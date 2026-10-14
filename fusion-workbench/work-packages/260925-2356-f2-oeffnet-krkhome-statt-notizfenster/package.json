@@ -1,0 +1,56 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "82f941b4-7429-4916-8202-01c9653bf04a",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": null,
+  "status": "done",
+  "claim": {
+    "checkout_id": "6c11b1f2",
+    "person": "Kai Stalmann <kai@stalmann.org>",
+    "claimed_at": null
+  },
+  "mode": {
+    "value": "ordinary",
+    "source": null
+  },
+  "origin": {
+    "kind": "user-request",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "user",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "narrative": {
+    "path": "work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/260925-2356-f2-oeffnet-krkhome-statt-notizfenster.md"
+  },
+  "depends_on": [],
+  "active_documents": [],
+  "references": [],
+  "evidence": [],
+  "outcome": {
+    "class": "legacy-completed",
+    "reason": "",
+    "evidence": []
+  },
+  "provenance": {
+    "source": "legacy-terminal",
+    "legacy_fields": {
+      "file_marker": null,
+      "head": {
+        "Status": "done",
+        "Claim": "6c11b1f2 — Kai Stalmann <kai@stalmann.org>, 260926-0004",
+        "Mode": "autonomous",
+        "Active spec/plan": "260926-1451_*_spec-home-menue-und-einstellbarer-ort.md (Spec), 260926-1506_*_plan-home-menue-und-einstellbarer-ort.md (Plan)",
+        "Filed by": "user, Kai Stalmann <kai@stalmann.org>",
+        "Cross-references": "260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md, 260926-0050_*_plan-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/260925-2356-f2-oeffnet-krkhome-statt-notizfenster.md",
+      "sha256": "sha256:01836e8dc99cfb64fa68c7233929e901eac9e941d5d97fc006b3c227fbbbbd1b",
+      "kind": "other"
+    }
+  },
+  "extensions": {}
+}

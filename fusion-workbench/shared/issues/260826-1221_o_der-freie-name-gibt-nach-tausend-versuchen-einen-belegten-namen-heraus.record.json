@@ -1,0 +1,33 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "98d10568-5682-43b8-b135-f24d02432835",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260826-1221_o_der-freie-name-gibt-nach-tausend-versuchen-einen-belegten-namen-heraus.md"
+  },
+  "filed_by": {
+    "actor": "coderev",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "coderev, Kai Stalmann <kai@stalmann.org>"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1221_o_der-freie-name-gibt-nach-tausend-versuchen-einen-belegten-namen-heraus.md",
+      "sha256": "sha256:8db1e150857ac6a6c03fe9e42c157e2a7c3f7f0da021e74e47fd03f1a43f17eb",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "76748976-cf07-496f-9dfc-5d3f2860b46a",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_a_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.md"
+  },
+  "filed_by": {
+    "actor": "shaper",
+    "person": null
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "a",
+      "head": {
+        "Domain": "code",
+        "Status": "answered",
+        "Filed by": "shaper (anticipated-circle mode)",
+        "Cross-references": "`crates/krk-ui/src/fenstermodell.rs:213` (`Bereich::mindestbreite`); `crates/krk-ui/src/appkit/fenster.rs:134` (`MINDESTGROESSE`, 780 Punkte); `circles/260811-1304-statusleiste-mit-bereichsschaltern/_b_circle.md` (Runde 5, `## Closure note`); `circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_a_circle.md`, `## Parent grounding stale` vom 260812-0816"
+      },
+      "derived": {
+        "/control/answer_ref": {
+          "rule": "answer-ref-self",
+          "evidence": "unresolvable-answer-line"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_a_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.md",
+      "sha256": "sha256:609d963868a13fda72e4d106df156ea36e45ebb6bd7cb7b3478cb6cfc39cf3db",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_a_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.md",
+      "sha256": "sha256:609d963868a13fda72e4d106df156ea36e45ebb6bd7cb7b3478cb6cfc39cf3db",
+      "kind": "decision"
+    },
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "4a39807a-7af2-45d5-bb72-e19de8f5d2ff",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_zwei-kommentare-in-default-keymap-toml-beschreiben-das-tippen-noch-als-sprungmarke.md"
+  },
+  "filed_by": {
+    "actor": "coder",
+    "person": "beim Umsetzen von A2"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Status": "Open",
+        "Domain": "Auslieferungsbelegung, Kommentarprosa",
+        "Filed by": "coder, beim Umsetzen von A2",
+        "Executor": "`ontocoder`",
+        "Related": "`planning/260814-2102_o_plan-tippen-filtert-dateiliste-flach-und-tief.md`, Schritt A2"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_zwei-kommentare-in-default-keymap-toml-beschreiben-das-tippen-noch-als-sprungmarke.md",
+      "sha256": "sha256:765fed3f1ac3903824f0187daf3f2b55d3f6e24729b4763eeb9707e82c13b8f6",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "ef3941a6-f060-4d4e-a7ac-101f055a1639",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260909-0938_o_die-erhebung-im-datensatz-zur-reichweite-nennt-vierzehn-dokumente-der-baum-traegt-zweiundvierzig.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "orchestrator, Kai Stalmann <kai@stalmann.org>",
+        "Domain": "code",
+        "Gefunden": "beim Vorlegen der Frage, während der Prüfung ihrer Erhebung gegen den Baum."
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260909-0938_o_die-erhebung-im-datensatz-zur-reichweite-nennt-vierzehn-dokumente-der-baum-traegt-zweiundvierzig.md",
+      "sha256": "sha256:3a403ae23dd177f96273d440bbb0a91aec118a1ffd021e0095b7fac5e19d17df",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

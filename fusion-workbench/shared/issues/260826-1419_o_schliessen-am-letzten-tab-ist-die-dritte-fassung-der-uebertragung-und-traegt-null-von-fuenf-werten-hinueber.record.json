@@ -1,0 +1,37 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "c17aeb34-580c-4c90-9e91-3c9a92773345",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260826-1419_o_schliessen-am-letzten-tab-ist-die-dritte-fassung-der-uebertragung-und-traegt-null-von-fuenf-werten-hinueber.md"
+  },
+  "filed_by": {
+    "actor": "coderev",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "coderev, Kai Stalmann <kai@stalmann.org>",
+        "Domain": "code",
+        "Schwere": "Niedrig",
+        "Betroffen": "`crates/krk-ui/src/tabs.rs` (`schliessen`, `verdeckten_tab_setzen`, `ordner_setzen`)",
+        "Baumstand": "`ca8072d`"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1419_o_schliessen-am-letzten-tab-ist-die-dritte-fassung-der-uebertragung-und-traegt-null-von-fuenf-werten-hinueber.md",
+      "sha256": "sha256:79cde710c1bdd4f3096ef49227eb0ace9335ceada047aefdf835f89fec164df4",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

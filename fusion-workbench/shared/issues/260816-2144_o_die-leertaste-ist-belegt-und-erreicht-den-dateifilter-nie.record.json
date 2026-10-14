@@ -1,0 +1,45 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "b815d4e6-d60a-4047-8a82-77ba49ccdd2a",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260816-2144_o_die-leertaste-ist-belegt-und-erreicht-den-dateifilter-nie.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Schwere": "Mittel. Kein Datenverlust, aber eine zugesagte Funktion greift bei einer",
+        "Gefunden von": "Nutzer, gemeldet am 260816-2144",
+        "Betroffen": "`resources/default-keymap.toml:287-290`,",
+        "Domain": "code"
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "5a52f1688931b25d20d659e7082ef74b9b818930"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260816-2144_o_die-leertaste-ist-belegt-und-erreicht-den-dateifilter-nie.md",
+      "sha256": "sha256:14497bc48ba61c4335220adcd80d8710c8236442a9e7c94c32fff1833231e439",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

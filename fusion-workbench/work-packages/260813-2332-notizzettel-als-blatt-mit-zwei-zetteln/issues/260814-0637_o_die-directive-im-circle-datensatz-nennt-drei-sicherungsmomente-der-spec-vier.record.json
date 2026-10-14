@@ -1,0 +1,42 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "17083e3a-35c5-4800-8335-d2540d35bd48",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-0637_o_die-directive-im-circle-datensatz-nennt-drei-sicherungsmomente-der-spec-vier.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Schwere": "niedrig. Kein Bau, kein Verhalten. Die Directive ist die Aussage, gegen die"
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "edea4d9228466314e2ff8c6173c1924fdb7ffbbd"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-0637_o_die-directive-im-circle-datensatz-nennt-drei-sicherungsmomente-der-spec-vier.md",
+      "sha256": "sha256:cca511ccb22e577ba74c9b2c5f89958b483cc34be19f2d86615d92185a21335a",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

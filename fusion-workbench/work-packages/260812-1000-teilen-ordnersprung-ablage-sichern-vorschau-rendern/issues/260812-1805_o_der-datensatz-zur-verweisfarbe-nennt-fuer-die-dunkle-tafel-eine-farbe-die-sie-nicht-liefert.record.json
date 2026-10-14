@@ -1,0 +1,44 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "93702481-0729-4d4f-9049-c53c4e865e2a",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1805_o_der-datensatz-zur-verweisfarbe-nennt-fuer-die-dunkle-tafel-eine-farbe-die-sie-nicht-liefert.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Nicht betroffen": "die Messung, die zur Abweichung vom Plan geführt hat. Dass",
+        "Gewicht": "niedrig, mit einer Einschränkung: der Datensatz ist offen und",
+        "Herkunft": "Circle der Runde 6, Planschritt 9."
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "94a81bd27632eefaa6700009c2cde6b6cbc18a7f"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1805_o_der-datensatz-zur-verweisfarbe-nennt-fuer-die-dunkle-tafel-eine-farbe-die-sie-nicht-liefert.md",
+      "sha256": "sha256:d933d7aba00688832e6b5fb7e00364aa865995330b3a45f0c239e5a82c43df3f",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

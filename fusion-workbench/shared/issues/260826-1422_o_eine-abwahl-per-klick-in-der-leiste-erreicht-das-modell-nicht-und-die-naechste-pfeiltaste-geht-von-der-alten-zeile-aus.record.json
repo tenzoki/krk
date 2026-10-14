@@ -1,0 +1,36 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "77ba7a60-a7a6-4839-8f02-a5012cf7be55",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260826-1422_o_eine-abwahl-per-klick-in-der-leiste-erreicht-das-modell-nicht-und-die-naechste-pfeiltaste-geht-von-der-alten-zeile-aus.md"
+  },
+  "filed_by": {
+    "actor": "coderev",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "coderev, Kai Stalmann <kai@stalmann.org>",
+        "Domain": "code",
+        "Schwere": "Niedrig",
+        "Betroffen": "`crates/krk-ui/src/appkit/leiste.rs`"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1422_o_eine-abwahl-per-klick-in-der-leiste-erreicht-das-modell-nicht-und-die-naechste-pfeiltaste-geht-von-der-alten-zeile-aus.md",
+      "sha256": "sha256:c1321cf7a1a1de5c929b0c72243286a571830e7e1a0cbe9244514fae2992bc1b",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

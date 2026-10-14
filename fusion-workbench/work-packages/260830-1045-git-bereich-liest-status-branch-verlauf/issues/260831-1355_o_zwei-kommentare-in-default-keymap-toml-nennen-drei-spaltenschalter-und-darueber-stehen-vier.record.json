@@ -1,0 +1,35 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "d81145a3-bb7c-4288-ad91-81e598115138",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260830-1045-git-bereich-liest-status-branch-verlauf/issues/260831-1355_o_zwei-kommentare-in-default-keymap-toml-nennen-drei-spaltenschalter-und-darueber-stehen-vier.md"
+  },
+  "filed_by": {
+    "actor": "coder",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Abnahme": "die Erhebung aus Schritt 12 der Runde 23 liefert für `resources/default-keymap.toml` keine unrichtige Zählaussage mehr, und `make check` bleibt grün (die Datei geht durch `Belegung::auslieferung`, ein Kommentar ändert daran nichts).",
+        "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+        "Domain": "data — `resources/default-keymap.toml` ist die eine Quelle jeder Tastenbelegung und gehört dem `ontocoder`; Schritt 9 der Runde 23 hat ihre drei neuen Einträge dort eingetragen."
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260830-1045-git-bereich-liest-status-branch-verlauf/issues/260831-1355_o_zwei-kommentare-in-default-keymap-toml-nennen-drei-spaltenschalter-und-darueber-stehen-vier.md",
+      "sha256": "sha256:94b0732c88ac1afebf443f3ea65342b180f345e954fdbf1449fabf3d38ae8686",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

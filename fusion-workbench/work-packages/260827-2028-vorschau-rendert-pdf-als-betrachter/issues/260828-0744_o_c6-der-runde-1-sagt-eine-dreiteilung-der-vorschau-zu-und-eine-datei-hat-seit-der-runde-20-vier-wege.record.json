@@ -1,0 +1,38 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "648640ac-fe54-4640-a07c-15375a1181b4",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260827-2028-vorschau-rendert-pdf-als-betrachter/issues/260828-0744_o_c6-der-runde-1-sagt-eine-dreiteilung-der-vorschau-zu-und-eine-datei-hat-seit-der-runde-20-vier-wege.md"
+  },
+  "filed_by": {
+    "actor": "analyst",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "analyst, Kai Stalmann <kai@stalmann.org>",
+        "Severity": "Low",
+        "Domain": "code",
+        "Tree state": "`4778c8a`, dazu der uncommittete Stand von `crates/krk-ui/src/vorschaumodell.rs` aus Schritt 5",
+        "Affected": "`circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_*_spec-navigator-geruest.md:307-317` (Kriterium C6, fünftes und sechstes Abnahmekriterium `:316-317`); `crates/krk-ui/src/vorschaumodell.rs:27-44` (Abschnitt `# Die Dreiteilung der Anzeige (C6)`)",
+        "Cross-references": "`circles/260827-2028-vorschau-rendert-pdf-als-betrachter/planning/260828-0649_*_spec-vorschau-rendert-pdf-als-betrachter.md:45-70` (Ursache, Abschnitt `## Wie der Betrachter in die Vorschau tritt`, und `:245`, zehnte Anweisung unter `## Open for Planner`); `circles/260827-2028-vorschau-rendert-pdf-als-betrachter/planning/260828-0712_*_plan-vorschau-rendert-pdf-als-betrachter.md:179-181` (Entscheidung 10) und `:252-257` (Schritt 10); `circles/260802-0842-krk-mac-dateimanager-editor-git/_b_circle.md:139` (der Abnahmelauf der Runde 1 ist Nutzerarbeit und steht aus); Vorbild `circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1710_*_c2-5-der-runde-16-sagt-unveraendert-ueber-die-ganze-anzeige-und-die-waechst-seit-der-runde-19-um-drei-zeilen.md`"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260827-2028-vorschau-rendert-pdf-als-betrachter/issues/260828-0744_o_c6-der-runde-1-sagt-eine-dreiteilung-der-vorschau-zu-und-eine-datei-hat-seit-der-runde-20-vier-wege.md",
+      "sha256": "sha256:7aba312e2a61f6b3294ec96cb545a1d977b37869d2b80e5688a5b825071932e3",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

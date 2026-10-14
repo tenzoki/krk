@@ -1,0 +1,51 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "34941373-d419-4619-bf08-409b59a83d82",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "dropped",
+  "claim": null,
+  "mode": {
+    "value": "ordinary",
+    "source": null
+  },
+  "origin": {
+    "kind": "legacy-unknown",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "shaper",
+    "person": null
+  },
+  "narrative": {
+    "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/_b_circle.md"
+  },
+  "depends_on": [],
+  "active_documents": [],
+  "references": [],
+  "evidence": [],
+  "outcome": {
+    "class": "bounded",
+    "reason": "closed bounded (legacy Circle marker)",
+    "evidence": []
+  },
+  "provenance": {
+    "source": "legacy-terminal",
+    "legacy_fields": {
+      "file_marker": "b",
+      "head": {
+        "Domain": "code",
+        "Status": "bounded",
+        "Filed by": "shaper (anticipated-circle mode)",
+        "Active spec/plan": "circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/planning/260812-1145_*_teilen-ordnersprung-ablage-sichern-vorschau-rendern.md",
+        "Active session history": "circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/_b_circle.md",
+      "sha256": "sha256:d86ffb12d294ef11a99e8885862a65ec8618e855e589612bb47cde27eeb58022",
+      "kind": "other"
+    }
+  },
+  "extensions": {}
+}

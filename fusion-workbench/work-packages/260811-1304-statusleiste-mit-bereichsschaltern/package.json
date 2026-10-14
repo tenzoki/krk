@@ -1,0 +1,51 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "f06ae7e1-e137-41ff-8987-aaa23021ec01",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "dropped",
+  "claim": null,
+  "mode": {
+    "value": "ordinary",
+    "source": null
+  },
+  "origin": {
+    "kind": "legacy-unknown",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "shaper",
+    "person": null
+  },
+  "narrative": {
+    "path": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/_b_circle.md"
+  },
+  "depends_on": [],
+  "active_documents": [],
+  "references": [],
+  "evidence": [],
+  "outcome": {
+    "class": "bounded",
+    "reason": "closed bounded (legacy Circle marker)",
+    "evidence": []
+  },
+  "provenance": {
+    "source": "legacy-terminal",
+    "legacy_fields": {
+      "file_marker": "b",
+      "head": {
+        "Domain": "code",
+        "Status": "bounded",
+        "Filed by": "shaper (anticipated-circle mode)",
+        "Active spec/plan": "circles/260811-1304-statusleiste-mit-bereichsschaltern/planning/260812-0415_*_bereichsleiste-und-proportionale-breitenregel.md",
+        "Active session history": "shared/history/260812-0306-orchestrator-session.md"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260811-1304-statusleiste-mit-bereichsschaltern/_b_circle.md",
+      "sha256": "sha256:250e585dcb2fd91b77cadb0bbf45bda64af6e5602caf689e259e540196472cd3",
+      "kind": "other"
+    }
+  },
+  "extensions": {}
+}

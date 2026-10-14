@@ -1,0 +1,45 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "1ace8125-e761-48b5-bcdb-222e9adec2b4",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0420_o_das-menue-bearbeiten-verliert-seine-mac-uebliche-reihenfolge-und-seinen-trenner.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Schwere": "gering (kein Befehl fällt aus, keine Kombination ändert sich; das Menü sieht an",
+        "Gefunden": "coder, beim Bauen von S6 der Runde 7 am 260813-0420",
+        "Betroffen": "`resources/default-keymap.toml` (die sechs `text_*`-Einträge),",
+        "Domain": "data — die Behebung gehört dem `ontocoder`"
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "16c0924a2fefa18829233d5e80354f21c2310523"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0420_o_das-menue-bearbeiten-verliert-seine-mac-uebliche-reihenfolge-und-seinen-trenner.md",
+      "sha256": "sha256:874da52dcdf59ff69171505cf6b15aa73000b14a418e7c4236a5772e7fd1d9e3",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

@@ -1,7 +1,6 @@
 # Spec: Die Oberfläche folgt der Systemsprache: Deutsch, Französisch, Englisch als Rückfall
 
 **Date:** 2026-10-01
-**Status:** Draft
 **Source:** „Plane, spezifiziere, implementiere im auto-Modus ein neues Arbeitspaket zu i8n. Alles was jetzt im UI nur auf Detusch erscheint, sollte lokalisiert werden können: außer Deutsch biete msl noch Französisch an. Auswhal im Krk Menu.“ Auf die drei Klärungsfragen des Entwurfs vom 261001-0735: „Ja, ne, wir machen das noch andders: folge der Systemsprache, Fallback auf English. Führe English also auch ein.“ Auf die Nachfrage zum Menü und zum Feld `name`: „a1 b1“. (Arbeitspaket `260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch.md`, `## Directive`; der Slug des Arbeitspakets bleibt.)
 **Cross-references:** `260826-1225_*_welche-schreibweise-gilt-fuer-nutzersichtbare-deutsche-meldungen-umlaut-oder-umschrift.md` (die Umlautregel, auf der die Naht dieses Specs aufsetzt), `260907-0826_*_wie-wird-die-naht-zwischen-umlaut-und-umschrift-gehalten-jetzt-da-sie-eine-regel-ist.md` (offen; C5 liefert einen Kandidaten für die Antwort), `260907-0826_*_gilt-die-umlautregel-auch-fuer-die-terminalausgabe-von-xtask-krk-bench-und-messmodus.md` (offen; bleibt unberührt, siehe `## Out of Scope`), `260807-0745_*_die-buendelbeschreibung-fuehrt-keine-entwicklungsregion.md` und `260807-0754_*_der-kommentar-an-cfbundlelocalizations-nennt-eine-falsche-auswahlregel.md` (die Messungen, auf denen die Sprachwahl durch macOS ruht), `260910-0818_*_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l4.md` (L4 steht schon daneben)
 

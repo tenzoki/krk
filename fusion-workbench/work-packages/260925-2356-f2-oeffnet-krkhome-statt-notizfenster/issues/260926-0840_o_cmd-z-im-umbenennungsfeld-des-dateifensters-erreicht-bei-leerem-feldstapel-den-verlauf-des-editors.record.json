@@ -1,0 +1,33 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "a7a55b04-50c2-405e-b8c9-9c29408640fb",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/issues/260926-0840_o_cmd-z-im-umbenennungsfeld-des-dateifensters-erreicht-bei-leerem-feldstapel-den-verlauf-des-editors.md"
+  },
+  "filed_by": {
+    "actor": "code-implementer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "code-implementer, Kai Stalmann <kai@stalmann.org>"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/issues/260926-0840_o_cmd-z-im-umbenennungsfeld-des-dateifensters-erreicht-bei-leerem-feldstapel-den-verlauf-des-editors.md",
+      "sha256": "sha256:b57d1ddfaff62d1cfd8fa1a68174b8195bbb86fd568c06e9128b30958014e9c6",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

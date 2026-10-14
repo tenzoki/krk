@@ -1,0 +1,39 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "04f1e54c-2aaf-40cd-a1fb-2a26fe3c51a2",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_a_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md"
+  },
+  "filed_by": {
+    "actor": "planner",
+    "person": null
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "a",
+      "head": {
+        "Domain": "code",
+        "Status": "open",
+        "Filed by": "planner",
+        "Cross-references": "`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_i_sprache-und-ui-werkzeugkasten.md` (Zeile 59, die Zusage, die diese Frage erzeugt), `circles/260802-0842-krk-mac-dateimanager-editor-git/analyses/260802-1134-sprache-und-ui-werkzeugkasten.md` Befund 6, `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` Schritte S1 und S5"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_a_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md",
+      "sha256": "sha256:7f1329f07b16d48116154b31a889e6aaabdb2145033aff22c0eaaba2ae757472",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": "260905-2008-orchestrator-session.md",
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

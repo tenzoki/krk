@@ -1,0 +1,50 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "c8108700-1add-4547-8616-4c7a07bbcbe5",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "done",
+  "claim": null,
+  "mode": {
+    "value": "ordinary",
+    "source": null
+  },
+  "origin": {
+    "kind": "legacy-unknown",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "shaper",
+    "person": null
+  },
+  "narrative": {
+    "path": "work-packages/260821-1644-veroeffentlichen-als-achte-station/_c_circle.md"
+  },
+  "depends_on": [],
+  "active_documents": [],
+  "references": [],
+  "evidence": [],
+  "outcome": {
+    "class": "legacy-completed",
+    "reason": "",
+    "evidence": []
+  },
+  "provenance": {
+    "source": "legacy-terminal",
+    "legacy_fields": {
+      "file_marker": "c",
+      "head": {
+        "Domain": "code",
+        "Filed by": "shaper (anticipated-circle mode)",
+        "Active spec/plan": "`260821-1115_*_spec-artefakt-und-release.md` — vor diesem Circle entstanden und deshalb im gemeinsamen Speicher, mit dem Plan dazu am selben Ort: `260821-1221_*_plan-artefakt-und-release.md` (der Plan liegt seit dem Aufräumlauf 260826-1637 unter `archive/`).",
+        "Active session history": "`shared/history/260820-2200-orchestrator-session.md`"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260821-1644-veroeffentlichen-als-achte-station/_c_circle.md",
+      "sha256": "sha256:1a05740c2202b0dc47cfef09b953d6b340990e4a96e350700b61f8688d551226",
+      "kind": "other"
+    }
+  },
+  "extensions": {}
+}

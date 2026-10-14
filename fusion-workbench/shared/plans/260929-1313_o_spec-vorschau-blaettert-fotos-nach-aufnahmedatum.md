@@ -1,7 +1,6 @@
 # Spec: Die Vorschau blättert durch die Fotos eines Jahres- oder Monatsordners
 
 **Date:** 2026-09-29
-**Status:** Draft
 **Source:** Wunsch des Nutzers vom 260929, wörtlich: „Allgemeines Reader Profile so erweitern, dass ein Baum dieser Struktur ein bestimmtes Scrollverhalten in der Vorschau realisiert: Fotos └── 2008 ├── <monat>, zB. 08 │ ├── 260827_162941_ss.png │ ├── Bild.jpg │ ├── IMG_0970_edited.jpeg. Wenn man innerhalb eines Jahresordners ist (Fotos/2008/) soll erst das erste Bild des ersten Monats angezeigt werden. Mit CMD-Pfeil-{hoch/runter} soll dann durch die Bilder navigiert werden. Wenn man innerhalb eines Monatsordners ist (Fotos/2008/08/) soll erst das erste Bild dieses Monats angezeigt werden. Mit CMD-Pfeil-{hoch/runter} soll dann durch die Bilder navigiert werden. Enter springt in beiden Fällen in den Ordner zu dem Bild.“ Klärung in einer Runde, Antworten des Nutzers vom 260929: „1 a 2 a 3 a 4c - lesegrenzen einfach erweitern“; die Vorgaben ohne Rückfrage hat er mit angenommen.
 
 ## Directive

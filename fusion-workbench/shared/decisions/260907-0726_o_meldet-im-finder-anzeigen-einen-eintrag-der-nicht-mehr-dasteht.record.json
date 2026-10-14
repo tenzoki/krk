@@ -1,0 +1,38 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "e6e78299-ab89-4e4a-b649-c88e689da529",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "shared/decisions/260907-0726_o_meldet-im-finder-anzeigen-einen-eintrag-der-nicht-mehr-dasteht.md"
+  },
+  "filed_by": {
+    "actor": "coder",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Domain": "code",
+        "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+        "Cross-references": "`crates/krk-ui/src/appkit/finder.rs` (Modulkopf, Abschnitt „Der Aufruf gibt nichts zurück\"), `crates/krk-ui/src/appkit/anwendung.rs` (`im_finder_anzeigen`), `crates/krk-ui/src/kommandos/operationen.rs` (`ordner_fehlt`, `kein_finder`)"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-0726_o_meldet-im-finder-anzeigen-einen-eintrag-der-nicht-mehr-dasteht.md",
+      "sha256": "sha256:bb60f703016fea1690a148c6f8ace5e378626dba5aeaacc64d1bd5b6cdecdfd2",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "answer_ref": null,
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

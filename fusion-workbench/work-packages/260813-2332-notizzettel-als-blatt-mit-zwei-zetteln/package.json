@@ -1,0 +1,51 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "9e0c9979-6a7b-48a6-ba00-a1bdb3b54d8d",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "dropped",
+  "claim": null,
+  "mode": {
+    "value": "ordinary",
+    "source": null
+  },
+  "origin": {
+    "kind": "legacy-unknown",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "shaper",
+    "person": null
+  },
+  "narrative": {
+    "path": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/_b_circle.md"
+  },
+  "depends_on": [],
+  "active_documents": [],
+  "references": [],
+  "evidence": [],
+  "outcome": {
+    "class": "bounded",
+    "reason": "closed bounded (legacy Circle marker)",
+    "evidence": []
+  },
+  "provenance": {
+    "source": "legacy-terminal",
+    "legacy_fields": {
+      "file_marker": "b",
+      "head": {
+        "Domain": "code",
+        "Status": "bounded",
+        "Filed by": "shaper (anticipated-circle mode)",
+        "Active spec/plan": "circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260814-0656_*_plan-notizzettel-als-blatt-mit-zwei-zetteln.md",
+        "Active session history": "circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/history/260813-2342-orchestrator-session.md"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/_b_circle.md",
+      "sha256": "sha256:5c19a874c775b9edc2edf75b989cd8d006b91d8f23667b712f1c10143c226558",
+      "kind": "other"
+    }
+  },
+  "extensions": {}
+}

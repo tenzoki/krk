@@ -1,0 +1,35 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "4a1123a2-e275-4118-8dbb-b194a0d27684",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/issues/260829-1215_o_der-eingefuegte-filtertext-hat-keine-hoechstlaenge-und-eine-lange-zeile-macht-jeden-rueckschritt-zum-gang-ueber-den-bestand.md"
+  },
+  "filed_by": {
+    "actor": "coderev",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "coderev, Kai Stalmann <kai@stalmann.org>",
+        "Severity": "Low",
+        "Executor": "Nutzer (Festlegung), dann coder"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/issues/260829-1215_o_der-eingefuegte-filtertext-hat-keine-hoechstlaenge-und-eine-lange-zeile-macht-jeden-rueckschritt-zum-gang-ueber-den-bestand.md",
+      "sha256": "sha256:ecbd55d7c1deca762fb53782e25509b23ddc66c495352437aff0bc1caf3c2042",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

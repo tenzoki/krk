@@ -1,0 +1,55 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "d0e91949-ccdc-403d-8659-574f6a894cb3",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "shared/decisions/260908-1754_a_bekommt-das-profil-des-gemeinsamen-speichers-die-zwei-forum-zeilen-die-es-jedem-anderen-unterspeicher-gibt.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "a",
+      "head": {
+        "Status": "beantwortet (von der Bahn R1 im Rahmen ihres Auftrags), noch nicht",
+        "Gestellt": "260908-1754",
+        "Answered": "Nein — die verdichtete Zeile steht in den zwei Wurzelprofilen,"
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "59e9910257196976daaebdc592e5b4788286b979"
+        },
+        "/control/answer_ref": {
+          "rule": "answer-ref-self",
+          "evidence": "no-answer-line"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260908-1754_a_bekommt-das-profil-des-gemeinsamen-speichers-die-zwei-forum-zeilen-die-es-jedem-anderen-unterspeicher-gibt.md",
+      "sha256": "sha256:6965591548e1297d1bf9d4f6419c3fd48b2b1891fa9c172a0962c3fa516f4ae0",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260908-1754_a_bekommt-das-profil-des-gemeinsamen-speichers-die-zwei-forum-zeilen-die-es-jedem-anderen-unterspeicher-gibt.md",
+      "sha256": "sha256:6965591548e1297d1bf9d4f6419c3fd48b2b1891fa9c172a0962c3fa516f4ae0",
+      "kind": "decision"
+    },
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

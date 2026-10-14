@@ -1,0 +1,35 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "d42d448a-1268-4a7b-896f-d0ee4995da2c",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260825-2107_o_ein-circle-datensatz-liegt-beim-1-8-fachen-der-64-kb-grenze-des-feldbausteins.md"
+  },
+  "filed_by": {
+    "actor": "analyst",
+    "person": null
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Domain": "code",
+        "Filed by": "analyst",
+        "Cross-references": "`shared/analyses/260825-2107-was-die-zwoelf-leseprofile-an-der-wirklichen-werkbank-kosten.md` (Abschnitt „Die 64-KB-Grenze ist an dieser Werkbank schon überschritten\"); `crates/krk-core/src/leseprofil/mod.rs` (`HOECHSTENS_BYTES`); `crates/krk-core/src/text/datei.rs` (`anlesen`); `resources/default-readers.toml` (Profil „fusion-Werkbank: eine Runde\", Zeile „Directive\")"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260825-2107_o_ein-circle-datensatz-liegt-beim-1-8-fachen-der-64-kb-grenze-des-feldbausteins.md",
+      "sha256": "sha256:cfb1087846e45a320291bb28704001fc905345c0cd16aa3d0403e0f6f949187c",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

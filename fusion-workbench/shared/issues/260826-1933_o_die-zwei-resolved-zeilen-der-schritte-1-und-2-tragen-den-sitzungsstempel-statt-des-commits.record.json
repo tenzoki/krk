@@ -1,0 +1,36 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "1830123e-ecd9-48ee-974b-0268977a4662",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260826-1933_o_die-zwei-resolved-zeilen-der-schritte-1-und-2-tragen-den-sitzungsstempel-statt-des-commits.md"
+  },
+  "filed_by": {
+    "actor": "coderev",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "coderev, Kai Stalmann <kai@stalmann.org>",
+        "Severity": "Low",
+        "Affected": "`shared/issues/260826-1221_c_ein-gescheitertes-kopieren-ueber-die-datentraegergrenze-loescht-die-quelle-trotzdem.md` (letzte Zeile), `shared/issues/260826-1221_c_der-schwungleser-oeffnet-mit-file-open-und-haengt-an-einer-benannten-roehre-fuer-immer.md` (letzte Zeile)",
+        "Domain": "code"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1933_o_die-zwei-resolved-zeilen-der-schritte-1-und-2-tragen-den-sitzungsstempel-statt-des-commits.md",
+      "sha256": "sha256:f95c5b06a270a2e2f9ecfcc5e8029b7286ecbe97b7d374d7f8fb2f4bf9829a15",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "1eedc46c-7fba-48f8-9b07-45c199f942d5",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0410_o_blatt-zeigen-answers-which-button-confirms-a-second-time-and-names-a-weaker-precondition.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Severity": "Medium. Latent — all five callers today come from `Blatt::neu`, where the two",
+        "Found by": "coderev, review `reviews/260818-0410-coderev-bundle-f-die-messungen-und-der-waechter.md`",
+        "Affected": "`crates/krk-ui/src/appkit/blaetter/mod.rs:762-766`",
+        "Tree state": "`a4d8211`",
+        "Domain": "code"
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "e843d90582395dcfbdb88725940e08dc39f30ea3"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0410_o_blatt-zeigen-answers-which-button-confirms-a-second-time-and-names-a-weaker-precondition.md",
+      "sha256": "sha256:e2f56b804a0742613a5b4570c2279409b4cca0519c6ce58eb77daab81fdcf93a",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

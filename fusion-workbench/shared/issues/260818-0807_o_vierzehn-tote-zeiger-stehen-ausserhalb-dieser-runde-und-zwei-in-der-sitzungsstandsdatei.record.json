@@ -1,0 +1,45 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "e4ae8069-615c-4666-a2bf-47a5af38606e",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260818-0807_o_vierzehn-tote-zeiger-stehen-ausserhalb-dieser-runde-und-zwei-in-der-sitzungsstandsdatei.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Schwere": "gering für den Baum, mittel als Beleg",
+        "Gefunden von": "reconciler, zweiter Abgleich der Sitzung 260817-2131 (260818-0807)",
+        "Betroffen": "die unten genannten sechs Dateien",
+        "Domain": "code"
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "563c17b69ac4fe00fa8817e2eb192b9d45e1f84b"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260818-0807_o_vierzehn-tote-zeiger-stehen-ausserhalb-dieser-runde-und-zwei-in-der-sitzungsstandsdatei.md",
+      "sha256": "sha256:4b4873c5690add235a4483568fc221bd1bb0f8baca66b9ec6d99344d479e0de6",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

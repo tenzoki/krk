@@ -1,0 +1,56 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "cc85de8f-ef72-45ba-a38d-e15481bd210c",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "dropped",
+  "claim": null,
+  "mode": {
+    "value": "ordinary",
+    "source": null
+  },
+  "origin": {
+    "kind": "legacy-unknown",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "shaper",
+    "person": null
+  },
+  "narrative": {
+    "path": "work-packages/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_d_circle.md"
+  },
+  "depends_on": [],
+  "active_documents": [],
+  "references": [],
+  "evidence": [],
+  "outcome": {
+    "class": "dropped",
+    "reason": "deferred (legacy Circle marker)",
+    "evidence": []
+  },
+  "provenance": {
+    "source": "legacy-terminal",
+    "legacy_fields": {
+      "file_marker": "d",
+      "head": {
+        "Domain": "code",
+        "Status": "anticipated",
+        "Filed by": "shaper (anticipated-circle mode)",
+        "Active spec/plan": "(none yet)",
+        "Active session history": "(none yet)"
+      },
+      "derived": {
+        "/status": {
+          "rule": "circle-deferred-dropped"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_d_circle.md",
+      "sha256": "sha256:dc8634e9a314430eb49adbc7c1f9a52c4a318fffe830c5f2fa9d6bcd3f843f70",
+      "kind": "other"
+    }
+  },
+  "extensions": {}
+}

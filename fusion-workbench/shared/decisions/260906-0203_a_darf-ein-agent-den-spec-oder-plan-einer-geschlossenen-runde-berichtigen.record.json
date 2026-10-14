@@ -1,0 +1,48 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "2a7ec28c-09dc-4312-a685-ca214ca10d0e",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "shared/decisions/260906-0203_a_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md"
+  },
+  "filed_by": {
+    "actor": "coder",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [
+    "260813-0642_*_zwei-hingenommene-verluste-stehen-auf-keiner-abnahmeliste.md",
+    "260814-1002_*_c1-verlangt-dass-keine-kombination-zweimal-steht-cmd-a-steht-zweimal.md",
+    "260814-1247_*_die-abnahmeliste-rechnet-gegen-72-kriterien-der-spec-fuehrt-nach-dem-c5-nachtrag-75.md",
+    "260813-1345_*_die-diagrammbefunde-am-spec-sind-nie-behoben-worden-und-das-stationsbild-zeigt-jetzt-sechs-wo-der-baum-sieben-traegt.md",
+    "260813-1345_*_die-eine-messung-die-der-plan-als-gegenmassnahme-nennt-ist-nicht-gefahren.md",
+    "260830-1317_*_die-25er-liste-der-nutzerarbeit-fuehrt-c3-1-und-c3-3-und-der-satz-darunter-sagt-sie-seien-nicht-gefuehrt.md",
+    "260830-1317_*_c1-1-nennt-vier-feldbreiten-die-den-bau-anhalten-gemessen-haelt-genau-eine.md",
+    "260830-1613_*_c8-3-nennt-98-zusaetzliche-pakete-am-projektbaum-gemessen-sind-es-101.md",
+    "260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md"
+  ],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "a",
+      "head": {
+        "Domain": "code",
+        "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+        "Cross-references": "`260813-0642_*_zwei-hingenommene-verluste-stehen-auf-keiner-abnahmeliste.md`, `260814-1002_*_c1-verlangt-dass-keine-kombination-zweimal-steht-cmd-a-steht-zweimal.md`, `260814-1247_*_die-abnahmeliste-rechnet-gegen-72-kriterien-der-spec-fuehrt-nach-dem-c5-nachtrag-75.md`, `260813-1345_*_die-diagrammbefunde-am-spec-sind-nie-behoben-worden-und-das-stationsbild-zeigt-jetzt-sechs-wo-der-baum-sieben-traegt.md`, `260813-1345_*_die-eine-messung-die-der-plan-als-gegenmassnahme-nennt-ist-nicht-gefahren.md`, `260830-1317_*_die-25er-liste-der-nutzerarbeit-fuehrt-c3-1-und-c3-3-und-der-satz-darunter-sagt-sie-seien-nicht-gefuehrt.md`, `260830-1317_*_c1-1-nennt-vier-feldbreiten-die-den-bau-anhalten-gemessen-haelt-genau-eine.md`, `260830-1613_*_c8-3-nennt-98-zusaetzliche-pakete-am-projektbaum-gemessen-sind-es-101.md`, `260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md`"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260906-0203_a_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md",
+      "sha256": "sha256:b8ddc19063d21b6296f41656268588f1d033eabb08805191200a18d036cad7b4",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": "260905-2008-orchestrator-session.md",
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "7f3d2170-18e8-48d1-adfa-d9434ffa72c2",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "shared/decisions/260818-0201_a_does-a-cross-references-line-between-records-write-the-marker-in-the-star-form.md"
+  },
+  "filed_by": {
+    "actor": "analyst",
+    "person": null
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "a",
+      "head": {
+        "Domain": "code",
+        "Status": "open",
+        "Filed by": "analyst",
+        "Cross-references": "`shared/decisions/260815-1145_*_schreiben-zitate-im-code-den-marker-aus-oder-die-sternform.md` (the answered question this one carves out of), `shared/issues/260817-1130_*_die-sternform-fuer-zitate-gilt-seit-dem-260815-und-drei-runden-schreiben-den-marker-aus.md` (the compliance defect, four rounds of it), `circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0013_*_two-decision-records-cite-each-other-with-markers-neither-of-them-carries-any-more.md` (the two instances that raised it), `CLAUDE.md` `## Bindende Grundlage: die Entscheidungsdatensätze` (the location rule)"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260818-0201_a_does-a-cross-references-line-between-records-write-the-marker-in-the-star-form.md",
+      "sha256": "sha256:0750c93220f27b82c955d3c22fc5e764599e937bc80fa4aecf5b546ef23cb2ba",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": "260905-2008-orchestrator-session.md",
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "94ac1738-67e6-4bb5-b0e5-69869142947f",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260910-0739_o_claude-md-sagt-es-gebe-keinen-vorgesehenen-circle-seit-heute-gibt-es-einen.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "orchestrator, Kai Stalmann <kai@stalmann.org>",
+        "Domain": "code",
+        "Gefunden": "vom Rangfolgelauf des 260910-0735, der die Stelle benannt und ausdrücklich dem"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260910-0739_o_claude-md-sagt-es-gebe-keinen-vorgesehenen-circle-seit-heute-gibt-es-einen.md",
+      "sha256": "sha256:4bdf7c47b96509a74e09884e561404cb5eb3a95456b81fac1508f6c1dd228232",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

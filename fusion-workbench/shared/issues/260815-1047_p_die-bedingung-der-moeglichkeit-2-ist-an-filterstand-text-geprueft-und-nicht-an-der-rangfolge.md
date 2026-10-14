@@ -2,7 +2,6 @@
 
 ---
 **Domain:** code
-**Status:** open
 **Filed by:** coderev
 **Cross-references:** `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1830_i_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md` (`## Constraints`, dritter Punkt, und die Zeile `Answered:`); `shared/history/260815-0912-orchestrator-session.md`; `crates/krk-ui/src/appkit/statuszeile.rs:369-386` (`filterstand_text`); `crates/krk-ui/src/appkit/statuszeile.rs:235-242` (`Rang::ALLE`); `crates/krk-ui/src/appkit/statuszeile.rs:516-545` (`zeile`); `crates/krk-ui/src/tabs.rs:543-548` (der Doc-Kommentar, der dieselbe Bedingung ausschreibt)
 

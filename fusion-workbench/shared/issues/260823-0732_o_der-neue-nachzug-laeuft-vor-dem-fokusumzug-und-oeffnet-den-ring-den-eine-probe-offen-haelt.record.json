@@ -1,0 +1,40 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "dd958c2e-0537-4ee9-80c7-123498218572",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260823-0732_o_der-neue-nachzug-laeuft-vor-dem-fokusumzug-und-oeffnet-den-ring-den-eine-probe-offen-haelt.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {},
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "a8be186d071c9a1d7a7f8bbe49d77446d2b48c27"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260823-0732_o_der-neue-nachzug-laeuft-vor-dem-fokusumzug-und-oeffnet-den-ring-den-eine-probe-offen-haelt.md",
+      "sha256": "sha256:8564222a6b34c7af2c693e2418c24942da911d361d19fda853e30353fa2fbcce",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

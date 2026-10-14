@@ -1,0 +1,33 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "efa2ed7b-3d58-4c83-93c0-58be6ba89764",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260825-0711-kontextmenue-traegt-zip-unzip-finder/issues/260825-1425_o_der-schnitt-sieht-einen-zerlegt-geschriebenen-umlaut-als-anderen-eintrag-als-den-zusammengesetzten.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "aus dem Bericht zu F-5"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "orchestrator, aus dem Bericht zu `F-5`"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260825-0711-kontextmenue-traegt-zip-unzip-finder/issues/260825-1425_o_der-schnitt-sieht-einen-zerlegt-geschriebenen-umlaut-als-anderen-eintrag-als-den-zusammengesetzten.md",
+      "sha256": "sha256:047cf1900c880b2a2c85b1fa29970e4d1ae12c3c67c4bf5c09ccd9b455ff9293",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

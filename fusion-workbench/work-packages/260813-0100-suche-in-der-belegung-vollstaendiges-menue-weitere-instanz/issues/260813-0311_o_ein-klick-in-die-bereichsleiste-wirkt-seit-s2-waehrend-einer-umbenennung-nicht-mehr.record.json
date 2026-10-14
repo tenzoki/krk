@@ -1,0 +1,45 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "5a73e0bd-fb80-4622-b10f-b39265af985b",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0311_o_ein-klick-in-die-bereichsleiste-wirkt-seit-s2-waehrend-einer-umbenennung-nicht-mehr.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Schwere": "mittel (ein Bedienweg, der heute wirkt, wirkt danach in einer benannten Lage",
+        "Gefunden": "coder, beim Bauen von S2 der Runde 7 am 260813-0311",
+        "Betroffen": "`crates/krk-ui/src/appkit/anwendung.rs:788-800`,",
+        "Domain": "code"
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "9da33bc2ae1ecd1b968ccd865443bef2b6f54277"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0311_o_ein-klick-in-die-bereichsleiste-wirkt-seit-s2-waehrend-einer-umbenennung-nicht-mehr.md",
+      "sha256": "sha256:cc706de67aca976cd7667692555a896cb2bb6c7ecb2f00f2191dade8c3db97ff",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

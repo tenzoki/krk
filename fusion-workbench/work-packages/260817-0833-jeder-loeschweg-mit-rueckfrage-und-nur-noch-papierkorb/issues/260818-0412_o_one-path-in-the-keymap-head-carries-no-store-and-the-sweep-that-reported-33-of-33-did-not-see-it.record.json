@@ -1,0 +1,47 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "26de1f56-4782-4619-9238-e60cbb767fa4",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0412_o_one-path-in-the-keymap-head-carries-no-store-and-the-sweep-that-reported-33-of-33-did-not-see-it.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Severity": "Low. One reference, and the file it means is findable by search. Filed because the",
+        "Found by": "coderev, review `reviews/260818-0410-coderev-bundle-f-die-messungen-und-der-waechter.md`",
+        "Affected": "`resources/default-keymap.toml:8`",
+        "Related": "`issues/260817-2243_c_two-decision-paths-in-the-keymap-head-are-split-across-comment-lines-and-escape-every-search.md`,",
+        "Tree state": "`a4d8211`",
+        "Domain": "code"
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "e843d90582395dcfbdb88725940e08dc39f30ea3"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0412_o_one-path-in-the-keymap-head-carries-no-store-and-the-sweep-that-reported-33-of-33-did-not-see-it.md",
+      "sha256": "sha256:9e1db535ef80fc2400f7525d043a90cc610906c271eb907114de6af539f77e08",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

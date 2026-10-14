@@ -1,6 +1,5 @@
 # Bekommt das Profil des gemeinsamen Speichers die zwei Forum-Zeilen, die es jedem anderen Unterspeicher gibt?
 
-**Status:** beantwortet (von der Bahn R1 im Rahmen ihres Auftrags), noch nicht
 als offene Nutzerfrage bestätigt
 **Gestellt:** 260908-1754
 **Answered:** Nein — die verdichtete Zeile steht in den zwei Wurzelprofilen,

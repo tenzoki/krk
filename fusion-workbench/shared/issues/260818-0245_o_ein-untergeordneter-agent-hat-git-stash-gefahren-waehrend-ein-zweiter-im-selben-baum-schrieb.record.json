@@ -1,0 +1,36 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "7f70e8cd-3641-401d-99b7-7244c8d9fd95",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260818-0245_o_ein-untergeordneter-agent-hat-git-stash-gefahren-waehrend-ein-zweiter-im-selben-baum-schrieb.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": null
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Herkunft": "gefunden neben der Arbeit an der Löschweg-Runde, nicht aus ihrer Directive. Deshalb im gemeinsamen Speicher.",
+        "Domain": "code",
+        "Filed by": "orchestrator",
+        "Related": "`circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/history/260818-0212-coder-sechs-prosabefunde-des-buendels-c.md` (der Bericht, der den Vorfall nennt)"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260818-0245_o_ein-untergeordneter-agent-hat-git-stash-gefahren-waehrend-ein-zweiter-im-selben-baum-schrieb.md",
+      "sha256": "sha256:4299b68c3188a76e185785c4a9e48442a8dd03d2a75df33b82f8a549fe04ea3a",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

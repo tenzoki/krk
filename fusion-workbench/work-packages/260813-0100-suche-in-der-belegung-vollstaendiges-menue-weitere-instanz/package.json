@@ -1,0 +1,51 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "66b06c51-57c1-4525-9761-6b0f39fb75bd",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "dropped",
+  "claim": null,
+  "mode": {
+    "value": "ordinary",
+    "source": null
+  },
+  "origin": {
+    "kind": "legacy-unknown",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": null
+  },
+  "narrative": {
+    "path": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/_b_circle.md"
+  },
+  "depends_on": [],
+  "active_documents": [],
+  "references": [],
+  "evidence": [],
+  "outcome": {
+    "class": "bounded",
+    "reason": "closed bounded (legacy Circle marker)",
+    "evidence": []
+  },
+  "provenance": {
+    "source": "legacy-terminal",
+    "legacy_fields": {
+      "file_marker": "b",
+      "head": {
+        "Domain": "code",
+        "Status": "bounded",
+        "Filed by": "orchestrator (nach dem Spec des shaper)",
+        "Active spec/plan": "circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/planning/260813-0205_*_plan-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz.md (Spec: shared/planning/260813-0053_*_spec-suche-in-der-belegung-vollstaendiges-menue-zweite-instanz.md)",
+        "Active session history": "shared/history/260813-0040-orchestrator-session.md"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/_b_circle.md",
+      "sha256": "sha256:892751ec01394f1cde2d4b4852d64ce6d7c108d5e67fcd80b255b62344c4ce15",
+      "kind": "other"
+    }
+  },
+  "extensions": {}
+}

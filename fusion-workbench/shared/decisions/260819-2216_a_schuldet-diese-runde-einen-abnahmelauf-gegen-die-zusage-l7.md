@@ -2,7 +2,6 @@
 
 ---
 **Domain:** code
-**Status:** answered
 **Filed by:** shaper
 **Cross-references:** `shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md` (Abschnitt „Verhältnis zu den zehn Zeitzusagen aus C8 der Runde 1"); `crates/krk-bench/src/messen.rs:1109-1114` (L7); `crates/krk-ui/src/appkit/vorschau.rs` (Modulkopf, Abschnitt „Der Einfärbungsvorgang wohnt hier und nicht im Modell"); `messungen/260810-1918-alle-zusagen.txt`; `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_*_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`
 

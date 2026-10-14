@@ -1,0 +1,51 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "94e50339-19da-431b-a84e-0c9cf0e84a20",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "done",
+  "claim": null,
+  "mode": {
+    "value": "ordinary",
+    "source": null
+  },
+  "origin": {
+    "kind": "legacy-unknown",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": null
+  },
+  "narrative": {
+    "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/_c_circle.md"
+  },
+  "depends_on": [],
+  "active_documents": [],
+  "references": [],
+  "evidence": [],
+  "outcome": {
+    "class": "legacy-completed",
+    "reason": "",
+    "evidence": []
+  },
+  "provenance": {
+    "source": "legacy-terminal",
+    "legacy_fields": {
+      "file_marker": "c",
+      "head": {
+        "Domain": "code",
+        "Status": "closed",
+        "Filed by": "orchestrator",
+        "Active spec/plan": "260817-0856_*_plan-absicherung-jedes-loeschwegs.md (Spec: 260817-0536_*_spec-absicherung-jedes-loeschwegs.md, seit dem Aufräumlauf 260819-1613 unter `archive/`)",
+        "Active session history": "circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/history/260817-2131-orchestrator-session.md"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/_c_circle.md",
+      "sha256": "sha256:0e06c2ed0ee68b882b1b7f381ea47976f2b9a775614dec529d58ea75593f13a0",
+      "kind": "other"
+    }
+  },
+  "extensions": {}
+}

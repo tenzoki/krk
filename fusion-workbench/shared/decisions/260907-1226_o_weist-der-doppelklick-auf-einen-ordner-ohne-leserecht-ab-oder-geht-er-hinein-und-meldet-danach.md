@@ -2,7 +2,6 @@
 
 ---
 **Domain:** code
-**Status:** open
 **Filed by:** coder
 **Cross-references:** `260815-1749_*_meldet-der-doppelklick-auf-einen-ordner-ohne-leserecht-oder-schweigt-er-wie-heute.md` (der Vorgänger, beantwortet am 260907-1210); `260907-1226_*_zwei-prosastellen-nennen-den-doppelklick-auf-einen-ordner-ohne-leserecht-wortlos-der-baum-meldet-seit-s12.md`; `crates/krk-ui/src/kommandos/pfadeingabe.rs`; `crates/krk-ui/src/appkit/tabelle.rs` (`in_zeile_einsteigen`); `crates/krk-ui/src/tabs.rs` (`lesemeldungen_einziehen`)
 

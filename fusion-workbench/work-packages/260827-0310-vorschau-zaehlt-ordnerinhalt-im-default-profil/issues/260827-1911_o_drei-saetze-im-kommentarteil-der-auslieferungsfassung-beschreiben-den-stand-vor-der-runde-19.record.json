@@ -1,0 +1,38 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "896f24f5-431f-401d-a62c-dfba6b31f93f",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1911_o_drei-saetze-im-kommentarteil-der-auslieferungsfassung-beschreiben-den-stand-vor-der-runde-19.md"
+  },
+  "filed_by": {
+    "actor": "coderev",
+    "person": "Kai Stalmann <kai@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "coderev, Kai Stalmann <kai@qantr.com>",
+        "Severity": "Low",
+        "Domain": "code",
+        "Tree state": "`d444879`",
+        "Affected": "`resources/default-readers.toml:18-19`, `:43-47`, `:229`",
+        "Cross-references": "`planning/260827-0646_*_spec-vorschau-zaehlt-ordnerinhalt-im-default-profil.md` (C3.6, C3.9, C3.10); `planning/260827-1322_*_plan-vorschau-zaehlt-ordnerinhalt-im-default-profil.md` (Schritt 6); `history/260827-1754-ontocoder-schritt-6-der-kommentarteil-der-auslieferungsfassung.md` (Nebenbefund des Ontocoders, nennt die ersten zwei Stellen); `reviews/260827-1911-coderev-durchsicht-runde-19-default-profil-zaehlzeilen.md` (F1); `crates/krk-core/src/leseprofil/datei.rs:49-57` (der Modulkopf, der dieselbe Reichweite für `typ` und `versteckt` schon nachgezogen hat)"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1911_o_drei-saetze-im-kommentarteil-der-auslieferungsfassung-beschreiben-den-stand-vor-der-runde-19.md",
+      "sha256": "sha256:c17d756b7decbbaf8bd15aac0899c1ac48f3e33ab0d20d8a06fc28db2e1d67e3",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

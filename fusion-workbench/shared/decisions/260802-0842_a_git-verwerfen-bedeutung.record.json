@@ -1,0 +1,39 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "beb8e124-b8f0-4e9b-b94c-6a85e2490dc9",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "shared/decisions/260802-0842_a_git-verwerfen-bedeutung.md"
+  },
+  "filed_by": {
+    "actor": "shaper",
+    "person": null
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "a",
+      "head": {
+        "Domain": "code",
+        "Status": "open",
+        "Filed by": "shaper",
+        "Cross-references": "`circles/260802-0842-krk-mac-dateimanager-editor-git/_a_circle.md`"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260802-0842_a_git-verwerfen-bedeutung.md",
+      "sha256": "sha256:5fa410aaed6939a22d405862cf5cc41695d02a54755e2f19e00abc3c939734df",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": "260905-2008-orchestrator-session.md",
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "1ce9dc0a-3f2b-486b-aaf1-5268ab735418",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260819-2230-auswahl-und-kopieren-in-der-vorschau/issues/260820-0733_o_die-abfangstelle-verwirft-die-geforderten-sorten-und-leert-jede-gereichte-ablage.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Richtung, nicht vorweggenommen": "entweder die Hülle bekommt eine zweite Auskunft, ob sie",
+        "Schwere": "mittel. Kein Weg ist heute nachweislich kaputt; die Stelle ist die einzige, an",
+        "Baumstand": "`b28cdd6`."
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "56afe456b926e9afb3d5e34ecbd36e504e465dfa"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260819-2230-auswahl-und-kopieren-in-der-vorschau/issues/260820-0733_o_die-abfangstelle-verwirft-die-geforderten-sorten-und-leert-jede-gereichte-ablage.md",
+      "sha256": "sha256:9efc2f422a1d7cfe81ddcb1e20a91505ede3ce65fe1ee3ae934da8b2e39fe4a1",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "26663221-7e66-484b-acee-33f867c05439",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260826-1419_o_die-zwei-mauswege-fragen-die-vorstufe-laufender-vorgang-an-verschiedenen-orten-und-die-lage-gar-nicht.md"
+  },
+  "filed_by": {
+    "actor": "coderev",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "coderev, Kai Stalmann <kai@stalmann.org>"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1419_o_die-zwei-mauswege-fragen-die-vorstufe-laufender-vorgang-an-verschiedenen-orten-und-die-lage-gar-nicht.md",
+      "sha256": "sha256:67b7134218eb5f4688efe634d77c907d86c01ae43ada7a2cabeec80c2db2f44e",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

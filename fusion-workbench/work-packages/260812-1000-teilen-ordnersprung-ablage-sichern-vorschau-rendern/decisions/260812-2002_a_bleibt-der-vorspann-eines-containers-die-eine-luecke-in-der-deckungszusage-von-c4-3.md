@@ -2,7 +2,6 @@
 
 ---
 **Domain:** code
-**Status:** open
 **Filed by:** orchestrator
 **Cross-references:** `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/planning/260812-1145_c_teilen-ordnersprung-ablage-sichern-vorschau-rendern.md` (C4.3); `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1920_*_die-deckungszusage-gilt-nicht-innerhalb-eines-elements-das-zeichen-geliefert-hat.md` (geschlossen); `crates/krk-ui/src/markdown.rs` (Modulkopf, Abschnitt „Wo die Deckung endet"; Probe `im_vorspann_eines_elements_endet_die_deckung`)
 

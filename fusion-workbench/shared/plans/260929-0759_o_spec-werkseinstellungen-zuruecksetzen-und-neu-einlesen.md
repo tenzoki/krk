@@ -1,7 +1,6 @@
 # Spec: Auf Werkseinstellungen zurücksetzen und neu einlesen
 
 **Date:** 2026-09-29
-**Status:** Draft
 **Geändert:** 2026-09-29, siehe `## Änderung 260929`
 **Source:** Nutzerwunsch, wörtlich: „Wir brauchen einen Befehl unter Krk, der automatisch auf Werkseinstellungen zurücksetzt und die Werte neu einliest.“ Anlass ist die Auslieferung 2.1.1 mit geänderten fusion-Leseprofilen. Ein Nutzer mit vorhandener `readers.toml` bekommt sie bisher nur, wenn er KRK beendet, die Datei beiseitelegt und neu startet, weil KRK seine Ablagedateien allein beim Start liest. Antworten des Nutzers auf die erste Fragerunde: „1 b 2 a 3 a 4 a“.
 

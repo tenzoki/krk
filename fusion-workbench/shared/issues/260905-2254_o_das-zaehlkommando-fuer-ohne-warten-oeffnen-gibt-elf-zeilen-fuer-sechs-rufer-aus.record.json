@@ -1,0 +1,37 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "1882918d-bbaa-4a0a-bbb8-310a097f5680",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260905-2254_o_das-zaehlkommando-fuer-ohne-warten-oeffnen-gibt-elf-zeilen-fuer-sechs-rufer-aus.md"
+  },
+  "filed_by": {
+    "actor": "coder",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+        "Domain": "code",
+        "Schwere": "niedrig",
+        "Baumstand": "`8779a25`",
+        "Betroffen": "`crates/krk-core/src/verzeichnis/sys.rs` (Modulkopf, Abschnitt zum Namen des Moduls; und der Doc-Kommentar von `ohne_warten_oeffnen` selbst), `CLAUDE.md` (Abschnitt „Was man nicht sieht, wenn man es nicht weiß\", Absatz „Die Prüfung dessen, was da geöffnet wurde, steht am Deskriptor und nicht am Pfad\")"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260905-2254_o_das-zaehlkommando-fuer-ohne-warten-oeffnen-gibt-elf-zeilen-fuer-sechs-rufer-aus.md",
+      "sha256": "sha256:31e4d63120d6f0e1012d0274fa513dd64adb405bc43b753ece029d6c06f61d02",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

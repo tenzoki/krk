@@ -2,10 +2,6 @@
 
 ---
 **Domain:** code
-**Status:** claimed
-**Claim:** 6c11b1f2 — Kai Stalmann <kai@stalmann.org>, 260930-2319
-**Mode:** autonomous
-**Active spec/plan:** 261001-0735_*_spec-oberflaeche-lokalisierbar-deutsch-und-franzoesisch.md (Spec), 261001-0850_*_plan-oberflaeche-folgt-der-systemsprache-deutsch-franzoesisch-englisch.md (Plan)
 **Cross-references:** 260930-1914-kontextmenue-traegt-duplicate-mit-namensdialog.md
 **Filed by:** user, Kai Stalmann <kai@stalmann.org>
 

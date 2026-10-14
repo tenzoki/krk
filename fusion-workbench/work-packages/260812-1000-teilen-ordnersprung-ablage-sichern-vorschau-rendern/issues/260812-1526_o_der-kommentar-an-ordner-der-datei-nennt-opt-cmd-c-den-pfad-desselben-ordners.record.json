@@ -1,0 +1,45 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "2285b772-4e4e-46ea-8324-7eef537fdb09",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1526_o_der-kommentar-an-ordner-der-datei-nennt-opt-cmd-c-den-pfad-desselben-ordners.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Herkunft": "Directive dieser Runde, Commit `95b2dfa` (Schritt 2 des Plans",
+        "Woher der Satz stammt": "wörtlich aus Möglichkeit 1 des Entscheidungsdatensatzes",
+        "Nicht betroffen": "die Kombination selbst. `opt+cmd+o` war frei (am 260812-1526",
+        "Empfehlung": "die Halbzeile berichtigen, ohne die Begründung zu verlieren. Der"
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "34ab5b5a000a44a55c6b2eafcdfdc2da0ae4003c"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1526_o_der-kommentar-an-ordner-der-datei-nennt-opt-cmd-c-den-pfad-desselben-ordners.md",
+      "sha256": "sha256:7ea0d43320fb07124024878026625c65134c5ac77a0437d88b3f860cf306a057",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

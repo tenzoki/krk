@@ -1,0 +1,40 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "113f805a-3292-42dc-acd9-11e4989a5126",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260823-1336_o_die-zeilenzitate-der-zwei-offen-gebliebenen-befunde-und-beider-durchsichten-zeigen-nach-52fba42-ins-leere.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {},
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "6502a6a710aaa7b1148b4fe18f6794ea5e0c5ec6"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260823-1336_o_die-zeilenzitate-der-zwei-offen-gebliebenen-befunde-und-beider-durchsichten-zeigen-nach-52fba42-ins-leere.md",
+      "sha256": "sha256:9f5b470b5ab774503f6fd1ff7096f67443e9bd8d09c398dcfd2e4108b9a89e60",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

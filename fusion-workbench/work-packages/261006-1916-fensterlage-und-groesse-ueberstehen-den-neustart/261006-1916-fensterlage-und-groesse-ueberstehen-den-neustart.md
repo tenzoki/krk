@@ -2,7 +2,6 @@
 
 ---
 **Domain:** code
-**Status:** open
 **Filed by:** user, Kai Stalmann <kai@stalmann.org>
 
 ---

@@ -1,0 +1,49 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "f2fcf3b0-b51a-4deb-81bd-f253e3eb808d",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "shared/decisions/260819-2216_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.md"
+  },
+  "filed_by": {
+    "actor": "shaper",
+    "person": null
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "a",
+      "head": {
+        "Domain": "code",
+        "Status": "answered",
+        "Filed by": "shaper",
+        "Cross-references": "`shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md` (Abschnitt „Verhältnis zu den zehn Zeitzusagen aus C8 der Runde 1\"); `crates/krk-bench/src/messen.rs:1109-1114` (L7); `crates/krk-ui/src/appkit/vorschau.rs` (Modulkopf, Abschnitt „Der Einfärbungsvorgang wohnt hier und nicht im Modell\"); `messungen/260810-1918-alle-zusagen.txt`; `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_*_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`"
+      },
+      "derived": {
+        "/control/answer_ref": {
+          "rule": "answer-ref-self",
+          "evidence": "unresolvable-answer-line"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260819-2216_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.md",
+      "sha256": "sha256:61630bf386645af8ddf818c852fd64b89a44d4ef43e6a8ad509142eea63520a4",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260819-2216_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.md",
+      "sha256": "sha256:61630bf386645af8ddf818c852fd64b89a44d4ef43e6a8ad509142eea63520a4",
+      "kind": "decision"
+    },
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "cbfb0efb-5d18-4f50-9afa-bb21441a4d43",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260821-1532_o_drei-von-durchsichten-verlangte-nachtraege-an-offenen-datensaetzen-sind-nie-eingetragen-worden.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {},
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "ca84a59f053a4de5ec2107e5e549201376fbe6a5"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260821-1532_o_drei-von-durchsichten-verlangte-nachtraege-an-offenen-datensaetzen-sind-nie-eingetragen-worden.md",
+      "sha256": "sha256:22d93301889ef74a830bd9f8ec2d48638c5a5d55872dd072948c51a184b007b4",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

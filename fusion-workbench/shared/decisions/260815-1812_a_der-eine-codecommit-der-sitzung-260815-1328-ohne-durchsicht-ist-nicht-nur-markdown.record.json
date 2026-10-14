@@ -1,0 +1,49 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "28e7155b-f91b-4357-9ff7-a77eb31762d6",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "shared/decisions/260815-1812_a_der-eine-codecommit-der-sitzung-260815-1328-ohne-durchsicht-ist-nicht-nur-markdown.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "a",
+      "head": {
+        "Gefunden am": "260815-1812, Stand `7fae5ba`",
+        "Gefunden von": "reconciler, beim Abgleich der Sitzung 260815-1328",
+        "Schwere": "mittel. Kein Fehlverhalten am Code, keine gebrochene Probe. Der Schaden ist die",
+        "Betroffen": "Verfahren, nicht Code. Der ungedeckte Wurf ist `7fae5ba`.",
+        "Domain": "code"
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "60a8ca5188f1801dfbf1771c63060fa7acfabd48"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260815-1812_a_der-eine-codecommit-der-sitzung-260815-1328-ohne-durchsicht-ist-nicht-nur-markdown.md",
+      "sha256": "sha256:a70ae704940a6b480111ee9f2766431d45233f073671d610e03d86a2a01fec58",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": "260905-2008-orchestrator-session.md",
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

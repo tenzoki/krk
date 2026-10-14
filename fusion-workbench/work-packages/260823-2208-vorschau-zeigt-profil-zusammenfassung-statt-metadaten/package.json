@@ -1,0 +1,50 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "caa2f7bf-21c5-4409-8fbc-cb2e6e1f7320",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "dropped",
+  "claim": null,
+  "mode": {
+    "value": "ordinary",
+    "source": null
+  },
+  "origin": {
+    "kind": "legacy-unknown",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "shaper",
+    "person": null
+  },
+  "narrative": {
+    "path": "work-packages/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/_b_circle.md"
+  },
+  "depends_on": [],
+  "active_documents": [],
+  "references": [],
+  "evidence": [],
+  "outcome": {
+    "class": "bounded",
+    "reason": "closed bounded (legacy Circle marker)",
+    "evidence": []
+  },
+  "provenance": {
+    "source": "legacy-terminal",
+    "legacy_fields": {
+      "file_marker": "b",
+      "head": {
+        "Domain": "code",
+        "Filed by": "shaper (anticipated-circle mode)",
+        "Active spec/plan": "circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/planning/260824-0640_p_plan-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md",
+        "Active session history": "circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/history/260824-0530-orchestrator-session.md"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/_b_circle.md",
+      "sha256": "sha256:2ea4dbec96e3fb93a4916b487dd57cbf9f359fc082fb3ecc147ae5ab62932a04",
+      "kind": "other"
+    }
+  },
+  "extensions": {}
+}

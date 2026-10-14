@@ -1,0 +1,45 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "4e70bd74-3e41-456a-b4e2-aa485c703494",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "open",
+  "claim": null,
+  "mode": {
+    "value": "ordinary",
+    "source": null
+  },
+  "origin": {
+    "kind": "user-request",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "user",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "narrative": {
+    "path": "work-packages/261006-1916-fensterlage-und-groesse-ueberstehen-den-neustart/261006-1916-fensterlage-und-groesse-ueberstehen-den-neustart.md"
+  },
+  "depends_on": [],
+  "active_documents": [],
+  "references": [],
+  "evidence": [],
+  "outcome": null,
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": null,
+      "head": {
+        "Domain": "code",
+        "Status": "open",
+        "Filed by": "user, Kai Stalmann <kai@stalmann.org>"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/261006-1916-fensterlage-und-groesse-ueberstehen-den-neustart/261006-1916-fensterlage-und-groesse-ueberstehen-den-neustart.md",
+      "sha256": "sha256:8db76bb31e3321ce3652481e352de51fcc0a424f62fa9a3ec1ac2b417b33462e",
+      "kind": "other"
+    }
+  },
+  "extensions": {}
+}

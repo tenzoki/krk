@@ -1,0 +1,41 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "27aae6dc-c56a-46c0-b5eb-37e708dba654",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "shared/decisions/260907-1226_o_weist-der-doppelklick-auf-einen-ordner-ohne-leserecht-ab-oder-geht-er-hinein-und-meldet-danach.md"
+  },
+  "filed_by": {
+    "actor": "coder",
+    "person": null
+  },
+  "references": [
+    "260815-1749_*_meldet-der-doppelklick-auf-einen-ordner-ohne-leserecht-oder-schweigt-er-wie-heute.md"
+  ],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Domain": "code",
+        "Status": "open",
+        "Filed by": "coder",
+        "Cross-references": "`260815-1749_*_meldet-der-doppelklick-auf-einen-ordner-ohne-leserecht-oder-schweigt-er-wie-heute.md` (der Vorgänger, beantwortet am 260907-1210); `260907-1226_*_zwei-prosastellen-nennen-den-doppelklick-auf-einen-ordner-ohne-leserecht-wortlos-der-baum-meldet-seit-s12.md`; `crates/krk-ui/src/kommandos/pfadeingabe.rs`; `crates/krk-ui/src/appkit/tabelle.rs` (`in_zeile_einsteigen`); `crates/krk-ui/src/tabs.rs` (`lesemeldungen_einziehen`)"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-1226_o_weist-der-doppelklick-auf-einen-ordner-ohne-leserecht-ab-oder-geht-er-hinein-und-meldet-danach.md",
+      "sha256": "sha256:ceadbe6511c8be44cb1a3770a50fc3e969ce612eaeb42f67f813cab38427d6ec",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "answer_ref": null,
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

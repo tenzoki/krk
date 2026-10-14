@@ -1,0 +1,34 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "1585b7f1-391e-4b7d-8075-0331a8938d21",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260826-0139_o_die-fallunterscheidung-des-kennzeichnen-satzes-traegt-ihre-bedingung-nur-an-einem-zweig.md"
+  },
+  "filed_by": {
+    "actor": "ontorev",
+    "person": "Kai Stalmann <kai@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "ontorev, Kai Stalmann <kai@qantr.com>",
+        "Cross-references": "`resources/default-readers.toml:61-67`;"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-0139_o_die-fallunterscheidung-des-kennzeichnen-satzes-traegt-ihre-bedingung-nur-an-einem-zweig.md",
+      "sha256": "sha256:6294694c63d3c4b2d79ce55a2a29d2bd6f9cbd1ed7cb2659c7d8e4dcadeec84b",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

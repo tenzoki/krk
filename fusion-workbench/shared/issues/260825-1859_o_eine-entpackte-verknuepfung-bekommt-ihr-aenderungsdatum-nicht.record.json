@@ -1,0 +1,33 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "7fd1ca1e-4530-4c38-b309-0d2ff6ae0385",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260825-1859_o_eine-entpackte-verknuepfung-bekommt-ihr-aenderungsdatum-nicht.md"
+  },
+  "filed_by": {
+    "actor": "coder",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "coder, Kai Stalmann <kai@stalmann.org>"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260825-1859_o_eine-entpackte-verknuepfung-bekommt-ihr-aenderungsdatum-nicht.md",
+      "sha256": "sha256:af7e1f1710e5980bafe8da3ab8192117d668b77ff5a6799e87f36d8bea66bc04",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

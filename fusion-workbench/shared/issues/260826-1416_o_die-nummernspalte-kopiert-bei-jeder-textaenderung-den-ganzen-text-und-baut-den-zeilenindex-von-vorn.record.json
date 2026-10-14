@@ -1,0 +1,36 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "98e9e2fb-d0c7-4d72-9226-9bdc2af50a86",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260826-1416_o_die-nummernspalte-kopiert-bei-jeder-textaenderung-den-ganzen-text-und-baut-den-zeilenindex-von-vorn.md"
+  },
+  "filed_by": {
+    "actor": "coderev",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "coderev, Kai Stalmann <kai@stalmann.org>",
+        "Domain": "code",
+        "Schwere": "Mittel",
+        "Betroffen": "`crates/krk-ui/src/appkit/nummernspalte.rs`, beide Flächen (Editor und Vorschau; in der Vorschau ändert sich der Text nur beim Inhaltswechsel, dort ist es je Wechsel einmal)"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1416_o_die-nummernspalte-kopiert-bei-jeder-textaenderung-den-ganzen-text-und-baut-den-zeilenindex-von-vorn.md",
+      "sha256": "sha256:cf78f3e035fe809263c953dc714e99bd0f6c5efd47ce0325fc61378c26ec6ab6",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

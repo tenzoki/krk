@@ -1,0 +1,37 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "5f15e9d3-35f3-4380-a926-9645133c384c",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260908-0645_o_die-vorabfrage-an-station-1-meldet-bei-verschwundenem-gh-gepackt-und-geschoben-obwohl-nichts-geschehen-ist.md"
+  },
+  "filed_by": {
+    "actor": "coder",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+        "Domain": "code",
+        "Schwere": "Niedrig — der Fall verlangt, dass `gh` zwischen `gh_pruefen` und",
+        "Baumstand": "`fe5fe9c` plus die Änderungen dieses Durchgangs",
+        "Betroffen": "`xtask/src/veroeffentlichung.rs`, `release_steht` und `release_frei_pruefen`"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260908-0645_o_die-vorabfrage-an-station-1-meldet-bei-verschwundenem-gh-gepackt-und-geschoben-obwohl-nichts-geschehen-ist.md",
+      "sha256": "sha256:7c02f4f919d2c0f25df2589b51dd5c6faa775626a71c9667bb4f2ff0fde9cf10",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

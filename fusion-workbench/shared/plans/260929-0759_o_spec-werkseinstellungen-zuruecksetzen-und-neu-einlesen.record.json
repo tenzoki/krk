@@ -1,0 +1,48 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "cddc1f3c-31b9-4b22-84cf-ef81106ca540",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "plan",
+  "narrative": {
+    "path": "shared/plans/260929-0759_o_spec-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Date": "2026-09-29",
+        "Status": "Draft",
+        "Geändert": "2026-09-29, siehe `## Änderung 260929`",
+        "Source": "Nutzerwunsch, wörtlich: „Wir brauchen einen Befehl unter Krk, der automatisch auf Werkseinstellungen zurücksetzt und die Werte neu einliest.“ Anlass ist die Auslieferung 2.1.1 mit geänderten fusion-Leseprofilen. Ein Nutzer mit vorhandener `readers.toml` bekommt sie bisher nur, wenn er KRK beendet, die Datei beiseitelegt und neu startet, weil KRK seine Ablagedateien allein beim Start liest. Antworten des Nutzers auf die erste Fragerunde: „1 b 2 a 3 a 4 a“."
+      },
+      "step_marks": {},
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "568efc74f49c74341f83e2b7079820e5eb32c225"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/plans/260929-0759_o_spec-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md",
+      "sha256": "sha256:9d42f35b73bab3cb1b2ffc26616b24fec91c19deea9a9f4ea441d6f9dd53589a",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "steps": [],
+    "criteria": [],
+    "acceptance": null
+  }
+}

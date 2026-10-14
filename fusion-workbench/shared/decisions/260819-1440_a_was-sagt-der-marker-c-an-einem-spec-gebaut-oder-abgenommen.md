@@ -2,7 +2,6 @@
 
 ---
 **Domain:** code
-**Status:** open
 **Filed by:** reconciler
 **Cross-references:** `circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/planning/260811-1552_o_spec-vier-tastenbefehle-pfade-kopieren-oeffnen.md:4`; `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260813-2348_o_spec-notizzettel-als-blatt-mit-zwei-zetteln.md`, `## Reconciliation Log` vom 260814-1247; `shared/planning/260818-1510_c_spec-verzeichnis-angleichen-und-abwurf-aus-fremden-apps.md`, `## Abgleich 260819-0057`; `circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/_c_circle.md`, `## Closure note`; `rules/fusion-workbench-conventions.md`, `### Planning files`
 

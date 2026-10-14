@@ -1,0 +1,36 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "1b234da4-faaf-4071-b9fe-6525d04f8caa",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260908-0719_o_zwei-saetze-zur-kuerzelregel-fehlen-in-default-keymap-toml-seit-die-frage-dahinter-beantwortet-ist.md"
+  },
+  "filed_by": {
+    "actor": "coder",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+        "Domain": "data — `resources/default-keymap.toml` ist die eine Quelle jeder Tastenbelegung und",
+        "Severity": "Low",
+        "Tree state": "`fe5fe9c` samt den Aenderungen dieses Durchgangs"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260908-0719_o_zwei-saetze-zur-kuerzelregel-fehlen-in-default-keymap-toml-seit-die-frage-dahinter-beantwortet-ist.md",
+      "sha256": "sha256:3037d30263174d74b1f8e2d7a05b2fe43ce1b5a19831a5e7c17cee6f75a810f3",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

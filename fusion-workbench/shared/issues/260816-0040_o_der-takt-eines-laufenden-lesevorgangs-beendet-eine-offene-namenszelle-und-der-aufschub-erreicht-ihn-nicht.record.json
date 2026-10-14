@@ -1,0 +1,45 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "d0d9132e-360b-4a8f-91ce-2a71e901f1e4",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260816-0040_o_der-takt-eines-laufenden-lesevorgangs-beendet-eine-offene-namenszelle-und-der-aufschub-erreicht-ihn-nicht.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Schwere": "niedrig bis mittel. Dieselbe Folge wie beim behobenen Weg — der getippte Name",
+        "Gefunden von": "coder, bei der Umsetzung des Entscheids vom 260816-0021",
+        "Betroffen": "`crates/krk-ui/src/appkit/tabelle.rs`, `DateifensterQuelle::einziehen`",
+        "Domain": "code"
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "27dca5742ed1e893df823883296c1302025dc24f"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260816-0040_o_der-takt-eines-laufenden-lesevorgangs-beendet-eine-offene-namenszelle-und-der-aufschub-erreicht-ihn-nicht.md",
+      "sha256": "sha256:db44612a4e5ed693a490cb04f464f8b23e16b57c5f5f1a83d78a0c5272194344",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

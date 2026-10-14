@@ -1,0 +1,45 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "41dd65df-96f5-424f-9eb7-8bba68ee2963",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260816-1803_o_der-kommentar-zu-deep-nennt-den-tabulator-als-frei-er-liegt-seit-der-runde-1-auf-fenster-wechseln.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Schwere": "niedrig. Kein Verhalten ist falsch, und keine Probe hält die",
+        "Gefunden von": "`ontocoder`, bei Schritt E2 der elften Runde",
+        "Betroffen": "`resources/default-keymap.toml`, Kommentarblock bei",
+        "Domain": "data"
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "37ca972e0eab477221ff6b38aa35a5d8125af34c"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260816-1803_o_der-kommentar-zu-deep-nennt-den-tabulator-als-frei-er-liegt-seit-der-runde-1-auf-fenster-wechseln.md",
+      "sha256": "sha256:2e879cc852e7f4e89032c065d47f5126b466a45695d1eaceca1de4e08d041424",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

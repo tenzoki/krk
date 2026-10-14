@@ -1,0 +1,45 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "a051ce99-faca-47b9-a782-12344fe0edc8",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0512_o_f4-nimmt-am-schmalen-fenster-eine-datei-in-einen-editor-an-den-niemand-sieht.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Schwere": "mittel (kein Absturz und kein Datenverlust, aber ein stiller Zustand, der von außen",
+        "Gefunden": "coder, bei der Umsetzung von Schritt 2",
+        "Betroffen": "`crates/krk-ui/src/appkit/anwendung.rs`, `im_editor_oeffnen` /",
+        "Domain": "code"
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "a2ea876b0cae63b92542dba3544324da6dbaf463"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0512_o_f4-nimmt-am-schmalen-fenster-eine-datei-in-einen-editor-an-den-niemand-sieht.md",
+      "sha256": "sha256:06fe9e4278c76a62e9483c6115f00f10d60144efa7a0c1156110663b01600289",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

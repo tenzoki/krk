@@ -1,0 +1,51 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "33e894bb-9270-4329-a02d-79ec76c85210",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "dropped",
+  "claim": null,
+  "mode": {
+    "value": "ordinary",
+    "source": null
+  },
+  "origin": {
+    "kind": "legacy-unknown",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "shaper",
+    "person": null
+  },
+  "narrative": {
+    "path": "work-packages/260809-2040-tastenbelegung-als-markdown-in-downloads/_b_circle.md"
+  },
+  "depends_on": [],
+  "active_documents": [],
+  "references": [],
+  "evidence": [],
+  "outcome": {
+    "class": "bounded",
+    "reason": "closed bounded (legacy Circle marker)",
+    "evidence": []
+  },
+  "provenance": {
+    "source": "legacy-terminal",
+    "legacy_fields": {
+      "file_marker": "b",
+      "head": {
+        "Domain": "code",
+        "Status": "anticipated",
+        "Filed by": "shaper (anticipated-circle mode)",
+        "Active spec/plan": "circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_*_spec-tastenbelegung-als-markdown-in-downloads.md (Abnahmekriterien) und circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_*_plan-tastenbelegung-als-markdown-in-downloads.md (Ausführungsstand)",
+        "Active session history": "circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0107-orchestrator-session.md"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260809-2040-tastenbelegung-als-markdown-in-downloads/_b_circle.md",
+      "sha256": "sha256:1ef380586e8650e719d624bdf6a86a3b751d28a59ab1ab54c045ab6dc4b9391f",
+      "kind": "other"
+    }
+  },
+  "extensions": {}
+}

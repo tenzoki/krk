@@ -1,0 +1,49 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "ba4cc31a-6d74-4992-bcc7-106b5cf9c89f",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-in-dessen-ordner.md"
+  },
+  "filed_by": {
+    "actor": "shaper",
+    "person": null
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "a",
+      "head": {
+        "Domain": "code",
+        "Status": "answered",
+        "Filed by": "shaper",
+        "Cross-references": "`crates/krk-ui/src/angezeigtedatei.rs:1-58` (`welche`, die Quelle des Ordnersprungs); `crates/krk-core/src/tasten/belegung.rs:866-880` (`Kommando::OrdnerDerDatei`); `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern` (die Runde, die den Ordnersprung gebaut hat)"
+      },
+      "derived": {
+        "/control/answer_ref": {
+          "rule": "answer-ref-self",
+          "evidence": "unresolvable-answer-line"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-in-dessen-ordner.md",
+      "sha256": "sha256:24c6e101969999fba74d9b7df3e8a9e2baac73a72060c84d019c4066dc738d0e",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-in-dessen-ordner.md",
+      "sha256": "sha256:24c6e101969999fba74d9b7df3e8a9e2baac73a72060c84d019c4066dc738d0e",
+      "kind": "decision"
+    },
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

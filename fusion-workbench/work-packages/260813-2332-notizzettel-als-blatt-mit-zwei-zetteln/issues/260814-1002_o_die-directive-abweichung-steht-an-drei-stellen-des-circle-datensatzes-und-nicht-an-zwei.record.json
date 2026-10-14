@@ -1,0 +1,42 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "fc33e488-f0dd-4928-9cb1-be0fb3c4d4ac",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1002_o_die-directive-abweichung-steht-an-drei-stellen-des-circle-datensatzes-und-nicht-an-zwei.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Schwere": "niedrig. Kein Bau, kein Verhalten. Dieselbe Schwere und derselbe Gegenstand wie"
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "e849ff8b3b7a03b118a256dcc2620b29f6ae4b39"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1002_o_die-directive-abweichung-steht-an-drei-stellen-des-circle-datensatzes-und-nicht-an-zwei.md",
+      "sha256": "sha256:6b7c07edb374896b9838298c5c1bf2a8409c7bec0e2f687780ba5a7b4cf137bb",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

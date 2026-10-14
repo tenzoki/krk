@@ -1,0 +1,45 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "5bf8d8a2-5a87-457e-9d18-f3107674e3ff",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260820-0602_o_make-check-prueft-den-ganzen-arbeitsbereich-und-bricht-bei-parallelen-agenten-an-fremden-dateien-ab.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Gefilt von": "orchestrator, Sitzung `260819-2026`",
+        "Gefunden": "am eigenen Lauf, während der Schritte 1 bis 3 der Runde 14.",
+        "Schwere": "niedrig in der Wirkung, hoch in der Verführung. Nichts geht kaputt, solange der",
+        "Baumstand": "`91f8727`."
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "dfacf29bdbf52defd5c9e5cbc0abb422d55aa912"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260820-0602_o_make-check-prueft-den-ganzen-arbeitsbereich-und-bricht-bei-parallelen-agenten-an-fremden-dateien-ab.md",
+      "sha256": "sha256:e070f09d7512c5eb8bdf192c376ad9387321af6fb52498d9549d8af5c9fb98e9",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

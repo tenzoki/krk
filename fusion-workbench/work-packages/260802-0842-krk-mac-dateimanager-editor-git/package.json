@@ -1,0 +1,51 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "d87eb056-d223-4120-952d-8609e2dcd8b3",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "dropped",
+  "claim": null,
+  "mode": {
+    "value": "ordinary",
+    "source": null
+  },
+  "origin": {
+    "kind": "legacy-unknown",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "shaper",
+    "person": null
+  },
+  "narrative": {
+    "path": "work-packages/260802-0842-krk-mac-dateimanager-editor-git/_b_circle.md"
+  },
+  "depends_on": [],
+  "active_documents": [],
+  "references": [],
+  "evidence": [],
+  "outcome": {
+    "class": "bounded",
+    "reason": "closed bounded (legacy Circle marker)",
+    "evidence": []
+  },
+  "provenance": {
+    "source": "legacy-terminal",
+    "legacy_fields": {
+      "file_marker": "b",
+      "head": {
+        "Domain": "code",
+        "Status": "bounded",
+        "Filed by": "shaper (anticipated-circle mode)",
+        "Active spec/plan": "circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_*_spec-navigator-geruest.md (Abnahmekriterien) und circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_*_plan-navigator-geruest-runde-1.md (Ausführungsstand); beide seit dem 260807-1035 auf `_c_`",
+        "Active session history": "circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-2257-orchestrator-session.md"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260802-0842-krk-mac-dateimanager-editor-git/_b_circle.md",
+      "sha256": "sha256:4722d345541734433dd68e866fecbc0abcd646456362c275d310aa6c539ab78a",
+      "kind": "other"
+    }
+  },
+  "extensions": {}
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "d8402d69-31a1-4e83-9353-9c2fb66594aa",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260825-2127_o_das-erweiterte-zeitfeld-steht-mit-vollem-rumpf-auch-im-hauptverzeichnis.md"
+  },
+  "filed_by": {
+    "actor": "coderev",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Domain": "code",
+        "Filed by": "coderev, Kai Stalmann <kai@stalmann.org>",
+        "Cross-references": "`crates/krk-core/src/operation/zippen.rs:680-703` (`zeit_uebernehmen`, der Kommentar bei `:690-692`), `:610-616` (`FELD_ERWEITERTE_ZEIT`); `Cargo.toml:176-201` (die Messtabelle); `crates/krk-core/tests/operation.rs:1416-1462` (`jeder_eintrag_traegt_beide_zusatzfelder_mit_der_epochensekunde`)"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260825-2127_o_das-erweiterte-zeitfeld-steht-mit-vollem-rumpf-auch-im-hauptverzeichnis.md",
+      "sha256": "sha256:25b7b659c260947b80f1acc693facfce330e980518ca5324b6d897add322e97f",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "1b206fe9-b2ff-45f4-bdd0-f15e46f9b8f6",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "shared/decisions/260906-0206_a_werden-dateinamen-mit-vorauslaufendem-zeitstempel-umbenannt-oder-vermerkt.md"
+  },
+  "filed_by": {
+    "actor": "coder",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [
+    "260812-1805_*_sechs-sitzungsprotokolle-tragen-einen-zeitstempel-aus-der-zukunft.md",
+    "260828-1044_*_fuenf-history-dateien-der-runde-20-tragen-zeitstempel-die-nach-ihrem-eigenen-commit-liegen.md",
+    "260824-1758_*_die-zeitstempel-in-dateinamen-laufen-der-uhr-voraus-bis-zu-drei-stunden.md",
+    "260818-0343_*_zwei-dateien-dieser-sitzung-tragen-einen-zeitstempel-fast-zwei-stunden-in-der-zukunft.md",
+    "260810-0918_*_der-plan-zitiert-einen-defekt-mit-einem-zeitstempel-den-sechs-datensaetze-tragen.md"
+  ],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "a",
+      "head": {
+        "Domain": "code",
+        "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+        "Cross-references": "`260812-1805_*_sechs-sitzungsprotokolle-tragen-einen-zeitstempel-aus-der-zukunft.md`, `260828-1044_*_fuenf-history-dateien-der-runde-20-tragen-zeitstempel-die-nach-ihrem-eigenen-commit-liegen.md`, `260824-1758_*_die-zeitstempel-in-dateinamen-laufen-der-uhr-voraus-bis-zu-drei-stunden.md`, `260818-0343_*_zwei-dateien-dieser-sitzung-tragen-einen-zeitstempel-fast-zwei-stunden-in-der-zukunft.md`, `260810-0918_*_der-plan-zitiert-einen-defekt-mit-einem-zeitstempel-den-sechs-datensaetze-tragen.md`, `rules/fusion-workbench-conventions.md` `## Timestamps`"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260906-0206_a_werden-dateinamen-mit-vorauslaufendem-zeitstempel-umbenannt-oder-vermerkt.md",
+      "sha256": "sha256:e1b36b3d4230bbe5890778d28d0416d46b21fb9a9ea666b9efcf50fdb8e16022",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": "260905-2008-orchestrator-session.md",
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "bd725927-689a-4b42-9e72-56ca4d4ff55b",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260910-1146_o_die-zahlenschreibweise-wohnt-jetzt-in-ablage-neuerungen-und-gehoert-dort-nicht-hin.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "orchestrator, Kai Stalmann <kai@stalmann.org>",
+        "Domain": "code",
+        "Gefunden": "vom Bau des Schrittes 5 selbst, der den Zielort im eigenen Bericht als nicht"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260910-1146_o_die-zahlenschreibweise-wohnt-jetzt-in-ablage-neuerungen-und-gehoert-dort-nicht-hin.md",
+      "sha256": "sha256:3d43bbf4cfb2943ab17ecf0847c76a254b7a0af62981558e337323495dbc5ccb",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

@@ -2,7 +2,6 @@
 
 ---
 **Domain:** code
-**Status:** open
 **Filed by:** analyst
 **Cross-references:** `shared/decisions/260815-1145_*_schreiben-zitate-im-code-den-marker-aus-oder-die-sternform.md` (the answered question this one carves out of), `shared/issues/260817-1130_*_die-sternform-fuer-zitate-gilt-seit-dem-260815-und-drei-runden-schreiben-den-marker-aus.md` (the compliance defect, four rounds of it), `circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0013_*_two-decision-records-cite-each-other-with-markers-neither-of-them-carries-any-more.md` (the two instances that raised it), `CLAUDE.md` `## Bindende Grundlage: die Entscheidungsdatensätze` (the location rule)
 

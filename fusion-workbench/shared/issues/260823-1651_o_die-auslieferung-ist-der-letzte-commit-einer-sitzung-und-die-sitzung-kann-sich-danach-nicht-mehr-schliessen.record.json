@@ -1,0 +1,40 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "22111904-8d8a-4075-9161-21af85def268",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260823-1651_o_die-auslieferung-ist-der-letzte-commit-einer-sitzung-und-die-sitzung-kann-sich-danach-nicht-mehr-schliessen.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {},
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "278a0083aae82a524db1a8892320fa69a91dd3f1"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260823-1651_o_die-auslieferung-ist-der-letzte-commit-einer-sitzung-und-die-sitzung-kann-sich-danach-nicht-mehr-schliessen.md",
+      "sha256": "sha256:a59e3acaa8f072dbc7581eb0958d895af3a7e41cdaf560833650364e0067ec11",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

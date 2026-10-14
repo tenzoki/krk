@@ -1,0 +1,39 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "e991fb15-0902-4b03-8ff4-8dba857749f9",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "shared/decisions/260819-1440_a_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md"
+  },
+  "filed_by": {
+    "actor": "reconciler",
+    "person": null
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "a",
+      "head": {
+        "Domain": "code",
+        "Status": "open",
+        "Filed by": "reconciler",
+        "Cross-references": "`circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/planning/260811-1552_o_spec-vier-tastenbefehle-pfade-kopieren-oeffnen.md:4`; `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260813-2348_o_spec-notizzettel-als-blatt-mit-zwei-zetteln.md`, `## Reconciliation Log` vom 260814-1247; `shared/planning/260818-1510_c_spec-verzeichnis-angleichen-und-abwurf-aus-fremden-apps.md`, `## Abgleich 260819-0057`; `circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/_c_circle.md`, `## Closure note`; `rules/fusion-workbench-conventions.md`, `### Planning files`"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260819-1440_a_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md",
+      "sha256": "sha256:eaf871dc6462b9b9690ffd2e5995e857fd788a444032bcdebeae1859d12af02a",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": "260905-2008-orchestrator-session.md",
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

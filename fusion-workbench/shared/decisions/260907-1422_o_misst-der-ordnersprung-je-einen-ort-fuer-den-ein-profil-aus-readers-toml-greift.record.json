@@ -1,0 +1,40 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "5b841869-5a5a-49fc-9aad-e28bdb079130",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "shared/decisions/260907-1422_o_misst-der-ordnersprung-je-einen-ort-fuer-den-ein-profil-aus-readers-toml-greift.md"
+  },
+  "filed_by": {
+    "actor": "coder",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [
+    "260824-1900_*_wie-wird-die-arbeit-dieser-runde-jemals-gegen-l7-gemessen-die-messstrecke-sieht-sie-nicht.md"
+  ],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Domain": "code",
+        "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+        "Cross-references": "`260824-1900_*_wie-wird-die-arbeit-dieser-runde-jemals-gegen-l7-gemessen-die-messstrecke-sieht-sie-nicht.md` (Möglichkeit 2 gewählt, Möglichkeit 3 nicht); `260827-1322_*_faellt-das-default-profil-auch-im-messmodus-an-und-was-misst-l7-danach.md`; `crates/krk-ui/src/appkit/anwendung.rs` (`Anwendungsdelegierter::sitzung_laden`); `crates/krk-core/src/leseprofil/bausteine.rs` (`zusammenfassen_gezaehlt`); `crates/krk-ui/src/messmodus.rs` (`sitzungsschritte`, der L7-Ordnerblock)"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-1422_o_misst-der-ordnersprung-je-einen-ort-fuer-den-ein-profil-aus-readers-toml-greift.md",
+      "sha256": "sha256:81dbb18cf77a3fc34bda0b415aab8e3a39fdabb73a42cbc54b794a326a45b944",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "answer_ref": null,
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

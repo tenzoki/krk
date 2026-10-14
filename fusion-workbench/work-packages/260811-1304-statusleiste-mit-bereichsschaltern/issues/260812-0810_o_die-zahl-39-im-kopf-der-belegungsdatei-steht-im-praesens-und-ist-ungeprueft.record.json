@@ -1,0 +1,45 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "e231eca8-c190-4c54-b4f7-94c439c51f29",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0810_o_die-zahl-39-im-kopf-der-belegungsdatei-steht-im-praesens-und-ist-ungeprueft.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Schwere": "niedrig (kein falsches Verhalten; eine Zahl in einem Kommentar, die falsch sein kann)",
+        "Gefunden": "ontocoder, beim Berichtigen des Spaltenblock-Kommentars am 260812-0805",
+        "Betroffen": "`resources/default-keymap.toml`, Dateikopf",
+        "Domain": "code"
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "caeaa182f43071e8a1eaf72880990a154fec9696"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0810_o_die-zahl-39-im-kopf-der-belegungsdatei-steht-im-praesens-und-ist-ungeprueft.md",
+      "sha256": "sha256:6e415664941fe64c3f0e4478027213247dfa991016d586052693ce8032f97220",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

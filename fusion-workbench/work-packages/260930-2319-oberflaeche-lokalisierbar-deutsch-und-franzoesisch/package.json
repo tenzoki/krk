@@ -1,0 +1,75 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "827c07e6-559e-4ef3-b14a-6ed9c86450ad",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "claimed",
+  "claim": {
+    "checkout_id": "6c11b1f2",
+    "person": "Kai Stalmann <kai@stalmann.org>",
+    "claimed_at": null
+  },
+  "mode": {
+    "value": "autonomous",
+    "source": {
+      "kind": "legacy",
+      "raw": "**Mode:** autonomous"
+    }
+  },
+  "origin": {
+    "kind": "user-request",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "user",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "narrative": {
+    "path": "work-packages/260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch/260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch.md"
+  },
+  "depends_on": [],
+  "active_documents": [
+    {
+      "ref": {
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "record_id": "bd299a4c-75ad-4833-8205-5886711b7225",
+        "display": "261001-0735_o_spec-oberflaeche-lokalisierbar-deutsch-und-franzoesisch.md"
+      },
+      "role": "spec",
+      "revision": "sha256:cac73df2d922fcdf83744cef3b543030b34fb95082384deb4f3bf7e6c86a22a1"
+    }
+  ],
+  "references": [
+    "260930-1914-kontextmenue-traegt-duplicate-mit-namensdialog.md",
+    "261001-0850_*_plan-oberflaeche-folgt-der-systemsprache-deutsch-franzoesisch-englisch.md"
+  ],
+  "evidence": [],
+  "outcome": null,
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": null,
+      "head": {
+        "Domain": "code",
+        "Status": "claimed",
+        "Claim": "6c11b1f2 — Kai Stalmann <kai@stalmann.org>, 260930-2319",
+        "Mode": "autonomous",
+        "Active spec/plan": "261001-0735_*_spec-oberflaeche-lokalisierbar-deutsch-und-franzoesisch.md (Spec), 261001-0850_*_plan-oberflaeche-folgt-der-systemsprache-deutsch-franzoesisch-englisch.md (Plan)",
+        "Cross-references": "260930-1914-kontextmenue-traegt-duplicate-mit-namensdialog.md",
+        "Filed by": "user, Kai Stalmann <kai@stalmann.org>"
+      },
+      "derived": {
+        "/references/1": {
+          "rule": "binding-carried-as-reference",
+          "evidence": "archived"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch/260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch.md",
+      "sha256": "sha256:56371e1533593136e6030df467f117d84ce43b6abbde848151c88546685bc880",
+      "kind": "other"
+    }
+  },
+  "extensions": {}
+}

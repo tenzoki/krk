@@ -1,6 +1,5 @@
 # `Belegungsmodell::zeile_traegt` führt denselben Vergleich eingesetzt und ruft die eine Fassung nicht
 
-**Status:** Open
 **Domain:** Filter der Runde 10 / Tippsuche der Belegungsansicht aus der Runde 7
 **Filed by:** coder, beim Umsetzen von A2
 **Related:** `planning/260814-2102_o_plan-tippen-filtert-dateiliste-flach-und-tief.md`, Schritt A2; `planning/260814-1830_o_spec-tippen-filtert-dateiliste-flach-und-tief.md`, C1.3

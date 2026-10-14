@@ -1,0 +1,45 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "23b5c697-c8a3-48df-b8f1-ebf8d74a8f24",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0700_o_der-breitenschritt-kommt-neben-einem-gedeckelten-bereich-gekuerzt-an.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Schwere": "niedrig (der Befehl wirkt und wirkt in die richtige Richtung; er wirkt nur schwächer,",
+        "Gefunden": "coder, bei der Behebung von",
+        "Betroffen": "`crates/krk-ui/src/fenstermodell.rs`, `massstab` zusammen mit `breite_aendern`",
+        "Domain": "code"
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "026c665dc6d283b7e882bb68d6f04c25c1fe4f9c"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0700_o_der-breitenschritt-kommt-neben-einem-gedeckelten-bereich-gekuerzt-an.md",
+      "sha256": "sha256:81dab13a1915cdfcb14b0eb1ae8bc6ebf00b737a681298cf1c37ef49a9aa076d",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

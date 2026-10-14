@@ -1,0 +1,51 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "ed425746-9f97-42fa-9743-37393f69ccf4",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "done",
+  "claim": null,
+  "mode": {
+    "value": "ordinary",
+    "source": null
+  },
+  "origin": {
+    "kind": "legacy-unknown",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "shaper",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "narrative": {
+    "path": "work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/_c_circle.md"
+  },
+  "depends_on": [],
+  "active_documents": [],
+  "references": [],
+  "evidence": [],
+  "outcome": {
+    "class": "legacy-completed",
+    "reason": "",
+    "evidence": []
+  },
+  "provenance": {
+    "source": "legacy-terminal",
+    "legacy_fields": {
+      "file_marker": "c",
+      "head": {
+        "Domain": "code",
+        "Filed by": "shaper (anticipated-circle mode), Kai Stalmann <kai@stalmann.org>",
+        "Claim": "Unclaimed",
+        "Active spec/plan": "circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/planning/260827-1322_*_plan-vorschau-zaehlt-ordnerinhalt-im-default-profil.md",
+        "Active session history": "circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/history/260827-1635-orchestrator-session.md"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/_c_circle.md",
+      "sha256": "sha256:9199d8454245c06fb2dd8b391fcb5ce3c85bfdafdc0357073017a60c1833cac4",
+      "kind": "other"
+    }
+  },
+  "extensions": {}
+}

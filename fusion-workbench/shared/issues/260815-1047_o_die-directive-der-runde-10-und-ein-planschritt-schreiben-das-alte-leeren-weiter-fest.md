@@ -2,7 +2,6 @@
 
 ---
 **Domain:** code
-**Status:** open
 **Filed by:** coderev
 **Cross-references:** `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/_b_circle.md:14` (`## Directive`); `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/planning/260814-2102_o_plan-tippen-filtert-dateiliste-flach-und-tief.md:340-341` (Schritt B2, `Changes`); `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/planning/260814-1830_o_spec-…:308-309` (C1.9, C1.10 — nachgezogen); `CLAUDE.md` (`## Worum es geht`, „Die vollständige Directive steht im Circle-Datensatz …, Abschnitt `## Directive`")
 

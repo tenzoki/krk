@@ -1,0 +1,36 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "6e08081f-94c3-4cd0-9b00-76429d710f26",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_belegungsmodell-zeile-traegt-fuehrt-denselben-vergleich-eingesetzt-und-ruft-die-eine-fassung-nicht.md"
+  },
+  "filed_by": {
+    "actor": "coder",
+    "person": "beim Umsetzen von A2"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Status": "Open",
+        "Domain": "Filter der Runde 10 / Tippsuche der Belegungsansicht aus der Runde 7",
+        "Filed by": "coder, beim Umsetzen von A2",
+        "Related": "`planning/260814-2102_o_plan-tippen-filtert-dateiliste-flach-und-tief.md`, Schritt A2; `planning/260814-1830_o_spec-tippen-filtert-dateiliste-flach-und-tief.md`, C1.3"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_belegungsmodell-zeile-traegt-fuehrt-denselben-vergleich-eingesetzt-und-ruft-die-eine-fassung-nicht.md",
+      "sha256": "sha256:12c4fedb261956aec086e321e649698e5c72037474f49284e47044af459b4c25",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

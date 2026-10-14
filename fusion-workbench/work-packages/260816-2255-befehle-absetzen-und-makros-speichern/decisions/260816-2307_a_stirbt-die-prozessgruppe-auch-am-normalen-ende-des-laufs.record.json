@@ -1,0 +1,49 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "43b2008f-dd2f-4b1e-84ec-dc88f9964df7",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_stirbt-die-prozessgruppe-auch-am-normalen-ende-des-laufs.md"
+  },
+  "filed_by": {
+    "actor": "planner",
+    "person": null
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "a",
+      "head": {
+        "Domain": "code",
+        "Status": "answered",
+        "Filed by": "planner",
+        "Cross-references": "`260816-2240_*_spec-befehle-absetzen-und-makros-speichern.md` (C1.9, C1.10, C1.15 und `## Was der Befehlslauf nicht kann`); `260816-2307_*_plan-befehle-absetzen-und-makros-speichern.md` Schritt A3 und die Zeile `**Decidability:**` im Plankopf"
+      },
+      "derived": {
+        "/control/answer_ref": {
+          "rule": "answer-ref-self",
+          "evidence": "unresolvable-answer-line"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_stirbt-die-prozessgruppe-auch-am-normalen-ende-des-laufs.md",
+      "sha256": "sha256:6cef7da59a288bfebe1bf993408c0490f80f633608b0d11fcdd198344d83eda5",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_stirbt-die-prozessgruppe-auch-am-normalen-ende-des-laufs.md",
+      "sha256": "sha256:6cef7da59a288bfebe1bf993408c0490f80f633608b0d11fcdd198344d83eda5",
+      "kind": "decision"
+    },
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

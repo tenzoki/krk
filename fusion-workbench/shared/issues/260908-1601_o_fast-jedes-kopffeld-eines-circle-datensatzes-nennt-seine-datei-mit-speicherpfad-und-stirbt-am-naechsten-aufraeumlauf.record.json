@@ -1,0 +1,36 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "dbc7d50b-ec1b-48d0-a243-b8a39b5d03bc",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260908-1601_o_fast-jedes-kopffeld-eines-circle-datensatzes-nennt-seine-datei-mit-speicherpfad-und-stirbt-am-naechsten-aufraeumlauf.md"
+  },
+  "filed_by": {
+    "actor": "coder",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+        "Domain": "Werkbankführung",
+        "Baumstand": "`2f4b7b2`",
+        "Schwere": "heute null, morgen mittel. Kein Bau, kein Verhalten, kein Leser, der heute ins"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260908-1601_o_fast-jedes-kopffeld-eines-circle-datensatzes-nennt-seine-datei-mit-speicherpfad-und-stirbt-am-naechsten-aufraeumlauf.md",
+      "sha256": "sha256:9211c32ffe00f171efbd14868da21eec1347603bba22121a7f975126d25152d1",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

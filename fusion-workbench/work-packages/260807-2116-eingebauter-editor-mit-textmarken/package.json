@@ -1,0 +1,51 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "68f6b93e-8b04-47ff-aeb6-0fd409ca2e99",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "dropped",
+  "claim": null,
+  "mode": {
+    "value": "ordinary",
+    "source": null
+  },
+  "origin": {
+    "kind": "legacy-unknown",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "shaper",
+    "person": null
+  },
+  "narrative": {
+    "path": "work-packages/260807-2116-eingebauter-editor-mit-textmarken/_b_circle.md"
+  },
+  "depends_on": [],
+  "active_documents": [],
+  "references": [],
+  "evidence": [],
+  "outcome": {
+    "class": "bounded",
+    "reason": "closed bounded (legacy Circle marker)",
+    "evidence": []
+  },
+  "provenance": {
+    "source": "legacy-terminal",
+    "legacy_fields": {
+      "file_marker": "b",
+      "head": {
+        "Domain": "code",
+        "Status": "bounded",
+        "Filed by": "shaper (anticipated-circle mode)",
+        "Active spec/plan": "circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_*_plan-eingebauter-editor-mit-textmarken.md (Spec: .../planning/260807-2147_*_spec-eingebauter-editor-mit-textmarken.md)",
+        "Active session history": "circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0845-orchestrator-session.md"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260807-2116-eingebauter-editor-mit-textmarken/_b_circle.md",
+      "sha256": "sha256:e1ef2bc838a1b0c2f310887eddf59a27164fbefbcb7d9060a8ca8df5a7f3baaf",
+      "kind": "other"
+    }
+  },
+  "extensions": {}
+}

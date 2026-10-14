@@ -1,0 +1,45 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "947965aa-62bd-471b-b526-b4c20978d454",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1854_o_der-kurzhinweis-der-statuszeile-veraltet-bei-einer-fensteraenderung.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Zwei Richtungen, beide erreichbar": "",
+        "Drei Zuschnitte, keiner ist hier gewählt": "",
+        "Gewicht": "gering. Kein falscher Satz, keine verlorene Auskunft — der Hinweis",
+        "Herkunft": "Circle der Runde 6, Turn 3, Rücknahme von Schritt 11 (C5.10)."
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "df4ec003655623b2d5fef4a7f53bdf9399154810"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1854_o_der-kurzhinweis-der-statuszeile-veraltet-bei-einer-fensteraenderung.md",
+      "sha256": "sha256:5cd7b473f95a366f01b14e44999b754faf3d046a02853ea3158c62ef939c606e",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "c9987e25-b885-4c91-a0c4-b3102d79cd3d",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260826-1333_o_return-bei-unlesbarer-regel-schliesst-das-stapelblatt-und-die-statuszeile-nennt-den-falschen-grund.md"
+  },
+  "filed_by": {
+    "actor": "coderev",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "coderev, Kai Stalmann <kai@stalmann.org>",
+        "Domain": "code",
+        "Schwere": "Mittel",
+        "Betroffen": "`crates/krk-ui/src/appkit/blaetter/stapelumbenennen.rs`, `crates/krk-ui/src/appkit/anwendung.rs`"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1333_o_return-bei-unlesbarer-regel-schliesst-das-stapelblatt-und-die-statuszeile-nennt-den-falschen-grund.md",
+      "sha256": "sha256:d08a935c37e433f553130985463ee732edd66f0d23afa78e8ff657a3adef3e4d",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "48aac5ba-b5d6-48a7-873e-c0d38002f5e6",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "done",
+  "claim": null,
+  "mode": {
+    "value": "ordinary",
+    "source": null
+  },
+  "origin": {
+    "kind": "legacy-unknown",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": null
+  },
+  "narrative": {
+    "path": "work-packages/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/_c_circle.md"
+  },
+  "depends_on": [],
+  "active_documents": [],
+  "references": [],
+  "evidence": [],
+  "outcome": {
+    "class": "legacy-completed",
+    "reason": "",
+    "evidence": []
+  },
+  "provenance": {
+    "source": "legacy-terminal",
+    "legacy_fields": {
+      "file_marker": "c",
+      "head": {
+        "Domain": "code",
+        "Status": "closed",
+        "Filed by": "orchestrator",
+        "Active spec/plan": "260818-1510_*_spec-verzeichnis-angleichen-und-abwurf-aus-fremden-apps.md (seit dem Aufräumlauf 260819-1613 unter `archive/`)",
+        "Active session history": "shared/history/260818-1117-orchestrator-session.md"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/_c_circle.md",
+      "sha256": "sha256:b5852ba438893da615efa2a506b2941bad541a56a66ab603172a9c6a0a59d6db",
+      "kind": "other"
+    }
+  },
+  "extensions": {}
+}

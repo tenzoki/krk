@@ -1,0 +1,42 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "26cf80ad-3511-4141-bb4f-f00a1fe2b632",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1345_o_der-nachtrag-aus-a3-zaehlt-die-ausnahmeliste-mit-zwei-eintraegen-und-turn-2-hat-einen-dritten-gebracht.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Schwere": "niedrig. Kein Verhalten, kein Bau. Der Nachtrag ist von Turn 1 und war beim"
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "e99f45429aaa098e13ece24dad31cad4510bf6d1"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1345_o_der-nachtrag-aus-a3-zaehlt-die-ausnahmeliste-mit-zwei-eintraegen-und-turn-2-hat-einen-dritten-gebracht.md",
+      "sha256": "sha256:9d5aa03f591c86d02385a6a4da131874664e89a8bea5a4e5125b392f687b856f",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

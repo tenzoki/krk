@@ -1,0 +1,45 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "2d46a777-5e1e-4ef4-be65-731991f2ef43",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260811-2157_o_fuenf-commits-stehen-hinter-dem-letzten-turn-ende-ohne-eigene-turn-grenze.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Schwere": "Niedrig",
+        "Gefunden": "`reconciler`, Abschluss-Abgleich der Sitzung 260811-1454",
+        "Betroffen": "das Verfahren, nicht der Code dieses Projekts",
+        "Domain": "code"
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "485d891ff7db5ebf3eda953ba63f8fb731c57690"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260811-2157_o_fuenf-commits-stehen-hinter-dem-letzten-turn-ende-ohne-eigene-turn-grenze.md",
+      "sha256": "sha256:1ca6126aa68382f401fe06799692ac2550bd9a2694a88bfba00f683bea9849e6",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

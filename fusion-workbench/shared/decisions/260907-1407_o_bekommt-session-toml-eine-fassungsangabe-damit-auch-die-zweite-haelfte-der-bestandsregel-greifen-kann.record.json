@@ -1,0 +1,38 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "d4c17a77-1bad-421a-b420-c7fcb4961a73",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "shared/decisions/260907-1407_o_bekommt-session-toml-eine-fassungsangabe-damit-auch-die-zweite-haelfte-der-bestandsregel-greifen-kann.md"
+  },
+  "filed_by": {
+    "actor": "coder",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Domain": "code",
+        "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+        "Cross-references": "`260821-0142_*_gilt-die-strenge-bestandsregel-auch-fuer-session-toml-und-keymap-toml.md` — der Entscheid, dessen eine Hälfte hier übrig bleibt; `260820-2235_*_eine-bookmarks-toml-die-serde-toleriert-aber-nicht-versteht-wird-still-als-leer-gelesen.md` — der Defekt, aus dem die Bestandsregel stammt; `crates/krk-core/src/ablage/sitzung.rs` (`Sitzung`), `crates/krk-core/src/ablage/pfade.rs` (`Datei::leerbefund`)"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-1407_o_bekommt-session-toml-eine-fassungsangabe-damit-auch-die-zweite-haelfte-der-bestandsregel-greifen-kann.md",
+      "sha256": "sha256:2cedbdf7631ac9fd558814fd22e37d830247f95d8d5586a000d92c181c4908e8",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "answer_ref": null,
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

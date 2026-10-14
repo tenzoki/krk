@@ -1,0 +1,38 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "61ff6a8a-527d-4950-84dd-3d34537ab703",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/decisions/260828-1041_a_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md"
+  },
+  "filed_by": {
+    "actor": "shaper",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "a",
+      "head": {
+        "Domain": "code",
+        "Filed by": "shaper (anticipated-circle mode), Kai Stalmann <kai@stalmann.org>",
+        "Cross-references": "`circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/_*_circle.md` (Directive und Grounding, Absatz zum Einhängepunkt); `resources/default-keymap.toml:81-84` und `:990-997` (die Reservierung); `crates/krk-ui/src/appkit/menue.rs:105-116` (derselbe Satz am Menü); `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260805-0000_*_menuekuerzel-in-die-konflikterkennung-oder-daneben.md` (der Nutzerentscheid, der `cmd+v` freihält)"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/decisions/260828-1041_a_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md",
+      "sha256": "sha256:9cb55129112a44e4671a070357c72a9addc0b204f572144f163a799f552c8eac",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": "260905-2008-orchestrator-session.md",
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

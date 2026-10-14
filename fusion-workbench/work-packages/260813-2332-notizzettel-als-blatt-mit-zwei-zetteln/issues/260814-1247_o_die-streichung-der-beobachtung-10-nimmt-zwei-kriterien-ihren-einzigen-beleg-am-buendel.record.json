@@ -1,0 +1,42 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "e5bcca31-27cb-49f8-8f5a-a710d70236fe",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1247_o_die-streichung-der-beobachtung-10-nimmt-zwei-kriterien-ihren-einzigen-beleg-am-buendel.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Schwere": "mittel. Der Weg der Meldung ist am Baum gelesen und sieht richtig aus; gesehen hat"
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "983d86e7718cc5094383fd85813ae88611f13d7a"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1247_o_die-streichung-der-beobachtung-10-nimmt-zwei-kriterien-ihren-einzigen-beleg-am-buendel.md",
+      "sha256": "sha256:5d0a798834e004a83a7f984dee27e912388dec87a55f92a908cd2fe2c5b9e6b3",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

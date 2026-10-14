@@ -1,0 +1,42 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "f36c8a8d-7a28-4384-8668-df450ced564a",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "shared/decisions/260918-0842_a_wer-vergibt-die-versionszahl-und-darf-ein-agent-den-auslieferungslauf-fahren.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "a",
+      "head": {
+        "Domain": "code",
+        "Filed by": "orchestrator, Kai Stalmann <kai@stalmann.org>",
+        "Cross-references": "260813-1534_*_darf-das-bauwerkzeug-den-tag-setzen-und-die-auslieferung-in-einem-kommando-fahren.md; 260821-1115_*_bekommt-der-veroeffentlichungsbefehl-eine-eigene-huelle-wie-certify-only-sh.md"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260918-0842_a_wer-vergibt-die-versionszahl-und-darf-ein-agent-den-auslieferungslauf-fahren.md",
+      "sha256": "sha256:553f35ab5fa5fb14a8e69221ccf33ad4429aebb7534ef64f11d66d5382aff545",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": {
+      "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+      "record_id": "f36c8a8d-7a28-4384-8668-df450ced564a",
+      "display": "260918-0842_a_wer-vergibt-die-versionszahl-und-darf-ein-agent-den-auslieferungslauf-fahren.md"
+    },
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

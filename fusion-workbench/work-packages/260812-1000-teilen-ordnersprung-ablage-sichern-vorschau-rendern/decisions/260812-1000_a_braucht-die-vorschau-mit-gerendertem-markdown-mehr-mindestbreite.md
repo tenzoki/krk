@@ -2,7 +2,6 @@
 
 ---
 **Domain:** code
-**Status:** answered
 **Filed by:** shaper (anticipated-circle mode)
 **Cross-references:** `crates/krk-ui/src/fenstermodell.rs:213` (`Bereich::mindestbreite`); `crates/krk-ui/src/appkit/fenster.rs:134` (`MINDESTGROESSE`, 780 Punkte); `circles/260811-1304-statusleiste-mit-bereichsschaltern/_b_circle.md` (Runde 5, `## Closure note`); `circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_a_circle.md`, `## Parent grounding stale` vom 260812-0816
 

@@ -2,7 +2,6 @@
 
 ---
 **Domain:** code
-**Status:** answered
 **Filed by:** shaper
 **Cross-references:** `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_*_spec-navigator-geruest.md`, Abschnitt `### C8` (die zehn Zusagen); `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_*_spec-eingebauter-editor-mit-textmarken.md:487-507` (die Runde, die statt einer elften Zahl zwei prüfbare Kriterien gesetzt hat); `crates/krk-bench/src/fixture.rs:22-31` und `:42` (die dünnbesetzten Prüfordner); `crates/krk-ui/src/messmodus.rs:820` (L1 misst zwanzig Pfeil-ab); `shared/planning/260816-1310_*_spec-inhaltsfilter-der-dateiliste.md`
 

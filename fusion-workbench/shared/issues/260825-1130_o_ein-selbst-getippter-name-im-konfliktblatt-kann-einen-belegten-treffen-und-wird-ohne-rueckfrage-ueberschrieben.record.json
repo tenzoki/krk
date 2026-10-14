@@ -1,0 +1,33 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "de2ed993-dde5-4ae3-abc3-37db06e19ecb",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260825-1130_o_ein-selbst-getippter-name-im-konfliktblatt-kann-einen-belegten-treffen-und-wird-ohne-rueckfrage-ueberschrieben.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "aus einem Nebenbefund der Durchsicht 260825-0942"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "orchestrator, aus einem Nebenbefund der Durchsicht `260825-0942`"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260825-1130_o_ein-selbst-getippter-name-im-konfliktblatt-kann-einen-belegten-treffen-und-wird-ohne-rueckfrage-ueberschrieben.md",
+      "sha256": "sha256:930b647be48aed0d762c9dab7de4ea8870e6ba4f8130ad453a65e949be4feccf",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

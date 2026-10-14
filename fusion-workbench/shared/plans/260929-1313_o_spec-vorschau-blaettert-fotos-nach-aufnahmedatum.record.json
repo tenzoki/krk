@@ -1,0 +1,47 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "93c7377b-caeb-4156-ae59-1d6ce1a00d2a",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "plan",
+  "narrative": {
+    "path": "shared/plans/260929-1313_o_spec-vorschau-blaettert-fotos-nach-aufnahmedatum.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Date": "2026-09-29",
+        "Status": "Draft",
+        "Source": "Wunsch des Nutzers vom 260929, wörtlich: „Allgemeines Reader Profile so erweitern, dass ein Baum dieser Struktur ein bestimmtes Scrollverhalten in der Vorschau realisiert: Fotos └── 2008 ├── <monat>, zB. 08 │ ├── 260827_162941_ss.png │ ├── Bild.jpg │ ├── IMG_0970_edited.jpeg. Wenn man innerhalb eines Jahresordners ist (Fotos/2008/) soll erst das erste Bild des ersten Monats angezeigt werden. Mit CMD-Pfeil-{hoch/runter} soll dann durch die Bilder navigiert werden. Wenn man innerhalb eines Monatsordners ist (Fotos/2008/08/) soll erst das erste Bild dieses Monats angezeigt werden. Mit CMD-Pfeil-{hoch/runter} soll dann durch die Bilder navigiert werden. Enter springt in beiden Fällen in den Ordner zu dem Bild.“ Klärung in einer Runde, Antworten des Nutzers vom 260929: „1 a 2 a 3 a 4c - lesegrenzen einfach erweitern“; die Vorgaben ohne Rückfrage hat er mit angenommen."
+      },
+      "step_marks": {},
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "c374be274044a209addd3e30bf01837d0b7bf199"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/plans/260929-1313_o_spec-vorschau-blaettert-fotos-nach-aufnahmedatum.md",
+      "sha256": "sha256:22a3965395cc33cb7272e7f10d3a0691f6127d81d82b28493016aa96a3cc8b47",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "steps": [],
+    "criteria": [],
+    "acceptance": null
+  }
+}

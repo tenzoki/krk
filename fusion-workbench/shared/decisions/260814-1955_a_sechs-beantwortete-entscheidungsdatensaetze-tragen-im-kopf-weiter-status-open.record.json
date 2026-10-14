@@ -1,0 +1,47 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "38278a92-eb08-4e82-8d64-364fddc9a99d",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "shared/decisions/260814-1955_a_sechs-beantwortete-entscheidungsdatensaetze-tragen-im-kopf-weiter-status-open.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "a",
+      "head": {
+        "Gefunden am": "260814-1950, beim Nachbessern des Spec auf die zweite Bewertung",
+        "Gemeldet von": "shaper",
+        "Herkunft": "neben der Arbeit am Circle `260814-1551-tippen-filtert-dateiliste-flach-und-tief` gefunden; die Ursache liegt im Ablauf, mit dem Datensätze beantwortet werden, und nicht in dessen Directive. Deshalb im gemeinsamen Speicher."
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "6cd122c474f826a32e071a970a221535b73dce25"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260814-1955_a_sechs-beantwortete-entscheidungsdatensaetze-tragen-im-kopf-weiter-status-open.md",
+      "sha256": "sha256:e9dded83910e04e91345042410d087ebbe1bcb99e651618f023d7ffc59fea6ad",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": "260905-2008-orchestrator-session.md",
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

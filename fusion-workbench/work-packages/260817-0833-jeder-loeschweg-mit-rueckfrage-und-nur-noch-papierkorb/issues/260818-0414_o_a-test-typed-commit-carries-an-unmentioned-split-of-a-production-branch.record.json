@@ -1,0 +1,46 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "8f5e5b0b-895f-4750-bbbc-7c2e7acc4daf",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0414_o_a-test-typed-commit-carries-an-unmentioned-split-of-a-production-branch.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Severity": "Low. Traceability only — the new branch is right, it is justified in a code",
+        "Found by": "coderev, review `reviews/260818-0410-coderev-bundle-f-die-messungen-und-der-waechter.md`",
+        "Affected": "`crates/krk-ui/src/kommandos/loeschwarnung.rs:766-780`, commit `441da86`",
+        "Tree state": "`a4d8211`",
+        "Domain": "code"
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "e843d90582395dcfbdb88725940e08dc39f30ea3"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0414_o_a-test-typed-commit-carries-an-unmentioned-split-of-a-production-branch.md",
+      "sha256": "sha256:7ff6854fa3113f482fb57a3dff9370eb7bf7f4d1104b85bdf0ab0d104f0e8de2",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

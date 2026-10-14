@@ -1,0 +1,38 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "34c58418-9889-41b1-b134-6ee11b8080e8",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "shared/decisions/260907-2127_o_heisst-die-variante-eintrag-textbefehl-weiter-so-jetzt-wo-eine-zugestellte-funktion-kein-textbefehl-ist.md"
+  },
+  "filed_by": {
+    "actor": "coder",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Domain": "code",
+        "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+        "Cross-references": ""
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-2127_o_heisst-die-variante-eintrag-textbefehl-weiter-so-jetzt-wo-eine-zugestellte-funktion-kein-textbefehl-ist.md",
+      "sha256": "sha256:dce884fb9c24e2dc01e55f96fe28c3a4195717fedf0b6cfb81a5f2c887357443",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "answer_ref": null,
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

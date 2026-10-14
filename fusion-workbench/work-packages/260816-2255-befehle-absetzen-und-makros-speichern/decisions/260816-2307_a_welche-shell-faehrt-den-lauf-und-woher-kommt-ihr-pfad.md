@@ -2,7 +2,6 @@
 
 ---
 **Domain:** code
-**Status:** open
 **Filed by:** planner
 **Cross-references:** `260816-2240_*_spec-befehle-absetzen-und-makros-speichern.md` (C1.2, C1.16, C1.17 und `## Offen für den Planner`, dritter Punkt); `shared/consult/260815-1354-befehlslauf-und-makros-in-krk.md` (`## Open Questions`, zweite Frage); `260816-2307_*_plan-befehle-absetzen-und-makros-speichern.md` Schritt A3 und A4
 

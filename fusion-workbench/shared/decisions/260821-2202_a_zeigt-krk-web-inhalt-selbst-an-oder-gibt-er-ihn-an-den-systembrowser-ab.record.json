@@ -1,0 +1,48 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "9dfb0ce8-37f5-407d-847b-0f6cdac5be53",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "shared/decisions/260821-2202_a_zeigt-krk-web-inhalt-selbst-an-oder-gibt-er-ihn-an-den-systembrowser-ab.md"
+  },
+  "filed_by": {
+    "actor": "user",
+    "person": null
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "a",
+      "head": {
+        "Domain": "code",
+        "Filed by": "user (über den Orchestrator, Sitzung 260820-2200)",
+        "Cross-references": "`circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_d_circle.md`"
+      },
+      "derived": {
+        "/control/answer_ref": {
+          "rule": "answer-ref-self",
+          "evidence": "unresolvable-answer-line"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260821-2202_a_zeigt-krk-web-inhalt-selbst-an-oder-gibt-er-ihn-an-den-systembrowser-ab.md",
+      "sha256": "sha256:9fc371af9cab43c1d5086134fbcc780363595851093e045644f1acb76904510c",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260821-2202_a_zeigt-krk-web-inhalt-selbst-an-oder-gibt-er-ihn-an-den-systembrowser-ab.md",
+      "sha256": "sha256:9fc371af9cab43c1d5086134fbcc780363595851093e045644f1acb76904510c",
+      "kind": "decision"
+    },
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

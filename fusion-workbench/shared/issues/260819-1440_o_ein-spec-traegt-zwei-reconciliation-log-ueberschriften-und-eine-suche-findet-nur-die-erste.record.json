@@ -1,0 +1,46 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "f764b0f6-047f-42f5-a506-98d895f08f07",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260819-1440_o_ein-spec-traegt-zwei-reconciliation-log-ueberschriften-und-eine-suche-findet-nur-die-erste.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Gefunden am": "260819-1440, Baumstand `77dcd48`",
+        "Gefunden von": "reconciler, beim Beurteilen der offenen Spec-Marker",
+        "Schwere": "gering. Keine Aussage der Datei ist falsch; verloren geht der Zugriff.",
+        "Betroffen": "`circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/planning/260814-1830_o_spec-tippen-filtert-dateiliste-flach-und-tief.md`",
+        "Domain": "code"
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "82c020a249ae6f2cf56ea266255035c2726d6f2b"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260819-1440_o_ein-spec-traegt-zwei-reconciliation-log-ueberschriften-und-eine-suche-findet-nur-die-erste.md",
+      "sha256": "sha256:4d6046ebcb64cca6ce130c251bd12b205710208588be023069c5af24641dbe69",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

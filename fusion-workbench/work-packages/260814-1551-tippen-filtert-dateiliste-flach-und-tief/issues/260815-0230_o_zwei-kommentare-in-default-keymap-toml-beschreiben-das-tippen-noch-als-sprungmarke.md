@@ -1,6 +1,5 @@
 # Zwei Kommentare in `default-keymap.toml` beschreiben das Tippen noch als Sprungmarke
 
-**Status:** Open
 **Domain:** Auslieferungsbelegung, Kommentarprosa
 **Filed by:** coder, beim Umsetzen von A2
 **Executor:** `ontocoder`

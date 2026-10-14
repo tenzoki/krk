@@ -1,0 +1,36 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "6f2eefbd-f0d7-4022-9d0e-e89f2157e2bd",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260912-2158_o_zwei-rundendatensaetze-tragen-eine-status-kopfzeile-die-ihrem-eigenen-dateinamen-widerspricht.md"
+  },
+  "filed_by": {
+    "actor": "ontocoder",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "ontocoder, Kai Stalmann <kai@stalmann.org>",
+        "Domain": "data",
+        "Gefunden": "beim Nachziehen der fusion-Leseprofile auf Fassung 11, bei der Gegenprobe des",
+        "Betroffen": "`fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/_b_circle.md`,"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260912-2158_o_zwei-rundendatensaetze-tragen-eine-status-kopfzeile-die-ihrem-eigenen-dateinamen-widerspricht.md",
+      "sha256": "sha256:2ad43978164cb5179021e952bb39a19e4ab5a9f1372ea89008063f4080dda064",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "a56f3a78-edcc-476f-80d1-15f8afe93ac0",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260908-1544_o_das-wort-offen-hinter-einem-berichtigten-zitat-im-circle-datensatz-des-web-betrachters-stimmt-nicht-mehr.md"
+  },
+  "filed_by": {
+    "actor": "coder",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+        "Domain": "Werkbankführung",
+        "Baumstand": "`2f4b7b2`",
+        "Schwere": "gering. Kein Bau, kein Verhalten. Der Zeiger löst auf; falsch ist die"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260908-1544_o_das-wort-offen-hinter-einem-berichtigten-zitat-im-circle-datensatz-des-web-betrachters-stimmt-nicht-mehr.md",
+      "sha256": "sha256:1c33df0aeb505d587345376d2ec2647811bc17df72ec882f41578fa026e76786",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

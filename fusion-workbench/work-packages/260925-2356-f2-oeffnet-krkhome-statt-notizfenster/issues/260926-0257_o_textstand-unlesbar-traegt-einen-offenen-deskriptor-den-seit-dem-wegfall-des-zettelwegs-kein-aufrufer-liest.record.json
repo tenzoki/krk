@@ -1,0 +1,33 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "221cb1b8-656f-4d83-b6f8-eac6d73f5265",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/issues/260926-0257_o_textstand-unlesbar-traegt-einen-offenen-deskriptor-den-seit-dem-wegfall-des-zettelwegs-kein-aufrufer-liest.md"
+  },
+  "filed_by": {
+    "actor": "code-implementer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Filed by": "code-implementer, Kai Stalmann <kai@stalmann.org>"
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/issues/260926-0257_o_textstand-unlesbar-traegt-einen-offenen-deskriptor-den-seit-dem-wegfall-des-zettelwegs-kein-aufrufer-liest.md",
+      "sha256": "sha256:01ac1846b17bfecb856245adc5030a07ceb9eeea7e9dcc0c7a79a10d6851c290",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

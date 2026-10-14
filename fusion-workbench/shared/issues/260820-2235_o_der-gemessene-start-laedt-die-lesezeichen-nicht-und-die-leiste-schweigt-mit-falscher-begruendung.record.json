@@ -1,0 +1,45 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "af55d864-a6de-4a58-af1a-c3e1ca818722",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/260820-2235_o_der-gemessene-start-laedt-die-lesezeichen-nicht-und-die-leiste-schweigt-mit-falscher-begruendung.md"
+  },
+  "filed_by": {
+    "actor": "legacy-unknown",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "imported",
+    "legacy_fields": {
+      "file_marker": "o",
+      "head": {
+        "Schwere": "gering bis mittel. Die Messstrecke misst nicht denselben Start, den der Nutzer",
+        "Gefunden": "analyst, forensische Untersuchung „Lesezeichen nach Installation weg\" am 260820-2235",
+        "Betroffen": "`crates/krk-ui/src/appkit/anwendung.rs:1376-1425`, `:1497`, `:1588-1607`,",
+        "Domain": "code"
+      },
+      "derived": {
+        "/filed_by/actor": {
+          "rule": "unknown"
+        },
+        "/filed_by/person": {
+          "rule": "git-first-add",
+          "evidence": "bb072a01aaeeaa21193df8900dbdaeb12fb51650"
+        }
+      }
+    },
+    "backup": {
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260820-2235_o_der-gemessene-start-laedt-die-lesezeichen-nicht-und-die-leiste-schweigt-mit-falscher-begruendung.md",
+      "sha256": "sha256:b6562876c1e1550863b4db404d17330c0d551b1b7385665b03628679b9a84dc2",
+      "kind": "other"
+    }
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}
