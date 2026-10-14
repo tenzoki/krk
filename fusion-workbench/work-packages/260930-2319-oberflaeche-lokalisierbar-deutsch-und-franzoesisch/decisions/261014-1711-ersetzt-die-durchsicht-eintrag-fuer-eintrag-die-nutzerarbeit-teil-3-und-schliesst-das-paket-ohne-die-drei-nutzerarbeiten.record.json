@@ -1,0 +1,26 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "6c6dfe44-d972-4948-973d-a2568f09f4ef",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch/decisions/261014-1711-ersetzt-die-durchsicht-eintrag-fuer-eintrag-die-nutzerarbeit-teil-3-und-schliesst-das-paket-ohne-die-drei-nutzerarbeiten.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "answer_ref": null,
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

@@ -1172,7 +1172,7 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::EditorUmschalten => "Afficher ou masquer l’Éditeur",
         Kommando::EditorAnsichtUmschalten => "Basculer entre vue brute et vue formatée",
         Kommando::EditorSichern => "Enregistrer",
-        Kommando::EditorZeileSpringen => "Atteindre la ligne…",
+        Kommando::EditorZeileSpringen => "Atteindre la ligne",
         Kommando::EditorSuchen => "Rechercher dans le texte",
         Kommando::EditorWeitersuchen => "Rechercher le suivant",
         Kommando::EditorRueckwaertsSuchen => "Rechercher le précédent",

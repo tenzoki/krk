@@ -1,0 +1,26 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "1227e62d-2779-4bbf-b9a0-af05e71ceb35",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch/issues/261014-1711-atteindre-la-ligne-traegt-als-einziger-der-drei-namen-des-zeilensprungs-ein-auslassungszeichen.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "closed",
+    "disposition": {
+      "kind": "fixed",
+      "reason_ref": null
+    }
+  }
+}

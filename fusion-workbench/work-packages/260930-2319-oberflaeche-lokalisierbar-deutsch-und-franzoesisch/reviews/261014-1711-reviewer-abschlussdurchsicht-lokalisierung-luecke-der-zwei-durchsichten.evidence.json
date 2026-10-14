@@ -1,0 +1,28 @@
+{
+  "schema": "fusion.evidence/v1",
+  "id": "c1231768-565f-4dd0-97fa-7a159324f9da",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "subject": {
+    "git_tree": "d3ce111177caf2597cc77d5b610f213408cf3089",
+    "git_range": null
+  },
+  "brief_revision": "sha256:9768f3878c3f335a774cda67975e09722332823c0016fb463772cb84c43db2d8",
+  "plan_revision": null,
+  "role": {
+    "profile": "reviewer",
+    "version": "13.0.0"
+  },
+  "host": "claude-code",
+  "execution_policy": "claude-guided",
+  "verdict": "escalate",
+  "uncertainties": [],
+  "checks": [],
+  "report": {
+    "path": "work-packages/260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch/reviews/261014-1711-reviewer-abschlussdurchsicht-lokalisierung-luecke-der-zwei-durchsichten.md",
+    "sha256": "sha256:0903450975a54826e98cf6ce5e80d647090ef252406968a6aa958206c2792ee7",
+    "kind": "review"
+  },
+  "predecessor": null,
+  "accepted_at": "2026-10-14T15:15:38Z",
+  "extensions": {}
+}
