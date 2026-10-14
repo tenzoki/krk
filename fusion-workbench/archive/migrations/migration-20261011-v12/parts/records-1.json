@@ -1,0 +1,1132 @@
+{
+  "schema": "fusion.migration-plan/v1",
+  "part": "records",
+  "migration_id": "migration-20261011-v12",
+  "n": 1,
+  "counts": {
+    "package_live": 2,
+    "package_terminal": 31,
+    "record_live": 153,
+    "record_closure": 0,
+    "plain_terminal": 854,
+    "empty_container": 0
+  },
+  "records": {
+    "beb8e124-b8f0-4e9b-b94c-6a85e2490dc9": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260802-0842_a_git-verwerfen-bedeutung.record.json",
+      "narrative": "shared/decisions/260802-0842_a_git-verwerfen-bedeutung.md"
+    },
+    "38278a92-eb08-4e82-8d64-364fddc9a99d": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260814-1955_a_sechs-beantwortete-entscheidungsdatensaetze-tragen-im-kopf-weiter-status-open.record.json",
+      "narrative": "shared/decisions/260814-1955_a_sechs-beantwortete-entscheidungsdatensaetze-tragen-im-kopf-weiter-status-open.md"
+    },
+    "28e7155b-f91b-4357-9ff7-a77eb31762d6": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260815-1812_a_der-eine-codecommit-der-sitzung-260815-1328-ohne-durchsicht-ist-nicht-nur-markdown.record.json",
+      "narrative": "shared/decisions/260815-1812_a_der-eine-codecommit-der-sitzung-260815-1328-ohne-durchsicht-ist-nicht-nur-markdown.md"
+    },
+    "99b1afdb-2430-4a78-9aef-93093c98303e": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260816-1310_a_bekommt-der-inhaltsfilter-eine-eigene-messgroesse-oder-kriterien-ohne-messstrecke.record.json",
+      "narrative": "shared/decisions/260816-1310_a_bekommt-der-inhaltsfilter-eine-eigene-messgroesse-oder-kriterien-ohne-messstrecke.md"
+    },
+    "7f3d2170-18e8-48d1-adfa-d9434ffa72c2": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260818-0201_a_does-a-cross-references-line-between-records-write-the-marker-in-the-star-form.record.json",
+      "narrative": "shared/decisions/260818-0201_a_does-a-cross-references-line-between-records-write-the-marker-in-the-star-form.md"
+    },
+    "e991fb15-0902-4b03-8ff4-8dba857749f9": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260819-1440_a_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.record.json",
+      "narrative": "shared/decisions/260819-1440_a_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md"
+    },
+    "fa967466-a8df-4069-8edb-0e4ebdf6f3a5": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260819-2216_a_gilt-die-quelltextzusage-auch-fuer-das-ziehen-einer-auswahl-und-die-dienste.record.json",
+      "narrative": "shared/decisions/260819-2216_a_gilt-die-quelltextzusage-auch-fuer-das-ziehen-einer-auswahl-und-die-dienste.md"
+    },
+    "f2fcf3b0-b51a-4deb-81bd-f253e3eb808d": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260819-2216_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.record.json",
+      "narrative": "shared/decisions/260819-2216_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.md"
+    },
+    "9dfb0ce8-37f5-407d-847b-0f6cdac5be53": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260821-2202_a_zeigt-krk-web-inhalt-selbst-an-oder-gibt-er-ihn-an-den-systembrowser-ab.record.json",
+      "narrative": "shared/decisions/260821-2202_a_zeigt-krk-web-inhalt-selbst-an-oder-gibt-er-ihn-an-den-systembrowser-ab.md"
+    },
+    "b178fd8f-0906-4c95-ba5c-9bbf3b9126de": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260831-1353_a_bekommt-das-ablageprofil-eine-zweite-umfangszeile-obwohl-die-dateizahl-nicht-zaehlbar-ist.record.json",
+      "narrative": "shared/decisions/260831-1353_a_bekommt-das-ablageprofil-eine-zweite-umfangszeile-obwohl-die-dateizahl-nicht-zaehlbar-ist.md"
+    },
+    "2a7ec28c-09dc-4312-a685-ca214ca10d0e": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260906-0203_a_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.record.json",
+      "narrative": "shared/decisions/260906-0203_a_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md"
+    },
+    "1b206fe9-b2ff-45f4-bdd0-f15e46f9b8f6": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260906-0206_a_werden-dateinamen-mit-vorauslaufendem-zeitstempel-umbenannt-oder-vermerkt.record.json",
+      "narrative": "shared/decisions/260906-0206_a_werden-dateinamen-mit-vorauslaufendem-zeitstempel-umbenannt-oder-vermerkt.md"
+    },
+    "e6e78299-ab89-4e4a-b649-c88e689da529": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260907-0726_o_meldet-im-finder-anzeigen-einen-eintrag-der-nicht-mehr-dasteht.record.json",
+      "narrative": "shared/decisions/260907-0726_o_meldet-im-finder-anzeigen-einen-eintrag-der-nicht-mehr-dasteht.md"
+    },
+    "0488a52e-d039-42b5-a3ef-5eeebf1eef98": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260907-0826_o_gilt-die-umlautregel-auch-fuer-die-terminalausgabe-von-xtask-krk-bench-und-messmodus.record.json",
+      "narrative": "shared/decisions/260907-0826_o_gilt-die-umlautregel-auch-fuer-die-terminalausgabe-von-xtask-krk-bench-und-messmodus.md"
+    },
+    "e23a11c8-eefd-4b05-a72d-03067d8ad8bb": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260907-0826_o_wie-wird-die-naht-zwischen-umlaut-und-umschrift-gehalten-jetzt-da-sie-eine-regel-ist.record.json",
+      "narrative": "shared/decisions/260907-0826_o_wie-wird-die-naht-zwischen-umlaut-und-umschrift-gehalten-jetzt-da-sie-eine-regel-ist.md"
+    },
+    "27aae6dc-c56a-46c0-b5eb-37e708dba654": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260907-1226_o_weist-der-doppelklick-auf-einen-ordner-ohne-leserecht-ab-oder-geht-er-hinein-und-meldet-danach.record.json",
+      "narrative": "shared/decisions/260907-1226_o_weist-der-doppelklick-auf-einen-ordner-ohne-leserecht-ab-oder-geht-er-hinein-und-meldet-danach.md"
+    },
+    "aa72e4f0-6fd7-4d62-b79b-03bcdd6b46d6": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260907-1301_o_wird-der-geschaetzte-zeitstempel-in-einem-dateinamen-pruefbar-gemacht.record.json",
+      "narrative": "shared/decisions/260907-1301_o_wird-der-geschaetzte-zeitstempel-in-einem-dateinamen-pruefbar-gemacht.md"
+    },
+    "d4c17a77-1bad-421a-b420-c7fcb4961a73": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260907-1407_o_bekommt-session-toml-eine-fassungsangabe-damit-auch-die-zweite-haelfte-der-bestandsregel-greifen-kann.record.json",
+      "narrative": "shared/decisions/260907-1407_o_bekommt-session-toml-eine-fassungsangabe-damit-auch-die-zweite-haelfte-der-bestandsregel-greifen-kann.md"
+    },
+    "5b841869-5a5a-49fc-9aad-e28bdb079130": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260907-1422_o_misst-der-ordnersprung-je-einen-ort-fuer-den-ein-profil-aus-readers-toml-greift.record.json",
+      "narrative": "shared/decisions/260907-1422_o_misst-der-ordnersprung-je-einen-ort-fuer-den-ein-profil-aus-readers-toml-greift.md"
+    },
+    "7b39a6ee-313e-4135-a2d1-e547b2ab6e4e": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260907-2046_o_traegt-das-cmd-f-paar-auf-demselben-grund-wie-cmd-a-oder-auf-einem-dritten.record.json",
+      "narrative": "shared/decisions/260907-2046_o_traegt-das-cmd-f-paar-auf-demselben-grund-wie-cmd-a-oder-auf-einem-dritten.md"
+    },
+    "34c58418-9889-41b1-b134-6ee11b8080e8": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260907-2127_o_heisst-die-variante-eintrag-textbefehl-weiter-so-jetzt-wo-eine-zugestellte-funktion-kein-textbefehl-ist.record.json",
+      "narrative": "shared/decisions/260907-2127_o_heisst-die-variante-eintrag-textbefehl-weiter-so-jetzt-wo-eine-zugestellte-funktion-kein-textbefehl-ist.md"
+    },
+    "8defe49f-1ca6-4ea2-90ec-5f4e437e38d8": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260907-2258_o_deckt-der-untergrenzen-prueflauf-auch-eingerueckte-use-zeilen-und-voll-ausgeschriebene-pfade.record.json",
+      "narrative": "shared/decisions/260907-2258_o_deckt-der-untergrenzen-prueflauf-auch-eingerueckte-use-zeilen-und-voll-ausgeschriebene-pfade.md"
+    },
+    "a509c037-9438-4489-9a19-cf99d663b2aa": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260907-2340_a_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.record.json",
+      "narrative": "shared/decisions/260907-2340_a_wie-weit-reicht-die-neue-regel-fuer-den-zustand-eines-anforderungsdokuments-in-den-bestand-zurueck.md"
+    },
+    "296ff5b6-63c7-4658-92e4-cacbb70a085c": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260908-0640_o_wie-wird-das-beglaubigte-buendel-vor-dem-naechsten-entwicklungsbau-geschuetzt.record.json",
+      "narrative": "shared/decisions/260908-0640_o_wie-wird-das-beglaubigte-buendel-vor-dem-naechsten-entwicklungsbau-geschuetzt.md"
+    },
+    "a70e5e6f-335f-484a-aa76-19ea690e9a39": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260908-1608_o_gilt-die-nachsatzregel-vom-260906-auch-unter-dem-abschnitt-directive-eines-circle-datensatzes.record.json",
+      "narrative": "shared/decisions/260908-1608_o_gilt-die-nachsatzregel-vom-260906-auch-unter-dem-abschnitt-directive-eines-circle-datensatzes.md"
+    },
+    "d0e91949-ccdc-403d-8659-574f6a894cb3": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260908-1754_a_bekommt-das-profil-des-gemeinsamen-speichers-die-zwei-forum-zeilen-die-es-jedem-anderen-unterspeicher-gibt.record.json",
+      "narrative": "shared/decisions/260908-1754_a_bekommt-das-profil-des-gemeinsamen-speichers-die-zwei-forum-zeilen-die-es-jedem-anderen-unterspeicher-gibt.md"
+    },
+    "2ad8d39e-c28a-4865-b542-24293e61cb48": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260912-1149_a_was-geschieht-mit-einem-oeffentlichen-namen-ohne-rufer-im-betriebscode.record.json",
+      "narrative": "shared/decisions/260912-1149_a_was-geschieht-mit-einem-oeffentlichen-namen-ohne-rufer-im-betriebscode.md"
+    },
+    "f36c8a8d-7a28-4384-8668-df450ced564a": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "shared/decisions/260918-0842_a_wer-vergibt-die-versionszahl-und-darf-ein-agent-den-auslieferungslauf-fahren.record.json",
+      "narrative": "shared/decisions/260918-0842_a_wer-vergibt-die-versionszahl-und-darf-ein-agent-den-auslieferungslauf-fahren.md"
+    },
+    "2d46a777-5e1e-4ef4-be65-731991f2ef43": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260811-2157_o_fuenf-commits-stehen-hinter-dem-letzten-turn-ende-ohne-eigene-turn-grenze.record.json",
+      "narrative": "shared/issues/260811-2157_o_fuenf-commits-stehen-hinter-dem-letzten-turn-ende-ohne-eigene-turn-grenze.md"
+    },
+    "f53fca7f-8364-4769-84db-6422df43de8b": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260813-0026_o_bundle-und-release-schreiben-an-denselben-ort-und-ein-entwicklungsbau-zerstoert-das-beglaubigte-buendel.record.json",
+      "narrative": "shared/issues/260813-0026_o_bundle-und-release-schreiben-an-denselben-ort-und-ein-entwicklungsbau-zerstoert-das-beglaubigte-buendel.md"
+    },
+    "e2f12d81-cdc5-401b-9966-9defecf56fff": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260814-0656_o_eine-neue-funktion-kommt-bei-jedem-nutzer-mit-eigener-keymap-unbelegt-an.record.json",
+      "narrative": "shared/issues/260814-0656_o_eine-neue-funktion-kommt-bei-jedem-nutzer-mit-eigener-keymap-unbelegt-an.md"
+    },
+    "0a8bf07b-f6bc-49f4-838b-936dbc5b10b3": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260814-1612_o_eine-verknuepfung-auf-einen-ordner-laesst-sich-nicht-betreten.record.json",
+      "narrative": "shared/issues/260814-1612_o_eine-verknuepfung-auf-einen-ordner-laesst-sich-nicht-betreten.md"
+    },
+    "517801b4-9b57-4159-883a-4cc4166ba56b": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260815-1047_o_die-directive-der-runde-10-und-ein-planschritt-schreiben-das-alte-leeren-weiter-fest.record.json",
+      "narrative": "shared/issues/260815-1047_o_die-directive-der-runde-10-und-ein-planschritt-schreiben-das-alte-leeren-weiter-fest.md"
+    },
+    "1fa167d0-c4d3-4261-9d39-2169db9fffe0": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260815-1047_p_die-bedingung-der-moeglichkeit-2-ist-an-filterstand-text-geprueft-und-nicht-an-der-rangfolge.record.json",
+      "narrative": "shared/issues/260815-1047_p_die-bedingung-der-moeglichkeit-2-ist-an-filterstand-text-geprueft-und-nicht-an-der-rangfolge.md"
+    },
+    "d0d9132e-360b-4a8f-91ce-2a71e901f1e4": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260816-0040_o_der-takt-eines-laufenden-lesevorgangs-beendet-eine-offene-namenszelle-und-der-aufschub-erreicht-ihn-nicht.record.json",
+      "narrative": "shared/issues/260816-0040_o_der-takt-eines-laufenden-lesevorgangs-beendet-eine-offene-namenszelle-und-der-aufschub-erreicht-ihn-nicht.md"
+    },
+    "41dd65df-96f5-424f-9eb7-8bba68ee2963": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260816-1803_o_der-kommentar-zu-deep-nennt-den-tabulator-als-frei-er-liegt-seit-der-runde-1-auf-fenster-wechseln.record.json",
+      "narrative": "shared/issues/260816-1803_o_der-kommentar-zu-deep-nennt-den-tabulator-als-frei-er-liegt-seit-der-runde-1-auf-fenster-wechseln.md"
+    },
+    "b815d4e6-d60a-4047-8a82-77ba49ccdd2a": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260816-2144_o_die-leertaste-ist-belegt-und-erreicht-den-dateifilter-nie.record.json",
+      "narrative": "shared/issues/260816-2144_o_die-leertaste-ist-belegt-und-erreicht-den-dateifilter-nie.md"
+    },
+    "0f448406-b8d4-4efa-93a6-8bdb7b917d79": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260817-1122_o_der-durchsichtsbereich-schliesst-seinen-ersten-commit-aus.record.json",
+      "narrative": "shared/issues/260817-1122_o_der-durchsichtsbereich-schliesst-seinen-ersten-commit-aus.md"
+    },
+    "b5ac8790-b84d-4c33-b809-7933d5dd31ca": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260817-1130_o_die-sternform-fuer-zitate-gilt-seit-dem-260815-und-drei-runden-schreiben-den-marker-aus.record.json",
+      "narrative": "shared/issues/260817-1130_o_die-sternform-fuer-zitate-gilt-seit-dem-260815-und-drei-runden-schreiben-den-marker-aus.md"
+    },
+    "7f70e8cd-3641-401d-99b7-7244c8d9fd95": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260818-0245_o_ein-untergeordneter-agent-hat-git-stash-gefahren-waehrend-ein-zweiter-im-selben-baum-schrieb.record.json",
+      "narrative": "shared/issues/260818-0245_o_ein-untergeordneter-agent-hat-git-stash-gefahren-waehrend-ein-zweiter-im-selben-baum-schrieb.md"
+    },
+    "e4ae8069-615c-4666-a2bf-47a5af38606e": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260818-0807_o_vierzehn-tote-zeiger-stehen-ausserhalb-dieser-runde-und-zwei-in-der-sitzungsstandsdatei.record.json",
+      "narrative": "shared/issues/260818-0807_o_vierzehn-tote-zeiger-stehen-ausserhalb-dieser-runde-und-zwei-in-der-sitzungsstandsdatei.md"
+    },
+    "f764b0f6-047f-42f5-a506-98d895f08f07": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260819-1440_o_ein-spec-traegt-zwei-reconciliation-log-ueberschriften-und-eine-suche-findet-nur-die-erste.record.json",
+      "narrative": "shared/issues/260819-1440_o_ein-spec-traegt-zwei-reconciliation-log-ueberschriften-und-eine-suche-findet-nur-die-erste.md"
+    },
+    "5bf8d8a2-5a87-457e-9d18-f3107674e3ff": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260820-0602_o_make-check-prueft-den-ganzen-arbeitsbereich-und-bricht-bei-parallelen-agenten-an-fremden-dateien-ab.record.json",
+      "narrative": "shared/issues/260820-0602_o_make-check-prueft-den-ganzen-arbeitsbereich-und-bricht-bei-parallelen-agenten-an-fremden-dateien-ab.md"
+    },
+    "c5c33678-5cae-4ad5-8066-f60431454e66": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260820-2056_o_drei-beantwortete-datensaetze-koennen-nie-umgesetzt-werden-weil-ihre-antwort-eine-abwesenheit-ist.record.json",
+      "narrative": "shared/issues/260820-2056_o_drei-beantwortete-datensaetze-koennen-nie-umgesetzt-werden-weil-ihre-antwort-eine-abwesenheit-ist.md"
+    },
+    "af55d864-a6de-4a58-af1a-c3e1ca818722": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260820-2235_o_der-gemessene-start-laedt-die-lesezeichen-nicht-und-die-leiste-schweigt-mit-falscher-begruendung.record.json",
+      "narrative": "shared/issues/260820-2235_o_der-gemessene-start-laedt-die-lesezeichen-nicht-und-die-leiste-schweigt-mit-falscher-begruendung.md"
+    },
+    "2d7c005c-5dcf-4d1b-9289-022f8ccce00c": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260821-0142_o_eine-nicht-lesbare-ablagedatei-wird-nicht-gesichert-und-vom-naechsten-schreibvorgang-ueberschrieben.record.json",
+      "narrative": "shared/issues/260821-0142_o_eine-nicht-lesbare-ablagedatei-wird-nicht-gesichert-und-vom-naechsten-schreibvorgang-ueberschrieben.md"
+    },
+    "974e1911-fc78-46a5-bfe2-4d228775659c": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260821-1401_o_der-leerbefund-zweig-verschweigt-eine-dastehende-sicherung-die-den-bestand-traegt.record.json",
+      "narrative": "shared/issues/260821-1401_o_der-leerbefund-zweig-verschweigt-eine-dastehende-sicherung-die-den-bestand-traegt.md"
+    },
+    "cbfb0efb-5d18-4f50-9afa-bb21441a4d43": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260821-1532_o_drei-von-durchsichten-verlangte-nachtraege-an-offenen-datensaetzen-sind-nie-eingetragen-worden.record.json",
+      "narrative": "shared/issues/260821-1532_o_drei-von-durchsichten-verlangte-nachtraege-an-offenen-datensaetzen-sind-nie-eingetragen-worden.md"
+    },
+    "dc4cf968-bc97-400f-be48-2ed730188b50": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260823-0731_o_ein-klick-in-das-andere-dateifenster-nimmt-eine-ziehbewegung-zurueck.record.json",
+      "narrative": "shared/issues/260823-0731_o_ein-klick-in-das-andere-dateifenster-nimmt-eine-ziehbewegung-zurueck.md"
+    },
+    "dd958c2e-0537-4ee9-80c7-123498218572": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260823-0732_o_der-neue-nachzug-laeuft-vor-dem-fokusumzug-und-oeffnet-den-ring-den-eine-probe-offen-haelt.record.json",
+      "narrative": "shared/issues/260823-0732_o_der-neue-nachzug-laeuft-vor-dem-fokusumzug-und-oeffnet-den-ring-den-eine-probe-offen-haelt.md"
+    },
+    "63c20a34-5128-4181-b20a-272c4711fb68": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260823-1210_o_ein-make-check-von-neun-ist-mit-2-abgebrochen-und-hat-sich-nicht-wiederholt.record.json",
+      "narrative": "shared/issues/260823-1210_o_ein-make-check-von-neun-ist-mit-2-abgebrochen-und-hat-sich-nicht-wiederholt.md"
+    },
+    "113f805a-3292-42dc-acd9-11e4989a5126": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260823-1336_o_die-zeilenzitate-der-zwei-offen-gebliebenen-befunde-und-beider-durchsichten-zeigen-nach-52fba42-ins-leere.record.json",
+      "narrative": "shared/issues/260823-1336_o_die-zeilenzitate-der-zwei-offen-gebliebenen-befunde-und-beider-durchsichten-zeigen-nach-52fba42-ins-leere.md"
+    },
+    "22111904-8d8a-4075-9161-21af85def268": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260823-1651_o_die-auslieferung-ist-der-letzte-commit-einer-sitzung-und-die-sitzung-kann-sich-danach-nicht-mehr-schliessen.record.json",
+      "narrative": "shared/issues/260823-1651_o_die-auslieferung-ist-der-letzte-commit-einer-sitzung-und-die-sitzung-kann-sich-danach-nicht-mehr-schliessen.md"
+    },
+    "de2ed993-dde5-4ae3-abc3-37db06e19ecb": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260825-1130_o_ein-selbst-getippter-name-im-konfliktblatt-kann-einen-belegten-treffen-und-wird-ohne-rueckfrage-ueberschrieben.record.json",
+      "narrative": "shared/issues/260825-1130_o_ein-selbst-getippter-name-im-konfliktblatt-kann-einen-belegten-treffen-und-wird-ohne-rueckfrage-ueberschrieben.md"
+    },
+    "7fd1ca1e-4530-4c38-b309-0d2ff6ae0385": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260825-1859_o_eine-entpackte-verknuepfung-bekommt-ihr-aenderungsdatum-nicht.record.json",
+      "narrative": "shared/issues/260825-1859_o_eine-entpackte-verknuepfung-bekommt-ihr-aenderungsdatum-nicht.md"
+    },
+    "32c312be-ca4a-449c-8b2c-ba48a5d1bafe": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260825-1922_o_der-programmstart-und-der-tabwechsel-erreichen-die-neue-vorschauregel-nicht.record.json",
+      "narrative": "shared/issues/260825-1922_o_der-programmstart-und-der-tabwechsel-erreichen-die-neue-vorschauregel-nicht.md"
+    },
+    "35af3f1f-818e-4753-b9b4-5d8b1d2e3331": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260825-1922_o_eine-auffrischung-stoesst-die-vorschau-mit-an-und-die-kosten-sind-ungemessen.record.json",
+      "narrative": "shared/issues/260825-1922_o_eine-auffrischung-stoesst-die-vorschau-mit-an-und-die-kosten-sind-ungemessen.md"
+    },
+    "1f29bd81-face-4577-bf7e-249daf66ab0f": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260825-1953_o_ein-platzhalterlauf-oeffnet-bis-zu-zweitausend-verzeichnisse-und-die-eintragsschranke-faengt-das-nicht.record.json",
+      "narrative": "shared/issues/260825-1953_o_ein-platzhalterlauf-oeffnet-bis-zu-zweitausend-verzeichnisse-und-die-eintragsschranke-faengt-das-nicht.md"
+    },
+    "0add33c4-a52b-438c-ad75-f3b92b0e2835": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260825-2044_o_die-zeile-projekt-der-werkbankprofile-haengt-an-einem-feld-das-fusion-nicht-mehr-schreibt.record.json",
+      "narrative": "shared/issues/260825-2044_o_die-zeile-projekt-der-werkbankprofile-haengt-an-einem-feld-das-fusion-nicht-mehr-schreibt.md"
+    },
+    "d42d448a-1268-4a7b-896f-d0ee4995da2c": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260825-2107_o_ein-circle-datensatz-liegt-beim-1-8-fachen-der-64-kb-grenze-des-feldbausteins.record.json",
+      "narrative": "shared/issues/260825-2107_o_ein-circle-datensatz-liegt-beim-1-8-fachen-der-64-kb-grenze-des-feldbausteins.md"
+    },
+    "2c67ff75-62b3-449f-82c0-6cd2d44eafb3": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260825-2126_o_die-summenprobe-der-sechs-zustandszeilen-faellt-schon-an-einem-ds-store.record.json",
+      "narrative": "shared/issues/260825-2126_o_die-summenprobe-der-sechs-zustandszeilen-faellt-schon-an-einem-ds-store.md"
+    },
+    "d8402d69-31a1-4e83-9353-9c2fb66594aa": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260825-2127_o_das-erweiterte-zeitfeld-steht-mit-vollem-rumpf-auch-im-hauptverzeichnis.record.json",
+      "narrative": "shared/issues/260825-2127_o_das-erweiterte-zeitfeld-steht-mit-vollem-rumpf-auch-im-hauptverzeichnis.md"
+    },
+    "1585b7f1-391e-4b7d-8075-0331a8938d21": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260826-0139_o_die-fallunterscheidung-des-kennzeichnen-satzes-traegt-ihre-bedingung-nur-an-einem-zweig.record.json",
+      "narrative": "shared/issues/260826-0139_o_die-fallunterscheidung-des-kennzeichnen-satzes-traegt-ihre-bedingung-nur-an-einem-zweig.md"
+    },
+    "c51c9705-1962-4a3e-8b52-fb8b6e8aabb1": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260826-0904_o_der-doppelungshinweis-sagt-vor-der-ortsangabe-und-fuenf-von-sieben-fusion-zeilen-haben-keine.record.json",
+      "narrative": "shared/issues/260826-0904_o_der-doppelungshinweis-sagt-vor-der-ortsangabe-und-fuenf-von-sieben-fusion-zeilen-haben-keine.md"
+    },
+    "98d10568-5682-43b8-b135-f24d02432835": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260826-1221_o_der-freie-name-gibt-nach-tausend-versuchen-einen-belegten-namen-heraus.record.json",
+      "narrative": "shared/issues/260826-1221_o_der-freie-name-gibt-nach-tausend-versuchen-einen-belegten-namen-heraus.md"
+    },
+    "7031d3f2-ca92-423e-91bf-14950504fc41": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260826-1221_o_die-kollisionspruefung-vergleicht-bytegenau-und-uebersieht-jede-kollision-in-schreibweise-und-normalform.record.json",
+      "narrative": "shared/issues/260826-1221_o_die-kollisionspruefung-vergleicht-bytegenau-und-uebersieht-jede-kollision-in-schreibweise-und-normalform.md"
+    },
+    "450fe82b-5065-4fe5-8967-a2e482a724d1": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260826-1221_o_die-tiefe-suche-ab-werk-nimmt-jede-verknuepfung-beim-ersten-anschlag-aus-der-liste.record.json",
+      "narrative": "shared/issues/260826-1221_o_die-tiefe-suche-ab-werk-nimmt-jede-verknuepfung-beim-ersten-anschlag-aus-der-liste.md"
+    },
+    "56afc597-b424-4e5d-b7f1-4e5901907086": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260826-1302_o_die-probenziele-des-kerns-tragen-kein-deny-unsafe-code-und-eines-fuehrt-fuenf-unsafe-stellen.record.json",
+      "narrative": "shared/issues/260826-1302_o_die-probenziele-des-kerns-tragen-kein-deny-unsafe-code-und-eines-fuehrt-fuenf-unsafe-stellen.md"
+    },
+    "a9857ecc-8a7b-464b-8695-4ead22b06b23": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260826-1302_o_eine-vierte-pruefordner-fassung-steht-in-xtask-und-die-zaehlprobe-c4-6-kann-sie-nicht-sehen.record.json",
+      "narrative": "shared/issues/260826-1302_o_eine-vierte-pruefordner-fassung-steht-in-xtask-und-die-zaehlprobe-c4-6-kann-sie-nicht-sehen.md"
+    },
+    "c9987e25-b885-4c91-a0c4-b3102d79cd3d": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260826-1333_o_return-bei-unlesbarer-regel-schliesst-das-stapelblatt-und-die-statuszeile-nennt-den-falschen-grund.record.json",
+      "narrative": "shared/issues/260826-1333_o_return-bei-unlesbarer-regel-schliesst-das-stapelblatt-und-die-statuszeile-nennt-den-falschen-grund.md"
+    },
+    "98e9e2fb-d0c7-4d72-9226-9bdc2af50a86": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260826-1416_o_die-nummernspalte-kopiert-bei-jeder-textaenderung-den-ganzen-text-und-baut-den-zeilenindex-von-vorn.record.json",
+      "narrative": "shared/issues/260826-1416_o_die-nummernspalte-kopiert-bei-jeder-textaenderung-den-ganzen-text-und-baut-den-zeilenindex-von-vorn.md"
+    },
+    "c9382941-68ed-4bcf-93c0-cc6370f1b727": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260826-1417_o_der-editor-haelt-die-16-mb-nur-am-eingang-ein-durch-bearbeiten-darueber-gewachsener-stand-wird-gesichert-und-beim-naechsten-oeffnen-abgewiesen.record.json",
+      "narrative": "shared/issues/260826-1417_o_der-editor-haelt-die-16-mb-nur-am-eingang-ein-durch-bearbeiten-darueber-gewachsener-stand-wird-gesichert-und-beim-naechsten-oeffnen-abgewiesen.md"
+    },
+    "ddcfe735-a7d7-4726-8424-4a2231c6de95": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260826-1418_o_der-zeichenzweig-setzt-die-zulaessigkeitsfrage-von-hand-aus-drei-lagefeldern-zusammen-und-keine-probe-sieht-ihn.record.json",
+      "narrative": "shared/issues/260826-1418_o_der-zeichenzweig-setzt-die-zulaessigkeitsfrage-von-hand-aus-drei-lagefeldern-zusammen-und-keine-probe-sieht-ihn.md"
+    },
+    "26663221-7e66-484b-acee-33f867c05439": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260826-1419_o_die-zwei-mauswege-fragen-die-vorstufe-laufender-vorgang-an-verschiedenen-orten-und-die-lage-gar-nicht.record.json",
+      "narrative": "shared/issues/260826-1419_o_die-zwei-mauswege-fragen-die-vorstufe-laufender-vorgang-an-verschiedenen-orten-und-die-lage-gar-nicht.md"
+    },
+    "c17aeb34-580c-4c90-9e91-3c9a92773345": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260826-1419_o_schliessen-am-letzten-tab-ist-die-dritte-fassung-der-uebertragung-und-traegt-null-von-fuenf-werten-hinueber.record.json",
+      "narrative": "shared/issues/260826-1419_o_schliessen-am-letzten-tab-ist-die-dritte-fassung-der-uebertragung-und-traegt-null-von-fuenf-werten-hinueber.md"
+    },
+    "a58eb453-bcc4-4618-926d-b1df95504c3f": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260826-1420_o_lesereihenfolge-liefert-eine-zweite-stufe-die-ihr-einziger-rufer-verwirft.record.json",
+      "narrative": "shared/issues/260826-1420_o_lesereihenfolge-liefert-eine-zweite-stufe-die-ihr-einziger-rufer-verwirft.md"
+    },
+    "77ba7a60-a7a6-4839-8f02-a5012cf7be55": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260826-1422_o_eine-abwahl-per-klick-in-der-leiste-erreicht-das-modell-nicht-und-die-naechste-pfeiltaste-geht-von-der-alten-zeile-aus.record.json",
+      "narrative": "shared/issues/260826-1422_o_eine-abwahl-per-klick-in-der-leiste-erreicht-das-modell-nicht-und-die-naechste-pfeiltaste-geht-von-der-alten-zeile-aus.md"
+    },
+    "47d2ab75-af20-40a8-806b-9db38c43b113": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260826-1442_o_die-spannenstrecke-hat-keinen-vordergrundvorbehalt-und-meldet-im-hintergrund-die-geduld-statt-der-ursache.record.json",
+      "narrative": "shared/issues/260826-1442_o_die-spannenstrecke-hat-keinen-vordergrundvorbehalt-und-meldet-im-hintergrund-die-geduld-statt-der-ursache.md"
+    },
+    "4c1defcd-6631-4010-8b9b-d2fbb5d2a8e1": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260826-1442_o_gleicher-ordner-ruft-canonicalize-je-gemeldetem-pfad-und-dateifenster-und-die-kosten-sind-ungemessen.record.json",
+      "narrative": "shared/issues/260826-1442_o_gleicher-ordner-ruft-canonicalize-je-gemeldetem-pfad-und-dateifenster-und-die-kosten-sind-ungemessen.md"
+    },
+    "1830123e-ecd9-48ee-974b-0268977a4662": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260826-1933_o_die-zwei-resolved-zeilen-der-schritte-1-und-2-tragen-den-sitzungsstempel-statt-des-commits.record.json",
+      "narrative": "shared/issues/260826-1933_o_die-zwei-resolved-zeilen-der-schritte-1-und-2-tragen-den-sitzungsstempel-statt-des-commits.md"
+    },
+    "1cf28a91-7a5f-4a18-9cca-cf8eb57ade6f": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260826-2205_o_der-deckungsmesser-meldet-am-sitzungs-head-ungedeckt-weil-der-commit-der-die-durchsicht-traegt-sich-selbst-nicht-decken-kann.record.json",
+      "narrative": "shared/issues/260826-2205_o_der-deckungsmesser-meldet-am-sitzungs-head-ungedeckt-weil-der-commit-der-die-durchsicht-traegt-sich-selbst-nicht-decken-kann.md"
+    },
+    "e4c0c13b-4e42-456d-a4d7-c52a2680b4c4": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260905-0406_o_das-atomare-schreiben-verliert-besitzer-attribute-und-zugriffslisten-der-ersetzten-datei.record.json",
+      "narrative": "shared/issues/260905-0406_o_das-atomare-schreiben-verliert-besitzer-attribute-und-zugriffslisten-der-ersetzten-datei.md"
+    },
+    "1882918d-bbaa-4a0a-bbb8-310a097f5680": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260905-2254_o_das-zaehlkommando-fuer-ohne-warten-oeffnen-gibt-elf-zeilen-fuer-sechs-rufer-aus.record.json",
+      "narrative": "shared/issues/260905-2254_o_das-zaehlkommando-fuer-ohne-warten-oeffnen-gibt-elf-zeilen-fuer-sechs-rufer-aus.md"
+    },
+    "cb093348-16c4-4cdb-9fbb-e20d73efdaf2": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260906-0509_o_fuenf-datensaetze-der-klasse-s-brauchen-einen-nachsatz-ausserhalb-von-circles-planning.record.json",
+      "narrative": "shared/issues/260906-0509_o_fuenf-datensaetze-der-klasse-s-brauchen-einen-nachsatz-ausserhalb-von-circles-planning.md"
+    },
+    "7b3d045f-3eae-4d42-89c0-84ba26986aad": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260907-0858_o_fuenf-proben-in-krk-ui-fahren-die-rechtesperre-frage-ohne-die-eine-antwort-des-kerns.record.json",
+      "narrative": "shared/issues/260907-0858_o_fuenf-proben-in-krk-ui-fahren-die-rechtesperre-frage-ohne-die-eine-antwort-des-kerns.md"
+    },
+    "5f15e9d3-35f3-4380-a926-9645133c384c": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260908-0645_o_die-vorabfrage-an-station-1-meldet-bei-verschwundenem-gh-gepackt-und-geschoben-obwohl-nichts-geschehen-ist.record.json",
+      "narrative": "shared/issues/260908-0645_o_die-vorabfrage-an-station-1-meldet-bei-verschwundenem-gh-gepackt-und-geschoben-obwohl-nichts-geschehen-ist.md"
+    },
+    "963d4311-e285-4734-96b7-5e22f07a586e": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260908-0838_o_claude-md-nennt-die-freigabe-des-rueckgaengig-blocks-ungemessen-seit-heute-haelt-sie-eine-probe.record.json",
+      "narrative": "shared/issues/260908-0838_o_claude-md-nennt-die-freigabe-des-rueckgaengig-blocks-ungemessen-seit-heute-haelt-sie-eine-probe.md"
+    },
+    "a56f3a78-edcc-476f-80d1-15f8afe93ac0": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260908-1544_o_das-wort-offen-hinter-einem-berichtigten-zitat-im-circle-datensatz-des-web-betrachters-stimmt-nicht-mehr.record.json",
+      "narrative": "shared/issues/260908-1544_o_das-wort-offen-hinter-einem-berichtigten-zitat-im-circle-datensatz-des-web-betrachters-stimmt-nicht-mehr.md"
+    },
+    "dbc7d50b-ec1b-48d0-a243-b8a39b5d03bc": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260908-1601_o_fast-jedes-kopffeld-eines-circle-datensatzes-nennt-seine-datei-mit-speicherpfad-und-stirbt-am-naechsten-aufraeumlauf.record.json",
+      "narrative": "shared/issues/260908-1601_o_fast-jedes-kopffeld-eines-circle-datensatzes-nennt-seine-datei-mit-speicherpfad-und-stirbt-am-naechsten-aufraeumlauf.md"
+    },
+    "ef3941a6-f060-4d4e-a7ac-101f055a1639": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260909-0938_o_die-erhebung-im-datensatz-zur-reichweite-nennt-vierzehn-dokumente-der-baum-traegt-zweiundvierzig.record.json",
+      "narrative": "shared/issues/260909-0938_o_die-erhebung-im-datensatz-zur-reichweite-nennt-vierzehn-dokumente-der-baum-traegt-zweiundvierzig.md"
+    },
+    "46abba13-b4de-4d1f-96b7-78b10edab963": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260909-1030_o_fuenf-verweise-zeigen-nach-dem-zug-der-plandokumente-ins-leere.record.json",
+      "narrative": "shared/issues/260909-1030_o_fuenf-verweise-zeigen-nach-dem-zug-der-plandokumente-ins-leere.md"
+    },
+    "94ac1738-67e6-4bb5-b0e5-69869142947f": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260910-0739_o_claude-md-sagt-es-gebe-keinen-vorgesehenen-circle-seit-heute-gibt-es-einen.record.json",
+      "narrative": "shared/issues/260910-0739_o_claude-md-sagt-es-gebe-keinen-vorgesehenen-circle-seit-heute-gibt-es-einen.md"
+    },
+    "dbd9bbe9-5956-46b7-aec1-443d31db9e56": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260910-1054_o_eine-beschaedigte-ablagedatei-wird-kopiert-nicht-beiseitegelegt-die-prosa-sagt-das-gegenteil.record.json",
+      "narrative": "shared/issues/260910-1054_o_eine-beschaedigte-ablagedatei-wird-kopiert-nicht-beiseitegelegt-die-prosa-sagt-das-gegenteil.md"
+    },
+    "bd725927-689a-4b42-9e72-56ca4d4ff55b": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260910-1146_o_die-zahlenschreibweise-wohnt-jetzt-in-ablage-neuerungen-und-gehoert-dort-nicht-hin.record.json",
+      "narrative": "shared/issues/260910-1146_o_die-zahlenschreibweise-wohnt-jetzt-in-ablage-neuerungen-und-gehoert-dort-nicht-hin.md"
+    },
+    "6f2eefbd-f0d7-4022-9d0e-e89f2157e2bd": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260912-2158_o_zwei-rundendatensaetze-tragen-eine-status-kopfzeile-die-ihrem-eigenen-dateinamen-widerspricht.record.json",
+      "narrative": "shared/issues/260912-2158_o_zwei-rundendatensaetze-tragen-eine-status-kopfzeile-die-ihrem-eigenen-dateinamen-widerspricht.md"
+    },
+    "ec5f9460-2a9a-477d-af02-171020d0ae51": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "shared/issues/260916-2119_o_die-profiltabelle-in-howto-md-kuendigt-sich-als-vollstaendig-an-und-laesst-das-forum-profil-aus.record.json",
+      "narrative": "shared/issues/260916-2119_o_die-profiltabelle-in-howto-md-kuendigt-sich-als-vollstaendig-an-und-laesst-das-forum-profil-aus.md"
+    },
+    "cddc1f3c-31b9-4b22-84cf-ef81106ca540": {
+      "kind": "plan",
+      "row": "record-live",
+      "control": "shared/plans/260929-0759_o_spec-werkseinstellungen-zuruecksetzen-und-neu-einlesen.record.json",
+      "narrative": "shared/plans/260929-0759_o_spec-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md"
+    },
+    "93c7377b-caeb-4156-ae59-1d6ce1a00d2a": {
+      "kind": "plan",
+      "row": "record-live",
+      "control": "shared/plans/260929-1313_o_spec-vorschau-blaettert-fotos-nach-aufnahmedatum.record.json",
+      "narrative": "shared/plans/260929-1313_o_spec-vorschau-blaettert-fotos-nach-aufnahmedatum.md"
+    },
+    "d87eb056-d223-4120-952d-8609e2dcd8b3": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260802-0842-krk-mac-dateimanager-editor-git/package.json",
+      "narrative": "work-packages/260802-0842-krk-mac-dateimanager-editor-git/_b_circle.md"
+    },
+    "04f1e54c-2aaf-40cd-a1fb-2a26fe3c51a2": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "work-packages/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_a_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.record.json",
+      "narrative": "work-packages/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_a_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md"
+    },
+    "cc85de8f-ef72-45ba-a38d-e15481bd210c": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/package.json",
+      "narrative": "work-packages/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_d_circle.md"
+    },
+    "68f6b93e-8b04-47ff-aeb6-0fd409ca2e99": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260807-2116-eingebauter-editor-mit-textmarken/package.json",
+      "narrative": "work-packages/260807-2116-eingebauter-editor-mit-textmarken/_b_circle.md"
+    },
+    "33e894bb-9270-4329-a02d-79ec76c85210": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260809-2040-tastenbelegung-als-markdown-in-downloads/package.json",
+      "narrative": "work-packages/260809-2040-tastenbelegung-als-markdown-in-downloads/_b_circle.md"
+    },
+    "c1a1783e-4bfd-4597-ae9a-7c7f2c85f57f": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/package.json",
+      "narrative": "work-packages/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_b_circle.md"
+    },
+    "f06ae7e1-e137-41ff-8987-aaa23021ec01": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/package.json",
+      "narrative": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/_b_circle.md"
+    },
+    "a051ce99-faca-47b9-a782-12344fe0edc8": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0512_o_f4-nimmt-am-schmalen-fenster-eine-datei-in-einen-editor-an-den-niemand-sieht.record.json",
+      "narrative": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0512_o_f4-nimmt-am-schmalen-fenster-eine-datei-in-einen-editor-an-den-niemand-sieht.md"
+    },
+    "23b5c697-c8a3-48df-b8f1-ebf8d74a8f24": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0700_o_der-breitenschritt-kommt-neben-einem-gedeckelten-bereich-gekuerzt-an.record.json",
+      "narrative": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0700_o_der-breitenschritt-kommt-neben-einem-gedeckelten-bereich-gekuerzt-an.md"
+    },
+    "e231eca8-c190-4c54-b4f7-94c439c51f29": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0810_o_die-zahl-39-im-kopf-der-belegungsdatei-steht-im-praesens-und-ist-ungeprueft.record.json",
+      "narrative": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0810_o_die-zahl-39-im-kopf-der-belegungsdatei-steht-im-praesens-und-ist-ungeprueft.md"
+    },
+    "34941373-d419-4619-bf08-409b59a83d82": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/package.json",
+      "narrative": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/_b_circle.md"
+    },
+    "76748976-cf07-496f-9dfc-5d3f2860b46a": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_a_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.record.json",
+      "narrative": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_a_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.md"
+    },
+    "4ff0ce61-c766-4db7-bfb9-3c227c32a22e": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-2002_a_bleibt-der-vorspann-eines-containers-die-eine-luecke-in-der-deckungszusage-von-c4-3.record.json",
+      "narrative": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-2002_a_bleibt-der-vorspann-eines-containers-die-eine-luecke-in-der-deckungszusage-von-c4-3.md"
+    },
+    "b7818b75-574a-40ac-a292-fc089a2a2fcf": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1204_o_eine-semantisch-widerspruechliche-keymap-toml-wird-nicht-zur-seite-gelegt.record.json",
+      "narrative": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1204_o_eine-semantisch-widerspruechliche-keymap-toml-wird-nicht-zur-seite-gelegt.md"
+    },
+    "2285b772-4e4e-46ea-8324-7eef537fdb09": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1526_o_der-kommentar-an-ordner-der-datei-nennt-opt-cmd-c-den-pfad-desselben-ordners.record.json",
+      "narrative": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1526_o_der-kommentar-an-ordner-der-datei-nennt-opt-cmd-c-den-pfad-desselben-ordners.md"
+    },
+    "fb509df9-7d34-48b2-a3e3-8c5639b28c12": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1527_o_die-zwei-neuen-kommentare-verengen-die-reihenordnung-und-widersprechen-der-datei.record.json",
+      "narrative": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1527_o_die-zwei-neuen-kommentare-verengen-die-reihenordnung-und-widersprechen-der-datei.md"
+    },
+    "caaa2647-ac19-4edf-b6ea-8df05a3396d5": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1528_o_der-abschnittskopf-nennt-drei-funktionen-der-runde-4-und-fuehrt-jetzt-vier.record.json",
+      "narrative": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1528_o_der-abschnittskopf-nennt-drei-funktionen-der-runde-4-und-fuehrt-jetzt-vier.md"
+    },
+    "8f4df0f5-c6d3-47c7-b279-39fcba46e826": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_o_der-freigabedialog-wird-nicht-aus-einem-mausdruck-heraus-geoeffnet.record.json",
+      "narrative": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_o_der-freigabedialog-wird-nicht-aus-einem-mausdruck-heraus-geoeffnet.md"
+    },
+    "89692959-9bf4-48f3-b908-94e00ae5716a": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1701_o_ein-gerendertes-markdown-behaelt-nach-dem-wechsel-auf-dunkel-die-verweisfarbe-der-hellen-tafel.record.json",
+      "narrative": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1701_o_ein-gerendertes-markdown-behaelt-nach-dem-wechsel-auf-dunkel-die-verweisfarbe-der-hellen-tafel.md"
+    },
+    "93702481-0729-4d4f-9049-c53c4e865e2a": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1805_o_der-datensatz-zur-verweisfarbe-nennt-fuer-die-dunkle-tafel-eine-farbe-die-sie-nicht-liefert.record.json",
+      "narrative": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1805_o_der-datensatz-zur-verweisfarbe-nennt-fuer-die-dunkle-tafel-eine-farbe-die-sie-nicht-liefert.md"
+    },
+    "d1d3c528-f872-499a-bc6b-5bdbeca66e22": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1805_o_yaml-front-matter-erscheint-als-trennlinie-und-ueberschrift-statt-als-quelltext.record.json",
+      "narrative": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1805_o_yaml-front-matter-erscheint-als-trennlinie-und-ueberschrift-statt-als-quelltext.md"
+    },
+    "6d139d20-aca9-423a-b826-af1ccdb8d2e7": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1816_o_die-durchsicht-von-turn-2-liest-einen-reinen-grundlagen-commit-als-codeaenderung.record.json",
+      "narrative": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1816_o_die-durchsicht-von-turn-2-liest-einen-reinen-grundlagen-commit-als-codeaenderung.md"
+    },
+    "947965aa-62bd-471b-b526-b4c20978d454": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1854_o_der-kurzhinweis-der-statuszeile-veraltet-bei-einer-fensteraenderung.record.json",
+      "narrative": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1854_o_der-kurzhinweis-der-statuszeile-veraltet-bei-einer-fensteraenderung.md"
+    },
+    "66b06c51-57c1-4525-9761-6b0f39fb75bd": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/package.json",
+      "narrative": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/_b_circle.md"
+    },
+    "5a73e0bd-fb80-4622-b10f-b39265af985b": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0311_o_ein-klick-in-die-bereichsleiste-wirkt-seit-s2-waehrend-einer-umbenennung-nicht-mehr.record.json",
+      "narrative": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0311_o_ein-klick-in-die-bereichsleiste-wirkt-seit-s2-waehrend-einer-umbenennung-nicht-mehr.md"
+    },
+    "1ace8125-e761-48b5-bcdb-222e9adec2b4": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0420_o_das-menue-bearbeiten-verliert-seine-mac-uebliche-reihenfolge-und-seinen-trenner.record.json",
+      "narrative": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0420_o_das-menue-bearbeiten-verliert-seine-mac-uebliche-reihenfolge-und-seinen-trenner.md"
+    },
+    "fc38affe-ca75-4383-a6ca-1b6c49e5f231": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0540_o_die-belegung-wird-weiter-blind-ueberschrieben-obwohl-der-datensatz-mehr-zusagt.record.json",
+      "narrative": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0540_o_die-belegung-wird-weiter-blind-ueberschrieben-obwohl-der-datensatz-mehr-zusagt.md"
+    },
+    "1b234da4-faaf-4071-b9fe-6525d04f8caa": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260908-0719_o_zwei-saetze-zur-kuerzelregel-fehlen-in-default-keymap-toml-seit-die-frage-dahinter-beantwortet-ist.record.json",
+      "narrative": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260908-0719_o_zwei-saetze-zur-kuerzelregel-fehlen-in-default-keymap-toml-seit-die-frage-dahinter-beantwortet-ist.md"
+    },
+    "e4901f46-7d0f-4548-b034-34d0b58b240c": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/package.json",
+      "narrative": "work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/_c_circle.md"
+    },
+    "a145cad7-deb5-46a4-a1a4-140317679051": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1110_o_eine-vierte-wegwerfordner-fassung-steht-in-xtask-und-die-probe-liest-die-kiste-nicht.record.json",
+      "narrative": "work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1110_o_eine-vierte-wegwerfordner-fassung-steht-in-xtask-und-die-probe-liest-die-kiste-nicht.md"
+    },
+    "26cf80ad-3511-4141-bb4f-f00a1fe2b632": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1345_o_der-nachtrag-aus-a3-zaehlt-die-ausnahmeliste-mit-zwei-eintraegen-und-turn-2-hat-einen-dritten-gebracht.record.json",
+      "narrative": "work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1345_o_der-nachtrag-aus-a3-zaehlt-die-ausnahmeliste-mit-zwei-eintraegen-und-turn-2-hat-einen-dritten-gebracht.md"
+    },
+    "9e0c9979-6a7b-48a6-ba00-a1bdb3b54d8d": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/package.json",
+      "narrative": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/_b_circle.md"
+    },
+    "17083e3a-35c5-4800-8335-d2540d35bd48": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-0637_o_die-directive-im-circle-datensatz-nennt-drei-sicherungsmomente-der-spec-vier.record.json",
+      "narrative": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-0637_o_die-directive-im-circle-datensatz-nennt-drei-sicherungsmomente-der-spec-vier.md"
+    },
+    "fc33e488-f0dd-4928-9cb1-be0fb3c4d4ac": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1002_o_die-directive-abweichung-steht-an-drei-stellen-des-circle-datensatzes-und-nicht-an-zwei.record.json",
+      "narrative": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1002_o_die-directive-abweichung-steht-an-drei-stellen-des-circle-datensatzes-und-nicht-an-zwei.md"
+    },
+    "e5bcca31-27cb-49f8-8f5a-a710d70236fe": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1247_o_die-streichung-der-beobachtung-10-nimmt-zwei-kriterien-ihren-einzigen-beleg-am-buendel.record.json",
+      "narrative": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1247_o_die-streichung-der-beobachtung-10-nimmt-zwei-kriterien-ihren-einzigen-beleg-am-buendel.md"
+    },
+    "9afa1247-14dd-4b73-bf48-66d6c7f1013d": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1247_o_sechzehn-der-neunundzwanzig-buendelkriterien-sind-vom-abnahmelauf-nie-beruehrt-worden.record.json",
+      "narrative": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1247_o_sechzehn-der-neunundzwanzig-buendelkriterien-sind-vom-abnahmelauf-nie-beruehrt-worden.md"
+    },
+    "d8891929-85b9-435b-9ff1-890d60819fbe": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/package.json",
+      "narrative": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/_b_circle.md"
+    },
+    "ba4cc31a-6d74-4992-bcc7-106b5cf9c89f": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-in-dessen-ordner.record.json",
+      "narrative": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-in-dessen-ordner.md"
+    },
+    "135672af-bd50-4d57-b1df-c96fb47d8afa": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0020_o_verdeckten-tab-setzen-baut-denselben-frischen-tabinhalt-und-traegt-zwei-von-vier-werten-hinueber.record.json",
+      "narrative": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0020_o_verdeckten-tab-setzen-baut-denselben-frischen-tabinhalt-und-traegt-zwei-von-vier-werten-hinueber.md"
+    },
+    "6e08081f-94c3-4cd0-9b00-76429d710f26": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_belegungsmodell-zeile-traegt-fuehrt-denselben-vergleich-eingesetzt-und-ruft-die-eine-fassung-nicht.record.json",
+      "narrative": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_belegungsmodell-zeile-traegt-fuehrt-denselben-vergleich-eingesetzt-und-ruft-die-eine-fassung-nicht.md"
+    },
+    "4a39807a-7af2-45d5-bb72-e19de8f5d2ff": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_zwei-kommentare-in-default-keymap-toml-beschreiben-das-tippen-noch-als-sprungmarke.record.json",
+      "narrative": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_zwei-kommentare-in-default-keymap-toml-beschreiben-das-tippen-noch-als-sprungmarke.md"
+    },
+    "1d01d64d-e928-455f-8cd5-7b24053a09d6": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/package.json",
+      "narrative": "work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/_b_circle.md"
+    },
+    "7afc156d-3dc6-4ded-9d3a-064245c09c8d": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1710_o_ein-rueckwechsel-auf-einen-tab-setzt-seinen-beendeten-durchlauf-nicht-fort.record.json",
+      "narrative": "work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1710_o_ein-rueckwechsel-auf-einen-tab-setzt-seinen-beendeten-durchlauf-nicht-fort.md"
+    },
+    "b84bd527-f5bc-4fdc-a232-7acedb2ef8fc": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1932_o_ein-deskriptormangel-beendet-den-durchlauf-still-und-die-statuszeile-nimmt-den-lesehinweis-zurueck.record.json",
+      "narrative": "work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1932_o_ein-deskriptormangel-beendet-den-durchlauf-still-und-die-statuszeile-nimmt-den-lesehinweis-zurueck.md"
+    },
+    "e2077d4a-8984-4130-8f9c-e0e7fd5b6d6e": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/package.json",
+      "narrative": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/_d_circle.md"
+    },
+    "43b2008f-dd2f-4b1e-84ec-dc88f9964df7": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_stirbt-die-prozessgruppe-auch-am-normalen-ende-des-laufs.record.json",
+      "narrative": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_stirbt-die-prozessgruppe-auch-am-normalen-ende-des-laufs.md"
+    },
+    "21e34152-e3e6-4777-8e20-fb791c808078": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_welche-shell-faehrt-den-lauf-und-woher-kommt-ihr-pfad.record.json",
+      "narrative": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_welche-shell-faehrt-den-lauf-und-woher-kommt-ihr-pfad.md"
+    },
+    "94e50339-19da-431b-a84e-0c9cf0e84a20": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/package.json",
+      "narrative": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/_c_circle.md"
+    },
+    "1eedc46c-7fba-48f8-9b07-45c199f942d5": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0410_o_blatt-zeigen-answers-which-button-confirms-a-second-time-and-names-a-weaker-precondition.record.json",
+      "narrative": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0410_o_blatt-zeigen-answers-which-button-confirms-a-second-time-and-names-a-weaker-precondition.md"
+    },
+    "26de1f56-4782-4619-9238-e60cbb767fa4": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0412_o_one-path-in-the-keymap-head-carries-no-store-and-the-sweep-that-reported-33-of-33-did-not-see-it.record.json",
+      "narrative": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0412_o_one-path-in-the-keymap-head-carries-no-store-and-the-sweep-that-reported-33-of-33-did-not-see-it.md"
+    },
+    "dfab2ce2-83ac-4eb2-8074-7016d705b33a": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0413_o_the-one-unmeasured-promise-of-the-new-guard-lives-only-in-prose-and-in-a-closed-record.record.json",
+      "narrative": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0413_o_the-one-unmeasured-promise-of-the-new-guard-lives-only-in-prose-and-in-a-closed-record.md"
+    },
+    "8f5e5b0b-895f-4750-bbbc-7c2e7acc4daf": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0414_o_a-test-typed-commit-carries-an-unmentioned-split-of-a-production-branch.record.json",
+      "narrative": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0414_o_a-test-typed-commit-carries-an-unmentioned-split-of-a-production-branch.md"
+    },
+    "47aab446-aced-4d72-be45-5ea2be078109": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0753_o_die-ausnahme-fuer-maschinell-gelesene-kopffelder-steht-nur-in-einem-geschlossenen-datensatz.record.json",
+      "narrative": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0753_o_die-ausnahme-fuer-maschinell-gelesene-kopffelder-steht-nur-in-einem-geschlossenen-datensatz.md"
+    },
+    "48aac5ba-b5d6-48a7-873e-c0d38002f5e6": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/package.json",
+      "narrative": "work-packages/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/_c_circle.md"
+    },
+    "94e85bee-d401-4e0a-a210-6b732be5c11f": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260819-2230-auswahl-und-kopieren-in-der-vorschau/package.json",
+      "narrative": "work-packages/260819-2230-auswahl-und-kopieren-in-der-vorschau/_c_circle.md"
+    },
+    "1ce9dc0a-3f2b-486b-aaf1-5268ab735418": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260819-2230-auswahl-und-kopieren-in-der-vorschau/issues/260820-0733_o_die-abfangstelle-verwirft-die-geforderten-sorten-und-leert-jede-gereichte-ablage.record.json",
+      "narrative": "work-packages/260819-2230-auswahl-und-kopieren-in-der-vorschau/issues/260820-0733_o_die-abfangstelle-verwirft-die-geforderten-sorten-und-leert-jede-gereichte-ablage.md"
+    },
+    "c8108700-1add-4547-8616-4c7a07bbcbe5": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260821-1644-veroeffentlichen-als-achte-station/package.json",
+      "narrative": "work-packages/260821-1644-veroeffentlichen-als-achte-station/_c_circle.md"
+    },
+    "caa2f7bf-21c5-4409-8fbc-cb2e6e1f7320": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/package.json",
+      "narrative": "work-packages/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/_b_circle.md"
+    },
+    "9e5643dd-10c1-4e64-85df-0a7ebc89b597": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/issues/260824-1655_o_sechs-speicher-unter-archive-bleiben-ohne-profil-und-tragen-dieselben-datensatzarten.record.json",
+      "narrative": "work-packages/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/issues/260824-1655_o_sechs-speicher-unter-archive-bleiben-ohne-profil-und-tragen-dieselben-datensatzarten.md"
+    },
+    "b47ed94d-b230-4035-bb3a-b89e60881f69": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260825-0711-kontextmenue-traegt-zip-unzip-finder/package.json",
+      "narrative": "work-packages/260825-0711-kontextmenue-traegt-zip-unzip-finder/_b_circle.md"
+    },
+    "efa2ed7b-3d58-4c83-93c0-58be6ba89764": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260825-0711-kontextmenue-traegt-zip-unzip-finder/issues/260825-1425_o_der-schnitt-sieht-einen-zerlegt-geschriebenen-umlaut-als-anderen-eintrag-als-den-zusammengesetzten.record.json",
+      "narrative": "work-packages/260825-0711-kontextmenue-traegt-zip-unzip-finder/issues/260825-1425_o_der-schnitt-sieht-einen-zerlegt-geschriebenen-umlaut-als-anderen-eintrag-als-den-zusammengesetzten.md"
+    },
+    "ed425746-9f97-42fa-9743-37393f69ccf4": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/package.json",
+      "narrative": "work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/_c_circle.md"
+    },
+    "52d3bf9b-90ff-4069-8303-77c9519db7e0": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1710_o_c2-5-der-runde-16-sagt-unveraendert-ueber-die-ganze-anzeige-und-die-waechst-seit-der-runde-19-um-drei-zeilen.record.json",
+      "narrative": "work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1710_o_c2-5-der-runde-16-sagt-unveraendert-ueber-die-ganze-anzeige-und-die-waechst-seit-der-runde-19-um-drei-zeilen.md"
+    },
+    "896f24f5-431f-401d-a62c-dfba6b31f93f": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1911_o_drei-saetze-im-kommentarteil-der-auslieferungsfassung-beschreiben-den-stand-vor-der-runde-19.record.json",
+      "narrative": "work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1911_o_drei-saetze-im-kommentarteil-der-auslieferungsfassung-beschreiben-den-stand-vor-der-runde-19.md"
+    },
+    "b402f0aa-3a09-4f4a-8b14-3587e680bb5e": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260827-2028-vorschau-rendert-pdf-als-betrachter/package.json",
+      "narrative": "work-packages/260827-2028-vorschau-rendert-pdf-als-betrachter/_c_circle.md"
+    },
+    "648640ac-fe54-4640-a07c-15375a1181b4": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260827-2028-vorschau-rendert-pdf-als-betrachter/issues/260828-0744_o_c6-der-runde-1-sagt-eine-dreiteilung-der-vorschau-zu-und-eine-datei-hat-seit-der-runde-20-vier-wege.record.json",
+      "narrative": "work-packages/260827-2028-vorschau-rendert-pdf-als-betrachter/issues/260828-0744_o_c6-der-runde-1-sagt-eine-dreiteilung-der-vorschau-zu-und-eine-datei-hat-seit-der-runde-20-vier-wege.md"
+    },
+    "b6d77477-40ae-4b2f-b582-99ef52e95716": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/package.json",
+      "narrative": "work-packages/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/_c_circle.md"
+    },
+    "61ff6a8a-527d-4950-84dd-3d34537ab703": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "work-packages/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/decisions/260828-1041_a_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.record.json",
+      "narrative": "work-packages/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/decisions/260828-1041_a_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md"
+    },
+    "4a1123a2-e275-4118-8dbb-b194a0d27684": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/issues/260829-1215_o_der-eingefuegte-filtertext-hat-keine-hoechstlaenge-und-eine-lange-zeile-macht-jeden-rueckschritt-zum-gang-ueber-den-bestand.record.json",
+      "narrative": "work-packages/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/issues/260829-1215_o_der-eingefuegte-filtertext-hat-keine-hoechstlaenge-und-eine-lange-zeile-macht-jeden-rueckschritt-zum-gang-ueber-den-bestand.md"
+    },
+    "1ffa5e49-2b19-4f6f-a2bd-219e917c896e": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab/package.json",
+      "narrative": "work-packages/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab/_c_circle.md"
+    },
+    "0902e84f-22c1-45af-aa5d-680218b198d9": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "work-packages/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab/decisions/260829-0053_a_was-erwartet-c2-1-beim-einfuegen-in-ein-terminal-den-namen-oder-den-pfad.record.json",
+      "narrative": "work-packages/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab/decisions/260829-0053_a_was-erwartet-c2-1-beim-einfuegen-in-ein-terminal-den-namen-oder-den-pfad.md"
+    },
+    "65d6ddfc-e365-4ac7-bb49-7f8ba9ad8cc4": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260830-1045-git-bereich-liest-status-branch-verlauf/package.json",
+      "narrative": "work-packages/260830-1045-git-bereich-liest-status-branch-verlauf/_b_circle.md"
+    },
+    "d81145a3-bb7c-4288-ad91-81e598115138": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260830-1045-git-bereich-liest-status-branch-verlauf/issues/260831-1355_o_zwei-kommentare-in-default-keymap-toml-nennen-drei-spaltenschalter-und-darueber-stehen-vier.record.json",
+      "narrative": "work-packages/260830-1045-git-bereich-liest-status-branch-verlauf/issues/260831-1355_o_zwei-kommentare-in-default-keymap-toml-nennen-drei-spaltenschalter-und-darueber-stehen-vier.md"
+    },
+    "b01e1dfe-f297-4e8f-b4aa-4d3668995371": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260830-1045-git-bereich-liest-status-branch-verlauf/issues/260831-1652_o_gix-zieht-ein-unlesbares-git-verzeichnis-und-einen-toten-gitdir-verweis-selbst-zu-kein-repository-zusammen.record.json",
+      "narrative": "work-packages/260830-1045-git-bereich-liest-status-branch-verlauf/issues/260831-1652_o_gix-zieht-ein-unlesbares-git-verzeichnis-und-einen-toten-gitdir-verweis-selbst-zu-kein-repository-zusammen.md"
+    },
+    "1ef3ec85-d8d5-4a87-8cea-ed0d8182dd8f": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260910-0707-krk-meldet-neuerungen-in-readers-settings-keymap/package.json",
+      "narrative": "work-packages/260910-0707-krk-meldet-neuerungen-in-readers-settings-keymap/260910-0707-krk-meldet-neuerungen-in-readers-settings-keymap.md"
+    },
+    "4aa4f91e-ce34-4eff-b9d0-66df91b6fd24": {
+      "kind": "decision",
+      "row": "record-live",
+      "control": "work-packages/260910-0707-krk-meldet-neuerungen-in-readers-settings-keymap/decisions/260910-0818_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l4.record.json",
+      "narrative": "work-packages/260910-0707-krk-meldet-neuerungen-in-readers-settings-keymap/decisions/260910-0818_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l4.md"
+    },
+    "82f941b4-7429-4916-8202-01c9653bf04a": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/package.json",
+      "narrative": "work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/260925-2356-f2-oeffnet-krkhome-statt-notizfenster.md"
+    },
+    "221cb1b8-656f-4d83-b6f8-eac6d73f5265": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/issues/260926-0257_o_textstand-unlesbar-traegt-einen-offenen-deskriptor-den-seit-dem-wegfall-des-zettelwegs-kein-aufrufer-liest.record.json",
+      "narrative": "work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/issues/260926-0257_o_textstand-unlesbar-traegt-einen-offenen-deskriptor-den-seit-dem-wegfall-des-zettelwegs-kein-aufrufer-liest.md"
+    },
+    "a7a55b04-50c2-405e-b8c9-9c29408640fb": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/issues/260926-0840_o_cmd-z-im-umbenennungsfeld-des-dateifensters-erreicht-bei-leerem-feldstapel-den-verlauf-des-editors.record.json",
+      "narrative": "work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/issues/260926-0840_o_cmd-z-im-umbenennungsfeld-des-dateifensters-erreicht-bei-leerem-feldstapel-den-verlauf-des-editors.md"
+    },
+    "06fa5056-d903-44e4-bd63-91c90f14f092": {
+      "kind": "issue",
+      "row": "record-live",
+      "control": "work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/issues/260926-1012_o_die-probe-ein-abgegebenes-sitzungsrecht-ist-wieder-zu-haben-schlug-in-einem-von-drei-laeufen-von-make-check-fehl.record.json",
+      "narrative": "work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/issues/260926-1012_o_die-probe-ein-abgegebenes-sitzungsrecht-ist-wieder-zu-haben-schlug-in-einem-von-drei-laeufen-von-make-check-fehl.md"
+    },
+    "6bcb1295-54f1-4f8d-9452-4bbf24cce9c6": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260926-2240-termine-als-weitere-datei-im-heimordner/package.json",
+      "narrative": "work-packages/260926-2240-termine-als-weitere-datei-im-heimordner/260926-2240-termine-als-weitere-datei-im-heimordner.md"
+    },
+    "e4608953-92f3-4a10-86c5-20cc99b1c377": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260926-2246-f10-oeffnet-quicknote-mit-fluechtigem-puffer/package.json",
+      "narrative": "work-packages/260926-2246-f10-oeffnet-quicknote-mit-fluechtigem-puffer/260926-2246-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md"
+    },
+    "fdfa7263-7da6-4261-9a76-2ff45b44abee": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260929-1015-werkseinstellungen-zuruecksetzen-und-neu-einlesen/package.json",
+      "narrative": "work-packages/260929-1015-werkseinstellungen-zuruecksetzen-und-neu-einlesen/260929-1015-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md"
+    },
+    "cb39944d-eb21-4aa6-b440-5223bd351166": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260929-1415-vorschau-blaettert-fotos-nach-aufnahmedatum/package.json",
+      "narrative": "work-packages/260929-1415-vorschau-blaettert-fotos-nach-aufnahmedatum/260929-1415-vorschau-blaettert-fotos-nach-aufnahmedatum.md"
+    },
+    "9989e1db-a9db-45dc-8069-25a8a6d9a373": {
+      "kind": "package",
+      "row": "package-terminal",
+      "control": "work-packages/260930-1914-kontextmenue-traegt-duplicate-mit-namensdialog/package.json",
+      "narrative": "work-packages/260930-1914-kontextmenue-traegt-duplicate-mit-namensdialog/260930-1914-kontextmenue-traegt-duplicate-mit-namensdialog.md"
+    },
+    "827c07e6-559e-4ef3-b14a-6ed9c86450ad": {
+      "kind": "package",
+      "row": "package-live",
+      "control": "work-packages/260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch/package.json",
+      "narrative": "work-packages/260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch/260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch.md"
+    },
+    "bd299a4c-75ad-4833-8205-5886711b7225": {
+      "kind": "plan",
+      "row": "record-live",
+      "control": "work-packages/260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch/plans/261001-0735_o_spec-oberflaeche-lokalisierbar-deutsch-und-franzoesisch.record.json",
+      "narrative": "work-packages/260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch/plans/261001-0735_o_spec-oberflaeche-lokalisierbar-deutsch-und-franzoesisch.md"
+    },
+    "4e70bd74-3e41-456a-b4e2-aa485c703494": {
+      "kind": "package",
+      "row": "package-live",
+      "control": "work-packages/261006-1916-fensterlage-und-groesse-ueberstehen-den-neustart/package.json",
+      "narrative": "work-packages/261006-1916-fensterlage-und-groesse-ueberstehen-den-neustart/261006-1916-fensterlage-und-groesse-ueberstehen-den-neustart.md"
+    }
+  }
+}

@@ -1,0 +1,1448 @@
+{
+  "schema": "fusion.migration-plan/v1",
+  "part": "chunk",
+  "migration_id": "migration-20261011-v12",
+  "chunk": 7,
+  "writes": [
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/_b_circle.md",
+      "from": "work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/_b_circle.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:b97a2d77bf030871bd40dbb0390bc0d1a09df68fe65537fc5dfdb11957377138"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1710_o_ein-rueckwechsel-auf-einen-tab-setzt-seinen-beendeten-durchlauf-nicht-fort.md",
+      "from": "work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1710_o_ein-rueckwechsel-auf-einen-tab-setzt-seinen-beendeten-durchlauf-nicht-fort.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:2b76759a71992098109d9323180627c56c58cf12a1f1801c26d3bc99b85bae30"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1932_o_ein-deskriptormangel-beendet-den-durchlauf-still-und-die-statuszeile-nimmt-den-lesehinweis-zurueck.md",
+      "from": "work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1932_o_ein-deskriptormangel-beendet-den-durchlauf-still-und-die-statuszeile-nimmt-den-lesehinweis-zurueck.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:650b352c358ee4032d085be57939a3b4fea9360c7f40d7fbbcb2118554194a54"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260816-2255-befehle-absetzen-und-makros-speichern/_d_circle.md",
+      "from": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/_d_circle.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:5ff5b76fe88cd5180fc248d18686678fb8b14e4c7a257b0274baf38f2168c115"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_stirbt-die-prozessgruppe-auch-am-normalen-ende-des-laufs.md",
+      "from": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_stirbt-die-prozessgruppe-auch-am-normalen-ende-des-laufs.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:6cef7da59a288bfebe1bf993408c0490f80f633608b0d11fcdd198344d83eda5"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_welche-shell-faehrt-den-lauf-und-woher-kommt-ihr-pfad.md",
+      "from": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_welche-shell-faehrt-den-lauf-und-woher-kommt-ihr-pfad.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:11522cc9cedbaf0e35b50d3340bc60b48254d76ddf17d465712c05fd999ddbd5"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/_c_circle.md",
+      "from": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/_c_circle.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:0e06c2ed0ee68b882b1b7f381ea47976f2b9a775614dec529d58ea75593f13a0"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0410_o_blatt-zeigen-answers-which-button-confirms-a-second-time-and-names-a-weaker-precondition.md",
+      "from": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0410_o_blatt-zeigen-answers-which-button-confirms-a-second-time-and-names-a-weaker-precondition.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:e2f56b804a0742613a5b4570c2279409b4cca0519c6ce58eb77daab81fdcf93a"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0412_o_one-path-in-the-keymap-head-carries-no-store-and-the-sweep-that-reported-33-of-33-did-not-see-it.md",
+      "from": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0412_o_one-path-in-the-keymap-head-carries-no-store-and-the-sweep-that-reported-33-of-33-did-not-see-it.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:9e1db535ef80fc2400f7525d043a90cc610906c271eb907114de6af539f77e08"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0413_o_the-one-unmeasured-promise-of-the-new-guard-lives-only-in-prose-and-in-a-closed-record.md",
+      "from": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0413_o_the-one-unmeasured-promise-of-the-new-guard-lives-only-in-prose-and-in-a-closed-record.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:6c41bdbc7e350b7858be30143b8c4dc5cab91c61ab1d0aeb40fc004a44a3ebec"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0414_o_a-test-typed-commit-carries-an-unmentioned-split-of-a-production-branch.md",
+      "from": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0414_o_a-test-typed-commit-carries-an-unmentioned-split-of-a-production-branch.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:7ff6854fa3113f482fb57a3dff9370eb7bf7f4d1104b85bdf0ab0d104f0e8de2"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0753_o_die-ausnahme-fuer-maschinell-gelesene-kopffelder-steht-nur-in-einem-geschlossenen-datensatz.md",
+      "from": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0753_o_die-ausnahme-fuer-maschinell-gelesene-kopffelder-steht-nur-in-einem-geschlossenen-datensatz.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:6290e879deff78e46eed692cd9928e96aeaec4f6e8bc9b49b209889b0d3c9a08"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/_c_circle.md",
+      "from": "work-packages/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/_c_circle.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:b5852ba438893da615efa2a506b2941bad541a56a66ab603172a9c6a0a59d6db"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260819-2230-auswahl-und-kopieren-in-der-vorschau/_c_circle.md",
+      "from": "work-packages/260819-2230-auswahl-und-kopieren-in-der-vorschau/_c_circle.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:addc06911f384e97267f2741064c6b65b40565c29c315fd5896760edade00fb9"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260819-2230-auswahl-und-kopieren-in-der-vorschau/issues/260820-0733_o_die-abfangstelle-verwirft-die-geforderten-sorten-und-leert-jede-gereichte-ablage.md",
+      "from": "work-packages/260819-2230-auswahl-und-kopieren-in-der-vorschau/issues/260820-0733_o_die-abfangstelle-verwirft-die-geforderten-sorten-und-leert-jede-gereichte-ablage.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:9efc2f422a1d7cfe81ddcb1e20a91505ede3ce65fe1ee3ae934da8b2e39fe4a1"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260821-1644-veroeffentlichen-als-achte-station/_c_circle.md",
+      "from": "work-packages/260821-1644-veroeffentlichen-als-achte-station/_c_circle.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:1a05740c2202b0dc47cfef09b953d6b340990e4a96e350700b61f8688d551226"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/_b_circle.md",
+      "from": "work-packages/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/_b_circle.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:2ea4dbec96e3fb93a4916b487dd57cbf9f359fc082fb3ecc147ae5ab62932a04"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/issues/260824-1655_o_sechs-speicher-unter-archive-bleiben-ohne-profil-und-tragen-dieselben-datensatzarten.md",
+      "from": "work-packages/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/issues/260824-1655_o_sechs-speicher-unter-archive-bleiben-ohne-profil-und-tragen-dieselben-datensatzarten.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:91c71ad26d04117b15a516371aea99b344a893c8c3c4a6cbcf96c280cd5f67b6"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260825-0711-kontextmenue-traegt-zip-unzip-finder/_b_circle.md",
+      "from": "work-packages/260825-0711-kontextmenue-traegt-zip-unzip-finder/_b_circle.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:357097ae13c664b4d1640b1c57e5caeafcca3987288722dbae8a8205ba1318f3"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260825-0711-kontextmenue-traegt-zip-unzip-finder/issues/260825-1425_o_der-schnitt-sieht-einen-zerlegt-geschriebenen-umlaut-als-anderen-eintrag-als-den-zusammengesetzten.md",
+      "from": "work-packages/260825-0711-kontextmenue-traegt-zip-unzip-finder/issues/260825-1425_o_der-schnitt-sieht-einen-zerlegt-geschriebenen-umlaut-als-anderen-eintrag-als-den-zusammengesetzten.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:047cf1900c880b2a2c85b1fa29970e4d1ae12c3c67c4bf5c09ccd9b455ff9293"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/_c_circle.md",
+      "from": "work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/_c_circle.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:9199d8454245c06fb2dd8b391fcb5ce3c85bfdafdc0357073017a60c1833cac4"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1710_o_c2-5-der-runde-16-sagt-unveraendert-ueber-die-ganze-anzeige-und-die-waechst-seit-der-runde-19-um-drei-zeilen.md",
+      "from": "work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1710_o_c2-5-der-runde-16-sagt-unveraendert-ueber-die-ganze-anzeige-und-die-waechst-seit-der-runde-19-um-drei-zeilen.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:7bc94e7b84a164b3d4986eed1be1fc8191e21bf06b0b9c2f018cfab61a027955"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1911_o_drei-saetze-im-kommentarteil-der-auslieferungsfassung-beschreiben-den-stand-vor-der-runde-19.md",
+      "from": "work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1911_o_drei-saetze-im-kommentarteil-der-auslieferungsfassung-beschreiben-den-stand-vor-der-runde-19.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:c17d756b7decbbaf8bd15aac0899c1ac48f3e33ab0d20d8a06fc28db2e1d67e3"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260827-2028-vorschau-rendert-pdf-als-betrachter/_c_circle.md",
+      "from": "work-packages/260827-2028-vorschau-rendert-pdf-als-betrachter/_c_circle.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:a8caf0394bb504540a59e6116eeda4ae7586798e201bbbba9246dc0442b75fc2"
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/package.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:439d16cd4086a9a73e63443a8e1e9f02c07dadf926d4892ccf80129ffbb76d60",
+      "control": {
+        "schema": "fusion.package/v1",
+        "id": "1d01d64d-e928-455f-8cd5-7b24053a09d6",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "domain": "code",
+        "status": "dropped",
+        "claim": null,
+        "mode": {
+          "value": "ordinary",
+          "source": null
+        },
+        "origin": {
+          "kind": "legacy-unknown",
+          "ref": null
+        },
+        "filed_by": {
+          "actor": "orchestrator",
+          "person": null
+        },
+        "narrative": {
+          "path": "work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/_b_circle.md"
+        },
+        "depends_on": [],
+        "active_documents": [],
+        "references": [],
+        "evidence": [],
+        "outcome": {
+          "class": "bounded",
+          "reason": "closed bounded (legacy Circle marker)",
+          "evidence": []
+        },
+        "provenance": {
+          "source": "legacy-terminal",
+          "legacy_fields": {
+            "file_marker": "b",
+            "head": {
+              "Domain": "code",
+              "Status": "bounded",
+              "Filed by": "orchestrator",
+              "Active spec/plan": "shared/planning/260816-1310_o_spec-inhaltsfilter-der-dateiliste.md (Spec), circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/planning/260816-1359_c_plan-inhaltsfilter-der-dateiliste.md (Plan, geschlossen)",
+              "Active session history": "shared/history/260815-2047-orchestrator-session.md"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/_b_circle.md",
+            "sha256": "sha256:b97a2d77bf030871bd40dbb0390bc0d1a09df68fe65537fc5dfdb11957377138",
+            "kind": "other"
+          }
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1710_o_ein-rueckwechsel-auf-einen-tab-setzt-seinen-beendeten-durchlauf-nicht-fort.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:1057597c3a47c096febdf46a9e9cfad4c812269951c86bff00c0e658e10447a0",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "7afc156d-3dc6-4ded-9d3a-064245c09c8d",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1710_o_ein-rueckwechsel-auf-einen-tab-setzt-seinen-beendeten-durchlauf-nicht-fort.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {},
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "09baffd339c15b66bcaa5b2fe43f70034ffb1d3d"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1710_o_ein-rueckwechsel-auf-einen-tab-setzt-seinen-beendeten-durchlauf-nicht-fort.md",
+            "sha256": "sha256:2b76759a71992098109d9323180627c56c58cf12a1f1801c26d3bc99b85bae30",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1932_o_ein-deskriptormangel-beendet-den-durchlauf-still-und-die-statuszeile-nimmt-den-lesehinweis-zurueck.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:5672efcf4180a0dd39c1e5d07a4ff985a7c54db61fdef7bba8bb23f25fd76cb6",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "b84bd527-f5bc-4fdc-a232-7acedb2ef8fc",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1932_o_ein-deskriptormangel-beendet-den-durchlauf-still-und-die-statuszeile-nimmt-den-lesehinweis-zurueck.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {},
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "f9ca26fd263d11bd51e4bf3cc73d606a2f44f7a0"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1932_o_ein-deskriptormangel-beendet-den-durchlauf-still-und-die-statuszeile-nimmt-den-lesehinweis-zurueck.md",
+            "sha256": "sha256:650b352c358ee4032d085be57939a3b4fea9360c7f40d7fbbcb2118554194a54",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/package.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:f2cf6198f320c69ad0a6588eb8ef9c8f5057f25d659fc2545073b9b943ebfb9e",
+      "control": {
+        "schema": "fusion.package/v1",
+        "id": "e2077d4a-8984-4130-8f9c-e0e7fd5b6d6e",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "domain": "code",
+        "status": "dropped",
+        "claim": null,
+        "mode": {
+          "value": "ordinary",
+          "source": null
+        },
+        "origin": {
+          "kind": "legacy-unknown",
+          "ref": null
+        },
+        "filed_by": {
+          "actor": "orchestrator",
+          "person": null
+        },
+        "narrative": {
+          "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/_d_circle.md"
+        },
+        "depends_on": [],
+        "active_documents": [],
+        "references": [],
+        "evidence": [],
+        "outcome": {
+          "class": "dropped",
+          "reason": "deferred (legacy Circle marker)",
+          "evidence": []
+        },
+        "provenance": {
+          "source": "legacy-terminal",
+          "legacy_fields": {
+            "file_marker": "d",
+            "head": {
+              "Domain": "code",
+              "Status": "deferred",
+              "Filed by": "orchestrator",
+              "Active spec/plan": "260816-2240_*_spec-befehle-absetzen-und-makros-speichern.md",
+              "Active session history": "shared/history/260816-2113-orchestrator-session.md"
+            },
+            "derived": {
+              "/status": {
+                "rule": "circle-deferred-dropped"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260816-2255-befehle-absetzen-und-makros-speichern/_d_circle.md",
+            "sha256": "sha256:5ff5b76fe88cd5180fc248d18686678fb8b14e4c7a257b0274baf38f2168c115",
+            "kind": "other"
+          }
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_stirbt-die-prozessgruppe-auch-am-normalen-ende-des-laufs.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:6475298b173d26c478fc3ed731e88af3147b8f45cccbd2da048abcb7a3b3d32c",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "43b2008f-dd2f-4b1e-84ec-dc88f9964df7",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_stirbt-die-prozessgruppe-auch-am-normalen-ende-des-laufs.md"
+        },
+        "filed_by": {
+          "actor": "planner",
+          "person": null
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "a",
+            "head": {
+              "Domain": "code",
+              "Status": "answered",
+              "Filed by": "planner",
+              "Cross-references": "`260816-2240_*_spec-befehle-absetzen-und-makros-speichern.md` (C1.9, C1.10, C1.15 und `## Was der Befehlslauf nicht kann`); `260816-2307_*_plan-befehle-absetzen-und-makros-speichern.md` Schritt A3 und die Zeile `**Decidability:**` im Plankopf"
+            },
+            "derived": {
+              "/control/answer_ref": {
+                "rule": "answer-ref-self",
+                "evidence": "unresolvable-answer-line"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_stirbt-die-prozessgruppe-auch-am-normalen-ende-des-laufs.md",
+            "sha256": "sha256:6cef7da59a288bfebe1bf993408c0490f80f633608b0d11fcdd198344d83eda5",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "answered",
+          "answer_ref": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_stirbt-die-prozessgruppe-auch-am-normalen-ende-des-laufs.md",
+            "sha256": "sha256:6cef7da59a288bfebe1bf993408c0490f80f633608b0d11fcdd198344d83eda5",
+            "kind": "decision"
+          },
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "rewrite",
+      "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_stirbt-die-prozessgruppe-auch-am-normalen-ende-des-laufs.md",
+      "source_sha256": "sha256:6cef7da59a288bfebe1bf993408c0490f80f633608b0d11fcdd198344d83eda5",
+      "after_sha256": "sha256:270e7ca07f9e0b2242f7b444d8b69fa53c9c2490bc3f0f04ea89f22492c5f26d",
+      "deletions": [
+        {
+          "offset": 105,
+          "length": 21
+        }
+      ]
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_welche-shell-faehrt-den-lauf-und-woher-kommt-ihr-pfad.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:fe75a4d916e2e139f64c93f7f1be60598adede1e207ff30a3dcf148da77fa0a7",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "21e34152-e3e6-4777-8e20-fb791c808078",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_welche-shell-faehrt-den-lauf-und-woher-kommt-ihr-pfad.md"
+        },
+        "filed_by": {
+          "actor": "planner",
+          "person": null
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "a",
+            "head": {
+              "Domain": "code",
+              "Status": "open",
+              "Filed by": "planner",
+              "Cross-references": "`260816-2240_*_spec-befehle-absetzen-und-makros-speichern.md` (C1.2, C1.16, C1.17 und `## Offen für den Planner`, dritter Punkt); `shared/consult/260815-1354-befehlslauf-und-makros-in-krk.md` (`## Open Questions`, zweite Frage); `260816-2307_*_plan-befehle-absetzen-und-makros-speichern.md` Schritt A3 und A4"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_welche-shell-faehrt-den-lauf-und-woher-kommt-ihr-pfad.md",
+            "sha256": "sha256:11522cc9cedbaf0e35b50d3340bc60b48254d76ddf17d465712c05fd999ddbd5",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "answered",
+          "answer_ref": "260905-2008-orchestrator-session.md",
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "rewrite",
+      "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_welche-shell-faehrt-den-lauf-und-woher-kommt-ihr-pfad.md",
+      "source_sha256": "sha256:11522cc9cedbaf0e35b50d3340bc60b48254d76ddf17d465712c05fd999ddbd5",
+      "after_sha256": "sha256:81266dcc2225aef6a7a0fc29ee4addf38c556cc9c0a78b1d9fdbc166486c1a91",
+      "deletions": [
+        {
+          "offset": 89,
+          "length": 17
+        }
+      ]
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/package.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:53711ff9656a8ba87fab1bef1aa832ab950a9f88b6a5802b18e39ec5976059b7",
+      "control": {
+        "schema": "fusion.package/v1",
+        "id": "94e50339-19da-431b-a84e-0c9cf0e84a20",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "domain": "code",
+        "status": "done",
+        "claim": null,
+        "mode": {
+          "value": "ordinary",
+          "source": null
+        },
+        "origin": {
+          "kind": "legacy-unknown",
+          "ref": null
+        },
+        "filed_by": {
+          "actor": "orchestrator",
+          "person": null
+        },
+        "narrative": {
+          "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/_c_circle.md"
+        },
+        "depends_on": [],
+        "active_documents": [],
+        "references": [],
+        "evidence": [],
+        "outcome": {
+          "class": "legacy-completed",
+          "reason": "",
+          "evidence": []
+        },
+        "provenance": {
+          "source": "legacy-terminal",
+          "legacy_fields": {
+            "file_marker": "c",
+            "head": {
+              "Domain": "code",
+              "Status": "closed",
+              "Filed by": "orchestrator",
+              "Active spec/plan": "260817-0856_*_plan-absicherung-jedes-loeschwegs.md (Spec: 260817-0536_*_spec-absicherung-jedes-loeschwegs.md, seit dem Aufräumlauf 260819-1613 unter `archive/`)",
+              "Active session history": "circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/history/260817-2131-orchestrator-session.md"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/_c_circle.md",
+            "sha256": "sha256:0e06c2ed0ee68b882b1b7f381ea47976f2b9a775614dec529d58ea75593f13a0",
+            "kind": "other"
+          }
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0410_o_blatt-zeigen-answers-which-button-confirms-a-second-time-and-names-a-weaker-precondition.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:1aac62b07dc2686684416ef1fabf7ad746ab7413cebc15dc3c09e2467082e628",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "1eedc46c-7fba-48f8-9b07-45c199f942d5",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0410_o_blatt-zeigen-answers-which-button-confirms-a-second-time-and-names-a-weaker-precondition.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Severity": "Medium. Latent — all five callers today come from `Blatt::neu`, where the two",
+              "Found by": "coderev, review `reviews/260818-0410-coderev-bundle-f-die-messungen-und-der-waechter.md`",
+              "Affected": "`crates/krk-ui/src/appkit/blaetter/mod.rs:762-766`",
+              "Tree state": "`a4d8211`",
+              "Domain": "code"
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "e843d90582395dcfbdb88725940e08dc39f30ea3"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0410_o_blatt-zeigen-answers-which-button-confirms-a-second-time-and-names-a-weaker-precondition.md",
+            "sha256": "sha256:e2f56b804a0742613a5b4570c2279409b4cca0519c6ce58eb77daab81fdcf93a",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0412_o_one-path-in-the-keymap-head-carries-no-store-and-the-sweep-that-reported-33-of-33-did-not-see-it.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:70ebf7e43cfc24fc5cf590d3d91ebeb58e14819ae5fb8e7c377da4232dbc8e2b",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "26de1f56-4782-4619-9238-e60cbb767fa4",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0412_o_one-path-in-the-keymap-head-carries-no-store-and-the-sweep-that-reported-33-of-33-did-not-see-it.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Severity": "Low. One reference, and the file it means is findable by search. Filed because the",
+              "Found by": "coderev, review `reviews/260818-0410-coderev-bundle-f-die-messungen-und-der-waechter.md`",
+              "Affected": "`resources/default-keymap.toml:8`",
+              "Related": "`issues/260817-2243_c_two-decision-paths-in-the-keymap-head-are-split-across-comment-lines-and-escape-every-search.md`,",
+              "Tree state": "`a4d8211`",
+              "Domain": "code"
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "e843d90582395dcfbdb88725940e08dc39f30ea3"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0412_o_one-path-in-the-keymap-head-carries-no-store-and-the-sweep-that-reported-33-of-33-did-not-see-it.md",
+            "sha256": "sha256:9e1db535ef80fc2400f7525d043a90cc610906c271eb907114de6af539f77e08",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0413_o_the-one-unmeasured-promise-of-the-new-guard-lives-only-in-prose-and-in-a-closed-record.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:f710ecea243c33db780746ef709bebb60aa5bf107690c0523a2e9b7c18b930e0",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "dfab2ce2-83ac-4eb2-8074-7016d705b33a",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0413_o_the-one-unmeasured-promise-of-the-new-guard-lives-only-in-prose-and-in-a-closed-record.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Severity": "Medium as a record gap, Low as behaviour. Nothing destructive: both buttons stay",
+              "Found by": "coderev, review `reviews/260818-0410-coderev-bundle-f-die-messungen-und-der-waechter.md`",
+              "Affected": "`crates/krk-ui/src/appkit/blaetter/konflikt.rs:49-53`",
+              "Related": "`issues/260817-1241_c_das-konfliktblatt-gibt-seinem-namensfeld-keinen-eingabewaechter.md` (closure note, last but one paragraph)",
+              "Tree state": "`a4d8211`",
+              "Domain": "code"
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "e843d90582395dcfbdb88725940e08dc39f30ea3"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0413_o_the-one-unmeasured-promise-of-the-new-guard-lives-only-in-prose-and-in-a-closed-record.md",
+            "sha256": "sha256:6c41bdbc7e350b7858be30143b8c4dc5cab91c61ab1d0aeb40fc004a44a3ebec",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0414_o_a-test-typed-commit-carries-an-unmentioned-split-of-a-production-branch.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:d75d3e32a61d6f1badea34a88c60fe09273cddd7e06d3f1faab5c741dc07277f",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "8f5e5b0b-895f-4750-bbbc-7c2e7acc4daf",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0414_o_a-test-typed-commit-carries-an-unmentioned-split-of-a-production-branch.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Severity": "Low. Traceability only — the new branch is right, it is justified in a code",
+              "Found by": "coderev, review `reviews/260818-0410-coderev-bundle-f-die-messungen-und-der-waechter.md`",
+              "Affected": "`crates/krk-ui/src/kommandos/loeschwarnung.rs:766-780`, commit `441da86`",
+              "Tree state": "`a4d8211`",
+              "Domain": "code"
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "e843d90582395dcfbdb88725940e08dc39f30ea3"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0414_o_a-test-typed-commit-carries-an-unmentioned-split-of-a-production-branch.md",
+            "sha256": "sha256:7ff6854fa3113f482fb57a3dff9370eb7bf7f4d1104b85bdf0ab0d104f0e8de2",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0753_o_die-ausnahme-fuer-maschinell-gelesene-kopffelder-steht-nur-in-einem-geschlossenen-datensatz.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:bde695ec23aea014c243afe75b1ac1d2d4affd0b046c87f6dd18c961f043fa3c",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "47aab446-aced-4d72-be45-5ea2be078109",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0753_o_die-ausnahme-fuer-maschinell-gelesene-kopffelder-steht-nur-in-einem-geschlossenen-datensatz.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Severity": "Low",
+              "Found by": "coderev, Durchsicht der Zeigerreparatur 260818-0752",
+              "Domain": "code"
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "9ac41ea6da6ffa6e1171c2eb434cedc37b83c84a"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0753_o_die-ausnahme-fuer-maschinell-gelesene-kopffelder-steht-nur-in-einem-geschlossenen-datensatz.md",
+            "sha256": "sha256:6290e879deff78e46eed692cd9928e96aeaec4f6e8bc9b49b209889b0d3c9a08",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/package.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:3127bb3a3131f9d3c079df6f5a1fac4508fec38d68504fe9b70a50efb3540b09",
+      "control": {
+        "schema": "fusion.package/v1",
+        "id": "48aac5ba-b5d6-48a7-873e-c0d38002f5e6",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "domain": "code",
+        "status": "done",
+        "claim": null,
+        "mode": {
+          "value": "ordinary",
+          "source": null
+        },
+        "origin": {
+          "kind": "legacy-unknown",
+          "ref": null
+        },
+        "filed_by": {
+          "actor": "orchestrator",
+          "person": null
+        },
+        "narrative": {
+          "path": "work-packages/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/_c_circle.md"
+        },
+        "depends_on": [],
+        "active_documents": [],
+        "references": [],
+        "evidence": [],
+        "outcome": {
+          "class": "legacy-completed",
+          "reason": "",
+          "evidence": []
+        },
+        "provenance": {
+          "source": "legacy-terminal",
+          "legacy_fields": {
+            "file_marker": "c",
+            "head": {
+              "Domain": "code",
+              "Status": "closed",
+              "Filed by": "orchestrator",
+              "Active spec/plan": "260818-1510_*_spec-verzeichnis-angleichen-und-abwurf-aus-fremden-apps.md (seit dem Aufräumlauf 260819-1613 unter `archive/`)",
+              "Active session history": "shared/history/260818-1117-orchestrator-session.md"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/_c_circle.md",
+            "sha256": "sha256:b5852ba438893da615efa2a506b2941bad541a56a66ab603172a9c6a0a59d6db",
+            "kind": "other"
+          }
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260819-2230-auswahl-und-kopieren-in-der-vorschau/package.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:b10bcff06c4d1f2af6628d879e06ea458877fba851e46442d958dadf56bad769",
+      "control": {
+        "schema": "fusion.package/v1",
+        "id": "94e85bee-d401-4e0a-a210-6b732be5c11f",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "domain": "code",
+        "status": "done",
+        "claim": null,
+        "mode": {
+          "value": "ordinary",
+          "source": null
+        },
+        "origin": {
+          "kind": "legacy-unknown",
+          "ref": null
+        },
+        "filed_by": {
+          "actor": "orchestrator",
+          "person": null
+        },
+        "narrative": {
+          "path": "work-packages/260819-2230-auswahl-und-kopieren-in-der-vorschau/_c_circle.md"
+        },
+        "depends_on": [],
+        "active_documents": [],
+        "references": [],
+        "evidence": [],
+        "outcome": {
+          "class": "legacy-completed",
+          "reason": "",
+          "evidence": []
+        },
+        "provenance": {
+          "source": "legacy-terminal",
+          "legacy_fields": {
+            "file_marker": "c",
+            "head": {
+              "Domain": "code",
+              "Filed by": "orchestrator",
+              "Active spec/plan": "`circles/260819-2230-auswahl-und-kopieren-in-der-vorschau/planning/260819-2245_*_plan-auswahl-und-kopieren-in-der-vorschau.md` — der Plan in Kraft, vom Nutzer am 260819-2252 abgenommen. Der Spec dazu, vor diesem Circle entstanden und deshalb im gemeinsamen Speicher: `shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md`.",
+              "Active session history": "shared/history/260819-2026-orchestrator-session.md"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260819-2230-auswahl-und-kopieren-in-der-vorschau/_c_circle.md",
+            "sha256": "sha256:addc06911f384e97267f2741064c6b65b40565c29c315fd5896760edade00fb9",
+            "kind": "other"
+          }
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260819-2230-auswahl-und-kopieren-in-der-vorschau/issues/260820-0733_o_die-abfangstelle-verwirft-die-geforderten-sorten-und-leert-jede-gereichte-ablage.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:892412fd453dd4415ee18076786583003d122eaf3ce9d52be43a98443c915a33",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "1ce9dc0a-3f2b-486b-aaf1-5268ab735418",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260819-2230-auswahl-und-kopieren-in-der-vorschau/issues/260820-0733_o_die-abfangstelle-verwirft-die-geforderten-sorten-und-leert-jede-gereichte-ablage.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Richtung, nicht vorweggenommen": "entweder die Hülle bekommt eine zweite Auskunft, ob sie",
+              "Schwere": "mittel. Kein Weg ist heute nachweislich kaputt; die Stelle ist die einzige, an",
+              "Baumstand": "`b28cdd6`."
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "56afe456b926e9afb3d5e34ecbd36e504e465dfa"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260819-2230-auswahl-und-kopieren-in-der-vorschau/issues/260820-0733_o_die-abfangstelle-verwirft-die-geforderten-sorten-und-leert-jede-gereichte-ablage.md",
+            "sha256": "sha256:9efc2f422a1d7cfe81ddcb1e20a91505ede3ce65fe1ee3ae934da8b2e39fe4a1",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260821-1644-veroeffentlichen-als-achte-station/package.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:8f08c697592a196c4710ef6ecbf07a86589ae0b902369fec7ca261432f21ef97",
+      "control": {
+        "schema": "fusion.package/v1",
+        "id": "c8108700-1add-4547-8616-4c7a07bbcbe5",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "domain": "code",
+        "status": "done",
+        "claim": null,
+        "mode": {
+          "value": "ordinary",
+          "source": null
+        },
+        "origin": {
+          "kind": "legacy-unknown",
+          "ref": null
+        },
+        "filed_by": {
+          "actor": "shaper",
+          "person": null
+        },
+        "narrative": {
+          "path": "work-packages/260821-1644-veroeffentlichen-als-achte-station/_c_circle.md"
+        },
+        "depends_on": [],
+        "active_documents": [],
+        "references": [],
+        "evidence": [],
+        "outcome": {
+          "class": "legacy-completed",
+          "reason": "",
+          "evidence": []
+        },
+        "provenance": {
+          "source": "legacy-terminal",
+          "legacy_fields": {
+            "file_marker": "c",
+            "head": {
+              "Domain": "code",
+              "Filed by": "shaper (anticipated-circle mode)",
+              "Active spec/plan": "`260821-1115_*_spec-artefakt-und-release.md` — vor diesem Circle entstanden und deshalb im gemeinsamen Speicher, mit dem Plan dazu am selben Ort: `260821-1221_*_plan-artefakt-und-release.md` (der Plan liegt seit dem Aufräumlauf 260826-1637 unter `archive/`).",
+              "Active session history": "`shared/history/260820-2200-orchestrator-session.md`"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260821-1644-veroeffentlichen-als-achte-station/_c_circle.md",
+            "sha256": "sha256:1a05740c2202b0dc47cfef09b953d6b340990e4a96e350700b61f8688d551226",
+            "kind": "other"
+          }
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/package.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:ead64cfdc71bba7812a90ff8aa2fedd99a4171d00fb09e7e9061726af431c8a4",
+      "control": {
+        "schema": "fusion.package/v1",
+        "id": "caa2f7bf-21c5-4409-8fbc-cb2e6e1f7320",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "domain": "code",
+        "status": "dropped",
+        "claim": null,
+        "mode": {
+          "value": "ordinary",
+          "source": null
+        },
+        "origin": {
+          "kind": "legacy-unknown",
+          "ref": null
+        },
+        "filed_by": {
+          "actor": "shaper",
+          "person": null
+        },
+        "narrative": {
+          "path": "work-packages/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/_b_circle.md"
+        },
+        "depends_on": [],
+        "active_documents": [],
+        "references": [],
+        "evidence": [],
+        "outcome": {
+          "class": "bounded",
+          "reason": "closed bounded (legacy Circle marker)",
+          "evidence": []
+        },
+        "provenance": {
+          "source": "legacy-terminal",
+          "legacy_fields": {
+            "file_marker": "b",
+            "head": {
+              "Domain": "code",
+              "Filed by": "shaper (anticipated-circle mode)",
+              "Active spec/plan": "circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/planning/260824-0640_p_plan-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md",
+              "Active session history": "circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/history/260824-0530-orchestrator-session.md"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/_b_circle.md",
+            "sha256": "sha256:2ea4dbec96e3fb93a4916b487dd57cbf9f359fc082fb3ecc147ae5ab62932a04",
+            "kind": "other"
+          }
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/issues/260824-1655_o_sechs-speicher-unter-archive-bleiben-ohne-profil-und-tragen-dieselben-datensatzarten.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:189a224ea41f490cc490f82d19d4c0179215b20793b37b853217028aec427117",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "9e5643dd-10c1-4e64-85df-0a7ebc89b597",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/issues/260824-1655_o_sechs-speicher-unter-archive-bleiben-ohne-profil-und-tragen-dieselben-datensatzarten.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Eine Zeilenangabe ist nachgezogen": "das Pfadmuster des Speicherprofils stand hier auf"
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "fe0352665bb9e795e868c6b4316abd9535ecf249"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/issues/260824-1655_o_sechs-speicher-unter-archive-bleiben-ohne-profil-und-tragen-dieselben-datensatzarten.md",
+            "sha256": "sha256:91c71ad26d04117b15a516371aea99b344a893c8c3c4a6cbcf96c280cd5f67b6",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260825-0711-kontextmenue-traegt-zip-unzip-finder/package.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:b7e2f314eb4740464e2ccc2feff019891345aedf1b9b4fe411244e9975a3f1c5",
+      "control": {
+        "schema": "fusion.package/v1",
+        "id": "b47ed94d-b230-4035-bb3a-b89e60881f69",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "domain": "code",
+        "status": "dropped",
+        "claim": null,
+        "mode": {
+          "value": "ordinary",
+          "source": null
+        },
+        "origin": {
+          "kind": "legacy-unknown",
+          "ref": null
+        },
+        "filed_by": {
+          "actor": "shaper",
+          "person": null
+        },
+        "narrative": {
+          "path": "work-packages/260825-0711-kontextmenue-traegt-zip-unzip-finder/_b_circle.md"
+        },
+        "depends_on": [],
+        "active_documents": [],
+        "references": [],
+        "evidence": [],
+        "outcome": {
+          "class": "bounded",
+          "reason": "closed bounded (legacy Circle marker)",
+          "evidence": []
+        },
+        "provenance": {
+          "source": "legacy-terminal",
+          "legacy_fields": {
+            "file_marker": "b",
+            "head": {
+              "Domain": "code",
+              "Filed by": "shaper (anticipated-circle mode)",
+              "Active spec/plan": "circles/260825-0711-kontextmenue-traegt-zip-unzip-finder/planning/260825-0727_c_plan-kontextmenue-traegt-zip-unzip-finder.md",
+              "Active session history": "shared/history/260824-2120-orchestrator-session.md"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260825-0711-kontextmenue-traegt-zip-unzip-finder/_b_circle.md",
+            "sha256": "sha256:357097ae13c664b4d1640b1c57e5caeafcca3987288722dbae8a8205ba1318f3",
+            "kind": "other"
+          }
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260825-0711-kontextmenue-traegt-zip-unzip-finder/issues/260825-1425_o_der-schnitt-sieht-einen-zerlegt-geschriebenen-umlaut-als-anderen-eintrag-als-den-zusammengesetzten.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:73918ee1448877aea08fa89b90b18160ec2c80ae5398ad820e45fd4aa57e144c",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "efa2ed7b-3d58-4c83-93c0-58be6ba89764",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260825-0711-kontextmenue-traegt-zip-unzip-finder/issues/260825-1425_o_der-schnitt-sieht-einen-zerlegt-geschriebenen-umlaut-als-anderen-eintrag-als-den-zusammengesetzten.md"
+        },
+        "filed_by": {
+          "actor": "orchestrator",
+          "person": "aus dem Bericht zu F-5"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "orchestrator, aus dem Bericht zu `F-5`"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260825-0711-kontextmenue-traegt-zip-unzip-finder/issues/260825-1425_o_der-schnitt-sieht-einen-zerlegt-geschriebenen-umlaut-als-anderen-eintrag-als-den-zusammengesetzten.md",
+            "sha256": "sha256:047cf1900c880b2a2c85b1fa29970e4d1ae12c3c67c4bf5c09ccd9b455ff9293",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/package.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:71fcb8b474a08f9b2d85d8e3dd42f49b9f889db7858b72543f27f729ae6079d6",
+      "control": {
+        "schema": "fusion.package/v1",
+        "id": "ed425746-9f97-42fa-9743-37393f69ccf4",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "domain": "code",
+        "status": "done",
+        "claim": null,
+        "mode": {
+          "value": "ordinary",
+          "source": null
+        },
+        "origin": {
+          "kind": "legacy-unknown",
+          "ref": null
+        },
+        "filed_by": {
+          "actor": "shaper",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "narrative": {
+          "path": "work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/_c_circle.md"
+        },
+        "depends_on": [],
+        "active_documents": [],
+        "references": [],
+        "evidence": [],
+        "outcome": {
+          "class": "legacy-completed",
+          "reason": "",
+          "evidence": []
+        },
+        "provenance": {
+          "source": "legacy-terminal",
+          "legacy_fields": {
+            "file_marker": "c",
+            "head": {
+              "Domain": "code",
+              "Filed by": "shaper (anticipated-circle mode), Kai Stalmann <kai@stalmann.org>",
+              "Claim": "Unclaimed",
+              "Active spec/plan": "circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/planning/260827-1322_*_plan-vorschau-zaehlt-ordnerinhalt-im-default-profil.md",
+              "Active session history": "circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/history/260827-1635-orchestrator-session.md"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/_c_circle.md",
+            "sha256": "sha256:9199d8454245c06fb2dd8b391fcb5ce3c85bfdafdc0357073017a60c1833cac4",
+            "kind": "other"
+          }
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1710_o_c2-5-der-runde-16-sagt-unveraendert-ueber-die-ganze-anzeige-und-die-waechst-seit-der-runde-19-um-drei-zeilen.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:c01c0f58f85de0c58585049c224428d3dd35ea3b9a2280a686e8446c6864ab69",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "52d3bf9b-90ff-4069-8303-77c9519db7e0",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1710_o_c2-5-der-runde-16-sagt-unveraendert-ueber-die-ganze-anzeige-und-die-waechst-seit-der-runde-19-um-drei-zeilen.md"
+        },
+        "filed_by": {
+          "actor": "analyst",
+          "person": "Kai Stalmann <kai@qantr.com>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "analyst, Kai Stalmann <kai@qantr.com>",
+              "Severity": "Low",
+              "Domain": "code",
+              "Tree state": "`5e506e6`",
+              "Affected": "`circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/planning/260824-0613_*_spec-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md:170` (Kriterium C2.5); `crates/krk-ui/src/appkit/vorschau.rs:1381-1415` (`metadaten_text`)",
+              "Cross-references": "`circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/planning/260827-0646_*_spec-vorschau-zaehlt-ordnerinhalt-im-default-profil.md:39-45` (Ursache, Abschnitt `## Die Zusage C2.5 der Runde 16 ist berührt und der Sache nach gewahrt`, und `:249`, sechste Anweisung unter `## Open for Planner`); `circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/planning/260827-1322_*_plan-vorschau-zaehlt-ordnerinhalt-im-default-profil.md:172-176` (Abschnitt 6) und `:226-229` (Schritt 7); `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/_b_circle.md:84` (der Abnahmelauf der Runde 16 ist Nutzerarbeit und steht aus)"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1710_o_c2-5-der-runde-16-sagt-unveraendert-ueber-die-ganze-anzeige-und-die-waechst-seit-der-runde-19-um-drei-zeilen.md",
+            "sha256": "sha256:7bc94e7b84a164b3d4986eed1be1fc8191e21bf06b0b9c2f018cfab61a027955",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1911_o_drei-saetze-im-kommentarteil-der-auslieferungsfassung-beschreiben-den-stand-vor-der-runde-19.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:7473465e00bc9cd9f62c53919fc0022a1f72e7b5902ff94922f658815aaffbda",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "896f24f5-431f-401d-a62c-dfba6b31f93f",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1911_o_drei-saetze-im-kommentarteil-der-auslieferungsfassung-beschreiben-den-stand-vor-der-runde-19.md"
+        },
+        "filed_by": {
+          "actor": "coderev",
+          "person": "Kai Stalmann <kai@qantr.com>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "coderev, Kai Stalmann <kai@qantr.com>",
+              "Severity": "Low",
+              "Domain": "code",
+              "Tree state": "`d444879`",
+              "Affected": "`resources/default-readers.toml:18-19`, `:43-47`, `:229`",
+              "Cross-references": "`planning/260827-0646_*_spec-vorschau-zaehlt-ordnerinhalt-im-default-profil.md` (C3.6, C3.9, C3.10); `planning/260827-1322_*_plan-vorschau-zaehlt-ordnerinhalt-im-default-profil.md` (Schritt 6); `history/260827-1754-ontocoder-schritt-6-der-kommentarteil-der-auslieferungsfassung.md` (Nebenbefund des Ontocoders, nennt die ersten zwei Stellen); `reviews/260827-1911-coderev-durchsicht-runde-19-default-profil-zaehlzeilen.md` (F1); `crates/krk-core/src/leseprofil/datei.rs:49-57` (der Modulkopf, der dieselbe Reichweite für `typ` und `versteckt` schon nachgezogen hat)"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1911_o_drei-saetze-im-kommentarteil-der-auslieferungsfassung-beschreiben-den-stand-vor-der-runde-19.md",
+            "sha256": "sha256:c17d756b7decbbaf8bd15aac0899c1ac48f3e33ab0d20d8a06fc28db2e1d67e3",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260827-2028-vorschau-rendert-pdf-als-betrachter/package.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:2545b0f90d8c98817c5c15a11f6a076b68dab5ce03bf8f5d123921fb8d71f179",
+      "control": {
+        "schema": "fusion.package/v1",
+        "id": "b402f0aa-3a09-4f4a-8b14-3587e680bb5e",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "domain": "code",
+        "status": "done",
+        "claim": null,
+        "mode": {
+          "value": "ordinary",
+          "source": null
+        },
+        "origin": {
+          "kind": "legacy-unknown",
+          "ref": null
+        },
+        "filed_by": {
+          "actor": "shaper",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "narrative": {
+          "path": "work-packages/260827-2028-vorschau-rendert-pdf-als-betrachter/_c_circle.md"
+        },
+        "depends_on": [],
+        "active_documents": [],
+        "references": [],
+        "evidence": [],
+        "outcome": {
+          "class": "legacy-completed",
+          "reason": "",
+          "evidence": []
+        },
+        "provenance": {
+          "source": "legacy-terminal",
+          "legacy_fields": {
+            "file_marker": "c",
+            "head": {
+              "Domain": "code",
+              "Filed by": "shaper (anticipated-circle mode), Kai Stalmann <kai@stalmann.org>",
+              "Claim": "Unclaimed",
+              "Active spec/plan": "circles/260827-2028-vorschau-rendert-pdf-als-betrachter/planning/260828-0712_c_plan-vorschau-rendert-pdf-als-betrachter.md",
+              "Active session history": "circles/260827-2028-vorschau-rendert-pdf-als-betrachter/history/260828-0035-orchestrator-session.md"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260827-2028-vorschau-rendert-pdf-als-betrachter/_c_circle.md",
+            "sha256": "sha256:a8caf0394bb504540a59e6116eeda4ae7586798e201bbbba9246dc0442b75fc2",
+            "kind": "other"
+          }
+        },
+        "extensions": {}
+      }
+    }
+  ]
+}

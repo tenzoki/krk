@@ -1,0 +1,1342 @@
+{
+  "schema": "fusion.migration-plan/v1",
+  "part": "chunk",
+  "migration_id": "migration-20261011-v12",
+  "chunk": 6,
+  "writes": [
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1701_o_ein-gerendertes-markdown-behaelt-nach-dem-wechsel-auf-dunkel-die-verweisfarbe-der-hellen-tafel.md",
+      "from": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1701_o_ein-gerendertes-markdown-behaelt-nach-dem-wechsel-auf-dunkel-die-verweisfarbe-der-hellen-tafel.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:f18112b1cab901a30834af7ac15413f5931431ae25701f4d65cead71109a72c7"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1805_o_der-datensatz-zur-verweisfarbe-nennt-fuer-die-dunkle-tafel-eine-farbe-die-sie-nicht-liefert.md",
+      "from": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1805_o_der-datensatz-zur-verweisfarbe-nennt-fuer-die-dunkle-tafel-eine-farbe-die-sie-nicht-liefert.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:d933d7aba00688832e6b5fb7e00364aa865995330b3a45f0c239e5a82c43df3f"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1805_o_yaml-front-matter-erscheint-als-trennlinie-und-ueberschrift-statt-als-quelltext.md",
+      "from": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1805_o_yaml-front-matter-erscheint-als-trennlinie-und-ueberschrift-statt-als-quelltext.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:e000025a2622637981749fa675c7b6c81ec826a9b5b7a1e2830b5c208322334d"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1816_o_die-durchsicht-von-turn-2-liest-einen-reinen-grundlagen-commit-als-codeaenderung.md",
+      "from": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1816_o_die-durchsicht-von-turn-2-liest-einen-reinen-grundlagen-commit-als-codeaenderung.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:c75356e23278bc312f97d1537287f50264b84bdc49c79f01503ffcfdcff44323"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1854_o_der-kurzhinweis-der-statuszeile-veraltet-bei-einer-fensteraenderung.md",
+      "from": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1854_o_der-kurzhinweis-der-statuszeile-veraltet-bei-einer-fensteraenderung.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:5cd7b473f95a366f01b14e44999b754faf3d046a02853ea3158c62ef939c606e"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/_b_circle.md",
+      "from": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/_b_circle.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:892751ec01394f1cde2d4b4852d64ce6d7c108d5e67fcd80b255b62344c4ce15"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0311_o_ein-klick-in-die-bereichsleiste-wirkt-seit-s2-waehrend-einer-umbenennung-nicht-mehr.md",
+      "from": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0311_o_ein-klick-in-die-bereichsleiste-wirkt-seit-s2-waehrend-einer-umbenennung-nicht-mehr.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:cc706de67aca976cd7667692555a896cb2bb6c7ecb2f00f2191dade8c3db97ff"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0420_o_das-menue-bearbeiten-verliert-seine-mac-uebliche-reihenfolge-und-seinen-trenner.md",
+      "from": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0420_o_das-menue-bearbeiten-verliert-seine-mac-uebliche-reihenfolge-und-seinen-trenner.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:874da52dcdf59ff69171505cf6b15aa73000b14a418e7c4236a5772e7fd1d9e3"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0540_o_die-belegung-wird-weiter-blind-ueberschrieben-obwohl-der-datensatz-mehr-zusagt.md",
+      "from": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0540_o_die-belegung-wird-weiter-blind-ueberschrieben-obwohl-der-datensatz-mehr-zusagt.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:8b59d10eb3fec3cb0e0858378c6dfd92c9bc66a73e9ca06c52ef8b3ceccbbada"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260908-0719_o_zwei-saetze-zur-kuerzelregel-fehlen-in-default-keymap-toml-seit-die-frage-dahinter-beantwortet-ist.md",
+      "from": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260908-0719_o_zwei-saetze-zur-kuerzelregel-fehlen-in-default-keymap-toml-seit-die-frage-dahinter-beantwortet-ist.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:3037d30263174d74b1f8e2d7a05b2fe43ce1b5a19831a5e7c17cee6f75a810f3"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/_c_circle.md",
+      "from": "work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/_c_circle.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:e47c3ba42c545e614342b23f083df4cf4dfcca8ed6529d0f9a8862a00a12db1c"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1110_o_eine-vierte-wegwerfordner-fassung-steht-in-xtask-und-die-probe-liest-die-kiste-nicht.md",
+      "from": "work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1110_o_eine-vierte-wegwerfordner-fassung-steht-in-xtask-und-die-probe-liest-die-kiste-nicht.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:4ae53f26682e06d1cea4d692337bc45fe74925c72f038f96ccac6ed416cc00d5"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1345_o_der-nachtrag-aus-a3-zaehlt-die-ausnahmeliste-mit-zwei-eintraegen-und-turn-2-hat-einen-dritten-gebracht.md",
+      "from": "work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1345_o_der-nachtrag-aus-a3-zaehlt-die-ausnahmeliste-mit-zwei-eintraegen-und-turn-2-hat-einen-dritten-gebracht.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:9d5aa03f591c86d02385a6a4da131874664e89a8bea5a4e5125b392f687b856f"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/_b_circle.md",
+      "from": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/_b_circle.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:5c19a874c775b9edc2edf75b989cd8d006b91d8f23667b712f1c10143c226558"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-0637_o_die-directive-im-circle-datensatz-nennt-drei-sicherungsmomente-der-spec-vier.md",
+      "from": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-0637_o_die-directive-im-circle-datensatz-nennt-drei-sicherungsmomente-der-spec-vier.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:cca511ccb22e577ba74c9b2c5f89958b483cc34be19f2d86615d92185a21335a"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1002_o_die-directive-abweichung-steht-an-drei-stellen-des-circle-datensatzes-und-nicht-an-zwei.md",
+      "from": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1002_o_die-directive-abweichung-steht-an-drei-stellen-des-circle-datensatzes-und-nicht-an-zwei.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:6b7c07edb374896b9838298c5c1bf2a8409c7bec0e2f687780ba5a7b4cf137bb"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1247_o_die-streichung-der-beobachtung-10-nimmt-zwei-kriterien-ihren-einzigen-beleg-am-buendel.md",
+      "from": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1247_o_die-streichung-der-beobachtung-10-nimmt-zwei-kriterien-ihren-einzigen-beleg-am-buendel.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:5d0a798834e004a83a7f984dee27e912388dec87a55f92a908cd2fe2c5b9e6b3"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1247_o_sechzehn-der-neunundzwanzig-buendelkriterien-sind-vom-abnahmelauf-nie-beruehrt-worden.md",
+      "from": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1247_o_sechzehn-der-neunundzwanzig-buendelkriterien-sind-vom-abnahmelauf-nie-beruehrt-worden.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:d19a35ee8d1985dc081d9551db2ebd1a96411512041ab93e0264462958ac55c5"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/_b_circle.md",
+      "from": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/_b_circle.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:069d2b2f01eec695fa344f1292d6dd1f439e40cd82781659b710eb4832b3fcca"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-in-dessen-ordner.md",
+      "from": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-in-dessen-ordner.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:24c6e101969999fba74d9b7df3e8a9e2baac73a72060c84d019c4066dc738d0e"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0020_o_verdeckten-tab-setzen-baut-denselben-frischen-tabinhalt-und-traegt-zwei-von-vier-werten-hinueber.md",
+      "from": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0020_o_verdeckten-tab-setzen-baut-denselben-frischen-tabinhalt-und-traegt-zwei-von-vier-werten-hinueber.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:233c8588177f196ea1b85e021817e3e928aa98da67e4b292d075631a0578a4fa"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_belegungsmodell-zeile-traegt-fuehrt-denselben-vergleich-eingesetzt-und-ruft-die-eine-fassung-nicht.md",
+      "from": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_belegungsmodell-zeile-traegt-fuehrt-denselben-vergleich-eingesetzt-und-ruft-die-eine-fassung-nicht.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:12c4fedb261956aec086e321e649698e5c72037474f49284e47044af459b4c25"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_zwei-kommentare-in-default-keymap-toml-beschreiben-das-tippen-noch-als-sprungmarke.md",
+      "from": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_zwei-kommentare-in-default-keymap-toml-beschreiben-das-tippen-noch-als-sprungmarke.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:765fed3f1ac3903824f0187daf3f2b55d3f6e24729b4763eeb9707e82c13b8f6"
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1701_o_ein-gerendertes-markdown-behaelt-nach-dem-wechsel-auf-dunkel-die-verweisfarbe-der-hellen-tafel.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:01bdba8520f45767076e42f61beaab20186e1d0ce45a8d4b5e0859d2eb9ebcbd",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "89692959-9bf4-48f3-b908-94e00ae5716a",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1701_o_ein-gerendertes-markdown-behaelt-nach-dem-wechsel-auf-dunkel-die-verweisfarbe-der-hellen-tafel.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {},
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "67028006cad04902a7b8daa409cc604a5748515c"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1701_o_ein-gerendertes-markdown-behaelt-nach-dem-wechsel-auf-dunkel-die-verweisfarbe-der-hellen-tafel.md",
+            "sha256": "sha256:f18112b1cab901a30834af7ac15413f5931431ae25701f4d65cead71109a72c7",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1805_o_der-datensatz-zur-verweisfarbe-nennt-fuer-die-dunkle-tafel-eine-farbe-die-sie-nicht-liefert.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:a3da1a0af6c6001b449ecbf7a3c5a1a2689a4a43c891e4b4dca8dbe80840fc66",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "93702481-0729-4d4f-9049-c53c4e865e2a",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1805_o_der-datensatz-zur-verweisfarbe-nennt-fuer-die-dunkle-tafel-eine-farbe-die-sie-nicht-liefert.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Nicht betroffen": "die Messung, die zur Abweichung vom Plan geführt hat. Dass",
+              "Gewicht": "niedrig, mit einer Einschränkung: der Datensatz ist offen und",
+              "Herkunft": "Circle der Runde 6, Planschritt 9."
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "94a81bd27632eefaa6700009c2cde6b6cbc18a7f"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1805_o_der-datensatz-zur-verweisfarbe-nennt-fuer-die-dunkle-tafel-eine-farbe-die-sie-nicht-liefert.md",
+            "sha256": "sha256:d933d7aba00688832e6b5fb7e00364aa865995330b3a45f0c239e5a82c43df3f",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1805_o_yaml-front-matter-erscheint-als-trennlinie-und-ueberschrift-statt-als-quelltext.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:b68a9bed8e260f00362c98fe9869a74b574ae25d8d17edbd8365b40c542726fb",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "d1d3c528-f872-499a-bc6b-5bdbeca66e22",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1805_o_yaml-front-matter-erscheint-als-trennlinie-und-ueberschrift-statt-als-quelltext.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Gewicht": "niedrig. Betrifft eine Dateiform, die in diesem Projekt nicht",
+              "Herkunft": "Circle der Runde 6, Planschritt 8 (C4.3)."
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "94a81bd27632eefaa6700009c2cde6b6cbc18a7f"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1805_o_yaml-front-matter-erscheint-als-trennlinie-und-ueberschrift-statt-als-quelltext.md",
+            "sha256": "sha256:e000025a2622637981749fa675c7b6c81ec826a9b5b7a1e2830b5c208322334d",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1816_o_die-durchsicht-von-turn-2-liest-einen-reinen-grundlagen-commit-als-codeaenderung.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:6cad511b6d0216c266cb4a7afc8e997a122cdfda2ae5ad74f882f22d33464633",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "6d139d20-aca9-423a-b826-af1ccdb8d2e7",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1816_o_die-durchsicht-von-turn-2-liest-einen-reinen-grundlagen-commit-als-codeaenderung.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {},
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "94a81bd27632eefaa6700009c2cde6b6cbc18a7f"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1816_o_die-durchsicht-von-turn-2-liest-einen-reinen-grundlagen-commit-als-codeaenderung.md",
+            "sha256": "sha256:c75356e23278bc312f97d1537287f50264b84bdc49c79f01503ffcfdcff44323",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1854_o_der-kurzhinweis-der-statuszeile-veraltet-bei-einer-fensteraenderung.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:43febabf4c5882fb1ce82ac5da6f7c474d696f9c89220cc1589e15d46c4f1542",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "947965aa-62bd-471b-b526-b4c20978d454",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1854_o_der-kurzhinweis-der-statuszeile-veraltet-bei-einer-fensteraenderung.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Zwei Richtungen, beide erreichbar": "",
+              "Drei Zuschnitte, keiner ist hier gewählt": "",
+              "Gewicht": "gering. Kein falscher Satz, keine verlorene Auskunft — der Hinweis",
+              "Herkunft": "Circle der Runde 6, Turn 3, Rücknahme von Schritt 11 (C5.10)."
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "df4ec003655623b2d5fef4a7f53bdf9399154810"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1854_o_der-kurzhinweis-der-statuszeile-veraltet-bei-einer-fensteraenderung.md",
+            "sha256": "sha256:5cd7b473f95a366f01b14e44999b754faf3d046a02853ea3158c62ef939c606e",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/package.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:5b7079ab3185f2ac1c82b9d30f1fe3b207b580b89cf1c7ee3b5120ed4628c4fa",
+      "control": {
+        "schema": "fusion.package/v1",
+        "id": "66b06c51-57c1-4525-9761-6b0f39fb75bd",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "domain": "code",
+        "status": "dropped",
+        "claim": null,
+        "mode": {
+          "value": "ordinary",
+          "source": null
+        },
+        "origin": {
+          "kind": "legacy-unknown",
+          "ref": null
+        },
+        "filed_by": {
+          "actor": "orchestrator",
+          "person": null
+        },
+        "narrative": {
+          "path": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/_b_circle.md"
+        },
+        "depends_on": [],
+        "active_documents": [],
+        "references": [],
+        "evidence": [],
+        "outcome": {
+          "class": "bounded",
+          "reason": "closed bounded (legacy Circle marker)",
+          "evidence": []
+        },
+        "provenance": {
+          "source": "legacy-terminal",
+          "legacy_fields": {
+            "file_marker": "b",
+            "head": {
+              "Domain": "code",
+              "Status": "bounded",
+              "Filed by": "orchestrator (nach dem Spec des shaper)",
+              "Active spec/plan": "circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/planning/260813-0205_*_plan-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz.md (Spec: shared/planning/260813-0053_*_spec-suche-in-der-belegung-vollstaendiges-menue-zweite-instanz.md)",
+              "Active session history": "shared/history/260813-0040-orchestrator-session.md"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/_b_circle.md",
+            "sha256": "sha256:892751ec01394f1cde2d4b4852d64ce6d7c108d5e67fcd80b255b62344c4ce15",
+            "kind": "other"
+          }
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0311_o_ein-klick-in-die-bereichsleiste-wirkt-seit-s2-waehrend-einer-umbenennung-nicht-mehr.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:aacbfe5d956bfcd38fa9947973d556b95c852089d9ff208c58e49e89279dbf99",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "5a73e0bd-fb80-4622-b10f-b39265af985b",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0311_o_ein-klick-in-die-bereichsleiste-wirkt-seit-s2-waehrend-einer-umbenennung-nicht-mehr.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Schwere": "mittel (ein Bedienweg, der heute wirkt, wirkt danach in einer benannten Lage",
+              "Gefunden": "coder, beim Bauen von S2 der Runde 7 am 260813-0311",
+              "Betroffen": "`crates/krk-ui/src/appkit/anwendung.rs:788-800`,",
+              "Domain": "code"
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "9da33bc2ae1ecd1b968ccd865443bef2b6f54277"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0311_o_ein-klick-in-die-bereichsleiste-wirkt-seit-s2-waehrend-einer-umbenennung-nicht-mehr.md",
+            "sha256": "sha256:cc706de67aca976cd7667692555a896cb2bb6c7ecb2f00f2191dade8c3db97ff",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0420_o_das-menue-bearbeiten-verliert-seine-mac-uebliche-reihenfolge-und-seinen-trenner.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:3a18e2f00cf00ee75efe526fa9e39dc5bcc0532fe0267d904f38543a85132a0b",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "1ace8125-e761-48b5-bcdb-222e9adec2b4",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0420_o_das-menue-bearbeiten-verliert-seine-mac-uebliche-reihenfolge-und-seinen-trenner.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Schwere": "gering (kein Befehl fällt aus, keine Kombination ändert sich; das Menü sieht an",
+              "Gefunden": "coder, beim Bauen von S6 der Runde 7 am 260813-0420",
+              "Betroffen": "`resources/default-keymap.toml` (die sechs `text_*`-Einträge),",
+              "Domain": "data — die Behebung gehört dem `ontocoder`"
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "16c0924a2fefa18829233d5e80354f21c2310523"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0420_o_das-menue-bearbeiten-verliert-seine-mac-uebliche-reihenfolge-und-seinen-trenner.md",
+            "sha256": "sha256:874da52dcdf59ff69171505cf6b15aa73000b14a418e7c4236a5772e7fd1d9e3",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0540_o_die-belegung-wird-weiter-blind-ueberschrieben-obwohl-der-datensatz-mehr-zusagt.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:73c4b8b51eefc0d7578a35885a9a5709755da5ff8d156e77ef621d36c6857866",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "fc38affe-ca75-4383-a6ca-1b6c49e5f231",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0540_o_die-belegung-wird-weiter-blind-ueberschrieben-obwohl-der-datensatz-mehr-zusagt.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Schwere": "mittel. Nutzerarbeit, die verlorengehen kann, aber ein enges Fenster und ein",
+              "Gefunden": "coderev, Durchsicht von `ca66c39..40b5fb0` am 260813-0540",
+              "Betroffen": "`crates/krk-ui/src/appkit/anwendung.rs:3039-3056`,",
+              "Domain": "code"
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "a34bf178b7f56a1eb152c390df54cf486c28cebb"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0540_o_die-belegung-wird-weiter-blind-ueberschrieben-obwohl-der-datensatz-mehr-zusagt.md",
+            "sha256": "sha256:8b59d10eb3fec3cb0e0858378c6dfd92c9bc66a73e9ca06c52ef8b3ceccbbada",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260908-0719_o_zwei-saetze-zur-kuerzelregel-fehlen-in-default-keymap-toml-seit-die-frage-dahinter-beantwortet-ist.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:dee97d130dccd603c9fa7f6ba8d5236ea98d3de248c9e993e98c65dbdb19c8ba",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "1b234da4-faaf-4071-b9fe-6525d04f8caa",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260908-0719_o_zwei-saetze-zur-kuerzelregel-fehlen-in-default-keymap-toml-seit-die-frage-dahinter-beantwortet-ist.md"
+        },
+        "filed_by": {
+          "actor": "coder",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+              "Domain": "data — `resources/default-keymap.toml` ist die eine Quelle jeder Tastenbelegung und",
+              "Severity": "Low",
+              "Tree state": "`fe5fe9c` samt den Aenderungen dieses Durchgangs"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260908-0719_o_zwei-saetze-zur-kuerzelregel-fehlen-in-default-keymap-toml-seit-die-frage-dahinter-beantwortet-ist.md",
+            "sha256": "sha256:3037d30263174d74b1f8e2d7a05b2fe43ce1b5a19831a5e7c17cee6f75a810f3",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/package.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:56907a7c2fa8afdaa3a8bd4dd1e2ca03b6e6f4438decee6351368b7e7e12d76b",
+      "control": {
+        "schema": "fusion.package/v1",
+        "id": "e4901f46-7d0f-4548-b034-34d0b58b240c",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "domain": "code",
+        "status": "done",
+        "claim": null,
+        "mode": {
+          "value": "ordinary",
+          "source": null
+        },
+        "origin": {
+          "kind": "legacy-unknown",
+          "ref": null
+        },
+        "filed_by": {
+          "actor": "shaper",
+          "person": null
+        },
+        "narrative": {
+          "path": "work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/_c_circle.md"
+        },
+        "depends_on": [],
+        "active_documents": [],
+        "references": [],
+        "evidence": [],
+        "outcome": {
+          "class": "legacy-completed",
+          "reason": "",
+          "evidence": []
+        },
+        "provenance": {
+          "source": "legacy-terminal",
+          "legacy_fields": {
+            "file_marker": "c",
+            "head": {
+              "Domain": "code",
+              "Status": "closed",
+              "Filed by": "shaper (anticipated-circle mode)",
+              "Active spec/plan": "circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/planning/260813-1110_*_plan-titelleiste-fuehrt-version-und-semantische-tags.md",
+              "Active session history": "circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1006-orchestrator-session.md"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/_c_circle.md",
+            "sha256": "sha256:e47c3ba42c545e614342b23f083df4cf4dfcca8ed6529d0f9a8862a00a12db1c",
+            "kind": "other"
+          }
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1110_o_eine-vierte-wegwerfordner-fassung-steht-in-xtask-und-die-probe-liest-die-kiste-nicht.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:4f15174c0d00aab2102b6efdfef26e78e2a605c07f4cabf889966704e250baa5",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "a145cad7-deb5-46a4-a1a4-140317679051",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1110_o_eine-vierte-wegwerfordner-fassung-steht-in-xtask-und-die-probe-liest-die-kiste-nicht.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {},
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "59b0a6cdd8bcede838d4f3855a0c959f80e6f438"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1110_o_eine-vierte-wegwerfordner-fassung-steht-in-xtask-und-die-probe-liest-die-kiste-nicht.md",
+            "sha256": "sha256:4ae53f26682e06d1cea4d692337bc45fe74925c72f038f96ccac6ed416cc00d5",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1345_o_der-nachtrag-aus-a3-zaehlt-die-ausnahmeliste-mit-zwei-eintraegen-und-turn-2-hat-einen-dritten-gebracht.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:92851d8e49531cf2e3d93c089d438be1e7047368483cbdf3b5df8aecf685b653",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "26cf80ad-3511-4141-bb4f-f00a1fe2b632",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1345_o_der-nachtrag-aus-a3-zaehlt-die-ausnahmeliste-mit-zwei-eintraegen-und-turn-2-hat-einen-dritten-gebracht.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Schwere": "niedrig. Kein Verhalten, kein Bau. Der Nachtrag ist von Turn 1 und war beim"
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "e99f45429aaa098e13ece24dad31cad4510bf6d1"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1345_o_der-nachtrag-aus-a3-zaehlt-die-ausnahmeliste-mit-zwei-eintraegen-und-turn-2-hat-einen-dritten-gebracht.md",
+            "sha256": "sha256:9d5aa03f591c86d02385a6a4da131874664e89a8bea5a4e5125b392f687b856f",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/package.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:3b98a36a88daa438975e63a74b4d426f364e50b838e4353f89815b73681ed4d8",
+      "control": {
+        "schema": "fusion.package/v1",
+        "id": "9e0c9979-6a7b-48a6-ba00-a1bdb3b54d8d",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "domain": "code",
+        "status": "dropped",
+        "claim": null,
+        "mode": {
+          "value": "ordinary",
+          "source": null
+        },
+        "origin": {
+          "kind": "legacy-unknown",
+          "ref": null
+        },
+        "filed_by": {
+          "actor": "shaper",
+          "person": null
+        },
+        "narrative": {
+          "path": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/_b_circle.md"
+        },
+        "depends_on": [],
+        "active_documents": [],
+        "references": [],
+        "evidence": [],
+        "outcome": {
+          "class": "bounded",
+          "reason": "closed bounded (legacy Circle marker)",
+          "evidence": []
+        },
+        "provenance": {
+          "source": "legacy-terminal",
+          "legacy_fields": {
+            "file_marker": "b",
+            "head": {
+              "Domain": "code",
+              "Status": "bounded",
+              "Filed by": "shaper (anticipated-circle mode)",
+              "Active spec/plan": "circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260814-0656_*_plan-notizzettel-als-blatt-mit-zwei-zetteln.md",
+              "Active session history": "circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/history/260813-2342-orchestrator-session.md"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/_b_circle.md",
+            "sha256": "sha256:5c19a874c775b9edc2edf75b989cd8d006b91d8f23667b712f1c10143c226558",
+            "kind": "other"
+          }
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-0637_o_die-directive-im-circle-datensatz-nennt-drei-sicherungsmomente-der-spec-vier.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:c869c8e35636379338ff80d546d259748bb5537e02061776efac0cf20af60c4f",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "17083e3a-35c5-4800-8335-d2540d35bd48",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-0637_o_die-directive-im-circle-datensatz-nennt-drei-sicherungsmomente-der-spec-vier.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Schwere": "niedrig. Kein Bau, kein Verhalten. Die Directive ist die Aussage, gegen die"
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "edea4d9228466314e2ff8c6173c1924fdb7ffbbd"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-0637_o_die-directive-im-circle-datensatz-nennt-drei-sicherungsmomente-der-spec-vier.md",
+            "sha256": "sha256:cca511ccb22e577ba74c9b2c5f89958b483cc34be19f2d86615d92185a21335a",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1002_o_die-directive-abweichung-steht-an-drei-stellen-des-circle-datensatzes-und-nicht-an-zwei.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:02998f6b4e9e4b01404168b871e5f94badbfe96ce7490ea3d75ae67a469948ad",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "fc33e488-f0dd-4928-9cb1-be0fb3c4d4ac",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1002_o_die-directive-abweichung-steht-an-drei-stellen-des-circle-datensatzes-und-nicht-an-zwei.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Schwere": "niedrig. Kein Bau, kein Verhalten. Dieselbe Schwere und derselbe Gegenstand wie"
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "e849ff8b3b7a03b118a256dcc2620b29f6ae4b39"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1002_o_die-directive-abweichung-steht-an-drei-stellen-des-circle-datensatzes-und-nicht-an-zwei.md",
+            "sha256": "sha256:6b7c07edb374896b9838298c5c1bf2a8409c7bec0e2f687780ba5a7b4cf137bb",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1247_o_die-streichung-der-beobachtung-10-nimmt-zwei-kriterien-ihren-einzigen-beleg-am-buendel.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:6ec601b5c71f6dec1febf361bbc219807b493faa499b0201b7dbd6c139ff0a9c",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "e5bcca31-27cb-49f8-8f5a-a710d70236fe",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1247_o_die-streichung-der-beobachtung-10-nimmt-zwei-kriterien-ihren-einzigen-beleg-am-buendel.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Schwere": "mittel. Der Weg der Meldung ist am Baum gelesen und sieht richtig aus; gesehen hat"
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "983d86e7718cc5094383fd85813ae88611f13d7a"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1247_o_die-streichung-der-beobachtung-10-nimmt-zwei-kriterien-ihren-einzigen-beleg-am-buendel.md",
+            "sha256": "sha256:5d0a798834e004a83a7f984dee27e912388dec87a55f92a908cd2fe2c5b9e6b3",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1247_o_sechzehn-der-neunundzwanzig-buendelkriterien-sind-vom-abnahmelauf-nie-beruehrt-worden.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:15e824453daa865d98b723c75b5e81ee6aa685aa04fbd3ef110e1bc750f8cab0",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "9afa1247-14dd-4b73-bf48-66d6c7f1013d",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1247_o_sechzehn-der-neunundzwanzig-buendelkriterien-sind-vom-abnahmelauf-nie-beruehrt-worden.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Schwere": "mittel. Nichts spricht dagegen, dass die sechzehn halten — es liegt nur kein Beleg"
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "983d86e7718cc5094383fd85813ae88611f13d7a"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1247_o_sechzehn-der-neunundzwanzig-buendelkriterien-sind-vom-abnahmelauf-nie-beruehrt-worden.md",
+            "sha256": "sha256:d19a35ee8d1985dc081d9551db2ebd1a96411512041ab93e0264462958ac55c5",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/package.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:c9ee17639fbea20375a346a4df6c7d17c23728584906016d2209f36649572bd8",
+      "control": {
+        "schema": "fusion.package/v1",
+        "id": "d8891929-85b9-435b-9ff1-890d60819fbe",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "domain": "code",
+        "status": "dropped",
+        "claim": null,
+        "mode": {
+          "value": "ordinary",
+          "source": null
+        },
+        "origin": {
+          "kind": "legacy-unknown",
+          "ref": null
+        },
+        "filed_by": {
+          "actor": "shaper",
+          "person": null
+        },
+        "narrative": {
+          "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/_b_circle.md"
+        },
+        "depends_on": [],
+        "active_documents": [],
+        "references": [],
+        "evidence": [],
+        "outcome": {
+          "class": "bounded",
+          "reason": "closed bounded (legacy Circle marker)",
+          "evidence": []
+        },
+        "provenance": {
+          "source": "legacy-terminal",
+          "legacy_fields": {
+            "file_marker": "b",
+            "head": {
+              "Domain": "code",
+              "Status": "bounded",
+              "Filed by": "shaper (anticipated-circle mode)",
+              "Active spec/plan": "circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/planning/260814-1830_*_spec-tippen-filtert-dateiliste-flach-und-tief.md",
+              "Active session history": "shared/history/260814-1500-orchestrator-session.md"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/_b_circle.md",
+            "sha256": "sha256:069d2b2f01eec695fa344f1292d6dd1f439e40cd82781659b710eb4832b3fcca",
+            "kind": "other"
+          }
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-in-dessen-ordner.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:8c5b3e7b36670993a4719e4db9a9d72383f61b28c73d7968537a4de612222afa",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "ba4cc31a-6d74-4992-bcc7-106b5cf9c89f",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-in-dessen-ordner.md"
+        },
+        "filed_by": {
+          "actor": "shaper",
+          "person": null
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "a",
+            "head": {
+              "Domain": "code",
+              "Status": "answered",
+              "Filed by": "shaper",
+              "Cross-references": "`crates/krk-ui/src/angezeigtedatei.rs:1-58` (`welche`, die Quelle des Ordnersprungs); `crates/krk-core/src/tasten/belegung.rs:866-880` (`Kommando::OrdnerDerDatei`); `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern` (die Runde, die den Ordnersprung gebaut hat)"
+            },
+            "derived": {
+              "/control/answer_ref": {
+                "rule": "answer-ref-self",
+                "evidence": "unresolvable-answer-line"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-in-dessen-ordner.md",
+            "sha256": "sha256:24c6e101969999fba74d9b7df3e8a9e2baac73a72060c84d019c4066dc738d0e",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "answered",
+          "answer_ref": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-in-dessen-ordner.md",
+            "sha256": "sha256:24c6e101969999fba74d9b7df3e8a9e2baac73a72060c84d019c4066dc738d0e",
+            "kind": "decision"
+          },
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "rewrite",
+      "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-in-dessen-ordner.md",
+      "source_sha256": "sha256:24c6e101969999fba74d9b7df3e8a9e2baac73a72060c84d019c4066dc738d0e",
+      "after_sha256": "sha256:e84ec67401e53fa958b9c799f75bb03e2368e0a09b98d57ffebc2732caf36856",
+      "deletions": [
+        {
+          "offset": 88,
+          "length": 21
+        }
+      ]
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0020_o_verdeckten-tab-setzen-baut-denselben-frischen-tabinhalt-und-traegt-zwei-von-vier-werten-hinueber.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:274a8735fa3f8d55df22d674070a7c65a94581207b5f3678e6cbd877001e149a",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "135672af-bd50-4d57-b1df-c96fb47d8afa",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0020_o_verdeckten-tab-setzen-baut-denselben-frischen-tabinhalt-und-traegt-zwei-von-vier-werten-hinueber.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {},
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "14718c288cacc3e4d0c8c4a4d4d58a9cc066b743"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0020_o_verdeckten-tab-setzen-baut-denselben-frischen-tabinhalt-und-traegt-zwei-von-vier-werten-hinueber.md",
+            "sha256": "sha256:233c8588177f196ea1b85e021817e3e928aa98da67e4b292d075631a0578a4fa",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_belegungsmodell-zeile-traegt-fuehrt-denselben-vergleich-eingesetzt-und-ruft-die-eine-fassung-nicht.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:4815aedd77462829bf621c5f9dfb6a18f4c3c9465c438e3d65e0b8751e164e14",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "6e08081f-94c3-4cd0-9b00-76429d710f26",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_belegungsmodell-zeile-traegt-fuehrt-denselben-vergleich-eingesetzt-und-ruft-die-eine-fassung-nicht.md"
+        },
+        "filed_by": {
+          "actor": "coder",
+          "person": "beim Umsetzen von A2"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Status": "Open",
+              "Domain": "Filter der Runde 10 / Tippsuche der Belegungsansicht aus der Runde 7",
+              "Filed by": "coder, beim Umsetzen von A2",
+              "Related": "`planning/260814-2102_o_plan-tippen-filtert-dateiliste-flach-und-tief.md`, Schritt A2; `planning/260814-1830_o_spec-tippen-filtert-dateiliste-flach-und-tief.md`, C1.3"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_belegungsmodell-zeile-traegt-fuehrt-denselben-vergleich-eingesetzt-und-ruft-die-eine-fassung-nicht.md",
+            "sha256": "sha256:12c4fedb261956aec086e321e649698e5c72037474f49284e47044af459b4c25",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "rewrite",
+      "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_belegungsmodell-zeile-traegt-fuehrt-denselben-vergleich-eingesetzt-und-ruft-die-eine-fassung-nicht.md",
+      "source_sha256": "sha256:12c4fedb261956aec086e321e649698e5c72037474f49284e47044af459b4c25",
+      "after_sha256": "sha256:b78084c380f9d1700f4f3e0349c53a01e7f53e180a3aaa1461f375b4924f5607",
+      "deletions": [
+        {
+          "offset": 105,
+          "length": 17
+        }
+      ]
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_zwei-kommentare-in-default-keymap-toml-beschreiben-das-tippen-noch-als-sprungmarke.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:8e1d4edad56a86ecb7889ea83a88b8344f7b62d98e8784c8c3626a1bd682ba7e",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "4a39807a-7af2-45d5-bb72-e19de8f5d2ff",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_zwei-kommentare-in-default-keymap-toml-beschreiben-das-tippen-noch-als-sprungmarke.md"
+        },
+        "filed_by": {
+          "actor": "coder",
+          "person": "beim Umsetzen von A2"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Status": "Open",
+              "Domain": "Auslieferungsbelegung, Kommentarprosa",
+              "Filed by": "coder, beim Umsetzen von A2",
+              "Executor": "`ontocoder`",
+              "Related": "`planning/260814-2102_o_plan-tippen-filtert-dateiliste-flach-und-tief.md`, Schritt A2"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_zwei-kommentare-in-default-keymap-toml-beschreiben-das-tippen-noch-als-sprungmarke.md",
+            "sha256": "sha256:765fed3f1ac3903824f0187daf3f2b55d3f6e24729b4763eeb9707e82c13b8f6",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "rewrite",
+      "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_zwei-kommentare-in-default-keymap-toml-beschreiben-das-tippen-noch-als-sprungmarke.md",
+      "source_sha256": "sha256:765fed3f1ac3903824f0187daf3f2b55d3f6e24729b4763eeb9707e82c13b8f6",
+      "after_sha256": "sha256:75e5a2b94f094a7b22ae1ffa6e87f9214e1b723263df569e81bcdd9adddbee3d",
+      "deletions": [
+        {
+          "offset": 88,
+          "length": 17
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1262 @@
+{
+  "schema": "fusion.migration-plan/v1",
+  "part": "chunk",
+  "migration_id": "migration-20261011-v12",
+  "chunk": 1,
+  "writes": [
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260802-0842_a_git-verwerfen-bedeutung.md",
+      "from": "shared/decisions/260802-0842_a_git-verwerfen-bedeutung.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:5fa410aaed6939a22d405862cf5cc41695d02a54755e2f19e00abc3c939734df"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260814-1955_a_sechs-beantwortete-entscheidungsdatensaetze-tragen-im-kopf-weiter-status-open.md",
+      "from": "shared/decisions/260814-1955_a_sechs-beantwortete-entscheidungsdatensaetze-tragen-im-kopf-weiter-status-open.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:e9dded83910e04e91345042410d087ebbe1bcb99e651618f023d7ffc59fea6ad"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260815-1812_a_der-eine-codecommit-der-sitzung-260815-1328-ohne-durchsicht-ist-nicht-nur-markdown.md",
+      "from": "shared/decisions/260815-1812_a_der-eine-codecommit-der-sitzung-260815-1328-ohne-durchsicht-ist-nicht-nur-markdown.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:a70ae704940a6b480111ee9f2766431d45233f073671d610e03d86a2a01fec58"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260816-1310_a_bekommt-der-inhaltsfilter-eine-eigene-messgroesse-oder-kriterien-ohne-messstrecke.md",
+      "from": "shared/decisions/260816-1310_a_bekommt-der-inhaltsfilter-eine-eigene-messgroesse-oder-kriterien-ohne-messstrecke.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:e27b381a89d844fa6a946b268749a01051588d2fcba128ada0fe8480d6a0d017"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260818-0201_a_does-a-cross-references-line-between-records-write-the-marker-in-the-star-form.md",
+      "from": "shared/decisions/260818-0201_a_does-a-cross-references-line-between-records-write-the-marker-in-the-star-form.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:0750c93220f27b82c955d3c22fc5e764599e937bc80fa4aecf5b546ef23cb2ba"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260819-1440_a_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md",
+      "from": "shared/decisions/260819-1440_a_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:eaf871dc6462b9b9690ffd2e5995e857fd788a444032bcdebeae1859d12af02a"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260819-2216_a_gilt-die-quelltextzusage-auch-fuer-das-ziehen-einer-auswahl-und-die-dienste.md",
+      "from": "shared/decisions/260819-2216_a_gilt-die-quelltextzusage-auch-fuer-das-ziehen-einer-auswahl-und-die-dienste.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:8106e229742b70145318272db865db47518eaf33fffd2551c02c6cf914a8c2a6"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260819-2216_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.md",
+      "from": "shared/decisions/260819-2216_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:61630bf386645af8ddf818c852fd64b89a44d4ef43e6a8ad509142eea63520a4"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260821-2202_a_zeigt-krk-web-inhalt-selbst-an-oder-gibt-er-ihn-an-den-systembrowser-ab.md",
+      "from": "shared/decisions/260821-2202_a_zeigt-krk-web-inhalt-selbst-an-oder-gibt-er-ihn-an-den-systembrowser-ab.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:9fc371af9cab43c1d5086134fbcc780363595851093e045644f1acb76904510c"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260831-1353_a_bekommt-das-ablageprofil-eine-zweite-umfangszeile-obwohl-die-dateizahl-nicht-zaehlbar-ist.md",
+      "from": "shared/decisions/260831-1353_a_bekommt-das-ablageprofil-eine-zweite-umfangszeile-obwohl-die-dateizahl-nicht-zaehlbar-ist.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:905766c7d647053abf0d8c6a978c5cc3a8fb2ad2b04ab3c005084a3d07fa0e32"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260906-0203_a_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md",
+      "from": "shared/decisions/260906-0203_a_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:b8ddc19063d21b6296f41656268588f1d033eabb08805191200a18d036cad7b4"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260906-0206_a_werden-dateinamen-mit-vorauslaufendem-zeitstempel-umbenannt-oder-vermerkt.md",
+      "from": "shared/decisions/260906-0206_a_werden-dateinamen-mit-vorauslaufendem-zeitstempel-umbenannt-oder-vermerkt.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:e1b36b3d4230bbe5890778d28d0416d46b21fb9a9ea666b9efcf50fdb8e16022"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-0726_o_meldet-im-finder-anzeigen-einen-eintrag-der-nicht-mehr-dasteht.md",
+      "from": "shared/decisions/260907-0726_o_meldet-im-finder-anzeigen-einen-eintrag-der-nicht-mehr-dasteht.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:bb60f703016fea1690a148c6f8ace5e378626dba5aeaacc64d1bd5b6cdecdfd2"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-0826_o_gilt-die-umlautregel-auch-fuer-die-terminalausgabe-von-xtask-krk-bench-und-messmodus.md",
+      "from": "shared/decisions/260907-0826_o_gilt-die-umlautregel-auch-fuer-die-terminalausgabe-von-xtask-krk-bench-und-messmodus.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:6f456db5decb20cb9033026949d025c0f76e6e29bac78f58a3c9d551e24464fc"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-0826_o_wie-wird-die-naht-zwischen-umlaut-und-umschrift-gehalten-jetzt-da-sie-eine-regel-ist.md",
+      "from": "shared/decisions/260907-0826_o_wie-wird-die-naht-zwischen-umlaut-und-umschrift-gehalten-jetzt-da-sie-eine-regel-ist.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:7c17f03e04fbc41b467e8b28f288ee7584810ebde46e93c1a696049a0192f079"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-1226_o_weist-der-doppelklick-auf-einen-ordner-ohne-leserecht-ab-oder-geht-er-hinein-und-meldet-danach.md",
+      "from": "shared/decisions/260907-1226_o_weist-der-doppelklick-auf-einen-ordner-ohne-leserecht-ab-oder-geht-er-hinein-und-meldet-danach.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:ceadbe6511c8be44cb1a3770a50fc3e969ce612eaeb42f67f813cab38427d6ec"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-1301_o_wird-der-geschaetzte-zeitstempel-in-einem-dateinamen-pruefbar-gemacht.md",
+      "from": "shared/decisions/260907-1301_o_wird-der-geschaetzte-zeitstempel-in-einem-dateinamen-pruefbar-gemacht.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:a9ca5bc73008dc9e3354f01157809d08d4d4e5397ee8333242e22d1654da8832"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-1407_o_bekommt-session-toml-eine-fassungsangabe-damit-auch-die-zweite-haelfte-der-bestandsregel-greifen-kann.md",
+      "from": "shared/decisions/260907-1407_o_bekommt-session-toml-eine-fassungsangabe-damit-auch-die-zweite-haelfte-der-bestandsregel-greifen-kann.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:2cedbdf7631ac9fd558814fd22e37d830247f95d8d5586a000d92c181c4908e8"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-1422_o_misst-der-ordnersprung-je-einen-ort-fuer-den-ein-profil-aus-readers-toml-greift.md",
+      "from": "shared/decisions/260907-1422_o_misst-der-ordnersprung-je-einen-ort-fuer-den-ein-profil-aus-readers-toml-greift.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:81dbb18cf77a3fc34bda0b415aab8e3a39fdabb73a42cbc54b794a326a45b944"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-2046_o_traegt-das-cmd-f-paar-auf-demselben-grund-wie-cmd-a-oder-auf-einem-dritten.md",
+      "from": "shared/decisions/260907-2046_o_traegt-das-cmd-f-paar-auf-demselben-grund-wie-cmd-a-oder-auf-einem-dritten.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:1e39877ad372849bb364214f2c1fb999ab2fca11a1ee2974759e7cddfcbaf71b"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-2127_o_heisst-die-variante-eintrag-textbefehl-weiter-so-jetzt-wo-eine-zugestellte-funktion-kein-textbefehl-ist.md",
+      "from": "shared/decisions/260907-2127_o_heisst-die-variante-eintrag-textbefehl-weiter-so-jetzt-wo-eine-zugestellte-funktion-kein-textbefehl-ist.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:dce884fb9c24e2dc01e55f96fe28c3a4195717fedf0b6cfb81a5f2c887357443"
+    },
+    {
+      "kind": "control",
+      "path": "shared/decisions/260802-0842_a_git-verwerfen-bedeutung.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:169db78c823719953525271467d0267252a61c740c6fe7930882e60989c35251",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "beb8e124-b8f0-4e9b-b94c-6a85e2490dc9",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "shared/decisions/260802-0842_a_git-verwerfen-bedeutung.md"
+        },
+        "filed_by": {
+          "actor": "shaper",
+          "person": null
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "a",
+            "head": {
+              "Domain": "code",
+              "Status": "open",
+              "Filed by": "shaper",
+              "Cross-references": "`circles/260802-0842-krk-mac-dateimanager-editor-git/_a_circle.md`"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260802-0842_a_git-verwerfen-bedeutung.md",
+            "sha256": "sha256:5fa410aaed6939a22d405862cf5cc41695d02a54755e2f19e00abc3c939734df",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "answered",
+          "answer_ref": "260905-2008-orchestrator-session.md",
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "rewrite",
+      "path": "shared/decisions/260802-0842_a_git-verwerfen-bedeutung.md",
+      "source_sha256": "sha256:5fa410aaed6939a22d405862cf5cc41695d02a54755e2f19e00abc3c939734df",
+      "after_sha256": "sha256:90d1d215c590502e7474db5597d5d43cb02e3475ef13a6a052ae77d5e8d2830b",
+      "deletions": [
+        {
+          "offset": 132,
+          "length": 17
+        }
+      ]
+    },
+    {
+      "kind": "control",
+      "path": "shared/decisions/260814-1955_a_sechs-beantwortete-entscheidungsdatensaetze-tragen-im-kopf-weiter-status-open.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:3219bc117ce89960880e6dd3ec200acbc71497fdf2dbacfa4bf9cee2494bae4b",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "38278a92-eb08-4e82-8d64-364fddc9a99d",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "shared/decisions/260814-1955_a_sechs-beantwortete-entscheidungsdatensaetze-tragen-im-kopf-weiter-status-open.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "a",
+            "head": {
+              "Gefunden am": "260814-1950, beim Nachbessern des Spec auf die zweite Bewertung",
+              "Gemeldet von": "shaper",
+              "Herkunft": "neben der Arbeit am Circle `260814-1551-tippen-filtert-dateiliste-flach-und-tief` gefunden; die Ursache liegt im Ablauf, mit dem Datensätze beantwortet werden, und nicht in dessen Directive. Deshalb im gemeinsamen Speicher."
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "6cd122c474f826a32e071a970a221535b73dce25"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260814-1955_a_sechs-beantwortete-entscheidungsdatensaetze-tragen-im-kopf-weiter-status-open.md",
+            "sha256": "sha256:e9dded83910e04e91345042410d087ebbe1bcb99e651618f023d7ffc59fea6ad",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "answered",
+          "answer_ref": "260905-2008-orchestrator-session.md",
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/decisions/260815-1812_a_der-eine-codecommit-der-sitzung-260815-1328-ohne-durchsicht-ist-nicht-nur-markdown.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:1575f56138a75e2fb2a6fd29809d8b1d835356048d0c7ae661826835aab32a2b",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "28e7155b-f91b-4357-9ff7-a77eb31762d6",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "shared/decisions/260815-1812_a_der-eine-codecommit-der-sitzung-260815-1328-ohne-durchsicht-ist-nicht-nur-markdown.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "a",
+            "head": {
+              "Gefunden am": "260815-1812, Stand `7fae5ba`",
+              "Gefunden von": "reconciler, beim Abgleich der Sitzung 260815-1328",
+              "Schwere": "mittel. Kein Fehlverhalten am Code, keine gebrochene Probe. Der Schaden ist die",
+              "Betroffen": "Verfahren, nicht Code. Der ungedeckte Wurf ist `7fae5ba`.",
+              "Domain": "code"
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "60a8ca5188f1801dfbf1771c63060fa7acfabd48"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260815-1812_a_der-eine-codecommit-der-sitzung-260815-1328-ohne-durchsicht-ist-nicht-nur-markdown.md",
+            "sha256": "sha256:a70ae704940a6b480111ee9f2766431d45233f073671d610e03d86a2a01fec58",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "answered",
+          "answer_ref": "260905-2008-orchestrator-session.md",
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/decisions/260816-1310_a_bekommt-der-inhaltsfilter-eine-eigene-messgroesse-oder-kriterien-ohne-messstrecke.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:371c3750f5e2c841ce47aaf4ea453bbb9575099ef3ce1b7aeb5ddd3d0efb98ee",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "99b1afdb-2430-4a78-9aef-93093c98303e",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "shared/decisions/260816-1310_a_bekommt-der-inhaltsfilter-eine-eigene-messgroesse-oder-kriterien-ohne-messstrecke.md"
+        },
+        "filed_by": {
+          "actor": "shaper",
+          "person": null
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "a",
+            "head": {
+              "Domain": "code",
+              "Status": "answered",
+              "Filed by": "shaper",
+              "Cross-references": "`circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_*_spec-navigator-geruest.md`, Abschnitt `### C8` (die zehn Zusagen); `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_*_spec-eingebauter-editor-mit-textmarken.md:487-507` (die Runde, die statt einer elften Zahl zwei prüfbare Kriterien gesetzt hat); `crates/krk-bench/src/fixture.rs:22-31` und `:42` (die dünnbesetzten Prüfordner); `crates/krk-ui/src/messmodus.rs:820` (L1 misst zwanzig Pfeil-ab); `shared/planning/260816-1310_*_spec-inhaltsfilter-der-dateiliste.md`"
+            },
+            "derived": {
+              "/control/answer_ref": {
+                "rule": "answer-ref-self",
+                "evidence": "unresolvable-answer-line"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260816-1310_a_bekommt-der-inhaltsfilter-eine-eigene-messgroesse-oder-kriterien-ohne-messstrecke.md",
+            "sha256": "sha256:e27b381a89d844fa6a946b268749a01051588d2fcba128ada0fe8480d6a0d017",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "answered",
+          "answer_ref": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260816-1310_a_bekommt-der-inhaltsfilter-eine-eigene-messgroesse-oder-kriterien-ohne-messstrecke.md",
+            "sha256": "sha256:e27b381a89d844fa6a946b268749a01051588d2fcba128ada0fe8480d6a0d017",
+            "kind": "decision"
+          },
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "rewrite",
+      "path": "shared/decisions/260816-1310_a_bekommt-der-inhaltsfilter-eine-eigene-messgroesse-oder-kriterien-ohne-messstrecke.md",
+      "source_sha256": "sha256:e27b381a89d844fa6a946b268749a01051588d2fcba128ada0fe8480d6a0d017",
+      "after_sha256": "sha256:358bf74e1ec0fe0f9d8e96e789ef0626c393449c7d73d52222b24158b654ea99",
+      "deletions": [
+        {
+          "offset": 108,
+          "length": 21
+        }
+      ]
+    },
+    {
+      "kind": "control",
+      "path": "shared/decisions/260818-0201_a_does-a-cross-references-line-between-records-write-the-marker-in-the-star-form.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:299a2a561d79137ec68ab18448875f442b34e0fc8705cbba0b76f87d5675625c",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "7f3d2170-18e8-48d1-adfa-d9434ffa72c2",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "shared/decisions/260818-0201_a_does-a-cross-references-line-between-records-write-the-marker-in-the-star-form.md"
+        },
+        "filed_by": {
+          "actor": "analyst",
+          "person": null
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "a",
+            "head": {
+              "Domain": "code",
+              "Status": "open",
+              "Filed by": "analyst",
+              "Cross-references": "`shared/decisions/260815-1145_*_schreiben-zitate-im-code-den-marker-aus-oder-die-sternform.md` (the answered question this one carves out of), `shared/issues/260817-1130_*_die-sternform-fuer-zitate-gilt-seit-dem-260815-und-drei-runden-schreiben-den-marker-aus.md` (the compliance defect, four rounds of it), `circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0013_*_two-decision-records-cite-each-other-with-markers-neither-of-them-carries-any-more.md` (the two instances that raised it), `CLAUDE.md` `## Bindende Grundlage: die Entscheidungsdatensätze` (the location rule)"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260818-0201_a_does-a-cross-references-line-between-records-write-the-marker-in-the-star-form.md",
+            "sha256": "sha256:0750c93220f27b82c955d3c22fc5e764599e937bc80fa4aecf5b546ef23cb2ba",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "answered",
+          "answer_ref": "260905-2008-orchestrator-session.md",
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "rewrite",
+      "path": "shared/decisions/260818-0201_a_does-a-cross-references-line-between-records-write-the-marker-in-the-star-form.md",
+      "source_sha256": "sha256:0750c93220f27b82c955d3c22fc5e764599e937bc80fa4aecf5b546ef23cb2ba",
+      "after_sha256": "sha256:91d4c167dd030711066a5103e352489ca0f79112b3dffa2b3763544a8a7818e9",
+      "deletions": [
+        {
+          "offset": 111,
+          "length": 17
+        }
+      ]
+    },
+    {
+      "kind": "control",
+      "path": "shared/decisions/260819-1440_a_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:ec0a1f15569eafc8abdb50e6acb86c9970fa2f28c08c9c8aa5a52ca31e5e0214",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "e991fb15-0902-4b03-8ff4-8dba857749f9",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "shared/decisions/260819-1440_a_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md"
+        },
+        "filed_by": {
+          "actor": "reconciler",
+          "person": null
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "a",
+            "head": {
+              "Domain": "code",
+              "Status": "open",
+              "Filed by": "reconciler",
+              "Cross-references": "`circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/planning/260811-1552_o_spec-vier-tastenbefehle-pfade-kopieren-oeffnen.md:4`; `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260813-2348_o_spec-notizzettel-als-blatt-mit-zwei-zetteln.md`, `## Reconciliation Log` vom 260814-1247; `shared/planning/260818-1510_c_spec-verzeichnis-angleichen-und-abwurf-aus-fremden-apps.md`, `## Abgleich 260819-0057`; `circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/_c_circle.md`, `## Closure note`; `rules/fusion-workbench-conventions.md`, `### Planning files`"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260819-1440_a_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md",
+            "sha256": "sha256:eaf871dc6462b9b9690ffd2e5995e857fd788a444032bcdebeae1859d12af02a",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "answered",
+          "answer_ref": "260905-2008-orchestrator-session.md",
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "rewrite",
+      "path": "shared/decisions/260819-1440_a_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md",
+      "source_sha256": "sha256:eaf871dc6462b9b9690ffd2e5995e857fd788a444032bcdebeae1859d12af02a",
+      "after_sha256": "sha256:8ebadc15082ebf4be9e942ea29bdda5217078296ed4f10184f0c75943ac12cbd",
+      "deletions": [
+        {
+          "offset": 111,
+          "length": 17
+        }
+      ]
+    },
+    {
+      "kind": "control",
+      "path": "shared/decisions/260819-2216_a_gilt-die-quelltextzusage-auch-fuer-das-ziehen-einer-auswahl-und-die-dienste.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:1da26867000ec42cbe4b9219cc5d214d476b3f47201808d80fc4f6910a4b8977",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "fa967466-a8df-4069-8edb-0e4ebdf6f3a5",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "shared/decisions/260819-2216_a_gilt-die-quelltextzusage-auch-fuer-das-ziehen-einer-auswahl-und-die-dienste.md"
+        },
+        "filed_by": {
+          "actor": "shaper",
+          "person": null
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "a",
+            "head": {
+              "Domain": "code",
+              "Status": "answered",
+              "Filed by": "shaper",
+              "Cross-references": "`shared/decisions/260819-2216_*_was-landet-beim-gerenderten-markdown-in-der-zwischenablage.md`; `shared/decisions/260819-2216_*_welches-kontextmenue-zeigt-die-auswaehlbare-vorschau.md`; `shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md` (C2.12); `crates/krk-ui/src/appkit/zwischenablage.rs` (die eine Hülle um `NSPasteboard`)"
+            },
+            "derived": {
+              "/control/answer_ref": {
+                "rule": "answer-ref-self",
+                "evidence": "unresolvable-answer-line"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260819-2216_a_gilt-die-quelltextzusage-auch-fuer-das-ziehen-einer-auswahl-und-die-dienste.md",
+            "sha256": "sha256:8106e229742b70145318272db865db47518eaf33fffd2551c02c6cf914a8c2a6",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "answered",
+          "answer_ref": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260819-2216_a_gilt-die-quelltextzusage-auch-fuer-das-ziehen-einer-auswahl-und-die-dienste.md",
+            "sha256": "sha256:8106e229742b70145318272db865db47518eaf33fffd2551c02c6cf914a8c2a6",
+            "kind": "decision"
+          },
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "rewrite",
+      "path": "shared/decisions/260819-2216_a_gilt-die-quelltextzusage-auch-fuer-das-ziehen-einer-auswahl-und-die-dienste.md",
+      "source_sha256": "sha256:8106e229742b70145318272db865db47518eaf33fffd2551c02c6cf914a8c2a6",
+      "after_sha256": "sha256:04f02129e17792c447200d93eff4fd145e09583a7512911ed01070a8806fd79c",
+      "deletions": [
+        {
+          "offset": 118,
+          "length": 21
+        }
+      ]
+    },
+    {
+      "kind": "control",
+      "path": "shared/decisions/260819-2216_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:62e491c90026ed1dfa03b58da93dc90784a624217ba152910b8ca19438bfdca3",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "f2fcf3b0-b51a-4deb-81bd-f253e3eb808d",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "shared/decisions/260819-2216_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.md"
+        },
+        "filed_by": {
+          "actor": "shaper",
+          "person": null
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "a",
+            "head": {
+              "Domain": "code",
+              "Status": "answered",
+              "Filed by": "shaper",
+              "Cross-references": "`shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md` (Abschnitt „Verhältnis zu den zehn Zeitzusagen aus C8 der Runde 1\"); `crates/krk-bench/src/messen.rs:1109-1114` (L7); `crates/krk-ui/src/appkit/vorschau.rs` (Modulkopf, Abschnitt „Der Einfärbungsvorgang wohnt hier und nicht im Modell\"); `messungen/260810-1918-alle-zusagen.txt`; `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_*_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md`"
+            },
+            "derived": {
+              "/control/answer_ref": {
+                "rule": "answer-ref-self",
+                "evidence": "unresolvable-answer-line"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260819-2216_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.md",
+            "sha256": "sha256:61630bf386645af8ddf818c852fd64b89a44d4ef43e6a8ad509142eea63520a4",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "answered",
+          "answer_ref": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260819-2216_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.md",
+            "sha256": "sha256:61630bf386645af8ddf818c852fd64b89a44d4ef43e6a8ad509142eea63520a4",
+            "kind": "decision"
+          },
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "rewrite",
+      "path": "shared/decisions/260819-2216_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.md",
+      "source_sha256": "sha256:61630bf386645af8ddf818c852fd64b89a44d4ef43e6a8ad509142eea63520a4",
+      "after_sha256": "sha256:484180a5983b0c5f45ea4fa6a7973f215528fcb57a018170c4d17ae308fe9940",
+      "deletions": [
+        {
+          "offset": 84,
+          "length": 21
+        }
+      ]
+    },
+    {
+      "kind": "control",
+      "path": "shared/decisions/260821-2202_a_zeigt-krk-web-inhalt-selbst-an-oder-gibt-er-ihn-an-den-systembrowser-ab.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:3453d2d32218a039f7a2597548d751e66f6cf546605a090ccbad7acd194898b6",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "9dfb0ce8-37f5-407d-847b-0f6cdac5be53",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "shared/decisions/260821-2202_a_zeigt-krk-web-inhalt-selbst-an-oder-gibt-er-ihn-an-den-systembrowser-ab.md"
+        },
+        "filed_by": {
+          "actor": "user",
+          "person": null
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "a",
+            "head": {
+              "Domain": "code",
+              "Filed by": "user (über den Orchestrator, Sitzung 260820-2200)",
+              "Cross-references": "`circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_d_circle.md`"
+            },
+            "derived": {
+              "/control/answer_ref": {
+                "rule": "answer-ref-self",
+                "evidence": "unresolvable-answer-line"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260821-2202_a_zeigt-krk-web-inhalt-selbst-an-oder-gibt-er-ihn-an-den-systembrowser-ab.md",
+            "sha256": "sha256:9fc371af9cab43c1d5086134fbcc780363595851093e045644f1acb76904510c",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "answered",
+          "answer_ref": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260821-2202_a_zeigt-krk-web-inhalt-selbst-an-oder-gibt-er-ihn-an-den-systembrowser-ab.md",
+            "sha256": "sha256:9fc371af9cab43c1d5086134fbcc780363595851093e045644f1acb76904510c",
+            "kind": "decision"
+          },
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/decisions/260831-1353_a_bekommt-das-ablageprofil-eine-zweite-umfangszeile-obwohl-die-dateizahl-nicht-zaehlbar-ist.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:f53814e4254e4a307b8f228a023172cf9f8642dc94483db51e27bf191712519b",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "b178fd8f-0906-4c95-ba5c-9bbf3b9126de",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "shared/decisions/260831-1353_a_bekommt-das-ablageprofil-eine-zweite-umfangszeile-obwohl-die-dateizahl-nicht-zaehlbar-ist.md"
+        },
+        "filed_by": {
+          "actor": "ontocoder",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "a",
+            "head": {
+              "Domain": "data",
+              "Filed by": "ontocoder, Kai Stalmann <kai@stalmann.org>",
+              "Cross-references": "`resources/default-readers.toml` (Profil `fusion-Werkbank: der Ablagespeicher`, und der Absatz „Der Platzhalter in der Ortsangabe\"); `crates/krk-core/src/leseprofil/mod.rs` (`Ortsmangel::MehrerePlatzhalter`, `Baustein` mit Festlegung A7); `crates/krk-core/src/leseprofil/bausteine.rs:699` (`Anzeige::Titel => eintrag.typ == Typ::Datei`); `crates/krk-core/src/ablage/leseprofile.rs` (die zwei Proben, die die Zahl zwölf halten); `crates/krk-core/tests/leseprofil.rs` (`ausgelieferte()`)"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260831-1353_a_bekommt-das-ablageprofil-eine-zweite-umfangszeile-obwohl-die-dateizahl-nicht-zaehlbar-ist.md",
+            "sha256": "sha256:905766c7d647053abf0d8c6a978c5cc3a8fb2ad2b04ab3c005084a3d07fa0e32",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "answered",
+          "answer_ref": "260905-2008-orchestrator-session.md",
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/decisions/260906-0203_a_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:304fe7cd089dc250e16c79ead70f99a08da02eef9ea7ea4ebf23b15ecd3595e3",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "2a7ec28c-09dc-4312-a685-ca214ca10d0e",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "shared/decisions/260906-0203_a_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md"
+        },
+        "filed_by": {
+          "actor": "coder",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [
+          "260813-0642_*_zwei-hingenommene-verluste-stehen-auf-keiner-abnahmeliste.md",
+          "260814-1002_*_c1-verlangt-dass-keine-kombination-zweimal-steht-cmd-a-steht-zweimal.md",
+          "260814-1247_*_die-abnahmeliste-rechnet-gegen-72-kriterien-der-spec-fuehrt-nach-dem-c5-nachtrag-75.md",
+          "260813-1345_*_die-diagrammbefunde-am-spec-sind-nie-behoben-worden-und-das-stationsbild-zeigt-jetzt-sechs-wo-der-baum-sieben-traegt.md",
+          "260813-1345_*_die-eine-messung-die-der-plan-als-gegenmassnahme-nennt-ist-nicht-gefahren.md",
+          "260830-1317_*_die-25er-liste-der-nutzerarbeit-fuehrt-c3-1-und-c3-3-und-der-satz-darunter-sagt-sie-seien-nicht-gefuehrt.md",
+          "260830-1317_*_c1-1-nennt-vier-feldbreiten-die-den-bau-anhalten-gemessen-haelt-genau-eine.md",
+          "260830-1613_*_c8-3-nennt-98-zusaetzliche-pakete-am-projektbaum-gemessen-sind-es-101.md",
+          "260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md"
+        ],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "a",
+            "head": {
+              "Domain": "code",
+              "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+              "Cross-references": "`260813-0642_*_zwei-hingenommene-verluste-stehen-auf-keiner-abnahmeliste.md`, `260814-1002_*_c1-verlangt-dass-keine-kombination-zweimal-steht-cmd-a-steht-zweimal.md`, `260814-1247_*_die-abnahmeliste-rechnet-gegen-72-kriterien-der-spec-fuehrt-nach-dem-c5-nachtrag-75.md`, `260813-1345_*_die-diagrammbefunde-am-spec-sind-nie-behoben-worden-und-das-stationsbild-zeigt-jetzt-sechs-wo-der-baum-sieben-traegt.md`, `260813-1345_*_die-eine-messung-die-der-plan-als-gegenmassnahme-nennt-ist-nicht-gefahren.md`, `260830-1317_*_die-25er-liste-der-nutzerarbeit-fuehrt-c3-1-und-c3-3-und-der-satz-darunter-sagt-sie-seien-nicht-gefuehrt.md`, `260830-1317_*_c1-1-nennt-vier-feldbreiten-die-den-bau-anhalten-gemessen-haelt-genau-eine.md`, `260830-1613_*_c8-3-nennt-98-zusaetzliche-pakete-am-projektbaum-gemessen-sind-es-101.md`, `260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md`"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260906-0203_a_darf-ein-agent-den-spec-oder-plan-einer-geschlossenen-runde-berichtigen.md",
+            "sha256": "sha256:b8ddc19063d21b6296f41656268588f1d033eabb08805191200a18d036cad7b4",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "answered",
+          "answer_ref": "260905-2008-orchestrator-session.md",
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/decisions/260906-0206_a_werden-dateinamen-mit-vorauslaufendem-zeitstempel-umbenannt-oder-vermerkt.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:523a448820597bf3a38339a319faad50fce6756288e650af89010698111658aa",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "1b206fe9-b2ff-45f4-bdd0-f15e46f9b8f6",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "shared/decisions/260906-0206_a_werden-dateinamen-mit-vorauslaufendem-zeitstempel-umbenannt-oder-vermerkt.md"
+        },
+        "filed_by": {
+          "actor": "coder",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [
+          "260812-1805_*_sechs-sitzungsprotokolle-tragen-einen-zeitstempel-aus-der-zukunft.md",
+          "260828-1044_*_fuenf-history-dateien-der-runde-20-tragen-zeitstempel-die-nach-ihrem-eigenen-commit-liegen.md",
+          "260824-1758_*_die-zeitstempel-in-dateinamen-laufen-der-uhr-voraus-bis-zu-drei-stunden.md",
+          "260818-0343_*_zwei-dateien-dieser-sitzung-tragen-einen-zeitstempel-fast-zwei-stunden-in-der-zukunft.md",
+          "260810-0918_*_der-plan-zitiert-einen-defekt-mit-einem-zeitstempel-den-sechs-datensaetze-tragen.md"
+        ],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "a",
+            "head": {
+              "Domain": "code",
+              "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+              "Cross-references": "`260812-1805_*_sechs-sitzungsprotokolle-tragen-einen-zeitstempel-aus-der-zukunft.md`, `260828-1044_*_fuenf-history-dateien-der-runde-20-tragen-zeitstempel-die-nach-ihrem-eigenen-commit-liegen.md`, `260824-1758_*_die-zeitstempel-in-dateinamen-laufen-der-uhr-voraus-bis-zu-drei-stunden.md`, `260818-0343_*_zwei-dateien-dieser-sitzung-tragen-einen-zeitstempel-fast-zwei-stunden-in-der-zukunft.md`, `260810-0918_*_der-plan-zitiert-einen-defekt-mit-einem-zeitstempel-den-sechs-datensaetze-tragen.md`, `rules/fusion-workbench-conventions.md` `## Timestamps`"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260906-0206_a_werden-dateinamen-mit-vorauslaufendem-zeitstempel-umbenannt-oder-vermerkt.md",
+            "sha256": "sha256:e1b36b3d4230bbe5890778d28d0416d46b21fb9a9ea666b9efcf50fdb8e16022",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "answered",
+          "answer_ref": "260905-2008-orchestrator-session.md",
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/decisions/260907-0726_o_meldet-im-finder-anzeigen-einen-eintrag-der-nicht-mehr-dasteht.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:cb7c2c552fd68a9628507705cc7953f81b04007390b19707d64b374806ed76a4",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "e6e78299-ab89-4e4a-b649-c88e689da529",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "shared/decisions/260907-0726_o_meldet-im-finder-anzeigen-einen-eintrag-der-nicht-mehr-dasteht.md"
+        },
+        "filed_by": {
+          "actor": "coder",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Domain": "code",
+              "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+              "Cross-references": "`crates/krk-ui/src/appkit/finder.rs` (Modulkopf, Abschnitt „Der Aufruf gibt nichts zurück\"), `crates/krk-ui/src/appkit/anwendung.rs` (`im_finder_anzeigen`), `crates/krk-ui/src/kommandos/operationen.rs` (`ordner_fehlt`, `kein_finder`)"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-0726_o_meldet-im-finder-anzeigen-einen-eintrag-der-nicht-mehr-dasteht.md",
+            "sha256": "sha256:bb60f703016fea1690a148c6f8ace5e378626dba5aeaacc64d1bd5b6cdecdfd2",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "answer_ref": null,
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/decisions/260907-0826_o_gilt-die-umlautregel-auch-fuer-die-terminalausgabe-von-xtask-krk-bench-und-messmodus.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:b3e7c970d0d171e173f53a2a31875778137bd417def3f6fadcbc3dec62eb5acf",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "0488a52e-d039-42b5-a3ef-5eeebf1eef98",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "shared/decisions/260907-0826_o_gilt-die-umlautregel-auch-fuer-die-terminalausgabe-von-xtask-krk-bench-und-messmodus.md"
+        },
+        "filed_by": {
+          "actor": "coder",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [
+          "260826-1225_*_welche-schreibweise-gilt-fuer-nutzersichtbare-deutsche-meldungen-umlaut-oder-umschrift.md",
+          "260907-0826_*_wie-wird-die-naht-zwischen-umlaut-und-umschrift-gehalten-jetzt-da-sie-eine-regel-ist.md"
+        ],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Domain": "code",
+              "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+              "Cross-references": "`260826-1225_*_welche-schreibweise-gilt-fuer-nutzersichtbare-deutsche-meldungen-umlaut-oder-umschrift.md` (die Antwort, die diese Frage aufwirft), `260907-0826_*_wie-wird-die-naht-zwischen-umlaut-und-umschrift-gehalten-jetzt-da-sie-eine-regel-ist.md` (dieselbe Naht, andere Frage)"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-0826_o_gilt-die-umlautregel-auch-fuer-die-terminalausgabe-von-xtask-krk-bench-und-messmodus.md",
+            "sha256": "sha256:6f456db5decb20cb9033026949d025c0f76e6e29bac78f58a3c9d551e24464fc",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "answer_ref": null,
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/decisions/260907-0826_o_wie-wird-die-naht-zwischen-umlaut-und-umschrift-gehalten-jetzt-da-sie-eine-regel-ist.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:9d443418200c53a599466bacdf20ef9f6175ceafc61c98a1bda6227fabd6d799",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "e23a11c8-eefd-4b05-a72d-03067d8ad8bb",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "shared/decisions/260907-0826_o_wie-wird-die-naht-zwischen-umlaut-und-umschrift-gehalten-jetzt-da-sie-eine-regel-ist.md"
+        },
+        "filed_by": {
+          "actor": "coder",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [
+          "260826-1225_*_welche-schreibweise-gilt-fuer-nutzersichtbare-deutsche-meldungen-umlaut-oder-umschrift.md",
+          "260907-0826_*_gilt-die-umlautregel-auch-fuer-die-terminalausgabe-von-xtask-krk-bench-und-messmodus.md",
+          "260811-2050_*_wird-die-untergrenzen-angabe-pruefbar-gemacht.md"
+        ],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Domain": "code",
+              "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+              "Cross-references": "`260826-1225_*_welche-schreibweise-gilt-fuer-nutzersichtbare-deutsche-meldungen-umlaut-oder-umschrift.md` (die Regel, die gehalten werden soll), `260907-0826_*_gilt-die-umlautregel-auch-fuer-die-terminalausgabe-von-xtask-krk-bench-und-messmodus.md` (dieselbe Naht, Frage nach ihrem Verlauf), `260811-2050_*_wird-die-untergrenzen-angabe-pruefbar-gemacht.md` (dieselbe Bauart von Frage: eine Gewohnheit prüfbar machen)"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-0826_o_wie-wird-die-naht-zwischen-umlaut-und-umschrift-gehalten-jetzt-da-sie-eine-regel-ist.md",
+            "sha256": "sha256:7c17f03e04fbc41b467e8b28f288ee7584810ebde46e93c1a696049a0192f079",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "answer_ref": null,
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/decisions/260907-1226_o_weist-der-doppelklick-auf-einen-ordner-ohne-leserecht-ab-oder-geht-er-hinein-und-meldet-danach.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:1222707edc5888ad42bba8b388300b4278cfe814507dd85c3055b9b9b6990a71",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "27aae6dc-c56a-46c0-b5eb-37e708dba654",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "shared/decisions/260907-1226_o_weist-der-doppelklick-auf-einen-ordner-ohne-leserecht-ab-oder-geht-er-hinein-und-meldet-danach.md"
+        },
+        "filed_by": {
+          "actor": "coder",
+          "person": null
+        },
+        "references": [
+          "260815-1749_*_meldet-der-doppelklick-auf-einen-ordner-ohne-leserecht-oder-schweigt-er-wie-heute.md"
+        ],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Domain": "code",
+              "Status": "open",
+              "Filed by": "coder",
+              "Cross-references": "`260815-1749_*_meldet-der-doppelklick-auf-einen-ordner-ohne-leserecht-oder-schweigt-er-wie-heute.md` (der Vorgänger, beantwortet am 260907-1210); `260907-1226_*_zwei-prosastellen-nennen-den-doppelklick-auf-einen-ordner-ohne-leserecht-wortlos-der-baum-meldet-seit-s12.md`; `crates/krk-ui/src/kommandos/pfadeingabe.rs`; `crates/krk-ui/src/appkit/tabelle.rs` (`in_zeile_einsteigen`); `crates/krk-ui/src/tabs.rs` (`lesemeldungen_einziehen`)"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-1226_o_weist-der-doppelklick-auf-einen-ordner-ohne-leserecht-ab-oder-geht-er-hinein-und-meldet-danach.md",
+            "sha256": "sha256:ceadbe6511c8be44cb1a3770a50fc3e969ce612eaeb42f67f813cab38427d6ec",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "answer_ref": null,
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "rewrite",
+      "path": "shared/decisions/260907-1226_o_weist-der-doppelklick-auf-einen-ordner-ohne-leserecht-ab-oder-geht-er-hinein-und-meldet-danach.md",
+      "source_sha256": "sha256:ceadbe6511c8be44cb1a3770a50fc3e969ce612eaeb42f67f813cab38427d6ec",
+      "after_sha256": "sha256:8fe02d9c8fd963e1fcc056278ac2204ee7089858a57f4ad7932adc88106ee002",
+      "deletions": [
+        {
+          "offset": 121,
+          "length": 17
+        }
+      ]
+    },
+    {
+      "kind": "control",
+      "path": "shared/decisions/260907-1301_o_wird-der-geschaetzte-zeitstempel-in-einem-dateinamen-pruefbar-gemacht.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:03e279ee55154862ad37a7bde5f440fe6c0b0fe5e6e74367e226a716475dd6cc",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "aa72e4f0-6fd7-4d62-b79b-03bcdd6b46d6",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "shared/decisions/260907-1301_o_wird-der-geschaetzte-zeitstempel-in-einem-dateinamen-pruefbar-gemacht.md"
+        },
+        "filed_by": {
+          "actor": "orchestrator",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Domain": "code",
+              "Filed by": "orchestrator, Kai Stalmann <kai@stalmann.org>",
+              "Cross-references": ""
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-1301_o_wird-der-geschaetzte-zeitstempel-in-einem-dateinamen-pruefbar-gemacht.md",
+            "sha256": "sha256:a9ca5bc73008dc9e3354f01157809d08d4d4e5397ee8333242e22d1654da8832",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "answer_ref": null,
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/decisions/260907-1407_o_bekommt-session-toml-eine-fassungsangabe-damit-auch-die-zweite-haelfte-der-bestandsregel-greifen-kann.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:7a70a628c4fb3133ddc9fd63908e1759c8ae3a3b4446c3348d2f628a9a3521e9",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "d4c17a77-1bad-421a-b420-c7fcb4961a73",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "shared/decisions/260907-1407_o_bekommt-session-toml-eine-fassungsangabe-damit-auch-die-zweite-haelfte-der-bestandsregel-greifen-kann.md"
+        },
+        "filed_by": {
+          "actor": "coder",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Domain": "code",
+              "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+              "Cross-references": "`260821-0142_*_gilt-die-strenge-bestandsregel-auch-fuer-session-toml-und-keymap-toml.md` — der Entscheid, dessen eine Hälfte hier übrig bleibt; `260820-2235_*_eine-bookmarks-toml-die-serde-toleriert-aber-nicht-versteht-wird-still-als-leer-gelesen.md` — der Defekt, aus dem die Bestandsregel stammt; `crates/krk-core/src/ablage/sitzung.rs` (`Sitzung`), `crates/krk-core/src/ablage/pfade.rs` (`Datei::leerbefund`)"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-1407_o_bekommt-session-toml-eine-fassungsangabe-damit-auch-die-zweite-haelfte-der-bestandsregel-greifen-kann.md",
+            "sha256": "sha256:2cedbdf7631ac9fd558814fd22e37d830247f95d8d5586a000d92c181c4908e8",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "answer_ref": null,
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/decisions/260907-1422_o_misst-der-ordnersprung-je-einen-ort-fuer-den-ein-profil-aus-readers-toml-greift.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:8475743772506ac293a1ecff1ec137dea60846bf1c697ef29d60b8619de50b42",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "5b841869-5a5a-49fc-9aad-e28bdb079130",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "shared/decisions/260907-1422_o_misst-der-ordnersprung-je-einen-ort-fuer-den-ein-profil-aus-readers-toml-greift.md"
+        },
+        "filed_by": {
+          "actor": "coder",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [
+          "260824-1900_*_wie-wird-die-arbeit-dieser-runde-jemals-gegen-l7-gemessen-die-messstrecke-sieht-sie-nicht.md"
+        ],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Domain": "code",
+              "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+              "Cross-references": "`260824-1900_*_wie-wird-die-arbeit-dieser-runde-jemals-gegen-l7-gemessen-die-messstrecke-sieht-sie-nicht.md` (Möglichkeit 2 gewählt, Möglichkeit 3 nicht); `260827-1322_*_faellt-das-default-profil-auch-im-messmodus-an-und-was-misst-l7-danach.md`; `crates/krk-ui/src/appkit/anwendung.rs` (`Anwendungsdelegierter::sitzung_laden`); `crates/krk-core/src/leseprofil/bausteine.rs` (`zusammenfassen_gezaehlt`); `crates/krk-ui/src/messmodus.rs` (`sitzungsschritte`, der L7-Ordnerblock)"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-1422_o_misst-der-ordnersprung-je-einen-ort-fuer-den-ein-profil-aus-readers-toml-greift.md",
+            "sha256": "sha256:81dbb18cf77a3fc34bda0b415aab8e3a39fdabb73a42cbc54b794a326a45b944",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "answer_ref": null,
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/decisions/260907-2046_o_traegt-das-cmd-f-paar-auf-demselben-grund-wie-cmd-a-oder-auf-einem-dritten.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:8acc09fefef44491180776d318a713d13566d956e0f30613a310cb08e96f1b1c",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "7b39a6ee-313e-4135-a2d1-e547b2ab6e4e",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "shared/decisions/260907-2046_o_traegt-das-cmd-f-paar-auf-demselben-grund-wie-cmd-a-oder-auf-einem-dritten.md"
+        },
+        "filed_by": {
+          "actor": "ontocoder",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [
+          "260805-0713_*_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md",
+          "260828-1041_*_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md",
+          "260907-2020_*_das-einfuegen-in-den-filtertext-braucht-eine-siebte-vom-menue-zugestellte-funktion-in-der-belegung.md",
+          "260907-2026_*_die-antwortzeile-zu-cmd-f-begruendet-das-paar-mit-dem-wirkungsbereich-die-regel-vom-260805-nennt-den-zusteller.md"
+        ],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Domain": "code",
+              "Filed by": "ontocoder, Kai Stalmann <kai@stalmann.org>",
+              "Cross-references": "`260805-0713_*_ist-eine-kombination-bei-zwei-zustellern-ein-konflikt.md` (die Zustellerregel), `260828-1041_*_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md` (der Entscheid, der cmd+f belegt), `260907-2020_*_das-einfuegen-in-den-filtertext-braucht-eine-siebte-vom-menue-zugestellte-funktion-in-der-belegung.md` (der Befund, aus dem die Zeile entstand), `260907-2026_*_die-antwortzeile-zu-cmd-f-begruendet-das-paar-mit-dem-wirkungsbereich-die-regel-vom-260805-nennt-den-zusteller.md` (dieselbe Naht, Frage nach der Begründung in der Antwortzeile)"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-2046_o_traegt-das-cmd-f-paar-auf-demselben-grund-wie-cmd-a-oder-auf-einem-dritten.md",
+            "sha256": "sha256:1e39877ad372849bb364214f2c1fb999ab2fca11a1ee2974759e7cddfcbaf71b",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "answer_ref": null,
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/decisions/260907-2127_o_heisst-die-variante-eintrag-textbefehl-weiter-so-jetzt-wo-eine-zugestellte-funktion-kein-textbefehl-ist.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:f6c7a6340c1c4df525204df4d64d17c04acaa1db62d1a977f07bd7c1cf1b3fc9",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "34c58418-9889-41b1-b134-6ee11b8080e8",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "shared/decisions/260907-2127_o_heisst-die-variante-eintrag-textbefehl-weiter-so-jetzt-wo-eine-zugestellte-funktion-kein-textbefehl-ist.md"
+        },
+        "filed_by": {
+          "actor": "coder",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Domain": "code",
+              "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+              "Cross-references": ""
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/decisions/260907-2127_o_heisst-die-variante-eintrag-textbefehl-weiter-so-jetzt-wo-eine-zugestellte-funktion-kein-textbefehl-ist.md",
+            "sha256": "sha256:dce884fb9c24e2dc01e55f96fe28c3a4195717fedf0b6cfb81a5f2c887357443",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "answer_ref": null,
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    }
+  ]
+}

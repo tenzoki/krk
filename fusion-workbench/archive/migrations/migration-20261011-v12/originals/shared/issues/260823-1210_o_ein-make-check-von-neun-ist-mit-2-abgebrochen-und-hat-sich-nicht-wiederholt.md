@@ -1,0 +1,74 @@
+Ein `make check` von neun ist mit 2 abgebrochen und hat sich nicht wiederholt
+
+---
+
+Am 260823 gegen 12:05 hat ein `make check` den Rückgabewert 2 geliefert. Acht weitere Läufe
+unmittelbar davor und danach, am selben Baumstand, sind grün. **Die Ausgabe des roten Laufs
+ist nicht erhalten**: er lief nach `/dev/null`, weil allein der Rückgabewert gebraucht war.
+Damit ist nicht entscheidbar, welches der vier Kommandos abgebrochen ist.
+
+---
+
+**Beobachtet, nicht diagnostiziert.**
+
+## Was gemessen ist
+
+| Lauf | Kommando | Rückgabewert | Ausgabe erhalten |
+|---|---|---|---|
+| 1 | `make check` | 0 | ja, „alle vier gruen" |
+| 2 | `make check` | 0 | ja, „alle vier gruen" |
+| 3 | `make check` | **2** | **nein** |
+| 4 | `make check` | 0 | ja, „alle vier gruen" |
+| 5 | `make check` | 0 | ja, keine Zeile mit `FAILED`, `panicked` oder `error` |
+| 6–8 | `make check` | 0 | ja |
+| 9–12 | `cargo test --workspace` | 0 | ja |
+
+Zwischen Lauf 2 und Lauf 3 lag genau eine Änderung: der Umbruch einer einzelnen
+Kommentarzeile in `crates/krk-ui/src/kommandos/mod.rs`. Lauf 4 lief unmittelbar danach ohne
+weitere Änderung und war grün, also erklärt die Änderung den Abbruch nicht.
+
+## Warum das hier steht
+
+`make check` ist das Abnahmekommando dieses Baums, und ein Lauf, der ohne erkennbaren Grund
+rot wird, macht jede Abnahme, die sich auf ihn stützt, um so viel unsicherer. Zwei
+Kandidaten liegen nahe und sind hier **nicht** geprüft:
+
+1. **Der Messplanwächter.** `Messplanwaechter::neu` (`krk-bench/src/messen.rs`) räumt beim
+   Anlegen jede fremde `krk-messplan-*.toml` im Temporärverzeichnis ab, und die Probe
+   `der_messplan_traegt_die_pruefsitzung_…` ruft `plan_schreiben`, also räumt auch
+   `cargo test` dort ab. Vorausgesetzt ist, dass nie zwei Läufe zugleich darauf greifen
+   (`shared/issues/260810-1925_*`). Ob zwei Prüffäden desselben Laufs das können, ist hier
+   nicht nachgesehen.
+2. **Etwas außerhalb dieses Baums**, etwa ein abgebrochener Übersetzerlauf.
+
+## Was zu tun wäre
+
+Den nächsten roten Lauf **mit** seiner Ausgabe festhalten. Ohne sie ist der Befund nicht
+weiter zu treiben; deshalb steht hier keine Vermutung als Ursache.
+
+**Schwere:** niedrig, solange er sich nicht wiederholt.
+
+**Gefunden:** coder, beim Abschluss der acht Befunde vom 260823, Baumstand `471d801` plus
+den Änderungen jener Arbeit
+
+**Domain:** code
+
+---
+
+**Abgleich 260823-1336.** Ein zehnter Lauf ist gefahren, am Baumstand `616ad5e` samt den nicht
+eingecheckten Workbench-Änderungen, mit erhaltener Ausgabe: Rückgabewert 0, Schlusszeile „alle
+vier gruen", `krk-core` und `xtask` je 155 beziehungsweise alle Ziele grün, `fmt` und `clippy`
+ohne Befund. Der Datensatz bleibt offen, und zwar unverändert aus dem Grund, den er selbst nennt:
+ein einzelner roter Lauf ohne erhaltene Ausgabe ist nicht diagnostizierbar, und ein weiterer
+grüner Lauf entkräftet ihn nicht, er verschiebt nur die Häufigkeit. Zu tun bleibt das, was unter
+„Was zu tun wäre" steht: den nächsten roten Lauf mit seiner Ausgabe festhalten.
+
+---
+Also seen: 260824-1130 by coder — auf diesem Gerät laufen seit dem 15. und dem 16.08. **22
+verwaiste Endlosschleifen** aus zwei früheren Sitzungen, je bei rund 65 Prozent einer Kerns,
+gefunden mit `ps -Ao pid,pcpu,etime,command | awk '$3>30'`. Es sind die Lastschleifen zweier
+Lastproben (`for i in $(seq 1 12); do (while :; do :; done) & done`), deren abschließendes
+`kill $(jobs -p)` nie gelaufen ist. Die Lastdurchschnitte stehen dadurch bei 35 bis 40 auf 16
+Kernen, und ein `make check` braucht statt einer Minute über zehn. Wer Lastabhängigkeit an
+diesem Gerät misst, misst bis auf Weiteres gegen diese Grundlast mit; die Prozesse sind mit
+`kill` zu beenden, und die Entscheidung darüber gehört dem Nutzer.

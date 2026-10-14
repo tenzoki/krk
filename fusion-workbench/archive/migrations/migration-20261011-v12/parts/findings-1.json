@@ -1,0 +1,1520 @@
+{
+  "schema": "fusion.migration-plan/v1",
+  "part": "findings",
+  "migration_id": "migration-20261011-v12",
+  "n": 1,
+  "findings": [
+    {
+      "class": "circle-deferred",
+      "severity": "reported",
+      "path": "work-packages/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_d_circle.md",
+      "detail": "Circle marker _d_ with head \"anticipated\"; dropped"
+    },
+    {
+      "class": "circle-head-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260809-2040-tastenbelegung-als-markdown-in-downloads/_b_circle.md",
+      "detail": "marker _b_, head \"anticipated\""
+    },
+    {
+      "class": "circle-deferred",
+      "severity": "reported",
+      "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/_d_circle.md",
+      "detail": "Circle marker _d_ with head \"deferred\"; dropped"
+    },
+    {
+      "class": "circle-head-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260819-2230-auswahl-und-kopieren-in-der-vorschau/_c_circle.md",
+      "detail": "marker _c_, head null"
+    },
+    {
+      "class": "circle-head-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260821-1644-veroeffentlichen-als-achte-station/_c_circle.md",
+      "detail": "marker _c_, head null"
+    },
+    {
+      "class": "circle-head-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/_b_circle.md",
+      "detail": "marker _b_, head null"
+    },
+    {
+      "class": "circle-head-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260825-0711-kontextmenue-traegt-zip-unzip-finder/_b_circle.md",
+      "detail": "marker _b_, head null"
+    },
+    {
+      "class": "circle-head-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/_c_circle.md",
+      "detail": "marker _c_, head null"
+    },
+    {
+      "class": "circle-head-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260827-2028-vorschau-rendert-pdf-als-betrachter/_c_circle.md",
+      "detail": "marker _c_, head null"
+    },
+    {
+      "class": "circle-head-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/_c_circle.md",
+      "detail": "marker _c_, head null"
+    },
+    {
+      "class": "circle-head-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab/_c_circle.md",
+      "detail": "marker _c_, head null"
+    },
+    {
+      "class": "circle-head-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260830-1045-git-bereich-liest-status-branch-verlauf/_b_circle.md",
+      "detail": "marker _b_, head null"
+    },
+    {
+      "class": "status-head-in-live-record",
+      "severity": "reported",
+      "path": "shared/decisions/260802-0842_a_git-verwerfen-bedeutung.md",
+      "detail": "**Status:** \"open\" removed"
+    },
+    {
+      "class": "status-head-in-live-record",
+      "severity": "reported",
+      "path": "shared/decisions/260816-1310_a_bekommt-der-inhaltsfilter-eine-eigene-messgroesse-oder-kriterien-ohne-messstrecke.md",
+      "detail": "**Status:** \"answered\" removed"
+    },
+    {
+      "class": "status-head-in-live-record",
+      "severity": "reported",
+      "path": "shared/decisions/260818-0201_a_does-a-cross-references-line-between-records-write-the-marker-in-the-star-form.md",
+      "detail": "**Status:** \"open\" removed"
+    },
+    {
+      "class": "status-head-in-live-record",
+      "severity": "reported",
+      "path": "shared/decisions/260819-1440_a_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md",
+      "detail": "**Status:** \"open\" removed"
+    },
+    {
+      "class": "status-head-in-live-record",
+      "severity": "reported",
+      "path": "shared/decisions/260819-2216_a_gilt-die-quelltextzusage-auch-fuer-das-ziehen-einer-auswahl-und-die-dienste.md",
+      "detail": "**Status:** \"answered\" removed"
+    },
+    {
+      "class": "status-head-in-live-record",
+      "severity": "reported",
+      "path": "shared/decisions/260819-2216_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.md",
+      "detail": "**Status:** \"answered\" removed"
+    },
+    {
+      "class": "status-head-in-live-record",
+      "severity": "reported",
+      "path": "shared/decisions/260907-1226_o_weist-der-doppelklick-auf-einen-ordner-ohne-leserecht-ab-oder-geht-er-hinein-und-meldet-danach.md",
+      "detail": "**Status:** \"open\" removed"
+    },
+    {
+      "class": "status-head-in-live-record",
+      "severity": "reported",
+      "path": "shared/decisions/260908-1754_a_bekommt-das-profil-des-gemeinsamen-speichers-die-zwei-forum-zeilen-die-es-jedem-anderen-unterspeicher-gibt.md",
+      "detail": "**Status:** \"beantwortet (von der Bahn R1 im Rahmen ihres Auftrags), noch nicht\" removed"
+    },
+    {
+      "class": "status-head-in-live-record",
+      "severity": "reported",
+      "path": "shared/issues/260815-1047_o_die-directive-der-runde-10-und-ein-planschritt-schreiben-das-alte-leeren-weiter-fest.md",
+      "detail": "**Status:** \"open\" removed"
+    },
+    {
+      "class": "status-head-in-live-record",
+      "severity": "reported",
+      "path": "shared/issues/260815-1047_p_die-bedingung-der-moeglichkeit-2-ist-an-filterstand-text-geprueft-und-nicht-an-der-rangfolge.md",
+      "detail": "**Status:** \"open\" removed"
+    },
+    {
+      "class": "status-head-in-live-record",
+      "severity": "reported",
+      "path": "work-packages/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_a_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md",
+      "detail": "**Status:** \"open\" removed"
+    },
+    {
+      "class": "status-head-in-live-record",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_a_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.md",
+      "detail": "**Status:** \"answered\" removed"
+    },
+    {
+      "class": "status-head-in-live-record",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-2002_a_bleibt-der-vorspann-eines-containers-die-eine-luecke-in-der-deckungszusage-von-c4-3.md",
+      "detail": "**Status:** \"open\" removed"
+    },
+    {
+      "class": "status-head-in-live-record",
+      "severity": "reported",
+      "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-in-dessen-ordner.md",
+      "detail": "**Status:** \"answered\" removed"
+    },
+    {
+      "class": "status-head-in-live-record",
+      "severity": "reported",
+      "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_belegungsmodell-zeile-traegt-fuehrt-denselben-vergleich-eingesetzt-und-ruft-die-eine-fassung-nicht.md",
+      "detail": "**Status:** \"Open\" removed"
+    },
+    {
+      "class": "status-head-in-live-record",
+      "severity": "reported",
+      "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_zwei-kommentare-in-default-keymap-toml-beschreiben-das-tippen-noch-als-sprungmarke.md",
+      "detail": "**Status:** \"Open\" removed"
+    },
+    {
+      "class": "status-head-in-live-record",
+      "severity": "reported",
+      "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_stirbt-die-prozessgruppe-auch-am-normalen-ende-des-laufs.md",
+      "detail": "**Status:** \"answered\" removed"
+    },
+    {
+      "class": "status-head-in-live-record",
+      "severity": "reported",
+      "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_welche-shell-faehrt-den-lauf-und-woher-kommt-ihr-pfad.md",
+      "detail": "**Status:** \"open\" removed"
+    },
+    {
+      "class": "active-document-archived",
+      "severity": "reported",
+      "path": "work-packages/260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch/260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch.md",
+      "detail": "261001-0850_*_plan-oberflaeche-folgt-der-systemsprache-deutsch-franzoesisch-englisch.md"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "shared/decisions/260802-0842_a_git-verwerfen-bedeutung.md",
+      "detail": "Implemented: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "shared/decisions/260802-0842_a_git-verwerfen-bedeutung.md",
+      "detail": "Superseded by: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "shared/decisions/260802-0842_a_git-verwerfen-bedeutung.md",
+      "detail": "Deferred: on _a_"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260802-0842_a_git-verwerfen-bedeutung.md",
+      "detail": "circles/260802-0842-krk-mac-dateimanager-editor-git/_a_circle.md"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/decisions/260814-1955_a_sechs-beantwortete-entscheidungsdatensaetze-tragen-im-kopf-weiter-status-open.md",
+      "detail": "null"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/decisions/260815-1812_a_der-eine-codecommit-der-sitzung-260815-1328-ohne-durchsicht-ist-nicht-nur-markdown.md",
+      "detail": "null"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "shared/decisions/260816-1310_a_bekommt-der-inhaltsfilter-eine-eigene-messgroesse-oder-kriterien-ohne-messstrecke.md",
+      "detail": "Implemented: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "shared/decisions/260816-1310_a_bekommt-der-inhaltsfilter-eine-eigene-messgroesse-oder-kriterien-ohne-messstrecke.md",
+      "detail": "Superseded by: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "shared/decisions/260816-1310_a_bekommt-der-inhaltsfilter-eine-eigene-messgroesse-oder-kriterien-ohne-messstrecke.md",
+      "detail": "Deferred: on _a_"
+    },
+    {
+      "class": "answer-ref-self",
+      "severity": "reported",
+      "path": "shared/decisions/260816-1310_a_bekommt-der-inhaltsfilter-eine-eigene-messgroesse-oder-kriterien-ohne-messstrecke.md",
+      "detail": "the Answered: line cites nothing resolvable; the record's original answers"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260816-1310_a_bekommt-der-inhaltsfilter-eine-eigene-messgroesse-oder-kriterien-ohne-messstrecke.md",
+      "detail": "circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_*_spec-navigator-geruest.md"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260816-1310_a_bekommt-der-inhaltsfilter-eine-eigene-messgroesse-oder-kriterien-ohne-messstrecke.md",
+      "detail": "Abschnitt `### C8` (die zehn Zusagen); `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_*_spec-eingebauter-editor-mit-textmarken.md:487-507` (die Runde, die statt einer elften Zahl zwei prüfbare Kriterien gesetzt hat); `crates/krk-bench/src/fixture.rs:22-31` und `:42` (die dünnbesetzten Prüfordner); `crates/krk-ui/src/messmodus.rs:820` (L1 misst zwanzig Pfeil-ab); `shared/planning/260816-1310_*_spec-inhaltsfilter-der-dateiliste.md"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "shared/decisions/260818-0201_a_does-a-cross-references-line-between-records-write-the-marker-in-the-star-form.md",
+      "detail": "Implemented: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "shared/decisions/260818-0201_a_does-a-cross-references-line-between-records-write-the-marker-in-the-star-form.md",
+      "detail": "Superseded by: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "shared/decisions/260818-0201_a_does-a-cross-references-line-between-records-write-the-marker-in-the-star-form.md",
+      "detail": "Deferred: on _a_"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260818-0201_a_does-a-cross-references-line-between-records-write-the-marker-in-the-star-form.md",
+      "detail": "shared/decisions/260815-1145_*_schreiben-zitate-im-code-den-marker-aus-oder-die-sternform.md"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260818-0201_a_does-a-cross-references-line-between-records-write-the-marker-in-the-star-form.md",
+      "detail": "shared/issues/260817-1130_*_die-sternform-fuer-zitate-gilt-seit-dem-260815-und-drei-runden-schreiben-den-marker-aus.md"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260818-0201_a_does-a-cross-references-line-between-records-write-the-marker-in-the-star-form.md",
+      "detail": "circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0013_*_two-decision-records-cite-each-other-with-markers-neither-of-them-carries-any-more.md"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260818-0201_a_does-a-cross-references-line-between-records-write-the-marker-in-the-star-form.md",
+      "detail": "CLAUDE.md` `## Bindende Grundlage: die Entscheidungsdatensätze` (the location rule)"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "shared/decisions/260819-1440_a_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md",
+      "detail": "Implemented: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "shared/decisions/260819-1440_a_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md",
+      "detail": "Superseded by: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "shared/decisions/260819-1440_a_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md",
+      "detail": "Deferred: on _a_"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260819-1440_a_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md",
+      "detail": "circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/planning/260811-1552_o_spec-vier-tastenbefehle-pfade-kopieren-oeffnen.md:4`; `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260813-2348_o_spec-notizzettel-als-blatt-mit-zwei-zetteln.md"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260819-1440_a_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md",
+      "detail": "## Reconciliation Log` vom 260814-1247; `shared/planning/260818-1510_c_spec-verzeichnis-angleichen-und-abwurf-aus-fremden-apps.md"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260819-1440_a_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md",
+      "detail": "## Abgleich 260819-0057`; `circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/_c_circle.md"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260819-1440_a_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md",
+      "detail": "## Closure note`; `rules/fusion-workbench-conventions.md"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260819-1440_a_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md",
+      "detail": "### Planning files"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "shared/decisions/260819-2216_a_gilt-die-quelltextzusage-auch-fuer-das-ziehen-einer-auswahl-und-die-dienste.md",
+      "detail": "Implemented: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "shared/decisions/260819-2216_a_gilt-die-quelltextzusage-auch-fuer-das-ziehen-einer-auswahl-und-die-dienste.md",
+      "detail": "Superseded by: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "shared/decisions/260819-2216_a_gilt-die-quelltextzusage-auch-fuer-das-ziehen-einer-auswahl-und-die-dienste.md",
+      "detail": "Deferred: on _a_"
+    },
+    {
+      "class": "answer-ref-self",
+      "severity": "reported",
+      "path": "shared/decisions/260819-2216_a_gilt-die-quelltextzusage-auch-fuer-das-ziehen-einer-auswahl-und-die-dienste.md",
+      "detail": "the Answered: line cites nothing resolvable; the record's original answers"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260819-2216_a_gilt-die-quelltextzusage-auch-fuer-das-ziehen-einer-auswahl-und-die-dienste.md",
+      "detail": "shared/decisions/260819-2216_*_was-landet-beim-gerenderten-markdown-in-der-zwischenablage.md`; `shared/decisions/260819-2216_*_welches-kontextmenue-zeigt-die-auswaehlbare-vorschau.md`; `shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md` (C2.12); `crates/krk-ui/src/appkit/zwischenablage.rs` (die eine Hülle um `NSPasteboard`)"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "shared/decisions/260819-2216_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.md",
+      "detail": "Implemented: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "shared/decisions/260819-2216_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.md",
+      "detail": "Superseded by: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "shared/decisions/260819-2216_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.md",
+      "detail": "Deferred: on _a_"
+    },
+    {
+      "class": "answer-ref-self",
+      "severity": "reported",
+      "path": "shared/decisions/260819-2216_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.md",
+      "detail": "the Answered: line cites nothing resolvable; the record's original answers"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260819-2216_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.md",
+      "detail": "shared/planning/260819-2216_*_spec-auswahl-und-kopieren-in-der-vorschau.md` (Abschnitt „Verhältnis zu den zehn Zeitzusagen aus C8 der Runde 1\"); `crates/krk-bench/src/messen.rs:1109-1114` (L7); `crates/krk-ui/src/appkit/vorschau.rs` (Modulkopf, Abschnitt „Der Einfärbungsvorgang wohnt hier und nicht im Modell\"); `messungen/260810-1918-alle-zusagen.txt`; `circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260806-1303_*_wie-kommt-krk-fuer-den-abnahmelauf-in-den-vordergrund.md"
+    },
+    {
+      "class": "answer-ref-self",
+      "severity": "reported",
+      "path": "shared/decisions/260821-2202_a_zeigt-krk-web-inhalt-selbst-an-oder-gibt-er-ihn-an-den-systembrowser-ab.md",
+      "detail": "the Answered: line cites nothing resolvable; the record's original answers"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260821-2202_a_zeigt-krk-web-inhalt-selbst-an-oder-gibt-er-ihn-an-den-systembrowser-ab.md",
+      "detail": "circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_d_circle.md"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260831-1353_a_bekommt-das-ablageprofil-eine-zweite-umfangszeile-obwohl-die-dateizahl-nicht-zaehlbar-ist.md",
+      "detail": "resources/default-readers.toml"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260906-0206_a_werden-dateinamen-mit-vorauslaufendem-zeitstempel-umbenannt-oder-vermerkt.md",
+      "detail": "rules/fusion-workbench-conventions.md` `## Timestamps"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260907-0726_o_meldet-im-finder-anzeigen-einen-eintrag-der-nicht-mehr-dasteht.md",
+      "detail": "crates/krk-ui/src/appkit/finder.rs"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260907-0726_o_meldet-im-finder-anzeigen-einen-eintrag-der-nicht-mehr-dasteht.md",
+      "detail": "crates/krk-ui/src/appkit/anwendung.rs"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260907-0726_o_meldet-im-finder-anzeigen-einen-eintrag-der-nicht-mehr-dasteht.md",
+      "detail": "crates/krk-ui/src/kommandos/operationen.rs"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "shared/decisions/260907-1226_o_weist-der-doppelklick-auf-einen-ordner-ohne-leserecht-ab-oder-geht-er-hinein-und-meldet-danach.md",
+      "detail": "Implemented: on _o_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "shared/decisions/260907-1226_o_weist-der-doppelklick-auf-einen-ordner-ohne-leserecht-ab-oder-geht-er-hinein-und-meldet-danach.md",
+      "detail": "Superseded by: on _o_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "shared/decisions/260907-1226_o_weist-der-doppelklick-auf-einen-ordner-ohne-leserecht-ab-oder-geht-er-hinein-und-meldet-danach.md",
+      "detail": "Deferred: on _o_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "shared/decisions/260907-1226_o_weist-der-doppelklick-auf-einen-ordner-ohne-leserecht-ab-oder-geht-er-hinein-und-meldet-danach.md",
+      "detail": "Answered: on _o_"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260907-1407_o_bekommt-session-toml-eine-fassungsangabe-damit-auch-die-zweite-haelfte-der-bestandsregel-greifen-kann.md",
+      "detail": "260821-0142_*_gilt-die-strenge-bestandsregel-auch-fuer-session-toml-und-keymap-toml.md` — der Entscheid"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260907-1407_o_bekommt-session-toml-eine-fassungsangabe-damit-auch-die-zweite-haelfte-der-bestandsregel-greifen-kann.md",
+      "detail": "dessen eine Hälfte hier übrig bleibt; `260820-2235_*_eine-bookmarks-toml-die-serde-toleriert-aber-nicht-versteht-wird-still-als-leer-gelesen.md` — der Defekt"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260907-1407_o_bekommt-session-toml-eine-fassungsangabe-damit-auch-die-zweite-haelfte-der-bestandsregel-greifen-kann.md",
+      "detail": "aus dem die Bestandsregel stammt; `crates/krk-core/src/ablage/sitzung.rs` (`Sitzung`)"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260907-1407_o_bekommt-session-toml-eine-fassungsangabe-damit-auch-die-zweite-haelfte-der-bestandsregel-greifen-kann.md",
+      "detail": "crates/krk-core/src/ablage/pfade.rs"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/decisions/260908-1754_a_bekommt-das-profil-des-gemeinsamen-speichers-die-zwei-forum-zeilen-die-es-jedem-anderen-unterspeicher-gibt.md",
+      "detail": "null"
+    },
+    {
+      "class": "answered-without-answer-line",
+      "severity": "reported",
+      "path": "shared/decisions/260908-1754_a_bekommt-das-profil-des-gemeinsamen-speichers-die-zwei-forum-zeilen-die-es-jedem-anderen-unterspeicher-gibt.md",
+      "detail": "_a_ with no Answered: line"
+    },
+    {
+      "class": "answer-ref-self",
+      "severity": "reported",
+      "path": "shared/decisions/260908-1754_a_bekommt-das-profil-des-gemeinsamen-speichers-die-zwei-forum-zeilen-die-es-jedem-anderen-unterspeicher-gibt.md",
+      "detail": "the Answered: line cites nothing resolvable; the record's original answers"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/decisions/260918-0842_a_wer-vergibt-die-versionszahl-und-darf-ein-agent-den-auslieferungslauf-fahren.md",
+      "detail": "260813-1534_*_darf-das-bauwerkzeug-den-tag-setzen-und-die-auslieferung-in-einem-kommando-fahren.md; 260821-1115_*_bekommt-der-veroeffentlichungsbefehl-eine-eigene-huelle-wie-certify-only-sh.md"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/issues/260811-2157_o_fuenf-commits-stehen-hinter-dem-letzten-turn-ende-ohne-eigene-turn-grenze.md",
+      "detail": "null"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/issues/260813-0026_o_bundle-und-release-schreiben-an-denselben-ort-und-ein-entwicklungsbau-zerstoert-das-beglaubigte-buendel.md",
+      "detail": "null"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/issues/260814-1612_o_eine-verknuepfung-auf-einen-ordner-laesst-sich-nicht-betreten.md",
+      "detail": "null"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/issues/260815-1047_o_die-directive-der-runde-10-und-ein-planschritt-schreiben-das-alte-leeren-weiter-fest.md",
+      "detail": "circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/_b_circle.md:14"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/issues/260815-1047_p_die-bedingung-der-moeglichkeit-2-ist-an-filterstand-text-geprueft-und-nicht-an-der-rangfolge.md",
+      "detail": "circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1830_i_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/issues/260816-0040_o_der-takt-eines-laufenden-lesevorgangs-beendet-eine-offene-namenszelle-und-der-aufschub-erreicht-ihn-nicht.md",
+      "detail": "null"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/issues/260816-1803_o_der-kommentar-zu-deep-nennt-den-tabulator-als-frei-er-liegt-seit-der-runde-1-auf-fenster-wechseln.md",
+      "detail": "null"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/issues/260816-2144_o_die-leertaste-ist-belegt-und-erreicht-den-dateifilter-nie.md",
+      "detail": "null"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/issues/260817-1122_o_der-durchsichtsbereich-schliesst-seinen-ersten-commit-aus.md",
+      "detail": "null"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/issues/260817-1130_o_die-sternform-fuer-zitate-gilt-seit-dem-260815-und-drei-runden-schreiben-den-marker-aus.md",
+      "detail": "null"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/issues/260818-0807_o_vierzehn-tote-zeiger-stehen-ausserhalb-dieser-runde-und-zwei-in-der-sitzungsstandsdatei.md",
+      "detail": "null"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/issues/260819-1440_o_ein-spec-traegt-zwei-reconciliation-log-ueberschriften-und-eine-suche-findet-nur-die-erste.md",
+      "detail": "null"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/issues/260820-0602_o_make-check-prueft-den-ganzen-arbeitsbereich-und-bricht-bei-parallelen-agenten-an-fremden-dateien-ab.md",
+      "detail": "null"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/issues/260820-2056_o_drei-beantwortete-datensaetze-koennen-nie-umgesetzt-werden-weil-ihre-antwort-eine-abwesenheit-ist.md",
+      "detail": "null"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/issues/260820-2235_o_der-gemessene-start-laedt-die-lesezeichen-nicht-und-die-leiste-schweigt-mit-falscher-begruendung.md",
+      "detail": "null"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/issues/260821-0142_o_eine-nicht-lesbare-ablagedatei-wird-nicht-gesichert-und-vom-naechsten-schreibvorgang-ueberschrieben.md",
+      "detail": "null"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/issues/260821-1401_o_der-leerbefund-zweig-verschweigt-eine-dastehende-sicherung-die-den-bestand-traegt.md",
+      "detail": "null"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/issues/260821-1532_o_drei-von-durchsichten-verlangte-nachtraege-an-offenen-datensaetzen-sind-nie-eingetragen-worden.md",
+      "detail": "null"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/issues/260823-0731_o_ein-klick-in-das-andere-dateifenster-nimmt-eine-ziehbewegung-zurueck.md",
+      "detail": "null"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/issues/260823-0732_o_der-neue-nachzug-laeuft-vor-dem-fokusumzug-und-oeffnet-den-ring-den-eine-probe-offen-haelt.md",
+      "detail": "null"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/issues/260823-1210_o_ein-make-check-von-neun-ist-mit-2-abgebrochen-und-hat-sich-nicht-wiederholt.md",
+      "detail": "null"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/issues/260823-1336_o_die-zeilenzitate-der-zwei-offen-gebliebenen-befunde-und-beider-durchsichten-zeigen-nach-52fba42-ins-leere.md",
+      "detail": "null"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "shared/issues/260823-1651_o_die-auslieferung-ist-der-letzte-commit-einer-sitzung-und-die-sitzung-kann-sich-danach-nicht-mehr-schliessen.md",
+      "detail": "null"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/issues/260825-1922_o_der-programmstart-und-der-tabwechsel-erreichen-die-neue-vorschauregel-nicht.md",
+      "detail": "shared/planning/260825-1725_*_plan-vorschau-vertieft-und-zwei-fehler.md` (Schritt 7); `shared/decisions/260825-1725_*_was-zeigt-die-vorschau-wenn-keine-zeile-ausgewaehlt-ist.md`; `crates/krk-ui/src/appkit/tabelle.rs` (`nach_lesebeginn`, `auswahl_merken`, `tab_gewechselt`); `crates/krk-ui/src/appkit/anwendung.rs` (`lesevorgaenge_starten`, `sichtbaren_lesen`); Commit `9322d5d"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/issues/260825-1922_o_eine-auffrischung-stoesst-die-vorschau-mit-an-und-die-kosten-sind-ungemessen.md",
+      "detail": "shared/planning/260825-1725_*_plan-vorschau-vertieft-und-zwei-fehler.md` (Schritt 7); `shared/decisions/260825-1725_*_was-zeigt-die-vorschau-wenn-keine-zeile-ausgewaehlt-ist.md` (Cons-Liste); `crates/krk-ui/src/appkit/tabelle.rs` (`nach_lesebeginn`, `auswahl_merken`); Commit `9322d5d"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/issues/260825-1953_o_ein-platzhalterlauf-oeffnet-bis-zu-zweitausend-verzeichnisse-und-die-eintragsschranke-faengt-das-nicht.md",
+      "detail": "shared/planning/260825-1725_*_plan-vorschau-vertieft-und-zwei-fehler.md"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/issues/260825-2107_o_ein-circle-datensatz-liegt-beim-1-8-fachen-der-64-kb-grenze-des-feldbausteins.md",
+      "detail": "shared/analyses/260825-2107-was-die-zwoelf-leseprofile-an-der-wirklichen-werkbank-kosten.md"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/issues/260825-2126_o_die-summenprobe-der-sechs-zustandszeilen-faellt-schon-an-einem-ds-store.md",
+      "detail": "resources/default-readers.toml:368-421;"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/issues/260825-2127_o_das-erweiterte-zeitfeld-steht-mit-vollem-rumpf-auch-im-hauptverzeichnis.md",
+      "detail": "crates/krk-core/src/operation/zippen.rs:680-703"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/issues/260825-2127_o_das-erweiterte-zeitfeld-steht-mit-vollem-rumpf-auch-im-hauptverzeichnis.md",
+      "detail": ":610-616"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/issues/260826-0139_o_die-fallunterscheidung-des-kennzeichnen-satzes-traegt-ihre-bedingung-nur-an-einem-zweig.md",
+      "detail": "resources/default-readers.toml:61-67;"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/issues/260826-0904_o_der-doppelungshinweis-sagt-vor-der-ortsangabe-und-fuenf-von-sieben-fusion-zeilen-haben-keine.md",
+      "detail": "resources/default-readers.toml"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/issues/260826-0904_o_der-doppelungshinweis-sagt-vor-der-ortsangabe-und-fuenf-von-sieben-fusion-zeilen-haben-keine.md",
+      "detail": "die vier Doppelungshinweise über `fusion-Werkbank: die Wurzel"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/issues/260826-0904_o_der-doppelungshinweis-sagt-vor-der-ortsangabe-und-fuenf-von-sieben-fusion-zeilen-haben-keine.md",
+      "detail": "Projektwurzel mit fusion-Werkbank"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "shared/issues/260826-0904_o_der-doppelungshinweis-sagt-vor-der-ortsangabe-und-fuenf-von-sieben-fusion-zeilen-haben-keine.md",
+      "detail": "flight-Werkbank: die Wurzel` und `Projektwurzel mit flight-Werkbank`; `shared/issues/260825-2126_c_der-doppelungshinweis-steht-bei-flight-nur-ueber-einem-der-beiden-bloecke.md` (der Datensatz, dessen Behebung die Formulierung auf den vierten Block gebracht hat)"
+    },
+    {
+      "class": "filed-by-not-owed",
+      "severity": "reported",
+      "path": "shared/plans/260929-0759_o_spec-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md",
+      "detail": "null"
+    },
+    {
+      "class": "filed-by-not-owed",
+      "severity": "reported",
+      "path": "shared/plans/260929-1313_o_spec-vorschau-blaettert-fotos-nach-aufnahmedatum.md",
+      "detail": "null"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_a_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md",
+      "detail": "Implemented: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_a_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md",
+      "detail": "Superseded by: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_a_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md",
+      "detail": "Deferred: on _a_"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_a_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md",
+      "detail": "in work-packages/260802-0842-krk-mac-dateimanager-editor-git"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "work-packages/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_a_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md",
+      "detail": "circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_i_sprache-und-ui-werkzeugkasten.md"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "work-packages/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_a_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md",
+      "detail": "circles/260802-0842-krk-mac-dateimanager-editor-git/analyses/260802-1134-sprache-und-ui-werkzeugkasten.md` Befund 6"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "work-packages/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_a_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md",
+      "detail": "circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` Schritte S1 und S5"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0512_o_f4-nimmt-am-schmalen-fenster-eine-datei-in-einen-editor-an-den-niemand-sieht.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0512_o_f4-nimmt-am-schmalen-fenster-eine-datei-in-einen-editor-an-den-niemand-sieht.md",
+      "detail": "in work-packages/260811-1304-statusleiste-mit-bereichsschaltern"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0700_o_der-breitenschritt-kommt-neben-einem-gedeckelten-bereich-gekuerzt-an.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0700_o_der-breitenschritt-kommt-neben-einem-gedeckelten-bereich-gekuerzt-an.md",
+      "detail": "in work-packages/260811-1304-statusleiste-mit-bereichsschaltern"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0810_o_die-zahl-39-im-kopf-der-belegungsdatei-steht-im-praesens-und-ist-ungeprueft.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0810_o_die-zahl-39-im-kopf-der-belegungsdatei-steht-im-praesens-und-ist-ungeprueft.md",
+      "detail": "in work-packages/260811-1304-statusleiste-mit-bereichsschaltern"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_a_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.md",
+      "detail": "Implemented: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_a_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.md",
+      "detail": "Superseded by: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_a_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.md",
+      "detail": "Deferred: on _a_"
+    },
+    {
+      "class": "answer-ref-self",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_a_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.md",
+      "detail": "the Answered: line cites nothing resolvable; the record's original answers"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_a_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.md",
+      "detail": "in work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_a_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.md",
+      "detail": "crates/krk-ui/src/fenstermodell.rs:213` (`Bereich::mindestbreite`); `crates/krk-ui/src/appkit/fenster.rs:134` (`MINDESTGROESSE`, 780 Punkte); `circles/260811-1304-statusleiste-mit-bereichsschaltern/_b_circle.md` (Runde 5, `## Closure note`); `circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_a_circle.md"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_a_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.md",
+      "detail": "## Parent grounding stale` vom 260812-0816"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-2002_a_bleibt-der-vorspann-eines-containers-die-eine-luecke-in-der-deckungszusage-von-c4-3.md",
+      "detail": "Implemented: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-2002_a_bleibt-der-vorspann-eines-containers-die-eine-luecke-in-der-deckungszusage-von-c4-3.md",
+      "detail": "Superseded by: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-2002_a_bleibt-der-vorspann-eines-containers-die-eine-luecke-in-der-deckungszusage-von-c4-3.md",
+      "detail": "Deferred: on _a_"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-2002_a_bleibt-der-vorspann-eines-containers-die-eine-luecke-in-der-deckungszusage-von-c4-3.md",
+      "detail": "in work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-2002_a_bleibt-der-vorspann-eines-containers-die-eine-luecke-in-der-deckungszusage-von-c4-3.md",
+      "detail": "circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/planning/260812-1145_c_teilen-ordnersprung-ablage-sichern-vorschau-rendern.md"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1204_o_eine-semantisch-widerspruechliche-keymap-toml-wird-nicht-zur-seite-gelegt.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1204_o_eine-semantisch-widerspruechliche-keymap-toml-wird-nicht-zur-seite-gelegt.md",
+      "detail": "in work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1526_o_der-kommentar-an-ordner-der-datei-nennt-opt-cmd-c-den-pfad-desselben-ordners.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1526_o_der-kommentar-an-ordner-der-datei-nennt-opt-cmd-c-den-pfad-desselben-ordners.md",
+      "detail": "in work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1527_o_die-zwei-neuen-kommentare-verengen-die-reihenordnung-und-widersprechen-der-datei.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1527_o_die-zwei-neuen-kommentare-verengen-die-reihenordnung-und-widersprechen-der-datei.md",
+      "detail": "in work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1528_o_der-abschnittskopf-nennt-drei-funktionen-der-runde-4-und-fuehrt-jetzt-vier.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1528_o_der-abschnittskopf-nennt-drei-funktionen-der-runde-4-und-fuehrt-jetzt-vier.md",
+      "detail": "in work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_o_der-freigabedialog-wird-nicht-aus-einem-mausdruck-heraus-geoeffnet.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_o_der-freigabedialog-wird-nicht-aus-einem-mausdruck-heraus-geoeffnet.md",
+      "detail": "in work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1701_o_ein-gerendertes-markdown-behaelt-nach-dem-wechsel-auf-dunkel-die-verweisfarbe-der-hellen-tafel.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1701_o_ein-gerendertes-markdown-behaelt-nach-dem-wechsel-auf-dunkel-die-verweisfarbe-der-hellen-tafel.md",
+      "detail": "in work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1805_o_der-datensatz-zur-verweisfarbe-nennt-fuer-die-dunkle-tafel-eine-farbe-die-sie-nicht-liefert.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1805_o_der-datensatz-zur-verweisfarbe-nennt-fuer-die-dunkle-tafel-eine-farbe-die-sie-nicht-liefert.md",
+      "detail": "in work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1805_o_yaml-front-matter-erscheint-als-trennlinie-und-ueberschrift-statt-als-quelltext.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1805_o_yaml-front-matter-erscheint-als-trennlinie-und-ueberschrift-statt-als-quelltext.md",
+      "detail": "in work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1816_o_die-durchsicht-von-turn-2-liest-einen-reinen-grundlagen-commit-als-codeaenderung.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1816_o_die-durchsicht-von-turn-2-liest-einen-reinen-grundlagen-commit-als-codeaenderung.md",
+      "detail": "in work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1854_o_der-kurzhinweis-der-statuszeile-veraltet-bei-einer-fensteraenderung.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1854_o_der-kurzhinweis-der-statuszeile-veraltet-bei-einer-fensteraenderung.md",
+      "detail": "in work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0311_o_ein-klick-in-die-bereichsleiste-wirkt-seit-s2-waehrend-einer-umbenennung-nicht-mehr.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0311_o_ein-klick-in-die-bereichsleiste-wirkt-seit-s2-waehrend-einer-umbenennung-nicht-mehr.md",
+      "detail": "in work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0420_o_das-menue-bearbeiten-verliert-seine-mac-uebliche-reihenfolge-und-seinen-trenner.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0420_o_das-menue-bearbeiten-verliert-seine-mac-uebliche-reihenfolge-und-seinen-trenner.md",
+      "detail": "in work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0540_o_die-belegung-wird-weiter-blind-ueberschrieben-obwohl-der-datensatz-mehr-zusagt.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260813-0540_o_die-belegung-wird-weiter-blind-ueberschrieben-obwohl-der-datensatz-mehr-zusagt.md",
+      "detail": "in work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/issues/260908-0719_o_zwei-saetze-zur-kuerzelregel-fehlen-in-default-keymap-toml-seit-die-frage-dahinter-beantwortet-ist.md",
+      "detail": "in work-packages/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1110_o_eine-vierte-wegwerfordner-fassung-steht-in-xtask-und-die-probe-liest-die-kiste-nicht.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1110_o_eine-vierte-wegwerfordner-fassung-steht-in-xtask-und-die-probe-liest-die-kiste-nicht.md",
+      "detail": "in work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1345_o_der-nachtrag-aus-a3-zaehlt-die-ausnahmeliste-mit-zwei-eintraegen-und-turn-2-hat-einen-dritten-gebracht.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/issues/260813-1345_o_der-nachtrag-aus-a3-zaehlt-die-ausnahmeliste-mit-zwei-eintraegen-und-turn-2-hat-einen-dritten-gebracht.md",
+      "detail": "in work-packages/260813-0939-titelleiste-fuehrt-version-und-semantische-tags"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-0637_o_die-directive-im-circle-datensatz-nennt-drei-sicherungsmomente-der-spec-vier.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-0637_o_die-directive-im-circle-datensatz-nennt-drei-sicherungsmomente-der-spec-vier.md",
+      "detail": "in work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1002_o_die-directive-abweichung-steht-an-drei-stellen-des-circle-datensatzes-und-nicht-an-zwei.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1002_o_die-directive-abweichung-steht-an-drei-stellen-des-circle-datensatzes-und-nicht-an-zwei.md",
+      "detail": "in work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1247_o_die-streichung-der-beobachtung-10-nimmt-zwei-kriterien-ihren-einzigen-beleg-am-buendel.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1247_o_die-streichung-der-beobachtung-10-nimmt-zwei-kriterien-ihren-einzigen-beleg-am-buendel.md",
+      "detail": "in work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1247_o_sechzehn-der-neunundzwanzig-buendelkriterien-sind-vom-abnahmelauf-nie-beruehrt-worden.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/issues/260814-1247_o_sechzehn-der-neunundzwanzig-buendelkriterien-sind-vom-abnahmelauf-nie-beruehrt-worden.md",
+      "detail": "in work-packages/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-in-dessen-ordner.md",
+      "detail": "Implemented: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-in-dessen-ordner.md",
+      "detail": "Superseded by: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-in-dessen-ordner.md",
+      "detail": "Deferred: on _a_"
+    },
+    {
+      "class": "answer-ref-self",
+      "severity": "reported",
+      "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-in-dessen-ordner.md",
+      "detail": "the Answered: line cites nothing resolvable; the record's original answers"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-in-dessen-ordner.md",
+      "detail": "in work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-in-dessen-ordner.md",
+      "detail": "crates/krk-ui/src/angezeigtedatei.rs:1-58"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0020_o_verdeckten-tab-setzen-baut-denselben-frischen-tabinhalt-und-traegt-zwei-von-vier-werten-hinueber.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0020_o_verdeckten-tab-setzen-baut-denselben-frischen-tabinhalt-und-traegt-zwei-von-vier-werten-hinueber.md",
+      "detail": "in work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_belegungsmodell-zeile-traegt-fuehrt-denselben-vergleich-eingesetzt-und-ruft-die-eine-fassung-nicht.md",
+      "detail": "in work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/260815-0230_o_zwei-kommentare-in-default-keymap-toml-beschreiben-das-tippen-noch-als-sprungmarke.md",
+      "detail": "in work-packages/260814-1551-tippen-filtert-dateiliste-flach-und-tief"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1710_o_ein-rueckwechsel-auf-einen-tab-setzt-seinen-beendeten-durchlauf-nicht-fort.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1710_o_ein-rueckwechsel-auf-einen-tab-setzt-seinen-beendeten-durchlauf-nicht-fort.md",
+      "detail": "in work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1932_o_ein-deskriptormangel-beendet-den-durchlauf-still-und-die-statuszeile-nimmt-den-lesehinweis-zurueck.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/issues/260816-1932_o_ein-deskriptormangel-beendet-den-durchlauf-still-und-die-statuszeile-nimmt-den-lesehinweis-zurueck.md",
+      "detail": "in work-packages/260816-1321-inhaltsfilter-mit-ankreuzfeld-content"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_stirbt-die-prozessgruppe-auch-am-normalen-ende-des-laufs.md",
+      "detail": "Implemented: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_stirbt-die-prozessgruppe-auch-am-normalen-ende-des-laufs.md",
+      "detail": "Superseded by: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_stirbt-die-prozessgruppe-auch-am-normalen-ende-des-laufs.md",
+      "detail": "Deferred: on _a_"
+    },
+    {
+      "class": "answer-ref-self",
+      "severity": "reported",
+      "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_stirbt-die-prozessgruppe-auch-am-normalen-ende-des-laufs.md",
+      "detail": "the Answered: line cites nothing resolvable; the record's original answers"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_stirbt-die-prozessgruppe-auch-am-normalen-ende-des-laufs.md",
+      "detail": "in work-packages/260816-2255-befehle-absetzen-und-makros-speichern"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_stirbt-die-prozessgruppe-auch-am-normalen-ende-des-laufs.md",
+      "detail": "260816-2240_*_spec-befehle-absetzen-und-makros-speichern.md` (C1.9, C1.10, C1.15 und `## Was der Befehlslauf nicht kann`); `260816-2307_*_plan-befehle-absetzen-und-makros-speichern.md` Schritt A3 und die Zeile `**Decidability:**` im Plankopf"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_welche-shell-faehrt-den-lauf-und-woher-kommt-ihr-pfad.md",
+      "detail": "Implemented: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_welche-shell-faehrt-den-lauf-und-woher-kommt-ihr-pfad.md",
+      "detail": "Superseded by: on _a_"
+    },
+    {
+      "class": "decision-line-disagrees-with-marker",
+      "severity": "reported",
+      "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_welche-shell-faehrt-den-lauf-und-woher-kommt-ihr-pfad.md",
+      "detail": "Deferred: on _a_"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_welche-shell-faehrt-den-lauf-und-woher-kommt-ihr-pfad.md",
+      "detail": "in work-packages/260816-2255-befehle-absetzen-und-makros-speichern"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "work-packages/260816-2255-befehle-absetzen-und-makros-speichern/decisions/260816-2307_a_welche-shell-faehrt-den-lauf-und-woher-kommt-ihr-pfad.md",
+      "detail": "260816-2240_*_spec-befehle-absetzen-und-makros-speichern.md` (C1.2, C1.16, C1.17 und `## Offen für den Planner`, dritter Punkt); `shared/consult/260815-1354-befehlslauf-und-makros-in-krk.md` (`## Open Questions`, zweite Frage); `260816-2307_*_plan-befehle-absetzen-und-makros-speichern.md` Schritt A3 und A4"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0410_o_blatt-zeigen-answers-which-button-confirms-a-second-time-and-names-a-weaker-precondition.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0410_o_blatt-zeigen-answers-which-button-confirms-a-second-time-and-names-a-weaker-precondition.md",
+      "detail": "in work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0412_o_one-path-in-the-keymap-head-carries-no-store-and-the-sweep-that-reported-33-of-33-did-not-see-it.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0412_o_one-path-in-the-keymap-head-carries-no-store-and-the-sweep-that-reported-33-of-33-did-not-see-it.md",
+      "detail": "in work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0413_o_the-one-unmeasured-promise-of-the-new-guard-lives-only-in-prose-and-in-a-closed-record.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0413_o_the-one-unmeasured-promise-of-the-new-guard-lives-only-in-prose-and-in-a-closed-record.md",
+      "detail": "in work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0414_o_a-test-typed-commit-carries-an-unmentioned-split-of-a-production-branch.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0414_o_a-test-typed-commit-carries-an-unmentioned-split-of-a-production-branch.md",
+      "detail": "in work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0753_o_die-ausnahme-fuer-maschinell-gelesene-kopffelder-steht-nur-in-einem-geschlossenen-datensatz.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/issues/260818-0753_o_die-ausnahme-fuer-maschinell-gelesene-kopffelder-steht-nur-in-einem-geschlossenen-datensatz.md",
+      "detail": "in work-packages/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260819-2230-auswahl-und-kopieren-in-der-vorschau/issues/260820-0733_o_die-abfangstelle-verwirft-die-geforderten-sorten-und-leert-jede-gereichte-ablage.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260819-2230-auswahl-und-kopieren-in-der-vorschau/issues/260820-0733_o_die-abfangstelle-verwirft-die-geforderten-sorten-und-leert-jede-gereichte-ablage.md",
+      "detail": "in work-packages/260819-2230-auswahl-und-kopieren-in-der-vorschau"
+    },
+    {
+      "class": "filed-by-missing",
+      "severity": "reported",
+      "path": "work-packages/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/issues/260824-1655_o_sechs-speicher-unter-archive-bleiben-ohne-profil-und-tragen-dieselben-datensatzarten.md",
+      "detail": "null"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/issues/260824-1655_o_sechs-speicher-unter-archive-bleiben-ohne-profil-und-tragen-dieselben-datensatzarten.md",
+      "detail": "in work-packages/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260825-0711-kontextmenue-traegt-zip-unzip-finder/issues/260825-1425_o_der-schnitt-sieht-einen-zerlegt-geschriebenen-umlaut-als-anderen-eintrag-als-den-zusammengesetzten.md",
+      "detail": "in work-packages/260825-0711-kontextmenue-traegt-zip-unzip-finder"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1710_o_c2-5-der-runde-16-sagt-unveraendert-ueber-die-ganze-anzeige-und-die-waechst-seit-der-runde-19-um-drei-zeilen.md",
+      "detail": "in work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1710_o_c2-5-der-runde-16-sagt-unveraendert-ueber-die-ganze-anzeige-und-die-waechst-seit-der-runde-19-um-drei-zeilen.md",
+      "detail": "circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/planning/260827-0646_*_spec-vorschau-zaehlt-ordnerinhalt-im-default-profil.md:39-45"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1911_o_drei-saetze-im-kommentarteil-der-auslieferungsfassung-beschreiben-den-stand-vor-der-runde-19.md",
+      "detail": "in work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "work-packages/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1911_o_drei-saetze-im-kommentarteil-der-auslieferungsfassung-beschreiben-den-stand-vor-der-runde-19.md",
+      "detail": "planning/260827-0646_*_spec-vorschau-zaehlt-ordnerinhalt-im-default-profil.md"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260827-2028-vorschau-rendert-pdf-als-betrachter/issues/260828-0744_o_c6-der-runde-1-sagt-eine-dreiteilung-der-vorschau-zu-und-eine-datei-hat-seit-der-runde-20-vier-wege.md",
+      "detail": "in work-packages/260827-2028-vorschau-rendert-pdf-als-betrachter"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "work-packages/260827-2028-vorschau-rendert-pdf-als-betrachter/issues/260828-0744_o_c6-der-runde-1-sagt-eine-dreiteilung-der-vorschau-zu-und-eine-datei-hat-seit-der-runde-20-vier-wege.md",
+      "detail": "circles/260827-2028-vorschau-rendert-pdf-als-betrachter/planning/260828-0649_*_spec-vorschau-rendert-pdf-als-betrachter.md:45-70` (Ursache, Abschnitt `## Wie der Betrachter in die Vorschau tritt`, und `:245`, zehnte Anweisung unter `## Open for Planner`); `circles/260827-2028-vorschau-rendert-pdf-als-betrachter/planning/260828-0712_*_plan-vorschau-rendert-pdf-als-betrachter.md:179-181` (Entscheidung 10) und `:252-257` (Schritt 10); `circles/260802-0842-krk-mac-dateimanager-editor-git/_b_circle.md:139` (der Abnahmelauf der Runde 1 ist Nutzerarbeit und steht aus); Vorbild `circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/issues/260827-1710_*_c2-5-der-runde-16-sagt-unveraendert-ueber-die-ganze-anzeige-und-die-waechst-seit-der-runde-19-um-drei-zeilen.md"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/decisions/260828-1041_a_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md",
+      "detail": "in work-packages/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "work-packages/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/decisions/260828-1041_a_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md",
+      "detail": "circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/_*_circle.md"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/issues/260829-1215_o_der-eingefuegte-filtertext-hat-keine-hoechstlaenge-und-eine-lange-zeile-macht-jeden-rueckschritt-zum-gang-ueber-den-bestand.md",
+      "detail": "in work-packages/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste"
+    },
+    {
+      "class": "answered-without-answer-line",
+      "severity": "reported",
+      "path": "work-packages/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab/decisions/260829-0053_a_was-erwartet-c2-1-beim-einfuegen-in-ein-terminal-den-namen-oder-den-pfad.md",
+      "detail": "_a_ with no Answered: line"
+    },
+    {
+      "class": "answer-ref-self",
+      "severity": "reported",
+      "path": "work-packages/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab/decisions/260829-0053_a_was-erwartet-c2-1-beim-einfuegen-in-ein-terminal-den-namen-oder-den-pfad.md",
+      "detail": "the Answered: line cites nothing resolvable; the record's original answers"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab/decisions/260829-0053_a_was-erwartet-c2-1-beim-einfuegen-in-ein-terminal-den-namen-oder-den-pfad.md",
+      "detail": "in work-packages/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "work-packages/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab/decisions/260829-0053_a_was-erwartet-c2-1-beim-einfuegen-in-ein-terminal-den-namen-oder-den-pfad.md",
+      "detail": "planning/260829-0005_*_spec-cmd-c-und-cmd-x-legen-dateiverweise-ab.md` (C2.1, Diagramm der Directive „Terminal, Textfeld: die Namen\"); `planning/260829-0006_*_plan-cmd-c-und-cmd-x-legen-dateiverweise-ab.md` (Schritt 9, Entscheidung 3); `reviews/260829-0051-coderev-runde-22-dateiverweise-in-der-zwischenablage.md` (Thema 4, Messung der Sorten)."
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260830-1045-git-bereich-liest-status-branch-verlauf/issues/260831-1355_o_zwei-kommentare-in-default-keymap-toml-nennen-drei-spaltenschalter-und-darueber-stehen-vier.md",
+      "detail": "in work-packages/260830-1045-git-bereich-liest-status-branch-verlauf"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260830-1045-git-bereich-liest-status-branch-verlauf/issues/260831-1652_o_gix-zieht-ein-unlesbares-git-verzeichnis-und-einen-toten-gitdir-verweis-selbst-zu-kein-repository-zusammen.md",
+      "detail": "in work-packages/260830-1045-git-bereich-liest-status-branch-verlauf"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260910-0707-krk-meldet-neuerungen-in-readers-settings-keymap/decisions/260910-0818_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l4.md",
+      "detail": "in work-packages/260910-0707-krk-meldet-neuerungen-in-readers-settings-keymap"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "work-packages/260910-0707-krk-meldet-neuerungen-in-readers-settings-keymap/decisions/260910-0818_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l4.md",
+      "detail": "260819-2216_*_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l7.md` — derselbe Fall an der Zusage L7"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "work-packages/260910-0707-krk-meldet-neuerungen-in-readers-settings-keymap/decisions/260910-0818_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l4.md",
+      "detail": "die Runde 14; `260810-2132_*_wird-die-zusage-l9-wieder-angehoben-...`; `crates/krk-bench/src/messen.rs` (die Zusage L4)"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "work-packages/260910-0707-krk-meldet-neuerungen-in-readers-settings-keymap/decisions/260910-0818_a_schuldet-diese-runde-einen-abnahmelauf-gegen-die-zusage-l4.md",
+      "detail": "messungen/260810-1918-alle-zusagen.txt"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/issues/260926-0257_o_textstand-unlesbar-traegt-einen-offenen-deskriptor-den-seit-dem-wegfall-des-zettelwegs-kein-aufrufer-liest.md",
+      "detail": "in work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/issues/260926-0840_o_cmd-z-im-umbenennungsfeld-des-dateifensters-erreicht-bei-leerem-feldstapel-den-verlauf-des-editors.md",
+      "detail": "in work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster"
+    },
+    {
+      "class": "live-record-in-terminal-container",
+      "severity": "reported",
+      "path": "work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster/issues/260926-1012_o_die-probe-ein-abgegebenes-sitzungsrecht-ist-wieder-zu-haben-schlug-in-einem-von-drei-laeufen-von-make-check-fehl.md",
+      "detail": "in work-packages/260925-2356-f2-oeffnet-krkhome-statt-notizfenster"
+    },
+    {
+      "class": "filed-by-not-owed",
+      "severity": "reported",
+      "path": "work-packages/260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch/plans/261001-0735_o_spec-oberflaeche-lokalisierbar-deutsch-und-franzoesisch.md",
+      "detail": "null"
+    },
+    {
+      "class": "reference-not-a-citation",
+      "severity": "reported",
+      "path": "work-packages/260930-2319-oberflaeche-lokalisierbar-deutsch-und-franzoesisch/plans/261001-0735_o_spec-oberflaeche-lokalisierbar-deutsch-und-franzoesisch.md",
+      "detail": "260807-0745_*_die-buendelbeschreibung-fuehrt-keine-entwicklungsregion.md` und `260807-0754_*_der-kommentar-an-cfbundlelocalizations-nennt-eine-falsche-auswahlregel.md` (die Messungen, auf denen die Sprachwahl durch macOS ruht)"
+    }
+  ]
+}

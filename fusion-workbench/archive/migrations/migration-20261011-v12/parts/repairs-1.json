@@ -1,0 +1,7 @@
+{
+  "schema": "fusion.migration-plan/v1",
+  "part": "repairs",
+  "migration_id": "migration-20261011-v12",
+  "n": 1,
+  "repairs": []
+}

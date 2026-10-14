@@ -1,0 +1,1362 @@
+{
+  "schema": "fusion.migration-plan/v1",
+  "part": "chunk",
+  "migration_id": "migration-20261011-v12",
+  "chunk": 5,
+  "writes": [
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260912-2158_o_zwei-rundendatensaetze-tragen-eine-status-kopfzeile-die-ihrem-eigenen-dateinamen-widerspricht.md",
+      "from": "shared/issues/260912-2158_o_zwei-rundendatensaetze-tragen-eine-status-kopfzeile-die-ihrem-eigenen-dateinamen-widerspricht.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:2ad43978164cb5179021e952bb39a19e4ab5a9f1372ea89008063f4080dda064"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260916-2119_o_die-profiltabelle-in-howto-md-kuendigt-sich-als-vollstaendig-an-und-laesst-das-forum-profil-aus.md",
+      "from": "shared/issues/260916-2119_o_die-profiltabelle-in-howto-md-kuendigt-sich-als-vollstaendig-an-und-laesst-das-forum-profil-aus.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:ddfd2723b4681824dd87a10cf4a16fa7e545c1fb4fa21bca20c425abf36e6fec"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/plans/260929-0759_o_spec-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md",
+      "from": "shared/plans/260929-0759_o_spec-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:9d42f35b73bab3cb1b2ffc26616b24fec91c19deea9a9f4ea441d6f9dd53589a"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/plans/260929-1313_o_spec-vorschau-blaettert-fotos-nach-aufnahmedatum.md",
+      "from": "shared/plans/260929-1313_o_spec-vorschau-blaettert-fotos-nach-aufnahmedatum.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:22a3965395cc33cb7272e7f10d3a0691f6127d81d82b28493016aa96a3cc8b47"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260802-0842-krk-mac-dateimanager-editor-git/_b_circle.md",
+      "from": "work-packages/260802-0842-krk-mac-dateimanager-editor-git/_b_circle.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:4722d345541734433dd68e866fecbc0abcd646456362c275d310aa6c539ab78a"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_a_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md",
+      "from": "work-packages/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_a_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:7f1329f07b16d48116154b31a889e6aaabdb2145033aff22c0eaaba2ae757472"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_d_circle.md",
+      "from": "work-packages/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_d_circle.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:dc8634e9a314430eb49adbc7c1f9a52c4a318fffe830c5f2fa9d6bcd3f843f70"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260807-2116-eingebauter-editor-mit-textmarken/_b_circle.md",
+      "from": "work-packages/260807-2116-eingebauter-editor-mit-textmarken/_b_circle.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:e1ef2bc838a1b0c2f310887eddf59a27164fbefbcb7d9060a8ca8df5a7f3baaf"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260809-2040-tastenbelegung-als-markdown-in-downloads/_b_circle.md",
+      "from": "work-packages/260809-2040-tastenbelegung-als-markdown-in-downloads/_b_circle.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:1ef380586e8650e719d624bdf6a86a3b751d28a59ab1ab54c045ab6dc4b9391f"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_b_circle.md",
+      "from": "work-packages/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_b_circle.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:292fa304c274db0ae90e5b7691f64b7615bb85f5b9ff30c82514333afd4f9ba1"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260811-1304-statusleiste-mit-bereichsschaltern/_b_circle.md",
+      "from": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/_b_circle.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:250e585dcb2fd91b77cadb0bbf45bda64af6e5602caf689e259e540196472cd3"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0512_o_f4-nimmt-am-schmalen-fenster-eine-datei-in-einen-editor-an-den-niemand-sieht.md",
+      "from": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0512_o_f4-nimmt-am-schmalen-fenster-eine-datei-in-einen-editor-an-den-niemand-sieht.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:06fe9e4278c76a62e9483c6115f00f10d60144efa7a0c1156110663b01600289"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0700_o_der-breitenschritt-kommt-neben-einem-gedeckelten-bereich-gekuerzt-an.md",
+      "from": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0700_o_der-breitenschritt-kommt-neben-einem-gedeckelten-bereich-gekuerzt-an.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:81dab13a1915cdfcb14b0eb1ae8bc6ebf00b737a681298cf1c37ef49a9aa076d"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0810_o_die-zahl-39-im-kopf-der-belegungsdatei-steht-im-praesens-und-ist-ungeprueft.md",
+      "from": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0810_o_die-zahl-39-im-kopf-der-belegungsdatei-steht-im-praesens-und-ist-ungeprueft.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:6e415664941fe64c3f0e4478027213247dfa991016d586052693ce8032f97220"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/_b_circle.md",
+      "from": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/_b_circle.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:d86ffb12d294ef11a99e8885862a65ec8618e855e589612bb47cde27eeb58022"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_a_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.md",
+      "from": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_a_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:609d963868a13fda72e4d106df156ea36e45ebb6bd7cb7b3478cb6cfc39cf3db"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-2002_a_bleibt-der-vorspann-eines-containers-die-eine-luecke-in-der-deckungszusage-von-c4-3.md",
+      "from": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-2002_a_bleibt-der-vorspann-eines-containers-die-eine-luecke-in-der-deckungszusage-von-c4-3.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:58e55390de6ab134375338e0224568ebfced222db80bb7e6a50564632899ece6"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1204_o_eine-semantisch-widerspruechliche-keymap-toml-wird-nicht-zur-seite-gelegt.md",
+      "from": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1204_o_eine-semantisch-widerspruechliche-keymap-toml-wird-nicht-zur-seite-gelegt.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:d24de4a5b3b102119bf6f71ca1a9403e41b72c039cc1da2b19d00e175c695e9c"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1526_o_der-kommentar-an-ordner-der-datei-nennt-opt-cmd-c-den-pfad-desselben-ordners.md",
+      "from": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1526_o_der-kommentar-an-ordner-der-datei-nennt-opt-cmd-c-den-pfad-desselben-ordners.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:7ea0d43320fb07124024878026625c65134c5ac77a0437d88b3f860cf306a057"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1527_o_die-zwei-neuen-kommentare-verengen-die-reihenordnung-und-widersprechen-der-datei.md",
+      "from": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1527_o_die-zwei-neuen-kommentare-verengen-die-reihenordnung-und-widersprechen-der-datei.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:3155cddd16693c68fe5f40f8a98f18fcf4660a9754459d953a22e6c955245167"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1528_o_der-abschnittskopf-nennt-drei-funktionen-der-runde-4-und-fuehrt-jetzt-vier.md",
+      "from": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1528_o_der-abschnittskopf-nennt-drei-funktionen-der-runde-4-und-fuehrt-jetzt-vier.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:c7bc97ab93bcf188304c4567da569c86e9886ebf22e3348c68e6b90ac20e4c03"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_o_der-freigabedialog-wird-nicht-aus-einem-mausdruck-heraus-geoeffnet.md",
+      "from": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_o_der-freigabedialog-wird-nicht-aus-einem-mausdruck-heraus-geoeffnet.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:fe809a547f8bf4f9de82caf20dac95bdcb5b685ee1ebfce8a1d30047c8be426c"
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260912-2158_o_zwei-rundendatensaetze-tragen-eine-status-kopfzeile-die-ihrem-eigenen-dateinamen-widerspricht.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:7aa731311fec27f8000c345dbec8479eebb959176d918b91b2ebaa07c3a52834",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "6f2eefbd-f0d7-4022-9d0e-e89f2157e2bd",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260912-2158_o_zwei-rundendatensaetze-tragen-eine-status-kopfzeile-die-ihrem-eigenen-dateinamen-widerspricht.md"
+        },
+        "filed_by": {
+          "actor": "ontocoder",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "ontocoder, Kai Stalmann <kai@stalmann.org>",
+              "Domain": "data",
+              "Gefunden": "beim Nachziehen der fusion-Leseprofile auf Fassung 11, bei der Gegenprobe des",
+              "Betroffen": "`fusion-workbench/circles/260809-2040-tastenbelegung-als-markdown-in-downloads/_b_circle.md`,"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260912-2158_o_zwei-rundendatensaetze-tragen-eine-status-kopfzeile-die-ihrem-eigenen-dateinamen-widerspricht.md",
+            "sha256": "sha256:2ad43978164cb5179021e952bb39a19e4ab5a9f1372ea89008063f4080dda064",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260916-2119_o_die-profiltabelle-in-howto-md-kuendigt-sich-als-vollstaendig-an-und-laesst-das-forum-profil-aus.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:c200e73855af729b5fad91ec30246895a11263634320bd8e64bfbd1cd10c6548",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "ec5f9460-2a9a-477d-af02-171020d0ae51",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260916-2119_o_die-profiltabelle-in-howto-md-kuendigt-sich-als-vollstaendig-an-und-laesst-das-forum-profil-aus.md"
+        },
+        "filed_by": {
+          "actor": "orchestrator",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [
+          "260916-2021_*_zwei-zeilen-der-profiltabelle-in-howto-md-versprechen-angaben-die-kein-profil-mehr-fuehrt.md"
+        ],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "orchestrator, Kai Stalmann <kai@stalmann.org>",
+              "Zu entscheiden ist mit der Behebung eines mit": "ob die Tabelle künftig vollständig ist und dann bei jedem neuen Profil nachgezogen werden muss, oder ob die Einleitung sagt, dass sie eine Auswahl zeigt, und auf `grep -c '^\\[\\[profil\\]\\]' resources/default-readers.toml` verweist, wie sie es für die Gesamtzahl schon tut. Die Anleitung reist im Releasepaket mit; eine Tabelle, die Vollständigkeit behauptet und sie nicht hält, ist die schlechtere der beiden Lagen.",
+              "Cross-references": "260916-2021_*_zwei-zeilen-der-profiltabelle-in-howto-md-versprechen-angaben-die-kein-profil-mehr-fuehrt.md"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260916-2119_o_die-profiltabelle-in-howto-md-kuendigt-sich-als-vollstaendig-an-und-laesst-das-forum-profil-aus.md",
+            "sha256": "sha256:ddfd2723b4681824dd87a10cf4a16fa7e545c1fb4fa21bca20c425abf36e6fec",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/plans/260929-0759_o_spec-werkseinstellungen-zuruecksetzen-und-neu-einlesen.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:471b2e8f218c923d439d7165709e97cea005e8cc581a776dad4bcc838b4160cf",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "cddc1f3c-31b9-4b22-84cf-ef81106ca540",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "plan",
+        "narrative": {
+          "path": "shared/plans/260929-0759_o_spec-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Date": "2026-09-29",
+              "Status": "Draft",
+              "Geändert": "2026-09-29, siehe `## Änderung 260929`",
+              "Source": "Nutzerwunsch, wörtlich: „Wir brauchen einen Befehl unter Krk, der automatisch auf Werkseinstellungen zurücksetzt und die Werte neu einliest.“ Anlass ist die Auslieferung 2.1.1 mit geänderten fusion-Leseprofilen. Ein Nutzer mit vorhandener `readers.toml` bekommt sie bisher nur, wenn er KRK beendet, die Datei beiseitelegt und neu startet, weil KRK seine Ablagedateien allein beim Start liest. Antworten des Nutzers auf die erste Fragerunde: „1 b 2 a 3 a 4 a“."
+            },
+            "step_marks": {},
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "568efc74f49c74341f83e2b7079820e5eb32c225"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/plans/260929-0759_o_spec-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md",
+            "sha256": "sha256:9d42f35b73bab3cb1b2ffc26616b24fec91c19deea9a9f4ea441d6f9dd53589a",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "steps": [],
+          "criteria": [],
+          "acceptance": null
+        }
+      }
+    },
+    {
+      "kind": "rewrite",
+      "path": "shared/plans/260929-0759_o_spec-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md",
+      "source_sha256": "sha256:9d42f35b73bab3cb1b2ffc26616b24fec91c19deea9a9f4ea441d6f9dd53589a",
+      "after_sha256": "sha256:1263f6bcf20c8fab7468627d622524a4b8f519d6309d7b1f63a19353bec959e6",
+      "deletions": [
+        {
+          "offset": 84,
+          "length": 18
+        }
+      ]
+    },
+    {
+      "kind": "control",
+      "path": "shared/plans/260929-1313_o_spec-vorschau-blaettert-fotos-nach-aufnahmedatum.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:d9069231a2f37d6cb5dff05345f66042a7e062ab81bf74b87644c6bd83fbcb9c",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "93c7377b-caeb-4156-ae59-1d6ce1a00d2a",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "plan",
+        "narrative": {
+          "path": "shared/plans/260929-1313_o_spec-vorschau-blaettert-fotos-nach-aufnahmedatum.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Date": "2026-09-29",
+              "Status": "Draft",
+              "Source": "Wunsch des Nutzers vom 260929, wörtlich: „Allgemeines Reader Profile so erweitern, dass ein Baum dieser Struktur ein bestimmtes Scrollverhalten in der Vorschau realisiert: Fotos └── 2008 ├── <monat>, zB. 08 │ ├── 260827_162941_ss.png │ ├── Bild.jpg │ ├── IMG_0970_edited.jpeg. Wenn man innerhalb eines Jahresordners ist (Fotos/2008/) soll erst das erste Bild des ersten Monats angezeigt werden. Mit CMD-Pfeil-{hoch/runter} soll dann durch die Bilder navigiert werden. Wenn man innerhalb eines Monatsordners ist (Fotos/2008/08/) soll erst das erste Bild dieses Monats angezeigt werden. Mit CMD-Pfeil-{hoch/runter} soll dann durch die Bilder navigiert werden. Enter springt in beiden Fällen in den Ordner zu dem Bild.“ Klärung in einer Runde, Antworten des Nutzers vom 260929: „1 a 2 a 3 a 4c - lesegrenzen einfach erweitern“; die Vorgaben ohne Rückfrage hat er mit angenommen."
+            },
+            "step_marks": {},
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "c374be274044a209addd3e30bf01837d0b7bf199"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/plans/260929-1313_o_spec-vorschau-blaettert-fotos-nach-aufnahmedatum.md",
+            "sha256": "sha256:22a3965395cc33cb7272e7f10d3a0691f6127d81d82b28493016aa96a3cc8b47",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "steps": [],
+          "criteria": [],
+          "acceptance": null
+        }
+      }
+    },
+    {
+      "kind": "rewrite",
+      "path": "shared/plans/260929-1313_o_spec-vorschau-blaettert-fotos-nach-aufnahmedatum.md",
+      "source_sha256": "sha256:22a3965395cc33cb7272e7f10d3a0691f6127d81d82b28493016aa96a3cc8b47",
+      "after_sha256": "sha256:d6c2a102683f839c6e3d132412cfe18070720fdc8b1c4f62da203829c5c84441",
+      "deletions": [
+        {
+          "offset": 102,
+          "length": 18
+        }
+      ]
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260802-0842-krk-mac-dateimanager-editor-git/package.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:627fa2a4879c9ad838aaf16b7b94b5253fada97c75cf03b5285f042aa6c649ca",
+      "control": {
+        "schema": "fusion.package/v1",
+        "id": "d87eb056-d223-4120-952d-8609e2dcd8b3",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "domain": "code",
+        "status": "dropped",
+        "claim": null,
+        "mode": {
+          "value": "ordinary",
+          "source": null
+        },
+        "origin": {
+          "kind": "legacy-unknown",
+          "ref": null
+        },
+        "filed_by": {
+          "actor": "shaper",
+          "person": null
+        },
+        "narrative": {
+          "path": "work-packages/260802-0842-krk-mac-dateimanager-editor-git/_b_circle.md"
+        },
+        "depends_on": [],
+        "active_documents": [],
+        "references": [],
+        "evidence": [],
+        "outcome": {
+          "class": "bounded",
+          "reason": "closed bounded (legacy Circle marker)",
+          "evidence": []
+        },
+        "provenance": {
+          "source": "legacy-terminal",
+          "legacy_fields": {
+            "file_marker": "b",
+            "head": {
+              "Domain": "code",
+              "Status": "bounded",
+              "Filed by": "shaper (anticipated-circle mode)",
+              "Active spec/plan": "circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1036_*_spec-navigator-geruest.md (Abnahmekriterien) und circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_*_plan-navigator-geruest-runde-1.md (Ausführungsstand); beide seit dem 260807-1035 auf `_c_`",
+              "Active session history": "circles/260802-0842-krk-mac-dateimanager-editor-git/history/260806-2257-orchestrator-session.md"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260802-0842-krk-mac-dateimanager-editor-git/_b_circle.md",
+            "sha256": "sha256:4722d345541734433dd68e866fecbc0abcd646456362c275d310aa6c539ab78a",
+            "kind": "other"
+          }
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_a_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:91a1044d8843de42345a28811f58e8d8193a5c0acba6d6ed0b8e131a3620b953",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "04f1e54c-2aaf-40cd-a1fb-2a26fe3c51a2",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "work-packages/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_a_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md"
+        },
+        "filed_by": {
+          "actor": "planner",
+          "person": null
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "a",
+            "head": {
+              "Domain": "code",
+              "Status": "open",
+              "Filed by": "planner",
+              "Cross-references": "`circles/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1134_i_sprache-und-ui-werkzeugkasten.md` (Zeile 59, die Zusage, die diese Frage erzeugt), `circles/260802-0842-krk-mac-dateimanager-editor-git/analyses/260802-1134-sprache-und-ui-werkzeugkasten.md` Befund 6, `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` Schritte S1 und S5"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_a_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md",
+            "sha256": "sha256:7f1329f07b16d48116154b31a889e6aaabdb2145033aff22c0eaaba2ae757472",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "answered",
+          "answer_ref": "260905-2008-orchestrator-session.md",
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "rewrite",
+      "path": "work-packages/260802-0842-krk-mac-dateimanager-editor-git/decisions/260802-1428_a_verfuegbarkeitspruefung-fuer-macos-26-schnittstellen-in-objc2.md",
+      "source_sha256": "sha256:7f1329f07b16d48116154b31a889e6aaabdb2145033aff22c0eaaba2ae757472",
+      "after_sha256": "sha256:6786e341af95e9f7985d5da4900c76009edd6d7a8025462a9f4c42b6f34e4def",
+      "deletions": [
+        {
+          "offset": 102,
+          "length": 17
+        }
+      ]
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/package.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:058307f6dfdbbde4a5f4627dade45899f3affd0673ae4aa235f7a1074293bd68",
+      "control": {
+        "schema": "fusion.package/v1",
+        "id": "cc85de8f-ef72-45ba-a38d-e15481bd210c",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "domain": "code",
+        "status": "dropped",
+        "claim": null,
+        "mode": {
+          "value": "ordinary",
+          "source": null
+        },
+        "origin": {
+          "kind": "legacy-unknown",
+          "ref": null
+        },
+        "filed_by": {
+          "actor": "shaper",
+          "person": null
+        },
+        "narrative": {
+          "path": "work-packages/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_d_circle.md"
+        },
+        "depends_on": [],
+        "active_documents": [],
+        "references": [],
+        "evidence": [],
+        "outcome": {
+          "class": "dropped",
+          "reason": "deferred (legacy Circle marker)",
+          "evidence": []
+        },
+        "provenance": {
+          "source": "legacy-terminal",
+          "legacy_fields": {
+            "file_marker": "d",
+            "head": {
+              "Domain": "code",
+              "Status": "anticipated",
+              "Filed by": "shaper (anticipated-circle mode)",
+              "Active spec/plan": "(none yet)",
+              "Active session history": "(none yet)"
+            },
+            "derived": {
+              "/status": {
+                "rule": "circle-deferred-dropped"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_d_circle.md",
+            "sha256": "sha256:dc8634e9a314430eb49adbc7c1f9a52c4a318fffe830c5f2fa9d6bcd3f843f70",
+            "kind": "other"
+          }
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260807-2116-eingebauter-editor-mit-textmarken/package.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:fb392a7b8569d9a3a8dca6f141bfa572f598917da140feb1b3dbd25a2fa50a76",
+      "control": {
+        "schema": "fusion.package/v1",
+        "id": "68f6b93e-8b04-47ff-aeb6-0fd409ca2e99",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "domain": "code",
+        "status": "dropped",
+        "claim": null,
+        "mode": {
+          "value": "ordinary",
+          "source": null
+        },
+        "origin": {
+          "kind": "legacy-unknown",
+          "ref": null
+        },
+        "filed_by": {
+          "actor": "shaper",
+          "person": null
+        },
+        "narrative": {
+          "path": "work-packages/260807-2116-eingebauter-editor-mit-textmarken/_b_circle.md"
+        },
+        "depends_on": [],
+        "active_documents": [],
+        "references": [],
+        "evidence": [],
+        "outcome": {
+          "class": "bounded",
+          "reason": "closed bounded (legacy Circle marker)",
+          "evidence": []
+        },
+        "provenance": {
+          "source": "legacy-terminal",
+          "legacy_fields": {
+            "file_marker": "b",
+            "head": {
+              "Domain": "code",
+              "Status": "bounded",
+              "Filed by": "shaper (anticipated-circle mode)",
+              "Active spec/plan": "circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260808-0140_*_plan-eingebauter-editor-mit-textmarken.md (Spec: .../planning/260807-2147_*_spec-eingebauter-editor-mit-textmarken.md)",
+              "Active session history": "circles/260807-2116-eingebauter-editor-mit-textmarken/history/260810-0845-orchestrator-session.md"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260807-2116-eingebauter-editor-mit-textmarken/_b_circle.md",
+            "sha256": "sha256:e1ef2bc838a1b0c2f310887eddf59a27164fbefbcb7d9060a8ca8df5a7f3baaf",
+            "kind": "other"
+          }
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260809-2040-tastenbelegung-als-markdown-in-downloads/package.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:9a420eee09dfa4fcbc15934496e80b3fc80caf658083ac4fd12d8697e44207cb",
+      "control": {
+        "schema": "fusion.package/v1",
+        "id": "33e894bb-9270-4329-a02d-79ec76c85210",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "domain": "code",
+        "status": "dropped",
+        "claim": null,
+        "mode": {
+          "value": "ordinary",
+          "source": null
+        },
+        "origin": {
+          "kind": "legacy-unknown",
+          "ref": null
+        },
+        "filed_by": {
+          "actor": "shaper",
+          "person": null
+        },
+        "narrative": {
+          "path": "work-packages/260809-2040-tastenbelegung-als-markdown-in-downloads/_b_circle.md"
+        },
+        "depends_on": [],
+        "active_documents": [],
+        "references": [],
+        "evidence": [],
+        "outcome": {
+          "class": "bounded",
+          "reason": "closed bounded (legacy Circle marker)",
+          "evidence": []
+        },
+        "provenance": {
+          "source": "legacy-terminal",
+          "legacy_fields": {
+            "file_marker": "b",
+            "head": {
+              "Domain": "code",
+              "Status": "anticipated",
+              "Filed by": "shaper (anticipated-circle mode)",
+              "Active spec/plan": "circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0753_*_spec-tastenbelegung-als-markdown-in-downloads.md (Abnahmekriterien) und circles/260809-2040-tastenbelegung-als-markdown-in-downloads/planning/260811-0838_*_plan-tastenbelegung-als-markdown-in-downloads.md (Ausführungsstand)",
+              "Active session history": "circles/260809-2040-tastenbelegung-als-markdown-in-downloads/history/260811-0107-orchestrator-session.md"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260809-2040-tastenbelegung-als-markdown-in-downloads/_b_circle.md",
+            "sha256": "sha256:1ef380586e8650e719d624bdf6a86a3b751d28a59ab1ab54c045ab6dc4b9391f",
+            "kind": "other"
+          }
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/package.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:e89f9033590beb8a56293cadfeb4b3e1fdadd15ca57ada078a36754a3de77a92",
+      "control": {
+        "schema": "fusion.package/v1",
+        "id": "c1a1783e-4bfd-4597-ae9a-7c7f2c85f57f",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "domain": "code",
+        "status": "dropped",
+        "claim": null,
+        "mode": {
+          "value": "ordinary",
+          "source": null
+        },
+        "origin": {
+          "kind": "legacy-unknown",
+          "ref": null
+        },
+        "filed_by": {
+          "actor": "shaper",
+          "person": null
+        },
+        "narrative": {
+          "path": "work-packages/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_b_circle.md"
+        },
+        "depends_on": [],
+        "active_documents": [],
+        "references": [],
+        "evidence": [],
+        "outcome": {
+          "class": "bounded",
+          "reason": "closed bounded (legacy Circle marker)",
+          "evidence": []
+        },
+        "provenance": {
+          "source": "legacy-terminal",
+          "legacy_fields": {
+            "file_marker": "b",
+            "head": {
+              "Domain": "code",
+              "Status": "bounded closure (260811-2210) — gebaut, nicht abgenommen",
+              "Filed by": "shaper (anticipated-circle mode)",
+              "Active spec/plan": "planning/260811-1552_*_spec-vier-tastenbefehle-pfade-kopieren-oeffnen.md, planning/260811-1648_*_plan-vier-tastenbefehle-pfade-kopieren-oeffnen.md",
+              "Active session history": "circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/history/260811-1454-orchestrator-session.md"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/_b_circle.md",
+            "sha256": "sha256:292fa304c274db0ae90e5b7691f64b7615bb85f5b9ff30c82514333afd4f9ba1",
+            "kind": "other"
+          }
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/package.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:580b4904d96c8f564155fa8dacb6ae563ee6719c3271f6d349099338df39993b",
+      "control": {
+        "schema": "fusion.package/v1",
+        "id": "f06ae7e1-e137-41ff-8987-aaa23021ec01",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "domain": "code",
+        "status": "dropped",
+        "claim": null,
+        "mode": {
+          "value": "ordinary",
+          "source": null
+        },
+        "origin": {
+          "kind": "legacy-unknown",
+          "ref": null
+        },
+        "filed_by": {
+          "actor": "shaper",
+          "person": null
+        },
+        "narrative": {
+          "path": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/_b_circle.md"
+        },
+        "depends_on": [],
+        "active_documents": [],
+        "references": [],
+        "evidence": [],
+        "outcome": {
+          "class": "bounded",
+          "reason": "closed bounded (legacy Circle marker)",
+          "evidence": []
+        },
+        "provenance": {
+          "source": "legacy-terminal",
+          "legacy_fields": {
+            "file_marker": "b",
+            "head": {
+              "Domain": "code",
+              "Status": "bounded",
+              "Filed by": "shaper (anticipated-circle mode)",
+              "Active spec/plan": "circles/260811-1304-statusleiste-mit-bereichsschaltern/planning/260812-0415_*_bereichsleiste-und-proportionale-breitenregel.md",
+              "Active session history": "shared/history/260812-0306-orchestrator-session.md"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260811-1304-statusleiste-mit-bereichsschaltern/_b_circle.md",
+            "sha256": "sha256:250e585dcb2fd91b77cadb0bbf45bda64af6e5602caf689e259e540196472cd3",
+            "kind": "other"
+          }
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0512_o_f4-nimmt-am-schmalen-fenster-eine-datei-in-einen-editor-an-den-niemand-sieht.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:856681a7b4a7d06bf68befb7f44fe89a3c186118dfa5e316fd292900da1d1764",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "a051ce99-faca-47b9-a782-12344fe0edc8",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0512_o_f4-nimmt-am-schmalen-fenster-eine-datei-in-einen-editor-an-den-niemand-sieht.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Schwere": "mittel (kein Absturz und kein Datenverlust, aber ein stiller Zustand, der von außen",
+              "Gefunden": "coder, bei der Umsetzung von Schritt 2",
+              "Betroffen": "`crates/krk-ui/src/appkit/anwendung.rs`, `im_editor_oeffnen` /",
+              "Domain": "code"
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "a2ea876b0cae63b92542dba3544324da6dbaf463"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0512_o_f4-nimmt-am-schmalen-fenster-eine-datei-in-einen-editor-an-den-niemand-sieht.md",
+            "sha256": "sha256:06fe9e4278c76a62e9483c6115f00f10d60144efa7a0c1156110663b01600289",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0700_o_der-breitenschritt-kommt-neben-einem-gedeckelten-bereich-gekuerzt-an.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:aaca44e84612b27747350541b8adff2b5e3485566f362a74d2fe0db05bf321b9",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "23b5c697-c8a3-48df-b8f1-ebf8d74a8f24",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0700_o_der-breitenschritt-kommt-neben-einem-gedeckelten-bereich-gekuerzt-an.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Schwere": "niedrig (der Befehl wirkt und wirkt in die richtige Richtung; er wirkt nur schwächer,",
+              "Gefunden": "coder, bei der Behebung von",
+              "Betroffen": "`crates/krk-ui/src/fenstermodell.rs`, `massstab` zusammen mit `breite_aendern`",
+              "Domain": "code"
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "026c665dc6d283b7e882bb68d6f04c25c1fe4f9c"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0700_o_der-breitenschritt-kommt-neben-einem-gedeckelten-bereich-gekuerzt-an.md",
+            "sha256": "sha256:81dab13a1915cdfcb14b0eb1ae8bc6ebf00b737a681298cf1c37ef49a9aa076d",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0810_o_die-zahl-39-im-kopf-der-belegungsdatei-steht-im-praesens-und-ist-ungeprueft.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:2b060a4ad6009570d5b35c1a2f10bfff7d62f889e13735ae1167606b8ef6ceaa",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "e231eca8-c190-4c54-b4f7-94c439c51f29",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0810_o_die-zahl-39-im-kopf-der-belegungsdatei-steht-im-praesens-und-ist-ungeprueft.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Schwere": "niedrig (kein falsches Verhalten; eine Zahl in einem Kommentar, die falsch sein kann)",
+              "Gefunden": "ontocoder, beim Berichtigen des Spaltenblock-Kommentars am 260812-0805",
+              "Betroffen": "`resources/default-keymap.toml`, Dateikopf",
+              "Domain": "code"
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "caeaa182f43071e8a1eaf72880990a154fec9696"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260811-1304-statusleiste-mit-bereichsschaltern/issues/260812-0810_o_die-zahl-39-im-kopf-der-belegungsdatei-steht-im-praesens-und-ist-ungeprueft.md",
+            "sha256": "sha256:6e415664941fe64c3f0e4478027213247dfa991016d586052693ce8032f97220",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/package.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:a9365821088d280f8414cd43eba5a12fc7b5b44098f69147589bfbed75b1e9e8",
+      "control": {
+        "schema": "fusion.package/v1",
+        "id": "34941373-d419-4619-bf08-409b59a83d82",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "domain": "code",
+        "status": "dropped",
+        "claim": null,
+        "mode": {
+          "value": "ordinary",
+          "source": null
+        },
+        "origin": {
+          "kind": "legacy-unknown",
+          "ref": null
+        },
+        "filed_by": {
+          "actor": "shaper",
+          "person": null
+        },
+        "narrative": {
+          "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/_b_circle.md"
+        },
+        "depends_on": [],
+        "active_documents": [],
+        "references": [],
+        "evidence": [],
+        "outcome": {
+          "class": "bounded",
+          "reason": "closed bounded (legacy Circle marker)",
+          "evidence": []
+        },
+        "provenance": {
+          "source": "legacy-terminal",
+          "legacy_fields": {
+            "file_marker": "b",
+            "head": {
+              "Domain": "code",
+              "Status": "bounded",
+              "Filed by": "shaper (anticipated-circle mode)",
+              "Active spec/plan": "circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/planning/260812-1145_*_teilen-ordnersprung-ablage-sichern-vorschau-rendern.md",
+              "Active session history": "circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/history/260812-1055-orchestrator-session.md"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/_b_circle.md",
+            "sha256": "sha256:d86ffb12d294ef11a99e8885862a65ec8618e855e589612bb47cde27eeb58022",
+            "kind": "other"
+          }
+        },
+        "extensions": {}
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_a_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:c1230db3c73efe591bc4c15c1ad0af535b04ad32a966494ad8ee6db1eb9e66e2",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "76748976-cf07-496f-9dfc-5d3f2860b46a",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_a_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.md"
+        },
+        "filed_by": {
+          "actor": "shaper",
+          "person": null
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "a",
+            "head": {
+              "Domain": "code",
+              "Status": "answered",
+              "Filed by": "shaper (anticipated-circle mode)",
+              "Cross-references": "`crates/krk-ui/src/fenstermodell.rs:213` (`Bereich::mindestbreite`); `crates/krk-ui/src/appkit/fenster.rs:134` (`MINDESTGROESSE`, 780 Punkte); `circles/260811-1304-statusleiste-mit-bereichsschaltern/_b_circle.md` (Runde 5, `## Closure note`); `circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/_a_circle.md`, `## Parent grounding stale` vom 260812-0816"
+            },
+            "derived": {
+              "/control/answer_ref": {
+                "rule": "answer-ref-self",
+                "evidence": "unresolvable-answer-line"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_a_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.md",
+            "sha256": "sha256:609d963868a13fda72e4d106df156ea36e45ebb6bd7cb7b3478cb6cfc39cf3db",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "answered",
+          "answer_ref": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_a_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.md",
+            "sha256": "sha256:609d963868a13fda72e4d106df156ea36e45ebb6bd7cb7b3478cb6cfc39cf3db",
+            "kind": "decision"
+          },
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "rewrite",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-1000_a_braucht-die-vorschau-mit-gerendertem-markdown-mehr-mindestbreite.md",
+      "source_sha256": "sha256:609d963868a13fda72e4d106df156ea36e45ebb6bd7cb7b3478cb6cfc39cf3db",
+      "after_sha256": "sha256:fd7dd30aac678bebb9a4de73aa74a137b6e4b21790c7f58944714fe0696e19c3",
+      "deletions": [
+        {
+          "offset": 113,
+          "length": 21
+        }
+      ]
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-2002_a_bleibt-der-vorspann-eines-containers-die-eine-luecke-in-der-deckungszusage-von-c4-3.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:a67bc14ffc88e4c860ae7a4d3c6c006346433986bc32bd674c2ff030de9ebcf0",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "4ff0ce61-c766-4db7-bfb9-3c227c32a22e",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "decision",
+        "narrative": {
+          "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-2002_a_bleibt-der-vorspann-eines-containers-die-eine-luecke-in-der-deckungszusage-von-c4-3.md"
+        },
+        "filed_by": {
+          "actor": "orchestrator",
+          "person": null
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "a",
+            "head": {
+              "Domain": "code",
+              "Status": "open",
+              "Filed by": "orchestrator",
+              "Cross-references": "`circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/planning/260812-1145_c_teilen-ordnersprung-ablage-sichern-vorschau-rendern.md` (C4.3); `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1920_*_die-deckungszusage-gilt-nicht-innerhalb-eines-elements-das-zeichen-geliefert-hat.md` (geschlossen); `crates/krk-ui/src/markdown.rs` (Modulkopf, Abschnitt „Wo die Deckung endet\"; Probe `im_vorspann_eines_elements_endet_die_deckung`)"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-2002_a_bleibt-der-vorspann-eines-containers-die-eine-luecke-in-der-deckungszusage-von-c4-3.md",
+            "sha256": "sha256:58e55390de6ab134375338e0224568ebfced222db80bb7e6a50564632899ece6",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "answered",
+          "answer_ref": "260905-2008-orchestrator-session.md",
+          "implementation_ref": null,
+          "superseded_by": null,
+          "deferral": null
+        }
+      }
+    },
+    {
+      "kind": "rewrite",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/decisions/260812-2002_a_bleibt-der-vorspann-eines-containers-die-eine-luecke-in-der-deckungszusage-von-c4-3.md",
+      "source_sha256": "sha256:58e55390de6ab134375338e0224568ebfced222db80bb7e6a50564632899ece6",
+      "after_sha256": "sha256:f3ecd418181d636e4e5e7b233c3eedda693a72209de9e19c115451133345b632",
+      "deletions": [
+        {
+          "offset": 109,
+          "length": 17
+        }
+      ]
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1204_o_eine-semantisch-widerspruechliche-keymap-toml-wird-nicht-zur-seite-gelegt.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:79eb1f2154b0e063dd7fe3d2fbaf53255c36f6b5df6c73c8acb842f3c123a328",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "b7818b75-574a-40ac-a292-fc089a2a2fcf",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1204_o_eine-semantisch-widerspruechliche-keymap-toml-wird-nicht-zur-seite-gelegt.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {},
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "755571ac237d348468929850d9f718dc930fb646"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1204_o_eine-semantisch-widerspruechliche-keymap-toml-wird-nicht-zur-seite-gelegt.md",
+            "sha256": "sha256:d24de4a5b3b102119bf6f71ca1a9403e41b72c039cc1da2b19d00e175c695e9c",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1526_o_der-kommentar-an-ordner-der-datei-nennt-opt-cmd-c-den-pfad-desselben-ordners.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:749138a62b6b803d7f29bbae8bfdcef9c72baa2fabcf219713850faeab75d3cd",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "2285b772-4e4e-46ea-8324-7eef537fdb09",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1526_o_der-kommentar-an-ordner-der-datei-nennt-opt-cmd-c-den-pfad-desselben-ordners.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Herkunft": "Directive dieser Runde, Commit `95b2dfa` (Schritt 2 des Plans",
+              "Woher der Satz stammt": "wörtlich aus Möglichkeit 1 des Entscheidungsdatensatzes",
+              "Nicht betroffen": "die Kombination selbst. `opt+cmd+o` war frei (am 260812-1526",
+              "Empfehlung": "die Halbzeile berichtigen, ohne die Begründung zu verlieren. Der"
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "34ab5b5a000a44a55c6b2eafcdfdc2da0ae4003c"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1526_o_der-kommentar-an-ordner-der-datei-nennt-opt-cmd-c-den-pfad-desselben-ordners.md",
+            "sha256": "sha256:7ea0d43320fb07124024878026625c65134c5ac77a0437d88b3f860cf306a057",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1527_o_die-zwei-neuen-kommentare-verengen-die-reihenordnung-und-widersprechen-der-datei.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:475591408d012628c4f12e5dcb765ae7b59bde2ddf231aadc707e14540ea0f14",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "fb509df9-7d34-48b2-a3e3-8c5639b28c12",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1527_o_die-zwei-neuen-kommentare-verengen-die-reihenordnung-und-widersprechen-der-datei.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Warum ein Datensatz und nicht zwei": "ein Fehler, eine Ursache, eine Berichtigung —",
+              "Herkunft": "Directive dieser Runde, Commit `95b2dfa` (Schritte 2 und 4 des Plans",
+              "Gewicht": "die Reihenordnung ist der ausdrückliche Grund, aus dem der Nutzer am",
+              "Empfehlung": "beide Kommentare auf die Formulierung des Datensatzes zurückführen",
+              "Nicht betroffen": "die Wahl der beiden Kombinationen und der Platz der beiden Blöcke.",
+              "Empfehlung des ontorev": "die Berichtigung auf den neuen Block ausdehnen. Gilt die zweigliedrige Fassung („`opt+cmd+X` wirkt auf Ordner und Bereiche\"), dann ist `weitere_instanz` die zweite benannte Ausnahme neben `opt+cmd+delete` und gehört genannt statt übergangen."
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "34ab5b5a000a44a55c6b2eafcdfdc2da0ae4003c"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1527_o_die-zwei-neuen-kommentare-verengen-die-reihenordnung-und-widersprechen-der-datei.md",
+            "sha256": "sha256:3155cddd16693c68fe5f40f8a98f18fcf4660a9754459d953a22e6c955245167",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1528_o_der-abschnittskopf-nennt-drei-funktionen-der-runde-4-und-fuehrt-jetzt-vier.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:7a15aa744cadc9f598dd0feb9ca9c7703b495cd4c0b68d2ff2de11182cf091c2",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "caaa2647-ac19-4edf-b6ea-8df05a3396d5",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1528_o_der-abschnittskopf-nennt-drei-funktionen-der-runde-4-und-fuehrt-jetzt-vier.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Herkunft": "Directive dieser Runde, Commit `95b2dfa` (Schritt 4 des Plans",
+              "Empfehlung": "den Kopf auf vier Funktionen ziehen und beide Herkünfte nennen, statt",
+              "Zu prüfen bei der Berichtigung": "ob die Sachgruppe weiter nach Runden benannt sein"
+            },
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "34ab5b5a000a44a55c6b2eafcdfdc2da0ae4003c"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1528_o_der-abschnittskopf-nennt-drei-funktionen-der-runde-4-und-fuehrt-jetzt-vier.md",
+            "sha256": "sha256:c7bc97ab93bcf188304c4567da569c86e9886ebf22e3348c68e6b90ac20e4c03",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_o_der-freigabedialog-wird-nicht-aus-einem-mausdruck-heraus-geoeffnet.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:c77ab080ba968b3161f735fd4e6df68c33aaa119067523dca3a6f347da4b5df8",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "8f4df0f5-c6d3-47c7-b279-39fcba46e826",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_o_der-freigabedialog-wird-nicht-aus-einem-mausdruck-heraus-geoeffnet.md"
+        },
+        "filed_by": {
+          "actor": "legacy-unknown",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {},
+            "derived": {
+              "/filed_by/actor": {
+                "rule": "unknown"
+              },
+              "/filed_by/person": {
+                "rule": "git-first-add",
+                "evidence": "34ab5b5a000a44a55c6b2eafcdfdc2da0ae4003c"
+              }
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/work-packages/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/issues/260812-1529_o_der-freigabedialog-wird-nicht-aus-einem-mausdruck-heraus-geoeffnet.md",
+            "sha256": "sha256:fe809a547f8bf4f9de82caf20dac95bdcb5b685ee1ebfce8a1d30047c8be426c",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    }
+  ]
+}

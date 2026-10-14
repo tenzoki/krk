@@ -1,0 +1,1215 @@
+{
+  "schema": "fusion.migration-plan/v1",
+  "part": "chunk",
+  "migration_id": "migration-20261011-v12",
+  "chunk": 4,
+  "writes": [
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1333_o_return-bei-unlesbarer-regel-schliesst-das-stapelblatt-und-die-statuszeile-nennt-den-falschen-grund.md",
+      "from": "shared/issues/260826-1333_o_return-bei-unlesbarer-regel-schliesst-das-stapelblatt-und-die-statuszeile-nennt-den-falschen-grund.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:d08a935c37e433f553130985463ee732edd66f0d23afa78e8ff657a3adef3e4d"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1416_o_die-nummernspalte-kopiert-bei-jeder-textaenderung-den-ganzen-text-und-baut-den-zeilenindex-von-vorn.md",
+      "from": "shared/issues/260826-1416_o_die-nummernspalte-kopiert-bei-jeder-textaenderung-den-ganzen-text-und-baut-den-zeilenindex-von-vorn.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:cf78f3e035fe809263c953dc714e99bd0f6c5efd47ce0325fc61378c26ec6ab6"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1417_o_der-editor-haelt-die-16-mb-nur-am-eingang-ein-durch-bearbeiten-darueber-gewachsener-stand-wird-gesichert-und-beim-naechsten-oeffnen-abgewiesen.md",
+      "from": "shared/issues/260826-1417_o_der-editor-haelt-die-16-mb-nur-am-eingang-ein-durch-bearbeiten-darueber-gewachsener-stand-wird-gesichert-und-beim-naechsten-oeffnen-abgewiesen.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:7972cea7c1a730571b136d9c55404c743a72fa5248a208efe954fdf1855e1982"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1418_o_der-zeichenzweig-setzt-die-zulaessigkeitsfrage-von-hand-aus-drei-lagefeldern-zusammen-und-keine-probe-sieht-ihn.md",
+      "from": "shared/issues/260826-1418_o_der-zeichenzweig-setzt-die-zulaessigkeitsfrage-von-hand-aus-drei-lagefeldern-zusammen-und-keine-probe-sieht-ihn.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:e8fa449e84c466033bad4b84a12b9c8a4aa252b1bb288208238939aefd3f5461"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1419_o_die-zwei-mauswege-fragen-die-vorstufe-laufender-vorgang-an-verschiedenen-orten-und-die-lage-gar-nicht.md",
+      "from": "shared/issues/260826-1419_o_die-zwei-mauswege-fragen-die-vorstufe-laufender-vorgang-an-verschiedenen-orten-und-die-lage-gar-nicht.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:67b7134218eb5f4688efe634d77c907d86c01ae43ada7a2cabeec80c2db2f44e"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1419_o_schliessen-am-letzten-tab-ist-die-dritte-fassung-der-uebertragung-und-traegt-null-von-fuenf-werten-hinueber.md",
+      "from": "shared/issues/260826-1419_o_schliessen-am-letzten-tab-ist-die-dritte-fassung-der-uebertragung-und-traegt-null-von-fuenf-werten-hinueber.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:79cde710c1bdd4f3096ef49227eb0ace9335ceada047aefdf835f89fec164df4"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1420_o_lesereihenfolge-liefert-eine-zweite-stufe-die-ihr-einziger-rufer-verwirft.md",
+      "from": "shared/issues/260826-1420_o_lesereihenfolge-liefert-eine-zweite-stufe-die-ihr-einziger-rufer-verwirft.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:da00c5da9b52bfff9f74a7cd59d0601bf75342ebd23c0c72d55367744294ab10"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1422_o_eine-abwahl-per-klick-in-der-leiste-erreicht-das-modell-nicht-und-die-naechste-pfeiltaste-geht-von-der-alten-zeile-aus.md",
+      "from": "shared/issues/260826-1422_o_eine-abwahl-per-klick-in-der-leiste-erreicht-das-modell-nicht-und-die-naechste-pfeiltaste-geht-von-der-alten-zeile-aus.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:c1321cf7a1a1de5c929b0c72243286a571830e7e1a0cbe9244514fae2992bc1b"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1442_o_die-spannenstrecke-hat-keinen-vordergrundvorbehalt-und-meldet-im-hintergrund-die-geduld-statt-der-ursache.md",
+      "from": "shared/issues/260826-1442_o_die-spannenstrecke-hat-keinen-vordergrundvorbehalt-und-meldet-im-hintergrund-die-geduld-statt-der-ursache.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:b74c39b901f2fa5013e4b4206735b9d3f1ae773093712499d11b1bd4cc1a20b2"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1442_o_gleicher-ordner-ruft-canonicalize-je-gemeldetem-pfad-und-dateifenster-und-die-kosten-sind-ungemessen.md",
+      "from": "shared/issues/260826-1442_o_gleicher-ordner-ruft-canonicalize-je-gemeldetem-pfad-und-dateifenster-und-die-kosten-sind-ungemessen.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:71ed2a6114f0f9073af73e5c8dd3c781263ca5e29113c6733a148a5ac1a78780"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1933_o_die-zwei-resolved-zeilen-der-schritte-1-und-2-tragen-den-sitzungsstempel-statt-des-commits.md",
+      "from": "shared/issues/260826-1933_o_die-zwei-resolved-zeilen-der-schritte-1-und-2-tragen-den-sitzungsstempel-statt-des-commits.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:f95c5b06a270a2e2f9ecfcc5e8029b7286ecbe97b7d374d7f8fb2f4bf9829a15"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-2205_o_der-deckungsmesser-meldet-am-sitzungs-head-ungedeckt-weil-der-commit-der-die-durchsicht-traegt-sich-selbst-nicht-decken-kann.md",
+      "from": "shared/issues/260826-2205_o_der-deckungsmesser-meldet-am-sitzungs-head-ungedeckt-weil-der-commit-der-die-durchsicht-traegt-sich-selbst-nicht-decken-kann.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:8da10531a536b1fb41be77648be68c295546edf8f3e1a9c6758729e54acff54f"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260905-0406_o_das-atomare-schreiben-verliert-besitzer-attribute-und-zugriffslisten-der-ersetzten-datei.md",
+      "from": "shared/issues/260905-0406_o_das-atomare-schreiben-verliert-besitzer-attribute-und-zugriffslisten-der-ersetzten-datei.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:ae95468d2d95b89c596436444dcb5c5d161523d9c61a4b95b1c4e4ba6decead8"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260905-2254_o_das-zaehlkommando-fuer-ohne-warten-oeffnen-gibt-elf-zeilen-fuer-sechs-rufer-aus.md",
+      "from": "shared/issues/260905-2254_o_das-zaehlkommando-fuer-ohne-warten-oeffnen-gibt-elf-zeilen-fuer-sechs-rufer-aus.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:31e4d63120d6f0e1012d0274fa513dd64adb405bc43b753ece029d6c06f61d02"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260906-0509_o_fuenf-datensaetze-der-klasse-s-brauchen-einen-nachsatz-ausserhalb-von-circles-planning.md",
+      "from": "shared/issues/260906-0509_o_fuenf-datensaetze-der-klasse-s-brauchen-einen-nachsatz-ausserhalb-von-circles-planning.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:b8159d9f83f4b36ae484359c928569087a157c87430b4dfc401888a5f28043ff"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260907-0858_o_fuenf-proben-in-krk-ui-fahren-die-rechtesperre-frage-ohne-die-eine-antwort-des-kerns.md",
+      "from": "shared/issues/260907-0858_o_fuenf-proben-in-krk-ui-fahren-die-rechtesperre-frage-ohne-die-eine-antwort-des-kerns.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:0194a812df50363137748d56589dd1ad8cd91738ddf06e82e6f5e457ebcac0ed"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260908-0645_o_die-vorabfrage-an-station-1-meldet-bei-verschwundenem-gh-gepackt-und-geschoben-obwohl-nichts-geschehen-ist.md",
+      "from": "shared/issues/260908-0645_o_die-vorabfrage-an-station-1-meldet-bei-verschwundenem-gh-gepackt-und-geschoben-obwohl-nichts-geschehen-ist.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:7c02f4f919d2c0f25df2589b51dd5c6faa775626a71c9667bb4f2ff0fde9cf10"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260908-0838_o_claude-md-nennt-die-freigabe-des-rueckgaengig-blocks-ungemessen-seit-heute-haelt-sie-eine-probe.md",
+      "from": "shared/issues/260908-0838_o_claude-md-nennt-die-freigabe-des-rueckgaengig-blocks-ungemessen-seit-heute-haelt-sie-eine-probe.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:a9373f4bda1d7f01b8bfaae9d8df5ea00298054802f996acd0f5e1fc539b2d9d"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260908-1544_o_das-wort-offen-hinter-einem-berichtigten-zitat-im-circle-datensatz-des-web-betrachters-stimmt-nicht-mehr.md",
+      "from": "shared/issues/260908-1544_o_das-wort-offen-hinter-einem-berichtigten-zitat-im-circle-datensatz-des-web-betrachters-stimmt-nicht-mehr.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:1c33df0aeb505d587345376d2ec2647811bc17df72ec882f41578fa026e76786"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260908-1601_o_fast-jedes-kopffeld-eines-circle-datensatzes-nennt-seine-datei-mit-speicherpfad-und-stirbt-am-naechsten-aufraeumlauf.md",
+      "from": "shared/issues/260908-1601_o_fast-jedes-kopffeld-eines-circle-datensatzes-nennt-seine-datei-mit-speicherpfad-und-stirbt-am-naechsten-aufraeumlauf.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:9211c32ffe00f171efbd14868da21eec1347603bba22121a7f975126d25152d1"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260909-0938_o_die-erhebung-im-datensatz-zur-reichweite-nennt-vierzehn-dokumente-der-baum-traegt-zweiundvierzig.md",
+      "from": "shared/issues/260909-0938_o_die-erhebung-im-datensatz-zur-reichweite-nennt-vierzehn-dokumente-der-baum-traegt-zweiundvierzig.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:3a403ae23dd177f96273d440bbb0a91aec118a1ffd021e0095b7fac5e19d17df"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260909-1030_o_fuenf-verweise-zeigen-nach-dem-zug-der-plandokumente-ins-leere.md",
+      "from": "shared/issues/260909-1030_o_fuenf-verweise-zeigen-nach-dem-zug-der-plandokumente-ins-leere.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:e1f75bbb9974746d8061010c31c23609db6479730f0c0da79769b88ba8b42c88"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260910-0739_o_claude-md-sagt-es-gebe-keinen-vorgesehenen-circle-seit-heute-gibt-es-einen.md",
+      "from": "shared/issues/260910-0739_o_claude-md-sagt-es-gebe-keinen-vorgesehenen-circle-seit-heute-gibt-es-einen.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:4bdf7c47b96509a74e09884e561404cb5eb3a95456b81fac1508f6c1dd228232"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260910-1054_o_eine-beschaedigte-ablagedatei-wird-kopiert-nicht-beiseitegelegt-die-prosa-sagt-das-gegenteil.md",
+      "from": "shared/issues/260910-1054_o_eine-beschaedigte-ablagedatei-wird-kopiert-nicht-beiseitegelegt-die-prosa-sagt-das-gegenteil.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:e235872758111e30437759d1d95ccdcbd126a0f89bd8826e7e591edee83f272c"
+    },
+    {
+      "kind": "original",
+      "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260910-1146_o_die-zahlenschreibweise-wohnt-jetzt-in-ablage-neuerungen-und-gehoert-dort-nicht-hin.md",
+      "from": "shared/issues/260910-1146_o_die-zahlenschreibweise-wohnt-jetzt-in-ablage-neuerungen-und-gehoert-dort-nicht-hin.md",
+      "source_sha256": null,
+      "after_sha256": "sha256:3d43bbf4cfb2943ab17ecf0847c76a254b7a0af62981558e337323495dbc5ccb"
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260826-1333_o_return-bei-unlesbarer-regel-schliesst-das-stapelblatt-und-die-statuszeile-nennt-den-falschen-grund.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:0cd26444b7bc252ecfd0d6f40c895758d28641bf33dd2b44eb42360383e7d10b",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "c9987e25-b885-4c91-a0c4-b3102d79cd3d",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260826-1333_o_return-bei-unlesbarer-regel-schliesst-das-stapelblatt-und-die-statuszeile-nennt-den-falschen-grund.md"
+        },
+        "filed_by": {
+          "actor": "coderev",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "coderev, Kai Stalmann <kai@stalmann.org>",
+              "Domain": "code",
+              "Schwere": "Mittel",
+              "Betroffen": "`crates/krk-ui/src/appkit/blaetter/stapelumbenennen.rs`, `crates/krk-ui/src/appkit/anwendung.rs`"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1333_o_return-bei-unlesbarer-regel-schliesst-das-stapelblatt-und-die-statuszeile-nennt-den-falschen-grund.md",
+            "sha256": "sha256:d08a935c37e433f553130985463ee732edd66f0d23afa78e8ff657a3adef3e4d",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260826-1416_o_die-nummernspalte-kopiert-bei-jeder-textaenderung-den-ganzen-text-und-baut-den-zeilenindex-von-vorn.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:0af8dd87d69df5763c0ca77588ed814b38126e8edec2d1fe01c3a28fdaec2bf8",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "98e9e2fb-d0c7-4d72-9226-9bdc2af50a86",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260826-1416_o_die-nummernspalte-kopiert-bei-jeder-textaenderung-den-ganzen-text-und-baut-den-zeilenindex-von-vorn.md"
+        },
+        "filed_by": {
+          "actor": "coderev",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "coderev, Kai Stalmann <kai@stalmann.org>",
+              "Domain": "code",
+              "Schwere": "Mittel",
+              "Betroffen": "`crates/krk-ui/src/appkit/nummernspalte.rs`, beide Flächen (Editor und Vorschau; in der Vorschau ändert sich der Text nur beim Inhaltswechsel, dort ist es je Wechsel einmal)"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1416_o_die-nummernspalte-kopiert-bei-jeder-textaenderung-den-ganzen-text-und-baut-den-zeilenindex-von-vorn.md",
+            "sha256": "sha256:cf78f3e035fe809263c953dc714e99bd0f6c5efd47ce0325fc61378c26ec6ab6",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260826-1417_o_der-editor-haelt-die-16-mb-nur-am-eingang-ein-durch-bearbeiten-darueber-gewachsener-stand-wird-gesichert-und-beim-naechsten-oeffnen-abgewiesen.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:0e950084bd048e3a20c20dc3c718c5fb5e202501d11f29669c697744e33735f9",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "c9382941-68ed-4bcf-93c0-cc6370f1b727",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260826-1417_o_der-editor-haelt-die-16-mb-nur-am-eingang-ein-durch-bearbeiten-darueber-gewachsener-stand-wird-gesichert-und-beim-naechsten-oeffnen-abgewiesen.md"
+        },
+        "filed_by": {
+          "actor": "coderev",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "coderev, Kai Stalmann <kai@stalmann.org>",
+              "Domain": "code",
+              "Schwere": "Mittel",
+              "Betroffen": "`crates/krk-ui/src/editormodell.rs` (`bearbeiten`, `treffer_ersetzen`,",
+              "Baumstand": "`ca8072d`"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1417_o_der-editor-haelt-die-16-mb-nur-am-eingang-ein-durch-bearbeiten-darueber-gewachsener-stand-wird-gesichert-und-beim-naechsten-oeffnen-abgewiesen.md",
+            "sha256": "sha256:7972cea7c1a730571b136d9c55404c743a72fa5248a208efe954fdf1855e1982",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260826-1418_o_der-zeichenzweig-setzt-die-zulaessigkeitsfrage-von-hand-aus-drei-lagefeldern-zusammen-und-keine-probe-sieht-ihn.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:cde6faef7e104897a58e0f6bacdbe18f9709db1f3d1d7f73d075d909590d2321",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "ddcfe735-a7d7-4726-8424-4a2231c6de95",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260826-1418_o_der-zeichenzweig-setzt-die-zulaessigkeitsfrage-von-hand-aus-drei-lagefeldern-zusammen-und-keine-probe-sieht-ihn.md"
+        },
+        "filed_by": {
+          "actor": "coderev",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "coderev, Kai Stalmann <kai@stalmann.org>"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1418_o_der-zeichenzweig-setzt-die-zulaessigkeitsfrage-von-hand-aus-drei-lagefeldern-zusammen-und-keine-probe-sieht-ihn.md",
+            "sha256": "sha256:e8fa449e84c466033bad4b84a12b9c8a4aa252b1bb288208238939aefd3f5461",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260826-1419_o_die-zwei-mauswege-fragen-die-vorstufe-laufender-vorgang-an-verschiedenen-orten-und-die-lage-gar-nicht.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:d77b7c4221bd7b2a2d553d60646be736b44f63e2af364b77e4cbb572a502d4d0",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "26663221-7e66-484b-acee-33f867c05439",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260826-1419_o_die-zwei-mauswege-fragen-die-vorstufe-laufender-vorgang-an-verschiedenen-orten-und-die-lage-gar-nicht.md"
+        },
+        "filed_by": {
+          "actor": "coderev",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "coderev, Kai Stalmann <kai@stalmann.org>"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1419_o_die-zwei-mauswege-fragen-die-vorstufe-laufender-vorgang-an-verschiedenen-orten-und-die-lage-gar-nicht.md",
+            "sha256": "sha256:67b7134218eb5f4688efe634d77c907d86c01ae43ada7a2cabeec80c2db2f44e",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260826-1419_o_schliessen-am-letzten-tab-ist-die-dritte-fassung-der-uebertragung-und-traegt-null-von-fuenf-werten-hinueber.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:0f5d251f6ac420d75344878723676558c7269a8098b69a38e8a27b6ff7a5dc1c",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "c17aeb34-580c-4c90-9e91-3c9a92773345",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260826-1419_o_schliessen-am-letzten-tab-ist-die-dritte-fassung-der-uebertragung-und-traegt-null-von-fuenf-werten-hinueber.md"
+        },
+        "filed_by": {
+          "actor": "coderev",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "coderev, Kai Stalmann <kai@stalmann.org>",
+              "Domain": "code",
+              "Schwere": "Niedrig",
+              "Betroffen": "`crates/krk-ui/src/tabs.rs` (`schliessen`, `verdeckten_tab_setzen`, `ordner_setzen`)",
+              "Baumstand": "`ca8072d`"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1419_o_schliessen-am-letzten-tab-ist-die-dritte-fassung-der-uebertragung-und-traegt-null-von-fuenf-werten-hinueber.md",
+            "sha256": "sha256:79cde710c1bdd4f3096ef49227eb0ace9335ceada047aefdf835f89fec164df4",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260826-1420_o_lesereihenfolge-liefert-eine-zweite-stufe-die-ihr-einziger-rufer-verwirft.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:fee4e4baa7c802faafd1829087a5ffff9132682fa8bc2bee87c01069c4d07ff0",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "a58eb453-bcc4-4618-926d-b1df95504c3f",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260826-1420_o_lesereihenfolge-liefert-eine-zweite-stufe-die-ihr-einziger-rufer-verwirft.md"
+        },
+        "filed_by": {
+          "actor": "coderev",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "coderev, Kai Stalmann <kai@stalmann.org>",
+              "Domain": "code",
+              "Schwere": "Niedrig",
+              "Betroffen": "`crates/krk-ui/src/fenstermodell.rs` (`lesereihenfolge`), `crates/krk-ui/src/tabs.rs`",
+              "Baumstand": "`ca8072d`"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1420_o_lesereihenfolge-liefert-eine-zweite-stufe-die-ihr-einziger-rufer-verwirft.md",
+            "sha256": "sha256:da00c5da9b52bfff9f74a7cd59d0601bf75342ebd23c0c72d55367744294ab10",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260826-1422_o_eine-abwahl-per-klick-in-der-leiste-erreicht-das-modell-nicht-und-die-naechste-pfeiltaste-geht-von-der-alten-zeile-aus.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:d1269c54dc7187f37ea57e93601bcc323c5310556100620a28625c1779b824e6",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "77ba7a60-a7a6-4839-8f02-a5012cf7be55",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260826-1422_o_eine-abwahl-per-klick-in-der-leiste-erreicht-das-modell-nicht-und-die-naechste-pfeiltaste-geht-von-der-alten-zeile-aus.md"
+        },
+        "filed_by": {
+          "actor": "coderev",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "coderev, Kai Stalmann <kai@stalmann.org>",
+              "Domain": "code",
+              "Schwere": "Niedrig",
+              "Betroffen": "`crates/krk-ui/src/appkit/leiste.rs`"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1422_o_eine-abwahl-per-klick-in-der-leiste-erreicht-das-modell-nicht-und-die-naechste-pfeiltaste-geht-von-der-alten-zeile-aus.md",
+            "sha256": "sha256:c1321cf7a1a1de5c929b0c72243286a571830e7e1a0cbe9244514fae2992bc1b",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260826-1442_o_die-spannenstrecke-hat-keinen-vordergrundvorbehalt-und-meldet-im-hintergrund-die-geduld-statt-der-ursache.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:14701965e6023fd5cae83526facad3bc74b7f27b47a326d04c977a6226eee19b",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "47d2ab75-af20-40a8-806b-9db38c43b113",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260826-1442_o_die-spannenstrecke-hat-keinen-vordergrundvorbehalt-und-meldet-im-hintergrund-die-geduld-statt-der-ursache.md"
+        },
+        "filed_by": {
+          "actor": "coderev",
+          "person": "Kai Stalmann <kai@qantr.com>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "coderev, Kai Stalmann <kai@qantr.com>"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1442_o_die-spannenstrecke-hat-keinen-vordergrundvorbehalt-und-meldet-im-hintergrund-die-geduld-statt-der-ursache.md",
+            "sha256": "sha256:b74c39b901f2fa5013e4b4206735b9d3f1ae773093712499d11b1bd4cc1a20b2",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260826-1442_o_gleicher-ordner-ruft-canonicalize-je-gemeldetem-pfad-und-dateifenster-und-die-kosten-sind-ungemessen.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:39f30219e9f4f1d4e6d73996299e6bbd2cb5c9cd72bc29ac76e6c392bb7ba397",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "4c1defcd-6631-4010-8b9b-d2fbb5d2a8e1",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260826-1442_o_gleicher-ordner-ruft-canonicalize-je-gemeldetem-pfad-und-dateifenster-und-die-kosten-sind-ungemessen.md"
+        },
+        "filed_by": {
+          "actor": "coderev",
+          "person": "Kai Stalmann <kai@qantr.com>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "coderev, Kai Stalmann <kai@qantr.com>"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1442_o_gleicher-ordner-ruft-canonicalize-je-gemeldetem-pfad-und-dateifenster-und-die-kosten-sind-ungemessen.md",
+            "sha256": "sha256:71ed2a6114f0f9073af73e5c8dd3c781263ca5e29113c6733a148a5ac1a78780",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260826-1933_o_die-zwei-resolved-zeilen-der-schritte-1-und-2-tragen-den-sitzungsstempel-statt-des-commits.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:c9c414fa58ebc75188e62ebf8d5ec2656dfa3476c090e6f9e735e0048d4d6601",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "1830123e-ecd9-48ee-974b-0268977a4662",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260826-1933_o_die-zwei-resolved-zeilen-der-schritte-1-und-2-tragen-den-sitzungsstempel-statt-des-commits.md"
+        },
+        "filed_by": {
+          "actor": "coderev",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "coderev, Kai Stalmann <kai@stalmann.org>",
+              "Severity": "Low",
+              "Affected": "`shared/issues/260826-1221_c_ein-gescheitertes-kopieren-ueber-die-datentraegergrenze-loescht-die-quelle-trotzdem.md` (letzte Zeile), `shared/issues/260826-1221_c_der-schwungleser-oeffnet-mit-file-open-und-haengt-an-einer-benannten-roehre-fuer-immer.md` (letzte Zeile)",
+              "Domain": "code"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-1933_o_die-zwei-resolved-zeilen-der-schritte-1-und-2-tragen-den-sitzungsstempel-statt-des-commits.md",
+            "sha256": "sha256:f95c5b06a270a2e2f9ecfcc5e8029b7286ecbe97b7d374d7f8fb2f4bf9829a15",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260826-2205_o_der-deckungsmesser-meldet-am-sitzungs-head-ungedeckt-weil-der-commit-der-die-durchsicht-traegt-sich-selbst-nicht-decken-kann.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:610bf2515c6e92eb75dbe76904a044119b58e4987d2354a9539b18c72a4ec867",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "1cf28a91-7a5f-4a18-9cca-cf8eb57ade6f",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260826-2205_o_der-deckungsmesser-meldet-am-sitzungs-head-ungedeckt-weil-der-commit-der-die-durchsicht-traegt-sich-selbst-nicht-decken-kann.md"
+        },
+        "filed_by": {
+          "actor": "reconciler",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "reconciler, Kai Stalmann <kai@stalmann.org>",
+              "Severity": "Low",
+              "Affected": "`bin/fusion-review-coverage` (fusion-Werkzeug, nicht KRK-Code); jede Sitzung, die ihre Durchsicht als eigenen Commit ablegt",
+              "Tree state": "`bc5991d`",
+              "Domain": "code"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260826-2205_o_der-deckungsmesser-meldet-am-sitzungs-head-ungedeckt-weil-der-commit-der-die-durchsicht-traegt-sich-selbst-nicht-decken-kann.md",
+            "sha256": "sha256:8da10531a536b1fb41be77648be68c295546edf8f3e1a9c6758729e54acff54f",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260905-0406_o_das-atomare-schreiben-verliert-besitzer-attribute-und-zugriffslisten-der-ersetzten-datei.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:de1cd2ff07d3a0fc8d847983a1932947764b5a10e4306635f88ea4fdbcac61c9",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "e4c0c13b-4e42-456d-a4d7-c52a2680b4c4",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260905-0406_o_das-atomare-schreiben-verliert-besitzer-attribute-und-zugriffslisten-der-ersetzten-datei.md"
+        },
+        "filed_by": {
+          "actor": "coder",
+          "person": "Kai Stalmann <kai@qantr.com>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "coder, Kai Stalmann <kai@qantr.com>",
+              "Domain": "code"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260905-0406_o_das-atomare-schreiben-verliert-besitzer-attribute-und-zugriffslisten-der-ersetzten-datei.md",
+            "sha256": "sha256:ae95468d2d95b89c596436444dcb5c5d161523d9c61a4b95b1c4e4ba6decead8",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260905-2254_o_das-zaehlkommando-fuer-ohne-warten-oeffnen-gibt-elf-zeilen-fuer-sechs-rufer-aus.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:735b5ef410ae14e02e3ec6bdfac59337b0ebc31aed27e4d1e7506e03ba989240",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "1882918d-bbaa-4a0a-bbb8-310a097f5680",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260905-2254_o_das-zaehlkommando-fuer-ohne-warten-oeffnen-gibt-elf-zeilen-fuer-sechs-rufer-aus.md"
+        },
+        "filed_by": {
+          "actor": "coder",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+              "Domain": "code",
+              "Schwere": "niedrig",
+              "Baumstand": "`8779a25`",
+              "Betroffen": "`crates/krk-core/src/verzeichnis/sys.rs` (Modulkopf, Abschnitt zum Namen des Moduls; und der Doc-Kommentar von `ohne_warten_oeffnen` selbst), `CLAUDE.md` (Abschnitt „Was man nicht sieht, wenn man es nicht weiß\", Absatz „Die Prüfung dessen, was da geöffnet wurde, steht am Deskriptor und nicht am Pfad\")"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260905-2254_o_das-zaehlkommando-fuer-ohne-warten-oeffnen-gibt-elf-zeilen-fuer-sechs-rufer-aus.md",
+            "sha256": "sha256:31e4d63120d6f0e1012d0274fa513dd64adb405bc43b753ece029d6c06f61d02",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260906-0509_o_fuenf-datensaetze-der-klasse-s-brauchen-einen-nachsatz-ausserhalb-von-circles-planning.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:922264feab6fac979716ac2cd7cb3156f0dd3cf8681165a09ea64229936759ab",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "cb093348-16c4-4cdb-9fbb-e20d73efdaf2",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260906-0509_o_fuenf-datensaetze-der-klasse-s-brauchen-einen-nachsatz-ausserhalb-von-circles-planning.md"
+        },
+        "filed_by": {
+          "actor": "coder",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+              "Domain": "Werkbankführung",
+              "Baumstand": "`5cb5110`"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260906-0509_o_fuenf-datensaetze-der-klasse-s-brauchen-einen-nachsatz-ausserhalb-von-circles-planning.md",
+            "sha256": "sha256:b8159d9f83f4b36ae484359c928569087a157c87430b4dfc401888a5f28043ff",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260907-0858_o_fuenf-proben-in-krk-ui-fahren-die-rechtesperre-frage-ohne-die-eine-antwort-des-kerns.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:9a74227af4bff9c37aa3335ad74975d5881cb2aaab9e1e8868e38e2ade7a7a9e",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "7b3d045f-3eae-4d42-89c0-84ba26986aad",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260907-0858_o_fuenf-proben-in-krk-ui-fahren-die-rechtesperre-frage-ohne-die-eine-antwort-des-kerns.md"
+        },
+        "filed_by": {
+          "actor": "coder",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "coder, Kai Stalmann <kai@stalmann.org>"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260907-0858_o_fuenf-proben-in-krk-ui-fahren-die-rechtesperre-frage-ohne-die-eine-antwort-des-kerns.md",
+            "sha256": "sha256:0194a812df50363137748d56589dd1ad8cd91738ddf06e82e6f5e457ebcac0ed",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260908-0645_o_die-vorabfrage-an-station-1-meldet-bei-verschwundenem-gh-gepackt-und-geschoben-obwohl-nichts-geschehen-ist.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:51f92ab9abdcd103c83780782c4625593b97a80d57381c0f55ebbfc65214e6db",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "5f15e9d3-35f3-4380-a926-9645133c384c",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260908-0645_o_die-vorabfrage-an-station-1-meldet-bei-verschwundenem-gh-gepackt-und-geschoben-obwohl-nichts-geschehen-ist.md"
+        },
+        "filed_by": {
+          "actor": "coder",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+              "Domain": "code",
+              "Schwere": "Niedrig — der Fall verlangt, dass `gh` zwischen `gh_pruefen` und",
+              "Baumstand": "`fe5fe9c` plus die Änderungen dieses Durchgangs",
+              "Betroffen": "`xtask/src/veroeffentlichung.rs`, `release_steht` und `release_frei_pruefen`"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260908-0645_o_die-vorabfrage-an-station-1-meldet-bei-verschwundenem-gh-gepackt-und-geschoben-obwohl-nichts-geschehen-ist.md",
+            "sha256": "sha256:7c02f4f919d2c0f25df2589b51dd5c6faa775626a71c9667bb4f2ff0fde9cf10",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260908-0838_o_claude-md-nennt-die-freigabe-des-rueckgaengig-blocks-ungemessen-seit-heute-haelt-sie-eine-probe.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:78161d0d4e6d8c28543856da405d31d27b4d35d834b654760b4fadb1e9906e25",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "963d4311-e285-4734-96b7-5e22f07a586e",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260908-0838_o_claude-md-nennt-die-freigabe-des-rueckgaengig-blocks-ungemessen-seit-heute-haelt-sie-eine-probe.md"
+        },
+        "filed_by": {
+          "actor": "coder",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+              "Domain": "code",
+              "Cross-references": ""
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260908-0838_o_claude-md-nennt-die-freigabe-des-rueckgaengig-blocks-ungemessen-seit-heute-haelt-sie-eine-probe.md",
+            "sha256": "sha256:a9373f4bda1d7f01b8bfaae9d8df5ea00298054802f996acd0f5e1fc539b2d9d",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260908-1544_o_das-wort-offen-hinter-einem-berichtigten-zitat-im-circle-datensatz-des-web-betrachters-stimmt-nicht-mehr.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:5723238181e53cb825ecb7aff3439473138f1a15b6b16489cbc2ef12f254c00c",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "a56f3a78-edcc-476f-80d1-15f8afe93ac0",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260908-1544_o_das-wort-offen-hinter-einem-berichtigten-zitat-im-circle-datensatz-des-web-betrachters-stimmt-nicht-mehr.md"
+        },
+        "filed_by": {
+          "actor": "coder",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+              "Domain": "Werkbankführung",
+              "Baumstand": "`2f4b7b2`",
+              "Schwere": "gering. Kein Bau, kein Verhalten. Der Zeiger löst auf; falsch ist die"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260908-1544_o_das-wort-offen-hinter-einem-berichtigten-zitat-im-circle-datensatz-des-web-betrachters-stimmt-nicht-mehr.md",
+            "sha256": "sha256:1c33df0aeb505d587345376d2ec2647811bc17df72ec882f41578fa026e76786",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260908-1601_o_fast-jedes-kopffeld-eines-circle-datensatzes-nennt-seine-datei-mit-speicherpfad-und-stirbt-am-naechsten-aufraeumlauf.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:ec35e5c89fa858475cfe95ad524915f761dd0172a034514b4f62c0342755ee51",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "dbc7d50b-ec1b-48d0-a243-b8a39b5d03bc",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260908-1601_o_fast-jedes-kopffeld-eines-circle-datensatzes-nennt-seine-datei-mit-speicherpfad-und-stirbt-am-naechsten-aufraeumlauf.md"
+        },
+        "filed_by": {
+          "actor": "coder",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "coder, Kai Stalmann <kai@stalmann.org>",
+              "Domain": "Werkbankführung",
+              "Baumstand": "`2f4b7b2`",
+              "Schwere": "heute null, morgen mittel. Kein Bau, kein Verhalten, kein Leser, der heute ins"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260908-1601_o_fast-jedes-kopffeld-eines-circle-datensatzes-nennt-seine-datei-mit-speicherpfad-und-stirbt-am-naechsten-aufraeumlauf.md",
+            "sha256": "sha256:9211c32ffe00f171efbd14868da21eec1347603bba22121a7f975126d25152d1",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260909-0938_o_die-erhebung-im-datensatz-zur-reichweite-nennt-vierzehn-dokumente-der-baum-traegt-zweiundvierzig.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:de5eb7124816f410297bf998fb023c3258eb28a35e12647222177c91ebca5242",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "ef3941a6-f060-4d4e-a7ac-101f055a1639",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260909-0938_o_die-erhebung-im-datensatz-zur-reichweite-nennt-vierzehn-dokumente-der-baum-traegt-zweiundvierzig.md"
+        },
+        "filed_by": {
+          "actor": "orchestrator",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "orchestrator, Kai Stalmann <kai@stalmann.org>",
+              "Domain": "code",
+              "Gefunden": "beim Vorlegen der Frage, während der Prüfung ihrer Erhebung gegen den Baum."
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260909-0938_o_die-erhebung-im-datensatz-zur-reichweite-nennt-vierzehn-dokumente-der-baum-traegt-zweiundvierzig.md",
+            "sha256": "sha256:3a403ae23dd177f96273d440bbb0a91aec118a1ffd021e0095b7fac5e19d17df",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260909-1030_o_fuenf-verweise-zeigen-nach-dem-zug-der-plandokumente-ins-leere.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:bdfe26258c124e9305e8cd7413a34b81aa5db54fe4573dbd8f3df63c7c5e6312",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "46abba13-b4de-4d1f-96b7-78b10edab963",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260909-1030_o_fuenf-verweise-zeigen-nach-dem-zug-der-plandokumente-ins-leere.md"
+        },
+        "filed_by": {
+          "actor": "orchestrator",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "orchestrator, Kai Stalmann <kai@stalmann.org>",
+              "Domain": "code",
+              "Gefunden": "vom Abgleichlauf des 260909-1021, gemeldet und dort bewusst nicht behoben."
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260909-1030_o_fuenf-verweise-zeigen-nach-dem-zug-der-plandokumente-ins-leere.md",
+            "sha256": "sha256:e1f75bbb9974746d8061010c31c23609db6479730f0c0da79769b88ba8b42c88",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260910-0739_o_claude-md-sagt-es-gebe-keinen-vorgesehenen-circle-seit-heute-gibt-es-einen.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:b8a749353eb8baf573d64e865cda32d8c6d120118ec8490a2d0628ecc1830c52",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "94ac1738-67e6-4bb5-b0e5-69869142947f",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260910-0739_o_claude-md-sagt-es-gebe-keinen-vorgesehenen-circle-seit-heute-gibt-es-einen.md"
+        },
+        "filed_by": {
+          "actor": "orchestrator",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "orchestrator, Kai Stalmann <kai@stalmann.org>",
+              "Domain": "code",
+              "Gefunden": "vom Rangfolgelauf des 260910-0735, der die Stelle benannt und ausdrücklich dem"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260910-0739_o_claude-md-sagt-es-gebe-keinen-vorgesehenen-circle-seit-heute-gibt-es-einen.md",
+            "sha256": "sha256:4bdf7c47b96509a74e09884e561404cb5eb3a95456b81fac1508f6c1dd228232",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260910-1054_o_eine-beschaedigte-ablagedatei-wird-kopiert-nicht-beiseitegelegt-die-prosa-sagt-das-gegenteil.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:a334023e242aa4cf0e865a16c8f90066132a20406f33ed9aae3168ad1f28de17",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "dbd9bbe9-5956-46b7-aec1-443d31db9e56",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260910-1054_o_eine-beschaedigte-ablagedatei-wird-kopiert-nicht-beiseitegelegt-die-prosa-sagt-das-gegenteil.md"
+        },
+        "filed_by": {
+          "actor": "orchestrator",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "orchestrator, Kai Stalmann <kai@stalmann.org>",
+              "Domain": "code",
+              "Gefunden": "vom Bau des Schrittes 1 der Runde"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260910-1054_o_eine-beschaedigte-ablagedatei-wird-kopiert-nicht-beiseitegelegt-die-prosa-sagt-das-gegenteil.md",
+            "sha256": "sha256:e235872758111e30437759d1d95ccdcbd126a0f89bd8826e7e591edee83f272c",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    },
+    {
+      "kind": "control",
+      "path": "shared/issues/260910-1146_o_die-zahlenschreibweise-wohnt-jetzt-in-ablage-neuerungen-und-gehoert-dort-nicht-hin.record.json",
+      "source_sha256": null,
+      "after_sha256": "sha256:d5481a5c5b926be0d6ff089d26e54c8a81f5f3b23d57a3d4d9f6284020291fd2",
+      "control": {
+        "schema": "fusion.record/v1",
+        "id": "bd725927-689a-4b42-9e72-56ca4d4ff55b",
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "kind": "issue",
+        "narrative": {
+          "path": "shared/issues/260910-1146_o_die-zahlenschreibweise-wohnt-jetzt-in-ablage-neuerungen-und-gehoert-dort-nicht-hin.md"
+        },
+        "filed_by": {
+          "actor": "orchestrator",
+          "person": "Kai Stalmann <kai@stalmann.org>"
+        },
+        "references": [],
+        "provenance": {
+          "source": "imported",
+          "legacy_fields": {
+            "file_marker": "o",
+            "head": {
+              "Filed by": "orchestrator, Kai Stalmann <kai@stalmann.org>",
+              "Domain": "code",
+              "Gefunden": "vom Bau des Schrittes 5 selbst, der den Zielort im eigenen Bericht als nicht"
+            }
+          },
+          "backup": {
+            "path": "archive/migrations/migration-20261011-v12/originals/shared/issues/260910-1146_o_die-zahlenschreibweise-wohnt-jetzt-in-ablage-neuerungen-und-gehoert-dort-nicht-hin.md",
+            "sha256": "sha256:3d43bbf4cfb2943ab17ecf0847c76a254b7a0af62981558e337323495dbc5ccb",
+            "kind": "other"
+          }
+        },
+        "extensions": {},
+        "control": {
+          "state": "open",
+          "disposition": null
+        }
+      }
+    }
+  ]
+}

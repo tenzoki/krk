@@ -1,0 +1,178 @@
+# Jeder Löschweg fragt nach, und es gibt nur noch den Papierkorb
+
+---
+**Domain:** code
+**Status:** closed
+**Filed by:** orchestrator
+**Active spec/plan:** 260817-0856_*_plan-absicherung-jedes-loeschwegs.md (Spec: 260817-0536_*_spec-absicherung-jedes-loeschwegs.md, seit dem Aufräumlauf 260819-1613 unter `archive/`)
+**Active session history:** circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/history/260817-2131-orchestrator-session.md
+
+---
+
+## Directive
+
+KRK kennt nach dieser Runde genau einen Löschweg, und er führt in den Papierkorb des Systems. Jeder Datei- und Ordner-Löschvorgang fragt vorher genau einmal nach, mit „Abbrechen" vorbelegt; wo das Ziel für den Nutzer, für seine Daten oder für den Umfang des Vorgangs ungewöhnlich ist, trägt dieselbe Rückfrage ein Warnzeichen und nennt den Grund in ihrer ersten Zeile. Ein Ziel ohne Papierkorb wird nicht gelöscht, sondern gemeldet. Der Befehl zum endgültigen Löschen fällt aus der Anwendung, aus der Belegung und aus dem Menü.
+
+## Grounding snapshot
+
+Erhoben am 260817 gegen den Baumstand `b8e198e`, Version 0.5.0. Die zwölfte gefahrene Runde des Projekts.
+
+### Woher das Vorhaben kommt: ein Schadensfall am eigenen Baum
+
+In der Nacht zum 260817 hat KRK, von Hand bedient, den Ordner `fusion-workbench/shared` des eigenen Projektverzeichnisses in den Papierkorb geräumt: 189 verfolgte Dateien in zehn Unterordnern, ein Tastendruck, keine Rückfrage. Der Verlust blieb vier Stunden unbemerkt und wurde durch einen `git status` gefunden, den der Orchestrator aus einem anderen Grund fuhr. Wiederhergestellt wurde aus `HEAD`; eine unverfolgte Datei war nur zu retten, weil der Nutzer den Ordner im Papierkorb noch fand.
+
+Die Forensik steht in `shared/analyses/260817-0419-verlust-des-speichers-shared.md` und belegt den Hergang mit vier unabhängigen Messungen. Der Nutzer hat danach einen gleichartigen Vorfall auf einem zweiten Gerät berichtet; die Fehlbedienung ist damit belegt und nicht mehr erschlossen.
+
+Der Befund selbst war schon sechs Stunden vor dem Schaden abgelegt, als Risiko: `shared/issues/260816-2144_*_das-raeumen-in-den-papierkorb-laeuft-ohne-rueckfrage.md`, gefunden vom Shaper beim Lesen des Baums für eine andere Runde. Er trägt den Stand am Baum, die vier nachzuziehenden Stellen und fünf Fragen, die der Umsetzer nicht raten darf, und hat der Klärung dieser Runde den größten Teil der Vorarbeit abgenommen.
+
+### Was diese Runde aufhebt
+
+Der heutige Zustand ist keine Nachlässigkeit, sondern eine umgesetzte Nutzerfestlegung. `shared/decisions/260802-0842_*_loeschen-papierkorb-oder-endgueltig.md` hält die Antwort vom 260802-1105: „Delete löscht in Papierkorb, FN+F8 endgültig". Der Datensatz trägt `_i_`, nennt die Commits `daecb45` und `343a7f3` und führt die fehlende Rückfrage ausdrücklich als gewollten Preis. Nach dieser Runde stimmt kein Teil davon mehr.
+
+Die Festlegung steht an sechs weiteren Stellen, darunter die Directive der Runde 1 und neun bindende Zeilen ihres Specs. Das Nachziehen ist deshalb ein eigener Gegenstand der Runde (C6) und kein Nebeneffekt: eine überholte Zusage, die stehen bleibt, wird von der nächsten Runde als bindend gelesen.
+
+### Die elf Antworten des Nutzers
+
+Sie stehen ausformuliert im Spec und im neuen Entscheidungsdatensatz `shared/decisions/260817-0536_*_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md` und werden hier nicht wiederholt. In Stichworten: Rückfrage vor jedem Vorgang mit Abbrechen vorbelegt; laute Warnung als dasselbe Blatt mit Warnzeichen, Pfad, Zahl und Grund in der ersten Zeile; Umfangsschwelle bei 25 Einträgen im Unterbaum, gedeckelt gezählt; vier entscheidbare Zielarten plus Umfang plus Git-Arbeitsbaum; kein endgültiger Löschweg mehr; kein Löschen auf Zielen ohne Papierkorb; `ctrl+delete` für Lesezeichen bleibt ohne Rückfrage; kein Protokoll in dieser Runde; `f8` zeigt künftig auf den Papierkorb; eine gespeicherte `keymap.toml` mit der entfallenen Kennung wird wie heute verworfen; die Git-Prüfung sieht aufwärts.
+
+Die letzte dieser Antworten hat der Nutzer am Spec-Gate umgedreht, nachdem die Kalibrierung des Shapers gezeigt hatte, dass die enge Form seinen eigenen Schadensfall nicht trifft. Der Einwand des Shapers dagegen bleibt gültig und steht im Spec: in diesem Projekt warnt danach fast jede Löschung im Quellbaum laut.
+
+### Was nicht entscheidbar ist
+
+Zwei der vier Zielklassen, die der Nutzer genannt hat, sind so nicht entscheidbar, und der Spec sagt es statt es zu überspielen. „Clouddrive" geht als benannte Orte (`~/Library/CloudStorage/`, `~/Library/Mobile Documents`), nicht als Klasse. „Gesharte Verzeichnisse" zerfällt in drei Dinge, von denen nur das eingehängte Netzlaufwerk sauber entscheidbar ist. KRK prüft, was es prüfen kann, und behauptet über den Rest nichts.
+
+Daneben gilt: **unentschieden gilt als laut.** Eine Prüfung, die im Zweifel schweigt, wäre in genau den Lagen still, in denen KRK am wenigsten über das Ziel weiß.
+
+## Dependencies
+
+- `circles/260802-0842-krk-mac-dateimanager-editor-git` — die Runde 1. Sie hat beide Löschwege gebaut, das Bestätigungsblatt, die Norton-Reihe mit F8 als Löschtaste und die zehn Zeitzusagen. Ihre Directive und neun Zeilen ihres Specs tragen die Festlegung, die diese Runde aufhebt; C6 zieht sie nach.
+- `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief` — die Runde 10. Sie hat die Rückschritt-Regel gebaut, deren Modulkopf seine Begründung darauf stützt, dass das Räumen ohne Rückfrage laufe. Die Regel bleibt nötig, ihr Modulkopf ist nachzuziehen. Sie hat daneben „unentschieden" vom negativen Befund getrennt (`verzeichnis::sys::ist_deskriptormangel`), worauf die Zählung der Umfangsschwelle aufsetzt.
+- `circles/260816-2255-befehle-absetzen-und-makros-speichern` — zurückgestellt am 260817 zugunsten dieser Runde. Spec und Plan liegen vollständig; wer sie aufnimmt, legt einen neuen Circle an.
+
+**Bindende Datensätze:**
+
+- `shared/decisions/260802-0842_*_loeschen-papierkorb-oder-endgueltig.md` — von dieser Runde überholt: der Datensatz trägt seit Commit `24bbccc` den Marker `_s_`, mit Grund und Verweis auf den nachfolgenden.
+- `shared/decisions/260817-0536_*_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md` — die Antwort, auf der diese Runde steht.
+- `shared/issues/260814-0656_*_eine-neue-funktion-kommt-bei-jedem-nutzer-mit-eigener-keymap-unbelegt-an.md` — offen, und diese Runde berührt seine Kehrseite: eine **entfallene** Funktion in einer gespeicherten Belegung. Der Nutzer hat entschieden, es beim heutigen Verhalten zu belassen.
+
+## Turn log
+
+- Turn 1 (Sitzung 260816-2113): Commits `664a0fd`..`472eb81`, dazu `a8b4bf8` für die
+  Durchsicht. Bündel A vollständig, drei Schritte. **Die Schutzschwelle ist erreicht:** KRK
+  fragt vor jedem Räumen nach, und die Durchsicht hat jeden Löschweg einzeln nachgezählt.
+  Kohärenz-Befund `ok`. Sieben Befunde gefiled, davon einer hoch — eine unbekannte
+  Blattantwort fällt im Löschblatt auf die zerstörende Schaltfläche. Ein Defekt, den der
+  Spec nicht kannte, ist mitbehoben: der bestätigte Auftrag trägt jetzt die gezeigte
+  Auswahl statt einer zweiten Lesung nach dem Blatt. Sitzungsprotokoll:
+  `shared/history/260816-2113-orchestrator-session.md`. Der Nutzer hat die Sitzung nach
+  diesem Turn beendet; Bündel B bis E stehen aus.
+- Turn 1 (Sitzung 260817-1208): Commits `873b9f4`..`ee85950`, dazu `1a57418` für die
+  Durchsicht. Die sieben Befunde des Bündels A und das ganze Bündel B, fünf Aufgaben.
+  Zuerst der hohe Befund: die Vorbelegung einer unbekannten Blattantwort geht im Löschblatt
+  von der zerstörenden auf die abbrechende Stelle, und die zwei widersprechenden
+  Vorbelegungen in `blaetter/mod.rs` sind zu einer geworden. **Die zweite Stufe des
+  Schutzes steht:** ein Ziel ohne Papierkorb wird gemeldet statt gelöscht. Die Stufenfolge
+  vor der Rückfrage ist als reine Funktion `vor_der_rueckfrage` nach `kommandos/` gezogen
+  und erstmals ohne Fenster prüfbar. Kohärenz-Befund `ok`. Sieben Datensätze aus der
+  Durchsicht, zwei mittel, keiner hoch.
+- Turn 2 (Sitzung 260817-1208): Commits `17d3550`..`792995a`, dazu `e313841` für die
+  Durchsicht. Das ganze Bündel C, sechs Aufgaben, dazu die vorgezogene Umbenennung auf
+  `Loeschzielbefund`. **Die dritte Stufe steht:** die Rückfrage trägt Warnzeichen und Grund,
+  wenn ein Ziel ungewöhnlich oder der Umfang groß ist. Ein Nutzerentscheid am 260817-1640
+  hat `ist_lokal` in `liegt_auf_netzlaufwerk` umbenannt, weil die Funktion die Umkehrung
+  ihres Feldes lieferte und der Übersetzer die Verdrehung nicht sieht. Kohärenz-Befund `ok`,
+  Abgleichsverdikt `review-needed` mit sechs Driftpunkten, alle in der Buchführung und
+  keiner am Code. Neun Datensätze aus der Durchsicht, zwei mittel, keiner hoch. Die
+  Abdeckung der Durchsichten schließt lückenlos über beide Turns. Der Nutzer hat den
+  Zuschnitt auf Befunde plus Bündel B und C gewählt; **Bündel D und E stehen aus**, das
+  endgültige Löschen ist damit noch im Programm.
+
+- Turn 1 (Sitzung 260817-2131): Commits `82707ef`..`f7a85c1`, dazu `8f556ed` für die
+  Durchsicht. **Das ganze Bündel D, drei Aufgaben — das endgültige Löschen ist aus dem
+  Programm.** `Kommando::EndgueltigLoeschen` und `Art::EndgueltigLoeschen` sind gefallen,
+  `Kommando::KENNUNGEN` steht bei 78, `opt+cmd+delete` ist unbelegt und wird nicht neu
+  vergeben, und `f8` liegt auf dem Papierkorb. Die Auslieferung führt 84 Funktionen mit 89
+  Kombinationen, beide Zahlen gegen die Datei gezählt. Eine neue Probe misst die
+  Nutzerantwort zur gespeicherten `keymap.toml`, statt sie zu behaupten. Schritt 14 fand
+  sieben Prosazahlen statt der acht, die der Plan erwartete: `menue.rs:128` war falsch,
+  solange der Baum 85 trug, und ist durch den Wegfall von selbst richtig geworden. Vier
+  Datensätze aus der Durchsicht, einer mittel, keiner hoch; der mittlere erreicht keinen
+  verbliebenen Planschritt und ist deshalb an Schritt 15 gehängt. Kohärenz-Befund `ok`.
+
+- Turn 2 (Sitzung 260817-2131): Commits `522cf51`..`da716c1`, dazu `f79f964` für die
+  Durchsicht. **Das ganze Bündel E, drei Aufgaben — der Plan der Runde trägt damit alle
+  siebzehn Schritte auf `[DONE]`.** Die Prosa des Baums kennt nur noch einen Löschweg: 22
+  von 51 Fundstellen nachgezogen, darunter drei, die das Wort „endgültig" gar nicht tragen
+  und erst eine zweite Suche über „ohne Rückfrage" gefunden hat. Fünf
+  Entscheidungsdatensätze bewegt, einer auf `_s_` und vier auf `_i_`, jeder Commit-Hash mit
+  `git log -S` belegt statt aus dem Plan übernommen. Die Datensätze der Runde 1 tragen ihre
+  aufgehobene Festlegung an zwanzig Stellen als Nachtrag, ohne dass ein aufgezeichneter
+  Stand überschrieben wäre. Kohärenz-Befund `ok`. Sieben Datensätze, einer mittel: vier
+  Doc-Kommentare unter `appkit/` sagen weiter, der falsche Zweig der Rückschritt-Regel
+  räume Dateien weg, während der Modulkopf derselben Regel seit `522cf51` das Gegenteil
+  sagt. Die Abdeckung der Durchsichten kachelt den Sitzungsbereich lückenlos.
+
+- Turn 3 (Sitzung 260817-2131): Commits `ae665e5`..`a4d8211`, dazu die Durchsicht.
+  **Der Befunde-Durchgang: 30 Datensätze geschlossen, darunter der auslösende Defekt der
+  ganzen Runde.** Sieben Stapel. Drei Befunde waren im gemessenen Umfang deutlich größer
+  als im gemeldeten: die verkürzte Blattsperre trägt der Baum an sechs statt vier Stellen,
+  von den Pfaden der Belegungsdatei brachen 22 statt zwei um, und vier statt zwei
+  Protokolldateien tragen einen falschen Zeitstempel. `285b58f` hat einen zweiten
+  Datenverlustweg geschlossen, den der Spec nicht kannte: das Konfliktblatt hätte auf ein
+  Return im Namensfeld hin „Überschreiben" ausgelöst. Sechs behauptete Eigenschaften sind
+  Messungen geworden, und die Durchsicht hat sie mit neun eingebauten Fehlern selbst
+  nachgeprüft statt den Berichten zu glauben. Kohärenz-Befund `ok`. Sechs Datensätze aus
+  der Durchsicht, zwei mittel, keiner ein Release-Blocker. Vier neue Entscheidungsfragen an
+  den Nutzer. Ein Lauf ist an einem Verbindungsfehler abgebrochen; sein vollständiger Teil
+  ist als `48bb57f` gerettet.
+
+- Turn 4 (Sitzung 260817-2131): Commits `adf638b`..`0494604`, dazu die Durchsicht.
+  **Aus dem Rebalance-Gate heraus gefahren:** der Abgleich hatte `review-needed` gemeldet,
+  weil Schritt 16 mit der Bewegung von fünf Entscheidungsdatensätzen 22 Zeiger in lebendem
+  Text getötet hatte. Alle 22 stehen jetzt in der Sternform und lösen auf, dazu sechzehn
+  weitere, die zwei eigene Erhebungen mitbrachten. Für `crates/` war die Sternform ohnehin
+  bindend (`shared/decisions/260815-1145_*_…`, umgesetzt); in Werkbank-Prosa ist sie
+  vorläufig gewählt, solange `shared/decisions/260818-0201_*_…` offen ist. Drei Stellen
+  behalten den Buchstaben mit Absicht, weil dort der Marker die Aussage selbst ist.
+  **Zwei Zitate zeigten aus einem anderen Grund als dem Marker ins Leere**, beide mit
+  richtiger Sternform und falschem Namensteil; die Durchsicht fand einen dritten außerhalb
+  dieser Runde. Kohärenz-Befund `ok`. Zwei Datensätze aus der Durchsicht, einer mittel,
+  beide außerhalb des durchgesehenen Bereichs.
+
+## Closure note
+
+Geschlossen am 260818 als **kohärent** (`_c_`), auf Entscheid des Nutzers am Rebalance-Gate der
+Sitzung `260817-2131`. Sitzungsprotokoll:
+`circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/history/260817-2131-orchestrator-session.md`.
+Der zweite Abgleich (`.../history/260818-0807-reconciliation.md`) verdikt `coherent`, nachdem der
+erste (`.../history/260818-0712-reconciliation.md`) `review-needed` gemeldet und der daraus
+gefahrene Turn 4 den einen Driftpunkt behoben hatte.
+
+**Was die Runde erreicht hat.** KRK kennt genau einen Löschweg, und er führt in den Papierkorb.
+Jeder Datei- und Ordner-Löschvorgang fragt vorher genau einmal nach, mit „Abbrechen" vorbelegt;
+wo das Ziel ungewöhnlich oder der Umfang groß ist, trägt dieselbe Rückfrage ein Warnzeichen und
+nennt den Grund in ihrer ersten Zeile. Ein Ziel ohne Papierkorb wird gemeldet statt gelöscht. Der
+Befehl zum endgültigen Löschen ist aus der Anwendung, aus der Belegung und aus dem Menü gefallen;
+`opt+cmd+delete` bleibt unbelegt, `f8` liegt auf dem Papierkorb. Jede Klausel der Directive ist am
+Baum messbar, und jede hält.
+
+**Der auslösende Defekt ist geschlossen.** `shared/issues/260816-2144_*_das-raeumen-in-den-papierkorb-laeuft-ohne-rueckfrage.md`
+war sechs Stunden vor dem Schadensfall vom 260817-0344 als Risiko abgelegt worden. Er ist am Baum
+nachgelesen und nicht auf Zuruf geschlossen: von `Kommando::InPapierkorb` bis
+`loeschauftrag_stellen` stellt nur noch der Rückruf des Blattes einen Auftrag.
+
+**Warum dieses `_c_` etwas anderes bedeutet als das der Runde 8.** Bis heute hieß `_c_` in diesem
+Projekt „der Nutzer hat den Abnahmelauf selbst gefahren", und das trifft allein auf
+`circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags` zu. Hier ist der Abnahmelauf
+**nicht** gefahren, und niemand hat von Hand eine Datei gelöscht. Der Marker steht trotzdem auf
+kohärent, weil der Abgleich zweimal begründet hat, dass die Directive dieser Runde über die zehn
+Zeitzusagen aus C8 nichts sagt: unerreichbar ist die Abnahme durch den Nutzer, nicht die Directive.
+Der Nutzer hat diese Lesart am Gate ausdrücklich gewählt, nachdem ihm beide Möglichkeiten mit ihren
+Folgen vorgelegen hatten. **Wer künftig `_c_` als „vom Nutzer abgenommen" liest, liest diese Runde
+falsch.**
+
+**Was offen bleibt.** Sieben Befunde im Circle, alle aus den beiden letzten Durchsichten und keiner
+ein Release-Blocker, davon zwei mittel: `Blatt::zeigen` beantwortet die Frage nach der bestätigenden
+Schaltfläche ein zweites Mal, und die eine ungemessene Zusage des neuen Eingabewächters steht nur in
+Prosa. Vier Entscheidungsfragen an den Nutzer, alle in dieser Runde entstanden. Der Abnahmelauf der
+zehn Zeitzusagen ist seit dem 260810 nicht gefahren, also inzwischen sieben Runden lang nicht.

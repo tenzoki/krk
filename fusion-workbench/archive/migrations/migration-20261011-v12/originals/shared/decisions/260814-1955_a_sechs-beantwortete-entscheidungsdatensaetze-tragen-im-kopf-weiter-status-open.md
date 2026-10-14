@@ -1,0 +1,121 @@
+Sechs beantwortete Entscheidungsdatensätze tragen im Kopf weiter `**Status:** open`
+
+---
+
+Der Marker im Dateinamen und das Feld `**Status:**` im Kopf desselben Datensatzes widersprechen einander. Am 260814-1950 trugen sechs der sieben mit `_a_` markierten Datensätze des Circles `260814-1551-tippen-filtert-dateiliste-flach-und-tief` im Kopf weiter `open`, obwohl jeder eine ausgefüllte `Answered:`-Zeile hat. Der Shaper hat die sechs Felder beim Nachbessern des Spec auf `answered` gesetzt; der Mechanismus, der die Abweichung erzeugt, besteht fort.
+
+---
+
+**Gefunden am:** 260814-1950, beim Nachbessern des Spec auf die zweite Bewertung
+**Gemeldet von:** shaper
+**Herkunft:** neben der Arbeit am Circle `260814-1551-tippen-filtert-dateiliste-flach-und-tief` gefunden; die Ursache liegt im Ablauf, mit dem Datensätze beantwortet werden, und nicht in dessen Directive. Deshalb im gemeinsamen Speicher.
+
+## Was der Befund war
+
+| Datensatz | Marker | Kopffeld vor der Berichtigung |
+|---|---|---|
+| `260814-1552_a_passt-der-filter-auf-den-namensanfang-…` | `_a_` | `open` |
+| `260814-1552_a_steigt-die-tiefe-suche-in-symbolische-verknuepfungen-hinab` | `_a_` | `open` |
+| `260814-1552_a_was-geschieht-mit-einer-markierung-…` | `_a_` | `open` |
+| `260814-1552_a_welche-tastenkombination-schaltet-die-tiefe-suche` | `_a_` | `open` |
+| `260814-1552_a_wie-kommt-der-nutzer-von-einem-tiefen-treffer-…` | `_a_` | `open` |
+| `260814-1852_a_raeumt-ein-gehaltener-rueckschritt-…` | `_a_` | `open` |
+| `260814-1830_a_wie-nimmt-der-nutzer-ein-einzelnes-zeichen-…` | `_a_` | `answered` — richtig |
+
+Einer von sieben war richtig gesetzt. Das ist kein einzelnes Versehen, sondern die Regel mit einer Ausnahme.
+
+## Warum es zählt, obwohl der Marker verbindlich ist
+
+`fusion-workbench-conventions.md` führt `**Status:** open | answered | implemented | deferred | superseded` als Kopffeld jedes Entscheidungsdatensatzes, und `CLAUDE.md` sagt zugleich, verbindlich sei der Dateibestand. Beides zusammen macht das Feld nicht harmlos, sondern zu einer zweiten Quelle, die falsch antwortet: wer einen einzelnen Datensatz öffnet, liest zuerst den Kopf und nicht den Dateinamen. Dieses Projekt hat den Fall schon einmal bezahlt — `260812-2253_o_sieben-verweise-im-circle-datensatz-der-runde-5-tragen-einen-gestorbenen-marker.md` ist derselbe Riss zwischen zitiertem und tatsächlichem Stand.
+
+Dazu kommt ein zweiter, kleinerer Befund am selben Ort: `260814-1852_a_raeumt-ein-gehaltener-rueckschritt-…` trägt zwei `Answered:`-Blöcke, den leeren aus der Vorlage und den ausgefüllten darunter. Der leere ist beim Beantworten nicht ersetzt, sondern ein zweiter angehängt worden. Ein Suchmuster auf `^Answered:$` findet damit einen unbeantworteten Datensatz, den es nicht gibt.
+
+## Was zu tun bleibt
+
+Die sechs Felder sind gesetzt. Offen ist die Ursache: wer einen Datensatz beantwortet, benennt heute die Datei um und schreibt die `Answered:`-Zeile, fasst das Kopffeld aber nicht an. Solange der Schritt einzeln neben der Umbenennung steht, wird er wieder ausgelassen — dieses Projekt hat genau diese Gestalt schon mehrfach als übersprungen gemessen. Die Berichtigung gehört deshalb in denselben Vorgang wie die Umbenennung und nicht daneben.
+
+---
+Abgleich 260815-1812 (reconciler): **Der Bestand ist erledigt, die Ursache steht unverändert,
+und ein zweiter Datensatz hat inzwischen dieselbe Sache anders geschlossen.**
+
+**Der Bestand.** Der Prüflauf über alle Entscheidungsdatensätze läuft am 260815-1812 ohne
+eine einzige Abweichung durch — 137 Datensätze in `shared/decisions` und
+`circles/*/decisions`, Marker und Kopffeld stimmen überall überein. Die sieben Datensätze der
+Tabelle oben sind darunter. Gefahren ist die Berichtigung nicht von diesem Datensatz,
+sondern von `cd0b5b7` über
+`shared/issues/260815-1216_c_vierzehn-entscheidungsdatensaetze-tragen-im-rumpf-einen-anderen-stand-als-im-dateinamen.md`,
+das denselben Befund projektweit erhoben hat.
+
+**Die beiden Datensätze beschreiben eine Sache und schließen verschieden.** `260815-1216`
+ist als `_c_` geschlossen mit der Feststellung, Weg 2 — die Kopfzeile aus der Vorlage nehmen —
+gehöre `fusion` und sei von hier aus nicht gangbar, „der Rest ist als bekannte Lage
+hinzunehmen". Dieser Datensatz bleibt offen und verlangt genau das, was jener als nicht
+gangbar abgelegt hat. Zu entscheiden ist deshalb nicht mehr die Sache, sondern welcher der
+beiden Abschlüsse gilt; solange das offen ist, bleibt der Marker hier `_o_`.
+
+**Der Nebenbefund ist größer als die eine Datei, die er nennt.** Am 260815-1812 über alle
+137 Entscheidungsdatensätze gezählt: **49** tragen eine leere Zeile `Answered:` ohne Inhalt
+dahinter, und **25** tragen zwei `Answered:`-Blöcke, den leeren und einen ausgefüllten
+darunter — also genau die Gestalt, die dieser Datensatz an
+`260814-1852_a_raeumt-ein-gehaltener-rueckschritt-…` beschreibt. Alle 25 mit doppeltem Block
+sind unter den 49. Ein Suchmuster auf einen leeren `Answered:`-Block meldet damit 49
+angeblich unbeantwortete Datensätze; unbeantwortet sind 24 (`_o_`), und die beiden Mengen
+decken sich nicht. Nachzuzählen mit:
+
+```sh
+cd fusion-workbench
+for f in shared/decisions/*.md circles/*/decisions/*.md; do
+  printf '%s %s %s\n' "$(grep -cE '^Answered: *$' "$f")" "$(grep -c '^Answered:' "$f")" "$f"
+done
+```
+
+---
+Also seen: 260819-0057 by reconciler — **dieselbe Gestalt jetzt auch an Defektdatensätzen, nicht
+nur an Entscheidungsdatensätzen.** Fünf der elf geschlossenen Datensätze der Runde 13 tragen im
+Dateinamen `_c_` und im Kopf weiter `**Status:** open`:
+`circles/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/issues/` `260818-2332`,
+`260818-2333`, `260818-2334`, `260818-2335`, `260818-2336` — die fünf des zweiten
+`coderev`-Durchgangs, die als einzige des Circles überhaupt eine `**Status:**`-Kopfzeile führen.
+Die sechs des ersten Durchgangs und die drei offenen tragen keine, weshalb bei ihnen nichts
+auseinanderlaufen kann.
+
+Nachzuzählen mit:
+
+```sh
+cd fusion-workbench
+for f in shared/issues/*.md circles/*/issues/*.md; do
+  m=$(basename "$f" | sed -nE 's/^[0-9-]+_([a-z])_.*/\1/p')
+  k=$(grep -m1 '^\*\*Status:\*\*' "$f")
+  [ -n "$k" ] && printf '%s  %s  %s\n' "$m" "$k" "$f"
+done
+```
+
+Der Marker bleibt hier `_o_` aus dem Grund, den der Abgleich vom 260815-1812 nennt: zu
+entscheiden ist nicht die Sache, sondern welcher der beiden Abschlüsse gilt — dieser oder der
+von `260815-1216_c_vierzehn-entscheidungsdatensaetze-…`, das die Ursache als „bekannte Lage"
+hingenommen hat. Der Befund von heute erweitert den Geltungsbereich jener Entscheidung um eine
+zweite Datensatzart.
+
+---
+Abgleich 260819-1440 (reconciler, Baumstand `77dcd48`): **der Entscheidungsbestand ist sauber geblieben, und die Gestalt ist vollständig in die Defektdatensätze umgezogen.**
+
+**Entscheidungsdatensätze: null Abweichungen von 160.** Marker im Dateinamen und Kopffeld `**Status:**` stimmen über `shared/decisions/` und `circles/*/decisions/` durchgehend überein. Der Bestand, den der Abgleich vom 260815-1812 mit 137 Datensätzen sauber gemeldet hat, ist es geblieben, obwohl seither drei Runden und 23 Datensätze dazugekommen sind. **Der Gegenstand der Überschrift dieses Datensatzes ist damit erledigt.**
+
+**Defektdatensätze: 19 Abweichungen von 27.** Gezählt wurden allein die Defektdatensätze, die überhaupt eine `**Status:**`-Kopfzeile führen; von 27 widersprechen 19 ihrem Dateinamen. Sechs davon sind bloße Schreibungsfälle (`Open` gegen `open`) an `_o_`-Dateien, **dreizehn widersprechen der Sache nach**: zwölfmal `_c_` mit Kopf `open`, einmal `_d_` mit Kopf `open`. Die Häufung sitzt in der Runde 10 (`circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/issues/`) und in drei Dateien des gemeinsamen Speichers (`260815-1047_c_c1-9-…`, `260815-1047_c_vier-verweise-im-code-…`, `260815-1047_d_die-bedingung-der-moeglichkeit-2-…`).
+
+**Die fünf Dateien aus dem Vermerk „Also seen: 260819-0057" sind berichtigt** und tragen heute `**Status:** closed`.
+
+**Der Marker bleibt `_o_`, und der Grund ist unverändert der von 260815-1812:** zu entscheiden ist nicht die Sache, sondern welcher der zwei Abschlüsse gilt, dieser oder der von `260815-1216_*_vierzehn-entscheidungsdatensaetze-tragen-im-rumpf-einen-anderen-stand-als-im-dateinamen.md`. **Dieser Abgleich hält daneben fest, dass der Datensatz seiner Art nach eine Entscheidung ist und kein Defekt** — sein eigener Text sagt es („zu entscheiden ist … welcher der beiden Abschlüsse gilt"), und die Vokabeln `_o_/_p_/_c_/_d_` des Defektspeichers können diesen Stand nicht ausdrücken. Der Vorschlag steht im Abgleichsprotokoll `shared/history/260819-1440-reconciliation.md` unter `## Falsch abgelegt — gehört in den Entscheidungsspeicher`; verschieben kann ihn nur der Nutzer von Hand.
+
+**Kein neuer Datensatz für die Defektdatensätze.** Die Gestalt ist hier schon aufgenommen, und ein zweiter Datensatz derselben Sache wäre die Doppelung, die die Filialregel ausdrücklich vermeidet.
+
+---
+Umgelegt am 260819 vom Defekt- in den Entscheidungsspeicher, auf Befund des Abgleichs 260819-1440: der Text sagt selbst, dass zu entscheiden und nicht zu beheben ist. Der Datensatz behaelt vorerst die Gestalt eines Defektberichts; die Abschnitte Options, Constraints und Recommendation fehlen ihm und sind nachzutragen, wenn die Frage vorgelegt wird.
+
+Answer located: `260826-0818-curator-run.md` `### K02` und `$FUSION_PLUGIN_ROOT/rules/fusion-workbench-conventions.md` `## Decision Record Template` — das Kopffeld `**Status:**` ist im Rahmenwerk ersatzlos abgeschafft, ein vorhandenes bleibt bewusst unangetastet; die Frage nach dem Abgleich von Kopffeld und Marker hat damit keinen Gegenstand mehr. Abgleich 260905-2101, Marker unverändert.
+
+---
+Answered: 260905-2008-orchestrator-session.md `## Elf Entscheidungen am 260906-2147 beantwortet` — die Zustandsangabe im Kopf wird nicht nachgezogen, weil es sie nicht mehr gibt; der Marker im Dateinamen ist die einzige Quelle; ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Retired: rules/fusion-workbench-conventions.md `## Decision Record Template` — das Kopffeld ist ersatzlos gestrichen, ein vorhandenes bleibt bewusst unangetastet; es gibt keine zweite Quelle mehr, die widersprechen koennte.

@@ -1,0 +1,134 @@
+{
+  "schema": "fusion.migration-receipt/v1",
+  "migration_id": "migration-20261011-v12",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "source_layout": "fusion-v12",
+  "plan": {
+    "path": "archive/migrations/migration-20261011-v12/plan.json",
+    "sha256": "sha256:3325f7f933b3686aafe62f691e044fca60f7ba2f170f7a15e80e3b70ef96a7c5"
+  },
+  "parts": [
+    {
+      "path": "archive/migrations/migration-20261011-v12/chunks/1.json",
+      "sha256": "sha256:eafd86093fe287bbcecd7cfd3b9bd8a34717d88dd09412d58673954765151ba3"
+    },
+    {
+      "path": "archive/migrations/migration-20261011-v12/chunks/2.json",
+      "sha256": "sha256:73534cf891a2dde44d669e0fcd14c5d21d99540fad142a9dc54776fd9ddcded8"
+    },
+    {
+      "path": "archive/migrations/migration-20261011-v12/chunks/3.json",
+      "sha256": "sha256:8d1547cc935e0bea7c3c91a84ee804f815f5c15ba419542cfd33841eadd9d1c1"
+    },
+    {
+      "path": "archive/migrations/migration-20261011-v12/chunks/4.json",
+      "sha256": "sha256:52939da7a3da59ae65c040080f5df1ac956317b9f1d2475a6ddfae326596c712"
+    },
+    {
+      "path": "archive/migrations/migration-20261011-v12/chunks/5.json",
+      "sha256": "sha256:1df7fab8c65634ddeca8411d476f6e9afdf4830e656b10e1c4123feeb78096c5"
+    },
+    {
+      "path": "archive/migrations/migration-20261011-v12/chunks/6.json",
+      "sha256": "sha256:85d3d4102d815d30dc971b1719dca2815bdbb6b466bed7665e8f45430b25dc11"
+    },
+    {
+      "path": "archive/migrations/migration-20261011-v12/chunks/7.json",
+      "sha256": "sha256:37d39d3a17a7d866649c945234c2bbee3c45bf269a6e21d437d9e989e2c6fba5"
+    },
+    {
+      "path": "archive/migrations/migration-20261011-v12/chunks/8.json",
+      "sha256": "sha256:19b56b74093c64e7f87281d39f06079a36e837ebc8df0617b819bfcc5334e50b"
+    },
+    {
+      "path": "archive/migrations/migration-20261011-v12/parts/records-1.json",
+      "sha256": "sha256:cdaa81547e904128f5dd78b2e05c86e023ede21ce15d8a5020c7c9143b45df05"
+    },
+    {
+      "path": "archive/migrations/migration-20261011-v12/parts/inventory-1.json",
+      "sha256": "sha256:42c24e89129a190efbd807d75c1981a74408315b0c9e2a46bd139f0a8b73a3fd"
+    },
+    {
+      "path": "archive/migrations/migration-20261011-v12/parts/findings-1.json",
+      "sha256": "sha256:203473d04e8669d127f3170e4b2d12f4c92bbf26934594fb1e4126c7d04c325a"
+    },
+    {
+      "path": "archive/migrations/migration-20261011-v12/parts/repairs-1.json",
+      "sha256": "sha256:f9f3bedefd603feabbd01af4d1a513ee3c29c54e4c2058bec8363f3b2d7a38a1"
+    },
+    {
+      "path": "archive/migrations/migration-20261011-v12/parts/answers-1.json",
+      "sha256": "sha256:387976dcd671940f1695205956bbab8aa00681710424b746c38c9d1a71155492"
+    }
+  ],
+  "verify_operation_id": "049d3a56-d45e-40c7-b9d8-40a9c4638d82",
+  "after_inventory_sha256": "sha256:d04dd073266eb8d622f7b5f60bd8697deae7bfe9b22994970ce6802c3c843600",
+  "checks": [
+    {
+      "name": "pairs",
+      "result": "passed",
+      "checked": 186
+    },
+    {
+      "name": "ids",
+      "result": "passed",
+      "checked": 186
+    },
+    {
+      "name": "graph",
+      "result": "passed",
+      "checked": 0
+    },
+    {
+      "name": "references",
+      "result": "passed",
+      "checked": 250
+    },
+    {
+      "name": "acceptance",
+      "result": "passed",
+      "checked": 0
+    },
+    {
+      "name": "closure",
+      "result": "passed",
+      "checked": 3
+    },
+    {
+      "name": "validate",
+      "result": "passed",
+      "checked": 186
+    },
+    {
+      "name": "reconcile",
+      "result": "passed",
+      "checked": 186
+    }
+  ],
+  "counts": {
+    "package_live": 2,
+    "package_terminal": 31,
+    "record_live": 153,
+    "record_closure": 0,
+    "plain_terminal": 854,
+    "empty_container": 0
+  },
+  "versions": {
+    "schemas": [
+      "urn:fusion:schema:fusion.campaign/v1",
+      "urn:fusion:schema:fusion.common/v1",
+      "urn:fusion:schema:fusion.evidence/v1",
+      "urn:fusion:schema:fusion.migration-plan/v1",
+      "urn:fusion:schema:fusion.migration-proposal/v1",
+      "urn:fusion:schema:fusion.migration-receipt/v1",
+      "urn:fusion:schema:fusion.package/v1",
+      "urn:fusion:schema:fusion.protocol/v1",
+      "urn:fusion:schema:fusion.record/v1",
+      "urn:fusion:schema:fusion.workbench/v1"
+    ],
+    "features": [
+      "json-control-v1"
+    ]
+  },
+  "manifest_revision": "sha256:4148f7cad5a46f5f7f1870a10c49396090d5a63229d7ab3554946994aa082316"
+}
