@@ -3,7 +3,7 @@
   "id": "827c07e6-559e-4ef3-b14a-6ed9c86450ad",
   "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
   "domain": "code",
-  "status": "claimed",
+  "status": "done",
   "claim": {
     "checkout_id": "6c11b1f2",
     "person": "Kai Stalmann <kai@stalmann.org>",
@@ -44,7 +44,20 @@
     "261001-0850_*_plan-oberflaeche-folgt-der-systemsprache-deutsch-franzoesisch-englisch.md"
   ],
   "evidence": [],
-  "outcome": null,
+  "outcome": {
+    "class": "completed",
+    "reason": "Oberflaeche folgt der Systemsprache (de, fr, en als Rueckfall), jeder nutzersichtbare Text aus der Sprachtabelle; fr.rs und en.rs am 261014 Eintrag fuer Eintrag durchgesehen, Vermerkzeilen gefallen (8fa6d6d, 56e1348). Die Durchsicht in der laufenden Anwendung und die zwei Nutzerarbeiten am Buendel sind nicht gefahren; gebaut, nicht abgenommen.",
+    "evidence": [
+      {
+        "ref": {
+          "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+          "record_id": "c1231768-565f-4dd0-97fa-7a159324f9da",
+          "revision": "sha256:664ca757dbfe30e335def3da0455a38e019a98c65bb6c09c6f3ac00e7e13fa1e"
+        },
+        "policy": "claude-guided"
+      }
+    ]
+  },
   "provenance": {
     "source": "imported",
     "legacy_fields": {
