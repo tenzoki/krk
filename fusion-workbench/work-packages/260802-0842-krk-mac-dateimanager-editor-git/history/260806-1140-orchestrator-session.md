@@ -7,7 +7,7 @@
 ## Setup-Snapshot (260806-1140)
 
 - Git HEAD: `8fd50a6`
-- Aktiver Circle: `circles/260802-0842-krk-mac-dateimanager-editor-git` (`_t_`)
+- Aktiver Circle: `260802-0842-krk-mac-dateimanager-editor-git` (`_t_`)
 - Plan: 35 von 36 Schritten `[DONE]`, offen allein S6b
 - Offene Defekte: 20 im Circle, 0 in `shared/issues/`
 - Offene Entscheidungen: L9 (`260806-0014`), Tastenweg Vorschau-Fokus (`260805-2216`), Entfernen einzelner Kombination (`260805-2252`), dazu die vier älteren aus der Anfangszeit des Circles

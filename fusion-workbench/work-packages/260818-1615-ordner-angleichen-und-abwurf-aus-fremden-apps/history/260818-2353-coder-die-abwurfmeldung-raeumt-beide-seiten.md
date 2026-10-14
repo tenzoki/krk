@@ -3,7 +3,7 @@
 **Date:** 2026-08-18
 **Status:** Complete
 **Agent:** coder
-**Circle:** `circles/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps`
+**Circle:** `260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps`
 **Issues:** `issues/260818-2332_o_the-drop-writes-a-rank-1-message-without-clearing-the-other-pane-and-loses-it.md` (high), `issues/260818-2335_o_vorgang-laeuft-carries-no-must-use-and-the-plan-number-that-kept-it-off-is-already-false.md` (low)
 **Tree state at start:** `a7419cd`, working tree clean
 **Verification:** `make check` — exit 0

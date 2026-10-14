@@ -3,7 +3,7 @@
 **Datum:** 260824-2010
 **Agent:** coder
 **Status:** Complete
-**Circle:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
+**Circle:** `260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
 **Auftrag:** Dispatch, keine Planschritte — sieben Defektdatensätze aus `issues/`
 **Baumstand vorher:** `8433935` auf HEAD, daneben die Arbeit des `ontocoder` an `resources/default-readers.toml` und die Werkbankdateien
 

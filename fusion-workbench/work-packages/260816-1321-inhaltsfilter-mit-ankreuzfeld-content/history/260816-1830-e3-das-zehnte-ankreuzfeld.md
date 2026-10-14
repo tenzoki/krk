@@ -3,7 +3,7 @@
 **Datum:** 2026-08-16
 **Agent:** coder
 **Status:** Complete
-**Circle:** `circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/`
+**Circle:** `260816-1321-inhaltsfilter-mit-ankreuzfeld-content`
 **Plan:** `planning/260816-1359_o_plan-inhaltsfilter-der-dateiliste.md`, Schritt E3
 **Baumstand vor der Arbeit:** `3dd799a` plus die Arbeitsbaumstände von E1 und E2
 **Vorbedingungen:** E1 und E2, beide im Arbeitsbaum

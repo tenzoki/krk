@@ -3,7 +3,7 @@
 **Datum:** 2026-08-02, 18:59
 **Agent:** planner
 **Status:** Complete
-**Circle:** `circles/260802-0842-krk-mac-dateimanager-editor-git`
+**Circle:** `260802-0842-krk-mac-dateimanager-editor-git`
 **Bearbeitete Datei:** `circles/260802-0842-krk-mac-dateimanager-editor-git/planning/260802-1428_o_plan-navigator-geruest-runde-1.md` (Marker bleibt offen)
 
 ---

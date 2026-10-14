@@ -3,7 +3,7 @@
 **Datum:** 2026-08-11
 **Status:** Complete — die Runde 4 ist beschränkt geschlossen, ihr Plan `planning/260811-1648_c_plan-vier-tastenbefehle-pfade-kopieren-oeffnen.md` steht auf `_c_`. Der Abgleich vom 260811-2157 hat 23 der 62 Abnahmekriterien einzeln am Baum belegt; die übrigen 39 brauchen das laufende Bündel und keine weitere Bauarbeit. `Kommando::MitStandardprogrammOeffnen` und `Kommando::TabSchliessen` stehen in `crates/krk-core/src/tasten/belegung.rs`, die zwei Pfadkopierer über `pfadzeilen` in `crates/krk-ui/src/kommandos/operationen.rs`, nachgesehen am 260909-1021.
 **Abnahme:** offen. Der Nutzer hat am 260811-1610 den Spec abgenommen, also den Text mitsamt der Auflage, die am 260811-1614 nachgezogen ist. Die 62 Abnahmekriterien sind davon unberührt und stehen auf `- [ ]`: 32 beantwortet nur das laufende Bündel, sieben brauchen dazu einen Prüfaufbau.
-**Circle:** `circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen`
+**Circle:** `260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen`
 **Quelle:** Circle-Directive im Datensatz `_t_circle.md`, Abschnitt `## Directive`. Dazu die vier Nutzerantworten vom 260811-1505 und die zwei vom 260811-1610, die in den Datensätzen unter `decisions/` mit einer `Answered:`-Zeile stehen, und die Festlegung vom 260811-1250 zu den Menükürzeln.
 
 ## Wie dieser Spec auf Datensätze verweist
@@ -286,7 +286,7 @@ Die Abnahmekriterien dieses Specs sind trotzdem prüfbar, und keines von ihnen v
 - **Einen Pfad aus dem Editor oder aus der Vorschau kopieren.** Beide zeigen eine Datei, und beide haben ihren Pfad im Fenstertitel. Ein Kopierbefehl dafür wäre eine eigene Funktion mit einem eigenen Wirkungsbereich; niemand hat sie verlangt.
 - **Eine Datei mit einer **bestimmten** Anwendung öffnen.** "Öffnen mit" ist ein Menü und nicht ein Tastendruck. `appkit/terminal.rs` zeigt, was es kostet, eine Anwendung zu benennen; diese Runde übergibt an das Standardprogramm und wählt nicht aus.
 - **Ein Ziehen und Ablegen von Einträgen.** Die Zwischenablage zu beschreiben ist nicht dasselbe wie ein Ablegeziel zu sein, und diese Runde baut kein Ablegeziel.
-- **Die Statusleiste mit Bereichsschaltern und die proportionale Neuaufteilung.** Dafür ist ein eigener Circle angelegt (`circles/260811-1304-statusleiste-mit-bereichsschaltern`).
+- **Die Statusleiste mit Bereichsschaltern und die proportionale Neuaufteilung.** Dafür ist ein eigener Circle angelegt (`260811-1304-statusleiste-mit-bereichsschaltern`).
 - **Der Abnahmelauf über die Zeitzusagen und über die 110 Kriterien der Runde 2.** Beide sind Nutzerarbeit und halten diese Runde nicht auf.
 - **Die Frage nach einem Bibliotheksziel für `krk-ui`.** `circles/260807-2116-eingebauter-editor-mit-textmarken/decisions/260810-1044_*` bedeutet einen Umbau der ganzen Kiste und ist eine Reihenfolgefrage, keine Abhängigkeit.
 

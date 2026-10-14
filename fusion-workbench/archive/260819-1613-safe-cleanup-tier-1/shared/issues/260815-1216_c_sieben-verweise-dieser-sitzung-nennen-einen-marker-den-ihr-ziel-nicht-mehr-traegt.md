@@ -29,7 +29,7 @@ Dazu zwei Fundstellen aus der Runde 10 selbst, die schon vorher falsch standen:
 | `…/planning/260814-2102_c_plan-…:585` | `260814-2102_a_gehoert-die-fallunterscheidung-…` | `_i_` |
 | `…/planning/260814-2102_c_plan-…:587` | `260814-2102_o_der-pruefschritt-fuer-die-sichtbarkeit-…` | `_c_` |
 
-`…` steht für `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/`.
+`…` steht für `260814-1551-tippen-filtert-dateiliste-flach-und-tief`.
 
 Nachzuzählen mit dem Muster, das Code und Werkbank gleichermaßen liest und den Fund gegen den Dateibestand auflöst:
 

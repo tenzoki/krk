@@ -3,7 +3,7 @@
 **Datum:** 260824-1457 bis 260824-1520
 **Agent:** coder
 **Status:** Complete
-**Circle:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
+**Circle:** `260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
 **Plan:** `planning/260824-0640_o_plan-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md`, Bündel C, Schritt 8
 **Baumstand vorher:** der Produktionscode von Schritt 8 lag unversioniert im Arbeitsbaum, `make check` grün
 

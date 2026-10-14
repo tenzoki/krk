@@ -3,7 +3,7 @@
 **Datum:** 2026-08-17 08:56
 **Agent:** planner
 **Status:** Complete
-**Circle:** `circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb`
+**Circle:** `260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb`
 **Ergebnis:** `circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb/planning/260817-0856_o_plan-absicherung-jedes-loeschwegs.md`
 
 ## Auftrag

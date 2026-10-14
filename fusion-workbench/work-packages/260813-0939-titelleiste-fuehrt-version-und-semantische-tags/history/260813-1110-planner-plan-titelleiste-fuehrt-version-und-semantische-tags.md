@@ -3,7 +3,7 @@
 **Datum:** 260813-1110
 **Agent:** planner
 **Status:** Complete
-**Circle:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/`
+**Circle:** `260813-0939-titelleiste-fuehrt-version-und-semantische-tags`
 **Eingaben:** der Spec vom 260813-1037, der Circle-Datensatz, die vier beantworteten Entscheide in `decisions/`, der Diagrammbericht vom 260813-1049
 
 ---

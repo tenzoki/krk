@@ -2,7 +2,7 @@
 
 **Datum:** 2026-08-11, 21:57
 **Agent:** `reconciler`, Bereich `code`
-**Circle:** `circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen` (aktiv, `_t_`)
+**Circle:** `260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen` (aktiv, `_t_`)
 **Anker:** `55a4afa` (HEAD bei Sitzungsbeginn) bis `b2a6c2e`, 16 Commits
 **Status:** Complete
 

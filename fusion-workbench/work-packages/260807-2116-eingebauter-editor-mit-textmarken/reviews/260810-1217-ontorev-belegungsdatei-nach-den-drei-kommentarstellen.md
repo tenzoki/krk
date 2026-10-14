@@ -3,7 +3,7 @@
 **Durchgesehen von:** ontorev
 **Am:** 260810-1217
 **Gegenstand:** `git diff 38a02b2..HEAD -- resources/default-keymap.toml`, 61 geänderte Zeilen
-**Circle:** `circles/260807-2116-eingebauter-editor-mit-textmarken`
+**Circle:** `260807-2116-eingebauter-editor-mit-textmarken`
 
 ---
 

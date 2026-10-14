@@ -3,7 +3,7 @@
 **Date:** 2026-08-14
 **Agent:** coder
 **Status:** Complete
-**Circle:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/`
+**Circle:** `260813-2332-notizzettel-als-blatt-mit-zwei-zetteln`
 **Vorgabe:** Spec `planning/260813-2348_o_spec-notizzettel-als-blatt-mit-zwei-zetteln.md`, C5; Nutzerantwort vom 260814-1010
 **Behobene Datensätze:** `issues/260814-0910_c_eine-zetteldatei-ueber-editorgrenze-wird-unbegrenzt-auf-dem-hauptfaden-kopiert.md` (mittel), `issues/260814-0911_c_acht-verweise-in-editor-rs-schicken-zu-textflaeche-bauen-wo-die-automatikzeilen-nicht-mehr-stehen.md` (mittel)
 **Verification:** `make check` am 260814, Rückgabewert 0, „alle vier gruen"

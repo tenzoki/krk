@@ -3,7 +3,7 @@ Die README sagt, die Git-Anbindung sei vorgesehen und nicht gebaut
 ---
 `README.md:6` beschreibt KRK und schließt mit „Eine Git-Anbindung ist vorgesehen und noch nicht gebaut."
 
-Sie ist gebaut. Die Runde 23 (`circles/260830-1045-git-bereich-liest-status-branch-verlauf`, beschränkt geschlossen am 260831-2024) hat den lesenden Git-Bereich gebracht: Branch, Statuszusammenfassung, Verlaufsliste mit Commit-Einzelheiten, dazu die Markenspalte in beiden Dateifenstern. Ausgeliefert in `v1.5.0`, seither in drei weiteren Fassungen fortgeschrieben.
+Sie ist gebaut. Die Runde 23 (`260830-1045-git-bereich-liest-status-branch-verlauf`, beschränkt geschlossen am 260831-2024) hat den lesenden Git-Bereich gebracht: Branch, Statuszusammenfassung, Verlaufsliste mit Commit-Einzelheiten, dazu die Markenspalte in beiden Dateifenstern. Ausgeliefert in `v1.5.0`, seither in drei weiteren Fassungen fortgeschrieben.
 
 **Der Satz ist nicht bloß veraltet, sondern für den einzigen Leser irreführend, den die README hat:** wer KRK herunterlädt, liest ihn als Auskunft über die Fassung, die er gerade bekommt.
 

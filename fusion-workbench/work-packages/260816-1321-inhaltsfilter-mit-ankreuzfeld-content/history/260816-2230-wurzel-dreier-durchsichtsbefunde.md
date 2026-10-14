@@ -3,7 +3,7 @@
 **Datum:** 2026-08-16
 **Agent:** coder
 **Status:** Complete
-**Circle:** `circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/`
+**Circle:** `260816-1321-inhaltsfilter-mit-ankreuzfeld-content`
 **Durchsicht:** `reviews/260816-1936-coderev-inhaltsfilter-der-dateiliste.md`, Abschnitt `## Übergreifende Beobachtungen`
 **Befunde:** `issues/260816-1930`, `issues/260816-1931`, `issues/260816-1933` — alle drei geschlossen
 **Nutzerentscheid:** 260816-2130, „nicht die drei einzeln, sondern ihre Wurzel"

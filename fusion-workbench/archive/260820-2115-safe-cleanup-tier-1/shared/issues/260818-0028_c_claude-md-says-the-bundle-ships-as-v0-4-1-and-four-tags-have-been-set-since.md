@@ -39,7 +39,7 @@ v0.5.1
 ## Origin
 
 Found beside the Directive of
-`circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb`, not out of it: the
+`260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb`, not out of it: the
 review of its bundle E had to check whether the executor's claim "die übrige Datei ist gegen den
 Baum nachgezählt und stimmt" holds. It does for the four enumerations that claim names, and does
 not for this line. The false claim itself is filed inside that Circle

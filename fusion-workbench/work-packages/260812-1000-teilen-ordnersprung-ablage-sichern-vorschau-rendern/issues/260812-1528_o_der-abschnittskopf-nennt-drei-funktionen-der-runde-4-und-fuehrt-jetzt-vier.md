@@ -16,7 +16,7 @@ Der Abschnitt führt seit `95b2dfa` vier Blöcke: `ordnerpfad_kopieren` (`:582`)
 (`:629`). Zwei Aussagen des Kopfes treffen den vierten nicht:
 
 - **„Drei Funktionen der Runde 4."** `teilen` gehört zur Runde 6
-  (`circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern`).
+  (`260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern`).
 - **„Die drei Kombinationen sind der Nutzerentscheid vom 260811-1505."**
   `shift+cmd+s` stammt aus dem Entscheid vom 260812-1105
   (`.../decisions/260812-1000_i_welche-tastenkombinationen-bekommen-die-zwei-neuen-befehle.md`).

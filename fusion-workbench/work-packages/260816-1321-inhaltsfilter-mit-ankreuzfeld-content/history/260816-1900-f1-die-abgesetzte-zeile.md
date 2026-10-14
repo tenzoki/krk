@@ -3,7 +3,7 @@
 **Datum:** 2026-08-16
 **Agent:** coder
 **Status:** Complete
-**Circle:** `circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/`
+**Circle:** `260816-1321-inhaltsfilter-mit-ankreuzfeld-content`
 **Plan:** `planning/260816-1359_o_plan-inhaltsfilter-der-dateiliste.md`, Schritt F1
 **Baumstand vor der Arbeit:** `3dd799a` plus A1 `5c7f5b9`, C1 `4a54212`, A2 `7283d55`, B1 `32fd038`, D1 `09baffd`, Strang E `37ca972`
 **Vorbedingungen:** C1 — `Ordnermodell::steht_wegen_des_inhalts` steht seit `4a54212`

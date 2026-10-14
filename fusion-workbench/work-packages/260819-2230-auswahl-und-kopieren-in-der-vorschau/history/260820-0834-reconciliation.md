@@ -5,7 +5,7 @@
 **Baumstand:** `05cb614`
 **Bereich:** `fce0b6f..HEAD`, fünfzehn Commits
 **Sitzung:** `shared/history/260819-2026-orchestrator-session.md`
-**Circle:** `circles/260819-2230-auswahl-und-kopieren-in-der-vorschau/` (Marker `_t_`, nicht angefasst)
+**Circle:** `260819-2230-auswahl-und-kopieren-in-der-vorschau` (Marker `_t_`, nicht angefasst)
 
 ---
 

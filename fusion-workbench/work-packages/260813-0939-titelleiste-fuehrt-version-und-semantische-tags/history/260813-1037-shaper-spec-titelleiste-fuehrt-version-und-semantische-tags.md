@@ -3,7 +3,7 @@
 **Datum:** 2026-08-13, 10:37
 **Agent:** shaper
 **Modus:** in-Circle, Spec für den aktiven Circle
-**Circle:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/` (aktiv seit 260813-1006)
+**Circle:** `260813-0939-titelleiste-fuehrt-version-und-semantische-tags` (aktiv seit 260813-1006)
 **Status:** Complete
 
 ---

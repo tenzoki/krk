@@ -4,7 +4,7 @@
 **Status:** Complete — die Runde 10 ist beschränkt geschlossen, ihr Plan `planning/260814-2102_c_plan-tippen-filtert-dateiliste-flach-und-tief.md` steht auf `_c_`. Der Abgleich vom 260815-1216 hat C1.9 und C1.10 einzeln am Baum nachgelesen und je fünf Wege belegt. Der Filter wohnt als `crates/krk-core/src/verzeichnis/filter.rs` neben dem Durchlauf in `durchlauf.rs`, beide nachgesehen am 260909-1021.
 **Abnahme:** offen. Der Abnahmelauf ist nicht gefahren. Von den 77 Abnahmekriterien tragen zehn einen Bündelanteil, und sie verlangen KRK im Vordergrund; kein Kästchen ist abgehakt.
 **Source:** Der Entwurf des Nutzers vom 260814-1520 und seine Berichtigungen vom 260814-1610, festgehalten in der Directive des Circle-Datensatzes `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/_t_circle.md`
-**Circle:** `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/`, aktiv seit 260814-1551
+**Circle:** `260814-1551-tippen-filtert-dateiliste-flach-und-tief`, aktiv seit 260814-1551
 **Grundlage erhoben:** 260814-1830, am Baum auf dem Stand `43dfe90`, unter `crates/` und `resources/`
 **Nachgebessert:** 260814-1852, nach der Bewertung `reviews/260814-1840-conceptrev-tippen-filtert-dateiliste-flach-und-tief.md` und nach der Antwort des Nutzers auf die Rückschritt-Taste vom 260814-1845
 **Nachgebessert:** 260814-1950, nach der zweiten Bewertung `reviews/260814-1938-conceptrev-tippen-filtert-dateiliste-flach-und-tief.md` und nach der Antwort des Nutzers auf die Tastenwiederholung vom 260814-1910

@@ -13,9 +13,9 @@ Der Circle-Datensatz ist das Artefakt dieses Laufs. Kein Spec, kein Plan, keine 
 
 ## Was angelegt wurde
 
-Das Verzeichnis `circles/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps/` mit den sechs Artefaktordnern `planning/`, `issues/`, `decisions/`, `history/`, `reviews/`, `analyses/`, dazu der Datensatz `_a_circle.md`. Nach dem Anlegen des Verzeichnisses ist `fusion-paths shaper <dir>` ein zweites Mal aufgelöst worden, damit dieses Protokoll im Circle landet und nicht im gemeinsamen Speicher.
+Das Verzeichnis `260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps` mit den sechs Artefaktordnern `planning/`, `issues/`, `decisions/`, `history/`, `reviews/`, `analyses/`, dazu der Datensatz `_a_circle.md`. Nach dem Anlegen des Verzeichnisses ist `fusion-paths shaper <dir>` ein zweites Mal aufgelöst worden, damit dieses Protokoll im Circle landet und nicht im gemeinsamen Speicher.
 
-Der Spec liegt weiterhin in `shared/planning/`. Er ist ohne Circle im Blick entstanden, und der Circle nimmt ihn über sein Feld `Active spec/plan:` an. Das ist der dokumentierte speicherübergreifende Fall aus `rules/circle-records.md` und kein Fehler; derselbe Bau steht in `circles/260816-2255-befehle-absetzen-und-makros-speichern`.
+Der Spec liegt weiterhin in `shared/planning/`. Er ist ohne Circle im Blick entstanden, und der Circle nimmt ihn über sein Feld `Active spec/plan:` an. Das ist der dokumentierte speicherübergreifende Fall aus `rules/circle-records.md` und kein Fehler; derselbe Bau steht in `260816-2255-befehle-absetzen-und-makros-speichern`.
 
 ## Was gemessen und nicht übernommen wurde
 

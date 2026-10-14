@@ -4,7 +4,7 @@
 **Status:** Complete — die Runde 16 ist beschränkt geschlossen, ihr Plan `planning/260824-0640_*_plan-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md` trägt alle vierzehn Schritte auf `[DONE]`, einzeln am 260824-1852 gegen den Baum gelesen. Von den 56 Abnahmekriterien sind 38 ohne Fenster belegt, zwei zur Hälfte und zwei unbelegt; die vier tragen je einen eigenen Defektdatensatz. Die Leseprofile stehen als `crates/krk-core/src/leseprofil/` mit fünf Modulen, nachgesehen am 260909-1021.
 **Abnahme:** offen. Die 14 Kriterien mit Bündelanteil — C2.8 in seiner sichtbaren Hälfte, C4.1 bis C4.6 und C5.1 bis C5.7 — verlangen KRK im Vordergrund und sind Nutzerarbeit. Dazu kommt der Handgriff mit der `readers.toml`, den ein Versionswechsel nicht mitbringt.
 **Source:** Der Backlogeintrag `shared/backlog/260823-2136_*_readerconventions-profile-fuer-dateizugriff.md` und die Directive des Circle-Datensatzes `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/_t_circle.md`
-**Circle:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/`, aktiv seit 260824-0530
+**Circle:** `260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`, aktiv seit 260824-0530
 **Grundlage erhoben:** 260824-0541, 260824-0600 und 260824-0613, am Baum auf dem Stand `278a008` und am Bestand dieser Werkbank
 
 **Acht Fragen sind beantwortet** und liegen als Datensätze unter `decisions/` dieses Circles; sie werden hier nicht erneut gestellt, sondern in `## Die acht Antworten, aus denen dieser Spec gebaut ist` einzeln zitiert. **Ein Defektdatensatz stand bei der Abfassung offen** und ist mit Schritt 13 des Plans geschlossen: `issues/260824-0600_*_der-entscheidungsdatensatz-zum-regulaeren-ausdruck-sagt-der-baum-fuehre-keine-solche-kiste-er-fuehrt-eine.md`. Er hat keinen Planschritt aufgehalten; die berichtigte Kostenlage steht unten in `## Ausgangslage`. *(Am 260824-1224 nachgezogen.)*
@@ -424,7 +424,7 @@ einzigen freien Deskriptor (`:2370`, `:2406`); C6.5 legt wirklich 2.001 Einträg
 eine abgesenkte Grenze (`:1351`); C6.4 prüft, dass der Zähler an der Grenze **stehenbleibt** und
 nicht über sie hinausläuft (`:1880`). C3.8 ist belegt, aber nirgends als C3.8 gekennzeichnet: die
 Zeile „Aktive Runde" der Wurzelzusammenfassung wird in der Messung zu C6.7 gegen
-`Wert::Text("circles/260823-2208-vorschau")` gehalten.
+`Wert::Text("260823-2208-vorschau")` gehalten.
 
 **C4.2 und C4.3 haben je eine abzählbare Hälfte, und die ist belegt.** Die Kopfzeile aus A6 hält
 `::die_kopfzeile_traegt_den_ausgewaehlten_pfad_und_nicht_den_aufgeloesten` (`:1255`), die

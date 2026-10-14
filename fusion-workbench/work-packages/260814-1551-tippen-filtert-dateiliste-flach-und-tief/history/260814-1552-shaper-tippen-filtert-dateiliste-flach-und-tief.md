@@ -3,7 +3,7 @@
 **Datum:** 2026-08-14
 **Agent:** shaper (anticipated-circle mode)
 **Status:** Complete
-**Ergebnis:** `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/`
+**Ergebnis:** `260814-1551-tippen-filtert-dateiliste-flach-und-tief`
 
 ## Der Entwurf
 

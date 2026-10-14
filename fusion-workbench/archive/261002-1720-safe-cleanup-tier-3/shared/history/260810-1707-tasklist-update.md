@@ -8,7 +8,7 @@
 
 ## Umfang
 
-Kein Circle war aktiv; die aufgelösten Scan-Pfade deckten allein `fusion-workbench/shared/` ab. Der Nutzer hat den Umfang stattdessen auf acht Defektdateien festgelegt, drei im gemeinsamen Speicher und fünf im Circle der Runde 1 (`circles/260802-0842-krk-mac-dateimanager-editor-git/`), der als beschränkter Abschluss geschlossen ist, dessen Defekte aber weiterbinden. Es ist kein Scan gefahren worden und keine weitere Datei aufgenommen worden.
+Kein Circle war aktiv; die aufgelösten Scan-Pfade deckten allein `fusion-workbench/shared/` ab. Der Nutzer hat den Umfang stattdessen auf acht Defektdateien festgelegt, drei im gemeinsamen Speicher und fünf im Circle der Runde 1 (`260802-0842-krk-mac-dateimanager-editor-git`), der als beschränkter Abschluss geschlossen ist, dessen Defekte aber weiterbinden. Es ist kein Scan gefahren worden und keine weitere Datei aufgenommen worden.
 
 Die Schlange trägt im Kopf eine Zeile `**Active Circle:**`, die den Zustand "kein Circle aktiv" festhält, damit der Orchestrator sie später als gültig oder veraltet einstufen kann.
 

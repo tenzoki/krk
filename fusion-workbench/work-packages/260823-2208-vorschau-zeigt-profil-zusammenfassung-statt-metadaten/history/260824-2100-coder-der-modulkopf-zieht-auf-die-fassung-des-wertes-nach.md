@@ -3,7 +3,7 @@
 **Datum:** 260824-2100
 **Agent:** coder
 **Status:** Complete
-**Circle:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
+**Circle:** `260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
 **Auftrag:** Dispatch, ein Defektdatensatz — `260824-1722_*_der-modulkopf-der-bausteine-sagt-die-abgeschnittene-zaehlung-duerfe-mehr-sagen-der-wert-widerspricht.md`
 **Baumstand vorher:** `8433935` auf HEAD, daneben die Arbeit des `ontocoder` an `resources/default-readers.toml`
 

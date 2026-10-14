@@ -4,7 +4,7 @@
 **Datum:** 260813-0647
 **Domäne:** code
 **Stand:** `1cd7788`, Sitzungsspanne `188b81a..HEAD`, 16 Commits
-**Circle:** `circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/`
+**Circle:** `260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz`
 **Sitzungsprotokoll:** `shared/history/260813-0040-orchestrator-session.md` (Abschnitt `## Coherence`)
 **Kein Bündelbau, kein Vordergrundlauf.** `target/KRK.app` ist unberührt geblieben.
 

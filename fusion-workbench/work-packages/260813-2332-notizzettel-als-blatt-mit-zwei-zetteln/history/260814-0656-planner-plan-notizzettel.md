@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-14 06:56
 **Agent:** planner
-**Circle:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/` (aktiv)
+**Circle:** `260813-2332-notizzettel-als-blatt-mit-zwei-zetteln` (aktiv)
 **Status:** Complete
 
 ---

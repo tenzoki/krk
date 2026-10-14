@@ -1,7 +1,7 @@
 # Planner-Sitzung 260819-2245: Umsetzungsplan zur Auswahl und zum Kopieren in der Vorschau
 
 **Agent:** planner
-**Circle:** `circles/260819-2230-auswahl-und-kopieren-in-der-vorschau` (aktiv)
+**Circle:** `260819-2230-auswahl-und-kopieren-in-der-vorschau` (aktiv)
 **Baumstand:** `fce0b6f`
 **Ergebnis:** `circles/260819-2230-auswahl-und-kopieren-in-der-vorschau/planning/260819-2245_o_plan-auswahl-und-kopieren-in-der-vorschau.md`
 

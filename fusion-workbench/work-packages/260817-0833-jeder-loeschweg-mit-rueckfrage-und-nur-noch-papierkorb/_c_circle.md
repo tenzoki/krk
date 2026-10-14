@@ -45,9 +45,9 @@ Daneben gilt: **unentschieden gilt als laut.** Eine Prüfung, die im Zweifel sch
 
 ## Dependencies
 
-- `circles/260802-0842-krk-mac-dateimanager-editor-git` — die Runde 1. Sie hat beide Löschwege gebaut, das Bestätigungsblatt, die Norton-Reihe mit F8 als Löschtaste und die zehn Zeitzusagen. Ihre Directive und neun Zeilen ihres Specs tragen die Festlegung, die diese Runde aufhebt; C6 zieht sie nach.
-- `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief` — die Runde 10. Sie hat die Rückschritt-Regel gebaut, deren Modulkopf seine Begründung darauf stützt, dass das Räumen ohne Rückfrage laufe. Die Regel bleibt nötig, ihr Modulkopf ist nachzuziehen. Sie hat daneben „unentschieden" vom negativen Befund getrennt (`verzeichnis::sys::ist_deskriptormangel`), worauf die Zählung der Umfangsschwelle aufsetzt.
-- `circles/260816-2255-befehle-absetzen-und-makros-speichern` — zurückgestellt am 260817 zugunsten dieser Runde. Spec und Plan liegen vollständig; wer sie aufnimmt, legt einen neuen Circle an.
+- `260802-0842-krk-mac-dateimanager-editor-git` — die Runde 1. Sie hat beide Löschwege gebaut, das Bestätigungsblatt, die Norton-Reihe mit F8 als Löschtaste und die zehn Zeitzusagen. Ihre Directive und neun Zeilen ihres Specs tragen die Festlegung, die diese Runde aufhebt; C6 zieht sie nach.
+- `260814-1551-tippen-filtert-dateiliste-flach-und-tief` — die Runde 10. Sie hat die Rückschritt-Regel gebaut, deren Modulkopf seine Begründung darauf stützt, dass das Räumen ohne Rückfrage laufe. Die Regel bleibt nötig, ihr Modulkopf ist nachzuziehen. Sie hat daneben „unentschieden" vom negativen Befund getrennt (`verzeichnis::sys::ist_deskriptormangel`), worauf die Zählung der Umfangsschwelle aufsetzt.
+- `260816-2255-befehle-absetzen-und-makros-speichern` — zurückgestellt am 260817 zugunsten dieser Runde. Spec und Plan liegen vollständig; wer sie aufnimmt, legt einen neuen Circle an.
 
 **Bindende Datensätze:**
 
@@ -163,7 +163,7 @@ nachgelesen und nicht auf Zuruf geschlossen: von `Kommando::InPapierkorb` bis
 
 **Warum dieses `_c_` etwas anderes bedeutet als das der Runde 8.** Bis heute hieß `_c_` in diesem
 Projekt „der Nutzer hat den Abnahmelauf selbst gefahren", und das trifft allein auf
-`circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags` zu. Hier ist der Abnahmelauf
+`260813-0939-titelleiste-fuehrt-version-und-semantische-tags` zu. Hier ist der Abnahmelauf
 **nicht** gefahren, und niemand hat von Hand eine Datei gelöscht. Der Marker steht trotzdem auf
 kohärent, weil der Abgleich zweimal begründet hat, dass die Directive dieser Runde über die zehn
 Zeitzusagen aus C8 nichts sagt: unerreichbar ist die Abnahme durch den Nutzer, nicht die Directive.

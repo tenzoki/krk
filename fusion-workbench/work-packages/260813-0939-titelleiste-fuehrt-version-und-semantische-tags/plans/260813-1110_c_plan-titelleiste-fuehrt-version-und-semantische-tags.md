@@ -3,7 +3,7 @@
 **Date:** 2026-08-13
 **Status:** Complete
 **Spec:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/planning/260813-1037_*_spec-titelleiste-fuehrt-version-und-semantische-tags.md`
-**Circle:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/`
+**Circle:** `260813-0939-titelleiste-fuehrt-version-und-semantische-tags`
 **Grundlage erhoben:** 260813-1110, am Baum unter `crates/`, `xtask/`, `resources/`, `README.md`, am SDK und an `~/.cargo/registry`
 **Decidability:** Zwei Fragen tragen diesen Plan, und sie fallen verschieden aus. Die Tag-Hälfte fragt „ist der Stand, aus dem gebaut wird, benannt?" — entscheidbar aus dem, was `git tag --points-at HEAD` und `git status --porcelain --untracked-files=no` über den Augenblick melden; die Prüfung misst einen Zustand und sagt nichts voraus, und der Vergleich ist eine reine Funktion über drei Zeichenketten. Die Anzeige-Hälfte fragt „steht vor dem Hauptfenster etwas, hinter dem kein Befehl wirken darf?" — entscheidbar für jedes **Fenster**, weil `NSApplication::keyWindow` die Antwort ausliefert, und **nicht** entscheidbar für eine Verfolgungsschleife wie den Freigabewähler aus der Runde 6, die kein Fenster ist und im Schlüsselfenster keine Spur hinterlässt. Der Plan ändert dafür nicht die Näherung, sondern benennt die Grenze: Schritt A1 beantwortet die Fensterfrage vollständig, Schritt A3 hält fest, dass der Wähler ausserhalb ihrer Reichweite liegt, und Strang E trägt die eine Beobachtung, die den Fall entscheidet. Wer die Wählerfrage später mechanisch beantworten will, ändert das Mittel und nicht die Bedingung: gefragt wäre dann nicht das Schlüsselfenster, sondern der Halt in `teilen.rs`, und der weiss heute nicht, wann sein Dialog zugeht.
 

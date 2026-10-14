@@ -4,7 +4,7 @@
 **Sender:** coderev
 **Reviewed-range:** `6d05bef..dd2643e`
 **Not-opened:** `fusion-workbench/circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/_t_circle.md`, `history/260813-2342-orchestrator-session.md`, `history/260813-2348-shaper-spec-notizzettel.md`, `history/260814-0628-shaper-spec-nachtrag.md`, `history/260814-0656-planner-plan-notizzettel.md`, `issues/260814-0628_o_diagrammbefunde-haben-keinen-eigentuemer-und-bleiben-deshalb-liegen.md`, `reviews/260814-0000-conceptrev-spec-notizzettel-als-blatt-mit-zwei-zetteln.md`, `reviews/260814-0711-conceptrev-plan-notizzettel-als-blatt-mit-zwei-zetteln.md`, `shared/issues/260814-0656_o_eine-neue-funktion-kommt-bei-jedem-nutzer-mit-eigener-keymap-unbelegt-an.md`, `fusion-workbench/orchestrator-events.jsonl`
-**Circle:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/`
+**Circle:** `260813-2332-notizzettel-als-blatt-mit-zwei-zetteln`
 **Gelesen gegen:** Spec `planning/260813-2348_o_spec-notizzettel-als-blatt-mit-zwei-zetteln.md` (Fassung 260814-0628), Plan `planning/260814-0656_o_plan-notizzettel-als-blatt-mit-zwei-zetteln.md`, beide Entscheide in `decisions/`
 **Eigener Lauf:** `make check` am 260814-0908 gefahren, Rückgabewert 0, „alle vier gruen". Kein `make bundle`, kein `cargo xtask`.
 

@@ -2,7 +2,7 @@
 
 **Datum:** 2026-08-09, 20:43
 **Agent:** shaper (in-Circle-Klärung, ohne Rückfragewerkzeug)
-**Circle:** `circles/260807-2116-eingebauter-editor-mit-textmarken`
+**Circle:** `260807-2116-eingebauter-editor-mit-textmarken`
 **Anlass:** Der Nutzer hat am 260809-2035 den Umfang des aktiven Circles um vier Anzeigefähigkeiten erweitert, bei 24 von 42 erledigten Planschritten.
 
 ## Was der Nutzer verlangt hat

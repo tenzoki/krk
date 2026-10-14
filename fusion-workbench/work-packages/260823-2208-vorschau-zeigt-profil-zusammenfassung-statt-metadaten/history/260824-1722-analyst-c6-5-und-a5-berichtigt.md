@@ -3,7 +3,7 @@
 **Datum:** 2026-08-24 17:22
 **Agent:** analyst
 **Status:** Complete
-**Circle:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
+**Circle:** `260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
 **Auftrag:** Der Befund `issues/260824-1651_o_c6-5-a5-und-planschritt-6-…`. Zuerst feststellen, welche
 Seite recht hat, der gebaute Wortlaut oder der zugesagte; danach die vier Stellen berichtigen und den
 Datensatz schließen. Keine Datei unter `crates/` oder `resources/` anfassen, dort arbeiten zwei

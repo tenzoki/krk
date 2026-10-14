@@ -19,6 +19,6 @@ Die Tastenbelegung für Zoom und Seitensprung war nicht Teil der Runde und ist a
 
 ## Ergebnis
 
-- Circle `circles/260827-2028-vorschau-rendert-pdf-als-betrachter/` mit `_a_circle.md` und den sechs Unterordnern.
+- Circle `260827-2028-vorschau-rendert-pdf-als-betrachter` mit `_a_circle.md` und den sechs Unterordnern.
 - Backlogeintrag auf `_c_` gesetzt, `Promoted:`-Zeile angehängt.
 - Kein Spec, keine Aktivierung: die ist `/fusion:next`.

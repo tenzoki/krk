@@ -4,7 +4,7 @@
 **Typ:** Vergleichende Analyse
 **Status:** Complete
 **Angefordert von:** Nutzer (über den Orchestrator)
-**Circle:** `circles/260802-0842-krk-mac-dateimanager-editor-git`
+**Circle:** `260802-0842-krk-mac-dateimanager-editor-git`
 
 ---
 

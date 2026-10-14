@@ -2,7 +2,7 @@
 
 **Datum:** 2026-08-24 12:34
 **Agent:** analyst
-**Circle:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
+**Circle:** `260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
 **Auftrag:** Sechs Defektdatensätze abarbeiten, die sämtlich die Buchführung an Spec und Plan betreffen. Ein Sicherungsschalter hatte angeschlagen: vierzehn offene Befunde gegen sieben erledigte Schritte, und der Nutzer hat die Räumung gewählt. Ein `coder` arbeitete parallel an den Code-Befunden.
 
 ---

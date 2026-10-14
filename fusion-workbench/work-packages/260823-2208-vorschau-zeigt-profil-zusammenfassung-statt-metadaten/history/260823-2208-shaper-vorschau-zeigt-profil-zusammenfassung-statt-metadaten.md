@@ -19,7 +19,7 @@ Vier Fragen, alle vom Nutzer beantwortet:
 
 ## Was entstanden ist
 
-Der Circle `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten/` mit dem Datensatz `_a_circle.md`, den sechs Artefaktverzeichnissen und zwei offenen Entscheidungsdatensätzen unter `decisions/`: ob ein Profil nur für Ordner oder auch für einzelne Dateien gilt, und ob KRK ein fertiges fusion-workbench-Profil mitliefert. Beide binden den Spec, der bei der Aktivierung entsteht.
+Der Circle `260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten` mit dem Datensatz `_a_circle.md`, den sechs Artefaktverzeichnissen und zwei offenen Entscheidungsdatensätzen unter `decisions/`: ob ein Profil nur für Ordner oder auch für einzelne Dateien gilt, und ob KRK ein fertiges fusion-workbench-Profil mitliefert. Beide binden den Spec, der bei der Aktivierung entsteht.
 
 Der Grounding-Abschnitt hält sieben Befunde aus dem Baum fest, darunter zwei, die den Zuschnitt der Runde berühren: die Zusammenfassung fällt in die Endbedingung der Zeitzusage L7 („sonst die Metadaten", 100 ms), und für die Ortserkennung über ein Pfadmuster gibt es im Baum noch keinen Mustervergleich.
 

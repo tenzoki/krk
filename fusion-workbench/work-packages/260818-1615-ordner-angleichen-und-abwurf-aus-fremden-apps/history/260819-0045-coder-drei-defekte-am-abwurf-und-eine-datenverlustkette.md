@@ -3,7 +3,7 @@
 **Date:** 2026-08-19
 **Status:** Complete
 **Agent:** coder
-**Circle:** `circles/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps`
+**Circle:** `260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps`
 **Issues:** `issues/260818-2333_o_the-same-folder-refusal-compares-a-krk-path-against-a-foreign-apps-path-textually.md` (medium), `issues/260818-2334_o_every-pointer-movement-decodes-the-whole-drag-pasteboard-and-nothing-names-that-cost.md` (medium), `issues/260818-2336_o_a-vanished-row-silently-redirects-the-drop-to-the-parent-folder-and-the-doc-comment-does-not-cover-it.md` (low)
 **Tree state at start:** `4d27c1c`, working tree clean
 **Verification:** `make check` — exit 0

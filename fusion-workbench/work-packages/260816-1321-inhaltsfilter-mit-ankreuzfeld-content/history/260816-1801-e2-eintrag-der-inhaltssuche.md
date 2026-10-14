@@ -3,7 +3,7 @@
 **Datum:** 2026-08-16
 **Agent:** ontocoder
 **Status:** Complete
-**Circle:** `circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/`
+**Circle:** `260816-1321-inhaltsfilter-mit-ankreuzfeld-content`
 **Plan:** `planning/260816-1359_o_plan-inhaltsfilter-der-dateiliste.md`, Schritt E2
 **Baumstand:** `09baffd` mit den unverbuchten Änderungen aus C1, A1, A2, B1, D1 und E1
 **Vorbedingungen:** E1

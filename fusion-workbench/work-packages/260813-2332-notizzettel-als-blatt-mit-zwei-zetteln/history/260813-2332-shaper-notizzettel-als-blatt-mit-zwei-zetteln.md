@@ -39,7 +39,7 @@ Eine achte Runde war nicht nötig. Kein tragender Punkt blieb offen, den diese s
 
 ## Was geschrieben wurde
 
-- **Circle** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/` mit dem Datensatz `_a_circle.md` und den sechs Artefaktordnern. Die Grounding-Aufnahme führt neun Abschnitte; drei davon halten Punkte fest, die der Auftrag ausdrücklich verlangt hat: der Verlust des seit dem Öffnen Getippten bei einem Absturz als benannte Folge und nicht als Lücke, die Überschreibgefahr zweier Instanzen als offen und nicht übersehen, und die Verträglichkeit von Umfang und Form.
+- **Circle** `260813-2332-notizzettel-als-blatt-mit-zwei-zetteln` mit dem Datensatz `_a_circle.md` und den sechs Artefaktordnern. Die Grounding-Aufnahme führt neun Abschnitte; drei davon halten Punkte fest, die der Auftrag ausdrücklich verlangt hat: der Verlust des seit dem Öffnen Getippten bei einem Absturz als benannte Folge und nicht als Lücke, die Überschreibgefahr zweier Instanzen als offen und nicht übersehen, und die Verträglichkeit von Umfang und Form.
 - **Backlog-Eintrag** `shared/backlog/260813-2033_c_…` geschlossen, mit `Promoted:`-Zeile auf den Circle.
 
 ## Was nicht geschrieben wurde

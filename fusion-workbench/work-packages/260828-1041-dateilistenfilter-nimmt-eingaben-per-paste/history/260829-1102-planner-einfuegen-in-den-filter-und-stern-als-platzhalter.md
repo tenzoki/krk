@@ -3,7 +3,7 @@
 **Date:** 2026-08-29, 260829-1102
 **Filed by:** planner, Kai Stalmann <kai@stalmann.org>
 **Status:** Complete
-**Circle:** `circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste`
+**Circle:** `260828-1041-dateilistenfilter-nimmt-eingaben-per-paste`
 **Spec:** `planning/260829-1052_*_spec-einfuegen-in-den-filter-und-stern-als-platzhalter.md` (vorab freigegeben, autonome Runde)
 **HEAD:** `1e44b01`
 **Executors im Dispatch:** coder, ontocoder, analyst

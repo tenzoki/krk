@@ -4,7 +4,7 @@
 **Datum:** 260814-1002
 **Domäne:** code
 **Stand:** `79dab20`, Sitzungsspanne `6d05bef..HEAD`, sieben Commits
-**Circle:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/`
+**Circle:** `260813-2332-notizzettel-als-blatt-mit-zwei-zetteln`
 **Sitzungsprotokoll:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/history/260813-2342-orchestrator-session.md` (Abschnitt `## Coherence`)
 **Kein Bündelbau, kein `cargo xtask`, kein Vordergrundlauf.** `target/KRK.app` ist unberührt geblieben.
 

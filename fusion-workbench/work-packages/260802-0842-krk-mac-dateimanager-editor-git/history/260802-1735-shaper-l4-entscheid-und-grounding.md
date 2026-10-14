@@ -1,7 +1,7 @@
 # Shaper 260802-1735: L4-Entscheid eingetragen, Grounding snapshot nachgezogen
 
 **Status:** Complete
-**Circle:** `circles/260802-0842-krk-mac-dateimanager-editor-git`
+**Circle:** `260802-0842-krk-mac-dateimanager-editor-git`
 **Modus:** in-Circle clarification, mit Freigabe des Nutzers für den Circle-Datensatz
 **Auftrag:** die Nutzerentscheidung zu L4 eintragen, die Messbedingungen um die Sitzungslage ergänzen, den Defekt vom 260802-1445 schließen und den Abschnitt `## Grounding snapshot` sowie C8 vollständig auf den heutigen Stand ziehen, statt weitere Defekte zu melden.
 

@@ -4,7 +4,7 @@
 **Datum:** 260813-1345
 **Domäne:** code
 **Stand:** `ed0388e`, Sitzungsspanne `9d5fcfa..HEAD`, acht Commits
-**Circle:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/`
+**Circle:** `260813-0939-titelleiste-fuehrt-version-und-semantische-tags`
 **Sitzungsprotokoll:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/history/260813-1006-orchestrator-session.md` (Abschnitt `## Coherence`)
 **Kein Bündelbau, kein Vordergrundlauf.** `target/KRK.app` ist unberührt geblieben.
 

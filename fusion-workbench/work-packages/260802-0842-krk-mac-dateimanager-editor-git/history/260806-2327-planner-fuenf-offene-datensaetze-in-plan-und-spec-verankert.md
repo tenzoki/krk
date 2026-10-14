@@ -2,7 +2,7 @@
 
 **Status:** Complete
 **Agent:** planner
-**Circle:** `circles/260802-0842-krk-mac-dateimanager-editor-git`
+**Circle:** `260802-0842-krk-mac-dateimanager-editor-git`
 **Auftrag:** Aufgabe D2 aus Turn 25. Nachzug an Plan und Spec, damit fünf offene Entscheidungsdatensätze an dem Schritt und der Fähigkeit stehen, auf die sie zeigen. Dazu zwei Verweisberichtigungen. Kein Codeeingriff, keine neue Planungsdatei, kein Commit.
 
 ## Anlass

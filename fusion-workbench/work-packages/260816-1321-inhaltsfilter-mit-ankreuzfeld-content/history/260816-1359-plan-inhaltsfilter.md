@@ -3,7 +3,7 @@
 **Datum:** 2026-08-16
 **Agent:** planner
 **Status:** Complete
-**Circle:** `circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/`
+**Circle:** `260816-1321-inhaltsfilter-mit-ankreuzfeld-content`
 **Baumstand:** `eae7b1c`
 
 ## Was entstanden ist

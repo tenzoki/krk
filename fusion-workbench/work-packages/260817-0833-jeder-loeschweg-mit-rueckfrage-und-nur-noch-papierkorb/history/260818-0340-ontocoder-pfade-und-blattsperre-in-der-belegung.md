@@ -21,9 +21,9 @@ unteilbares Wort auf einer Zeile bleibt.
 
 **2. Zehn Pfade zeigten auf nichts (zusätzlicher Befund).** Zitate der Form `decisions/…` und
 `issues/…` ohne Circle lösen nach der Pfadregel in `CLAUDE.md` gegen die **Runde 2** auf,
-`circles/260807-2116-eingebauter-editor-mit-textmarken`. Keiner der zehn liegt dort: neun
-gehören der Runde 1 (`circles/260802-0842-krk-mac-dateimanager-editor-git`), einer der Runde 4
-(`circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen`). Alle zehn tragen jetzt ihren
+`260807-2116-eingebauter-editor-mit-textmarken`. Keiner der zehn liegt dort: neun
+gehören der Runde 1 (`260802-0842-krk-mac-dateimanager-editor-git`), einer der Runde 4
+(`260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen`). Alle zehn tragen jetzt ihren
 Circle, so wie die Mehrheit der Pfade dieser Datei es schon tat.
 
 **3. Die Blattsperre nennt vier Kommandos (`260817-1419`).** Die Stelle sagte „jeden Befehl

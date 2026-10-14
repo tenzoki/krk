@@ -3,7 +3,7 @@
 ---
 **Domain:** code
 **Filed by:** coder, Kai Stalmann <kai@qantr.com>
-**Cross-references:** `crates/krk-core/src/verzeichnis/filter.rs:127-158` (`inhaltsschwelle`, die eine Stelle der Staffelung); `crates/krk-core/src/verzeichnis/modell.rs` (`Ordnermodell::neu`, die eine Stelle der Vorgabe, und `inhalt_wirkt`, der eine Frager); `circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content` (die Runde, die die Staffelung gesetzt hat); `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1830_o_gilt-das-ankreuzfeld-deep-je-tab-oder-je-fenster.md` (offen, und dieselbe Vorgabe ist ihr Gegenstand von der anderen Seite)
+**Cross-references:** `crates/krk-core/src/verzeichnis/filter.rs:127-158` (`inhaltsschwelle`, die eine Stelle der Staffelung); `crates/krk-core/src/verzeichnis/modell.rs` (`Ordnermodell::neu`, die eine Stelle der Vorgabe, und `inhalt_wirkt`, der eine Frager); `260816-1321-inhaltsfilter-mit-ankreuzfeld-content` (die Runde, die die Staffelung gesetzt hat); `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/260814-1830_o_gilt-das-ankreuzfeld-deep-je-tab-oder-je-fenster.md` (offen, und dieselbe Vorgabe ist ihr Gegenstand von der anderen Seite)
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Datum:** 2026-08-24 15:38
 **Agent:** analyst
-**Circle:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
+**Circle:** `260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
 **Auftrag:** Reine Buchführung. Der Nutzer hat am 260824-1505 zwei offene Entscheidungen mit Möglichkeit 2 beantwortet; Spec und Plan sollen die Antworten tragen, der Plan die Umsetzung als eigenen Schritt, und ein Defektdatensatz soll schließen. Keine Datei unter `crates/` und keine unter `resources/` anfassen — dort arbeiten andere Agenten.
 
 ---

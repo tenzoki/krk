@@ -1,12 +1,12 @@
 # Spec: Suche in der Belegungsansicht, vollständiges Menü, weitere Instanz
 
 **Date:** 2026-08-13
-**Status:** Complete — die Runde 7 (`circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz`) ist am 260813 beschränkt geschlossen, ihr Plan `planning/260813-0205_c_plan-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz.md` steht auf `_c_`, und der Bau ist dort gegen den Baum gelesen. `Kommando::WeitereInstanz` steht in `crates/krk-core/src/tasten/belegung.rs`, die Zulässigkeitsregel als `crates/krk-ui/src/kommandos/zulaessigkeit.rs`, nachgesehen am 260909-1021.
+**Status:** Complete — die Runde 7 (`260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz`) ist am 260813 beschränkt geschlossen, ihr Plan `planning/260813-0205_c_plan-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz.md` steht auf `_c_`, und der Bau ist dort gegen den Baum gelesen. `Kommando::WeitereInstanz` steht in `crates/krk-core/src/tasten/belegung.rs`, die Zulässigkeitsregel als `crates/krk-ui/src/kommandos/zulaessigkeit.rs`, nachgesehen am 260909-1021.
 **Abnahme:** offen. Kein Abnahmelauf ist gefahren. Zwei Datensätze binden den Spec weiter und sind unbeantwortet: `shared/decisions/260813-0053_*_wie-viele-obermenues-…` und `shared/decisions/260813-0053_*_was-teilen-sich-zwei-instanzen-…`; keine der Runden 19 bis 22 hat ein Obermenü hinzugefügt oder die Sitzungsablage berührt.
 **Überarbeitet:** 260813-0130, nach dem Spruch `tangled` der Diagrammprüfung `circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/reviews/260813-0109-conceptrev-spec-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz.md`. Was geändert wurde und warum, steht unten unter `## Nachzug vom 260813-0130`.
 **Source:** Nutzerwortlaut vom 260813: „1. wenn F1 gedrückt wurde und die tastenbelegung angezeigt wird, sollte jede eingabe eines zeichens an einen suchstring appended werden und sofort nach dem ersten treffer gesucht werden, enter sucht das nächste vorkommen, weitere eingaben werden append und lösen eine weitere suche aus, backspace löscht und triggert die suche, esc beendet F1. 2. wir brauchen eine möglichkeit eine zweite instanz von krk zu starten - auch per taste. 3. alle tastenbefehle sollten auch über das Menu erreichbar sein."
 **Grundlage erhoben:** 260813-0053, am Baum unter `crates/` und `resources/`
-**Der Spec ist vor dem Circle entstanden** und liegt deshalb im gemeinsamen Speicher. Der Circle `circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz/` ist seit dem 260813-0100 angelegt, ist aktiv und zitiert ihn von dort; der Spec behält seinen Ort und seinen Namen.
+**Der Spec ist vor dem Circle entstanden** und liegt deshalb im gemeinsamen Speicher. Der Circle `260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz` ist seit dem 260813-0100 angelegt, ist aktiv und zitiert ihn von dort; der Spec behält seinen Ort und seinen Namen.
 
 ---
 

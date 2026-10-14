@@ -3,7 +3,7 @@
 **Datum:** 2026-08-02
 **Zeitstempel:** 260802-1036, fortgeschrieben 260802-1105
 **Agent:** shaper, in-Circle-Klärungsmodus
-**Circle:** `circles/260802-0842-krk-mac-dateimanager-editor-git`
+**Circle:** `260802-0842-krk-mac-dateimanager-editor-git`
 **Status:** Abgeschlossen. Vier Antworten eingearbeitet, eine Teilfrage offen (Referenzgerät).
 
 ## Auftrag

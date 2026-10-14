@@ -3,7 +3,7 @@
 **Date:** 2026-08-14
 **Agent:** coder
 **Status:** Complete
-**Circle:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/`
+**Circle:** `260813-2332-notizzettel-als-blatt-mit-zwei-zetteln`
 **Vorgabe:** Spec `planning/260813-2348_o_spec-notizzettel-als-blatt-mit-zwei-zetteln.md`, C4 in der Fassung vom 260814-0925
 **Behobene Datensätze:** `issues/260814-0908_c_ein-neuoeffnen-nach-gescheiterter-sicherung-wirft-den-ungesicherten-zettelstand-weg.md` (hoch), `issues/260814-0909_c_je-sicherungsmoment-wird-hoechstens-ein-zettel-geschrieben-und-beim-beenden-gibt-es-kein-naechstes-mal.md` (mittel, zwei Wege)
 **Verification:** `make check` am 260814-0947, Rückgabewert 0, „alle vier gruen"

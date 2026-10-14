@@ -24,7 +24,7 @@ Zustand nach einem Rundenabschluss und keine Warnung.
 ## Rangfolge der vorgesehenen Runden
 
 Ein Kandidat, und damit der Vorschlag:
-`circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil`. Seine
+`260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil`. Seine
 Grundlage steht auf der Platte, seine zwei eigenen offenen Fragen hat der
 Shaper bei der Anlage gestellt, und beide sind vom Nutzer in einem Zug zu
 beantworten.
@@ -80,7 +80,7 @@ darunter.
   `~/Library/Application Support/KRK/`, die je Ort eine Zusammenfassung
   festlegen, mit der fusion-Werkbank als Beispielfall. Gebaut hat das die Runde
   16 als `readers.toml`
-  (`circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`),
+  (`260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`),
   angelegt zweiunddreißig Minuten nach dem Eintrag. `resources/default-readers.toml`
   trägt heute zwölf Profile, darunter die Wurzel der Werkbank, ein Speicher, ein
   Defektspeicher, der Ablagespeicher, alle Runden und eine einzelne Runde. Der

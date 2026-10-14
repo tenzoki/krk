@@ -26,7 +26,7 @@
 
 ## Hinweis zum Portfolio
 
-Ein vorgesehener Circle steht bereit: `circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/`.
+Ein vorgesehener Circle steht bereit: `260804-0933-eingebauter-web-betrachter-im-vorschaufenster`.
 Der Setup-Hinweis auf `/fusion:next` wurde ausgegeben.
 
 ## Häufig geänderte Dateien

@@ -210,7 +210,7 @@ Drei Grenzen sind bekannt, bevor die Runde beginnt. Sie stehen hier, damit sie s
 
 **Die offene Frage nach der Zahl der Obermenüs wird faktisch beantwortet und nicht geschlossen.** `shared/decisions/260813-0053_o_wie-viele-obermenues-traegt-die-menueleiste-fuer-81-funktionen.md` steht offen und empfiehlt Möglichkeit 1, ein Obermenü je Funktionsbereich. Diese Runde baut ein zehntes Obermenü und folgt damit der Empfehlung. **Sie schließt den Datensatz nicht**; das bleibt dem Nutzer, und wer ihn später anders beantwortet, ordnet auch dieses Obermenü neu ein.
 
-**Diese Runde läuft bewusst vor dem vorgesehenen Circle `circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster`.** Beide greifen dieselbe Fläche an, die Tabs des Vorschaufensters. Die Befehlsausgabe ist die dritte fremde Quelle nach der Datei und der Zwischenablage, und sie legt mit der Anheftung die Regel fest, nach der eine fremde Quelle in einen Vorschau-Tab schreibt. Der Web-Betrachter wäre die vierte nach derselben Regel und erbt die Anheftbarkeit, statt eine eigene Ausnahme zu brauchen.
+**Diese Runde läuft bewusst vor dem vorgesehenen Circle `260804-0933-eingebauter-web-betrachter-im-vorschaufenster`.** Beide greifen dieselbe Fläche an, die Tabs des Vorschaufensters. Die Befehlsausgabe ist die dritte fremde Quelle nach der Datei und der Zwischenablage, und sie legt mit der Anheftung die Regel fest, nach der eine fremde Quelle in einen Vorschau-Tab schreibt. Der Web-Betrachter wäre die vierte nach derselben Regel und erbt die Anheftbarkeit, statt eine eigene Ausnahme zu brauchen.
 
 ## Nicht Gegenstand dieser Runde
 

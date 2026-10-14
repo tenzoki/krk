@@ -2,7 +2,7 @@
 
 **Agent:** coder
 **Datum:** 2026-08-09, 21:35
-**Circle:** `circles/260807-2116-eingebauter-editor-mit-textmarken`
+**Circle:** `260807-2116-eingebauter-editor-mit-textmarken`
 **Plan:** `planning/260808-0140_o_plan-eingebauter-editor-mit-textmarken.md`, Phasen J und L
 **Status:** Complete
 

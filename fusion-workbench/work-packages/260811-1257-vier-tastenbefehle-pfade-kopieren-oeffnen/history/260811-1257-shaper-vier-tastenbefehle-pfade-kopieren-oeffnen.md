@@ -22,7 +22,7 @@ Weiter geprüft: `auswahl_oeffnen` (`crates/krk-ui/src/appkit/tabelle.rs:955`) f
 
 ## Was angelegt wurde
 
-- Circle `circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen/` mit dem Datensatz `_a_circle.md` (vorgesehen) und den sechs Artefaktverzeichnissen.
+- Circle `260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen` mit dem Datensatz `_a_circle.md` (vorgesehen) und den sechs Artefaktverzeichnissen.
 - Vier Entscheidungsdatensätze in `decisions/` dieses Circles, alle offen: die Reichweite von Cmd+W, was der Pfadkopierer bei stehender Markierung nimmt, was ein Doppelklick auf einen Ordner tut, und welche vier Kombinationen ab Werk gelten. Jeder trägt zwei bis drei Möglichkeiten und eine Empfehlung.
 
 Kein Spec. Ein vorgesehener Circle hält eine Absicht fest, und der Spec entsteht bei der Aktivierung.

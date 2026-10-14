@@ -7,7 +7,7 @@
 ## Aufnahme bei Sitzungsbeginn
 
 **Arbeitsplatz:** `/Users/k1/Projects/productive/krk/fusion-workbench`
-**Aktiver Circle:** `circles/260802-0842-krk-mac-dateimanager-editor-git` (Marker `_t_`, ein aktiver Circle, keine anticipated)
+**Aktiver Circle:** `260802-0842-krk-mac-dateimanager-editor-git` (Marker `_t_`, ein aktiver Circle, keine anticipated)
 **Git HEAD:** `def6fa7`
 
 | Größe | Stand |

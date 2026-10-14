@@ -4,7 +4,7 @@
 **Reviewed-range:** `9f5ced5..b9ab8ae`
 **Not-opened:** `crates/krk-core/tests/belegung.rs`, `crates/krk-ui/src/appkit/menue.rs`, `crates/krk-ui/src/belegungsausgabe.rs`, `crates/krk-ui/src/belegungsmodell.rs`, `crates/krk-ui/src/appkit/anwendung.rs`
 **Datum:** 2026-08-16
-**Circle:** `circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/`
+**Circle:** `260816-1321-inhaltsfilter-mit-ankreuzfeld-content`
 **Spec:** `shared/planning/260816-1310_o_spec-inhaltsfilter-der-dateiliste.md` (sechs Fähigkeiten, 57 Abnahmekriterien)
 **Plan:** `planning/260816-1359_c_plan-inhaltsfilter-der-dateiliste.md` (zwölf Schritte, alle `[DONE]`)
 

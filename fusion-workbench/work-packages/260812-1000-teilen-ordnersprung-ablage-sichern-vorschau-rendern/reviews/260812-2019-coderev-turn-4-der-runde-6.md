@@ -4,7 +4,7 @@
 **Reviewed-range:** `f401dcc..c35f8b1`
 **Not-opened:** none
 **Date:** 2026-08-12
-**Circle:** `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern`
+**Circle:** `260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern`
 **Commits:** `c6bf13d` (reine Werkbank), `c35f8b1` (eine Codedatei)
 **Datei im Umfang:** `crates/krk-ui/src/markdown.rs` (+370/−32)
 

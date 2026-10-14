@@ -1,7 +1,7 @@
 # Shaper — Reststellen der Fn-Korrektur, Planfeld und die beiden Planner-Punkte (260802-1445)
 
 **Modus:** in-Circle clarification, mit ausdrücklicher Freigabe für den Circle-Datensatz
-**Circle:** `circles/260802-0842-krk-mac-dateimanager-editor-git`
+**Circle:** `260802-0842-krk-mac-dateimanager-editor-git`
 **Status:** Complete
 
 ## Auftrag

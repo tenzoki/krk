@@ -90,7 +90,7 @@ Die vierte ist die Tastenbindung über nummerierte Plätze, mit je einer Zeile i
 
 **Zwei Dinge gehören ausdrücklich nicht hinein.** Ein sechster Bereich in der Fensterzeile lohnt nicht: er zöge `Bereich` (`crates/krk-ui/src/fenstermodell.rs:103-128`), `Fokus`, `Wirkungsbereich` (`belegung.rs:186`) und die proportionale Breitenregel der fünften Runde nach sich, und die Vorschau leistet dasselbe ohne eine dieser vier Änderungen. Und ein eingebautes Terminal bleibt draußen: für Werkzeuge, die selbst die Tastatur führen, bleibt `Ctrl+O`, das den angezeigten Ordner an Ghostty oder Terminal übergibt.
 
-**Ein Hinweis zur Reihenfolge im Portfolio.** Der einzige heute vorgesehene und nicht gefahrene Circle ist der Web-Betrachter im Vorschaufenster (`circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster`). Er greift dieselbe Fläche an wie dieser Vorschlag, nämlich die Tabs des Vorschaufensters. Wer beide fährt, sollte die Reihenfolge bewusst wählen; wer den Befehlslauf zuerst baut, legt die Regel fest, nach der eine dritte fremde Quelle in einen Vorschau-Tab schreibt, und der Web-Betrachter wäre dann die vierte nach derselben Regel.
+**Ein Hinweis zur Reihenfolge im Portfolio.** Der einzige heute vorgesehene und nicht gefahrene Circle ist der Web-Betrachter im Vorschaufenster (`260804-0933-eingebauter-web-betrachter-im-vorschaufenster`). Er greift dieselbe Fläche an wie dieser Vorschlag, nämlich die Tabs des Vorschaufensters. Wer beide fährt, sollte die Reihenfolge bewusst wählen; wer den Befehlslauf zuerst baut, legt die Regel fest, nach der eine dritte fremde Quelle in einen Vorschau-Tab schreibt, und der Web-Betrachter wäre dann die vierte nach derselben Regel.
 
 ## Open Questions
 

@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** open
 **Filed by:** shaper
-**Cross-references:** `crates/krk-ui/src/appkit/statuszeile.rs:197-240` (die fünf Ränge); `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern` (die Runde, die die eine Zeile gebaut hat)
+**Cross-references:** `crates/krk-ui/src/appkit/statuszeile.rs:197-240` (die fünf Ränge); `260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern` (die Runde, die die eine Zeile gebaut hat)
 
 ---
 

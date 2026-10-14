@@ -3,7 +3,7 @@
 **Date:** 2026-08-29, 260829-0023
 **Filed by:** coder, Kai Stalmann <kai@stalmann.org>
 **Status:** Complete
-**Circle:** `circles/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab`
+**Circle:** `260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab`
 **Plan:** `planning/260829-0006_*_plan-cmd-c-und-cmd-x-legen-dateiverweise-ab.md`, Schritt 1
 **HEAD:** `a5c7a46`
 

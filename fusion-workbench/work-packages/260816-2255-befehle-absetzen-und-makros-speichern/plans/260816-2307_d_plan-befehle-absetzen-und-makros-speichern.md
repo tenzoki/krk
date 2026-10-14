@@ -3,7 +3,7 @@
 **Datum:** 2026-08-16
 **Status:** Entwurf
 **Spec:** `260816-2240_*_spec-befehle-absetzen-und-makros-speichern.md`, abgenommen vom Nutzer am 260816-2250
-**Circle:** `circles/260816-2255-befehle-absetzen-und-makros-speichern`
+**Circle:** `260816-2255-befehle-absetzen-und-makros-speichern`
 **Baumstand:** `627b5f4`, Version 0.5.0, gelesen am 260816
 **Decidability:** Die tragende Frage dieses Plans ist nicht, was ein Befehl anfassen wird, sondern **wann ein Lauf zu Ende ist**. Aus dem Dateiende der Röhre ist sie nicht entscheidbar: ein abgehängter Enkelprozess hält sein Schreibende offen, und KRK kann das von einem langsamen Befehl nicht unterscheiden. Entschieden wird deshalb die andere Frage, ob die Shell geendet hat; `waitpid` beantwortet sie aus dem, was der Mechanismus ohnehin hält. Der Wechsel des Mechanismus besteht darin, dass der Lauf mit der Shell endet und dasselbe Signal an die Prozessgruppe, das der Abbruch schickt, danach die übrigen Schreibenden schließt — ein Mechanismus mit zwei Auslösern statt einer Näherung. Die Trennung, die der Spec nennt, hält daneben unverändert: was ein Befehl anfasst, sagt KRK nicht voraus, und wie ein Wert vollständig angeführt wird, beantwortet C2.6.
 

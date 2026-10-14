@@ -3,7 +3,7 @@
 **Datum:** 2026-08-09
 **Status:** Complete
 **Modus:** anticipated-circle (über `/fusion:direct`)
-**Angelegter Circle:** `circles/260809-2040-tastenbelegung-als-markdown-in-downloads/`
+**Angelegter Circle:** `260809-2040-tastenbelegung-als-markdown-in-downloads`
 
 Diese Sitzung hat keinen Bezug zur Directive des aktiven Circles. Sie liegt hier, weil `bin/fusion-paths shaper` `OUT_HISTORY` bei aktivem Circle in dessen `history/` auflöst; der Gegenstand gehört dem neu angelegten Circle.
 

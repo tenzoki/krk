@@ -2,7 +2,7 @@
 
 **Datum:** 2026-08-29, 10:47 bis 10:58
 **Filed by:** shaper (user-direct, vom Orchestrator dispatched), Kai Stalmann
-**Modus:** user-direct, Domain code, aktiver Circle `circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/` (`_t_circle.md`)
+**Modus:** user-direct, Domain code, aktiver Circle `260828-1041-dateilistenfilter-nimmt-eingaben-per-paste` (`_t_circle.md`)
 **Weisung:** autonom bauen, keine Klärungsrunde, Lücken nach Muster als Festlegungen; das Spec-Tor gilt als vorab freigegeben.
 **Status:** Complete
 

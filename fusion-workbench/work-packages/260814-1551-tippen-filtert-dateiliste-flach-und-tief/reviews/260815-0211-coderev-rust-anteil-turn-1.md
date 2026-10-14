@@ -4,7 +4,7 @@
 **Reviewed-range:** `ba4af5f..05881d1`
 **Not-opened:** `fusion-workbench/circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/planning/260814-2102_o_plan-tippen-filtert-dateiliste-flach-und-tief.md`, `fusion-workbench/circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/history/*` (achtzehn Datensätze der Schritte A1 bis G2, darunter die Abnahmeliste `260815-0400-abnahmeliste-g2.md`), `fusion-workbench/circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/decisions/*` (vierzehn Datensätze, nur die Dateinamen gelesen), `fusion-workbench/circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/_t_circle.md`, `fusion-workbench/orchestrator-events.jsonl`, `fusion-workbench/shared/history/260814-1500-orchestrator-session.md`
 **Datum:** 260815-0211
-**Circle:** `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/`
+**Circle:** `260814-1551-tippen-filtert-dateiliste-flach-und-tief`
 **Grundlage:** Spec `planning/260814-1830_o_spec-tippen-filtert-dateiliste-flach-und-tief.md`, 75 Abnahmekriterien
 
 Der ganze Rust-Anteil des Bereichs ist geöffnet, jede Datei unter `crates/` und `resources/`, die der Bereich anfasst. Nicht geöffnet sind die Werkstattdatensätze der Runde; der Auftrag hat die Durchsicht auf den Rust-Anteil geschnitten, und die zehn offenen Defekte und fünf Fragen des Circle sind über ihre Titel und ihre Befundabschnitte gelesen, damit hier nichts doppelt liegt.

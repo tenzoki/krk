@@ -65,7 +65,7 @@ Zusicherung darunter ist mitzuziehen.
 
 **e) Die Werkbankwurzel hat zwei Zeilen weniger.** Die erwartete Beschriftungsliste
 (Zeile 3988 ff.) verliert „Aktive Runde" und „Sitzung", die ausgeschriebene Werteliste
-(Zeile 4014 ff.) verliert `Wert::Text("circles/260823-2208-vorschau")` und
+(Zeile 4014 ff.) verliert `Wert::Text("260823-2208-vorschau")` und
 `Wert::Text("Schritt 12, die Zaehlproben")`, und der Haushalt fällt von `(4, 5)` auf `(4, 3)`:
 die zwei gestrichenen Zeilen waren Feldzeilen und öffneten je eine Datei. Dieselben zwei
 Zeilen fallen im Profil „Projektwurzel mit fusion-Werkbank", also noch einmal an der vierten

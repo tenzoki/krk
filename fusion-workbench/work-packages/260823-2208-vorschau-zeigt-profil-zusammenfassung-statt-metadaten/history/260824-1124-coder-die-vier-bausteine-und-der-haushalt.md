@@ -3,7 +3,7 @@
 **Datum:** 260824-1124 bis 260824-1150
 **Agent:** coder
 **Status:** Complete
-**Circle:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
+**Circle:** `260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
 **Plan:** `planning/260824-0640_o_plan-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md`, Bündel B, Schritt 6
 **Baumstand vorher:** die Schritte 1 bis 5 und 13 auf `[DONE]`
 

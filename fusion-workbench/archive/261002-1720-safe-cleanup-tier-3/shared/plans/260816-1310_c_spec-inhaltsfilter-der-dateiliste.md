@@ -1,7 +1,7 @@
 # Spec: Der Filter der Dateiliste berücksichtigt den Inhalt der Dateien
 
 **Datum:** 2026-08-16
-**Status:** Complete — die Runde 11 (`circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content`) ist am 260816-2030 beschränkt geschlossen, ihr Plan `planning/260816-1359_c_plan-inhaltsfilter-der-dateiliste.md` steht auf `_c_`. Der Abgleich vom 260820-2056 hat die ohne Bündel entscheidbaren Kriterien einzeln nachgelesen, und alle halten; `make check` lief an jenem Tag mit Rückgabewert 0. Der Inhaltsfilter steht als `crates/krk-core/src/verzeichnis/inhalt.rs`, nachgesehen am 260909-1021.
+**Status:** Complete — die Runde 11 (`260816-1321-inhaltsfilter-mit-ankreuzfeld-content`) ist am 260816-2030 beschränkt geschlossen, ihr Plan `planning/260816-1359_c_plan-inhaltsfilter-der-dateiliste.md` steht auf `_c_`. Der Abgleich vom 260820-2056 hat die ohne Bündel entscheidbaren Kriterien einzeln nachgelesen, und alle halten; `make check` lief an jenem Tag mit Rückgabewert 0. Der Inhaltsfilter steht als `crates/krk-core/src/verzeichnis/inhalt.rs`, nachgesehen am 260909-1021.
 **Abnahme:** offen. Die Abnahmeliste liegt fertig unter `messungen/260816-abnahme-inhaltsfilter.md` mit 28 Beobachtungen an vier Orten und ist nicht gefahren; sie verlangt KRK im Vordergrund. Von den 57 Abnahmekriterien ist keines abgehakt.
 **Quelle:** „Nächste Erweiterung des Filters: im Moment filtern wir Datei-/Foldernamen. Nun erweitern wir so, dass matches im Dateiinhalt berücksichtigt werden. Diese Funktion wird mit einer weiteren Checkbox in der unteren Controlleiste aktiviert: ‚Content'."
 **Baumstand:** `9236dd4`, gelesen am 260816

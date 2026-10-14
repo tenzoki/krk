@@ -3,7 +3,7 @@
 **Datum:** 2026-08-02, 14:28
 **Agent:** planner
 **Status:** Complete
-**Circle:** `circles/260802-0842-krk-mac-dateimanager-editor-git`
+**Circle:** `260802-0842-krk-mac-dateimanager-editor-git`
 **Angefordert von:** Nutzer (über den Orchestrator)
 
 ---

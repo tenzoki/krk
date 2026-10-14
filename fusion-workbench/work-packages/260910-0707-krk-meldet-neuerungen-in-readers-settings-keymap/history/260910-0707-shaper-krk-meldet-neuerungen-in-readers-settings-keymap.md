@@ -45,6 +45,6 @@ und diese Runde meldet, statt zu schreiben. Der Rest steht als angenommener Prei
 ## Ergebnis
 
 Angelegt ist die vorgesehene Runde
-`circles/260910-0707-krk-meldet-neuerungen-in-readers-settings-keymap` mit dem Datensatz
+`260910-0707-krk-meldet-neuerungen-in-readers-settings-keymap` mit dem Datensatz
 `_a_circle.md` und den sechs Unterordnern. Kein Spec, kein Plan, keine Aktivierung: das ist der
 nächste, getrennte Schritt des Nutzers.

@@ -35,7 +35,7 @@ Zwei der fünf Datensätze sind unbeantwortet geblieben, `wohnt-die-git-anbindun
 
 ## Geschrieben
 
-- `circles/260830-1045-git-bereich-liest-status-branch-verlauf/` mit `_a_circle.md` und den sechs Artefaktverzeichnissen
+- `260830-1045-git-bereich-liest-status-branch-verlauf` mit `_a_circle.md` und den sechs Artefaktverzeichnissen
 - `shared/decisions/260830-1006_o_bekommt-der-git-bereich-…` nach `_a_`, mit `Answered:`-Zeile
 - `shared/decisions/260830-1006_o_was-zeigen-git-bereich-ankreuzfeld-…` nach `_a_`, mit `Answered:`-Zeile
 - diese Datei

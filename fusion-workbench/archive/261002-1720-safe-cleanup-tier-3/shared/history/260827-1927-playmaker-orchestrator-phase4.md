@@ -1,7 +1,7 @@
 # Playmaker — 260827-1927 — orchestrator-phase4
 
 **Status:** Complete
-**Auslöser:** Phase-4-Dispatch des Orchestrators nach dem kohärenten Abschluss der Runde 19 (`circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil`, Commit `3fe9a5c`)
+**Auslöser:** Phase-4-Dispatch des Orchestrators nach dem kohärenten Abschluss der Runde 19 (`260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil`, Commit `3fe9a5c`)
 **Domain-Gewichtung:** code (aus der Zeile `**Domain:** code` des Dispatch-Prompts)
 **Mandat:** nicht interaktiv; ranken, Portfolio neu erzeugen, Backlog-Marker umbenennen. Keine bestätigungspflichtige Operation.
 

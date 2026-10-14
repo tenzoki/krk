@@ -3,7 +3,7 @@
 **Datum:** 2026-08-04, 08:30
 **Agent:** planner
 **Status:** Complete
-**Circle:** `circles/260802-0842-krk-mac-dateimanager-editor-git`
+**Circle:** `260802-0842-krk-mac-dateimanager-editor-git`
 **Berührt:** Spec `planning/260802-1036_o_spec-navigator-geruest.md`, Plan `planning/260802-1428_o_plan-navigator-geruest-runde-1.md`, drei Entscheidungsdatensätze, drei Defekte
 
 ---

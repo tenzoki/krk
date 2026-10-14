@@ -3,7 +3,7 @@
 **Date:** 2026-08-31
 **Filed by:** ontocoder, Kai Stalmann <kai@stalmann.org>
 **Status:** Complete
-**Circle:** `circles/260830-1045-git-bereich-liest-status-branch-verlauf`
+**Circle:** `260830-1045-git-bereich-liest-status-branch-verlauf`
 **Plan:** `260830-1317_*_plan-git-bereich-liest-status-branch-verlauf.md`, Schritt 9
 **HEAD:** `7079519` (nicht committet; der Orchestrator committet)
 

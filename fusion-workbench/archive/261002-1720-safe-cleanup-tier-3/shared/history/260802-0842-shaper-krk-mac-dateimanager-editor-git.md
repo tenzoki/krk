@@ -33,7 +33,7 @@ Der **Datei- und Ordnervergleich** braucht zwei getrennte Differenzberechnungen,
 
 ## Angelegte Artefakte
 
-Circle-Verzeichnis `circles/260802-0842-krk-mac-dateimanager-editor-git/` mit dem Record `_a_circle.md` und den sechs Unterverzeichnissen `planning/`, `issues/`, `decisions/`, `history/`, `reviews/`, `analyses/`.
+Circle-Verzeichnis `260802-0842-krk-mac-dateimanager-editor-git` mit dem Record `_a_circle.md` und den sechs Unterverzeichnissen `planning/`, `issues/`, `decisions/`, `history/`, `reviews/`, `analyses/`.
 
 Fünf Entscheidungsdatensätze im gemeinsamen Speicher, alle im Zustand offen:
 

@@ -3,7 +3,7 @@
 **Datum:** 2026-08-13
 **Agent:** shaper (anticipated-circle mode)
 **Status:** Complete
-**Ergebnis:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/`
+**Ergebnis:** `260813-0939-titelleiste-fuehrt-version-und-semantische-tags`
 
 ---
 
@@ -35,7 +35,7 @@ Der Eintrag verlangt Namen und Version links in der Titelleiste, wo heute nur de
 
 ## Was angelegt wurde
 
-- Der Circle `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/` mit dem Datensatz `_a_circle.md` und den sechs Unterverzeichnissen.
+- Der Circle `260813-0939-titelleiste-fuehrt-version-und-semantische-tags` mit dem Datensatz `_a_circle.md` und den sechs Unterverzeichnissen.
 - Drei Entscheidungsdatensätze in `decisions/` dieses Circles, alle `_o_`: der Eintrag "Über KRK", wer den ersten Tag `v0.1.0` setzt, und ob die Prüfung auch einen sauberen Arbeitsbaum verlangt. Keiner davon ändert die Directive; alle drei sind Eingabe für die Klärungsrunde bei der Aktivierung.
 - Der Backlog-Eintrag ist auf `_c_` umbenannt und trägt eine `Promoted:`-Zeile auf den Circle.
 

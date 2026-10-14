@@ -2,7 +2,7 @@
 
 **Datum:** 260815-0246
 **Agent:** shaper (in-Circle-Klärung, Turn 2, Reparaturrunde)
-**Circle:** `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/`
+**Circle:** `260814-1551-tippen-filtert-dateiliste-flach-und-tief`
 **Spec:** `planning/260814-1830_o_spec-tippen-filtert-dateiliste-flach-und-tief.md`
 **Baum:** `195791a`, unverändert gelassen
 

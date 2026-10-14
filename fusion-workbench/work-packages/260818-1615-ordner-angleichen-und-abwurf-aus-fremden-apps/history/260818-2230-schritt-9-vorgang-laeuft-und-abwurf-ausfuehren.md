@@ -3,7 +3,7 @@
 **Date:** 2026-08-18
 **Status:** Complete
 **Agent:** coder
-**Circle:** `circles/260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps`
+**Circle:** `260818-1615-ordner-angleichen-und-abwurf-aus-fremden-apps`
 **Plan:** `planning/260818-1633_o_plan-ordner-angleichen-und-abwurf-aus-fremden-apps.md`, step 9
 **Tree state at start:** `07347b8`, working tree clean for `anwendung.rs`
 

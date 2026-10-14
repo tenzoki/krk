@@ -4,7 +4,7 @@
 **Agent:** reconciler
 **Domain:** code
 **Session:** orchestrator session 260817-1208, Phase 3
-**Circle:** `circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb`
+**Circle:** `260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb`
 **Tree state read:** `e313841`, session start anchor `3fcd375`
 **Verification:** `make check` exit 0 ("alle vier gruen"); `cargo test --workspace` 0 failures on
 every target, 10 skipped (the child probes under a lowered descriptor limit)

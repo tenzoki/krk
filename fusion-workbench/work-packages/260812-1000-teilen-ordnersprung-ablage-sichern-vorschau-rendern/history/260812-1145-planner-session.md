@@ -1,6 +1,6 @@
 # Planner-Lauf 260812-1145: Implementierungsplan der sechsten Runde
 
-**Circle:** `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern`
+**Circle:** `260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern`
 **Erzeugt:** `planning/260812-1145_o_teilen-ordnersprung-ablage-sichern-vorschau-rendern.md`
 **Dazu abgelegt:** `decisions/260812-1145_o_bewegt-ein-rechtsklick-in-der-dateiliste-die-auswahl.md`
 **Baumstand:** `6463ac6` und die unversionierten Aenderungen darueber

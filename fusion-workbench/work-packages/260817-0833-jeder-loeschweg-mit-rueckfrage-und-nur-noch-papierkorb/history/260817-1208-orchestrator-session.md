@@ -7,7 +7,7 @@
 **Commits:** 13 (`3fcd375`..`e313841`)
 **Aufgaben:** 11 von 11 erledigt, 0 mit Fehler, 0 übersprungen
 **Turn-Budget:** 12
-**Aktiver Circle:** `circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb` (aktiv, `_t_`)
+**Aktiver Circle:** `260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb` (aktiv, `_t_`)
 **Erkannte Domäne:** code (140 Quelldateien, 12 Datendateien, gezählt mit `git ls-files`)
 **Turn-Budget:** 12 (aus `fusion.json`, Schlüssel `orchestrator.maxTurns`)
 **Git-HEAD zu Beginn:** `3fcd375`

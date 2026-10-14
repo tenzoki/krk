@@ -3,7 +3,7 @@
 **Date:** 2026-08-29, 260829-1140
 **Filed by:** ontocoder, Kai Stalmann <kai@qantr.com>
 **Status:** Complete
-**Circle:** `circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste`
+**Circle:** `260828-1041-dateilistenfilter-nimmt-eingaben-per-paste`
 **Plan:** `planning/260829-1102_p_plan-einfuegen-in-den-filter-und-stern-als-platzhalter.md`, Schritt 4
 **Datei:** `resources/default-keymap.toml`, allein Kommentarzeilen
 

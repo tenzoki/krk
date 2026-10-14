@@ -3,7 +3,7 @@
 **Datum:** 2026-08-16 23:07
 **Status:** Complete
 **Agent:** planner
-**Circle:** `circles/260816-2255-befehle-absetzen-und-makros-speichern`
+**Circle:** `260816-2255-befehle-absetzen-und-makros-speichern`
 
 ## Auftrag
 

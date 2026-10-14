@@ -20,7 +20,7 @@ Drei Zeilen decken vier davon ab, wenn die dritte Zeile `_c_` und `_b_` zusammen
 jede der drei Zeilen mit „nein". Eine so abgelegte Runde saehe in der Zusammenfassung aus wie
 eine Runde, ueber deren Zustand die Werkbank nichts sagt.
 
-**Der Fall ist am Bestand belegt und nicht ausgedacht.** `circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/`
+**Der Fall ist am Bestand belegt und nicht ausgedacht.** `260804-0933-eingebauter-web-betrachter-im-vorschaufenster`
 traegt seit dem 260821-2202 den Marker `_d_`; der Nutzer hat jenen Circle abgesagt. Von den
 achtzehn Circle-Verzeichnissen dieser Werkbank faellt heute genau eines aus den drei Zeilen
 heraus.

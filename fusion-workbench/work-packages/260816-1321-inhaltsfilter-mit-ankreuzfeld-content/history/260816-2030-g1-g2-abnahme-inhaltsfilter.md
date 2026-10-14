@@ -3,7 +3,7 @@
 **Datum:** 2026-08-16
 **Agent:** coder (schreibt auf; der Durchgang selbst ist Nutzerarbeit)
 **Status:** Complete
-**Circle:** `circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/`
+**Circle:** `260816-1321-inhaltsfilter-mit-ankreuzfeld-content`
 **Plan:** `planning/260816-1359_o_plan-inhaltsfilter-der-dateiliste.md`, Strang G, Schritte G1 und G2
 **Spec:** `shared/planning/260816-1310_o_spec-inhaltsfilter-der-dateiliste.md`, 57 Abnahmekriterien
 **Baumstand:** `3dd799a` plus A1 `5c7f5b9`, C1 `4a54212`, A2 `7283d55`, B1 `32fd038`, D1 `09baffd`, Strang E `37ca972`, F1 `f7cf88b`, F2 `c8fd829`

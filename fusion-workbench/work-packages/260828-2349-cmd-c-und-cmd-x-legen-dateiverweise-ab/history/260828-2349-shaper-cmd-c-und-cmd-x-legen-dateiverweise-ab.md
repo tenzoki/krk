@@ -20,4 +20,4 @@ Keine. Der Baum entscheidet jede Frage bis auf eine (was `cmd+x` tut); die ist i
 
 ## Ergebnis
 
-Circle `circles/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab/` mit `_a_circle.md` und sechs Unterordnern. Backlog-Eintrag auf `_c_` gesetzt mit `Promoted:`-Zeile. Nichts committet.
+Circle `260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab` mit `_a_circle.md` und sechs Unterordnern. Backlog-Eintrag auf `_c_` gesetzt mit `Promoted:`-Zeile. Nichts committet.

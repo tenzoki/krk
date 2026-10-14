@@ -29,6 +29,6 @@ Die Runde beantwortet `paste:` am Dateifenster und besetzt damit den seit dem 26
 
 ## Ergebnis
 
-- Circle `circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/` mit `_a_circle.md`, einem Entscheidungsdatensatz und den sechs Unterordnern.
+- Circle `260828-1041-dateilistenfilter-nimmt-eingaben-per-paste` mit `_a_circle.md`, einem Entscheidungsdatensatz und den sechs Unterordnern.
 - Backlogeintrag auf `_c_` gesetzt, `Promoted:`-Zeile angehängt.
 - Kein Spec, keine Aktivierung, kein Commit: die Aktivierung ist `/fusion:next`.

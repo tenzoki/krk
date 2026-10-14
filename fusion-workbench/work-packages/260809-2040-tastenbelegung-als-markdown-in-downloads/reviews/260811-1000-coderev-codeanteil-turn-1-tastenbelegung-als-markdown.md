@@ -2,7 +2,7 @@
 
 **Datum:** 2026-08-11, 10:00
 **Sender:** coderev
-**Circle:** `circles/260809-2040-tastenbelegung-als-markdown-in-downloads`
+**Circle:** `260809-2040-tastenbelegung-als-markdown-in-downloads`
 **Umfang:** `git diff 5e369bb..HEAD -- crates/`, vier Commits: `39687f3` (S1), `33cc083` (S2),
 `fd863e3` (S3), dazu `f1ce0f5` am Circle-Datensatz. 1728 Zeilen zu, 44 ab, über neun Dateien.
 **Maßstab:** Spec `planning/260811-0753_*_spec-*.md` (38 Kriterien in C1 bis C4, zwei unter

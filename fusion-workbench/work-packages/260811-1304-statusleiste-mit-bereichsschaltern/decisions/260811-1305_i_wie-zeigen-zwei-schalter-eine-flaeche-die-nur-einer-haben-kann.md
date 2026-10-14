@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** implemented
 **Filed by:** shaper (anticipated-circle mode)
-**Cross-references:** `crates/krk-ui/src/fenstermodell.rs:151` (`Bereich::teilt_flaeche_mit`), `circles/260807-2116-eingebauter-editor-mit-textmarken/` (C1 der Editor-Runde)
+**Cross-references:** `crates/krk-ui/src/fenstermodell.rs:151` (`Bereich::teilt_flaeche_mit`), `260807-2116-eingebauter-editor-mit-textmarken` (C1 der Editor-Runde)
 
 ---
 

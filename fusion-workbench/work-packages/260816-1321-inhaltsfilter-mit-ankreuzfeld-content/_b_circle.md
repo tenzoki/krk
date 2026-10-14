@@ -58,7 +58,7 @@ Gefüllt beim Übergang auf aktiv am 260816-1330. Der Stand:
 
 Kein anderer Circle ist Voraussetzung. Zitiert und bindend sind:
 
-- `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/` — die Runde,
+- `260814-1551-tippen-filtert-dateiliste-flach-und-tief` — die Runde,
   die den Filter gebaut hat. Ihr Spec, ihr Plan und ihre Entscheide binden weiter,
   insbesondere `decisions/260814-1830_*_bleibt-der-filtertext-bei-einem-ordnerwechsel-stehen-wenn-deep-aus-ist.md`.
 - `shared/planning/260816-1310_o_spec-inhaltsfilter-der-dateiliste.md` — der Spec

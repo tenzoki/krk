@@ -17,7 +17,7 @@ Aufrufe** und nicht die Zeit."
 Die Zahl fünf stammt aus der Runde 16 und ist mit Schritt 4 der Runde 18 falsch geworden. Seit
 ein Ort je Zusammenfassung höchstens einmal gelesen wird, kostet das Profil einer einzelnen
 Runde **vier** Leseläufe und nicht fünf; die elf Dateiöffnungen stimmen unverändert. Nachgemessen
-am 260825-2107 über `zusammenfassen_gezaehlt` an `circles/260802-0842-krk-mac-dateimanager-editor-git`:
+am 260825-2107 über `zusammenfassen_gezaehlt` an `260802-0842-krk-mac-dateimanager-editor-git`:
 4 Leseläufe, 11 Dateiöffnungen.
 
 Dazu kommt eine zweite Verschiebung, die der Satz nicht mehr trägt: **das größte mitgelieferte

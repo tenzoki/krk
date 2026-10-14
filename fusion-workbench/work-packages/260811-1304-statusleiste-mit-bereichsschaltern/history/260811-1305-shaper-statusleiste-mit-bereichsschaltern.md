@@ -12,7 +12,7 @@ Der Auftrag hielt ausdrücklich fest, dass der Shaper als Unteragent kein `AskUs
 
 ## Was entstanden ist
 
-**Circle:** `circles/260811-1304-statusleiste-mit-bereichsschaltern/`, Datensatz `_a_circle.md`, mit den sechs Artefaktverzeichnissen. Kein Spec: ein vorgesehener Circle hält eine Absicht fest.
+**Circle:** `260811-1304-statusleiste-mit-bereichsschaltern`, Datensatz `_a_circle.md`, mit den sechs Artefaktverzeichnissen. Kein Spec: ein vorgesehener Circle hält eine Absicht fest.
 
 **Sieben Entscheidungsdatensätze** in `decisions/` dieses Circles, alle `_o_`:
 

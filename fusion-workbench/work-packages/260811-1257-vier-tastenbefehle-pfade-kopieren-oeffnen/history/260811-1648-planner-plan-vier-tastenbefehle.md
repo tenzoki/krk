@@ -2,7 +2,7 @@
 
 **Datum:** 260811-1648
 **Agent:** planner
-**Circle:** `circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen`
+**Circle:** `260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen`
 **Status:** Complete
 
 ## Auftrag

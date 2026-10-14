@@ -3,7 +3,7 @@
 **Datum:** 2026-08-11
 **Status:** Complete — die Runde 3 ist beschränkt geschlossen, ihr Plan `planning/260811-0838_c_plan-tastenbelegung-als-markdown-in-downloads.md` steht auf `_c_`. Am Baum tragen `belegungsausgabe::markdown` (`crates/krk-ui/src/belegungsausgabe.rs`) und der Menüeintrag „Tastenbelegung als Markdown sichern“ (Selektor `tastenbelegungSichern:`, `crates/krk-ui/src/appkit/menue.rs`) die vier Fähigkeiten, nachgesehen am 260909-1021.
 **Abnahme:** offen. Die 41 Abnahmekriterien aus C1 bis C4 stehen auf `- [ ]`. Die Anleitung dazu liegt fertig als `planning/260811-1130_*_abnahmeanleitung-tastenbelegung-als-markdown.md` und ist nicht gefahren; sie verlangt KRK im Vordergrund und ist Nutzerarbeit.
-**Circle:** `circles/260809-2040-tastenbelegung-als-markdown-in-downloads`
+**Circle:** `260809-2040-tastenbelegung-als-markdown-in-downloads`
 **Quelle:** Circle-Directive im Datensatz `_*_circle.md`, Abschnitt `## Directive`. Dazu zwölf Festlegungen des Nutzers: die fünf Antworten vom 260811-0110, die in den Datensätzen unter `decisions/` mit einer `Answered:`-Zeile stehen, und die sieben Antworten vom 260811-0115, die die Klärungsrunde `history/260811-0446-shaper-klaerungsrunde-tastenbelegung-ausgabe.md` gestellt hat.
 
 > **Diese Runde ist klein, und der Spec hält sie klein.** Vier Fähigkeiten, ein neuer Menüeintrag, eine neue Beschriftungsliste, keine neue Zeile in `resources/default-keymap.toml`. Was daran über eine Formsache hinausgeht, sind zwei Punkte, und beide stehen unten unter `## Was die Abnahme mitentscheidet`: eine Ableitung des Shapers, deren Prüfung vor dem Bau dieser Spec erzwungen hat und die dabei gebrochen ist, und ein Preis, den der Nutzer gegen die Empfehlung des Shapers angenommen hat.

@@ -1,6 +1,6 @@
 # Klärungsrunde bei der Aktivierung — 260812-0306
 
-**Circle:** `circles/260811-1304-statusleiste-mit-bereichsschaltern`
+**Circle:** `260811-1304-statusleiste-mit-bereichsschaltern`
 **Sitzung:** `shared/history/260812-0306-orchestrator-session.md`
 **Geführt von:** Orchestrator, autonom auf Weisung des Nutzers ("mache autonom den
 Statuszeilen-Circle und fixe auch den darin enthaltenen Bug")

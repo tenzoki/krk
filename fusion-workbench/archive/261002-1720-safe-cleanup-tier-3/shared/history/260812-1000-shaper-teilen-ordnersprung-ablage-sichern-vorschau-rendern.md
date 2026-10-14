@@ -3,7 +3,7 @@
 **Datum:** 2026-08-12, 10:00
 **Agent:** shaper (anticipated-circle mode)
 **Status:** Complete
-**Ergebnis:** `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern/`
+**Ergebnis:** `260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern`
 
 ---
 

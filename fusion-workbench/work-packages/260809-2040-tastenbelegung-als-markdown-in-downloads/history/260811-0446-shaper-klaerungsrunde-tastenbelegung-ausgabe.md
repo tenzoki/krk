@@ -1,7 +1,7 @@
 # Shaper: Klärungsrunde vor dem Spec der Belegungsausgabe
 
 **Datum:** 2026-08-11, 04:46
-**Circle:** `circles/260809-2040-tastenbelegung-als-markdown-in-downloads`
+**Circle:** `260809-2040-tastenbelegung-als-markdown-in-downloads`
 **Status:** Unterbrochen, wartet auf sieben Nutzerantworten
 **Agent:** shaper, als Unteragent dispatcht
 

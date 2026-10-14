@@ -81,7 +81,7 @@ Drei Stellen sind beim Nachlesen als überholt aufgefallen. Keine ist angefasst
 worden, weil der Auftrag auf `HowTo.md` beschränkt war:
 
 1. `README.md:6` sagt „Eine Git-Anbindung ist vorgesehen und noch nicht gebaut".
-   Die Runde 23 (`circles/260830-1045-git-bereich-liest-status-branch-verlauf`,
+   Die Runde 23 (`260830-1045-git-bereich-liest-status-branch-verlauf`,
    `_b_`) hat sie als Lesestufe gebaut.
 2. `CLAUDE.md` nennt für `Bereich` fünf Werte und für `Fokus` fünf. Der Baum
    trägt für beide sechs, seit `Bereich::Git` und `Fokus::Git`.

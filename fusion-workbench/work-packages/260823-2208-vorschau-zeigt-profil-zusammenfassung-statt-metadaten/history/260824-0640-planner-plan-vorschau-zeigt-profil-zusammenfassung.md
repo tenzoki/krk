@@ -3,7 +3,7 @@
 **Date:** 2026-08-24
 **Agent:** planner (als Unteragent des Orchestrators)
 **Status:** Complete
-**Circle:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
+**Circle:** `260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
 **Baumstand:** `278a008`
 
 ---
@@ -57,7 +57,7 @@ der ohnehin gelesen wird; allgemein gilt er nicht.
 **Eine Entscheidung:** `decisions/260824-0634_o_bekommt-das-circle-profil-eine-vierte-zustandszeile-fuer-die-abgelegten-runden.md`.
 A7 nennt drei Zustandszeilen, das Markervokabular kennt sechs Zustaende. Eine ueberholte
 (`_s_`) oder zurueckgestellte (`_d_`) Runde antwortet auf alle drei mit „nein"; in dieser
-Werkbank betrifft das heute `circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster`.
+Werkbank betrifft das heute `260804-0933-eingebauter-web-betrachter-im-vorschaufenster`.
 Empfohlen ist eine vierte Zeile, weil sie zwei Zeilen TOML kostet und keine Zeile Rust und
 den Bausteinsatz bei vier laesst.
 

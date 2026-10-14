@@ -2,7 +2,7 @@
 
 **Datum:** 2026-08-11, 19:16
 **Absender:** `coderev`
-**Circle:** `circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen`
+**Circle:** `260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen`
 **Umfang:** `git diff 6939249..HEAD -- crates/ resources/`, fünf Commits (`a358d86`, `3d48f34`, `d23bfdb`, `cee5276`, `5487695`), 15 Dateien, 1062 eingefügte und 89 entfernte Zeilen
 **Maßstab:** Spec `planning/260811-1552_o_spec-*.md` (5 Fähigkeiten, 62 Kriterien), Plan `planning/260811-1648_o_plan-*.md` (5 Schritte), die sieben beantworteten Datensätze unter `decisions/`
 

@@ -1,7 +1,7 @@
 # Planner: Nacharbeit am Plan der Tastenbelegungs-Ausgabe
 
 **Datum:** 2026-08-11 09:05
-**Circle:** `circles/260809-2040-tastenbelegung-als-markdown-in-downloads`
+**Circle:** `260809-2040-tastenbelegung-als-markdown-in-downloads`
 **Auftrag:** eng begrenzte Nacharbeit. Der Nutzer hat den Plan am 260811-0900 abgenommen, mit zwei Auflagen: die Pfadfrage ist entschieden und in S3 nachzuziehen, und zwei Befunde der Bewertung `reviews/260811-0853-conceptrev-plan-tastenbelegung-als-markdown-in-downloads.md` (Spruch `acceptable`) sind an den Schaubildern nachzuziehen.
 **Angefasst:** allein `planning/260811-0838_o_plan-tastenbelegung-als-markdown-in-downloads.md`. Marker bleibt `_o_`. Kein Code, kein Circle-Datensatz, kein Spec, kein Commit.
 

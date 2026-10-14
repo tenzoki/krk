@@ -1,7 +1,7 @@
 # Shaper: Nachzug am Spec der Runde 4 nach der Bewertung `conceptrev`
 
 **Datum:** 2026-08-11 16:14
-**Circle:** `circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen`
+**Circle:** `260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen`
 **Modus:** in-Circle, eng begrenzte Nacharbeit am eigenen Spec
 **Datei:** `planning/260811-1552_o_spec-vier-tastenbefehle-pfade-kopieren-oeffnen.md` (Marker bleibt `_o_`)
 **Anlass:** Abnahme des Nutzers am 260811-1610 unter der Auflage, das Diagramm nachzuziehen. Grundlage ist `reviews/260811-1604-conceptrev-spec-vier-tastenbefehle-pfade-kopieren-oeffnen.md`, Spruch `acceptable`.

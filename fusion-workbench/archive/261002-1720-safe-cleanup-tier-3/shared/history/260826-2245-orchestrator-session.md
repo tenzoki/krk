@@ -43,7 +43,7 @@ Circle im Bestand, also greift die Bedingung nicht.
 ## Übergabe an den Circle
 
 Um 260827-0622 ist der Circle
-`circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil` aktiviert worden.
+`260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil` aktiviert worden.
 Ab dort führt diese Sitzung ihr Protokoll im Circle weiter:
 `circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil/history/260827-0622-orchestrator-session.md`.
 Diese Datei bleibt als Aufsatzpunkt der Sitzung stehen und wird nicht fortgeschrieben.

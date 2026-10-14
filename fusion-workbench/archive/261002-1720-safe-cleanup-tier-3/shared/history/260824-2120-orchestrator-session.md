@@ -1,6 +1,6 @@
 # Orchestrator Session — 260824-2120
 
-**Directive:** Das Kontextmenü der Dateiliste trägt Zip, Unzip und Finder neben dem Teilen (Runde 17, Circle `circles/260825-0711-kontextmenue-traegt-zip-unzip-finder`)
+**Directive:** Das Kontextmenü der Dateiliste trägt Zip, Unzip und Finder neben dem Teilen (Runde 17, Circle `260825-0711-kontextmenue-traegt-zip-unzip-finder`)
 **Mode:** custom, ab Phase 1 plan
 **Status:** Complete
 

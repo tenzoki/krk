@@ -4,7 +4,7 @@
 **Filed by:** coderev, Kai Stalmann <kai@stalmann.org>
 **Reviewed-range:** `83e011c..38aa652`
 **Not-opened:** none
-**Circle:** `circles/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab`
+**Circle:** `260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab`
 **Spec:** `planning/260829-0005_*_spec-cmd-c-und-cmd-x-legen-dateiverweise-ab.md`
 **Plan:** `planning/260829-0006_*_plan-cmd-c-und-cmd-x-legen-dateiverweise-ab.md`
 **Frühere Durchsicht dieser Runde:** keine (`carried=(not recorded)`)

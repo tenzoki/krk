@@ -24,7 +24,7 @@ Das Kontextmenü der Dateiliste entsteht leer in `crates/krk-ui/src/appkit/tabel
 
 ## Erzeugter Circle
 
-`circles/260825-0711-kontextmenue-traegt-zip-unzip-finder/`, Datensatz `_a_circle.md`, Marker `_a_` (vorgesehen). Die sechs Artefaktverzeichnisse stehen. Als Abhängigkeiten sind die Runde 6 (Kontextmenü und Menübauer) und die Runde 1 (Vorgangsanzeige, Konfliktblatt, Statuszeile) eingetragen.
+`260825-0711-kontextmenue-traegt-zip-unzip-finder`, Datensatz `_a_circle.md`, Marker `_a_` (vorgesehen). Die sechs Artefaktverzeichnisse stehen. Als Abhängigkeiten sind die Runde 6 (Kontextmenü und Menübauer) und die Runde 1 (Vorgangsanzeige, Konfliktblatt, Statuszeile) eingetragen.
 
 ## Offene Entscheidungsdatensätze dieser Runde
 

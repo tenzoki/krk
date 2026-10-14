@@ -2,7 +2,7 @@
 
 **Datum:** 2026-08-27
 **Agent:** shaper, user-direct mode
-**Circle:** `circles/260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil`
+**Circle:** `260827-0310-vorschau-zaehlt-ordnerinhalt-im-default-profil`
 **Status:** Complete
 
 ---

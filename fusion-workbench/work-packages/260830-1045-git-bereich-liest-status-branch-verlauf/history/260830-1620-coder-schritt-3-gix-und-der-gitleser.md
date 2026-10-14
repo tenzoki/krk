@@ -3,7 +3,7 @@
 **Date:** 2026-08-30, 260830-1620
 **Filed by:** coder, Kai Stalmann <kai@qantr.com>
 **Status:** Complete (die Arbeit; der Schritt ist an einer Nutzerfrage angehalten)
-**Circle:** `circles/260830-1045-git-bereich-liest-status-branch-verlauf`
+**Circle:** `260830-1045-git-bereich-liest-status-branch-verlauf`
 **Plan:** `planning/260830-1317_*_plan-git-bereich-liest-status-branch-verlauf.md`, Schritt 3
 **HEAD:** `4f6b880` (nicht committet; der Orchestrator committet)
 

@@ -3,7 +3,7 @@
 **Datum:** 260824-1755
 **Agent:** coder
 **Status:** Complete
-**Circle:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
+**Circle:** `260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
 **Plan:** `planning/260824-0640_o_plan-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md`, Bündel D, Schritt 11
 **Baumstand vorher:** Schritt 8 (`4516f4e`) und Schritt 10 (`a77bb77`) eingegangen, Arbeitsbaum mit den nicht eingegangenen Änderungen aus Schritt 8 und der Auslieferungsfassung (`8433935`)
 

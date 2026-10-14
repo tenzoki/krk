@@ -2,7 +2,7 @@
 
 **Status:** Complete
 **Agent:** planner
-**Circle:** `circles/260802-0842-krk-mac-dateimanager-editor-git`
+**Circle:** `260802-0842-krk-mac-dateimanager-editor-git`
 **Auftrag:** R2b aus dem Orchestrator-Turn 26. Dokumentenpflege an Spec, Plan und
 vier Entscheidungsdatensätzen. Kein Code, keine `.toml`, keine neue
 Planungsdatei.

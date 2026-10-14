@@ -2,7 +2,7 @@
 
 **Datum:** 2026-08-11, 10:38
 **Agent:** shaper (user-direct, eng begrenzter Berichtigungsauftrag vom 260811-1005)
-**Circle:** `circles/260809-2040-tastenbelegung-als-markdown-in-downloads`
+**Circle:** `260809-2040-tastenbelegung-als-markdown-in-downloads`
 **Berührte Datei:** `planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md` (Marker bleibt `_o_`)
 
 ## Anlass

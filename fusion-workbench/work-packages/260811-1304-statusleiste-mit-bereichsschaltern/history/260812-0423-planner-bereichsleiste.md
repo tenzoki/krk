@@ -2,7 +2,7 @@
 
 **Status:** Complete
 **Agent:** planner
-**Circle:** `circles/260811-1304-statusleiste-mit-bereichsschaltern`
+**Circle:** `260811-1304-statusleiste-mit-bereichsschaltern`
 **Dispatch:** Nutzer, direkt ("Erstelle den Implementierungsplan für den aktiven Circle")
 
 ## Was entstanden ist

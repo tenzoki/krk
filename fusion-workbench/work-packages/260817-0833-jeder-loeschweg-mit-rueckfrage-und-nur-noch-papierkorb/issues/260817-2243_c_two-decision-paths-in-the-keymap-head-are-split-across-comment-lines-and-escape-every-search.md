@@ -67,10 +67,10 @@ characters, with the path itself held on one line as an unbreakable token.
 
 **A second defect surfaced under the same check and is fixed with it.** Ten citations stood in
 the bare form `decisions/…` or `issues/…` without a Circle. `CLAUDE.md` resolves an unqualified
-path of that form against **Runde 2**, `circles/260807-2116-eingebauter-editor-mit-textmarken`,
+path of that form against **Runde 2**, `260807-2116-eingebauter-editor-mit-textmarken`,
 and none of the ten lives there: nine belong to Runde 1
-(`circles/260802-0842-krk-mac-dateimanager-editor-git`) and one to Runde 4
-(`circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen`). Read by the project's own
+(`260802-0842-krk-mac-dateimanager-editor-git`) and one to Runde 4
+(`260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen`). Read by the project's own
 path rule they pointed at nothing. All ten now carry their Circle, the form the majority of this
 file already used.
 

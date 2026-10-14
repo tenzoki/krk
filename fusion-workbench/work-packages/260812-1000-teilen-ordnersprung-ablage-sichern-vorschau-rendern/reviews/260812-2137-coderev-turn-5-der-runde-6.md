@@ -4,7 +4,7 @@
 **Reviewed-range:** `1e4e01f..2c0b2a6`
 **Not-opened:** none
 **Datum:** 260812-2137
-**Circle:** `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern`
+**Circle:** `260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern`
 
 ## Zusammenfassung
 

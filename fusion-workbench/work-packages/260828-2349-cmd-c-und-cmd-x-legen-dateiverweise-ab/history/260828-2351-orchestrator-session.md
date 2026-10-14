@@ -1,6 +1,6 @@
 # Orchestrator Session — 260828-2351
 
-**Directive:** die Runde 22 autonom fertigstellen — Circle `circles/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab`: Cmd+C und Cmd+X in der Dateiliste legen die betroffenen Dateien als Verweise auf die Zwischenablage, sodass andere Apps (Finder) sie einfügen können. Der Nutzer hat am 260828 verlangt, die Runde ohne Tore zu bauen; Spec- und Plan-Tor gelten als vorab freigegeben, der Abnahmelauf am Bündel bleibt bei ihm.
+**Directive:** die Runde 22 autonom fertigstellen — Circle `260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab`: Cmd+C und Cmd+X in der Dateiliste legen die betroffenen Dateien als Verweise auf die Zwischenablage, sodass andere Apps (Finder) sie einfügen können. Der Nutzer hat am 260828 verlangt, die Runde ohne Tore zu bauen; Spec- und Plan-Tor gelten als vorab freigegeben, der Abnahmelauf am Bündel bleibt bei ihm.
 **Mode:** custom → Phase 0b (Shaping, Planung), autonom
 **Status:** Complete — Runde 22 kohärent geschlossen (`_c_`), Auslieferung 1.3.0 im Anschluss
 **Circle:** 260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab (aktiviert 260828-2351, Claim auf Checkout 6c11b1f2)
@@ -65,7 +65,7 @@ Unter `circles/260828-2349-cmd-c-und-cmd-x-legen-dateiverweise-ab/issues/`:
 - `260829-0041_o_die-probenablagen-der-huelle-teilen-sich-zwei-gleichzeitige-testlaeufe` (Low; nur bei parallelen `cargo test`-Prozessen)
 - `260829-0006_o_drei-baumaussagen-des-specs-…` (Punkt 2 überholt, 1 und 3 offen; Spec-Prosa)
 Für den Kurator (CLAUDE.md): die Hülle schreibt seit dieser Runde auch Dateiverweise; Rundentabelle endet bei 18; `copy:`/`cut:` als dritter Weg ohne Taste; `Wirkungsbereich` acht Werte (aus Runde 20).
-Vorgesehen: `circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/` (Runde 21).
+Vorgesehen: `260828-1041-dateilistenfilter-nimmt-eingaben-per-paste` (Runde 21).
 
 ## Commits
 

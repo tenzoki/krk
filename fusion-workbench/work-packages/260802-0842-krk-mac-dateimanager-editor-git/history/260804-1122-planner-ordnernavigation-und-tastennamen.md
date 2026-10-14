@@ -3,7 +3,7 @@
 **Datum:** 260804-1122
 **Agent:** planner
 **Status:** Complete
-**Circle:** `circles/260802-0842-krk-mac-dateimanager-editor-git`
+**Circle:** `260802-0842-krk-mac-dateimanager-editor-git`
 
 ## Auftrag
 

@@ -3,7 +3,7 @@
 **Datum:** 2026-08-11, 14:03
 **Agent:** reconciler
 **Domain:** code
-**Circle:** `circles/260809-2040-tastenbelegung-als-markdown-in-downloads`
+**Circle:** `260809-2040-tastenbelegung-als-markdown-in-downloads`
 **Sitzung:** `history/260811-0107-orchestrator-session.md`
 **Umfang:** Commits `e43f21a..caf6375`, elf Stück
 **Status:** Complete

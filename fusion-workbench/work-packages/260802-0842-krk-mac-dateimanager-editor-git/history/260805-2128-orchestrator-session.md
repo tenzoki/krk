@@ -8,7 +8,7 @@
 
 - Arbeitsverzeichnis: `/Users/k1/Projects/productive/krk`
 - Git HEAD: `7aa8f3f`
-- Aktiver Circle: `circles/260802-0842-krk-mac-dateimanager-editor-git` (`_t_`); dazu 1 anticipated Circle. Hinweis auf `/fusion:next` wurde ausgegeben.
+- Aktiver Circle: `260802-0842-krk-mac-dateimanager-editor-git` (`_t_`); dazu 1 anticipated Circle. Hinweis auf `/fusion:next` wurde ausgegeben.
 - Offene Defekte: 13 im Circle (`_o_`/`_p_`), 0 in `shared/issues/`
 - Offene Planungsdateien: Spec `260802-1036_o_spec-navigator-geruest.md`, Plan `260802-1428_o_plan-navigator-geruest-runde-1.md` (30 von 36 Schritten `[DONE]`)
 - Offene Entscheidungen (`_o_`): 4 im Circle, 3 in `shared/decisions/` = 7

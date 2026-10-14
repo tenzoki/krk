@@ -10,7 +10,7 @@ Der Kopf der `README.md` lautete bis zum Umbau vom 260821:
 > Tastatur erreichbar. **Editor und Git-Anbindung folgen in späteren Runden.**
 
 Der zweite Satz ist zur Hälfte falsch. Der eingebaute Editor ist der Gegenstand
-der Runde 2 (`circles/260807-2116-eingebauter-editor-mit-textmarken`), steht seit
+der Runde 2 (`260807-2116-eingebauter-editor-mit-textmarken`), steht seit
 dem als fünfter Bereich der Fensterzeile im Baum und ist seither in zwölf
 weiteren Runden fortgeschrieben worden. Allein die Git-Anbindung ist offen; am
 260821 trägt `Kommando` keine einzige Git-Variante.

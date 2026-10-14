@@ -87,13 +87,13 @@ themselves. No line of code or data in this session went unreviewed.
 The playmaker regenerated `portfolio.md` after the `_t_`→`_c_` transition. Its log is
 `shared/history/260818-1018-playmaker-orchestrator-phase4.md`.
 
-It recommends `circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster` as the
+It recommends `260804-0933-eingebauter-web-betrachter-im-vorschaufenster` as the
 next round, the only anticipated Circle, and names three things that stand before its
 activation: a study of the rendering means, a clarification round over three questions,
 and one line of its Grounding that has to be corrected.
 
 It also named a candidate it deliberately did **not** rank: the deferred round
-`circles/260816-2255-befehle-absetzen-und-makros-speichern`. A deferred Circle is not a
+`260816-2255-befehle-absetzen-und-makros-speichern`. A deferred Circle is not a
 ranking candidate, but this one carries a finished spec of 54 criteria and a finished plan
 of 22 steps and is nothing but "not got to yet". The playmaker reports that staying silent
 about it would have pre-decided the choice.

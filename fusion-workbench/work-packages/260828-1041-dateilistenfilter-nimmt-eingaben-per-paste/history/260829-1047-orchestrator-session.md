@@ -1,6 +1,6 @@
 # Orchestrator Session — 260829-1047
 
-**Directive:** die Runde 21 autonom fertigstellen — Circle `circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste`: Cmd+V im Dateifenster hängt Text an den Filter an (Directive im Datensatz), **erweitert um die zweite Fähigkeit** aus `shared/backlog/260829-0842_o_dateilistenfilter-versteht-stern-als-platzhalter.md`: `*` im Filtertext ist ein Platzhalter für eine beliebige Zeichenfolge. Der Nutzer hat am 260829 beide zusammen in diese Runde gelegt und sie ohne Tore beauftragt; der Abnahmelauf am Bündel bleibt bei ihm.
+**Directive:** die Runde 21 autonom fertigstellen — Circle `260828-1041-dateilistenfilter-nimmt-eingaben-per-paste`: Cmd+V im Dateifenster hängt Text an den Filter an (Directive im Datensatz), **erweitert um die zweite Fähigkeit** aus `shared/backlog/260829-0842_o_dateilistenfilter-versteht-stern-als-platzhalter.md`: `*` im Filtertext ist ein Platzhalter für eine beliebige Zeichenfolge. Der Nutzer hat am 260829 beide zusammen in diese Runde gelegt und sie ohne Tore beauftragt; der Abnahmelauf am Bündel bleibt bei ihm.
 **Mode:** custom → Phase 0b (Shaping, Planung), autonom
 **Status:** Complete — Runde 21 kohärent geschlossen (`_c_`), Auslieferung 1.4.0 im Anschluss
 **Circle:** 260828-1041-dateilistenfilter-nimmt-eingaben-per-paste (aktiviert 260829-1047, Claim auf Checkout 6c11b1f2)
@@ -58,7 +58,7 @@
 
 ## Remaining Work
 
-Unter `circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/`:
+Unter `260828-1041-dateilistenfilter-nimmt-eingaben-per-paste`:
 - `issues/260829-1215_o_…keine-hoechstlaenge…` (Low; Nutzerfrage: Grenze oder ausdrücklich keine)
 - `issues/260829-1216_o_…wagenruecklauf…` (Low, Coder, Einzeiler + Probe)
 - `issues/260829-1217_o_claude-md-nennt-die-zaehlprobe-…` (Kurator)

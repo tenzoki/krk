@@ -27,7 +27,7 @@ steht deshalb im Grundlagenschnappschuss.
 
 ## Was angelegt wurde
 
-`circles/260821-1644-veroeffentlichen-als-achte-station/` mit dem Datensatz `_a_circle.md` und
+`260821-1644-veroeffentlichen-als-achte-station` mit dem Datensatz `_a_circle.md` und
 den sechs Artefaktverzeichnissen `planning/`, `issues/`, `decisions/`, `history/`, `reviews/`
 und `analyses/`. Die fünf leeren bleiben leer.
 

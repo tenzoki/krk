@@ -2,7 +2,7 @@
 
 **Status:** Complete
 **Agent:** planner
-**Circle:** `circles/260802-0842-krk-mac-dateimanager-editor-git`
+**Circle:** `260802-0842-krk-mac-dateimanager-editor-git`
 **Auftrag:** Nachzug an Plan und Spec, damit der Entscheidungsdatensatz zur Sortierung an den Stellen steht, für die er sich bindend erklärt. Kein Codeeingriff, kein Eingriff an Entscheidungs- oder Defektdateien, kein Commit.
 
 ## Anlass

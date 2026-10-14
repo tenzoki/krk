@@ -3,7 +3,7 @@
 **Datum:** 2026-08-04, 09:33
 **Agent:** shaper (anticipated-circle mode)
 **Status:** Complete
-**Ergebnis:** `circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/`
+**Ergebnis:** `260804-0933-eingebauter-web-betrachter-im-vorschaufenster`
 
 ## Auftrag
 

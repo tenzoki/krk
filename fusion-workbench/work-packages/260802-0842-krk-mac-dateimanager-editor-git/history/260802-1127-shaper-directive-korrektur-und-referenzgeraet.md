@@ -2,7 +2,7 @@
 
 **Datum:** 2026-08-02, 11:27
 **Agent:** shaper, in-Circle-Klärungsmodus mit ausdrücklicher Ausnahme für den Circle-Datensatz
-**Circle:** `circles/260802-0842-krk-mac-dateimanager-editor-git`
+**Circle:** `260802-0842-krk-mac-dateimanager-editor-git`
 **Status:** Complete
 
 ## Auftrag

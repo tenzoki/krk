@@ -4,7 +4,7 @@ CLAUDE.md nennt zehn gefahrene Runden, es sind elf
 
 Der Abschnitt `## Worum es geht` behauptet in fetter Schrift "**Zehn Runden sind gefahren.**"
 und führt darunter eine Tabelle mit zehn Zeilen. Am 260816 sind es elf: die Runde
-`circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content` ist am selben Tag beschränkt
+`260816-1321-inhaltsfilter-mit-ankreuzfeld-content` ist am selben Tag beschränkt
 geschlossen worden und fehlt in der Tabelle. Nachzuzählen mit
 `ls fusion-workbench/circles/*/_[bc]_circle.md` — elf Datensätze, zehn mit `_b_`, einer mit `_c_`.
 

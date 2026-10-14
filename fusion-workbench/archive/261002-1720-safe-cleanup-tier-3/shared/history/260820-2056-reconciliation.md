@@ -4,7 +4,7 @@
 **Reconciler**, Domäne `code`, Baumstand `f5300f4`, Arbeitsbaum zu Beginn sauber, alles nach
 `origin/main` geschoben.
 **Anlass:** Schritt 3 von `/fusion:cleanup`. Kein Circle ist aktiv, `agentstate.yaml` und
-`.active-circle` fehlen. Die Runde 14 (`circles/260819-2230-auswahl-und-kopieren-in-der-vorschau`)
+`.active-circle` fehlen. Die Runde 14 (`260819-2230-auswahl-und-kopieren-in-der-vorschau`)
 ist am 260820-1045 kohärent geschlossen und hat ihren eigenen Abgleich vom 260820-0834 bereits
 gefahren. Dieser Durchgang ist der breite über alle Speicher, mit zwei vom Nutzer ausdrücklich
 benannten Stellen darin.

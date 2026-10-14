@@ -103,7 +103,7 @@ nichts mehr" (`git ls-files -d` ohne Treffer, am 260817-1129 nachgeprüft und we
 und „Der Datensatz ist damit ursächlich geklärt. Was bleibt, ist die Abstellung, und die
 gehört nicht hierher". Die Bergung ist vollständig, die Ursache ist mit dem zweiten Vorfall
 belegt, und die Abstellung läuft als eigene Runde
-(`circles/260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb`) auf dem
+(`260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papierkorb`) auf dem
 Datensatz `shared/issues/260816-2144_*_das-raeumen-in-den-papierkorb-laeuft-ohne-rueckfrage.md`.
 In diesem Datensatz steht damit keine offene Arbeit mehr.
 

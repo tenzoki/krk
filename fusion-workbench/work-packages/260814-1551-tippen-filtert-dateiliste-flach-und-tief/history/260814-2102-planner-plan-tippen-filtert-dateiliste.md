@@ -2,7 +2,7 @@
 
 **Datum:** 260814-2102
 **Status:** Complete
-**Circle:** `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/` (aktiv, über den Parameter `Circle:` benannt)
+**Circle:** `260814-1551-tippen-filtert-dateiliste-flach-und-tief` (aktiv, über den Parameter `Circle:` benannt)
 **Ergebnis:** `planning/260814-2102_o_plan-tippen-filtert-dateiliste-flach-und-tief.md`
 
 ## Was gelesen wurde

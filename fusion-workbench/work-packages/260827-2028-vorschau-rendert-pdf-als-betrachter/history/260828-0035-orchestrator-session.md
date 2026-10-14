@@ -1,6 +1,6 @@
 # Orchestrator Session — 260828-0035
 
-**Directive:** die aktive Runde 20 fahren — Circle `circles/260827-2028-vorschau-rendert-pdf-als-betrachter`: die Vorschau rendert PDF als Betrachter (Zoom, Seitensprung, Seitenzähler, Textauswahl mit Cmd+C, Grenze 64 MB); der Datensatz `_t_circle.md` trägt die Directive, Spec und Plan fehlen noch
+**Directive:** die aktive Runde 20 fahren — Circle `260827-2028-vorschau-rendert-pdf-als-betrachter`: die Vorschau rendert PDF als Betrachter (Zoom, Seitensprung, Seitenzähler, Textauswahl mit Cmd+C, Grenze 64 MB); der Datensatz `_t_circle.md` trägt die Directive, Spec und Plan fehlen noch
 **Mode:** custom → Phase 0b (Shaping, Planung)
 **Status:** Complete — Runde 20 kohärent geschlossen (`_c_`)
 **Circle:** 260827-2028-vorschau-rendert-pdf-als-betrachter (aktiviert 260828-0035 über /fusion:next, Claim auf Checkout 6c11b1f2)
@@ -61,7 +61,7 @@
 
 ## Remaining Work
 
-Alles unter `circles/260827-2028-vorschau-rendert-pdf-als-betrachter/`, sofern nicht anders genannt:
+Alles unter `260827-2028-vorschau-rendert-pdf-als-betrachter`, sofern nicht anders genannt:
 - `issues/260828-1046_o_claude-md-nennt-sieben-werte-fuer-wirkungsbereich-…` (Medium, Kurator: `/fusion:cleanup --only claude-md`)
 - `issues/260828-1046_o_dokument-setzen-merkt-nur-den-erfolg-…` (Low, Coder)
 - `issues/260828-1046_o_die-regel-nur-http-und-https-steht-…-je-einmal` (Low, Coder)
@@ -70,7 +70,7 @@ Alles unter `circles/260827-2028-vorschau-rendert-pdf-als-betrachter/`, sofern n
 - `issues/260828-0744_o_c6-der-runde-1-…` — Schließung gehört dem Nutzer
 - `issues/260828-0712_o_der-spec-nennt-make-tasten-…` — Spec-Prosa, nicht angefasst
 - `decisions/260828-0712_o_wie-erreicht-eine-us-tastaturbelegung-cmd-plus-…` — Nutzerfrage
-- `circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/` — vorgesehen, vom Playmaker zur Aktivierung empfohlen
+- `260828-1041-dateilistenfilter-nimmt-eingaben-per-paste` — vorgesehen, vom Playmaker zur Aktivierung empfohlen
 
 ## Commits
 

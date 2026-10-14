@@ -2,7 +2,7 @@
 
 **Date:** 260814-0812
 **Agent:** coder
-**Circle:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/`
+**Circle:** `260813-2332-notizzettel-als-blatt-mit-zwei-zetteln`
 **Plan:** `planning/260814-0656_o_plan-notizzettel-als-blatt-mit-zwei-zetteln.md`, Schritte 1 bis 5
 **Status:** Complete
 

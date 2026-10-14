@@ -15,7 +15,7 @@
 - Open defect records: 34 in the shared store, 103 across the Circle stores.
 - Open plan files: 3 in the shared store, 7 across the Circle stores.
 - Open decision records: 13 in the shared store, 20 across the Circle stores.
-- Circles: 1 anticipated, 10 bounded closure, 3 closed coherent, 1 deferred. The one anticipated Circle is `circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster/`.
+- Circles: 1 anticipated, 10 bounded closure, 3 closed coherent, 1 deferred. The one anticipated Circle is `260804-0933-eingebauter-web-betrachter-im-vorschaufenster`.
 - Circle hint printed to the user: yes (1 anticipated, 0 active).
 - Workbench domain: `code`. Source count `code_files=147`, `data_files=11`, `counted_by=git-ls-files`; data does not outweigh source, so the tree's source volume decides.
 - Monitor binary refreshed from the installed plugin.

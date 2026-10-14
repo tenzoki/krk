@@ -4,7 +4,7 @@
 **Datum:** 260814-1247
 **Domäne:** code
 **Stand:** `a6098d9`, ein Codecommit seit dem ersten Abgleich
-**Circle:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/`
+**Circle:** `260813-2332-notizzettel-als-blatt-mit-zwei-zetteln`
 **Erster Abgleich:** `history/260814-1002-reconciliation.md` — was dort steht, ist hier nicht wiederholt
 **Sitzungsprotokoll:** `history/260813-2342-orchestrator-session.md` (Abschnitt `## Coherence`)
 **Kein Bündelbau, kein `cargo xtask`, kein Vordergrundlauf.** `target/KRK.app` ist unberührt geblieben.

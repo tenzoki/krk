@@ -1,7 +1,7 @@
 # Shaper: Diagrammnachzug am Spec der Tastenbelegungs-Ausgabe
 
 **Datum:** 2026-08-11 08:26
-**Circle:** `circles/260809-2040-tastenbelegung-als-markdown-in-downloads`
+**Circle:** `260809-2040-tastenbelegung-als-markdown-in-downloads`
 **Auftrag:** eng begrenzte Nacharbeit. Der Nutzer hat den Spec abgenommen, mit der Auflage, vorher das Diagramm nachzuziehen. Auslöser ist die Bewertung `reviews/260811-0803-conceptrev-spec-tastenbelegung-als-markdown-in-downloads.md`, Spruch `acceptable`.
 **Angefasst:** `planning/260811-0753_o_spec-tastenbelegung-als-markdown-in-downloads.md`, der Mermaid-Block im Abschnitt `### Woher die Ausgabe ihre Daten nimmt, und woher nicht` sowie eine Zeilenangabe in C3. Marker bleibt `_o_`. Kein Code, kein Circle-Datensatz, kein Commit.
 

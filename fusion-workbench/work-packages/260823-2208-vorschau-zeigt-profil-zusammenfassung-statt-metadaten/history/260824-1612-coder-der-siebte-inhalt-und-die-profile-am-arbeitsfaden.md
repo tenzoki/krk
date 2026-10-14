@@ -3,7 +3,7 @@
 **Datum:** 260824-1612 bis 260824-1650
 **Agent:** coder
 **Status:** Complete
-**Circle:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
+**Circle:** `260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
 **Plan:** `planning/260824-0640_o_plan-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md`, Bündel D, Schritt 9
 **Baumstand vorher:** Schritt 6 versioniert (`abe1a31`), Schritt 8 eingegangen (`4516f4e`), `make check` grün
 

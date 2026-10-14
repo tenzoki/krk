@@ -3,7 +3,7 @@
 **Datum:** 260824-1900
 **Domäne:** `code`
 **Baumstand:** `83026f6`, Sitzungsanker `278a008`, 25 Commits dazwischen
-**Circle:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
+**Circle:** `260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
 **Status:** Complete
 
 ---

@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-14 18:52
 **Modus:** in-Circle, Nachbesserung
-**Circle:** `circles/260814-1551-tippen-filtert-dateiliste-flach-und-tief/`
+**Circle:** `260814-1551-tippen-filtert-dateiliste-flach-und-tief`
 **Bearbeitet:** `planning/260814-1830_o_spec-tippen-filtert-dateiliste-flach-und-tief.md`
 
 ## Auftrag

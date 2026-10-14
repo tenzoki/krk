@@ -4,7 +4,7 @@
 **Status:** Complete
 **Spec:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/planning/260813-2348_*_spec-notizzettel-als-blatt-mit-zwei-zetteln.md` (Fassung vom 260814-0925, mit dem Nachtrag an C4)
 **Nachgezogen am 260814-0941**, an sechs Stellen und nur an C4 entlang: die Schritte 10 bis 14, der Kasten `zettel_sichern` im Bild der Sicherungsmomente und die Risikozeile zu zwei Instanzen. Anlass sind die zwei Defektdatensätze `issues/260814-0908_*` (hoch) und `issues/260814-0909_*` (mittel) aus der Durchsicht von Turn 1 und der Nachtrag des Spec an C4 vom 260814-0925: der getippte Stand gewinnt, und jeder Sicherungsmoment schreibt jeden abweichenden Zettel. Die Reihenfolge der Arbeit, die Zulässigkeitsregel der achten Runde und der eine `durchgang` beim Beenden sind dabei unangetastet geblieben; die fünf niedrigen Befunde der Durchsicht sind nicht Gegenstand dieses Nachtrags und bleiben offen.
-**Circle:** `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln/`
+**Circle:** `260813-2332-notizzettel-als-blatt-mit-zwei-zetteln`
 **Bindender Entscheid:** `decisions/260813-2348_*_was-tut-der-zettel-mit-einer-zetteldatei-die-er-nicht-lesen-kann.md` — Möglichkeit 3, `EDITORGRENZE` als Grenze
 **Grundlage erhoben:** 260814-0656, am Baum unter `crates/` und `resources/`
 

@@ -3,7 +3,7 @@
 **Datum:** 2026-08-16
 **Agent:** coder
 **Status:** Complete
-**Circle:** `circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content/`
+**Circle:** `260816-1321-inhaltsfilter-mit-ankreuzfeld-content`
 **Plan:** `planning/260816-1359_o_plan-inhaltsfilter-der-dateiliste.md`, Schritt A2
 **Baumstand vor der Arbeit:** `4a54212`
 **Erfüllt:** C1.4, C1.5, C1.6, C6.1, C6.3, C6.7, C6.8, C6.9

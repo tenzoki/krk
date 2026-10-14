@@ -47,11 +47,11 @@ Kein eingebautes Terminal, kein sechster Bereich der Fensterzeile, keine Oberfl�
 
 ## Dependencies
 
-- `circles/260802-0842-krk-mac-dateimanager-editor-git` — die Runde 1. Sie liefert die Dateioperationen mit Vermittlerfaden und Vorgangszeile, das Vorschaufenster, die Tastenbelegung und die zehn Zeitzusagen aus C8. Ihr Abschnitt `## Ausdrücklich außerhalb dieses Circles` führt „KRK als Kommandozentrale für Fusion"; diese Runde nennt die Abgrenzung ausdrücklich und hebt sie nicht auf.
-- `circles/260807-2116-eingebauter-editor-mit-textmarken` — die Runde 2. Ihr Editor ist das Ziel des Befehls „Makrodatei im Editor öffnen".
-- `circles/260813-2332-notizzettel-als-blatt-mit-zwei-zetteln` — die Runde 9. Sie hat die Ablage von vier auf sechs Dateien gebracht; die Makrodatei ist die siebte.
-- `circles/260816-1321-inhaltsfilter-mit-ankreuzfeld-content` — die Runde 11. Ihr Ankreuzfeld wird mit leerer Tastenliste ausgeliefert statt mit `reserviert_fuer`; die neun Makroplätze folgen diesem Vorbild.
-- `circles/260804-0933-eingebauter-web-betrachter-im-vorschaufenster` — vorgesehen, nicht gefahren. Er greift dieselbe Fläche an, die Tabs des Vorschaufensters. Der Nutzer hat am 260816 entschieden, diese Runde zuerst zu fahren: sie legt mit der Anheftung die Regel fest, nach der eine fremde Quelle in einen Vorschau-Tab schreibt, und der Web-Betrachter wäre die vierte nach derselben Regel.
+- `260802-0842-krk-mac-dateimanager-editor-git` — die Runde 1. Sie liefert die Dateioperationen mit Vermittlerfaden und Vorgangszeile, das Vorschaufenster, die Tastenbelegung und die zehn Zeitzusagen aus C8. Ihr Abschnitt `## Ausdrücklich außerhalb dieses Circles` führt „KRK als Kommandozentrale für Fusion"; diese Runde nennt die Abgrenzung ausdrücklich und hebt sie nicht auf.
+- `260807-2116-eingebauter-editor-mit-textmarken` — die Runde 2. Ihr Editor ist das Ziel des Befehls „Makrodatei im Editor öffnen".
+- `260813-2332-notizzettel-als-blatt-mit-zwei-zetteln` — die Runde 9. Sie hat die Ablage von vier auf sechs Dateien gebracht; die Makrodatei ist die siebte.
+- `260816-1321-inhaltsfilter-mit-ankreuzfeld-content` — die Runde 11. Ihr Ankreuzfeld wird mit leerer Tastenliste ausgeliefert statt mit `reserviert_fuer`; die neun Makroplätze folgen diesem Vorbild.
+- `260804-0933-eingebauter-web-betrachter-im-vorschaufenster` — vorgesehen, nicht gefahren. Er greift dieselbe Fläche an, die Tabs des Vorschaufensters. Der Nutzer hat am 260816 entschieden, diese Runde zuerst zu fahren: sie legt mit der Anheftung die Regel fest, nach der eine fremde Quelle in einen Vorschau-Tab schreibt, und der Web-Betrachter wäre die vierte nach derselben Regel.
 
 **Bindende Datensätze, die diese Runde nicht aufhält:**
 

@@ -13,7 +13,7 @@ Ohne jede Nennung sind unter anderen `tabelle.rs`, `zwischenablage.rs`, `termina
 
 ---
 
-Gefunden vom `planner` am 260811 beim Erheben der Grundlage für die Runde 4 (`circles/260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen`). Der Befund ist ein Widerspruch zwischen der Dokumentation und dem Baum und kein Fehler im Programm: die angesprochenen Klassen stehen sämtlich seit macOS 10.0 zur Verfügung, soweit nachgesehen, und ein Absturz ist von dieser Lage nicht zu erwarten.
+Gefunden vom `planner` am 260811 beim Erheben der Grundlage für die Runde 4 (`260811-1257-vier-tastenbefehle-pfade-kopieren-oeffnen`). Der Befund ist ein Widerspruch zwischen der Dokumentation und dem Baum und kein Fehler im Programm: die angesprochenen Klassen stehen sämtlich seit macOS 10.0 zur Verfügung, soweit nachgesehen, und ein Absturz ist von dieser Lage nicht zu erwarten.
 
 **Er ist nebenbei gefunden und nicht durch die Directive dieser Runde verursacht**, deshalb liegt er im gemeinsamen Speicher und nicht im Circle. Die Runde 4 zieht die Angabe für die beiden Module nach, die sie ohnehin anfasst (`zwischenablage.rs` und das neue `standardprogramm.rs`), und lässt die übrigen stehen; das steht in ihrem Umsetzungsplan.
 

@@ -82,9 +82,9 @@ Mehr als zwei Zettel. Suchen, Ersetzen, Zeilennummern, Syntaxhervorhebung und Te
 
 ## Dependencies
 
-- `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags` — die achte Runde hat `zulaessigkeit::zulaessig` um die Schlüsselfensterfrage erweitert. Diese Regel trägt den Zettel; die Runde ist geschlossen (`_c_`), die Regel steht.
-- `circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz` — die siebte Runde hat Schreibgriff und Sitzungsrecht getrennt und den Fall der zweiten Instanz aufgemacht. Ihr offener Datensatz zu `Esc` im Editor ist vor dem Bau zu lesen.
-- `circles/260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern` — die sechste Runde hat die Ablage angefasst, in die die zwei Zetteldateien einziehen.
+- `260813-0939-titelleiste-fuehrt-version-und-semantische-tags` — die achte Runde hat `zulaessigkeit::zulaessig` um die Schlüsselfensterfrage erweitert. Diese Regel trägt den Zettel; die Runde ist geschlossen (`_c_`), die Regel steht.
+- `260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz` — die siebte Runde hat Schreibgriff und Sitzungsrecht getrennt und den Fall der zweiten Instanz aufgemacht. Ihr offener Datensatz zu `Esc` im Editor ist vor dem Bau zu lesen.
+- `260812-1000-teilen-ordnersprung-ablage-sichern-vorschau-rendern` — die sechste Runde hat die Ablage angefasst, in die die zwei Zetteldateien einziehen.
 
 ## Turn log
 

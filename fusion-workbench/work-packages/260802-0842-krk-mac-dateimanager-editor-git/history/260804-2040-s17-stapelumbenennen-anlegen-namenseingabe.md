@@ -3,7 +3,7 @@
 ---
 **Status:** Complete
 **Agent:** coder
-**Circle:** `circles/260802-0842-krk-mac-dateimanager-editor-git`
+**Circle:** `260802-0842-krk-mac-dateimanager-editor-git`
 **Plan:** `planning/260802-1428_o_plan-navigator-geruest-runde-1.md`, Abschnitt `#### 17.`
 **Spec:** `planning/260802-1036_o_spec-navigator-geruest.md`, Abschnitt `### C4`
 **Datensatz:** `decisions/260802-1036_a_umbenennen-im-stapel-umfang.md`

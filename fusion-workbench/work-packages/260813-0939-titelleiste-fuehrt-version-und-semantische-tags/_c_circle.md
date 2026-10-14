@@ -75,7 +75,7 @@ Ebenso offen: an welcher Stelle der sechs Stationen von `cargo xtask release` di
 Kein anderer Circle muss vor diesem laufen. Vier Stellen binden ihn inhaltlich.
 
 - `circles/260807-2116-eingebauter-editor-mit-textmarken/planning/260807-2147_*_spec-eingebauter-editor-mit-textmarken.md`, Fähigkeit **C11**. Die einzige bestehende Zusage über die Titelleiste. Ihr erstes und ihr neuntes Abnahmekriterium sind oben ausgeschrieben; dieser Circle stellt einen Bereich daneben und ändert den Titel selbst nicht.
-- `circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz`, die Runde 7. Sie hat das vollständige Hauptmenü gebaut, in dem ein Eintrag "Über KRK" fehlt. Die erste offene Frage oben hängt daran.
+- `260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz`, die Runde 7. Sie hat das vollständige Hauptmenü gebaut, in dem ein Eintrag "Über KRK" fehlt. Die erste offene Frage oben hängt daran.
 - `shared/issues/260813-0026_*_bundle-und-release-schreiben-an-denselben-ort-und-ein-entwicklungsbau-zerstoert-das-beglaubigte-buendel.md`. Offen, betrifft denselben Auslieferungsweg, den die Tag-Prüfung erweitert.
 - `shared/issues/260812-1628_*_der-buendelbau-nennt-die-signaturidentitaet-aber-nicht-was-sie-fuer-die-weitergabe-bedeutet.md`. Offen, aus demselben Anlass: der Weg von einem Bau zu einer Auslieferung ist im Werkzeug heute nicht ausgeschildert. Die Tag-Prüfung ist das erste Schild.
 

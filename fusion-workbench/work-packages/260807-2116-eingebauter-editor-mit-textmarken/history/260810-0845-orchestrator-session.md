@@ -98,7 +98,7 @@ berührt jede Datei der Kiste.
 **Arbeitsplatz:** `/Users/k1/Projects/productive/krk`
 **Plugin-Version:** 7.0.0
 **git HEAD:** `38a02b2` — chore(workbench): Sitzungszustand geraeumt, Dashboard und Ereignisprotokoll nachgezogen
-**Aktiver Circle:** `circles/260807-2116-eingebauter-editor-mit-textmarken` (Zustand aktiv)
+**Aktiver Circle:** `260807-2116-eingebauter-editor-mit-textmarken` (Zustand aktiv)
 
 ### Zählungen im Suchbereich des Auflösers
 

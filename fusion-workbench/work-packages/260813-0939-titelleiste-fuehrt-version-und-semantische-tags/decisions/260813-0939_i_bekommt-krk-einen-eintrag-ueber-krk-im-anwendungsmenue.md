@@ -4,7 +4,7 @@
 **Domain:** code
 **Status:** implemented
 **Filed by:** shaper (anticipated-circle mode)
-**Cross-references:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/_*_circle.md` (Directive und Grounding-Aufnahme); `circles/260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz` (Runde 7, das vollständige Hauptmenü); `crates/krk-ui/src/menuemodell.rs` (die eine Gliederung des Menüs)
+**Cross-references:** `circles/260813-0939-titelleiste-fuehrt-version-und-semantische-tags/_*_circle.md` (Directive und Grounding-Aufnahme); `260813-0100-suche-in-der-belegung-vollstaendiges-menue-weitere-instanz` (Runde 7, das vollständige Hauptmenü); `crates/krk-ui/src/menuemodell.rs` (die eine Gliederung des Menüs)
 
 ---
 

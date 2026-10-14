@@ -22,7 +22,7 @@ Kein vorgesehener Circle. Empfehlung: keine. Der Abhängigkeitsgraph der nicht-t
 ## Warnungen (in das Portfolio geschrieben)
 
 - Kein Zeigerfehler, kein Zyklus, keine veraltete Grundlage (der Abschluss ist `_c_`, seit dem letzten Lauf 260829-0738 ist kein Circle nach `_b_` gewechselt).
-- Die Runde 21 lässt fünf offene Defekte und eine offene Entscheidung unter `circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/` zurück; einer davon (`issues/260829-1215_*_…`, Höchstlänge) ist eine Nutzerfrage, einer (`issues/260829-1217_*_…`) ein Kurator-Befund an CLAUDE.md.
+- Die Runde 21 lässt fünf offene Defekte und eine offene Entscheidung unter `260828-1041-dateilistenfilter-nimmt-eingaben-per-paste` zurück; einer davon (`issues/260829-1215_*_…`, Höchstlänge) ist eine Nutzerfrage, einer (`issues/260829-1217_*_…`) ein Kurator-Befund an CLAUDE.md.
 - Die Runden 22, 20 und 19 lassen vier, acht und vier offene Datensätze zurück, unverändert seit dem Lauf 260829-0738.
 - Fünf Punkte für den Kurator an CLAUDE.md (vier aus dem Lauf 260829-0738, dazu `issues/260829-1217_*_…` der Runde 21).
 - Der Datensatz der Runde 17 trägt keine Schließungsnotiz (unverändert seit 260827-0403); drei weitere terminale Datensätze tragen ein leeres Turn-Protokoll.

@@ -3,7 +3,7 @@
 **Datum:** 260824-1902
 **Agent:** coder
 **Status:** Complete
-**Circle:** `circles/260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
+**Circle:** `260823-2208-vorschau-zeigt-profil-zusammenfassung-statt-metadaten`
 **Plan:** `planning/260824-0640_o_plan-vorschau-zeigt-profil-zusammenfassung-statt-metadaten.md`, Bündel E, Schritt 12
 **Baumstand vorher:** Schritt 11 (`7de937f`) auf HEAD, Arbeitsbaum sauber bis auf die Werkbankdateien
 
