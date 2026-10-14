@@ -165,8 +165,8 @@
 //! | Springe / Gehe (Schaltflaechen der Eingabeblaetter) | Aller | Go |
 //! | Festlegen / Oeffnen / Aendern (Schaltflaechen des PIN-Blattes) | Définir / Ouvrir / Modifier | Set / Open / Change |
 //! | OK (Schaltflaeche des Hinweises) | OK | OK |
-//! | Return (Tastenname in einer Erlaeuterung) | Entrée | Return |
-//! | Cmd+Return / Opt+Return | Cmd+Entrée / Opt+Entrée | Cmd+Return / Opt+Return |
+//! | Return (Tastenname in einer Erlaeuterung; die Taste ↩, auf einem franzoesischen Mac „Retour“, waehrend „Entrée“ dort ⌤ heisst und in der Tabelle der Eintrag ist) | Retour | Return |
+//! | Cmd+Return / Opt+Return | Cmd+Retour / Opt+Retour | Cmd+Return / Opt+Return |
 //! | Textmarke (ein Lesezeichen auf eine Zeile) | signet de texte | text bookmark |
 //! | Schreibmarke | curseur | cursor |
 //! | Treffer (der Suche im Editor) | résultat | match |

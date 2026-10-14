@@ -372,6 +372,46 @@ fn anzahl_und_satz_an_der_tabelle() {
     }
 }
 
+/// Die Abbruchmeldung eines Vorgangs setzt unter `{uebertragen}` den ganzen
+/// Satz aus `VorgangUebertragen` ein, also Zahl, Menge und Positionen
+/// zusammen, und ein franzoesisches Mitwort dahinter muesste sich an die
+/// Zahl der Eintraege angleichen, die der Eintrag nicht kennt. Der
+/// franzoesische Eintrag stellt das Mitwort deshalb als unveraenderliche
+/// Beschriftung davor. Die Probe baut die Meldung, wie `abschlusstext` in
+/// `krk_ui::kommandos::operationen` sie baut, mit ausdruecklicher Sprache
+/// und haelt den Wortlaut bei einem und bei zwei Eintraegen.
+#[test]
+fn die_franzoesische_abbruchmeldung_braucht_keine_angleichung() {
+    let meldung = |eintraege: u64, bytes: u64, positionen: u64| {
+        let uebertragen = Sprache::Fr.satz(
+            Text::VorgangUebertragen,
+            &[
+                (
+                    "eintraege",
+                    &Sprache::Fr.anzahl(Zahlwort::Eintraege, eintraege, &[]),
+                ),
+                ("menge", &Sprache::Fr.menge(bytes)),
+                (
+                    "positionen",
+                    &Sprache::Fr.anzahl(Zahlwort::AusgewaehltePositionen, positionen, &[]),
+                ),
+            ],
+        );
+        Sprache::Fr.satz(
+            Text::VorgangAbgebrochen,
+            &[("was", &"Copie"), ("uebertragen", &uebertragen)],
+        )
+    };
+    assert_eq!(
+        meldung(1, 1_500, 1),
+        "Copie\u{a0}: annulé, transféré\u{a0}: une entrée, 1,5 ko (une position sélectionnée)"
+    );
+    assert_eq!(
+        meldung(2, 3_000, 2),
+        "Copie\u{a0}: annulé, transféré\u{a0}: 2 entrées, 3,0 ko (2 positions sélectionnées)"
+    );
+}
+
 /// Ohne `festlegen` gilt Deutsch, und die Formen ohne Sprache antworten wie
 /// die deutschen mit Sprache.
 #[test]

@@ -480,9 +480,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::BelegungsansichtZuweisen => "Attribuer",
         Text::BelegungsansichtAuslieferungszustand => "Version livrée",
         Text::BelegungsansichtFertig => "Terminé",
-        Text::BelegungsansichtTasteEingabe => "Entrée",
+        Text::BelegungsansichtTasteEingabe => "Retour",
         Text::BelegungsansichtErlaeuterung => {
-            "Chaque caractère saisi cherche dans les deux colonnes et va au premier résultat\u{202f}; la touche Entrée passe au suivant, la touche de retour arrière raccourcit le texte de recherche. Les flèches choisissent la fonction. {zuweisen} ({zuweisen_taste}) enregistre la prochaine combinaison pressée\u{202f}; esc annule la saisie. {zuruecksetzen} ({zuruecksetzen_taste}) réinitialise tout. {fertig} ({fertig_taste}) ou esc quitte la vue et enregistre les modifications."
+            "Chaque caractère saisi cherche dans les deux colonnes et va au premier résultat\u{202f}; la touche Retour passe au suivant, la touche de retour arrière raccourcit le texte de recherche. Les flèches choisissent la fonction. {zuweisen} ({zuweisen_taste}) enregistre la prochaine combinaison pressée\u{202f}; esc annule la saisie. {zuruecksetzen} ({zuruecksetzen_taste}) réinitialise tout. {fertig} ({fertig_taste}) ou esc quitte la vue et enregistre les modifications."
         }
         Text::BelegungsansichtErstWaehlen => {
             "Sélectionner d’abord une fonction, puis appuyer sur Attribuer."
@@ -564,7 +564,12 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::VorgangSchonEiner => "une opération est déjà en cours\u{a0}: {was}",
         Text::VorgangUebertragen => "{eintraege}, {menge} ({positionen})",
-        Text::VorgangAbgebrochen => "{was}\u{a0}: annulé, {uebertragen} transférés",
+        // `{uebertragen}` ist der Satz aus `VorgangUebertragen`, also Zahl,
+        // Menge und Positionen zusammen; ein Mitwort dahinter muesste sich an
+        // die Zahl der Eintraege angleichen, und die kennt dieser Eintrag
+        // nicht. Das Mitwort steht deshalb davor, als Beschriftung mit
+        // Doppelpunkt, und bleibt unveraenderlich.
+        Text::VorgangAbgebrochen => "{was}\u{a0}: annulé, transféré\u{a0}: {uebertragen}",
         Text::VorgangFertig => "{was}\u{a0}: terminé, {uebertragen}",
         Text::UebersprungenZeile => "{name}\u{a0}: {grund}",
         Text::AnlegenFrageOrdner => "Quel nom donner au nouveau dossier\u{202f}?",
@@ -703,10 +708,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::KonfliktInDenPapierkorbUndErsetzen => "Mettre à la Corbeille et remplacer",
         Text::KonfliktEndgueltigLoeschenUndErsetzen => "Supprimer définitivement et remplacer",
         Text::KonfliktTastenhinweisEinZiel => {
-            "Entrée et Esc annulent, Cmd+Entrée remplace, Opt+Entrée renomme."
+            "Retour et Esc annulent, Cmd+Retour remplace, Opt+Retour renomme."
         }
         Text::KonfliktTastenhinweisMehrereZiele => {
-            "Entrée ignore, Cmd+Entrée remplace, Opt+Entrée renomme, Esc annule."
+            "Retour ignore, Cmd+Retour remplace, Opt+Retour renomme, Esc annule."
         }
         Text::KonfliktFrage => "«\u{a0}{name}\u{a0}» existe déjà à la destination",
         Text::KonfliktErlaeuterung => {
@@ -714,7 +719,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::KonfliktFuerAlleWeiteren => "Appliquer à toutes les suivantes",
         Text::LoeschblattErlaeuterung => {
-            "{erlaeuterung}\n\nEntrée et Esc annulent. Cmd+Entrée pour confirmer."
+            "{erlaeuterung}\n\nRetour et Esc annulent. Cmd+Retour pour confirmer."
         }
         Text::NeuerungenBlattFrage => "Vos fichiers de données et ce que cette version apporte",
         Text::OrtwahlWaehlen => "Choisir",
@@ -737,7 +742,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::StapelSpalteNeu => "Nouveau",
         Text::StapelSpalteHinweis => "Remarque",
         Text::StapelErlaeuterung => {
-            "L’aperçu montre ce que ferait la commande. Le renommage n’a lieu qu’avec Entrée\u{202f}; Esc annule. Les entrées accompagnées d’une remarque restent inchangées."
+            "L’aperçu montre ce que ferait la commande. Le renommage n’a lieu qu’avec Retour\u{202f}; Esc annule. Les entrées accompagnées d’une remarque restent inchangées."
         }
         Text::StapelFeldNummerAb => "Numéro à partir de\u{a0}:",
         Text::StapelFeldStellen => "Chiffres\u{a0}:",
@@ -749,20 +754,20 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::SucheErsetzen => "Remplacer",
         Text::SucheAlleErsetzen => "Tout remplacer",
         Text::SucheErlaeuterung => {
-            "Entrée cherche le suivant, Cmd+Entrée remplace le résultat, Opt+Entrée remplace tout, Esc annule."
+            "Retour cherche le suivant, Cmd+Retour remplace le résultat, Opt+Retour remplace tout, Esc annule."
         }
         Text::SucheFrage => "Que rechercher\u{202f}?",
         Text::UngesichertSichern => "Enregistrer",
         Text::UngesichertVerwerfen => "Ne pas enregistrer",
         Text::UngesichertFrage => "«\u{a0}{name}\u{a0}» a des modifications non enregistrées",
         Text::UngesichertErlaeuterung => {
-            "{pfad}\n\nEntrée enregistre, Cmd+Entrée abandonne les modifications, Esc annule."
+            "{pfad}\n\nRetour enregistre, Cmd+Retour abandonne les modifications, Esc annule."
         }
         Text::FremdaenderungNeuLaden => "Recharger",
         Text::FremdaenderungUeberschreiben => "Écraser quand même",
         Text::FremdaenderungFrage => "«\u{a0}{name}\u{a0}» a été modifié en dehors de KRK",
         Text::FremdaenderungErlaeuterung => {
-            "{pfad}\n\nRecharger abandonne les modifications de l’Éditeur, Écraser remplace la version sur le disque. Entrée et Esc annulent, Opt+Entrée recharge, Cmd+Entrée écrase."
+            "{pfad}\n\nRecharger abandonne les modifications de l’Éditeur, Écraser remplace la version sur le disque. Retour et Esc annulent, Opt+Retour recharge, Cmd+Retour écrase."
         }
         Text::ZeilennummerFrage => "À quelle ligne\u{202f}?",
         Text::ZeilennummerSpringe => "Aller",
@@ -1096,10 +1101,10 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
 /// Belegungsansicht und jeder Konfliktmeldung.
 pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str {
     match schluessel {
-        Kommando::AuswahlHoch => "Sélection une entrée vers le haut",
-        Kommando::AuswahlRunter => "Sélection une entrée vers le bas",
-        Kommando::SeiteHoch => "Sélection une page d’écran vers le haut",
-        Kommando::SeiteRunter => "Sélection une page d’écran vers le bas",
+        Kommando::AuswahlHoch => "Monter la sélection d’une entrée",
+        Kommando::AuswahlRunter => "Descendre la sélection d’une entrée",
+        Kommando::SeiteHoch => "Monter la sélection d’une page d’écran",
+        Kommando::SeiteRunter => "Descendre la sélection d’une page d’écran",
         Kommando::Listenanfang => "Au début de la liste",
         Kommando::Listenende => "À la fin de la liste",
         Kommando::Oeffnen => "Entrer dans le dossier sélectionné",
