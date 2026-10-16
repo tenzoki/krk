@@ -180,13 +180,28 @@ pub enum Text {
     /// `operation::fern`, Ueberschreiben: der Ersatz ist nicht vollstaendig
     /// angekommen, und das Ziel bleibt, wie es war.
     VorgangErsatzUnvollstaendig,
-    /// `operation::fern`, Ueberschreiben: das Ziel ist entfernt, und der
-    /// Ersatz liess sich nicht auf seinen Namen umbenennen; `{name}`, `{grund}`.
+    /// `operation::fern`, Ueberschreiben: das Ziel liegt beiseite, der Ersatz
+    /// liess sich nicht auf seinen Namen umbenennen und das Ziel nicht
+    /// zurueckholen; `{alt}` (das Ziel), `{name}` (der Ersatz), `{grund}`.
     VorgangErsatzUnterZwischennamen,
     /// `operation::fern`, Ueberschreiben beim Verschieben: das Ziel blieb, und
     /// die Quelle liess sich nicht von ihrem Zwischennamen zurueckholen;
     /// `{name}`, `{grund}`.
     VorgangQuelleUnterZwischennamen,
+    /// `operation::fern`, Ueberschreiben: der Ersatz steht am Ziel, und vom
+    /// beiseitegelegten alten Ziel liess sich nicht alles entfernen; `{name}`
+    /// (der Zwischenname des alten Ziels), `{grund}`.
+    VorgangAltesZielBlieb,
+    /// `operation::fern`, Ueberschreiben: ein Ersatz, der nicht an die Stelle
+    /// des Ziels kommt, liess sich nicht wegraeumen; `{grund}`.
+    VorgangErsatzNichtWeggeraeumt,
+    /// `operation::fern`: die halbe Datei eines gescheiterten oder
+    /// abgebrochenen Kopierens liess sich nicht wegraeumen; `{grund}`.
+    VorgangHalbeDateiNichtWeggeraeumt,
+    /// `operation::fern`, Ueberschreiben: mit dem Ziel lag auch die Quelle
+    /// beiseite, sie ist also das Ziel selbst, ueber einen zweiten Weg, oder
+    /// liegt in ihm; das Ziel bleibt.
+    VorgangQuelleIstTeilDesZiels,
     /// `OhnePapierkorb`: der Papierkorb, den es nicht gibt.
     VorgangKeinPapierkorb,
     /// Duplizieren und Packen: die Quelle ist Ordner, Verknuepfung, Roehre,
@@ -1624,7 +1639,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 679] = [
+    pub const ALLE: [Text; 683] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1698,6 +1713,10 @@ impl Text {
         Text::VorgangErsatzUnvollstaendig,
         Text::VorgangErsatzUnterZwischennamen,
         Text::VorgangQuelleUnterZwischennamen,
+        Text::VorgangAltesZielBlieb,
+        Text::VorgangErsatzNichtWeggeraeumt,
+        Text::VorgangHalbeDateiNichtWeggeraeumt,
+        Text::VorgangQuelleIstTeilDesZiels,
         Text::VorgangKeinPapierkorb,
         Text::VorgangKeineGewoehnlicheDatei,
         Text::VorgangDateiangabenNichtKopiert,

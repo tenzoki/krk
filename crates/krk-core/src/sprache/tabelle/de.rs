@@ -75,7 +75,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::FernRechnerLeer => "Vor Port oder Pfad der Adresse steht kein Rechner.",
         Text::FernRechnerUngueltig => {
-            "„{rechner}“ ist kein Rechnername: kein Leerraum, kein „@“ und kein „-“ am Anfang; das Konto steht in seinem eigenen Feld."
+            "„{rechner}“ ist kein Rechnername: erlaubt sind Buchstaben ohne Umlaut, Ziffern, „.“, „-“ und „_“, kein „-“ am Anfang, oder eine IP-Adresse; das Konto steht in seinem eigenen Feld."
         }
         Text::FernPortUngueltig => "„{port}“ ist kein Port; erlaubt sind 1 bis 65535.",
         Text::ZaehlzeileDateien => "Dateien",
@@ -112,10 +112,20 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "nicht vollständig kopiert, das Ziel bleibt unverändert"
         }
         Text::VorgangErsatzUnterZwischennamen => {
-            "das Ziel ist entfernt, der Ersatz liegt unter „{name}“: {grund}"
+            "das Ziel liegt unter „{alt}“, der Ersatz unter „{name}“: {grund}"
         }
         Text::VorgangQuelleUnterZwischennamen => {
             "das Ziel ließ sich nicht ersetzen, und der Eintrag liegt jetzt unter „{name}“: {grund}"
+        }
+        Text::VorgangAltesZielBlieb => {
+            "ersetzt; was vom alten Ziel blieb, liegt unter „{name}“: {grund}"
+        }
+        Text::VorgangErsatzNichtWeggeraeumt => "der Ersatz ließ sich nicht wegräumen: {grund}",
+        Text::VorgangHalbeDateiNichtWeggeraeumt => {
+            "die halbe Datei ließ sich nicht wegräumen: {grund}"
+        }
+        Text::VorgangQuelleIstTeilDesZiels => {
+            "die Quelle ist das Ziel selbst oder liegt darin; das Ziel bleibt unverändert"
         }
         Text::VorgangKeinPapierkorb => "kein Papierkorb eingehängt; es wurde nichts gelöscht",
         Text::VorgangKeineGewoehnlicheDatei => "keine gewöhnliche Datei",

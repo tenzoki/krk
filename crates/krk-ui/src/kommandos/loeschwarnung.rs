@@ -126,7 +126,8 @@
 //! Weil sie in die andere Richtung zeigt als die Ausloeser der lauten Form: bei
 //! ihr ist `Ja` die **Erlaubnis** und nicht der Warngrund. Bis zum 261016
 //! gehoerte `Unentschieden` deshalb zu `Nein`, und die Regel fragte allein
-//! [`Erlaubnisbefund::erlaubt`]: beide hielten mit derselben Meldung an. Seit
+//! `Erlaubnisbefund::erlaubt`, das seit dem 261017 nicht mehr steht: beide
+//! hielten mit derselben Meldung an. Seit
 //! `Nein` zur endgueltigen Rueckfrage fuehrt, fuehren die zwei zu
 //! **verschiedenen** Ausgaengen, und die Tafel schreibt alle drei Werte aus;
 //! eine Zusammenfassung wuerde aus „wir wissen nichts" ein endgueltiges

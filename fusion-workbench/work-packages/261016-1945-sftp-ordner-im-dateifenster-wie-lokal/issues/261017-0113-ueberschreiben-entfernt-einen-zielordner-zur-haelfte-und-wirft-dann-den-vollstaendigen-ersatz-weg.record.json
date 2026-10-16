@@ -1,0 +1,26 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "5e2a752b-a3c7-433d-9b93-572d2b0dd490",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261016-1945-sftp-ordner-im-dateifenster-wie-lokal/issues/261017-0113-ueberschreiben-entfernt-einen-zielordner-zur-haelfte-und-wirft-dann-den-vollstaendigen-ersatz-weg.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "closed",
+    "disposition": {
+      "kind": "fixed",
+      "reason_ref": null
+    }
+  }
+}

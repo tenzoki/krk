@@ -71,7 +71,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::FernRechnerLeer => "The address names no host before the port or path.",
         Text::FernRechnerUngueltig => {
-            "“{rechner}” is not a host name: no whitespace, no “@” and no leading “-”; the account has its own field."
+            "“{rechner}” is not a host name: allowed are letters without accents, digits, “.”, “-” and “_”, no leading “-”, or an IP address; the account has its own field."
         }
         Text::FernPortUngueltig => "“{port}” is not a port; allowed are 1 to 65535.",
         Text::ZaehlzeileDateien => "Files",
@@ -102,10 +102,18 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VorgangKopiertAberInQuelleGeblieben => "copied, but left in the source: {grund}",
         Text::VorgangErsatzUnvollstaendig => "not completely copied, the destination is unchanged",
         Text::VorgangErsatzUnterZwischennamen => {
-            "the destination was removed, the replacement is at “{name}”: {grund}"
+            "the destination is at “{alt}”, the replacement at “{name}”: {grund}"
         }
         Text::VorgangQuelleUnterZwischennamen => {
             "the destination could not be replaced, and the entry is now at “{name}”: {grund}"
+        }
+        Text::VorgangAltesZielBlieb => {
+            "replaced; what remained of the old destination is at “{name}”: {grund}"
+        }
+        Text::VorgangErsatzNichtWeggeraeumt => "the replacement could not be removed: {grund}",
+        Text::VorgangHalbeDateiNichtWeggeraeumt => "the partial file could not be removed: {grund}",
+        Text::VorgangQuelleIstTeilDesZiels => {
+            "the source is the destination itself or lies inside it; the destination is unchanged"
         }
         Text::VorgangKeinPapierkorb => "no Trash attached; nothing was deleted",
         Text::VorgangKeineGewoehnlicheDatei => "not a regular file",

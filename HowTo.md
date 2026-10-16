@@ -1962,10 +1962,18 @@ verbunden wird nicht.
   Dateifenster heraus lässt sich nichts ziehen. Fortschritt, Abbruch und das
   Blatt bei einem vorhandenen Namen sind dieselben wie lokal; eine
   abgebrochene Datei wird am Ziel entfernt. **„Überschreiben“ legt den Ersatz
-  erst vollständig neben das Ziel und entfernt das Ziel danach**: kommt der
-  Ersatz nicht vollständig an, bleibt das Ziel, wie es war, und die
-  Abschlussliste sagt es. Benennen Quelle und Ziel auf dem Server über eine
-  Verknüpfung denselben Eintrag, wird nichts überschrieben. **Mit gehen Rechte
+  erst vollständig neben das Ziel, benennt dann das Ziel um, gibt dem Ersatz
+  seinen Namen und entfernt das alte Ziel zuletzt**: kommt der Ersatz nicht
+  vollständig an, bleibt das Ziel, wie es war, und die Abschlussliste sagt es.
+  Lässt sich vom alten Ziel etwas nicht entfernen, etwa ein Ordner ohne
+  Schreibrecht darin, steht der Ersatz trotzdem am Ziel, und die
+  Abschlussliste nennt den Namen `.krk-alt-…`, unter dem der Rest liegt.
+  Lehnt der Server nur Rechte und Änderungszeit ab, wird trotzdem ersetzt,
+  mit einem Hinweis. Benennen Quelle und Ziel auf dem Server über eine
+  Verknüpfung denselben Eintrag, wird nichts überschrieben. Erreichen beide
+  Seiten denselben Speicher auf zwei Wegen, etwa ein NAS, das eingehängt und
+  zugleich über sftp geöffnet ist, fragt KRK zwar nach, überschreibt aber
+  nichts: die Quelle bleibt, und die Abschlussliste sagt es. **Mit gehen Rechte
   und Änderungszeit, nicht aber erweiterte Attribute**: Finder-Etiketten,
   Kommentare und andere Zusatzdaten einer Datei gehen auf dem Weg zum Server
   verloren. Verknüpfungen bleiben Verknüpfungen; auf einen Server, der sich
@@ -1991,9 +1999,10 @@ verbunden wird nicht.
 - **Das Kontextmenü graut nichts aus**, sondern meldet: „Öffnen mit“, Zippen,
   Entpacken, Duplizieren, „Im Finder öffnen“, „Im Finder anzeigen“ und
   „Auswerfen“ sagen in der Statuszeile „Das geht an einem Ort auf einem Server
-  nicht.“ „Teilen“ steht dort gar nicht im Kontextmenü. Dasselbe sagen `cmd+c` und `cmd+x`, die von dort keine
+  nicht.“ Dasselbe sagen `cmd+c` und `cmd+x`, die von dort keine
   Dateiverweise ablegen, und ein Doppelklick auf eine Datei. Ein Doppelklick
-  auf eine Verknüpfung tritt ein, wenn sie auf einen Ordner zeigt.
+  auf eine Verknüpfung tritt ein, wenn sie auf einen Ordner zeigt. „Teilen“
+  steht dort gar nicht im Kontextmenü.
 - **Die Vorschau** zeigt Name, Größe, Änderungszeit und Typ aus der Liste und
   liest keinen Inhalt. Der Git-Bereich fragt einen Ordner auf einem Server
   nicht.

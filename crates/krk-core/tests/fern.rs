@@ -1376,6 +1376,27 @@ fn das_anhaengen_legt_verzeichnis_und_datei_mit_den_engen_rechten_an_und_schreib
     assert_eq!(fehler.kind(), std::io::ErrorKind::NotFound);
 }
 
+/// Die Meldung zu einem abgewiesenen Rechner nennt in jeder Sprache die
+/// Regel, nach der `rechnername_gueltig` abweist (Befund
+/// `261017-0113-texte-und-prosa-nach-den-behebungen-des-sftp-pakets-…`).
+///
+/// Bis zur Behebung nannte sie die alte Regel, „kein Leerraum, kein `@` und
+/// kein `-` am Anfang“, und wer `a\u{e4}.example` oder `a.example,*` eintrug,
+/// las einen Grund, der auf seine Eingabe nicht zutraf. Jetzt nennt sie, was
+/// erlaubt ist: der Unterstrich und die IP-Adresse stehen darin, und das
+/// alte Verbot des Leerraums als einziger Grund nicht mehr.
+#[test]
+fn die_meldung_zu_einem_ungueltigen_rechner_nennt_die_erlaubten_zeichen() {
+    for sprache in krk_core::sprache::Sprache::ALLE {
+        let meldung = sprache.text(krk_core::sprache::Text::FernRechnerUngueltig);
+        assert!(meldung.contains('_'), "{sprache:?}: {meldung}");
+        assert!(meldung.contains("IP"), "{sprache:?}: {meldung}");
+        for alt in ["kein Leerraum", "no whitespace", "ni espace"] {
+            assert!(!meldung.contains(alt), "{sprache:?}: {meldung}");
+        }
+    }
+}
+
 /// Ein Rechnername mit einem Zeichen, das `known_hosts` als Muster liest,
 /// kommt weder durch das Zerlegen der Adresse noch in eine Zeile zum
 /// Anhaengen (Befund `261017-0004-ein-rechnername-mit-komma-oder-stern-…`).

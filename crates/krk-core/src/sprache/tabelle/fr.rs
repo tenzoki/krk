@@ -79,7 +79,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::FernRechnerLeer => "L’adresse ne nomme aucun hôte avant le port ou le chemin.",
         Text::FernRechnerUngueltig => {
-            "«\u{a0}{rechner}\u{a0}» n’est pas un nom d’hôte\u{a0}: ni espace, ni «\u{a0}@\u{a0}», ni «\u{a0}-\u{a0}» au début\u{202f}; le compte a son propre champ."
+            "«\u{a0}{rechner}\u{a0}» n’est pas un nom d’hôte\u{a0}: sont admis les lettres sans accent, les chiffres, «\u{a0}.\u{a0}», «\u{a0}-\u{a0}» et «\u{a0}_\u{a0}», sans «\u{a0}-\u{a0}» au début, ou une adresse IP\u{202f}; le compte a son propre champ."
         }
         Text::FernPortUngueltig => {
             "«\u{a0}{port}\u{a0}» n’est pas un port\u{202f}; seules les valeurs de 1 à 65535 sont admises."
@@ -122,10 +122,22 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::VorgangErsatzUnvollstaendig => "copie incomplète, la destination reste inchangée",
         Text::VorgangErsatzUnterZwischennamen => {
-            "la destination a été supprimée, le remplacement se trouve sous «\u{a0}{name}\u{a0}»\u{a0}: {grund}"
+            "la destination se trouve sous «\u{a0}{alt}\u{a0}», le remplacement sous «\u{a0}{name}\u{a0}»\u{a0}: {grund}"
         }
         Text::VorgangQuelleUnterZwischennamen => {
             "la destination n’a pas pu être remplacée, et l’entrée se trouve maintenant sous «\u{a0}{name}\u{a0}»\u{a0}: {grund}"
+        }
+        Text::VorgangAltesZielBlieb => {
+            "remplacé\u{202f}; ce qui reste de l’ancienne destination se trouve sous «\u{a0}{name}\u{a0}»\u{a0}: {grund}"
+        }
+        Text::VorgangErsatzNichtWeggeraeumt => {
+            "le remplacement n’a pas pu être supprimé\u{a0}: {grund}"
+        }
+        Text::VorgangHalbeDateiNichtWeggeraeumt => {
+            "le fichier partiel n’a pas pu être supprimé\u{a0}: {grund}"
+        }
+        Text::VorgangQuelleIstTeilDesZiels => {
+            "la source est la destination elle-même ou se trouve à l’intérieur\u{202f}; la destination reste inchangée"
         }
         Text::VorgangKeinPapierkorb => {
             "aucune Corbeille n’est disponible\u{202f}; rien n’a été supprimé"

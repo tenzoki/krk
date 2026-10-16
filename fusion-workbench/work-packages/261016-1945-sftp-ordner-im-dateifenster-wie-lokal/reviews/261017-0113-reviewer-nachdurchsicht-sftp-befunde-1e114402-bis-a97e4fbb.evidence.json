@@ -1,0 +1,28 @@
+{
+  "schema": "fusion.evidence/v1",
+  "id": "d200eaa0-f12c-4438-8641-5c583be9180f",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "subject": {
+    "git_tree": "781d4250536e9d5e0dea66be3563b4fe252f3a15",
+    "git_range": null
+  },
+  "brief_revision": "sha256:9b6ea2696978aa0210abd2e47535316350f7e231e73345bba269a864eda54e70",
+  "plan_revision": "sha256:8f507e97abee5fc9c0339de98d475c76bd295a08adc898c0d6c25864bddfa811",
+  "role": {
+    "profile": "reviewer",
+    "version": "13.0.0"
+  },
+  "host": "claude-code",
+  "execution_policy": "claude-guided",
+  "verdict": "revise",
+  "uncertainties": [],
+  "checks": [],
+  "report": {
+    "path": "work-packages/261016-1945-sftp-ordner-im-dateifenster-wie-lokal/reviews/261017-0113-reviewer-nachdurchsicht-sftp-befunde-1e114402-bis-a97e4fbb.md",
+    "sha256": "sha256:c57cf89c9b92bd870b376ece87b12b2f2ef11f6831a8086226a70236d39518a0",
+    "kind": "review"
+  },
+  "predecessor": null,
+  "accepted_at": "2026-10-16T23:16:24Z",
+  "extensions": {}
+}

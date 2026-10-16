@@ -13,7 +13,8 @@
 //!                    │    └── oder(andere)       ──> Warnbefund
 //!                    │
 //!                    └──> Erlaubnisbefund::{Ja, Nein, Unentschieden}
-//!                         └── erlaubt()          ──> bool   (nur Ja)
+//!                         (keine Frage an den Wert; der Rufer schreibt
+//!                          alle drei aus)
 //! ```
 //!
 //! # Warum zwei Typen und nicht einer
@@ -211,8 +212,12 @@ pub enum Warnbefund {
 /// Frage: „fuehrt das Ziel einen Papierkorb" (C4).
 /// [`Erlaubnisbefund::Unentschieden`] gehoert hier zu
 /// [`Erlaubnisbefund::Nein`] — ein Ziel, dessen Papierkorb sich nicht
-/// feststellen laesst, wird nicht geloescht —, und [`Erlaubnisbefund::erlaubt`]
-/// ist die eine Frage an den Wert.
+/// feststellen laesst, wird nicht in einen Papierkorb geraeumt. **Eine Frage
+/// an den Wert, die zwei der drei zusammenfasst, traegt der Typ seit dem
+/// 261017 nicht mehr**: `loeschwarnung::vor_der_rueckfrage` schreibt alle drei
+/// aus, weil `Nein` dort zur endgueltigen Rueckfrage fuehrt und
+/// `Unentschieden` zu einer Meldung, und eine Zusammenfassung von `Nein` und
+/// `Unentschieden` machte aus „wir wissen nichts“ ein endgueltiges Loeschen.
 ///
 /// **Eine Verknuepfung wie [`Warnbefund::oder`] traegt dieser Typ nicht**, weil
 /// keine Stelle im Baum zwei Erlaubnisse zusammenfasst. Sie waere Vorrat, und
@@ -354,34 +359,6 @@ impl Warnbefund {
     }
 }
 
-impl Erlaubnisbefund {
-    /// Ob dieser Befund das Raeumen in den Papierkorb erlaubt: allein
-    /// [`Erlaubnisbefund::Ja`].
-    ///
-    /// Sie faellt bewusst **anders** aus als [`Warnbefund::ist_warnwuerdig`]:
-    /// dort gehoert `Unentschieden` zum `Ja`, hier zum `Nein`. Wer nichts ueber
-    /// den Papierkorb eines Ziels weiss, raeumt dort nicht, und genau das ist
-    /// die Zusage von C4.
-    ///
-    /// **`loeschwarnung::vor_der_rueckfrage` fragt sie seit dem 261017 nicht
-    /// mehr**, sondern schreibt die drei Antworten selbst aus: dort fuehrt
-    /// `Nein` zur endgueltigen Rueckfrage und `Unentschieden` zu einer Meldung,
-    /// und diese Frage zieht genau die beiden zusammen. Wer „erlaubt“ fuer die
-    /// Frage nach dem endgueltigen Loeschen haelt, machte aus „wir wissen
-    /// nichts“ ein endgueltiges Loeschen.
-    ///
-    /// `#[must_use]`, weil das stille Fallenlassen unbemerkt bliebe: der Wert
-    /// ist die Erlaubnis selbst, und ohne ihn loeschte der Aufrufer auf einem
-    /// Ziel, das keinen Rueckweg fuehrt.
-    #[must_use = "der Wert ist die Erlaubnis zu loeschen; fallengelassen loescht der Aufrufer ohne Rueckweg"]
-    pub fn erlaubt(self) -> bool {
-        match self {
-            Self::Ja => true,
-            Self::Nein | Self::Unentschieden => false,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -417,31 +394,6 @@ mod tests {
         assert!(
             !Nein.ist_warnwuerdig(),
             "ein entschiedenes Nein macht die Rueckfrage laut"
-        );
-    }
-
-    /// Die Erlaubnis traegt genau einen der drei Werte, und es ist das `Ja`.
-    ///
-    /// **Die Gegenrichtung zur Probe darueber, und die beiden zusammen sind der
-    /// Grund fuer die zwei Typen.** Dieselben drei Namen, dieselbe Reihenfolge,
-    /// und `Unentschieden` faellt hier auf die andere Seite. Solange die zwei
-    /// Richtungen einen Typ teilten, war dieser Unterschied allein in Prosa
-    /// festgehalten; seit dem 260907 haelt ihn der Uebersetzer, und diese Probe
-    /// schreibt aus, was er haelt.
-    #[test]
-    fn die_erlaubnis_traegt_nur_das_ja() {
-        assert!(
-            Erlaubnisbefund::Ja.erlaubt(),
-            "ein festgestellter Papierkorb erlaubt das Loeschen nicht"
-        );
-        assert!(
-            !Erlaubnisbefund::Nein.erlaubt(),
-            "ein Ziel ohne Papierkorb erlaubt das Loeschen"
-        );
-        assert!(
-            !Erlaubnisbefund::Unentschieden.erlaubt(),
-            "ein unentschiedener Befund erlaubt das Loeschen, obwohl C4 ihn \
-             wie das Nein behandelt"
         );
     }
 

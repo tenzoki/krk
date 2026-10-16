@@ -61,18 +61,49 @@
 //! Blatt wie lokal. Ordner auf Ordner ist kein Konflikt.
 //!
 //! **„Ueberschreiben“ entfernt das Ziel erst, wenn sein Ersatz vollstaendig
-//! daneben steht.** Der Ersatz entsteht unter einem Zwischennamen im Ordner
-//! des Ziels (`.krk-ersatz-<prozess>-<n>`): beim Kopieren als vollstaendige
-//! Kopie, beim Verschieben auf demselben Server als `RENAME` der Quelle
-//! dorthin. Erst dann wird das Ziel endgueltig entfernt und der Ersatz auf
-//! seinen Namen umbenannt. Kommt der Ersatz nicht vollstaendig an, faellt er
-//! weg, und das Ziel bleibt, wie es war; scheitert das Entfernen, ebenso. Ein
+//! an seinem Platz steht.** Der Ersatz entsteht unter einem Zwischennamen im
+//! Ordner des Ziels (`.krk-ersatz-<prozess>-<n>`): beim Kopieren als
+//! vollstaendige Kopie, beim Verschieben auf demselben Server als `RENAME` der
+//! Quelle dorthin. Kommt er nicht vollstaendig an, faellt er weg, und das Ziel
+//! bleibt, wie es war. Dann tauscht [`tauschen`] in drei Schritten, von denen
+//! die ersten zwei je ein `RENAME` sind und das Ziel nicht anfassen:
+//!
+//! 1. Das Ziel geht unter einen eigenen Zwischennamen beiseite
+//!    (`.krk-alt-<prozess>-<n>`). Scheitert das, steht es unveraendert, und
+//!    der Ersatz faellt weg.
+//! 2. Der Ersatz bekommt den Namen des Ziels. Scheitert das, kommt das Ziel
+//!    unter seinen Namen zurueck, und der Ersatz faellt weg; scheitert auch
+//!    das Zurueckholen, nennt der Bericht beide Zwischennamen.
+//! 3. Erst jetzt wird das beiseitegelegte Ziel endgueltig entfernt, ein Ordner
+//!    samt Inhalt. Scheitert das an einem Kind, steht der Ersatz schon am
+//!    Ziel, und der Bericht nennt den Zwischennamen, unter dem der Rest des
+//!    alten Ziels liegt.
+//!
+//! Ein `RENAME` eines Ordners braucht allein das Schreibrecht im Elternordner
+//! und keines in seinem Inhalt; ein Ziel, das sich nicht ganz entfernen
+//! laesst, wird so nie zur Haelfte entfernt, bevor sein Ersatz steht. Ein
 //! `RENAME` ueber ein vorhandenes Ziel hinweg kennt SFTP v3 nicht, und
 //! `posix-rename@openssh.com` bleibt nach Entscheidung 10 ungenutzt; zwischen
-//! dem Entfernen und dem Umbenennen fehlt das Ziel deshalb einen Augenblick
-//! lang, waehrend der Ersatz vollstaendig daneben liegt. Scheitert gerade
-//! dieses Umbenennen, nennt der Bericht den Zwischennamen, unter dem der
-//! Ersatz liegt.
+//! dem ersten und dem zweiten Schritt traegt der Name des Ziels deshalb einen
+//! Augenblick lang keinen Eintrag, waehrend Ziel und Ersatz beide vollstaendig
+//! daneben liegen.
+//!
+//! **Liegt mit dem Ziel auch die Quelle beiseite, wird nicht getauscht.**
+//! Nach dem ersten Schritt fragt [`tauschen`] beim Kopieren und beim
+//! Verschieben ueber eine Grenze, ob die Quelle noch unter ihrem Namen steht
+//! (`LSTAT`, lokal `symlink_metadata`). Fehlt sie, ist sie das Ziel selbst,
+//! erreicht ueber einen zweiten Weg, oder sie liegt in ihm; das Ziel kommt
+//! zurueck, der Ersatz faellt weg, und der Eintrag steht im Bericht. Ohne
+//! diese Frage entfernte das Verschieben danach die Quelle, unter deren Namen
+//! nun der Ersatz stuende, und die Datei waere an keinem Ort mehr. Laesst sich
+//! die Quelle nicht fragen, wird ebenso nicht getauscht.
+//!
+//! **Rechte und Aenderungszeit zaehlen nicht zur Vollstaendigkeit des
+//! Ersatzes.** Lehnt der Server allein das Setzen ab, steht der Inhalt ganz
+//! da, und getauscht wird wie beim Kopieren ohne Konflikt; der Hinweis kommt
+//! erst nach dem Tausch in den Bericht, unter dem Namen des Ziels und nicht
+//! unter dem Zwischennamen ([`Angabenweg`]). Als fertig verbucht wird der
+//! Eintrag erst, wenn der Ersatz am Ziel steht.
 //!
 //! **Was der Bericht nennt, ist eine Bezeichnung und fuer einen fernen Eintrag
 //! kein Pfad auf dieser Platte.** [`Uebersprungen::pfad`], der Fortschritt und
@@ -96,7 +127,16 @@
 //!   [`Stelle::liegt_in`] ebenso ueber `REALPATH`, und ohne Antwort am Pfad.
 //! - Zwei Kennungen, die denselben Server meinen (`rechner` und
 //!   `rechner:22`), gelten als zwei Server; zwischen ihnen wird kopiert und
-//!   nicht umbenannt, und `REALPATH` wird nicht gefragt.
+//!   nicht umbenannt, und `REALPATH` wird nicht gefragt. Dasselbe gilt fuer
+//!   eine lokale Seite und eine ferne, die denselben Speicher erreichen (ein
+//!   NAS, eingehaengt und zugleich ueber sftp geoeffnet). Vor die
+//!   Konfliktfrage kommt ein solcher Eintrag deshalb; „Ueberschreiben“ verliert
+//!   ihn aber nicht, weil [`tauschen`] nach dem Beiseitelegen des Ziels nach
+//!   der Quelle fragt (oben). **Die Grenze dieser Regel:** sie erkennt allein
+//!   eine Quelle, die mit dem Ziel ihren Namen verliert. Zwei harte Verweise
+//!   auf dieselbe Datei sieht sie nicht; dort bleibt nach dem Tausch der
+//!   Ersatz am Ziel und der zweite Verweis an der Quelle, und das Verschieben
+//!   entfernt allein den zweiten Verweis, also keine einzige Kopie.
 //! - Erweiterte Attribute und Ressourcengabeln gehen auf dem Weg zum Server
 //!   verloren; mit gehen allein Rechte und Aenderungszeit.
 //! - Eine Verknuepfung legt es auf einem Server allein an, wenn er sich als
@@ -430,7 +470,14 @@ fn einen_uebertragen(
     if verschieben {
         eintrag_verschieben(pfand, quelle, &angaben, ziel, steuerung)
     } else {
-        eintrag_kopieren(pfand, quelle, &angaben, ziel, steuerung)
+        eintrag_kopieren(
+            pfand,
+            quelle,
+            &angaben,
+            ziel,
+            steuerung,
+            &mut Angabenweg::Bericht,
+        )
     }
 }
 
@@ -595,6 +642,49 @@ enum Klaerung {
     Abbrechen,
 }
 
+/// Wohin ein Fuellen meldet, dass Rechte oder Aenderungszeit eines Eintrags
+/// sich nicht setzen liessen.
+///
+/// Der Hinweis zaehlt nicht zur Vollstaendigkeit eines Ersatzes (Modulkopf,
+/// „Ueberschreiben“), und er soll den Namen tragen, unter dem der Eintrag am
+/// Ende steht. Ein Ersatz liegt beim Fuellen noch unter seinem Zwischennamen;
+/// deshalb haelt [`kopie_ersetzt_ziel`] die Hinweise bis zum Tausch zurueck.
+enum Angabenweg<'a> {
+    /// Gleich in den Bericht: der Eintrag steht schon unter seinem Namen.
+    Bericht,
+    /// Zurueckgehalten, als Bezeichnung und Grund, bis der Ersatz seinen
+    /// Namen traegt.
+    Ersatz(&'a mut Vec<(PathBuf, String)>),
+}
+
+impl Angabenweg<'_> {
+    fn melden(&mut self, steuerung: &mut Steuerung, pfad: PathBuf, grund: String) {
+        match self {
+            Angabenweg::Bericht => steuerung.ueberspringen(&pfad, grund),
+            Angabenweg::Ersatz(hinweise) => hinweise.push((pfad, grund)),
+        }
+    }
+}
+
+/// Setzt Rechte und Aenderungszeit am eben gefuellten `ziel`; scheitert das,
+/// geht der Hinweis mit `schluessel` ueber `weg`.
+fn angaben_uebernehmen(
+    pfand: &Fernfaden,
+    ziel: &Stelle,
+    angaben: &Angaben,
+    schluessel: Text,
+    steuerung: &mut Steuerung,
+    weg: &mut Angabenweg<'_>,
+) {
+    if let Err(fehler) = ziel.angaben_setzen(pfand, angaben) {
+        weg.melden(
+            steuerung,
+            ziel.bezeichnung(),
+            satz(schluessel, &[("grund", &grund(&fehler))]),
+        );
+    }
+}
+
 /// Kopiert einen Eintrag an sein Ziel, samt Konfliktbehandlung.
 ///
 /// **Die Schleife endet**: „Ueberschreiben“ geht an [`kopie_ersetzt_ziel`]
@@ -606,6 +696,7 @@ fn eintrag_kopieren(
     angaben: &Angaben,
     ziel: Stelle,
     steuerung: &mut Steuerung,
+    weg: &mut Angabenweg<'_>,
 ) -> Ablauf {
     let bezeichnung = quelle.bezeichnung();
     let anlage = match angaben.typ {
@@ -628,10 +719,10 @@ fn eintrag_kopieren(
     loop {
         let fehler = match anlegen(pfand, &ziel, &anlage) {
             Ok(Angelegt::Datei(schreibziel)) => {
-                return datei_fuellen(pfand, quelle, angaben, &ziel, schreibziel, steuerung);
+                return datei_fuellen(pfand, quelle, angaben, &ziel, schreibziel, steuerung, weg);
             }
             Ok(Angelegt::Ordner) => {
-                return ordner_fuellen(pfand, quelle, angaben, &ziel, steuerung);
+                return ordner_fuellen(pfand, quelle, angaben, &ziel, steuerung, weg);
             }
             Ok(Angelegt::Verknuepfung) => {
                 steuerung.eintrag_fertig(&bezeichnung, 0);
@@ -646,11 +737,11 @@ fn eintrag_kopieren(
             return Ablauf::Weiter;
         };
         if angaben.typ == Typ::Ordner && vorhanden.typ == Typ::Ordner {
-            return ordner_fuellen(pfand, quelle, angaben, &ziel, steuerung);
+            return ordner_fuellen(pfand, quelle, angaben, &ziel, steuerung, weg);
         }
         match konflikt_klaeren(pfand, &bezeichnung, &ziel, steuerung) {
             Klaerung::Ersetzen => {
-                return kopie_ersetzt_ziel(pfand, quelle, angaben, &anlage, &ziel, steuerung);
+                return kopie_ersetzt_ziel(pfand, quelle, angaben, &anlage, &ziel, steuerung, weg);
             }
             Klaerung::Nach(neues) => {
                 if neues.bezeichnung() == ziel.bezeichnung() {
@@ -735,8 +826,14 @@ fn zwischen_anlegen(
 ///
 /// Die Kopie entsteht vollstaendig unter einem Zwischennamen; dass sie
 /// vollstaendig ist, bezeugt wie in [`ueber_die_grenze`], dass seit ihrem
-/// Beginn nichts uebersprungen wurde. Fehlt etwas, faellt die Kopie weg, und
-/// das Ziel bleibt. Erst dann tauscht [`tauschen`].
+/// Beginn nichts uebersprungen wurde. Ein Hinweis auf Rechte und Zeit zaehlt
+/// dabei nicht mit: er geht nicht in den Bericht, sondern wartet ueber
+/// [`Angabenweg::Ersatz`] auf den Tausch. Fehlt etwas, faellt die Kopie weg,
+/// und das Ziel bleibt. Erst dann tauscht [`tauschen`], und erst nach dem
+/// Tausch ist der Eintrag fertig.
+///
+/// `weg` ist der Weg des Rufers: ueber ihn gehen die zurueckgehaltenen
+/// Hinweise nach dem Tausch, unter dem Namen des Ziels.
 fn kopie_ersetzt_ziel(
     pfand: &Fernfaden,
     quelle: &Stelle,
@@ -744,6 +841,7 @@ fn kopie_ersetzt_ziel(
     anlage: &Anlage,
     ziel: &Stelle,
     steuerung: &mut Steuerung,
+    weg: &mut Angabenweg<'_>,
 ) -> Ablauf {
     let bezeichnung = quelle.bezeichnung();
     if !ersetzen_erlaubt(pfand, quelle, ziel, steuerung) {
@@ -760,27 +858,66 @@ fn kopie_ersetzt_ziel(
         }
     };
     let stand = steuerung.uebersprungen_stand();
-    let ablauf = match angelegt {
-        Angelegt::Datei(schreibziel) => {
-            datei_fuellen(pfand, quelle, angaben, &zwischen, schreibziel, steuerung)
-        }
-        Angelegt::Ordner => ordner_fuellen(pfand, quelle, angaben, &zwischen, steuerung),
-        Angelegt::Verknuepfung => Ablauf::Weiter,
-    };
-    if ablauf == Ablauf::Abgebrochen {
-        rest_wegraeumen(pfand, &zwischen, steuerung);
-        return Ablauf::Abgebrochen;
-    }
-    if !steuerung.uebersprungen_seit(stand).is_empty() {
-        rest_wegraeumen(pfand, &zwischen, steuerung);
-        steuerung.ueberspringen(&bezeichnung, text(Text::VorgangErsatzUnvollstaendig));
-        return Ablauf::Weiter;
-    }
-    match tauschen(pfand, &zwischen, ziel) {
-        Tausch::Getauscht => {
-            if matches!(anlage, Anlage::Verknuepfung(_)) {
-                steuerung.eintrag_fertig(&bezeichnung, 0);
+    let mut zurueckgehalten = Vec::new();
+    let gefuellt = {
+        let mut ersatzweg = Angabenweg::Ersatz(&mut zurueckgehalten);
+        match angelegt {
+            Angelegt::Datei(schreibziel) => {
+                match datei_uebertragen(pfand, quelle, &zwischen, schreibziel, steuerung) {
+                    Ok(bytes) => {
+                        angaben_uebernehmen(
+                            pfand,
+                            &zwischen,
+                            angaben,
+                            Text::VorgangDateiangabenNichtKopiert,
+                            steuerung,
+                            &mut ersatzweg,
+                        );
+                        Ok(bytes)
+                    }
+                    Err(ablauf) => Err(ablauf),
+                }
             }
+            Angelegt::Ordner => {
+                match ordnerinhalt_fuellen(pfand, quelle, &zwischen, steuerung, &mut ersatzweg) {
+                    Ok(()) => {
+                        angaben_uebernehmen(
+                            pfand,
+                            &zwischen,
+                            angaben,
+                            Text::VorgangOrdnerangabenNichtKopiert,
+                            steuerung,
+                            &mut ersatzweg,
+                        );
+                        Ok(0)
+                    }
+                    Err(ablauf) => Err(ablauf),
+                }
+            }
+            Angelegt::Verknuepfung => Ok(0),
+        }
+    };
+    let bytes = match gefuellt {
+        Err(Ablauf::Abgebrochen) => {
+            rest_wegraeumen(pfand, &zwischen, steuerung);
+            return Ablauf::Abgebrochen;
+        }
+        Ok(bytes) if steuerung.uebersprungen_seit(stand).is_empty() => bytes,
+        Ok(_) | Err(Ablauf::Weiter) => {
+            rest_wegraeumen(pfand, &zwischen, steuerung);
+            steuerung.ueberspringen(&bezeichnung, text(Text::VorgangErsatzUnvollstaendig));
+            return Ablauf::Weiter;
+        }
+    };
+    match tauschen(pfand, &zwischen, ziel, Some(quelle)) {
+        Tausch::Getauscht => {
+            steuerung.eintrag_fertig(&bezeichnung, bytes);
+            hinweise_nachtragen(zurueckgehalten, &zwischen, ziel, steuerung, weg);
+        }
+        Tausch::AltesBlieb { alt, fehler } => {
+            steuerung.eintrag_fertig(&bezeichnung, bytes);
+            hinweise_nachtragen(zurueckgehalten, &zwischen, ziel, steuerung, weg);
+            altes_ziel_melden(ziel, &alt, &fehler, steuerung);
         }
         Tausch::ZielBlieb(fehler) => {
             rest_wegraeumen(pfand, &zwischen, steuerung);
@@ -789,54 +926,172 @@ fn kopie_ersetzt_ziel(
                 satz(Text::VorgangZielNichtErsetzt, &[("grund", &grund(&fehler))]),
             );
         }
-        Tausch::ZielFort(fehler) => steuerung.ueberspringen(
-            &bezeichnung,
-            satz(
-                Text::VorgangErsatzUnterZwischennamen,
-                &[
-                    ("name", &zwischen.bezeichnung().display()),
-                    ("grund", &grund(&fehler)),
-                ],
-            ),
-        ),
+        Tausch::QuelleBeiseite => {
+            rest_wegraeumen(pfand, &zwischen, steuerung);
+            steuerung.ueberspringen(&bezeichnung, text(Text::VorgangQuelleIstTeilDesZiels));
+        }
+        Tausch::BeideBeiseite { alt, fehler } => {
+            beide_beiseite_melden(&bezeichnung, &zwischen, &alt, &fehler, steuerung);
+        }
     }
     Ablauf::Weiter
 }
 
-/// Wie der Tausch von Ersatz und Ziel ausging.
-enum Tausch {
-    /// Der Ersatz traegt den Namen des Ziels.
-    Getauscht,
-    /// Das Ziel liess sich nicht entfernen und steht unveraendert; der Ersatz
-    /// liegt weiter unter seinem Zwischennamen.
-    ZielBlieb(Fehlschlag),
-    /// Das Ziel ist entfernt, und der Ersatz liess sich nicht umbenennen; er
-    /// liegt unter seinem Zwischennamen.
-    ZielFort(Fehlschlag),
+/// Gibt die zurueckgehaltenen Hinweise eines Ersatzes, der nun am Ziel
+/// steht, ueber `weg` weiter, mit dem Namen des Ziels statt des
+/// Zwischennamens.
+fn hinweise_nachtragen(
+    hinweise: Vec<(PathBuf, String)>,
+    zwischen: &Stelle,
+    ziel: &Stelle,
+    steuerung: &mut Steuerung,
+    weg: &mut Angabenweg<'_>,
+) {
+    let vorher = zwischen.bezeichnung();
+    let nachher = ziel.bezeichnung();
+    for (pfad, grund) in hinweise {
+        let pfad = match pfad.strip_prefix(&vorher) {
+            Ok(rest) if rest.as_os_str().is_empty() => nachher.clone(),
+            Ok(rest) => nachher.join(rest),
+            Err(_) => pfad,
+        };
+        weg.melden(steuerung, pfad, grund);
+    }
 }
 
-/// Entfernt `ziel` endgueltig und benennt den vollstaendigen Ersatz
-/// `zwischen` auf seinen Namen um.
-fn tauschen(pfand: &Fernfaden, zwischen: &Stelle, ziel: &Stelle) -> Tausch {
+/// Meldet den Rest eines alten Ziels, der sich nach dem Tausch nicht
+/// entfernen liess: unter dem Namen des Ziels, mit dem Zwischennamen, unter
+/// dem er liegt.
+fn altes_ziel_melden(ziel: &Stelle, alt: &Stelle, fehler: &Fehlschlag, steuerung: &mut Steuerung) {
+    steuerung.ueberspringen(
+        &ziel.bezeichnung(),
+        satz(
+            Text::VorgangAltesZielBlieb,
+            &[
+                ("name", &alt.bezeichnung().display()),
+                ("grund", &grund(fehler)),
+            ],
+        ),
+    );
+}
+
+/// Meldet einen Tausch, nach dem weder Ziel noch Ersatz unter dem Namen des
+/// Ziels steht: beide liegen unter ihren Zwischennamen.
+fn beide_beiseite_melden(
+    bezeichnung: &Path,
+    zwischen: &Stelle,
+    alt: &Stelle,
+    fehler: &Fehlschlag,
+    steuerung: &mut Steuerung,
+) {
+    steuerung.ueberspringen(
+        bezeichnung,
+        satz(
+            Text::VorgangErsatzUnterZwischennamen,
+            &[
+                ("alt", &alt.bezeichnung().display()),
+                ("name", &zwischen.bezeichnung().display()),
+                ("grund", &grund(fehler)),
+            ],
+        ),
+    );
+}
+
+/// Wie der Tausch von Ersatz und Ziel ausging (Modulkopf, „Ueberschreiben“).
+enum Tausch {
+    /// Der Ersatz traegt den Namen des Ziels, und das alte Ziel ist fort.
+    Getauscht,
+    /// Der Ersatz traegt den Namen des Ziels; vom beiseitegelegten alten Ziel
+    /// liess sich nicht alles entfernen, und der Rest liegt unter `alt`.
+    AltesBlieb { alt: Stelle, fehler: Fehlschlag },
+    /// Das Ziel steht unveraendert unter seinem Namen: es liess sich nicht
+    /// beiseitelegen, oder es kam zurueck, weil der Ersatz seinen Namen nicht
+    /// bekam oder die Quelle sich nicht fragen liess. Der Ersatz liegt unter
+    /// seinem Zwischennamen.
+    ZielBlieb(Fehlschlag),
+    /// Mit dem Ziel lag auch die Quelle beiseite; das Ziel steht wieder
+    /// unveraendert unter seinem Namen, der Ersatz unter seinem Zwischennamen.
+    QuelleBeiseite,
+    /// Das Ziel liegt unter `alt`, der Ersatz unter seinem Zwischennamen:
+    /// zurueckholen liess sich das Ziel nicht, aus dem Grund `fehler`.
+    BeideBeiseite { alt: Stelle, fehler: Fehlschlag },
+}
+
+/// Der Zwischenname des beiseitegelegten Ziels beim `versuch`-ten Anlauf,
+/// gebaut wie [`zwischenname`].
+fn altname(versuch: u32) -> String {
+    format!(".krk-alt-{}-{versuch}", std::process::id())
+}
+
+/// Legt `ziel` per `RENAME` unter einem freien Zwischennamen daneben
+/// beiseite; ein vergebener Zwischenname fuehrt zum naechsten.
+fn beiseite_legen(pfand: &Fernfaden, ziel: &Stelle) -> Result<Stelle, Fehlschlag> {
+    let mut letzter = Fehlschlag::KeinEintrag;
+    for versuch in 0..ZWISCHENVERSUCHE {
+        let name = altname(versuch);
+        let alt = ziel.geschwister(&name).ok_or(Fehlschlag::KeinEintrag)?;
+        match ziel.umbenennen_in(pfand, &name) {
+            Ok(()) => return Ok(alt),
+            Err(fehler) if vorhandenes_ziel(pfand, &fehler, &alt).is_some() => {
+                letzter = fehler;
+            }
+            Err(fehler) => return Err(fehler),
+        }
+    }
+    Err(letzter)
+}
+
+/// Setzt den vollstaendigen Ersatz `zwischen` an die Stelle von `ziel`, in den
+/// drei Schritten des Modulkopfs: Ziel beiseite, Ersatz auf den Namen, altes
+/// Ziel entfernen.
+///
+/// `quelle` ist die Quelle, nach der nach dem ersten Schritt gefragt wird, oder
+/// `None`, wenn sie selbst der Ersatz ist (Verschieben auf demselben Server).
+fn tauschen(
+    pfand: &Fernfaden,
+    zwischen: &Stelle,
+    ziel: &Stelle,
+    quelle: Option<&Stelle>,
+) -> Tausch {
     let name = match ziel.name() {
         Ok(name) => name,
         Err(_) => return Tausch::ZielBlieb(Fehlschlag::KeinEintrag),
     };
-    // Ohne Abbruchfrage: ein halb entferntes Ziel waere schlimmer als ein
-    // Tausch, der zu Ende laeuft, denn der Ersatz liegt schon vollstaendig da.
-    if let Err(fehler) = ziel.baum_entfernen(pfand, &nie_abgebrochen) {
-        return Tausch::ZielBlieb(fehler);
+    let alt = match beiseite_legen(pfand, ziel) {
+        Ok(alt) => alt,
+        Err(fehler) => return Tausch::ZielBlieb(fehler),
+    };
+    let zurueckholen = |anlass: Tausch| match alt.umbenennen_in(pfand, &name) {
+        Ok(()) => anlass,
+        Err(fehler) => Tausch::BeideBeiseite {
+            alt: alt.clone(),
+            fehler,
+        },
+    };
+    if let Some(quelle) = quelle
+        && let Err(fehler) = quelle.angaben(pfand)
+    {
+        return zurueckholen(if fehler.ist_nicht_da() {
+            Tausch::QuelleBeiseite
+        } else {
+            Tausch::ZielBlieb(fehler)
+        });
     }
-    match zwischen.umbenennen_in(pfand, &name) {
+    if let Err(fehler) = zwischen.umbenennen_in(pfand, &name) {
+        return zurueckholen(Tausch::ZielBlieb(fehler));
+    }
+    // Ohne Abbruchfrage: der Ersatz steht schon am Ziel, und der Rest des
+    // alten Ziels gehoert weg, auch wenn der Nutzer jetzt abbricht.
+    match alt.baum_entfernen(pfand, &nie_abgebrochen) {
         Ok(()) => Tausch::Getauscht,
-        Err(fehler) => Tausch::ZielFort(fehler),
+        Err(fehler) => Tausch::AltesBlieb { alt, fehler },
     }
 }
 
 /// Entfernt einen Ersatz, der nicht an die Stelle des Ziels kommt; scheitert
 /// das, steht es im Bericht.
 ///
-/// Ohne Abbruchfrage: gerufen wird es gerade nach einem Abbruch, und der Rest
+/// Ohne Abbruchfrage: gerufen wird es auch nach einem Abbruch, und der Rest
 /// soll trotzdem fort.
 fn rest_wegraeumen(pfand: &Fernfaden, zwischen: &Stelle, steuerung: &mut Steuerung) {
     if let Err(fehler) = zwischen.baum_entfernen(pfand, &nie_abgebrochen)
@@ -845,7 +1100,7 @@ fn rest_wegraeumen(pfand: &Fernfaden, zwischen: &Stelle, steuerung: &mut Steueru
         steuerung.ueberspringen(
             &zwischen.bezeichnung(),
             satz(
-                Text::VorgangNachAbbruchNichtWeggeraeumt,
+                Text::VorgangErsatzNichtWeggeraeumt,
                 &[("grund", &grund(&fehler))],
             ),
         );
@@ -904,12 +1159,7 @@ fn konflikt_klaeren(
 }
 
 /// Uebertraegt den Inhalt einer Datei in das eben angelegte Ziel, dann Rechte
-/// und Aenderungszeit.
-///
-/// **Ein abgebrochenes oder gescheitertes Ziel wird entfernt**: die halbe
-/// Datei ist kein Ergebnis, sondern ein Rest, wie in
-/// `kopieren::datei_uebertragen`. Das Ziel hat dieser Lauf selbst angelegt,
-/// ausschliessend; entfernt wird also nie ein Eintrag, der vorher dastand.
+/// und Aenderungszeit, und verbucht den Eintrag als fertig.
 fn datei_fuellen(
     pfand: &Fernfaden,
     quelle: &Stelle,
@@ -917,7 +1167,39 @@ fn datei_fuellen(
     ziel: &Stelle,
     schreibziel: Schreibziel,
     steuerung: &mut Steuerung,
+    weg: &mut Angabenweg<'_>,
 ) -> Ablauf {
+    let bytes = match datei_uebertragen(pfand, quelle, ziel, schreibziel, steuerung) {
+        Ok(bytes) => bytes,
+        Err(ablauf) => return ablauf,
+    };
+    angaben_uebernehmen(
+        pfand,
+        ziel,
+        angaben,
+        Text::VorgangDateiangabenNichtKopiert,
+        steuerung,
+        weg,
+    );
+    steuerung.eintrag_fertig(&quelle.bezeichnung(), bytes);
+    Ablauf::Weiter
+}
+
+/// Uebertraegt den Inhalt einer Datei in das eben angelegte Ziel und gibt die
+/// Zahl der Bytes zurueck; `Err` traegt, wie der Rufer endet, und was
+/// scheiterte, steht schon im Bericht.
+///
+/// **Ein abgebrochenes oder gescheitertes Ziel wird entfernt**: die halbe
+/// Datei ist kein Ergebnis, sondern ein Rest, wie in
+/// `kopieren::datei_uebertragen`. Das Ziel hat dieser Lauf selbst angelegt,
+/// ausschliessend; entfernt wird also nie ein Eintrag, der vorher dastand.
+fn datei_uebertragen(
+    pfand: &Fernfaden,
+    quelle: &Stelle,
+    ziel: &Stelle,
+    schreibziel: Schreibziel,
+    steuerung: &mut Steuerung,
+) -> Result<u64, Ablauf> {
     let bezeichnung = quelle.bezeichnung();
     let mut schreibziel = schreibziel;
     let mut bytes: u64 = 0;
@@ -942,30 +1224,18 @@ fn datei_fuellen(
     };
 
     match ausgang {
-        Ok(()) => {}
+        Ok(()) => Ok(bytes),
         Err(Fehlschlag::Abgebrochen) => {
             steuerung.teilstueck(bytes);
             halbes_ziel_wegraeumen(pfand, ziel, steuerung);
-            return Ablauf::Abgebrochen;
+            Err(Ablauf::Abgebrochen)
         }
         Err(fehler) => {
             halbes_ziel_wegraeumen(pfand, ziel, steuerung);
             steuerung.ueberspringen(&bezeichnung, grund(&fehler));
-            return Ablauf::Weiter;
+            Err(Ablauf::Weiter)
         }
     }
-
-    if let Err(fehler) = ziel.angaben_setzen(pfand, angaben) {
-        steuerung.ueberspringen(
-            &ziel.bezeichnung(),
-            satz(
-                Text::VorgangDateiangabenNichtKopiert,
-                &[("grund", &grund(&fehler))],
-            ),
-        );
-    }
-    steuerung.eintrag_fertig(&bezeichnung, bytes);
-    Ablauf::Weiter
 }
 
 /// Entfernt die halbe Zieldatei; scheitert das, steht es im Bericht.
@@ -976,7 +1246,7 @@ fn halbes_ziel_wegraeumen(pfand: &Fernfaden, ziel: &Stelle, steuerung: &mut Steu
         steuerung.ueberspringen(
             &ziel.bezeichnung(),
             satz(
-                Text::VorgangNachAbbruchNichtWeggeraeumt,
+                Text::VorgangHalbeDateiNichtWeggeraeumt,
                 &[("grund", &grund(&fehler))],
             ),
         );
@@ -984,22 +1254,45 @@ fn halbes_ziel_wegraeumen(pfand: &Fernfaden, ziel: &Stelle, steuerung: &mut Steu
 }
 
 /// Kopiert den Inhalt eines Ordners in einen Ordner am Ziel, der eben
-/// angelegt wurde oder schon dastand, dann Rechte und Aenderungszeit.
+/// angelegt wurde oder schon dastand, dann Rechte und Aenderungszeit, und
+/// verbucht den Ordner als fertig.
 fn ordner_fuellen(
     pfand: &Fernfaden,
     quelle: &Stelle,
     angaben: &Angaben,
     ziel: &Stelle,
     steuerung: &mut Steuerung,
+    weg: &mut Angabenweg<'_>,
 ) -> Ablauf {
-    let bezeichnung = quelle.bezeichnung();
-    let kinder = match kinder_lesen(pfand, quelle, steuerung) {
-        Ok(kinder) => kinder,
-        Err(ablauf) => return ablauf,
-    };
+    if let Err(ablauf) = ordnerinhalt_fuellen(pfand, quelle, ziel, steuerung, weg) {
+        return ablauf;
+    }
+    angaben_uebernehmen(
+        pfand,
+        ziel,
+        angaben,
+        Text::VorgangOrdnerangabenNichtKopiert,
+        steuerung,
+        weg,
+    );
+    steuerung.eintrag_fertig(&quelle.bezeichnung(), 0);
+    Ablauf::Weiter
+}
+
+/// Kopiert die Kinder des Ordners `quelle` in den Ordner `ziel`, jedes samt
+/// Konfliktbehandlung. `Err` traegt, wie der Rufer endet: der Ordner liess
+/// sich nicht lesen (steht im Bericht), oder der Nutzer brach ab.
+fn ordnerinhalt_fuellen(
+    pfand: &Fernfaden,
+    quelle: &Stelle,
+    ziel: &Stelle,
+    steuerung: &mut Steuerung,
+    weg: &mut Angabenweg<'_>,
+) -> Result<(), Ablauf> {
+    let kinder = kinder_lesen(pfand, quelle, steuerung)?;
     for (unterquelle, unterangaben) in kinder {
         if steuerung.abgebrochen() {
-            return Ablauf::Abgebrochen;
+            return Err(Ablauf::Abgebrochen);
         }
         let Some(unterziel) = unterquelle.name().ok().and_then(|name| ziel.kind(&name)) else {
             steuerung.ueberspringen(
@@ -1012,24 +1305,19 @@ fn ordner_fuellen(
         else {
             continue;
         };
-        if eintrag_kopieren(pfand, &unterquelle, &unterangaben, unterziel, steuerung)
-            == Ablauf::Abgebrochen
+        if eintrag_kopieren(
+            pfand,
+            &unterquelle,
+            &unterangaben,
+            unterziel,
+            steuerung,
+            weg,
+        ) == Ablauf::Abgebrochen
         {
-            return Ablauf::Abgebrochen;
+            return Err(Ablauf::Abgebrochen);
         }
     }
-
-    if let Err(fehler) = ziel.angaben_setzen(pfand, angaben) {
-        steuerung.ueberspringen(
-            &ziel.bezeichnung(),
-            satz(
-                Text::VorgangOrdnerangabenNichtKopiert,
-                &[("grund", &grund(&fehler))],
-            ),
-        );
-    }
-    steuerung.eintrag_fertig(&bezeichnung, 0);
-    Ablauf::Weiter
+    Ok(())
 }
 
 /// Die Kinder eines Ordners als Stellen, mit den Angaben, die das Lesen schon
@@ -1170,8 +1458,9 @@ fn eintrag_verschieben(
 /// „Ueberschreiben“).
 ///
 /// Die Quelle geht zuerst per `RENAME` unter einen Zwischennamen neben das
-/// Ziel; scheitert das, ist nichts geschehen. Laesst sich danach das Ziel
-/// nicht entfernen, kehrt die Quelle an ihren Platz zurueck.
+/// Ziel; scheitert das, ist nichts geschehen. Danach tauscht [`tauschen`];
+/// steht das Ziel danach unveraendert, weil es sich nicht beiseitelegen liess
+/// oder zurueckkam, kehrt die Quelle an ihren Platz zurueck.
 fn umbenennen_ersetzt_ziel(
     pfand: &Fernfaden,
     quelle: &Stelle,
@@ -1216,38 +1505,48 @@ fn umbenennen_ersetzt_ziel(
         );
         return Ablauf::Weiter;
     };
-    match tauschen(pfand, &zwischen, ziel) {
-        Tausch::Getauscht => steuerung.eintrag_fertig(&bezeichnung, angaben.groesse),
-        Tausch::ZielBlieb(fehler) => match zwischen.umbenennen(pfand, quelle) {
-            Some(Ok(())) => steuerung.ueberspringen(
-                &bezeichnung,
-                satz(Text::VorgangZielNichtErsetzt, &[("grund", &grund(&fehler))]),
-            ),
-            Some(Err(zurueck)) => steuerung.ueberspringen(
-                &bezeichnung,
-                satz(
-                    Text::VorgangQuelleUnterZwischennamen,
-                    &[
-                        ("name", &zwischen.bezeichnung().display()),
-                        ("grund", &grund(&zurueck)),
-                    ],
-                ),
-            ),
-            None => steuerung.ueberspringen(
-                &bezeichnung,
-                satz(
-                    Text::VorgangQuelleUnterZwischennamen,
-                    &[
-                        ("name", &zwischen.bezeichnung().display()),
-                        ("grund", &grund(&fehler)),
-                    ],
-                ),
-            ),
-        },
-        Tausch::ZielFort(fehler) => steuerung.ueberspringen(
+    // Die Quelle ist hier selbst der Ersatz; nach ihr zu fragen hiesse,
+    // nach dem Zwischennamen zu fragen, den der Tausch eben vergibt.
+    let (fehler, gruende) = match tauschen(pfand, &zwischen, ziel, None) {
+        Tausch::Getauscht => {
+            steuerung.eintrag_fertig(&bezeichnung, angaben.groesse);
+            return Ablauf::Weiter;
+        }
+        Tausch::AltesBlieb { alt, fehler } => {
+            steuerung.eintrag_fertig(&bezeichnung, angaben.groesse);
+            altes_ziel_melden(ziel, &alt, &fehler, steuerung);
+            return Ablauf::Weiter;
+        }
+        Tausch::BeideBeiseite { alt, fehler } => {
+            beide_beiseite_melden(&bezeichnung, &zwischen, &alt, &fehler, steuerung);
+            return Ablauf::Weiter;
+        }
+        Tausch::ZielBlieb(fehler) => {
+            let zurueck = satz(Text::VorgangZielNichtErsetzt, &[("grund", &grund(&fehler))]);
+            (fehler, zurueck)
+        }
+        Tausch::QuelleBeiseite => (
+            Fehlschlag::KeinEintrag,
+            text(Text::VorgangQuelleIstTeilDesZiels).to_owned(),
+        ),
+    };
+    // Das Ziel steht unveraendert; die Quelle kehrt an ihren Platz zurueck.
+    match zwischen.umbenennen(pfand, quelle) {
+        Some(Ok(())) => steuerung.ueberspringen(&bezeichnung, gruende),
+        Some(Err(zurueck)) => steuerung.ueberspringen(
             &bezeichnung,
             satz(
-                Text::VorgangErsatzUnterZwischennamen,
+                Text::VorgangQuelleUnterZwischennamen,
+                &[
+                    ("name", &zwischen.bezeichnung().display()),
+                    ("grund", &grund(&zurueck)),
+                ],
+            ),
+        ),
+        None => steuerung.ueberspringen(
+            &bezeichnung,
+            satz(
+                Text::VorgangQuelleUnterZwischennamen,
                 &[
                     ("name", &zwischen.bezeichnung().display()),
                     ("grund", &grund(&fehler)),
@@ -1323,7 +1622,15 @@ fn ueber_die_grenze(
 ) -> Ablauf {
     let bezeichnung = quelle.bezeichnung();
     let stand = steuerung.uebersprungen_stand();
-    if eintrag_kopieren(pfand, quelle, angaben, ziel, steuerung) == Ablauf::Abgebrochen {
+    if eintrag_kopieren(
+        pfand,
+        quelle,
+        angaben,
+        ziel,
+        steuerung,
+        &mut Angabenweg::Bericht,
+    ) == Ablauf::Abgebrochen
+    {
         return Ablauf::Abgebrochen;
     }
     let seither = steuerung.uebersprungen_seit(stand);
@@ -1590,7 +1897,7 @@ const HOECHSTENS_NAMEN: usize = 1_000_000;
 ///
 /// Eine Frage und kein Verweis auf die [`Steuerung`], weil zwei Wege sie
 /// bewusst nie bejahen: das Wegraeumen nach einem Abbruch und das Entfernen
-/// eines Ziels, dessen Ersatz schon vollstaendig daneben liegt
+/// eines alten Ziels, dessen Ersatz schon an seinem Platz steht
 /// ([`nie_abgebrochen`]).
 type Abbruchfrage<'a> = &'a dyn Fn() -> bool;
 

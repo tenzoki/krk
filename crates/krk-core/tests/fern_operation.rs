@@ -296,13 +296,22 @@ fn ein_vorhandenes_ziel_stellt_die_konfliktfrage_und_ueberschreiben_ersetzt_es()
     );
 }
 
-/// Ob im Ordner ein Zwischenname des Ueberschreibens liegen geblieben ist.
+/// Ob im Ordner ein Zwischenname des Ueberschreibens liegen geblieben ist,
+/// der eines Ersatzes oder der eines beiseitegelegten Ziels.
 fn zwischennamen_in(ordner: &Path) -> Vec<String> {
+    namen_mit(ordner, ".krk-ersatz-")
+        .into_iter()
+        .chain(namen_mit(ordner, ".krk-alt-"))
+        .collect()
+}
+
+/// Die Namen im Ordner, die mit `anfang` beginnen.
+fn namen_mit(ordner: &Path, anfang: &str) -> Vec<String> {
     fs::read_dir(ordner)
         .expect("der Ordner laesst sich nicht lesen")
         .filter_map(|eintrag| eintrag.ok())
         .map(|eintrag| eintrag.file_name().to_string_lossy().into_owned())
-        .filter(|name| name.starts_with(".krk-ersatz-"))
+        .filter(|name| name.starts_with(anfang))
         .collect()
 }
 
@@ -471,6 +480,226 @@ fn ueberschreiben_entfernt_das_ziel_erst_wenn_der_ersatz_vollstaendig_dasteht() 
     );
     assert!(zwischennamen_in(&fernordner).is_empty());
     assert!(zwischennamen_in(&hier).is_empty());
+}
+
+/// „Ueberschreiben“ entfernt einen Zielordner nie zur Haelfte, bevor sein
+/// Ersatz steht (Befund
+/// `261017-0113-ueberschreiben-entfernt-einen-zielordner-zur-haelfte-…`).
+///
+/// Am Ziel steht ein Ordner `d/` mit `a.txt` und `zu/b.txt`, `zu/` mit den
+/// Rechten `0555`; kopiert wird eine Datei `d`. Bis zur Behebung entfernte
+/// der Tausch zuerst das Ziel: `a.txt` war fort, `zu/b.txt` liess sich nicht
+/// entfernen, und danach fiel der vollstaendige Ersatz weg. Jetzt geht das
+/// Ziel per `RENAME` beiseite, der Ersatz bekommt seinen Namen, und erst dann
+/// wird das alte Ziel entfernt; was davon blieb, liegt unter seinem
+/// Zwischennamen, und der Bericht nennt ihn.
+#[test]
+fn ueberschreiben_entfernt_einen_zielordner_nie_zur_haelfte() {
+    let ordner = Pruefordner::neu("fern-ersatz-zielordner");
+    let _ = ordner.ordner("quelle");
+    let quelle = ordner.datei("quelle/d", b"neue datei");
+    let fernordner = ordner.ordner("server");
+    let d = ordner.ordner("server/d");
+    fs::write(d.join("a.txt"), b"a").expect("a.txt");
+    let zu = ordner.ordner("server/d/zu");
+    fs::write(zu.join("b.txt"), b"b").expect("b.txt");
+    fs::set_permissions(&zu, fs::Permissions::from_mode(0o555)).expect("Rechte");
+    gemeinsam::rechtesperre_haelt_oder_abbruch(
+        "ein Kind von zu/ laesst sich nicht entfernen",
+        fs::remove_file(zu.join("b.txt")).is_err(),
+    );
+    let server = zugang("server.test");
+
+    let ausgang = fahren(
+        Fernauftrag::kopieren(vec![lokal(&quelle)], fern(&server, &fernordner)),
+        Konfliktantwort::Ueberschreiben,
+    );
+    let alte = namen_mit(&fernordner, ".krk-alt-");
+    for alt in &alte {
+        let _ = fs::set_permissions(
+            fernordner.join(alt).join("zu"),
+            fs::Permissions::from_mode(0o755),
+        );
+    }
+    let _ = fs::set_permissions(&zu, fs::Permissions::from_mode(0o755));
+
+    assert_eq!(ausgang.konflikte.len(), 1, "{:?}", ausgang.konflikte);
+    assert_eq!(
+        fs::read(fernordner.join("d")).ok().as_deref(),
+        Some(&b"neue datei"[..]),
+        "der Ersatz steht nicht am Ziel; am Ziel steht: {:?}",
+        fs::read_dir(fernordner.join("d")).map(|liste| liste.count())
+    );
+    assert_eq!(ausgang.bericht.eintraege, 1, "{:?}", ausgang.bericht);
+    assert!(namen_mit(&fernordner, ".krk-ersatz-").is_empty());
+    assert_eq!(alte.len(), 1, "{alte:?}");
+    let alt = fernordner.join(&alte[0]);
+    assert_eq!(
+        fs::read(alt.join("zu/b.txt")).ok().as_deref(),
+        Some(&b"b"[..]),
+        "der Rest des alten Ziels fehlt"
+    );
+    let ziel = format!("kai@server.test:{}", fernordner.join("d").display());
+    assert_eq!(
+        ausgang.bericht.uebersprungen.len(),
+        1,
+        "{:?}",
+        ausgang.bericht
+    );
+    let gemeldet = &ausgang.bericht.uebersprungen[0];
+    assert_eq!(gemeldet.pfad, PathBuf::from(&ziel));
+    assert!(
+        gemeldet.grund.contains(alte[0].as_str()),
+        "der Bericht nennt den Zwischennamen nicht: {}",
+        gemeldet.grund
+    );
+}
+
+/// Ein Zugang zu einem Server, der `SETSTAT` ablehnt.
+fn zugang_ohne_setstat(rechner: &str) -> Arc<Fernzugang> {
+    let kennung = Serverkennung::neu(rechner, None, Some("kai"));
+    let plan = Kanalplan {
+        argumente: vec!["-P".into(), "setstat,fsetstat,lsetstat".into()],
+        ..Kanalplan::nur(SFTP_SERVER)
+    };
+    faden("krk-probe-fern".to_owned(), move |pfand| {
+        Fernzugang::aufbauen(pfand, kennung, "Probe", &plan)
+    })
+    .expect("kein Faden fuer die Probe")
+    .join()
+    .expect("der Aufbau ist abgestuerzt")
+    .expect("sftp-server laesst sich nicht ansprechen")
+}
+
+/// Lehnt der Server allein das Setzen von Rechten und Zeit ab, ersetzt
+/// „Ueberschreiben“ das Ziel trotzdem, und der Hinweis steht unter dem Namen
+/// des Ziels (Befund
+/// `261017-0113-ueberschreiben-verwirft-einen-vollstaendigen-ersatz-…`).
+///
+/// Bis zur Behebung zaehlte der Hinweis als Luecke im Ersatz: der Ersatz fiel
+/// weg, das Ziel blieb, und der Bericht fuehrte den Eintrag als fertig und als
+/// uebersprungen, den Hinweis unter dem Zwischennamen. Eine Datei und ein
+/// Ordner mit einer Datei darin, je ueber eine Datei gleichen Namens.
+#[test]
+fn ueberschreiben_gelingt_auch_wenn_der_server_rechte_und_zeit_ablehnt() {
+    let ordner = Pruefordner::neu("fern-ersatz-ohne-setstat");
+    let _ = ordner.ordner("quelle");
+    let datei = ordner.datei("quelle/a.txt", b"neu");
+    let baum = ordner.ordner("quelle/d");
+    fs::write(baum.join("x.txt"), b"x").expect("x.txt");
+    let fernordner = ordner.ordner("server");
+    fs::write(fernordner.join("a.txt"), b"alt").expect("a.txt");
+    fs::write(fernordner.join("d"), b"alte datei").expect("d");
+    let server = zugang_ohne_setstat("server.test");
+
+    let ausgang = fahren(
+        Fernauftrag::kopieren(
+            vec![lokal(&datei), lokal(&baum)],
+            fern(&server, &fernordner),
+        ),
+        Konfliktantwort::Ueberschreiben,
+    );
+
+    assert_eq!(ausgang.konflikte.len(), 2, "{:?}", ausgang.konflikte);
+    assert_eq!(fs::read(fernordner.join("a.txt")).expect("a.txt"), b"neu");
+    assert_eq!(fs::read(fernordner.join("d/x.txt")).expect("d/x.txt"), b"x");
+    assert!(
+        zwischennamen_in(&fernordner).is_empty(),
+        "{:?}",
+        zwischennamen_in(&fernordner)
+    );
+    let am_ziel = |name: &str| {
+        PathBuf::from(format!(
+            "kai@server.test:{}",
+            fernordner.join(name).display()
+        ))
+    };
+    let gemeldet: Vec<&Path> = ausgang
+        .bericht
+        .uebersprungen
+        .iter()
+        .map(|eintrag| eintrag.pfad.as_path())
+        .collect();
+    assert_eq!(
+        gemeldet,
+        vec![am_ziel("a.txt"), am_ziel("d/x.txt"), am_ziel("d")],
+        "{:?}",
+        ausgang.bericht
+    );
+    for eintrag in &ausgang.bericht.uebersprungen {
+        assert!(
+            eintrag
+                .grund
+                .starts_with("Inhalt kopiert, Rechte und Datum"),
+            "{}",
+            eintrag.grund
+        );
+    }
+    for quelle in [&datei, &baum] {
+        assert!(
+            !gemeldet.contains(&quelle.as_path()),
+            "die Quelle steht als uebersprungen im Bericht"
+        );
+    }
+    // Zwei Quellen und das Kind im Ordner, jedes einmal.
+    assert_eq!(ausgang.bericht.eintraege, 3, "{:?}", ausgang.bericht);
+}
+
+/// Verschieben mit „Ueberschreiben“ verliert nie die einzige Kopie, wenn
+/// Quelle und Ziel ueber zwei Wege derselbe Eintrag sind (Befund
+/// `261017-0113-verschieben-mit-ueberschreiben-loescht-die-einzige-kopie-…`).
+///
+/// Zwei Wege zu demselben Ordner: lokal und ueber den Server, und ueber zwei
+/// Kennungen auf denselben Server. Bis zur Behebung entfernte der Tausch das
+/// Ziel, also die Quelle, setzte den Ersatz an ihren Namen, und danach
+/// entfernte das Verschieben die Quelle, unter deren Namen nun der Ersatz
+/// stand. Jetzt faellt beim Beiseitelegen des Ziels auf, dass auch die Quelle
+/// fort ist; das Ziel kommt zurueck, und der Eintrag steht im Bericht.
+#[test]
+fn verschieben_mit_ueberschreiben_verliert_keine_quelle_die_ueber_zwei_wege_das_ziel_ist() {
+    let ordner = Pruefordner::neu("fern-zwei-wege");
+    let hier = ordner.ordner("hier");
+    let datei = ordner.datei("hier/x.txt", b"inhalt");
+    let server = zugang("server.test");
+    let zweiter = zugang("zweiter.test");
+
+    for (art, auftrag) in [
+        (
+            "lokal nach fern, verschieben",
+            Fernauftrag::verschieben(vec![lokal(&datei)], fern(&server, &hier)),
+        ),
+        (
+            "fern nach lokal, verschieben",
+            Fernauftrag::verschieben(vec![fern(&server, &datei)], lokal(&hier)),
+        ),
+        (
+            "zwei Kennungen, verschieben",
+            Fernauftrag::verschieben(vec![fern(&server, &datei)], fern(&zweiter, &hier)),
+        ),
+        (
+            "zwei Kennungen, kopieren",
+            Fernauftrag::kopieren(vec![fern(&server, &datei)], fern(&zweiter, &hier)),
+        ),
+    ] {
+        let ausgang = fahren(auftrag, Konfliktantwort::Ueberschreiben);
+        assert_eq!(
+            fs::read(&datei).ok().as_deref(),
+            Some(&b"inhalt"[..]),
+            "{art}: die Datei ist verloren"
+        );
+        assert_eq!(ausgang.konflikte.len(), 1, "{art}: {:?}", ausgang.konflikte);
+        assert_eq!(
+            ausgang.bericht.uebersprungen.len(),
+            1,
+            "{art}: {:?}",
+            ausgang.bericht
+        );
+        assert!(
+            zwischennamen_in(&hier).is_empty(),
+            "{art}: {:?}",
+            zwischennamen_in(&hier)
+        );
+    }
 }
 
 /// Ein Ordner auf einen gleichnamigen Ordner ist kein Konflikt: der Inhalt
