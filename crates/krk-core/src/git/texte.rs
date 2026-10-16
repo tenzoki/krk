@@ -5,7 +5,9 @@
 //! steht ([`kopfzeile`]), was darunter steht ([`zusammenfassung`]), was eine
 //! Zeile der Verlaufsliste traegt ([`verlaufszeile`]), was die Flaeche unter
 //! der Liste fuer den ausgewaehlten Commit traegt ([`einzelheiten`]), und was
-//! in einem Ordner ohne Repository dasteht ([`kein_repository`]).
+//! in einem Ordner ohne Repository dasteht ([`kein_repository`]). Ein sechster,
+//! [`am_fernen_ort`], steht vor einem Ordner auf einem Server, wo gar nicht
+//! gefragt wird.
 //!
 //! **Sie stehen im Kern und nicht in `krk-ui`, damit sie eine Probe haben.**
 //! `krk-ui` hat kein Bibliotheksziel; eine Datei unter `crates/krk-ui/tests/`
@@ -32,6 +34,16 @@ use crate::sprache::{Text, Zahlwort, anzahl, satz, text};
 #[must_use]
 pub fn kein_repository() -> &'static str {
     text(Text::GitKeinRepository)
+}
+
+/// Was der Git-Bereich vor einem Ordner auf einem Server zeigt.
+///
+/// Dort laeuft kein Gitlauf: `gix` liest ein lokales Dateisystem, und ein
+/// ferner Ort ist keines (Entscheidung 13 des Plans
+/// `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`).
+#[must_use]
+pub fn am_fernen_ort() -> &'static str {
+    text(Text::GitAmFernenOrt)
 }
 
 /// Was an der Stelle der Zusammenfassung steht, solange kein Commit da ist

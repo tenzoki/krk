@@ -44,14 +44,36 @@
 //! ueber den einen geteilten Wert aus [`crate::heimgriff`]:
 //! `lesen_starten` laeuft auf dem Hauptfaden und stellt weiter keinen einzigen
 //! Dateisystemaufruf.
+//!
+//! # Ein Tab kann einen Ordner auf einem Server zeigen
+//!
+//! Was ein Tab zeigt, ist ein [`Tabort`]: ein lokaler Ordner oder ein ferner
+//! Ort samt dem lokalen Ordner, zu dem er beim Neustart zurueckkehrt
+//! (Entscheidung 2 des Plans
+//! `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`). **Zwei Leser
+//! ersetzen den einen Ordnerpfad**: [`Tabinhalt::ort`] fuer jeden, der beide
+//! Faelle kann, und [`Tabinhalt::lokaler_ordner`] fuer jeden, der nur lokal
+//! arbeitet und fuer einen fernen Ort `None` bekommt. Jede Stelle dieser
+//! Datei, die einen Ordner nennt, verzweigt vollstaendig ueber den Wert, und
+//! ihr lokaler Zweig ruft den Code, der ohne ferne Orte lief; insbesondere
+//! steht [`Lesevorgang::starten`] in [`Tabliste::lesen_starten`] woertlich da.
+//!
+//! Was ein ferner Tab **nicht** bekommt, faellt am Wert und ohne Systemaufruf:
+//! keinen Durchlauf ueber den Unterbaum, keinen Gitlauf (der Git-Bereich nennt
+//! den Grund), keine Eigenschaft „ohne Inhaltsauftrag“. Die Sitzung nennt ihn
+//! nicht: `session.toml` bekommt seinen Rueckkehrordner, ein Neustart verbindet
+//! also nicht und fragt nach keiner PIN.
 
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 use krk_core::ablage::{Dateifenster as Fensterzustand, Tab as Tabzustand};
+use krk_core::fern::{Fernfehler, Fernzugang};
 use krk_core::git::Marke;
 use krk_core::git::lauf::{Gitfrage, Gitlauf, Gitmeldung};
 use krk_core::heimordner::Heimordner;
-use krk_core::sprache::{Text, satz};
+use krk_core::ort::{FernerOrt, Ort};
+use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
 use krk_core::verzeichnis::modell::Befund;
 use krk_core::verzeichnis::{
     Abschluss, Durchlauf, Lesevorgang, Meldung, Ordnermodell, datenschutzsperre,
@@ -63,9 +85,76 @@ use crate::heimgriff::{self, Heimgriff};
 /// Die Generation, mit der ein noch nicht gelesener Tab anfaengt.
 const GENERATION_LEER: u64 = 0;
 
-/// Ein Tab: sein Ordner, sein Inhalt und sein Lesevorgang.
+/// Was ein Tab zeigt (Entscheidung 2 des Plans der sftp-Ordner).
+///
+/// **Der ferne Fall traegt seinen Rueckkehrordner mit**: den lokalen Ordner,
+/// den der Tab vor dem Wechsel auf den Server zeigte. Ihn schreibt die Sitzung
+/// an seiner Stelle, und ein weiterer Tab daneben uebernimmt ihn.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Tabort {
+    /// Ein lokaler Ordner.
+    Lokal(PathBuf),
+    /// Ein Ordner auf einem Server.
+    Fern {
+        /// Der ferne Ort.
+        ort: FernerOrt,
+        /// Der lokale Ordner, zu dem der Tab beim Neustart zurueckkehrt.
+        rueckkehr: PathBuf,
+    },
+}
+
+impl Tabort {
+    /// Der Ort als Wert des Kerns.
+    #[must_use]
+    pub fn ort(&self) -> Ort {
+        match self {
+            Tabort::Lokal(ordner) => Ort::Lokal(ordner.clone()),
+            Tabort::Fern { ort, .. } => Ort::Fern(ort.clone()),
+        }
+    }
+
+    /// Der lokale Ordner, oder `None` fuer einen fernen Ort.
+    #[must_use]
+    pub fn lokaler_ordner(&self) -> Option<&Path> {
+        match self {
+            Tabort::Lokal(ordner) => Some(ordner),
+            Tabort::Fern { .. } => None,
+        }
+    }
+
+    /// Der lokale Ordner, den die Sitzung schreibt: der Ordner selbst, oder
+    /// der Rueckkehrordner eines fernen Orts.
+    #[must_use]
+    fn sitzungsordner(&self) -> &Path {
+        match self {
+            Tabort::Lokal(ordner) => ordner,
+            Tabort::Fern { rueckkehr, .. } => rueckkehr,
+        }
+    }
+
+    /// Wie der Ort in einer Meldung heisst: der Pfad, oder
+    /// `konto@rechner:/pfad`.
+    #[must_use]
+    fn anzeige(&self) -> String {
+        match self {
+            Tabort::Lokal(ordner) => ordner.display().to_string(),
+            Tabort::Fern { ort, .. } => ort.to_string(),
+        }
+    }
+}
+
+/// Der ferne Ort, aus dem ein Tab eine Verknuepfung betreten hat, und ihr Name
+/// (Entscheidung 8 des Plans): laesst sich die Verknuepfung nicht als Ordner
+/// oeffnen, kehrt der Tab dorthin zurueck und waehlt sie wieder.
+#[derive(Debug, Clone)]
+struct Rueckfall {
+    ort: FernerOrt,
+    name: String,
+}
+
+/// Ein Tab: sein Ort, sein Inhalt und sein Lesevorgang.
 pub struct Tabinhalt {
-    ordner: PathBuf,
+    ort: Tabort,
     modell: Ordnermodell,
     lesevorgang: Option<Lesevorgang>,
     /// Der Durchlauf ueber die Unterbaeume, falls einer laeuft.
@@ -139,6 +228,12 @@ pub struct Tabinhalt {
     gitlauf: Option<Gitlauf>,
     /// Was der Git-Bereich fuer diesen Tab zeigt.
     gitmodell: Gitmodell,
+    /// Woher der laufende Lesevorgang eine ferne Verknuepfung betreten hat,
+    /// solange noch kein Stapel kam; siehe [`Rueckfall`].
+    rueckfall: Option<Rueckfall>,
+    /// Der Rueckfall, den der Abschluss faellig gemacht hat; eingeloest in
+    /// [`Tabliste::einziehen`], die als einzige neu lesen kann.
+    rueckfall_faellig: Option<Rueckfall>,
     /// Die Generation des Lesevorgangs, zu dem der laufende Gitlauf gehoert.
     ///
     /// **Sie reist nicht im Kanal mit, und der Grund steht bei
@@ -186,7 +281,7 @@ impl Tabinhalt {
         modell.sortierung_setzen(zustand.sortierung);
         modell.ohne_inhaltsauftrag_setzen(ohne_inhaltsauftrag);
         Self {
-            ordner: zustand.ordner.clone(),
+            ort: Tabort::Lokal(zustand.ordner.clone()),
             modell,
             lesevorgang: None,
             durchlauf: None,
@@ -199,15 +294,45 @@ impl Tabinhalt {
             gelesen: false,
             gitlauf: None,
             gitmodell: Gitmodell::neu(),
+            rueckfall: None,
+            rueckfall_faellig: None,
             gitgeneration: GENERATION_LEER,
             wartende_marken: None,
         }
     }
 
-    /// Der Ordner, den dieser Tab zeigt.
+    /// Ein ungelesener Tab auf einem fernen Ort; `zustand.ordner` ist sein
+    /// Rueckkehrordner, und der Rest des Zustands gilt wie lokal.
+    ///
+    /// Ohne Eigenschaft „ohne Inhaltsauftrag“: sie gehoert dem Heimordner,
+    /// und der liegt nie auf einem Server.
+    fn fern_aus_zustand(zustand: &Tabzustand, ort: FernerOrt) -> Self {
+        let mut tab = Self::aus_zustand(zustand, None);
+        tab.ort = Tabort::Fern {
+            ort,
+            rueckkehr: zustand.ordner.clone(),
+        };
+        tab
+    }
+
+    /// Was dieser Tab zeigt.
     #[must_use]
-    pub fn ordner(&self) -> &Path {
-        &self.ordner
+    pub fn tabort(&self) -> &Tabort {
+        &self.ort
+    }
+
+    /// Der Ort, den dieser Tab zeigt, lokal oder fern.
+    #[must_use]
+    pub fn ort(&self) -> Ort {
+        self.ort.ort()
+    }
+
+    /// Der lokale Ordner, den dieser Tab zeigt, oder `None` an einem fernen
+    /// Ort. Wer hier `None` bekommt und nur lokal arbeiten kann, meldet
+    /// `Text::AmFernenOrtNichtVerfuegbar` und tut sonst nichts.
+    #[must_use]
+    pub fn lokaler_ordner(&self) -> Option<&Path> {
+        self.ort.lokaler_ordner()
     }
 
     /// Der Inhalt des Ordners.
@@ -365,20 +490,41 @@ impl Tabinhalt {
     /// dort steht der Pfad selbst.
     #[must_use]
     pub fn titel(&self) -> String {
-        match self.ordner.file_name() {
-            Some(name) => name.to_string_lossy().into_owned(),
-            None => self.ordner.to_string_lossy().into_owned(),
+        match &self.ort {
+            Tabort::Lokal(ordner) => match ordner.file_name() {
+                Some(name) => name.to_string_lossy().into_owned(),
+                None => ordner.to_string_lossy().into_owned(),
+            },
+            Tabort::Fern { ort, .. } => match ort.pfad.name() {
+                Some(name) => name.to_owned(),
+                None => ort.pfad.als_text().to_owned(),
+            },
         }
     }
 
     /// Der gespeicherte Zustand dieses Tabs, wie er in `session.toml` gehoert.
+    ///
+    /// **Ein ferner Tab schreibt seinen Rueckkehrordner** und weder Auswahl
+    /// noch Bildlauf: beide gehoeren dem Ordner auf dem Server und traefen im
+    /// Rueckkehrordner einen anderen Eintrag. Ein Neustart verbindet damit
+    /// nicht und fragt nach keiner PIN (Entscheidung 2 des Plans; L4 und L5
+    /// verlangen einen Start, der auf nichts wartet).
     fn zustand(&self) -> Tabzustand {
-        Tabzustand {
-            ordner: self.ordner.clone(),
-            auswahl: self.auswahlname(),
-            verstecke_ausgeblendet: self.modell.verstecke_ausgeblendet(),
-            sortierung: self.modell.sortierung(),
-            bildlauf: self.bildlauf,
+        match &self.ort {
+            Tabort::Lokal(ordner) => Tabzustand {
+                ordner: ordner.clone(),
+                auswahl: self.auswahlname(),
+                verstecke_ausgeblendet: self.modell.verstecke_ausgeblendet(),
+                sortierung: self.modell.sortierung(),
+                bildlauf: self.bildlauf,
+            },
+            Tabort::Fern { rueckkehr, .. } => Tabzustand {
+                ordner: rueckkehr.clone(),
+                auswahl: None,
+                verstecke_ausgeblendet: self.modell.verstecke_ausgeblendet(),
+                sortierung: self.modell.sortierung(),
+                bildlauf: 0.0,
+            },
         }
     }
 
@@ -599,6 +745,11 @@ pub struct Einzug {
     /// Anwendungsdelegierte kaeme sonst nie zu dem Zeitpunkt, an dem die
     /// Antwort eintrifft.
     pub gitkopf_neu: bool,
+    /// Der sichtbare Tab zeigt einen anderen Ort als vor dem Einzug: eine
+    /// ferne Verknuepfung liess sich nicht als Ordner oeffnen, und der Tab ist
+    /// zurueckgekehrt. Die Ansicht meldet dann einen Ordnerwechsel, damit
+    /// Titel und Tableiste nachziehen.
+    pub ort_neu: bool,
     /// Der Gitlauf des sichtbaren Tabs hat Marken in sein Ordnermodell
     /// getragen.
     ///
@@ -762,13 +913,19 @@ impl Tabliste {
         self.tabs.iter().map(Tabinhalt::titel).collect()
     }
 
-    /// Die Ordner aller Tabs, in der Reihenfolge der Leiste (C9).
+    /// Die lokalen Ordner aller Tabs, in der Reihenfolge der Leiste (C9);
+    /// `None` fuer einen Tab auf einem fernen Ort.
     ///
     /// Neben [`Tabliste::aktiver`], weil der Auswurf eines Datentraegers jeden
-    /// Tab trifft und nicht nur den sichtbaren.
+    /// Tab trifft und nicht nur den sichtbaren. Ein ferner Tab liegt auf keinem
+    /// Datentraeger und steht deshalb als `None` da, an seiner Stelle, damit
+    /// die Stellen der uebrigen stimmen.
     #[must_use]
-    pub fn tabordner(&self) -> Vec<PathBuf> {
-        self.tabs.iter().map(|tab| tab.ordner.clone()).collect()
+    pub fn tabordner(&self) -> Vec<Option<PathBuf>> {
+        self.tabs
+            .iter()
+            .map(|tab| tab.lokaler_ordner().map(Path::to_path_buf))
+            .collect()
     }
 
     /// Setzt einen **verdeckten** Tab auf einen anderen Ordner, ohne zu lesen
@@ -871,6 +1028,25 @@ impl Tabliste {
         self.lesen_starten(stelle);
     }
 
+    /// Oeffnet einen neuen Tab hinter dem sichtbaren auf demselben Ort wie
+    /// dieser und macht ihn sichtbar (C1; Entscheidung 15 des Plans der
+    /// sftp-Ordner).
+    ///
+    /// Ein lokaler Ort geht ueber [`Tabliste::oeffnen`], wie bisher; ein
+    /// ferner Ort bekommt denselben fernen Ort und denselben Rueckkehrordner.
+    pub fn aktiven_verdoppeln(&mut self) {
+        match self.tabs[self.aktiv].ort.clone() {
+            Tabort::Lokal(ordner) => self.oeffnen(ordner),
+            Tabort::Fern { ort, rueckkehr } => {
+                let stelle = self.aktiv + 1;
+                let tab = Tabinhalt::fern_aus_zustand(&Tabzustand::auf(rueckkehr), ort);
+                self.tabs.insert(stelle, tab);
+                self.aktiv = stelle;
+                self.lesen_starten(stelle);
+            }
+        }
+    }
+
     /// Schliesst den sichtbaren Tab.
     ///
     /// Beim letzten Tab bleibt das Dateifenster stehen und zeigt den
@@ -880,7 +1056,7 @@ impl Tabliste {
     pub fn schliessen(&mut self) -> bool {
         if self.tabs.len() == 1 {
             let standard = Tabzustand::default();
-            if self.tabs[0].ordner == standard.ordner {
+            if self.tabs[0].lokaler_ordner() == Some(standard.ordner.as_path()) {
                 // Schon der Standardordner. Ihn ein zweites Mal zu lesen waere
                 // Arbeit ohne sichtbare Wirkung.
                 return false;
@@ -977,7 +1153,72 @@ impl Tabliste {
     /// Abschluss des Lesevorgangs meldet dann, ob das Foto ausgefiltert ist
     /// oder fehlt.
     pub fn ordner_setzen(&mut self, ordner: impl Into<PathBuf>, auswahl: Option<Vormerkung>) {
-        let stelle = self.aktiv;
+        self.ort_setzen_an(self.aktiv, Tabort::Lokal(ordner.into()), auswahl);
+    }
+
+    /// Laesst den sichtbaren Tab einen Ordner auf einem Server zeigen.
+    ///
+    /// Derselbe Weg wie [`Tabliste::ordner_setzen`], mit denselben
+    /// Uebertragungen. Der Rueckkehrordner ist der lokale Ordner, den der Tab
+    /// bisher zeigte, oder, wenn er schon fern stand, dessen Rueckkehrordner.
+    pub fn fern_setzen(&mut self, ort: FernerOrt, auswahl: Option<Vormerkung>) {
+        let rueckkehr = self.tabs[self.aktiv].ort.sitzungsordner().to_path_buf();
+        self.ort_setzen_an(self.aktiv, Tabort::Fern { ort, rueckkehr }, auswahl);
+    }
+
+    /// Betritt eine ferne Verknuepfung wie einen Ordner und kehrt zurueck,
+    /// falls sie sich nicht als Ordner oeffnen laesst (Entscheidung 8 des
+    /// Plans der sftp-Ordner).
+    ///
+    /// Ob sie einer ist, sagt allein der Lesevorgang: `OPENDIR` auf ihren Pfad.
+    /// Antwortet der Server darauf mit einem Statuscode, bevor ein Stapel kam,
+    /// stellt [`Tabliste::einziehen`] den verlassenen Ort wieder her, waehlt
+    /// die Verknuepfung und meldet `Text::AmFernenOrtNichtVerfuegbar`. Ohne
+    /// fernen sichtbaren Tab tut sie nichts.
+    pub fn fern_verknuepfung_betreten(&mut self, verknuepfung: FernerOrt) {
+        let Tabort::Fern { ort: vorher, .. } = self.tabs[self.aktiv].ort.clone() else {
+            return;
+        };
+        let Some(name) = verknuepfung.pfad.name().map(str::to_owned) else {
+            return;
+        };
+        self.fern_setzen(verknuepfung, None);
+        self.tabs[self.aktiv].rueckfall = Some(Rueckfall { ort: vorher, name });
+    }
+
+    /// Liest jeden Tab neu, der einen Ort auf dem Server dieses Zugangs zeigt,
+    /// den sichtbaren wie jeden verdeckten, und gibt ihm diesen Zugang
+    /// (Entscheidung 3 des Plans der sftp-Ordner).
+    ///
+    /// Der Weg nach einem Wiederaufbau: wer ein altes Gespraech hielt, bekam
+    /// `Fernfehler::Getrennt`. Auswahl und Bildlauf werden vorgemerkt wie in
+    /// [`Tabliste::heimordner_gewechselt`]. Verglichen wird die Serverkennung,
+    /// ohne Systemaufruf. Die Antwort sagt, ob der sichtbare Tab darunter war.
+    #[must_use = "die Antwort sagt, ob die Ansicht des sichtbaren Tabs nachzuziehen ist"]
+    pub fn fern_neu_lesen(&mut self, zugang: &Arc<Fernzugang>) -> bool {
+        let mut sichtbarer = false;
+        for stelle in 0..self.tabs.len() {
+            let Tabort::Fern { ort, .. } = &mut self.tabs[stelle].ort else {
+                continue;
+            };
+            if ort.kennung() != zugang.kennung() {
+                continue;
+            }
+            ort.zugang = Arc::clone(zugang);
+            let auswahlname = self.tabs[stelle].auswahlname();
+            let tab = &mut self.tabs[stelle];
+            tab.wunschauswahl = auswahlname;
+            tab.bildlauf_offen = tab.bildlauf > 0.0;
+            self.lesen_starten(stelle);
+            sichtbarer |= stelle == self.aktiv;
+        }
+        sichtbarer
+    }
+
+    /// Der Rumpf von [`Tabliste::ordner_setzen`] und [`Tabliste::fern_setzen`]
+    /// fuer einen genannten Tab; der Doc-Kommentar von `ordner_setzen` sagt,
+    /// was hinuebergeht.
+    fn ort_setzen_an(&mut self, stelle: usize, ort: Tabort, auswahl: Option<Vormerkung>) {
         let sortierung = self.tabs[stelle].modell.sortierung();
         let verstecke = self.tabs[stelle].modell.verstecke_ausgeblendet();
         let tief = self.tabs[stelle].modell.tief();
@@ -991,14 +1232,17 @@ impl Tabliste {
         // ein `true` und liesse eine Fallunterscheidung vermuten, die es nicht
         // gibt. Der Doc-Kommentar darueber schreibt die Regel aus.
         let filtertext = self.tabs[stelle].modell.filtertext().to_owned();
-        let mut zustand = Tabzustand::auf(ordner);
+        let mut zustand = Tabzustand::auf(ort.sitzungsordner());
         zustand.sortierung = sortierung;
         zustand.verstecke_ausgeblendet = verstecke;
         let melden = auswahl
             .as_ref()
             .is_some_and(|vormerkung| vormerkung.meldung == Wunschmeldung::Melden);
         zustand.auswahl = auswahl.map(|vormerkung| vormerkung.name);
-        self.tabs[stelle] = self.tab_bauen(&zustand);
+        self.tabs[stelle] = match ort {
+            Tabort::Lokal(_) => self.tab_bauen(&zustand),
+            Tabort::Fern { ort, .. } => Tabinhalt::fern_aus_zustand(&zustand, ort),
+        };
         self.tabs[stelle].wunsch_melden = melden;
         let modell = &mut self.tabs[stelle].modell;
         // Unbedingt gesetzt und nicht nur, wenn sich etwas aendert: das frische
@@ -1075,7 +1319,10 @@ impl Tabliste {
     pub fn heimordner_gewechselt(&mut self, alt: Option<&Heimordner>, neu: &Heimordner) -> bool {
         let mut sichtbarer = false;
         for stelle in 0..self.tabs.len() {
-            let ordner = &self.tabs[stelle].ordner;
+            // Ein ferner Tab zeigt nie den Notizordner.
+            let Some(ordner) = self.tabs[stelle].lokaler_ordner() else {
+                continue;
+            };
             if !(neu.ist(ordner) || alt.is_some_and(|alt| alt.ist(ordner))) {
                 continue;
             }
@@ -1266,6 +1513,12 @@ impl Tabliste {
         if stelle != self.aktiv {
             return false;
         }
+        // Ein ferner Tab bekommt keinen Durchlauf (Entscheidung 13 des Plans
+        // der sftp-Ordner): der Unterbaum laege auf dem Server, und jeder
+        // Schritt waere eine Anfrage. Der Namensfilter wirkt flach.
+        let Some(ordner) = self.tabs[stelle].lokaler_ordner().map(Path::to_path_buf) else {
+            return false;
+        };
         let tab = &self.tabs[stelle];
         // Der Bestand muss stehen. Waehrend eines Lesevorgangs zeigt das Modell
         // noch den **alten** Ordner — es wird nicht vorab geleert, sondern mit
@@ -1301,7 +1554,7 @@ impl Tabliste {
             // deshalb den blossen Index und keinen Namen.
             tab.modell.bestand(),
             auftraege,
-            tab.ordner.clone(),
+            ordner,
             tab.modell.muster().clone(),
             // **Die eine Stelle, an der die 1 MB in den Kern reisen**, und sie
             // liegt hier, weil die Zahl in `crate::vorschaumodell` wohnt:
@@ -1371,11 +1624,16 @@ impl Tabliste {
         if bereits == 0 {
             return false;
         }
+        // Ein ferner Tab hat keinen Verlauf; `bereits` ist dort null, und
+        // diese Zeile steht, weil der Lauf einen lokalen Pfad braucht.
+        let Some(ordner) = tab.lokaler_ordner().map(Path::to_path_buf) else {
+            return false;
+        };
         self.letzter_gitlauf += 1;
         let nummer = self.letzter_gitlauf;
         let tab = &mut self.tabs[stelle];
         tab.gitlauf = Some(Gitlauf::starten(
-            tab.ordner.clone(),
+            ordner,
             Gitfrage::WeitererVerlauf { bereits },
             nummer,
         ));
@@ -1427,6 +1685,14 @@ impl Tabliste {
         self.tabs[stelle].gitlauf = None;
         self.tabs[stelle].wartende_marken = None;
         self.tabs[stelle].gitmodell.zuruecksetzen();
+        // Ein ferner Tab bekommt keinen Gitlauf, und der Git-Bereich sagt es
+        // (Entscheidung 13 des Plans der sftp-Ordner). Gesetzt wird das vor
+        // der Frage nach Sichtbarkeit und Bedarf, damit es dasteht, sobald der
+        // Tab sichtbar wird.
+        let Some(ordner) = self.tabs[stelle].lokaler_ordner().map(Path::to_path_buf) else {
+            self.tabs[stelle].gitmodell.am_fernen_ort_setzen();
+            return false;
+        };
         if stelle != self.aktiv || !self.git_gefragt {
             return false;
         }
@@ -1434,7 +1700,7 @@ impl Tabliste {
         // geaenderten `session.toml` und ist kein Ordner, den `gix::discover`
         // sinnvoll befragte; der Lauf faellt dann aus, statt aufwaerts vom
         // Arbeitsverzeichnis zu suchen.
-        if self.tabs[stelle].ordner.as_os_str().is_empty() {
+        if ordner.as_os_str().is_empty() {
             return false;
         }
         self.letzter_gitlauf += 1;
@@ -1443,7 +1709,7 @@ impl Tabliste {
         // Die Generation des Bestands, dem der Befund gelten wird. Sie steht
         // hier und nicht in der Meldung; der Grund steht am Feld.
         tab.gitgeneration = tab.modell.generation();
-        tab.gitlauf = Some(Gitlauf::starten(tab.ordner.clone(), Gitfrage::Ganz, nummer));
+        tab.gitlauf = Some(Gitlauf::starten(ordner, Gitfrage::Ganz, nummer));
         true
     }
 
@@ -1486,7 +1752,12 @@ impl Tabliste {
         let aktiv = self.aktiv;
         let mut einzug = Einzug::default();
         for stelle in 0..self.tabs.len() {
-            let veraendert = einzug_je_tab(&mut self.tabs[stelle]);
+            let mut veraendert = einzug_je_tab(&mut self.tabs[stelle]);
+            if let Some(rueckfall) = self.tabs[stelle].rueckfall_faellig.take() {
+                self.rueckfall_einloesen(stelle, rueckfall);
+                veraendert.ort_neu = true;
+                veraendert.meldung_neu = true;
+            }
             if veraendert.fertig {
                 // Der Wert sagt, ob der Einzugstakt anzuwerfen ist. Hier laeuft
                 // er schon: dieser Aufruf **ist** sein Rumpf.
@@ -1518,7 +1789,11 @@ impl Tabliste {
     fn lesen_starten(&mut self, stelle: usize) {
         self.letzte_generation += 1;
         let generation = self.letzte_generation;
-        let ohne_inhaltsauftrag = ohne_inhaltsauftrag_fuer(&self.heim, &self.tabs[stelle].ordner);
+        let ohne_inhaltsauftrag = match &self.tabs[stelle].ort {
+            Tabort::Lokal(ordner) => ohne_inhaltsauftrag_fuer(&self.heim, ordner),
+            // Der Heimordner liegt nie auf einem Server.
+            Tabort::Fern { .. } => None,
+        };
         let tab = &mut self.tabs[stelle];
         // Der bisherige Lesevorgang faellt hier. Sein Arbeitsfaden bemerkt den
         // Abbruch und endet von selbst; auf ihn zu warten hiesse, eine
@@ -1541,7 +1816,10 @@ impl Tabliste {
         tab.modell.ohne_inhaltsauftrag_setzen(ohne_inhaltsauftrag);
         tab.meldung = None;
         tab.gelesen = false;
-        tab.lesevorgang = Some(Lesevorgang::starten(&tab.ordner, generation));
+        tab.lesevorgang = Some(match &tab.ort {
+            Tabort::Lokal(ordner) => Lesevorgang::starten(ordner, generation),
+            Tabort::Fern { ort, .. } => Lesevorgang::fern_starten(ort.clone(), generation),
+        });
         // **Zugleich mit dem Lesevorgang und nicht nach ihm**, und danach, weil
         // der neue Lauf die eben gesetzte Generation mitbekommen muss. Der
         // Gitlauf braucht allein den Pfad; darauf zu warten, dass hunderttausend
@@ -1549,6 +1827,26 @@ impl Tabliste {
         // zurueckzuhalten. Der Wert sagt, ob der Einzugstakt anzuwerfen ist —
         // er laeuft hier ohnehin, denn der Lesevorgang darueber braucht ihn.
         let _ = self.gitlauf_nachziehen_an(stelle);
+    }
+
+    /// Stellt den Ort wieder her, aus dem ein Tab eine ferne Verknuepfung
+    /// betreten hat, die sich nicht als Ordner oeffnen liess, waehlt sie und
+    /// meldet es (Entscheidung 8 des Plans der sftp-Ordner).
+    ///
+    /// Gerufen allein aus [`Tabliste::einziehen`]. Die Meldung steht nach dem
+    /// Lesebeginn, weil [`Tabliste::lesen_starten`] die Meldung des Tabs
+    /// raeumt.
+    fn rueckfall_einloesen(&mut self, stelle: usize, rueckfall: Rueckfall) {
+        let rueckkehr = self.tabs[stelle].ort.sitzungsordner().to_path_buf();
+        self.ort_setzen_an(
+            stelle,
+            Tabort::Fern {
+                ort: rueckfall.ort,
+                rueckkehr,
+            },
+            Some(Vormerkung::still(rueckfall.name)),
+        );
+        self.tabs[stelle].meldung = Some(text(Text::AmFernenOrtNichtVerfuegbar).to_owned());
     }
 
     /// Liest den sichtbaren Tab nach, falls er noch nie gelesen wurde.
@@ -1751,6 +2049,9 @@ fn lesemeldungen_einziehen(tab: &mut Tabinhalt) -> Einzug {
     for meldung in vorgang.meldungen().try_iter() {
         match meldung {
             Meldung::Stapel { eintraege, .. } => {
+                // Ein Stapel heisst: der Ort liess sich als Ordner oeffnen, und
+                // ein Rueckfall aus einer Verknuepfung ist vom Tisch.
+                tab.rueckfall = None;
                 // Vor dem Anhaengen gefragt: danach ist der Ersatz eingeloest
                 // und die Antwort waere immer "nein".
                 einzug.ersetzt |= tab.modell.ersetzt_beim_naechsten_stapel();
@@ -1758,14 +2059,19 @@ fn lesemeldungen_einziehen(tab: &mut Tabinhalt) -> Einzug {
                 einzug.angehaengt = true;
             }
             Meldung::Fertig { abschluss, .. } => {
-                if let Abschluss::Fehler(fehler) = &abschluss {
-                    tab.meldung =
-                        Some(datenschutzsperre(&tab.ordner, fehler).unwrap_or_else(|| {
-                            satz(
-                                Text::TabNichtVollstaendigGelesen,
-                                &[("ordner", &tab.ordner.display()), ("fehler", &fehler)],
-                            )
-                        }));
+                // Nach `Fertig` endgueltig (`Lesevorgang::uebersprungen`), und
+                // hier gelesen, solange der Vorgang noch ausgeliehen ist.
+                let uebersprungen = vorgang.uebersprungen();
+                // Eine Verknuepfung, die sich nicht als Ordner oeffnen liess:
+                // der Server antwortet mit einem Statuscode, bevor ein Stapel
+                // kam. Der Tab kehrt im Einzug zurueck, statt den Fehler zu
+                // melden.
+                if let Some(rueckfall) = tab.rueckfall.take()
+                    && matches!(abschluss, Abschluss::Fern(Fernfehler::Status { .. }))
+                {
+                    tab.rueckfall_faellig = Some(rueckfall);
+                } else if let Some(satz) = lesefehlertext(&tab.ort, &abschluss) {
+                    tab.meldung = Some(satz);
                     einzug.meldung_neu = true;
                 }
                 tab.modell.abschliessen();
@@ -1782,6 +2088,13 @@ fn lesemeldungen_einziehen(tab: &mut Tabinhalt) -> Einzug {
                     einzug.meldung_neu = true;
                 }
                 tab.wunsch_melden = false;
+                // Uebersprungene Namen eines fernen Ordners (Entscheidung 8):
+                // nach jeder anderen Meldung, die den Vorrang hat.
+                if uebersprungen > 0 && tab.meldung.is_none() {
+                    tab.meldung =
+                        Some(anzahl(Zahlwort::FernNamenUebersprungen, uebersprungen, &[]));
+                    einzug.meldung_neu = true;
+                }
                 tab.gelesen = true;
                 einzug.fertig = true;
                 break;
@@ -1794,12 +2107,56 @@ fn lesemeldungen_einziehen(tab: &mut Tabinhalt) -> Einzug {
     einzug
 }
 
+/// Was die Statuszeile zum Abschluss eines Lesevorgangs sagt, oder nichts.
+///
+/// Vollstaendig ueber [`Abschluss`] und ohne Auffangzweig. Der lokale Zweig
+/// ist der Satz, der vor den fernen Orten hier stand, und fragt die
+/// Datenschutzsperre zuerst; ein Lesefehler eines fernen Orts nennt den Ort
+/// als `konto@rechner:/pfad`, und eine getrennte Verbindung sagt, wie man neu
+/// verbindet.
+fn lesefehlertext(ort: &Tabort, abschluss: &Abschluss) -> Option<String> {
+    match abschluss {
+        Abschluss::Vollstaendig | Abschluss::Abgebrochen => None,
+        Abschluss::Fehler(fehler) => Some(match ort {
+            Tabort::Lokal(ordner) => datenschutzsperre(ordner, fehler).unwrap_or_else(|| {
+                satz(
+                    Text::TabNichtVollstaendigGelesen,
+                    &[("ordner", &ordner.display()), ("fehler", &fehler)],
+                )
+            }),
+            Tabort::Fern { .. } => satz(
+                Text::TabNichtVollstaendigGelesen,
+                &[("ordner", &ort.anzeige()), ("fehler", &fehler)],
+            ),
+        }),
+        Abschluss::Fern(fehler) => Some(match (ort, fehler) {
+            (Tabort::Fern { ort, .. }, Fernfehler::Getrennt(_)) => satz(
+                Text::FernVerbindungGetrennt,
+                &[("name", &ort.zugang.verbindung())],
+            ),
+            _ => satz(
+                Text::TabNichtVollstaendigGelesen,
+                &[("ordner", &ort.anzeige()), ("fehler", fehler)],
+            ),
+        }),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use krk_core::verzeichnis::{Auftrag, Auftragsart};
 
     use super::*;
     use crate::pruefordner::Pruefordner;
+
+    impl Tabinhalt {
+        /// Der lokale Ordner fuer die Proben dieser Datei, die ihn an einem
+        /// lokalen Tab ablesen.
+        fn ordner(&self) -> &Path {
+            self.lokaler_ordner()
+                .expect("die Probe liest den Ordner eines lokalen Tabs")
+        }
+    }
 
     /// Ein Fensterzustand mit den genannten Ordnern, der erste ist sichtbar.
     fn zustand(ordner: &[&str]) -> Fensterzustand {
@@ -1841,7 +2198,7 @@ mod tests {
         liste
             .tabs
             .iter()
-            .map(|tab| tab.ordner.display().to_string())
+            .map(|tab| tab.ordner().display().to_string())
             .collect()
     }
 
@@ -3876,6 +4233,190 @@ mod tests {
         liste.aktiver_mut().modell_mut().filtertext_setzen("andere");
         liste.ordner_setzen(&monat, Some(Vormerkung::still("bild.jpg".to_owned())));
         fertig_lesen(&mut liste);
+        assert_eq!(liste.aktiver().meldung(), None);
+    }
+
+    // ------------------------------------------------------------------
+    // Ein ferner Ort im Tab (Schritt 3 des Plans der sftp-Ordner)
+    // ------------------------------------------------------------------
+
+    /// Ein ferner Ort auf dem Server des Systems fuer diesen Pruefordner.
+    fn ferner_ort_auf(pfad: &Path) -> FernerOrt {
+        let echt = std::fs::canonicalize(pfad).expect("canonicalize");
+        crate::fernprobe::ferner_ort(
+            "server.test",
+            None,
+            echt.to_str().expect("Pruefpfade sind UTF-8"),
+        )
+    }
+
+    /// Ein ferner Tab liest ueber den fernen Lesevorgang, nennt sich nach dem
+    /// letzten Bestandteil seines Pfades, bekommt weder Durchlauf noch Gitlauf
+    /// und sagt im Git-Bereich, warum; seine Stelle in `tabordner` ist leer.
+    #[test]
+    fn ein_ferner_tab_liest_und_bekommt_weder_durchlauf_noch_gitlauf() {
+        let ordner = Pruefordner::neu("tab-fern");
+        let daheim = ordner.ordner("daheim");
+        let dort = ordner.ordner("dort");
+        for name in ["a.txt", "b.txt", "unterordner-mit-a"] {
+            std::fs::write(dort.join(name), b"x").expect("Datei");
+        }
+        let mut liste = liste(&[&daheim.display().to_string()]);
+        let _ = liste.git_gefragt_setzen(true);
+        liste.sichtbaren_lesen();
+        fertig_lesen(&mut liste);
+
+        liste.fern_setzen(ferner_ort_auf(&dort), None);
+        fertig_lesen(&mut liste);
+        let tab = liste.aktiver();
+        assert!(tab.lokaler_ordner().is_none());
+        assert!(matches!(tab.ort(), Ort::Fern(_)));
+        assert_eq!(tab.titel(), "dort");
+        assert_eq!(tab.modell().zeilenzahl(), 3);
+        assert_eq!(tab.meldung(), None);
+        assert!(
+            tab.gitlauf.is_none(),
+            "ein ferner Tab bekommt keinen Gitlauf"
+        );
+        assert_eq!(
+            tab.gitmodell().kopfzeile(),
+            krk_core::git::texte::am_fernen_ort(),
+            "der Git-Bereich nennt den Grund"
+        );
+        assert_eq!(liste.tabordner(), [None]);
+
+        // Ein Filtertext ueber der Schwelle stoesst lokal einen Durchlauf an;
+        // fern nicht, der Namensfilter wirkt flach.
+        liste.aktiver_mut().modell_mut().tief_setzen(true);
+        liste
+            .aktiver_mut()
+            .modell_mut()
+            .filtertext_setzen("unterordner");
+        assert!(
+            !liste.durchlauf_nachziehen(),
+            "ein ferner Tab bekommt keinen Durchlauf"
+        );
+        assert_eq!(
+            liste.aktiver().modell().zeilenzahl(),
+            1,
+            "der Namensfilter wirkt flach"
+        );
+    }
+
+    /// Die Sitzung nennt keinen fernen Ort: ein ferner Tab schreibt seinen
+    /// Rueckkehrordner, ohne Auswahl und ohne Bildlauf, und ein Tab, der
+    /// schon fern stand, behaelt den ersten Rueckkehrordner (Entscheidung 2
+    /// des Plans). Gefragt wird `Tabliste::zustand`, das `sitzung_bauen` je
+    /// Dateifenster schreibt.
+    #[test]
+    fn die_sitzung_nennt_keinen_fernen_ort() {
+        let ordner = Pruefordner::neu("tab-sitzung");
+        let daheim = ordner.ordner("daheim");
+        let dort = ordner.ordner("dort");
+        let weiter = ordner.ordner("dort/weiter");
+        let mut liste = liste(&[&daheim.display().to_string()]);
+        liste.fern_setzen(
+            ferner_ort_auf(&dort),
+            Some(Vormerkung::still("weiter".to_owned())),
+        );
+        liste.fern_setzen(ferner_ort_auf(&weiter), None);
+        liste.aktiven_verdoppeln();
+        assert_eq!(liste.zahl(), 2);
+        assert!(
+            matches!(liste.aktiver().tabort(), Tabort::Fern { rueckkehr, .. } if *rueckkehr == daheim),
+            "der neue Tab zeigt denselben fernen Ort mit demselben Rueckkehrordner"
+        );
+        assert_eq!(liste.aktiver().ort(), liste.tabs[0].ort());
+        let zustand = liste.zustand();
+        for tab in &zustand.tabs {
+            assert_eq!(tab.ordner, daheim);
+            assert_eq!(tab.auswahl, None);
+            assert_eq!(tab.bildlauf, 0.0);
+        }
+        let text = toml::to_string(&zustand).expect("der Zustand laesst sich schreiben");
+        assert!(
+            !text.contains("server.test") && !text.contains("kai@"),
+            "die Sitzung nennt den Server: {text}"
+        );
+    }
+
+    /// Nach einem Wiederaufbau liest jeder Tab auf diesem Server neu und
+    /// bekommt den Zugang, der jetzt gilt; ein lokaler Tab und ein Tab auf
+    /// einem anderen Server bleiben unberuehrt (Entscheidung 3 des Plans).
+    #[test]
+    fn nach_einem_wiederaufbau_liest_jeder_tab_auf_diesem_server_neu() {
+        let ordner = Pruefordner::neu("tab-wiederaufbau");
+        let daheim = ordner.ordner("daheim");
+        let dort = ordner.ordner("dort");
+        let mut liste = liste(&[&daheim.display().to_string()]);
+        liste.sichtbaren_lesen();
+        fertig_lesen(&mut liste);
+        liste.oeffnen(&daheim);
+        liste.fern_setzen(ferner_ort_auf(&dort), None);
+        fertig_lesen(&mut liste);
+        let _ = liste.waehlen(0);
+        fertig_lesen(&mut liste);
+
+        let neuer = crate::fernprobe::zugang("Server.Test", None);
+        assert!(!liste.fern_neu_lesen(&neuer), "der sichtbare Tab ist lokal");
+        assert!(!liste.tabs[0].liest(), "der lokale Tab liest nicht neu");
+        assert!(liste.tabs[1].liest(), "der ferne Tab liest neu");
+        let Tabort::Fern { ort, .. } = liste.tabs[1].tabort() else {
+            panic!("der ferne Tab ist lokal geworden");
+        };
+        assert!(
+            Arc::ptr_eq(&ort.zugang, &neuer),
+            "der Tab haelt den neuen Zugang"
+        );
+
+        let fremder = crate::fernprobe::zugang("anderer.test", None);
+        let _ = liste.waehlen(1);
+        fertig_lesen(&mut liste);
+        assert!(!liste.fern_neu_lesen(&fremder));
+        assert!(
+            !liste.aktiver().liest(),
+            "ein anderer Server liest nicht neu"
+        );
+    }
+
+    /// Eine ferne Verknuepfung, die sich nicht als Ordner oeffnen laesst,
+    /// fuehrt zurueck: derselbe Ort, die Verknuepfung gewaehlt, und die
+    /// Statuszeile meldet es; eine Verknuepfung auf einen Ordner wird
+    /// betreten (Entscheidung 8 des Plans).
+    #[test]
+    fn eine_ferne_verknuepfung_auf_eine_datei_fuehrt_zurueck() {
+        let ordner = Pruefordner::neu("tab-verknuepfung");
+        let daheim = ordner.ordner("daheim");
+        let dort = ordner.ordner("dort");
+        std::fs::write(dort.join("ziel.txt"), b"x").expect("Datei");
+        std::fs::create_dir(dort.join("zielordner")).expect("Ordner");
+        std::os::unix::fs::symlink("ziel.txt", dort.join("auf-datei")).expect("Verknuepfung");
+        std::os::unix::fs::symlink("zielordner", dort.join("auf-ordner")).expect("Verknuepfung");
+        let mut liste = liste(&[&daheim.display().to_string()]);
+        let ort = ferner_ort_auf(&dort);
+        liste.fern_setzen(ort.clone(), None);
+        fertig_lesen(&mut liste);
+
+        let unter = |name: &str| FernerOrt {
+            zugang: Arc::clone(&ort.zugang),
+            pfad: ort.pfad.verbinden(name).expect("ein Name"),
+        };
+        liste.fern_verknuepfung_betreten(unter("auf-datei"));
+        fertig_lesen(&mut liste);
+        assert_eq!(
+            liste.aktiver().ort(),
+            Ort::Fern(ort.clone()),
+            "der Tab ist zurueck"
+        );
+        assert_eq!(
+            liste.aktiver().meldung(),
+            Some(text(Text::AmFernenOrtNichtVerfuegbar))
+        );
+        assert_eq!(liste.aktiver().auswahlname().as_deref(), Some("auf-datei"));
+
+        liste.fern_verknuepfung_betreten(unter("auf-ordner"));
+        fertig_lesen(&mut liste);
+        assert_eq!(liste.aktiver().ort(), Ort::Fern(unter("auf-ordner")));
         assert_eq!(liste.aktiver().meldung(), None);
     }
 }

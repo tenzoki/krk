@@ -85,6 +85,10 @@ mod belegungsmodell;
 mod editormodell;
 mod fenstermodell;
 mod fenstertitel;
+/// Ein ferner Ort fuer die Proben, ueber den Server des Systems und ohne
+/// Netz. Nur im Probenbau uebersetzt, aus demselben Grund wie `pruefordner`.
+#[cfg(test)]
+mod fernprobe;
 mod filteranzeige;
 mod gitmodell;
 mod heimgriff;

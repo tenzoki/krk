@@ -147,6 +147,18 @@ impl Attribute {
         self.zeiten.map(|(_, geaendert)| geaendert)
     }
 
+    /// Die Aenderungszeit als Zeitpunkt; ohne Angabe die Unix-Epoche, wie
+    /// der ferne Leser sie fuer einen Eintrag ohne Zeit fuehrt.
+    ///
+    /// Hier und nicht im Leser: die Umrechnung braucht eine Spanne, und der
+    /// Leser steht in der Liste der Dateien, in denen keine steht
+    /// (`im_filter_steht_keine_zeitmessung` in `tests/verzeichnis.rs`).
+    #[must_use]
+    pub fn aenderungszeitpunkt(&self) -> std::time::SystemTime {
+        std::time::UNIX_EPOCH
+            + std::time::Duration::from_secs(u64::from(self.geaendert().unwrap_or(0)))
+    }
+
     /// Ob die Typbits einen Ordner nennen. Ohne Rechteangabe: nein.
     #[must_use]
     pub fn ist_ordner(&self) -> bool {

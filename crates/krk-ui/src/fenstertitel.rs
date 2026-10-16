@@ -63,6 +63,7 @@
 
 use std::path::Path;
 
+use krk_core::ort::Ort;
 use krk_core::sprache::{Text, text};
 
 use crate::kommandos::fokus::Fokus;
@@ -94,7 +95,11 @@ pub enum Editoranzeige<'a> {
 ///
 /// `aktiver_ordner` ist der Ordner, den das **aktive** Dateifenster zeigt. Er
 /// wird in jedem Fall ausser [`Fokus::Anderswo`] gebraucht und deshalb nicht
-/// als `Option` gefuehrt: ein Dateifenster zeigt immer einen Ordner.
+/// als `Option` gefuehrt: ein Dateifenster zeigt immer einen Ordner. Liegt er
+/// auf einem Server, heisst er `konto@rechner:/pfad`, mit Port
+/// `konto@rechner:port:/pfad` (Entscheidung 15 des Plans
+/// `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`); geschrieben
+/// wird er, wie er dasteht, ohne Anfrage, wie jeder lokale.
 ///
 /// **Die offene Quicknote hat keinen Pfad und nennt sich selbst**: steht der
 /// Fokus im Editor und zeigt der die Quicknote, heisst der Titel „Quicknote",
@@ -102,24 +107,32 @@ pub enum Editoranzeige<'a> {
 /// (Schritt 5 des Plans der Quicknote).
 pub fn titel(
     fokus: Fokus,
-    aktiver_ordner: &Path,
+    aktiver_ordner: &Ort,
     editor: Editoranzeige<'_>,
     vorschaudatei: Option<&Path>,
 ) -> Option<String> {
+    let ordner = || match aktiver_ordner {
+        Ort::Lokal(pfad) => pfad.display().to_string(),
+        Ort::Fern(ort) => ort.to_string(),
+    };
     let pfad = match fokus {
-        Fokus::Dateifenster => aktiver_ordner,
+        Fokus::Dateifenster => return Some(ordner()),
         // Die Auswahl in der Leiste setzt den Ordner des aktiven
         // Dateifensters; sie hat keinen eigenen Pfad, sondern genau diesen.
-        Fokus::Leiste => aktiver_ordner,
+        Fokus::Leiste => return Some(ordner()),
         Fokus::Editor => match editor {
-            Editoranzeige::Datei(datei) => datei.unwrap_or(aktiver_ordner),
+            Editoranzeige::Datei(Some(datei)) => datei,
+            Editoranzeige::Datei(None) => return Some(ordner()),
             Editoranzeige::Quicknote => return Some(text(Text::FenstertitelQuicknote).to_owned()),
         },
-        Fokus::Vorschau => vorschaudatei.unwrap_or(aktiver_ordner),
+        Fokus::Vorschau => match vorschaudatei {
+            Some(datei) => datei,
+            None => return Some(ordner()),
+        },
         // Der Git-Bereich zeigt den Zustand des aktiven Ordners und haelt
         // keinen eigenen Pfad (C2.3); dieselbe Antwort und derselbe Grund wie
         // bei der Leiste.
-        Fokus::Git => aktiver_ordner,
+        Fokus::Git => return Some(ordner()),
         Fokus::Anderswo => return None,
     };
     Some(pfad.display().to_string())
@@ -131,8 +144,8 @@ mod tests {
 
     use super::*;
 
-    fn ordner() -> PathBuf {
-        PathBuf::from("/Users/k1/Projekte")
+    fn ordner() -> Ort {
+        Ort::Lokal(PathBuf::from("/Users/k1/Projekte"))
     }
 
     /// Jeder Fokuswert bekommt seine Antwort, und `Anderswo` keine.
@@ -247,8 +260,13 @@ mod tests {
     #[test]
     fn der_pfad_steht_ungekuerzt() {
         let tief = PathBuf::from("/Users/k1/Library/Caches/krk-messplatz/lauf/ordner");
-        let titel = titel(Fokus::Dateifenster, &tief, Editoranzeige::Datei(None), None)
-            .expect("das Dateifenster liefert immer einen Titel");
+        let titel = titel(
+            Fokus::Dateifenster,
+            &Ort::Lokal(tief),
+            Editoranzeige::Datei(None),
+            None,
+        )
+        .expect("das Dateifenster liefert immer einen Titel");
         assert_eq!(titel, "/Users/k1/Library/Caches/krk-messplatz/lauf/ordner");
         assert!(!titel.contains('~'), "der Benutzerordner ist gekuerzt");
     }
@@ -266,8 +284,59 @@ mod tests {
             "die Probe braucht einen Pfad, den es nicht gibt"
         );
         assert_eq!(
-            titel(Fokus::Dateifenster, &fort, Editoranzeige::Datei(None), None).as_deref(),
+            titel(
+                Fokus::Dateifenster,
+                &Ort::Lokal(fort),
+                Editoranzeige::Datei(None),
+                None
+            )
+            .as_deref(),
             Some("/Volumes/abgezogen/ordner")
         );
+    }
+
+    /// Ein ferner Ordner steht als `konto@rechner:/pfad` im Titel, mit Port
+    /// als `konto@rechner:port:/pfad` (Entscheidung 15 des Plans der
+    /// sftp-Ordner), und jeder Fokuswert, der lokal auf den Ordner faellt,
+    /// faellt auch hier auf ihn.
+    #[test]
+    fn der_fenstertitel_nennt_konto_rechner_und_pfad() {
+        let ohne_port = Ort::Fern(crate::fernprobe::ferner_ort(
+            "server.test",
+            None,
+            "/var/www",
+        ));
+        let mit_port = Ort::Fern(crate::fernprobe::ferner_ort(
+            "server.test",
+            Some(2222),
+            "/srv/daten",
+        ));
+        assert_eq!(
+            titel(
+                Fokus::Dateifenster,
+                &ohne_port,
+                Editoranzeige::Datei(None),
+                None
+            )
+            .as_deref(),
+            Some("kai@server.test:/var/www")
+        );
+        assert_eq!(
+            titel(
+                Fokus::Dateifenster,
+                &mit_port,
+                Editoranzeige::Datei(None),
+                None
+            )
+            .as_deref(),
+            Some("kai@server.test:2222:/srv/daten")
+        );
+        for fokus in [Fokus::Leiste, Fokus::Git, Fokus::Vorschau] {
+            assert_eq!(
+                titel(fokus, &ohne_port, Editoranzeige::Datei(None), None).as_deref(),
+                Some("kai@server.test:/var/www"),
+                "{fokus:?}"
+            );
+        }
     }
 }

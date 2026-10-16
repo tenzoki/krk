@@ -165,7 +165,7 @@ use objc2_foundation::{
 
 use krk_core::fern::rechnerschluessel::{self, Schluesselstand};
 use krk_core::fern::{
-    Anmeldung, Fernfaden, Fernfehler, Fernziel, Kanalplan, Trennung, Zugangsfehler,
+    Anmeldung, Fernfaden, Fernfehler, Fernziel, Herkunft, Kanalplan, Trennung, Zugangsfehler,
     Zugangsregister, ssh_plan,
 };
 use krk_core::heimordner::eintraege::geheimnisse::Passwort;
@@ -258,6 +258,9 @@ pub enum Verbindungsausgang {
         ort: FernerOrt,
         /// Der verlangte Ordner, wenn er fehlte.
         startordner_fehlte: Option<String>,
+        /// Ob ein getrennter Zugang ein neues Gespraech bekommen hat; dann
+        /// liest jeder Tab auf diesem Server neu (Entscheidung 3 des Plans).
+        neu_verbunden: bool,
     },
     /// `ssh` kennt den Rechnerschluessel nicht; der Name, unter dem
     /// gesucht wurde.
@@ -372,8 +375,8 @@ fn fern_verbinden(
         );
         Ok((plan, Some(hilfe)))
     };
-    let zugang = match register.zugang(pfand, &ziel.kennung(), name, vorbereiten) {
-        Ok((zugang, _)) => zugang,
+    let (zugang, herkunft) = match register.zugang(pfand, &ziel.kennung(), name, vorbereiten) {
+        Ok(gefunden) => gefunden,
         Err(Zugangsfehler::Vorbereitung(Fernhindernis::Unbekannt(suchname))) => {
             return Verbindungsausgang::RechnerschluesselUnbekannt(suchname);
         }
@@ -389,6 +392,7 @@ fn fern_verbinden(
                 pfad: start.pfad,
             },
             startordner_fehlte: start.fehlte,
+            neu_verbunden: herkunft == Herkunft::NeuVerbunden,
         },
         Err(fehler) => fernfehlerart(&fehler),
     }

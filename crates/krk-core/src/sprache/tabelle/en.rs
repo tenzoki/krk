@@ -360,6 +360,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::ProfilJuengsteNull => "juengste with anzahl = 0 can never show an entry",
         Text::GitKeinRepository => "This folder is not in any Git repository.",
+        Text::GitAmFernenOrt => "A folder on a server is not checked with Git.",
         Text::GitOhneCommit => "no commit yet",
         Text::GitUnveraendert => "unchanged",
         Text::GitImOrdner => "{marken} in this folder",
@@ -963,6 +964,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::FernStartordnerFehlt => {
             "“{name}” is connected, but {pfad} is not a folder; showing {heim}."
         }
+        Text::AmFernenOrtNichtVerfuegbar => "This is not possible in a folder on a server.",
+        Text::FernVerbindungGetrennt => {
+            "The connection “{name}” is closed; clicking the connection reconnects."
+        }
         Text::VerbindenErstSichern => {
             "secrets.txt has unsaved changes in the editor; save first, then connect."
         }
@@ -1063,6 +1068,10 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
             "{name} was ejected; {n} hidden tabs now show {ziel}",
         ),
         Zahlwort::GekuerztWeitere => ("… and {n} more", "… and {n} more"),
+        Zahlwort::FernNamenUebersprungen => (
+            "One name that is not UTF-8 was skipped.",
+            "{n} names that are not UTF-8 were skipped.",
+        ),
     }
 }
 

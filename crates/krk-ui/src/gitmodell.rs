@@ -76,6 +76,10 @@ pub struct Gitmodell {
     erschoepft: bool,
     /// Die Zusammenfassung des Status, sobald die Markenmeldung da war.
     zusammenfassung: Option<String>,
+    /// Ob der Tab einen Ordner auf einem Server zeigt; dort laeuft kein
+    /// Gitlauf, und die Kopfzeile sagt es (Entscheidung 13 des Plans
+    /// `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`).
+    am_fernen_ort: bool,
 }
 
 impl Gitmodell {
@@ -99,6 +103,13 @@ impl Gitmodell {
     /// gibt.
     pub fn zuruecksetzen(&mut self) {
         *self = Self::neu();
+    }
+
+    /// Haelt fest, dass der Tab einen fernen Ort zeigt und kein Gitlauf
+    /// kommt. Faellt mit [`Self::zuruecksetzen`], also mit jedem Orts- und
+    /// Tabwechsel.
+    pub fn am_fernen_ort_setzen(&mut self) {
+        self.am_fernen_ort = true;
     }
 
     /// Traegt ein, worauf HEAD steht.
@@ -184,6 +195,9 @@ impl Gitmodell {
     /// nichts beantwortet ist (A8).
     #[must_use]
     pub fn kopfzeile(&self) -> String {
+        if self.am_fernen_ort {
+            return texte::am_fernen_ort().to_owned();
+        }
         self.kopf.as_ref().map(texte::kopfzeile).unwrap_or_default()
     }
 

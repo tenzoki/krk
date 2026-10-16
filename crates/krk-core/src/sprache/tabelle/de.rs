@@ -376,6 +376,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::ProfilJuengsteNull => "juengste mit anzahl = 0 kann nie einen Eintrag zeigen",
         Text::GitKeinRepository => "Dieser Ordner liegt in keinem Git-Repository.",
+        Text::GitAmFernenOrt => "Ein Ordner auf einem Server wird nicht nach Git gefragt.",
         Text::GitOhneCommit => "noch kein Commit",
         Text::GitUnveraendert => "unverändert",
         Text::GitImOrdner => "{marken} in diesem Ordner",
@@ -1005,6 +1006,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::FernStartordnerFehlt => {
             "„{name}“ ist verbunden, aber {pfad} ist kein Ordner; gezeigt wird {heim}."
         }
+        Text::AmFernenOrtNichtVerfuegbar => "Das geht an einem Ort auf einem Server nicht.",
+        Text::FernVerbindungGetrennt => {
+            "Die Verbindung „{name}“ ist getrennt; ein Klick auf die Verbindung verbindet neu."
+        }
         Text::VerbindenErstSichern => {
             "secrets.txt hat im Editor ungesicherte Änderungen; erst sichern, dann verbinden."
         }
@@ -1119,6 +1124,10 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
             "{name} wurde ausgeworfen; {n} verdeckte Tabs zeigen jetzt {ziel}",
         ),
         Zahlwort::GekuerztWeitere => ("… und {n} weitere", "… und {n} weitere"),
+        Zahlwort::FernNamenUebersprungen => (
+            "Ein Name ohne UTF-8 ist übersprungen.",
+            "{n} Namen ohne UTF-8 sind übersprungen.",
+        ),
     }
 }
 

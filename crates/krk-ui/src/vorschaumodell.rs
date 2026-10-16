@@ -289,6 +289,40 @@ fn geheimnishinweis() -> &'static str {
     text(Text::VorschauGeheimnishinweis)
 }
 
+/// Was die Vorschau fuer ein Dateifenster zu beschreiben hat: einen lokalen
+/// Pfad, oder die Angaben eines Eintrags oder Ordners auf einem Server.
+///
+/// **Ein ferner Eintrag wird nicht gelesen** (Entscheidung 13 des Plans
+/// `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`): die Vorschau
+/// zeigt, was das Ordnermodell ueber ihn weiss, und stellt keine Anfrage. Der
+/// lokale Fall geht den Weg, den die Vorschau ohne ferne Orte ging.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Beschreibung {
+    /// Ein lokaler Eintrag oder Ordner.
+    Lokal(PathBuf),
+    /// Ein Eintrag oder Ordner auf einem Server.
+    Fern(Fernangaben),
+}
+
+/// Was die Vorschau ueber einen Eintrag oder Ordner auf einem Server zeigt.
+///
+/// Alles stammt aus dem `Eintrag` des Ordnermodells, also aus dem Lesen des
+/// Ordners; fuer den angezeigten Ordner selbst, der kein Eintrag ist, fehlen
+/// Groesse und Aenderungszeit.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Fernangaben {
+    /// Der Name ohne Pfad, an der Wurzel `/`.
+    pub name: String,
+    /// Der Ort als `konto@rechner:/pfad`.
+    pub ort: String,
+    /// Die Groesse in Bytes, falls bekannt.
+    pub groesse: Option<u64>,
+    /// Die Aenderungszeit, falls bekannt.
+    pub geaendert: Option<SystemTime>,
+    /// Ordner, Datei oder Verknuepfung.
+    pub typ: Typ,
+}
+
 /// Die Metadaten eines Eintrags, wie C6 sie fuer alles Uebrige verlangt.
 ///
 /// Fuenf der sechs Angaben kennt auch `Eintrag` aus S2; die Rechte kommen
@@ -1112,6 +1146,21 @@ impl Vorschaumodell {
             auftraege += 1;
         }
         auftraege
+    }
+
+    /// Zeigt im aktiven Tab die Angaben eines Eintrags auf einem Server, als
+    /// fertigen Text der Ansicht.
+    ///
+    /// Ohne Arbeitsfaden und ohne Anfrage, wie die Zwischenablage darunter:
+    /// die Angaben stammen aus dem Ordnermodell. Ein noch laufendes Laden des
+    /// Tabs faellt, denn der ferne Eintrag ist die neuere Auswahl.
+    pub fn fern_anzeigen(&mut self, titel: String, angaben: String) {
+        let tab = &mut self.tabs[self.aktiv];
+        tab.titel = titel;
+        tab.ladevorgang = None;
+        tab.folge = None;
+        tab.pfad = None;
+        tab.inhalt = Inhalt::Hinweis(angaben);
     }
 
     /// Zeigt den Inhalt der Zwischenablage im aktiven Tab (C10).

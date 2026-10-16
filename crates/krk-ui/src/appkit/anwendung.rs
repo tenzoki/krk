@@ -333,7 +333,8 @@ use crate::quicknote::{self, F10Wirkung, Kopierausgang, Rueckkehr};
 use crate::spalten::Spalte;
 use crate::tabs::{Auswahlversuch, Tabliste, Vormerkung, Wunschmeldung};
 use crate::tresorweg::{self, Anhaengausgang, Verbindungsentwurf, Verbindungshindernis};
-use crate::vorschaumodell::Blaetterrichtung;
+use crate::vorschaumodell::{Beschreibung, Blaetterrichtung};
+use krk_core::ort::Ort as Dateiort;
 
 use super::aufteilung::Aufteilung;
 use super::auswurf::{self, Auswurfergebnis};
@@ -997,7 +998,7 @@ pub struct AnwendungsIvars {
     ///
     /// Leer heisst: es ist nichts nachzuholen. Der Tab behaelt dann seinen
     /// Inhalt, wie das Halteverhalten aus C6 es ohnehin sagt.
-    vorschau_nachtrag: RefCell<Option<PathBuf>>,
+    vorschau_nachtrag: RefCell<Option<Beschreibung>>,
     /// Der Zugang zu `bookmarks.toml` (C5).
     ///
     /// Er steht hier und nicht in der Leiste: der Kern legt ab, die Leiste
@@ -1969,9 +1970,9 @@ impl Anwendungsdelegierter {
             let schwach = objc2::rc::Weak::from_retained(&self.retain());
             self.dateifenster(seite)
                 .quelle()
-                .auswahlmelder_setzen(Box::new(move |pfad| {
+                .auswahlmelder_setzen(Box::new(move |beschreibung| {
                     if let Some(selbst) = schwach.load() {
-                        selbst.vorschau_fuellen(seite, pfad);
+                        selbst.vorschau_fuellen(seite, beschreibung);
                     }
                 }));
             // Das Umbenennen in der Liste aus C4. Die Zelle sammelt den Namen
@@ -2518,17 +2519,32 @@ impl Anwendungsdelegierter {
     /// C7 holt ihn nach; die Begruendung steht am Feld. Ein zweiter Weg in die
     /// Vorschau entsteht dabei nicht: nachgeholt wird mit demselben
     /// `datei_anzeigen`, das auch hier steht.
-    fn vorschau_fuellen(&self, seite: Fensterseite, pfad: PathBuf) {
+    ///
+    /// **Ein ferner Eintrag wird nicht gelesen** (Entscheidung 13 des Plans
+    /// der sftp-Ordner): die Vorschau zeigt die Angaben, die das Ordnermodell
+    /// ueber ihn hat ([`Beschreibung::Fern`]), und der lokale Fall geht den
+    /// Weg, den er vorher ging.
+    fn vorschau_fuellen(&self, seite: Fensterseite, beschreibung: Beschreibung) {
         if seite != self.ivars().modell.borrow().aktiv() {
             return;
         }
         if !self.ivars().modell.borrow().sichtbar(Bereich::Vorschau) {
-            *self.ivars().vorschau_nachtrag.borrow_mut() = Some(pfad);
+            *self.ivars().vorschau_nachtrag.borrow_mut() = Some(beschreibung);
             return;
         }
         // Gelesen wird sofort, also ist nichts mehr nachzuholen.
         *self.ivars().vorschau_nachtrag.borrow_mut() = None;
-        self.vorschau().datei_anzeigen(&pfad);
+        self.vorschau_beschreiben(&beschreibung);
+    }
+
+    /// Gibt eine Beschreibung an die Vorschau: einen lokalen Pfad zum Lesen,
+    /// die Angaben eines fernen Eintrags zum Zeigen. Die eine Stelle, die
+    /// ueber [`Beschreibung`] verzweigt, fuer das Fuellen und den Nachtrag.
+    fn vorschau_beschreiben(&self, beschreibung: &Beschreibung) {
+        match beschreibung {
+            Beschreibung::Lokal(pfad) => self.vorschau().datei_anzeigen(pfad),
+            Beschreibung::Fern(angaben) => self.vorschau().fern_anzeigen(angaben),
+        }
     }
 
     /// Holt das Laden nach, das die ausgeblendete Vorschau ausgesetzt hat.
@@ -2537,10 +2553,10 @@ impl Anwendungsdelegierter {
     /// Vermerk geschieht nichts, und der Tab zeigt weiter, was er beim
     /// Ausblenden zeigte.
     fn vorschau_nachtragen(&self) {
-        let Some(pfad) = self.ivars().vorschau_nachtrag.borrow_mut().take() else {
+        let Some(beschreibung) = self.ivars().vorschau_nachtrag.borrow_mut().take() else {
             return;
         };
-        self.vorschau().datei_anzeigen(&pfad);
+        self.vorschau_beschreiben(&beschreibung);
     }
 
     /// Zeigt den Inhalt der Zwischenablage im aktiven Vorschau-Tab (C10).
@@ -2967,7 +2983,10 @@ impl Anwendungsdelegierter {
             ));
         }
 
-        let ordner = self.dateifenster(seite).quelle().angezeigter_ordner();
+        // Ein ferner Ort bekommt kein Lesezeichen: `bookmarks.toml` nennt
+        // lokale Ordner, und eine Verbindung erreicht man ueber ihre eigene
+        // Zeile in der Leiste (Entscheidung 2 des Plans der sftp-Ordner).
+        let ordner = self.lokaler_ordner_oder_melden(seite)?;
         let vorschlag = ordner
             .file_name()
             .map(|teil| teil.to_string_lossy().into_owned())
@@ -3001,7 +3020,9 @@ impl Anwendungsdelegierter {
     /// Zulaessigkeitspruefung.
     fn terminal_oeffnen(&self) -> bool {
         let seite = self.ivars().modell.borrow().aktiv();
-        let ordner = self.dateifenster(seite).quelle().angezeigter_ordner();
+        let Some(ordner) = self.lokaler_ordner_oder_melden(seite) else {
+            return true;
+        };
         if let Some(meldung) = operationen::ordner_fehlt(&ordner) {
             self.antwort_zeigen(seite, &meldung);
             return true;
@@ -4230,8 +4251,12 @@ impl Anwendungsdelegierter {
         else {
             return false;
         };
-        let beschrieben = dateifenster[aktiv.index()].quelle().beschrieben();
-        vorschau.zeigt_bildfolge_von(&beschrieben)
+        match dateifenster[aktiv.index()].quelle().beschrieben() {
+            Beschreibung::Lokal(beschrieben) => vorschau.zeigt_bildfolge_von(&beschrieben),
+            // Ein ferner Eintrag wird nicht gelesen, also steht fuer ihn keine
+            // Bildfolge.
+            Beschreibung::Fern(_) => false,
+        }
     }
 
     /// Der eine Rumpf der drei Selektoren `copy:`, `cut:` und
@@ -5159,8 +5184,11 @@ impl Anwendungsdelegierter {
     fn ordner_angleichen(&self) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
         let ziel = aktiv.andere();
-        let ordner = self.dateifenster(aktiv).quelle().angezeigter_ordner();
-        let dort = self.dateifenster(ziel).quelle().angezeigter_ordner();
+        // Am Wert verglichen und angewandt, lokal wie fern: das Angleichen
+        // wirkt an jedem Ort (Entscheidung 13 des Plans der sftp-Ordner), und
+        // ein ferner Ort geht ueber denselben Zugang hinueber.
+        let ordner = self.dateifenster(aktiv).quelle().angezeigter_ort();
+        let dort = self.dateifenster(ziel).quelle().angezeigter_ort();
 
         let bereich = Bereich::von_seite(ziel);
         // **Die Ausleihe endet mit dieser Zeile und nicht erst mit der
@@ -5190,7 +5218,10 @@ impl Anwendungsdelegierter {
             return !sichtbar;
         }
 
-        self.dateifenster(ziel).quelle().ordner_lesen(&ordner, None);
+        match ordner {
+            Dateiort::Lokal(ordner) => self.dateifenster(ziel).quelle().ordner_lesen(&ordner, None),
+            Dateiort::Fern(ort) => self.dateifenster(ziel).quelle().fern_lesen(ort, None),
+        }
         true
     }
 
@@ -5230,13 +5261,12 @@ impl Anwendungsdelegierter {
     fn teilen(&self, fokus: Fokus) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
         let (pfade, anker) = match teilen::worauf(fokus) {
-            teilen::Quelle::BetroffeneEintraege => (
-                self.dateifenster(aktiv)
-                    .quelle()
-                    .betroffene_eintraege()
-                    .pfade,
-                self.fokusansicht(Fokus::Dateifenster),
-            ),
+            teilen::Quelle::BetroffeneEintraege => {
+                let Some(betroffen) = self.betroffene_oder_melden(aktiv) else {
+                    return true;
+                };
+                (betroffen.pfade, self.fokusansicht(Fokus::Dateifenster))
+            }
             teilen::Quelle::AngezeigteDatei => (
                 self.angezeigte_datei().into_iter().collect(),
                 self.fokusansicht(fokus),
@@ -5752,7 +5782,7 @@ impl Anwendungsdelegierter {
         let vorhanden = tabelle
             .tabordner()
             .iter()
-            .position(|ordner| heim.ist(ordner));
+            .position(|ordner| ordner.as_deref().is_some_and(|ordner| heim.ist(ordner)));
         match vorhanden {
             Some(stelle) => tabelle.tab_waehlen(stelle),
             None => tabelle.tab_oeffnen(heim.geschrieben()),
@@ -7098,7 +7128,7 @@ impl Anwendungsdelegierter {
             return;
         };
         let aktiv = self.ivars().modell.borrow().aktiv();
-        let ordner = dateifenster[aktiv.index()].quelle().angezeigter_ordner();
+        let ordner = dateifenster[aktiv.index()].quelle().angezeigter_ort();
         let editor = self.ivars().editor.get();
         let quicknote_offen = editor.is_some_and(|editor| editor.quicknote_offen());
         let editordatei = editor.and_then(|editor| editor.pfad());
@@ -7127,10 +7157,18 @@ impl Anwendungsdelegierter {
     /// Kopieren oder Verschieben in den Ordner des anderen Dateifensters (C4).
     fn uebertragen(&self, kommando: Kommando) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
-        let ziel = self
+        // Die Uebertragung zu einem fernen Ort ist der Fernauftrag und steht
+        // noch aus; bis dahin meldet sie sich (Entscheidung 9 des Plans der
+        // sftp-Ordner). Gemeldet wird im aktiven Dateifenster, in dem der
+        // Nutzer den Befehl gab.
+        let Some(ziel) = self
             .dateifenster(aktiv.andere())
             .quelle()
-            .angezeigter_ordner();
+            .angezeigter_lokaler_ordner()
+        else {
+            self.am_fernen_ort_melden(aktiv);
+            return true;
+        };
         let art = match kommando {
             Kommando::Verschieben => Art::Verschieben { ziel },
             // Der Aufrufer schickt nur diese beiden; ein drittes Kommando hier
@@ -7372,6 +7410,12 @@ impl Anwendungsdelegierter {
     /// kein Fenster gibt, an dem das Blatt haengen koennte.
     fn loeschen_nach_rueckfrage(&self, schaltflaeche: &str) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
+        // Ein ferner Ort hat keinen Papierkorb, und sein endgueltiges Loeschen
+        // steht noch aus (Entscheidung 12 des Plans der sftp-Ordner). Gefragt
+        // wird am Wert und vor jedem Systemaufruf darunter.
+        let Some(quellordner) = self.lokaler_ordner_oder_melden(aktiv) else {
+            return true;
+        };
 
         // Die beiden billigen Tatsachen der Regel, jede aus genau einer Quelle.
         // Sie stehen im Speicher, und die Reihenfolge, in der sie hier
@@ -7382,9 +7426,9 @@ impl Anwendungsdelegierter {
         // mehr an `ivars().vorgang` heran: sie hat eine Antwortstelle, und
         // dieser Zweig braucht von ihrer Antwort allein, ob es sie gibt.
         let vorgang_laeuft = self.vorgang_laeuft().is_some();
-        let quelle = self.dateifenster(aktiv).quelle();
-        let auswahl = quelle.betroffene_eintraege();
-        let quellordner = quelle.angezeigter_ordner();
+        let Some(auswahl) = self.betroffene_oder_melden(aktiv) else {
+            return true;
+        };
 
         // Der aufgeloeste Ordner, gemerkt fuer den vierten Zweig: die Tafel
         // ruft den Abschluss darunter allein im Feld `(false, false)`, und dann
@@ -7777,7 +7821,9 @@ impl Anwendungsdelegierter {
             return false;
         };
         let seite = self.ivars().modell.borrow().aktiv();
-        let ordner = self.dateifenster(seite).quelle().angezeigter_ordner();
+        let Some(ordner) = self.lokaler_ordner_oder_melden(seite) else {
+            return true;
+        };
 
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
         let griff = namenseingabe::zeigen(
@@ -7871,7 +7917,9 @@ impl Anwendungsdelegierter {
     /// der Grund geht in die Statuszeile. Eine Vorabprueferei gegen die
     /// gelesene Liste waere eine zweite Wahrheit ueber denselben Ordner.
     fn umbenennen_ausfuehren(&self, seite: Fensterseite, alt: &str, neu: &str) {
-        let ordner = self.dateifenster(seite).quelle().angezeigter_ordner();
+        let Some(ordner) = self.lokaler_ordner_oder_melden(seite) else {
+            return;
+        };
         if let Err(fehler) = operation::umbenennen(&ordner.join(alt), neu) {
             self.antwort_zeigen(seite, &operationen::umbenennungsfehler(neu, &fehler));
             return;
@@ -7890,8 +7938,10 @@ impl Anwendungsdelegierter {
     /// "Umbenennen" des Blattes.
     fn stapel_umbenennen(&self) -> bool {
         let seite = self.ivars().modell.borrow().aktiv();
+        let Some((ordner, auswahl)) = self.lokale_auswahl_oder_melden(seite) else {
+            return true;
+        };
         let quelle = self.dateifenster(seite).quelle();
-        let auswahl = quelle.betroffene_eintraege();
         if auswahl.ist_leer() {
             self.antwort_zeigen(seite, text(Text::NichtsAusgewaehlt));
             return true;
@@ -7900,7 +7950,6 @@ impl Anwendungsdelegierter {
             return false;
         };
 
-        let ordner = quelle.angezeigter_ordner();
         // Die Namen in Sichtreihenfolge: sie bestimmen die Reihenfolge der
         // fortlaufenden Nummer, und `betroffene_eintraege` liefert sie schon in
         // genau dieser Ordnung.
@@ -8127,13 +8176,13 @@ impl Anwendungsdelegierter {
             return true;
         }
 
-        let quelle = self.dateifenster(aktiv).quelle();
-        let auswahl = quelle.betroffene_eintraege();
+        let Some((quellordner, auswahl)) = self.lokale_auswahl_oder_melden(aktiv) else {
+            return true;
+        };
         if auswahl.ist_leer() {
             self.antwort_zeigen(aktiv, text(Text::NichtsAusgewaehlt));
             return true;
         }
-        let quellordner = quelle.angezeigter_ordner();
         if art.eq(&Art::Kopieren {
             ziel: quellordner.clone(),
         }) || art.eq(&Art::Verschieben {
@@ -8374,7 +8423,9 @@ impl Anwendungsdelegierter {
     /// selbst mit einer leeren Liste ([`operationen::keine_anwendung`]). Die
     /// Frage stellt [`kontextmenue::oeffnungsbezug`] und nicht diese Stelle.
     fn keine_anwendung_melden(&self, seite: Fensterseite) {
-        let betroffen = self.dateifenster(seite).quelle().betroffene_eintraege();
+        let Some(betroffen) = self.betroffene_oder_melden(seite) else {
+            return;
+        };
         let satz = if kontextmenue::oeffnungsbezug(&betroffen.pfade).is_some() {
             operationen::keine_anwendung()
         } else {
@@ -8414,7 +8465,9 @@ impl Anwendungsdelegierter {
     /// Auskunft ueber dieselbe Anwendung, und bei jeder lokalisiert benannten
     /// eine andere als die gelesene.
     fn mit_anwendung_oeffnen(&self, seite: Fensterseite, anwendung: &Anwendung) {
-        let betroffen = self.dateifenster(seite).quelle().betroffene_eintraege();
+        let Some(betroffen) = self.betroffene_oder_melden(seite) else {
+            return;
+        };
         if betroffen.ist_leer() {
             self.antwort_zeigen(seite, &operationen::nichts_zu_oeffnen());
             return;
@@ -8460,9 +8513,9 @@ impl Anwendungsdelegierter {
         if self.vorgang_laeuft_schon(seite) {
             return;
         }
-        let quelle = self.dateifenster(seite).quelle();
-        let auswahl = quelle.betroffene_eintraege();
-        let ordner = quelle.angezeigter_ordner();
+        let Some((ordner, auswahl)) = self.lokale_auswahl_oder_melden(seite) else {
+            return;
+        };
         let (quellen, ziel) = kontextmenue::packziel(&auswahl.pfade, &ordner);
         if quellen.is_empty() {
             self.antwort_zeigen(seite, &operationen::nichts_zu_packen());
@@ -8511,7 +8564,11 @@ impl Anwendungsdelegierter {
             return;
         }
         let quelle = self.dateifenster(seite).quelle();
-        let (paare, ausgelassen) = match quelle.entpackbefund() {
+        let Some(befund) = quelle.entpackbefund() else {
+            self.am_fernen_ort_melden(seite);
+            return;
+        };
+        let (paare, ausgelassen) = match befund {
             Entpackbefund::Archive { paare, ausgelassen } => (paare, ausgelassen),
             Entpackbefund::Keines => {
                 self.antwort_zeigen(seite, &operationen::kein_archiv());
@@ -8522,7 +8579,9 @@ impl Anwendungsdelegierter {
                 return;
             }
         };
-        let ordner = quelle.angezeigter_ordner();
+        let Some(ordner) = self.lokaler_ordner_oder_melden(seite) else {
+            return;
+        };
         let positionen = paare.len();
         // Der Rueckgabewert sagt "der Tastendruck ist verbraucht", und hier gab
         // es keinen: ein Menueklick ist eine Mausbewegung.
@@ -8582,7 +8641,11 @@ impl Anwendungsdelegierter {
             return;
         }
         let quelle = self.dateifenster(seite).quelle();
-        let (datei, name) = match quelle.duplikatbefund() {
+        let Some(befund) = quelle.duplikatbefund() else {
+            self.am_fernen_ort_melden(seite);
+            return;
+        };
+        let (datei, name) = match befund {
             Duplikatbefund::Datei {
                 quelle: datei,
                 name,
@@ -8607,7 +8670,9 @@ impl Anwendungsdelegierter {
                 return;
             }
         };
-        let ordner = quelle.angezeigter_ordner();
+        let Some(ordner) = self.lokaler_ordner_oder_melden(seite) else {
+            return;
+        };
         let Some(fenster) = self.ivars().fenster.get() else {
             return;
         };
@@ -8791,7 +8856,9 @@ impl Anwendungsdelegierter {
     /// Pfad an das System weiter; die Frage nach dem einen Vorgang gilt der
     /// Operationsmaschine und nicht dem Menue.
     fn im_finder_oeffnen(&self, seite: Fensterseite) {
-        let ordner = self.dateifenster(seite).quelle().angezeigter_ordner();
+        let Some(ordner) = self.lokaler_ordner_oder_melden(seite) else {
+            return;
+        };
         if let Some(meldung) = operationen::ordner_fehlt(&ordner) {
             self.antwort_zeigen(seite, &meldung);
             return;
@@ -8841,10 +8908,10 @@ impl Anwendungsdelegierter {
     fn auswurf_beginnen(&self, seite: Fensterseite, herkunft: Auswurfherkunft) {
         let betroffen = match herkunft {
             Auswurfherkunft::Dateiliste => {
-                self.dateifenster(seite)
-                    .quelle()
-                    .betroffene_eintraege()
-                    .pfade
+                let Some(betroffen) = self.betroffene_oder_melden(seite) else {
+                    return;
+                };
+                betroffen.pfade
             }
             Auswurfherkunft::Leiste(einhaengepunkt) => vec![einhaengepunkt],
         };
@@ -9160,28 +9227,39 @@ impl Anwendungsdelegierter {
                 Text::VerbindungFehlercode,
                 &[("name", &name), ("code", &code)],
             ),
-            // Bis der Tab einen fernen Ort zeigen kann (Schritt 3 des Plans
-            // der sftp-Ordner), nennt die Statuszeile ihn allein. Der Ort
-            // faellt am Ende dieses Zweigs; ist er der letzte Halter seines
-            // Zugangs, schliesst der Zugang, ohne zu warten.
+            // Der ferne Startordner erscheint im aktiven Dateifenster
+            // (Schritt 3 des Plans der sftp-Ordner), ueber denselben Weg wie
+            // jede Navigation dorthin; gelesen wird auf dem Faden des fernen
+            // Lesevorgangs. Nach einem Wiederaufbau liest zuvor jeder Tab auf
+            // diesem Server neu, in beiden Dateifenstern: wer das alte
+            // Gespraech hielt, bekam `Getrennt` (Entscheidung 3).
             Verbindungsausgang::Fern {
                 ort,
-                startordner_fehlte: None,
-            } => satz(
-                Text::VerbindungEingehaengt,
-                &[("name", &name), ("pfad", &ort.to_string())],
-            ),
-            Verbindungsausgang::Fern {
-                ort,
-                startordner_fehlte: Some(verlangt),
-            } => satz(
-                Text::FernStartordnerFehlt,
-                &[
-                    ("name", &name),
-                    ("pfad", &verlangt),
-                    ("heim", &ort.to_string()),
-                ],
-            ),
+                startordner_fehlte,
+                neu_verbunden,
+            } => {
+                if neu_verbunden {
+                    for seite in Fensterseite::ALLE {
+                        selbst
+                            .dateifenster(seite)
+                            .quelle()
+                            .fern_neu_lesen(&ort.zugang);
+                    }
+                }
+                let gezeigt = ort.to_string();
+                selbst.dateifenster(aktiv).quelle().fern_lesen(ort, None);
+                selbst.sitzung_vormerken();
+                match startordner_fehlte {
+                    None => satz(
+                        Text::VerbindungEingehaengt,
+                        &[("name", &name), ("pfad", &gezeigt)],
+                    ),
+                    Some(verlangt) => satz(
+                        Text::FernStartordnerFehlt,
+                        &[("name", &name), ("pfad", &verlangt), ("heim", &gezeigt)],
+                    ),
+                }
+            }
             Verbindungsausgang::RechnerschluesselUnbekannt(suchname) => satz(
                 Text::FernRechnerschluesselUnbekannt,
                 &[("name", &name), ("rechner", &suchname)],
@@ -9511,7 +9589,9 @@ impl Anwendungsdelegierter {
     /// **Kein laufender Vorgang haelt ihn auf**, aus demselben Grund wie beim
     /// Nachbarzweig: er stellt keinen Auftrag und fasst nichts an.
     fn im_finder_anzeigen(&self, seite: Fensterseite) {
-        let betroffen = self.dateifenster(seite).quelle().betroffene_eintraege();
+        let Some(betroffen) = self.betroffene_oder_melden(seite) else {
+            return;
+        };
         if betroffen.ist_leer() {
             self.antwort_zeigen(seite, &operationen::nichts_anzuzeigen());
             return;
@@ -9957,6 +10037,50 @@ impl Anwendungsdelegierter {
     /// Nicht zu verwechseln mit [`Dateifenstersicht::melden`] weiter unten:
     /// das ist der Weg der Ereignisse, die niemand angefordert hat, und der
     /// schreibt die [`Rang::Fenstermeldung`](statuszeile::Rang::Fenstermeldung), die darunter steht.
+    /// Meldet in der Statuszeile dieser Seite, dass ein Befehl an einem fernen
+    /// Ort nicht wirkt.
+    fn am_fernen_ort_melden(&self, seite: Fensterseite) {
+        self.antwort_zeigen(seite, text(Text::AmFernenOrtNichtVerfuegbar));
+    }
+
+    /// Der lokale Ordner des sichtbaren Tabs dieser Seite, oder `None` nach
+    /// der Meldung aus [`Self::am_fernen_ort_melden`].
+    ///
+    /// Der eine Weg, auf dem ein Befehl, der nur lokal wirkt, nach seinem
+    /// Ordner fragt (Entscheidung 2 des Plans der sftp-Ordner): entschieden
+    /// am Wert und ohne Systemaufruf.
+    fn lokaler_ordner_oder_melden(&self, seite: Fensterseite) -> Option<PathBuf> {
+        let ordner = self
+            .dateifenster(seite)
+            .quelle()
+            .angezeigter_lokaler_ordner();
+        if ordner.is_none() {
+            self.am_fernen_ort_melden(seite);
+        }
+        ordner
+    }
+
+    /// Die betroffenen Eintraege dieser Seite, oder `None` an einem fernen
+    /// Ort nach derselben Meldung.
+    fn betroffene_oder_melden(&self, seite: Fensterseite) -> Option<operationen::Auswahl> {
+        let betroffen = self.dateifenster(seite).quelle().betroffene_eintraege();
+        if betroffen.is_none() {
+            self.am_fernen_ort_melden(seite);
+        }
+        betroffen
+    }
+
+    /// Der lokale Ordner und die betroffenen Eintraege dieser Seite, oder
+    /// `None` an einem fernen Ort nach derselben Meldung.
+    fn lokale_auswahl_oder_melden(
+        &self,
+        seite: Fensterseite,
+    ) -> Option<(PathBuf, operationen::Auswahl)> {
+        let ordner = self.lokaler_ordner_oder_melden(seite)?;
+        let betroffen = self.betroffene_oder_melden(seite)?;
+        Some((ordner, betroffen))
+    }
+
     fn antwort_zeigen(&self, seite: Fensterseite, text: &str) {
         self.dateifenster(seite)
             .quelle()
@@ -10043,6 +10167,12 @@ impl Anwendungsdelegierter {
     /// Rueckfrage faellt: die Nachfrage aus C4 kommt mit ihrem eigenen Schritt.
     fn im_editor_oeffnen(&self) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
+        // Eine ferne Datei oeffnet der Editor nicht (Entscheidung 13 des
+        // Plans der sftp-Ordner); gefragt am Wert, bevor die leere Auswahl
+        // gemeldet wuerde, die es dort nicht ist.
+        if self.lokaler_ordner_oder_melden(aktiv).is_none() {
+            return true;
+        }
         let Some(pfad) = self.dateifenster(aktiv).quelle().auswahl_pfad() else {
             // Kein Eintrag, also nichts, was der Editor annehmen oder abweisen
             // koennte — keine Abweisung und deshalb keine `Editormeldung`,
@@ -11766,7 +11896,8 @@ impl Anwendungsdelegierter {
                     Auswahlversuch::Unbekannt => {
                         return Err(crate::messmodus::auswahl_ohne_eintrag(
                             &name,
-                            &quelle.angezeigter_ordner(),
+                            // Der Messmodus zeigt nie einen fernen Ort.
+                            &quelle.angezeigter_lokaler_ordner().unwrap_or_default(),
                             quelle.zeilen(),
                         ));
                     }
@@ -11795,7 +11926,11 @@ impl Anwendungsdelegierter {
                         "{} traegt neben {name} keine zweite Zeile; die Messung der Bildfolge \
                          waehlt vor jeder Wiederholung eine andere aus, damit die Folge neu \
                          beginnt",
-                        quelle.angezeigter_ordner().display()
+                        // Der Messmodus zeigt nie einen fernen Ort.
+                        quelle
+                            .angezeigter_lokaler_ordner()
+                            .unwrap_or_default()
+                            .display()
                     ));
                 };
                 match quelle.eintrag_waehlen(&andere) {
@@ -11803,7 +11938,8 @@ impl Anwendungsdelegierter {
                     Auswahlversuch::Unbekannt => {
                         return Err(crate::messmodus::auswahl_ohne_eintrag(
                             &andere,
-                            &quelle.angezeigter_ordner(),
+                            // Der Messmodus zeigt nie einen fernen Ort.
+                            &quelle.angezeigter_lokaler_ordner().unwrap_or_default(),
                             quelle.zeilen(),
                         ));
                     }
@@ -11852,11 +11988,15 @@ impl Anwendungsdelegierter {
                 liest_aktiv: aktiv_quelle.liest_noch(),
                 auswahl_aktiv: aktiv_quelle.auswahlzeile(),
                 tab_aktiv: aktiv_quelle.sichtbarer_tab(),
-                ordner_aktiv: aktiv_quelle.angezeigter_ordner(),
+                // Der Messmodus zeigt nie einen fernen Ort; ein leerer Pfad
+                // traefe keine seiner Endbedingungen.
+                ordner_aktiv: aktiv_quelle
+                    .angezeigter_lokaler_ordner()
+                    .unwrap_or_default(),
                 auswahl_pfad: aktiv_quelle.auswahl_pfad(),
                 zeilen_rechts: rechts.zeilen(),
                 liest_rechts: rechts.liest_noch(),
-                ordner_rechts: rechts.angezeigter_ordner(),
+                ordner_rechts: rechts.angezeigter_lokaler_ordner().unwrap_or_default(),
                 vorschau_pfad,
                 vorschau_laedt,
                 vorschau_folgebild,
@@ -11874,11 +12014,11 @@ impl Anwendungsdelegierter {
 /// die die Fragen beantworten kann. Die Rechnung darauf steht in
 /// [`crate::auffrischung`] und ist ohne Fenster pruefbar.
 impl Dateifenstersicht for Anwendungsdelegierter {
-    fn ordner(&self, seite: Fensterseite) -> PathBuf {
-        self.dateifenster(seite).quelle().angezeigter_ordner()
+    fn ordner(&self, seite: Fensterseite) -> Dateiort {
+        self.dateifenster(seite).quelle().angezeigter_ort()
     }
 
-    fn tabordner(&self, seite: Fensterseite) -> Vec<PathBuf> {
+    fn tabordner(&self, seite: Fensterseite) -> Vec<Option<PathBuf>> {
         self.dateifenster(seite).quelle().tabordner()
     }
 

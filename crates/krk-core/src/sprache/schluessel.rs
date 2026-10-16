@@ -495,6 +495,8 @@ pub enum Text {
     /// `git::texte::kein_repository`: die Kopfzeile des Git-Bereichs in
     /// einem Ordner ohne Repository (A14 der Runde 23).
     GitKeinRepository,
+    /// Der Git-Bereich vor einem fernen Ort: dort laeuft kein Gitlauf.
+    GitAmFernenOrt,
     /// `git::texte::ohne_commit`: die Zusammenfassung, solange kein Commit
     /// da ist.
     GitOhneCommit,
@@ -1524,6 +1526,12 @@ pub enum Text {
     /// Der Startordner einer sftp-Verbindung fehlt, gezeigt wird das
     /// Anmeldeverzeichnis; `{name}`, `{pfad}` (verlangt), `{heim}`.
     FernStartordnerFehlt,
+    /// Ein Befehl, der allein an einem lokalen Ordner wirkt, an einem fernen
+    /// Ort.
+    AmFernenOrtNichtVerfuegbar,
+    /// Der Lesevorgang eines fernen Tabs scheitert, weil die Verbindung
+    /// getrennt ist; `{name}` (die Verbindung in `secrets.txt`).
+    FernVerbindungGetrennt,
     /// „Verbinden…“, waehrend der Editor `secrets.txt` ungesichert haelt.
     VerbindenErstSichern,
     /// „Verbinden…“, waehrend der Editor `secrets.txt` mit einer eben
@@ -1565,7 +1573,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 658] = [
+    pub const ALLE: [Text; 661] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1768,6 +1776,7 @@ impl Text {
         Text::ProfilOrtsangabeMitPlatzhalter,
         Text::ProfilJuengsteNull,
         Text::GitKeinRepository,
+        Text::GitAmFernenOrt,
         Text::GitOhneCommit,
         Text::GitUnveraendert,
         Text::GitImOrdner,
@@ -2207,6 +2216,8 @@ impl Text {
         Text::FernVerbindungAbgewiesen,
         Text::FernRechnerschluesselUnbekannt,
         Text::FernStartordnerFehlt,
+        Text::AmFernenOrtNichtVerfuegbar,
+        Text::FernVerbindungGetrennt,
         Text::VerbindenErstSichern,
         Text::VerbindenPinNochNichtGesichert,
         Text::VerbindenEditorLaedt,
@@ -2329,11 +2340,13 @@ pub enum Zahlwort {
     /// das den Rest beziffert; der eine Wortlaut fuer jede Liste, die KRK
     /// kuerzt.
     GekuerztWeitere,
+    /// Ein ferner Lesevorgang hat Namen uebersprungen, die kein UTF-8 sind.
+    FernNamenUebersprungen,
 }
 
 impl Zahlwort {
     /// Alle Zahlwoerter, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Zahlwort; 33] = [
+    pub const ALLE: [Zahlwort; 34] = [
         Zahlwort::Byte,
         Zahlwort::NeuerungenEintraegeIn,
         Zahlwort::HeimZettelUebernommen,
@@ -2367,5 +2380,6 @@ impl Zahlwort {
         Zahlwort::AuswurfDateifensterUndVerdeckteTabs,
         Zahlwort::AuswurfVerdeckteTabs,
         Zahlwort::GekuerztWeitere,
+        Zahlwort::FernNamenUebersprungen,
     ];
 }

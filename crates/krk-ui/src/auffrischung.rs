@@ -86,6 +86,7 @@ use std::path::{Component, Path, PathBuf};
 
 use krk_core::ablage::Fensterseite;
 use krk_core::operation::Art;
+use krk_core::ort::Ort;
 use krk_core::sprache::{Text, Zahlwort, anzahl, satz};
 
 /// Was der Auffrischungspfad von den beiden Dateifenstern braucht.
@@ -95,8 +96,9 @@ use krk_core::sprache::{Text, Zahlwort, anzahl, satz};
 /// Umweg ueber diese Schnittstelle ist der Grund, aus dem die Entscheidung
 /// darueber, welches Dateifenster ein Pfad angeht, ohne Fenster pruefbar ist.
 pub trait Dateifenstersicht {
-    /// Der Ordner, den der sichtbare Tab dieses Dateifensters gerade zeigt.
-    fn ordner(&self, seite: Fensterseite) -> PathBuf;
+    /// Der Ort, den der sichtbare Tab dieses Dateifensters gerade zeigt, lokal
+    /// oder fern.
+    fn ordner(&self, seite: Fensterseite) -> Ort;
 
     /// Die Ordner **aller** Tabs dieses Dateifensters, in der Reihenfolge der
     /// Leiste.
@@ -106,7 +108,10 @@ pub trait Dateifenstersicht {
     /// waere sie falsch: was in einem verdeckten Tab steht, sieht niemand, und
     /// ihn bei jeder fremden Aenderung neu zu lesen waere Arbeit fuer einen
     /// leeren Schirm.
-    fn tabordner(&self, seite: Fensterseite) -> Vec<PathBuf>;
+    ///
+    /// `None` steht fuer einen Tab auf einem fernen Ort: er liegt auf keinem
+    /// Datentraeger, und seine Stelle bleibt, damit die der uebrigen stimmen.
+    fn tabordner(&self, seite: Fensterseite) -> Vec<Option<PathBuf>>;
 
     /// Die Stelle des sichtbaren Tabs in [`Dateifenstersicht::tabordner`].
     fn sichtbarer_tab(&self, seite: Fensterseite) -> usize;
@@ -179,6 +184,11 @@ pub trait Dateifenstersicht {
 ///
 /// Doppelnennungen fallen weg, weil beide Dateifenster denselben Ordner zeigen
 /// duerfen und die Datei des Editors in einem von ihnen liegen darf.
+///
+/// **Ein ferner Ort wird nie beobachtet** (Entscheidung 2 des Plans
+/// `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`): FSEvents
+/// sieht allein dieses Geraet, und am Wert entschieden faellt er hier heraus,
+/// ohne Systemaufruf.
 pub fn sichtbare_ordner(sicht: &impl Dateifenstersicht) -> Vec<PathBuf> {
     let mut ordner: Vec<PathBuf> = Vec::with_capacity(3);
     let mut aufnehmen = |dieser: PathBuf| {
@@ -190,7 +200,10 @@ pub fn sichtbare_ordner(sicht: &impl Dateifenstersicht) -> Vec<PathBuf> {
         if !sicht.sichtbar(seite) {
             continue;
         }
-        aufnehmen(sicht.ordner(seite));
+        match sicht.ordner(seite) {
+            Ort::Lokal(dieser) => aufnehmen(dieser),
+            Ort::Fern(_) => {}
+        }
     }
     if let Some(ordner_der_datei) = editorordner(sicht.editordatei().as_deref()) {
         aufnehmen(ordner_der_datei);
@@ -280,10 +293,14 @@ fn editorordner(editordatei: Option<&Path>) -> Option<PathBuf> {
 /// bleibt darum unberuehrt; der Befund dazu ist
 /// `shared/issues/260816-0040_*_der-takt-eines-laufenden-lesevorgangs-beendet-
 /// eine-offene-namenszelle-und-der-aufschub-erreicht-ihn-nicht.md`.
+///
+/// **Ein gemeldeter Pfad ist lokal**, und ein Dateifenster auf einem fernen Ort
+/// zeigt ihn nie; der Vergleich faellt dort am Wert aus ([`gleicher_ort`]).
 pub fn ordner_neu_lesen(sicht: &impl Dateifenstersicht, pfad: &Path) -> usize {
+    let gemeldet = Ort::Lokal(pfad.to_path_buf());
     let mut aufgefrischt = 0;
     for seite in Fensterseite::ALLE {
-        if !gleicher_ordner(&sicht.ordner(seite), pfad) {
+        if !gleicher_ort(&sicht.ordner(seite), &gemeldet) {
             continue;
         }
         if sicht.namenszelle_in_bearbeitung(seite) {
@@ -462,7 +479,11 @@ pub fn datentraeger_verloren(
             .tabordner(seite)
             .iter()
             .enumerate()
-            .filter(|(_, ordner)| liegt_auf(ordner, datentraeger))
+            .filter(|(_, ordner)| {
+                ordner
+                    .as_deref()
+                    .is_some_and(|ordner| liegt_auf(ordner, datentraeger))
+            })
             .map(|(stelle, _)| stelle)
             .collect();
         if treffer.is_empty() {
@@ -502,6 +523,21 @@ fn auswurfmeldung(name: &str, ziel: &Path, sichtbar: bool, verdeckt: usize) -> S
             &werte,
         ),
         (false, _) => anzahl(Zahlwort::AuswurfVerdeckteTabs, verdeckte, &werte),
+    }
+}
+
+/// Ob zwei Orte derselbe sind (Entscheidung 2 des Plans der sftp-Ordner).
+///
+/// Vollstaendig ueber beide Werte und ohne Auffangzweig. Zwei lokale gehen
+/// durch [`gleicher_ordner`], wie ohne ferne Orte; zwei ferne werden **am
+/// Wert** verglichen, ueber Serverkennung und Pfad und ohne `canonicalize`,
+/// denn ein ferner Pfad ist auf diesem Geraet keiner. Ein lokaler und ein
+/// ferner sind nie derselbe.
+fn gleicher_ort(einer: &Ort, anderer: &Ort) -> bool {
+    match (einer, anderer) {
+        (Ort::Lokal(einer), Ort::Lokal(anderer)) => gleicher_ordner(einer, anderer),
+        (Ort::Fern(einer), Ort::Fern(anderer)) => einer == anderer,
+        (Ort::Lokal(_), Ort::Fern(_)) | (Ort::Fern(_), Ort::Lokal(_)) => false,
     }
 }
 
@@ -554,6 +590,9 @@ mod tests {
     /// [`Probe::mit_tabs`] gibt einer Seite mehrere.
     struct Probe {
         tabs: [Vec<PathBuf>; 2],
+        /// Ein ferner Ort, den der sichtbare Tab dieser Seite statt seines
+        /// Pfades zeigt.
+        fern: [Option<krk_core::ort::FernerOrt>; 2],
         sichtbarer_tab: [usize; 2],
         sichtbar: [bool; 2],
         /// Die Datei, die der Editor haelt; ohne Editor `None`.
@@ -568,6 +607,7 @@ mod tests {
         fn neu(links: &str, rechts: &str) -> Self {
             Self {
                 tabs: [vec![PathBuf::from(links)], vec![PathBuf::from(rechts)]],
+                fern: [None, None],
                 sichtbarer_tab: [0, 0],
                 sichtbar: [true, true],
                 editordatei: None,
@@ -595,6 +635,12 @@ mod tests {
             self
         }
 
+        /// Laesst den sichtbaren Tab dieser Seite einen fernen Ort zeigen.
+        fn mit_fernem(mut self, seite: Fensterseite, ort: krk_core::ort::FernerOrt) -> Self {
+            self.fern[seite.index()] = Some(ort);
+            self
+        }
+
         fn ohne_rechtes(mut self) -> Self {
             self.sichtbar[1] = false;
             self
@@ -610,12 +656,23 @@ mod tests {
     }
 
     impl Dateifenstersicht for Probe {
-        fn ordner(&self, seite: Fensterseite) -> PathBuf {
-            self.tabs[seite.index()][self.sichtbarer_tab[seite.index()]].clone()
+        fn ordner(&self, seite: Fensterseite) -> Ort {
+            match &self.fern[seite.index()] {
+                Some(ort) => Ort::Fern(ort.clone()),
+                None => {
+                    Ort::Lokal(self.tabs[seite.index()][self.sichtbarer_tab[seite.index()]].clone())
+                }
+            }
         }
 
-        fn tabordner(&self, seite: Fensterseite) -> Vec<PathBuf> {
-            self.tabs[seite.index()].clone()
+        fn tabordner(&self, seite: Fensterseite) -> Vec<Option<PathBuf>> {
+            let sichtbar = self.sichtbarer_tab[seite.index()];
+            let fern = self.fern[seite.index()].is_some();
+            self.tabs[seite.index()]
+                .iter()
+                .enumerate()
+                .map(|(stelle, ordner)| (!(fern && stelle == sichtbar)).then(|| ordner.clone()))
+                .collect()
         }
 
         fn sichtbarer_tab(&self, seite: Fensterseite) -> usize {
@@ -726,6 +783,40 @@ mod tests {
         }
         let probe = Probe::neu("/tmp", "/b");
         assert_eq!(ordner_neu_lesen(&probe, Path::new("/private/tmp")), 1);
+    }
+
+    /// Ein ferner Ort wird nie beobachtet, frischt auf keine lokale Meldung
+    /// auf und zieht bei keinem Auswurf um (Entscheidung 2 des Plans der
+    /// sftp-Ordner). Sein Pfad steht dabei absichtlich auch lokal, damit ein
+    /// Vergleich am Text auffiele.
+    #[test]
+    fn ein_ferner_ort_wird_nie_beobachtet() {
+        let fern = || crate::fernprobe::ferner_ort("server.test", None, "/a");
+        let probe = Probe::neu("/a", "/b").mit_fernem(Fensterseite::Links, fern());
+        assert_eq!(sichtbare_ordner(&probe), [PathBuf::from("/b")]);
+        assert_eq!(
+            sichtbare_ordner(
+                &Probe::neu("/a", "/b")
+                    .mit_fernem(Fensterseite::Links, fern())
+                    .mit_fernem(Fensterseite::Rechts, fern())
+            ),
+            Vec::<PathBuf>::new(),
+            "zwei ferne Fenster geben FSEvents nichts"
+        );
+        assert_eq!(ordner_neu_lesen(&probe, Path::new("/a")), 0);
+        assert!(probe.protokoll().is_empty());
+        assert_eq!(
+            datentraeger_verloren(&probe, Path::new("/a"), "Platte", Path::new("/")),
+            0,
+            "ein ferner Tab liegt auf keinem Datentraeger"
+        );
+        // Zwei ferne Orte vergleichen sich am Wert, ein ferner und ein
+        // lokaler nie.
+        assert!(gleicher_ort(&Ort::Fern(fern()), &Ort::Fern(fern())));
+        assert!(!gleicher_ort(
+            &Ort::Fern(fern()),
+            &Ort::Lokal(PathBuf::from("/a"))
+        ));
     }
 
     #[test]

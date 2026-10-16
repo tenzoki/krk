@@ -398,6 +398,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::ProfilJuengsteNull => "juengste avec anzahl = 0 ne peut jamais montrer d’entrée",
         Text::GitKeinRepository => "Ce dossier ne se trouve dans aucun dépôt Git.",
+        Text::GitAmFernenOrt => "Un dossier situé sur un serveur n’est pas interrogé par Git.",
         Text::GitOhneCommit => "pas encore de commit",
         Text::GitUnveraendert => "inchangé",
         Text::GitImOrdner => "{marken} dans ce dossier",
@@ -1088,6 +1089,12 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::FernStartordnerFehlt => {
             "«\u{a0}{name}\u{a0}» est connecté, mais {pfad} n’est pas un dossier\u{202f}; {heim} est affiché."
         }
+        Text::AmFernenOrtNichtVerfuegbar => {
+            "Ce n’est pas possible dans un dossier situé sur un serveur."
+        }
+        Text::FernVerbindungGetrennt => {
+            "La connexion «\u{a0}{name}\u{a0}» est interrompue\u{202f}; un clic sur la connexion la rétablit."
+        }
         Text::VerbindenErstSichern => {
             "secrets.txt a des modifications non enregistrées dans l’éditeur\u{202f}; enregistrez avant de vous connecter."
         }
@@ -1201,6 +1208,10 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
             "{name} a été éjecté\u{202f}; {n} onglets masqués montrent maintenant {ziel}",
         ),
         Zahlwort::GekuerztWeitere => ("… et {n} autre", "… et {n} autres"),
+        Zahlwort::FernNamenUebersprungen => (
+            "Un nom qui n’est pas en UTF-8 a été ignoré.",
+            "{n} noms qui ne sont pas en UTF-8 ont été ignorés.",
+        ),
     }
 }
 

@@ -35,17 +35,44 @@
 //! zweites Mal im Speicher halten, und ein Abbruch traefe einen Faden, der
 //! laengst fertig ist. Mit der Kapazitaet 1 laeuft der Leser hoechstens zwei
 //! Stapel vor, der Abbruch greift also innerhalb von zwei Stapeln.
+//!
+//! # Ein Ordner auf einem Server
+//!
+//! [`Lesevorgang::fern_starten`] liest einen fernen Ordner und liefert
+//! **denselben Typ ueber denselben Kanal**: Stapel zu [`STAPELGROESSE`], danach
+//! genau ein [`Meldung::Fertig`]. Ordnermodell, Kollation, Sortierung und
+//! Namensfilter sehen keinen Unterschied, denn jeder ferne Eintrag entsteht
+//! ueber [`Eintrag::mit_versteckt`], denselben Konstruktor samt
+//! Kollationsschluessel wie ein lokaler (Entscheidungen 8 und 14 des Plans
+//! `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`).
+//! [`Lesevorgang::starten`] bleibt dabei Zeile fuer Zeile, wie es war; der
+//! ferne Weg steht daneben und nicht in ihm.
+//!
+//! Gelesen wird `OPENDIR`, dann `READDIR` bis zum Ende, dann `CLOSE`, und der
+//! Abbruch wird vor jedem `READDIR` und zwischen zwei Stapeln gefragt, wie
+//! lokal vor jedem Schwung. Der Faden entsteht ueber [`crate::fern::faden()`],
+//! denn jede Anfrage verlangt das Pfand, das nur dort entsteht; ein
+//! Lesevorgang kann den Hauptfaden deshalb nicht an das Netz haengen.
+//!
+//! **Namen, die kein UTF-8 sind, fallen weg und werden gezaehlt**
+//! ([`namen_aufnehmen`], [`Lesevorgang::uebersprungen`]): ein ersetzter Name
+//! zeigte auf keinen Eintrag mehr, und jede spaetere Anfrage an ihm ginge ins
+//! Leere. Ein lokaler Lesevorgang zaehlt immer null; das Dateisystem des Macs
+//! nimmt solche Namen gar nicht erst an.
 
 use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread::{self, JoinHandle};
 
+use crate::fern::paket::{Name, S_IFDIR, S_IFLNK, S_IFMT};
+use crate::fern::{self, Fernfaden, Fernfehler, Gespraech, Handle};
+use crate::ort::FernerOrt;
 use crate::sprache::{Text, satz};
 
-use super::eintrag::Eintrag;
+use super::eintrag::{Eintrag, Typ};
 use super::sys::Schwungleser;
 
 /// Wie viele Eintraege ein Stapel traegt.
@@ -98,6 +125,10 @@ pub enum Abschluss {
     Abgebrochen,
     /// Der Lesevorgang ist gescheitert. Bereits gesendete Stapel sind gueltig.
     Fehler(io::Error),
+    /// Ein ferner Lesevorgang ist an der Gegenseite gescheitert: am Server,
+    /// am Protokoll oder an einer getrennten Verbindung. Bereits gesendete
+    /// Stapel sind gueltig. Allein [`Lesevorgang::fern_starten`] meldet ihn.
+    Fern(Fernfehler),
 }
 
 impl Abschluss {
@@ -163,6 +194,15 @@ pub struct Lesevorgang {
     abbruch: Arc<AtomicBool>,
     meldungen: Receiver<Meldung>,
     faden: Option<JoinHandle<()>>,
+    /// Wie viele Namen der Lauf uebersprungen hat, weil sie kein UTF-8 sind.
+    ///
+    /// Neben dem Kanal und nicht in [`Meldung::Fertig`]: die Meldung ist ein
+    /// Vertrag mit jedem, der sie zerlegt, und ein weiteres Feld darin aenderte
+    /// jeden dieser Zerleger, auch die lokalen, fuer eine Zahl, die lokal immer
+    /// null ist. Geschrieben wird sie vor dem Senden von `Fertig`, und der
+    /// Kanal ordnet das Schreiben vor das Empfangen; wer sie nach `Fertig`
+    /// liest, liest die endgueltige Zahl.
+    uebersprungen: Arc<AtomicU64>,
 }
 
 impl Lesevorgang {
@@ -204,7 +244,54 @@ impl Lesevorgang {
             abbruch,
             meldungen,
             faden,
+            uebersprungen: Arc::new(AtomicU64::new(0)),
         }
+    }
+
+    /// Startet den Lesevorgang eines fernen Ordners und kehrt sofort zurueck.
+    ///
+    /// Derselbe Typ und derselbe Kanal wie [`Lesevorgang::starten`]; der
+    /// Modulkopf sagt, was gleich ist und was nicht. Der Faden heisst
+    /// `krk-fernleser-<generation>` und entsteht ueber [`crate::fern::faden()`].
+    /// Ein gescheiterter Fadenstart meldet [`Abschluss::Fehler`], wie lokal.
+    ///
+    /// Gefragt wird das Gespraech, das der Zugang **jetzt** fuehrt
+    /// ([`crate::fern::Fernzugang::gespraech`]); ist es getrennt, endet der
+    /// Lauf mit [`Abschluss::Fern`] und [`Fernfehler::Getrennt`].
+    pub fn fern_starten(ort: FernerOrt, generation: u64) -> Self {
+        let abbruch = Arc::new(AtomicBool::new(false));
+        let uebersprungen = Arc::new(AtomicU64::new(0));
+        let (sender, meldungen) = sync_channel(KANALTIEFE);
+        let faden = match fern::faden(format!("krk-fernleser-{generation}"), {
+            let sender = sender.clone();
+            let abbruch = Arc::clone(&abbruch);
+            let zaehler = Arc::clone(&uebersprungen);
+            move |pfand| fern_lesefaden(pfand, &ort, generation, &abbruch, &zaehler, &sender)
+        }) {
+            Ok(faden) => Some(faden),
+            Err(fehler) => {
+                // Wie in `starten`: der Kanal traegt dieses eine Senden.
+                let _ = sender.send(Meldung::Fertig {
+                    generation,
+                    abschluss: Abschluss::Fehler(fehler),
+                });
+                None
+            }
+        };
+        Self {
+            abbruch,
+            meldungen,
+            faden,
+            uebersprungen,
+        }
+    }
+
+    /// Wie viele Namen dieser Lauf uebersprungen hat, weil sie kein UTF-8
+    /// sind; lokal immer null. Endgueltig, sobald [`Meldung::Fertig`]
+    /// empfangen ist (siehe das Feld).
+    #[must_use]
+    pub fn uebersprungen(&self) -> u64 {
+        self.uebersprungen.load(Ordering::Acquire)
     }
 
     /// Der Kanal, aus dem der Hauptfaden die Stapel holt.
@@ -446,4 +533,168 @@ fn rest_senden(
             eintraege,
         })
         .ok()
+}
+
+/// Was aus einem Namen einer Antwort auf `READDIR` wird.
+#[derive(Debug)]
+pub enum Fernname {
+    /// Ein Eintrag des Ordners.
+    Eintrag(Eintrag),
+    /// `.` oder `..`: keiner, und nicht gezaehlt.
+    Punkt,
+    /// Ein Name, der kein UTF-8 ist: keiner, und gezaehlt.
+    KeinUtf8,
+}
+
+/// Der Eintrag zu einem Namen aus `READDIR`, ohne Anfrage und ohne Netz
+/// (Entscheidung 8 des Plans).
+///
+/// - Der Typ kommt aus den Rechtebits: `S_IFDIR` ist ein Ordner, `S_IFLNK`
+///   eine Verknuepfung, alles andere eine Datei, auch ohne Rechteangabe.
+/// - Die Groesse ist die gemeldete, bei einem Ordner null wie lokal.
+/// - Die Aenderungszeit ist `mtime`; ohne Angabe die Unix-Epoche.
+/// - Versteckt ist ein Name genau dann, wenn er mit einem Punkt beginnt.
+#[must_use]
+pub fn fern_eintrag(name: &Name) -> Fernname {
+    if name.name == b"." || name.name == b".." {
+        return Fernname::Punkt;
+    }
+    let Ok(text) = std::str::from_utf8(&name.name) else {
+        return Fernname::KeinUtf8;
+    };
+    let attribute = &name.attribute;
+    let typ = match attribute.rechte.map(|rechte| rechte & S_IFMT) {
+        Some(S_IFDIR) => Typ::Ordner,
+        Some(S_IFLNK) => Typ::Verknuepfung,
+        Some(_) | None => Typ::Datei,
+    };
+    let groesse = match typ {
+        Typ::Ordner => 0,
+        Typ::Datei | Typ::Verknuepfung => attribute.groesse.unwrap_or(0),
+    };
+    let geaendert = attribute.aenderungszeitpunkt();
+    Fernname::Eintrag(Eintrag::mit_versteckt(
+        text.to_owned(),
+        groesse,
+        geaendert,
+        typ,
+        text.starts_with('.'),
+    ))
+}
+
+/// Nimmt die Namen einer Antwort auf `READDIR` in `gesammelt` auf und liefert,
+/// wie viele davon uebersprungen sind, weil sie kein UTF-8 sind.
+///
+/// Rein und ohne Netz: die Zaehlung steht hier und nicht im Lesefaden, damit
+/// eine Probe sie erreicht. Das Dateisystem des Macs nimmt keinen Namen an,
+/// der kein UTF-8 ist, also kann sie kein Server im Pruefordner liefern.
+#[must_use]
+pub fn namen_aufnehmen(namen: Vec<Name>, gesammelt: &mut Vec<Eintrag>) -> u64 {
+    let mut uebersprungen = 0;
+    for name in &namen {
+        match fern_eintrag(name) {
+            Fernname::Eintrag(eintrag) => gesammelt.push(eintrag),
+            Fernname::Punkt => {}
+            Fernname::KeinUtf8 => uebersprungen += 1,
+        }
+    }
+    uebersprungen
+}
+
+fn fern_lesefaden(
+    pfand: &Fernfaden,
+    ort: &FernerOrt,
+    generation: u64,
+    abbruch: &AtomicBool,
+    uebersprungen: &AtomicU64,
+    sender: &SyncSender<Meldung>,
+) {
+    let abschluss = fern_lesen_und_senden(pfand, ort, generation, abbruch, uebersprungen, sender);
+    // Vor dem Senden geschrieben; der Kanal ordnet beides (siehe das Feld).
+    if let Some(abschluss) = abschluss {
+        let _ = sender.send(Meldung::Fertig {
+            generation,
+            abschluss,
+        });
+    }
+}
+
+/// Oeffnet den fernen Ordner, liest ihn und schliesst sein Handle wieder,
+/// gleich wie das Lesen endet.
+///
+/// Liefert `None` wie [`lesen_und_senden`], wenn der Empfaenger verschwunden
+/// ist.
+fn fern_lesen_und_senden(
+    pfand: &Fernfaden,
+    ort: &FernerOrt,
+    generation: u64,
+    abbruch: &AtomicBool,
+    uebersprungen: &AtomicU64,
+    sender: &SyncSender<Meldung>,
+) -> Option<Abschluss> {
+    let gespraech = ort.zugang.gespraech();
+    let handle = match gespraech.opendir(pfand, ort.pfad.als_text()) {
+        Ok(handle) => handle,
+        Err(fehler) => return Some(Abschluss::Fern(fehler)),
+    };
+    let abschluss = fern_namen_senden(
+        pfand,
+        &gespraech,
+        &handle,
+        generation,
+        abbruch,
+        uebersprungen,
+        sender,
+    );
+    // Das Handle faellt in jedem Fall, auch nach einem Abbruch. Ein Fehler
+    // beim Schliessen aendert nichts an dem, was gelesen ist: die Stapel sind
+    // gesendet, und ein getrenntes Gespraech hat sein Handle ohnehin verloren.
+    let _ = gespraech.close(pfand, handle);
+    abschluss
+}
+
+/// Die Schleife ueber `READDIR`, mit denselben zwei Abbruchstellen wie
+/// [`lesen_und_senden`] und aus denselben Gruenden.
+fn fern_namen_senden(
+    pfand: &Fernfaden,
+    gespraech: &Gespraech,
+    handle: &Handle,
+    generation: u64,
+    abbruch: &AtomicBool,
+    uebersprungen: &AtomicU64,
+    sender: &SyncSender<Meldung>,
+) -> Option<Abschluss> {
+    let mut gesammelt: Vec<Eintrag> = Vec::with_capacity(STAPELGROESSE);
+    loop {
+        if abbruch.load(Ordering::Relaxed) {
+            return Some(Abschluss::Abgebrochen);
+        }
+        match gespraech.readdir(pfand, handle) {
+            Ok(None) => {
+                rest_senden(generation, sender, &mut gesammelt)?;
+                return Some(Abschluss::Vollstaendig);
+            }
+            Ok(Some(namen)) => {
+                let weg = namen_aufnehmen(namen, &mut gesammelt);
+                uebersprungen.fetch_add(weg, Ordering::Release);
+            }
+            Err(fehler) => {
+                rest_senden(generation, sender, &mut gesammelt)?;
+                return Some(Abschluss::Fern(fehler));
+            }
+        }
+        while gesammelt.len() >= STAPELGROESSE {
+            if abbruch.load(Ordering::Relaxed) {
+                return Some(Abschluss::Abgebrochen);
+            }
+            let rest = gesammelt.split_off(STAPELGROESSE);
+            let voller_stapel = std::mem::replace(&mut gesammelt, rest);
+            sender
+                .send(Meldung::Stapel {
+                    generation,
+                    eintraege: voller_stapel,
+                })
+                .ok()?;
+        }
+    }
 }

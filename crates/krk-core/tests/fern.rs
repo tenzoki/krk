@@ -1,7 +1,7 @@
 //! Abnahme des SFTP-Gespraechs im Kern (Schritt 1 des Plans
-//! `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`) und von
+//! `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`), von
 //! Adresse, `ssh`-Aufruf, Vorpruefung des Rechnerschluessels und Zugang
-//! (Schritt 2).
+//! (Schritt 2) und des fernen Lesevorgangs (Schritt 3).
 //!
 //! **Kein Netz, kein `ssh`.** Jede Probe, die spricht, startet
 //! `/usr/libexec/sftp-server` unmittelbar als Kindprozess und fuehrt das
@@ -40,6 +40,8 @@ use krk_core::fern::{
 };
 use krk_core::heimordner::verbindung::{Verbindungsziel, Zielfehler, verbindungsziel};
 use krk_core::ort::FernerOrt;
+use krk_core::verzeichnis::leser::{Fernname, fern_eintrag, namen_aufnehmen};
+use krk_core::verzeichnis::{Abschluss, Eintrag, Lesevorgang, Meldung, STAPELGROESSE, Typ};
 
 /// Der Server des Systems, ohne `ssh` davor.
 const SFTP_SERVER: &str = "/usr/libexec/sftp-server";
@@ -1278,4 +1280,272 @@ fn der_startordner_wird_auf_dem_server_aufgeloest() {
     assert_eq!(heimstart.pfad, heim);
     assert!(gleich && !ungleich);
     assert_eq!(gezeigt, "kai@server.test:/a/b");
+}
+
+// ----------------------------------------------------------------------
+// Der ferne Lesevorgang (Schritt 3)
+// ----------------------------------------------------------------------
+
+/// Ein ferner Ort auf dem Server des Systems, aufgebaut in einem Faden mit
+/// Pfand; der Lesevorgang darauf startet danach von jedem Faden aus.
+fn ferner_ort_auf(pfad: &str) -> FernerOrt {
+    let pfad = pfad.to_owned();
+    im_fernfaden(move |pfand| {
+        let zugang = Fernzugang::aufbauen(
+            pfand,
+            Serverkennung::neu("server.test", None, Some("kai")),
+            "Probe",
+            &serverplan(),
+        )
+        .expect("der Zugang steht");
+        FernerOrt {
+            zugang,
+            pfad: Fernpfad::aus_text(&pfad).expect("absolut"),
+        }
+    })
+}
+
+/// Liest einen Lesevorgang bis `Fertig` und liefert alle Eintraege, den
+/// Abschluss und wie viele `Fertig` kamen, bis der Kanal schloss.
+fn auslesen(vorgang: Lesevorgang) -> (Vec<Eintrag>, Abschluss, usize, u64) {
+    let mut eintraege = Vec::new();
+    let mut abschluss = None;
+    let mut fertig = 0;
+    while let Ok(meldung) = vorgang.meldungen().recv() {
+        match meldung {
+            Meldung::Stapel {
+                eintraege: stapel, ..
+            } => {
+                assert!(stapel.len() <= STAPELGROESSE, "ein Stapel ist zu gross");
+                eintraege.extend(stapel);
+            }
+            Meldung::Fertig {
+                abschluss: ende, ..
+            } => {
+                fertig += 1;
+                abschluss = Some(ende);
+            }
+        }
+    }
+    let uebersprungen = vorgang.uebersprungen();
+    vorgang.warten();
+    (
+        eintraege,
+        abschluss.expect("der Lauf meldet keinen Abschluss"),
+        fertig,
+        uebersprungen,
+    )
+}
+
+/// Was an einem Eintrag verglichen wird: Name, Groesse, Typ, Versteckt und
+/// die Aenderungszeit auf die Sekunde.
+fn vergleichbar(eintraege: &[Eintrag]) -> Vec<(String, u64, Typ, bool, u64)> {
+    let mut zeilen: Vec<_> = eintraege
+        .iter()
+        .map(|eintrag| {
+            let sekunden = eintrag
+                .geaendert
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("nach 1970")
+                .as_secs();
+            (
+                eintrag.name.clone(),
+                eintrag.groesse,
+                eintrag.typ,
+                eintrag.versteckt,
+                sekunden,
+            )
+        })
+        .collect();
+    zeilen.sort_by(|links, rechts| links.0.cmp(&rechts.0));
+    zeilen
+}
+
+/// Derselbe Ordner liefert ueber den lokalen und den fernen Lesevorgang
+/// dieselben Eintraege: Namen, Groessen, Typen, Versteckt-Kennzeichen und
+/// Aenderungszeit auf die Sekunde (Entscheidungen 8 und 14 des Plans). Mehr
+/// als ein Stapel kommt dabei an, und keiner ist uebersprungen.
+#[test]
+fn fern_und_lokal_liefern_fuer_denselben_ordner_dieselben_eintraege() {
+    let ordner = Pruefordner::neu("fern-gleich");
+    for i in 0..1500 {
+        ordner.datei(&format!("datei-{i:04}.txt"), "x".repeat(i % 37));
+    }
+    ordner.datei(".versteckt", "geheim");
+    ordner.datei("Ärger mit Umlaut.md", "ä");
+    ordner.ordner("unterordner");
+    std::os::unix::fs::symlink("datei-0001.txt", ordner.unter("verweis"))
+        .expect("Verknuepfung laesst sich nicht anlegen");
+    let echt = fs::canonicalize(ordner.pfad()).expect("canonicalize");
+
+    let (lokal, lokal_ende, _, _) = auslesen(Lesevorgang::starten(echt.clone(), 1));
+    let ort = ferner_ort_auf(&text(&echt));
+    let (fern, fern_ende, fertig, uebersprungen) = auslesen(Lesevorgang::fern_starten(ort, 2));
+
+    assert!(matches!(lokal_ende, Abschluss::Vollstaendig));
+    assert!(
+        matches!(fern_ende, Abschluss::Vollstaendig),
+        "der ferne Lauf endete mit {fern_ende:?}"
+    );
+    assert_eq!(fertig, 1, "genau ein Fertig");
+    assert_eq!(uebersprungen, 0);
+    assert_eq!(fern.len(), 1504, "ohne . und ..");
+    assert_eq!(vergleichbar(&fern), vergleichbar(&lokal));
+    let typ = |name: &str| {
+        fern.iter()
+            .find(|eintrag| eintrag.name == name)
+            .map(|eintrag| (eintrag.typ, eintrag.versteckt))
+    };
+    assert_eq!(typ("unterordner"), Some((Typ::Ordner, false)));
+    assert_eq!(typ("verweis"), Some((Typ::Verknuepfung, false)));
+    assert_eq!(typ(".versteckt"), Some((Typ::Datei, true)));
+}
+
+/// Ein Name, der kein UTF-8 ist, faellt weg und wird gezaehlt; `.` und `..`
+/// fallen weg und werden nicht gezaehlt (Entscheidung 8 des Plans).
+///
+/// **Am reinen Schritt und nicht am Server**: das Dateisystem des Macs nimmt
+/// einen solchen Namen gar nicht erst an (`EILSEQ`), also kann ihn der Server
+/// im Pruefordner nicht liefern. Der Lesefaden zaehlt mit genau diesem
+/// Schritt; dass die Zahl ihn verlaesst, zeigt die Probe darueber mit ihrer
+/// Null.
+#[test]
+fn ein_name_ohne_utf8_wird_uebersprungen_und_gezaehlt() {
+    let name = |bytes: &[u8], rechte: u32| Name {
+        name: bytes.to_vec(),
+        lang: Vec::new(),
+        attribute: Attribute {
+            groesse: Some(7),
+            rechte: Some(rechte),
+            zeiten: Some((0, 1_700_000_000)),
+            ..Attribute::default()
+        },
+    };
+    let namen = vec![
+        name(b".", 0o040_755),
+        name(b"..", 0o040_755),
+        name(b"gut.txt", 0o100_644),
+        name(b"kaputt-\xff\xfe", 0o100_644),
+        name(b".versteckt", 0o100_600),
+        name(b"ordner", 0o040_755),
+        name(b"verweis", 0o120_777),
+        name("nicht-\u{e4}rger".as_bytes(), 0o100_644),
+    ];
+    let mut gesammelt = Vec::new();
+    assert_eq!(namen_aufnehmen(namen, &mut gesammelt), 1);
+    let zeilen: Vec<(&str, u64, Typ, bool)> = gesammelt
+        .iter()
+        .map(|eintrag| {
+            (
+                eintrag.name.as_str(),
+                eintrag.groesse,
+                eintrag.typ,
+                eintrag.versteckt,
+            )
+        })
+        .collect();
+    assert_eq!(
+        zeilen,
+        [
+            ("gut.txt", 7, Typ::Datei, false),
+            (".versteckt", 7, Typ::Datei, true),
+            ("ordner", 0, Typ::Ordner, false),
+            ("verweis", 7, Typ::Verknuepfung, false),
+            ("nicht-\u{e4}rger", 7, Typ::Datei, false),
+        ]
+    );
+    assert_eq!(
+        gesammelt[0]
+            .geaendert
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("nach 1970")
+            .as_secs(),
+        1_700_000_000
+    );
+    let ohne_angaben = Name {
+        name: b"nackt".to_vec(),
+        lang: Vec::new(),
+        attribute: Attribute::default(),
+    };
+    let Fernname::Eintrag(nackt) = fern_eintrag(&ohne_angaben) else {
+        panic!("ein Name ohne Attribute ist ein Eintrag");
+    };
+    assert_eq!(
+        (nackt.typ, nackt.groesse, nackt.geaendert),
+        (Typ::Datei, 0, std::time::UNIX_EPOCH),
+        "ohne Angaben: Datei, null Bytes, die Unix-Epoche"
+    );
+}
+
+/// Ein abgebrochener ferner Lesevorgang schickt genau ein `Fertig`, und das
+/// sagt `Abgebrochen`; danach schliesst der Kanal.
+///
+/// Abgebrochen wird nach dem ersten Stapel: der Kanal ist einen Stapel tief,
+/// also steht der Leser dann vor einem Ordner, von dem noch Namen ausstehen,
+/// und fragt den Abbruch, bevor er sie holt.
+#[test]
+fn ein_abgebrochener_ferner_lesevorgang_schickt_genau_ein_fertig() {
+    let ordner = Pruefordner::neu("fern-abbruch");
+    for i in 0..6000 {
+        fs::File::create(ordner.unter(&format!("d-{i:05}"))).expect("Datei");
+    }
+    let ort = ferner_ort_auf(&text(
+        &fs::canonicalize(ordner.pfad()).expect("canonicalize"),
+    ));
+    let vorgang = Lesevorgang::fern_starten(ort, 7);
+    match vorgang.meldungen().recv().expect("ein erster Stapel") {
+        Meldung::Stapel { generation, .. } => assert_eq!(generation, 7),
+        Meldung::Fertig { abschluss, .. } => panic!("fertig vor dem ersten Stapel: {abschluss:?}"),
+    }
+    vorgang.abbrechen();
+    let (eintraege, abschluss, fertig, _) = auslesen(vorgang);
+    assert_eq!(fertig, 1, "genau ein Fertig");
+    assert!(
+        matches!(abschluss, Abschluss::Abgebrochen),
+        "der Lauf endete mit {abschluss:?}"
+    );
+    assert!(
+        eintraege.len() < 6000 - STAPELGROESSE,
+        "der Abbruch griff nicht"
+    );
+}
+
+/// Ein ferner Ordner, den es nicht gibt, endet mit `Abschluss::Fern` und
+/// einem Statuscode des Servers, ohne einen Stapel.
+#[test]
+fn ein_fehlender_ferner_ordner_endet_mit_dem_statuscode() {
+    let ordner = Pruefordner::neu("fern-fehlt");
+    let fehlt = format!(
+        "{}/gibt-es-nicht",
+        text(&fs::canonicalize(ordner.pfad()).expect("canonicalize"))
+    );
+    let (eintraege, abschluss, fertig, _) =
+        auslesen(Lesevorgang::fern_starten(ferner_ort_auf(&fehlt), 3));
+    assert!(eintraege.is_empty());
+    assert_eq!(fertig, 1);
+    assert!(
+        matches!(abschluss, Abschluss::Fern(Fernfehler::Status { .. })),
+        "{abschluss:?}"
+    );
+}
+
+/// Aufwaerts endet an der Wurzel des Servers: aus jedem Pfad fuehrt eine
+/// endliche Kette bis `/`, jeder Schritt nennt den verlassenen Namen, und
+/// oberhalb von `/` gibt es kein Aufwaerts (Entscheidung 15 des Plans).
+#[test]
+fn aufwaerts_endet_an_der_wurzel_des_servers() {
+    let mut pfad = Fernpfad::aus_text("/home/kai/htdocs/bilder").expect("absolut");
+    let mut verlassen = Vec::new();
+    while let Some(oben) = pfad.aufwaerts() {
+        verlassen.push(
+            pfad.name()
+                .expect("unter der Wurzel hat jeder Pfad einen Namen")
+                .to_owned(),
+        );
+        pfad = oben;
+    }
+    assert!(pfad.ist_wurzel());
+    assert_eq!(verlassen, ["bilder", "htdocs", "kai", "home"]);
+    assert_eq!(Fernpfad::wurzel().aufwaerts(), None);
+    assert_eq!(Fernpfad::wurzel().name(), None);
 }

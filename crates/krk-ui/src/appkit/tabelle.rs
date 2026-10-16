@@ -343,8 +343,10 @@ use objc2_foundation::{
 };
 
 use krk_core::ablage::Dateifenster as Fensterzustand;
+use krk_core::fern::Fernzugang;
 use krk_core::git::Marke;
 use krk_core::heimordner::Heimordner;
+use krk_core::ort::{FernerOrt, Ort};
 use krk_core::sprache::{Text, satz, text};
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::filter::traegt_ein_dateiname;
@@ -364,9 +366,10 @@ use crate::kommandos::kontextmenue::{
 };
 use crate::kommandos::navigation::{Bewegung, ersatzzeile, zielzeile};
 use crate::kommandos::operationen::{self, Dateiablage, Umbenennungswunsch};
-use crate::kommandos::pfadeingabe::{self, Ergebnis};
+use crate::kommandos::pfadeingabe::{self, Ergebnis, FernErgebnis};
 use crate::spalten::Spalte;
-use crate::tabs::{Auswahlversuch, Tabliste, Vormerkung};
+use crate::tabs::{Auswahlversuch, Tabliste, Tabort, Vormerkung};
+use crate::vorschaumodell::{Beschreibung, Fernangaben};
 
 use super::abwurf;
 use super::blaetter;
@@ -580,7 +583,9 @@ fn ohne_ordnerzeichen(anzeige: &str) -> Option<&str> {
 pub type Umbenennungsmelder = Box<dyn Fn(&str, &str)>;
 
 /// Was die Vorschau zu beschreiben hat: der vollstaendige Pfad des
-/// ausgewaehlten Eintrags, und ohne ausgewaehlte Zeile der angezeigte Ordner.
+/// ausgewaehlten Eintrags, und ohne ausgewaehlte Zeile der angezeigte Ordner;
+/// an einem fernen Ort statt des Pfades die Angaben aus dem Ordnermodell
+/// ([`Beschreibung`]).
 ///
 /// **Er meldet immer einen Pfad und nie `None`.** Bis zum 260825 trug er ein
 /// `Option`, und der Empfaenger kehrte bei `None` zurueck; der Vorschau-Tab
@@ -591,7 +596,7 @@ pub type Umbenennungsmelder = Box<dyn Fn(&str, &str)>;
 ///
 /// Ein eigener Name aus demselben Grund wie beim [`Umbenennungsmelder`]
 /// darueber.
-pub type Auswahlmelder = Box<dyn Fn(PathBuf)>;
+pub type Auswahlmelder = Box<dyn Fn(Beschreibung)>;
 
 /// Was die Vorschau zu beschreiben hat, aus dem ausgewaehlten Eintrag und dem
 /// angezeigten Ordner.
@@ -609,9 +614,49 @@ pub type Auswahlmelder = Box<dyn Fn(PathBuf)>;
 /// trotzdem als eigene Funktion da, aus demselben Grund wie die
 /// Rueckschrittregel in [`crate::kommandos::rueckschritt`]: eine Regel, die als
 /// Zeile mitten in einem AppKit-Weg steht, erreicht keine Probe.
+///
+/// **Ueber den Wert allgemein**, seit ein Tab einen fernen Ort zeigen kann:
+/// dieselbe Regel gilt fuer einen lokalen Pfad und fuer die Angaben eines
+/// fernen Eintrags, und eine zweite Fassung je Art waere dieselbe Frage
+/// zweimal.
 #[must_use]
-fn zu_beschreiben(eintrag: Option<PathBuf>, ordner: PathBuf) -> PathBuf {
+fn zu_beschreiben<T>(eintrag: Option<T>, ordner: T) -> T {
     eintrag.unwrap_or(ordner)
+}
+
+/// Die Angaben eines fernen Eintrags im Ordner `ort`, fuer die Vorschau.
+fn fernangaben_des_eintrags(ort: &FernerOrt, eintrag: &Eintrag) -> Fernangaben {
+    let pfad = match ort.pfad.verbinden(&eintrag.name) {
+        Some(pfad) => FernerOrt {
+            zugang: std::sync::Arc::clone(&ort.zugang),
+            pfad,
+        }
+        .to_string(),
+        // Ein Name mit `/` oder `.`: der Leser liefert keinen, und der Ordner
+        // ist dann die ehrlichste Ortsangabe.
+        None => ort.to_string(),
+    };
+    Fernangaben {
+        name: eintrag.name.clone(),
+        ort: pfad,
+        groesse: Some(eintrag.groesse),
+        geaendert: Some(eintrag.geaendert),
+        typ: eintrag.typ,
+    }
+}
+
+/// Die Angaben eines fernen Ordners selbst, fuer die Vorschau ohne Auswahl.
+///
+/// Groesse und Aenderungszeit fehlen: der Ordner ist kein Eintrag seines
+/// eigenen Bestands, und sie zu erfragen waere eine Anfrage.
+fn fernangaben_des_ordners(ort: &FernerOrt) -> Fernangaben {
+    Fernangaben {
+        name: ort.pfad.name().unwrap_or(ort.pfad.als_text()).to_owned(),
+        ort: ort.to_string(),
+        groesse: None,
+        geaendert: None,
+        typ: Typ::Ordner,
+    }
 }
 
 /// Was zu geschehen hat, wenn der Nutzer dieses Dateifenster angefasst hat:
@@ -1444,10 +1489,16 @@ define_class!(
         // SAFETY: Die Signatur entspricht der des Protokolls.
         #[unsafe(method(menuNeedsUpdate:))]
         fn menue_auffrischen(&self, menue: &NSMenu) {
-            let betroffen = self.betroffene_eintraege();
+            // An einem fernen Ort gibt es keine lokalen Pfade; die eigenen
+            // Eintraege stehen trotzdem da und melden beim Klick, was dort
+            // nicht geht, und Teilen faellt mit der leeren Liste weg.
+            let pfade = self
+                .betroffene_eintraege()
+                .map(|betroffen| betroffen.pfade)
+                .unwrap_or_default();
             menue.removeAllItems();
-            self.eigene_kontexteintraege_anfuegen(menue, &betroffen.pfade);
-            teilen::eintrag_anfuegen(menue, &betroffen.pfade, self.mtm());
+            self.eigene_kontexteintraege_anfuegen(menue, &pfade);
+            teilen::eintrag_anfuegen(menue, &pfade, self.mtm());
         }
     }
 );
@@ -1563,13 +1614,26 @@ impl DateifensterQuelle {
         *self.ivars().kontextbefehl.borrow_mut() = Some(melden);
     }
 
-    /// Der Ordner, den der sichtbare Tab gerade zeigt.
-    pub fn angezeigter_ordner(&self) -> PathBuf {
-        self.ivars().tabs.borrow().aktiver().ordner().to_path_buf()
+    /// Der Ort, den der sichtbare Tab gerade zeigt, lokal oder fern.
+    pub fn angezeigter_ort(&self) -> Ort {
+        self.ivars().tabs.borrow().aktiver().ort()
     }
 
-    /// Die Ordner aller Tabs, in der Reihenfolge der Leiste (C9).
-    pub fn tabordner(&self) -> Vec<PathBuf> {
+    /// Der lokale Ordner, den der sichtbare Tab gerade zeigt, oder `None` an
+    /// einem fernen Ort. Wer nur lokal arbeiten kann, fragt hier und meldet
+    /// bei `None` `Text::AmFernenOrtNichtVerfuegbar`.
+    pub fn angezeigter_lokaler_ordner(&self) -> Option<PathBuf> {
+        self.ivars()
+            .tabs
+            .borrow()
+            .aktiver()
+            .lokaler_ordner()
+            .map(Path::to_path_buf)
+    }
+
+    /// Die lokalen Ordner aller Tabs, in der Reihenfolge der Leiste (C9);
+    /// `None` fuer einen fernen Tab.
+    pub fn tabordner(&self) -> Vec<Option<PathBuf>> {
         self.ivars().tabs.borrow().tabordner()
     }
 
@@ -1658,9 +1722,8 @@ impl DateifensterQuelle {
 
     /// Oeffnet einen neuen Tab auf dem Ordner des sichtbaren (C1).
     pub fn tab_neu(&self) {
-        let ordner = self.ivars().tabs.borrow().aktiver().ordner().to_path_buf();
         self.bildlauf_merken();
-        self.ivars().tabs.borrow_mut().oeffnen(ordner);
+        self.ivars().tabs.borrow_mut().aktiven_verdoppeln();
         self.tab_gewechselt();
     }
 
@@ -1732,6 +1795,36 @@ impl DateifensterQuelle {
         self.ivars().tabs.borrow_mut().ordner_setzen(pfad, auswahl);
         self.nach_lesebeginn();
         self.ordnerwechsel_melden();
+    }
+
+    /// Liest einen Ordner auf einem Server in den sichtbaren Tab.
+    ///
+    /// Derselbe Weg wie [`Self::ordner_lesen`]; gelesen wird auf dem Faden des
+    /// fernen Lesevorgangs, und der Hauptfaden stellt keine Anfrage.
+    pub fn fern_lesen(&self, ort: FernerOrt, auswahl: Option<Vormerkung>) {
+        self.fenstermeldung_loeschen();
+        self.ivars().tabs.borrow_mut().fern_setzen(ort, auswahl);
+        self.nach_lesebeginn();
+        self.ordnerwechsel_melden();
+    }
+
+    /// Liest jeden Tab neu, der einen Ort auf dem Server dieses Zugangs zeigt
+    /// (Entscheidung 3 des Plans der sftp-Ordner); der Weg nach einem
+    /// Wiederaufbau. Gebaut wie [`Self::heimordner_gewechselt`].
+    pub fn fern_neu_lesen(&self, zugang: &std::sync::Arc<Fernzugang>) {
+        self.bildlauf_merken();
+        let sichtbarer = self.ivars().tabs.borrow_mut().fern_neu_lesen(zugang);
+        if sichtbarer {
+            self.nach_lesebeginn();
+        } else if self.ivars().tabs.borrow().arbeitet_noch() {
+            self.einzug_starten();
+        }
+    }
+
+    /// Meldet in der Statuszeile, dass ein Befehl an einem fernen Ort nicht
+    /// wirkt.
+    fn am_fernen_ort_melden(&self) {
+        self.befehlsantwort_zeigen(text(Text::AmFernenOrtNichtVerfuegbar));
     }
 
     /// Liest den angezeigten Ordner noch einmal (C9).
@@ -1914,9 +2007,12 @@ impl DateifensterQuelle {
         }
         let tabs = self.ivars().tabs.borrow();
         let tab = tabs.aktiver();
+        // Ein ferner Eintrag hat keinen lokalen Pfad; die Endbedingung von
+        // L7 gilt fuer ihn nicht.
+        let ordner = tab.lokaler_ordner()?;
         tab.modell()
             .zeile(zeile as usize)
-            .map(|eintrag| tab.ordner().join(&eintrag.name))
+            .map(|eintrag| ordner.join(&eintrag.name))
     }
 
     /// Der Name des ausgewaehlten Eintrags, so wie ihn das Ordnermodell fuehrt;
@@ -1998,9 +2094,10 @@ impl DateifensterQuelle {
             Kommando::TabVoriger => self.tab_voriger(),
             Kommando::OrdnerpfadKopieren => self.ordnerpfad_kopieren(),
             Kommando::EintragspfadKopieren => self.eintragspfad_kopieren(),
-            Kommando::MitStandardprogrammOeffnen => {
-                self.mit_standardprogramm_oeffnen(&self.betroffene_eintraege().pfade)
-            }
+            Kommando::MitStandardprogrammOeffnen => match self.betroffene_eintraege() {
+                Some(betroffen) => self.mit_standardprogramm_oeffnen(&betroffen.pfade),
+                None => self.am_fernen_ort_melden(),
+            },
             Kommando::Umbenennen => return self.umbenennung_beginnen(),
             // Nicht Sache eines einzelnen Dateifensters.
             _ => return false,
@@ -2262,10 +2359,16 @@ impl DateifensterQuelle {
     /// Die Regel dahinter, dass die Markierung Vorrang vor der Auswahl hat,
     /// steht in [`crate::kommandos::operationen::betroffene`] und ist ohne
     /// Fenster pruefbar; hier bleibt allein die Ausleihe des Tabmodells.
-    pub fn betroffene_eintraege(&self) -> operationen::Auswahl {
+    ///
+    /// **`None` an einem fernen Ort**: die Regel baut lokale Pfade, und ein
+    /// ferner Eintrag hat keinen. Wer `None` bekommt, meldet
+    /// `Text::AmFernenOrtNichtVerfuegbar`; was an einem fernen Ort doch wirkt,
+    /// nimmt einen eigenen Weg.
+    pub fn betroffene_eintraege(&self) -> Option<operationen::Auswahl> {
         let tabs = self.ivars().tabs.borrow();
         let tab = tabs.aktiver();
-        operationen::betroffene(tab.modell(), tab.ordner())
+        let ordner = tab.lokaler_ordner()?;
+        Some(operationen::betroffene(tab.modell(), ordner))
     }
 
     /// Worauf der Unzip-Eintrag des Kontextmenues in diesem Dateifenster wirkt
@@ -2285,11 +2388,18 @@ impl DateifensterQuelle {
     /// koennten einen Lesevorgang zwischen sich haben und Auswahl und Bestand
     /// aus zwei Staenden desselben Ordners mischen; hier sieht die Regel eine
     /// Liste und dieselbe, die der Nutzer beim Klicken vor sich hatte.
-    pub fn entpackbefund(&self) -> Entpackbefund {
+    ///
+    /// `None` an einem fernen Ort, wie bei [`Self::betroffene_eintraege`].
+    pub fn entpackbefund(&self) -> Option<Entpackbefund> {
         let tabs = self.ivars().tabs.borrow();
         let tab = tabs.aktiver();
-        let betroffen = operationen::betroffene(tab.modell(), tab.ordner());
-        kontextmenue::entpackziel(tab.modell(), &betroffen.pfade, tab.ordner())
+        let ordner = tab.lokaler_ordner()?;
+        let betroffen = operationen::betroffene(tab.modell(), ordner);
+        Some(kontextmenue::entpackziel(
+            tab.modell(),
+            &betroffen.pfade,
+            ordner,
+        ))
     }
 
     /// Worauf der Eintrag „Duplizieren…" des Kontextmenues in diesem
@@ -2306,11 +2416,14 @@ impl DateifensterQuelle {
     /// **Kein Dateizugriff.** Der Typ ist der, den der Leser des Ordners
     /// erhoben hat; ob der Eintrag im Augenblick des Anlegens noch eine
     /// gewoehnliche Datei ist, entscheidet der Kern im Arbeitsfaden.
-    pub fn duplikatbefund(&self) -> Duplikatbefund {
+    ///
+    /// `None` an einem fernen Ort, wie bei [`Self::betroffene_eintraege`].
+    pub fn duplikatbefund(&self) -> Option<Duplikatbefund> {
         let tabs = self.ivars().tabs.borrow();
         let tab = tabs.aktiver();
-        let betroffen = operationen::betroffene(tab.modell(), tab.ordner());
-        kontextmenue::duplikatbezug(tab.modell(), &betroffen.pfade)
+        let ordner = tab.lokaler_ordner()?;
+        let betroffen = operationen::betroffene(tab.modell(), ordner);
+        Some(kontextmenue::duplikatbezug(tab.modell(), &betroffen.pfade))
     }
 
     /// Legt den Pfad des angezeigten Ordners in die Zwischenablage (C1).
@@ -2324,7 +2437,10 @@ impl DateifensterQuelle {
     /// `bereichskommando` an die aktive Fensterseite, und diese Quelle gehoert
     /// ihr.
     fn ordnerpfad_kopieren(&self) {
-        let ordner = self.angezeigter_ordner();
+        let Some(ordner) = self.angezeigter_lokaler_ordner() else {
+            self.am_fernen_ort_melden();
+            return;
+        };
         let text = operationen::pfadtext(&ordner);
         if super::zwischenablage::text_schreiben(&text) {
             self.befehlsantwort_zeigen(&operationen::kopiermeldung(std::slice::from_ref(&ordner)));
@@ -2348,7 +2464,10 @@ impl DateifensterQuelle {
     /// der Zahl ist die Antwort darauf, dass der Nutzer der Zwischenablage
     /// nicht ansieht, wie viele Zeilen er erzeugt hat.
     fn eintragspfad_kopieren(&self) {
-        let betroffen = self.betroffene_eintraege();
+        let Some(betroffen) = self.betroffene_eintraege() else {
+            self.am_fernen_ort_melden();
+            return;
+        };
         if betroffen.ist_leer() {
             self.befehlsantwort_zeigen(&operationen::nichts_zu_kopieren());
             return;
@@ -2387,7 +2506,10 @@ impl DateifensterQuelle {
     /// `cut:` beantwortet und die aktive Fensterseite waehlt, wie bei
     /// [`Self::betroffene_eintraege`].
     pub fn dateiverweise_ablegen(&self, befehl: Dateiablage) {
-        let betroffen = self.betroffene_eintraege();
+        let Some(betroffen) = self.betroffene_eintraege() else {
+            self.am_fernen_ort_melden();
+            return;
+        };
         if betroffen.ist_leer() {
             self.befehlsantwort_zeigen(&operationen::nichts_zu_kopieren());
             return;
@@ -2571,6 +2693,11 @@ impl DateifensterQuelle {
             Einstieg::KeinOrdner => {}
         }
         let Some((pfad, _)) = self.eintrag_in_zeile(zeile) else {
+            // Eine ferne Datei geht an kein Programm: sie liegt nicht auf
+            // diesem Geraet (Entscheidung 13 des Plans der sftp-Ordner).
+            if self.fern_eintrag_in_zeile(zeile).is_some() {
+                self.am_fernen_ort_melden();
+            }
             return;
         };
         self.mit_standardprogramm_oeffnen(std::slice::from_ref(&pfad));
@@ -2752,15 +2879,22 @@ impl DateifensterQuelle {
     /// Stuenden beide Herleitungen einzeln da, koennte die Frage, ob die
     /// Vorschau zeigt, was dieses Fenster beschreibt, gegen eine andere Antwort
     /// pruefen als die, die gemeldet wurde.
-    fn beschreibung(&self) -> (Option<u32>, PathBuf) {
+    fn beschreibung(&self) -> (Option<u32>, Beschreibung) {
         let zeile = usize::try_from(self.ivars().tabelle.selectedRow()).ok();
         let tabs = self.ivars().tabs.borrow();
-        let ordner = tabs.aktiver().ordner().to_path_buf();
         let modell = tabs.aktiver().modell();
         let eintrag = zeile.and_then(|zeile| modell.eintragsindex(zeile));
-        let gewaehlt = eintrag
-            .and_then(|eintrag| modell.eintraege().get(eintrag as usize))
-            .map(|eintrag| ordner.join(&eintrag.name));
+        let gewaehlt = eintrag.and_then(|eintrag| modell.eintraege().get(eintrag as usize));
+        let (gewaehlt, ordner) = match tabs.aktiver().tabort() {
+            Tabort::Lokal(ordner) => (
+                gewaehlt.map(|eintrag| Beschreibung::Lokal(ordner.join(&eintrag.name))),
+                Beschreibung::Lokal(ordner.clone()),
+            ),
+            Tabort::Fern { ort, .. } => (
+                gewaehlt.map(|eintrag| Beschreibung::Fern(fernangaben_des_eintrags(ort, eintrag))),
+                Beschreibung::Fern(fernangaben_des_ordners(ort)),
+            ),
+        };
         (eintrag, zu_beschreiben(gewaehlt, ordner))
     }
 
@@ -2773,7 +2907,7 @@ impl DateifensterQuelle {
     /// steht (`issues/260929-1646_*_lage-bildfolge-fragt-allein-den-vorschauinhalt-*.md`
     /// im Arbeitspaket `260929-1415-vorschau-blaettert-fotos-nach-aufnahmedatum`).
     #[must_use]
-    pub fn beschrieben(&self) -> PathBuf {
+    pub fn beschrieben(&self) -> Beschreibung {
         self.beschreibung().1
     }
 
@@ -2902,6 +3036,9 @@ impl DateifensterQuelle {
     /// ziehen: als Ziel eines Sprungs gilt das Verweisziel, in der Liste die
     /// Verknuepfung.
     fn in_zeile_einsteigen(&self, zeile: usize) -> Einstieg {
+        if let Some((ziel, typ)) = self.fern_eintrag_in_zeile(zeile) {
+            return self.fern_einsteigen(ziel, typ);
+        }
         let Some((ziel, typ)) = self.eintrag_in_zeile(zeile) else {
             return Einstieg::KeinOrdner;
         };
@@ -2955,22 +3092,85 @@ impl DateifensterQuelle {
     /// Die Ausleihe des Tabmodells endet mit der Rueckgabe: der Pfad ist
     /// eigener Besitz, und der Aufrufer darf danach AppKit rufen.
     #[must_use]
+    ///
+    /// **`None` auch an einem fernen Ort**: ein ferner Eintrag hat keinen
+    /// lokalen Pfad. Seine Zeile uebersetzt [`Self::fern_eintrag_in_zeile`].
     fn eintrag_in_zeile(&self, zeile: usize) -> Option<(PathBuf, Typ)> {
         let tabs = self.ivars().tabs.borrow();
         let tab = tabs.aktiver();
+        let ordner = tab.lokaler_ordner()?;
         tab.modell()
             .zeile(zeile)
-            .map(|eintrag| (tab.ordner().join(&eintrag.name), eintrag.typ))
+            .map(|eintrag| (ordner.join(&eintrag.name), eintrag.typ))
+    }
+
+    /// Der ferne Ort des Eintrags in dieser Zeile und seine Art; `None`, wenn
+    /// der Tab lokal ist oder die Zeile nicht steht. Rein lexikalisch.
+    fn fern_eintrag_in_zeile(&self, zeile: usize) -> Option<(FernerOrt, Typ)> {
+        let tabs = self.ivars().tabs.borrow();
+        let Tabort::Fern { ort, .. } = tabs.aktiver().tabort() else {
+            return None;
+        };
+        let eintrag = tabs.aktiver().modell().zeile(zeile)?;
+        let pfad = ort.pfad.verbinden(&eintrag.name)?;
+        Some((
+            FernerOrt {
+                zugang: std::sync::Arc::clone(&ort.zugang),
+                pfad,
+            },
+            eintrag.typ,
+        ))
+    }
+
+    /// Steigt in einen fernen Eintrag ein (Entscheidung 8 des Plans der
+    /// sftp-Ordner): ein Ordner wird gelesen, eine Verknuepfung betreten und
+    /// bei Bedarf wieder verlassen, eine Datei ist kein Einstieg.
+    ///
+    /// **Ohne Anfrage auf dem Hauptfaden.** Ob eine Verknuepfung auf einen
+    /// Ordner zeigt, beantwortet der Lesevorgang, der sie oeffnet, und nicht
+    /// ein `STAT` hier; die Rueckkehr steht in `Tabliste::fern_verknuepfung_betreten`.
+    fn fern_einsteigen(&self, ziel: FernerOrt, typ: Typ) -> Einstieg {
+        match typ {
+            Typ::Ordner => self.fern_lesen(ziel, None),
+            Typ::Verknuepfung => {
+                self.fenstermeldung_loeschen();
+                self.ivars()
+                    .tabs
+                    .borrow_mut()
+                    .fern_verknuepfung_betreten(ziel);
+                self.nach_lesebeginn();
+                self.ordnerwechsel_melden();
+            }
+            Typ::Datei => return Einstieg::KeinOrdner,
+        }
+        Einstieg::Eingestiegen
     }
 
     /// Steigt in den uebergeordneten Ordner auf (C2).
     ///
     /// Die Auswahl steht danach auf dem Ordner, aus dem der Nutzer kam. Die
-    /// Rechnung dafuer ist reine Pfadarithmetik und steht im Kern.
+    /// Rechnung dafuer ist reine Pfadarithmetik und steht im Kern; an einem
+    /// fernen Ort am `Fernpfad`, und oberhalb von `/` gibt es kein Aufwaerts
+    /// (Entscheidung 15 des Plans der sftp-Ordner).
     fn ordner_aufwaerts(&self) {
-        let hier = self.ivars().tabs.borrow().aktiver().ordner().to_path_buf();
-        if let Some((eltern, verlassen)) = aufwaerts(&hier) {
-            self.ordner_lesen(&eltern, Some(Vormerkung::still(verlassen)));
+        match self.ivars().tabs.borrow().aktiver().tabort().clone() {
+            Tabort::Lokal(hier) => {
+                if let Some((eltern, verlassen)) = aufwaerts(&hier) {
+                    self.ordner_lesen(&eltern, Some(Vormerkung::still(verlassen)));
+                }
+            }
+            Tabort::Fern { ort, .. } => {
+                if let (Some(eltern), Some(verlassen)) = (ort.pfad.aufwaerts(), ort.pfad.name()) {
+                    let verlassen = verlassen.to_owned();
+                    self.fern_lesen(
+                        FernerOrt {
+                            zugang: ort.zugang,
+                            pfad: eltern,
+                        },
+                        Some(Vormerkung::still(verlassen)),
+                    );
+                }
+            }
         }
     }
 
@@ -2987,7 +3187,10 @@ impl DateifensterQuelle {
         let Some(fenster) = self.ivars().tabelle.window() else {
             return;
         };
-        let hier = self.ivars().tabs.borrow().aktiver().ordner().to_path_buf();
+        let hier = match self.angezeigter_ort() {
+            Ort::Lokal(ordner) => ordner.to_string_lossy().into_owned(),
+            Ort::Fern(ort) => ort.pfad.als_text().to_owned(),
+        };
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
         // **Der Griff faellt hier, und das ist eine Entscheidung.** Der Schlitz
         // `offenes_blatt` gehoert dem Anwendungsdelegierten, und dieses Blatt
@@ -2999,16 +3202,11 @@ impl DateifensterQuelle {
         // `Anwendungsdelegierter::abbrechen` bei einem stehenden Blatt ohne
         // Griff `false` und gibt die Taste an AppKit zurueck, statt den
         // Filtertext dahinter zu leeren.
-        let _ = blaetter::pfadeingabe::zeigen(
-            self.mtm(),
-            &fenster,
-            &hier.to_string_lossy(),
-            move |eingabe| {
-                if let Some(selbst) = schwach.load() {
-                    selbst.pfad_anspringen(Path::new(eingabe.trim()));
-                }
-            },
-        );
+        let _ = blaetter::pfadeingabe::zeigen(self.mtm(), &fenster, &hier, move |eingabe| {
+            if let Some(selbst) = schwach.load() {
+                selbst.pfad_anspringen(Path::new(eingabe.trim()));
+            }
+        });
     }
 
     /// Springt zu dem, was in der Zwischenablage steht (C10).
@@ -3043,14 +3241,40 @@ impl DateifensterQuelle {
     /// Ausloeser oben enden hier, und ein zweiter Navigationsweg daneben
     /// entsteht nicht. Was geprueft wird, steht in
     /// [`crate::kommandos::pfadeingabe`] und ist ohne Fenster pruefbar.
+    ///
+    /// In einem fernen Tab ist der Text ein Pfad auf demselben Server, und
+    /// [`Self::fern_pfad_anspringen`] wendet ihn an.
     fn pfad_anspringen(&self, pfad: &Path) {
-        let angezeigt = self.ivars().tabs.borrow().aktiver().ordner().to_path_buf();
+        let angezeigt = match self.angezeigter_ort() {
+            Ort::Lokal(ordner) => ordner,
+            Ort::Fern(ort) => return self.fern_pfad_anspringen(pfad, ort),
+        };
         match pfadeingabe::pruefen(pfad, &angezeigt) {
             Ergebnis::Wechseln { ordner, auswahl } => {
                 self.ordner_lesen(&ordner, auswahl.map(Vormerkung::still));
             }
             Ergebnis::NurAuswahl { name } => self.eintrag_anspringen(&name),
             Ergebnis::Meldung(text) => self.befehlsantwort_zeigen(&text),
+        }
+    }
+
+    /// Der ferne Zweig von [`Self::pfad_anspringen`]: rein lexikalisch, ohne
+    /// Systemaufruf und ohne Anfrage (Entscheidung 15 des Plans der
+    /// sftp-Ordner). Ob dort ein Ordner steht, sagt der Lesevorgang im Tab.
+    fn fern_pfad_anspringen(&self, pfad: &Path, ort: FernerOrt) {
+        let Some(eingabe) = pfad.to_str() else {
+            self.befehlsantwort_zeigen(&satz(Text::PfadNichtAbsolut, &[("pfad", &pfad.display())]));
+            return;
+        };
+        match pfadeingabe::fern_pruefen(eingabe, &ort.zugang.anmeldeverzeichnis()) {
+            FernErgebnis::Wechseln(ziel) => self.fern_lesen(
+                FernerOrt {
+                    zugang: ort.zugang,
+                    pfad: ziel,
+                },
+                None,
+            ),
+            FernErgebnis::Meldung(text) => self.befehlsantwort_zeigen(&text),
         }
     }
 
@@ -4109,6 +4333,13 @@ impl DateifensterQuelle {
     /// Ein Takt des Zeitgebers: Stapel uebernehmen, Tabelle benachrichtigen.
     fn einziehen(&self) {
         let einzug = self.ivars().tabs.borrow_mut().einziehen();
+        if einzug.ort_neu {
+            // Eine ferne Verknuepfung liess sich nicht als Ordner oeffnen, und
+            // der Tab ist an seinen vorigen Ort zurueckgekehrt: derselbe
+            // Nachzug wie nach einer Navigation, samt Titel und Tableiste.
+            self.nach_lesebeginn();
+            self.ordnerwechsel_melden();
+        }
         if einzug.fertig {
             // Erst jetzt steht die Sortierung. Die bisher angezeigten Zeilen
             // standen in Lesereihenfolge, also muss die Tabelle sie neu holen.
@@ -4358,7 +4589,7 @@ impl DateifensterQuelle {
     /// Dateifenstern — und zuletzt der Zeiger.
     ///
     /// **Die Ausleihe des Tabmodells endet vor dem ersten Objective-C-Aufruf**,
-    /// und zwar in [`Self::eintrag_in_zeile`] und [`Self::angezeigter_ordner`]
+    /// und zwar in [`Self::eintrag_in_zeile`] und [`Self::angezeigter_lokaler_ordner`]
     /// selbst: beide geben eigenen Besitz zurueck. Das ist die Regel des
     /// Modulkopfs, und ein `borrow()`, das eine AppKit-Zeile ueberlebte, waere
     /// der Absturz, gegen den sie geschrieben ist — `setDropRow:` und die
@@ -4424,7 +4655,14 @@ impl DateifensterQuelle {
             // `Zeile` ohne Eintrag kann nicht entstehen — die Marke folgt
             // allein aus `Some(Typ::Ordner)`. Der Zweig steht, weil der Typ ihn
             // verlangt, und faellt auf dasselbe Ziel wie `Liste`.
-            (Abwurfmarke::Zeile, None) | (Abwurfmarke::Liste, _) => self.angezeigter_ordner(),
+            (Abwurfmarke::Zeile, None) | (Abwurfmarke::Liste, _) => {
+                // Ein ferner Ort nimmt bis zur Uebertragung dorthin keinen
+                // Abwurf an; ohne lokalen Ordner gibt es kein Ziel.
+                match self.angezeigter_lokaler_ordner() {
+                    Some(ordner) => ordner,
+                    None => return NSDragOperation::None,
+                }
+            }
         };
 
         let quellen = self.abwurfquellen(zug);
@@ -4542,7 +4780,10 @@ impl DateifensterQuelle {
             eintrag,
         ) {
             (Abwurfziel::Zeile, Some((pfad, _))) => pfad,
-            (Abwurfziel::AngezeigterOrdner, _) => self.angezeigter_ordner(),
+            (Abwurfziel::AngezeigterOrdner, _) => match self.angezeigter_lokaler_ordner() {
+                Some(ordner) => ordner,
+                None => return false,
+            },
             // `Zeile` ohne Eintrag kann nicht entstehen — die Marke folgt
             // allein aus `Some(Typ::Ordner)`. Der Zweig steht, weil der Typ ihn
             // verlangt, und faellt auf denselben Ausgang wie `Keines`.

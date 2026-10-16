@@ -331,8 +331,8 @@ use crate::hervorhebung::{
 };
 use crate::markdown::Quellbezug;
 use crate::vorschaumodell::{
-    Blaetterrichtung, Inhalt, Metadaten, Tabstand, Vorschaumodell, Zwischenablageinhalt,
-    rechte_text,
+    Blaetterrichtung, Fernangaben, Inhalt, Metadaten, Tabstand, Vorschaumodell,
+    Zwischenablageinhalt, rechte_text,
 };
 
 use super::betrachter::{Deutung, Pdfbetrachter, Zoom};
@@ -1300,6 +1300,37 @@ impl Vorschaufenster {
         }
     }
 
+    /// Zeigt die Angaben eines Eintrags oder Ordners auf einem Server im
+    /// aktiven Tab (Entscheidung 13 des Plans der sftp-Ordner).
+    ///
+    /// Kein Lesen und keine Anfrage: Name, Ort, Groesse, Aenderungszeit und
+    /// Typ kommen aus dem Ordnermodell. Die Zeilen sind die der Metadaten,
+    /// ohne die Rechte, die das Modell nicht kennt, und ohne Groesse und
+    /// Datum, wo sie fehlen; formatiert wird mit denselben Formatierern.
+    pub fn fern_anzeigen(&self, angaben: &Fernangaben) {
+        let mut zeilen = vec![
+            satz(Text::MetadatenName, &[("name", &angaben.name)]),
+            satz(Text::MetadatenPfad, &[("pfad", &angaben.ort)]),
+        ];
+        if let Some(groesse) = angaben.groesse {
+            let groesse = self.groesse_text(angaben.typ, groesse);
+            zeilen.push(satz(Text::MetadatenGroesse, &[("groesse", &groesse)]));
+        }
+        if let Some(geaendert) = angaben.geaendert {
+            let datum = self.datum_text(geaendert);
+            zeilen.push(satz(Text::MetadatenGeaendert, &[("datum", &datum)]));
+        }
+        zeilen.push(satz(
+            Text::MetadatenTyp,
+            &[("typ", &typ_beschriften(angaben.typ))],
+        ));
+        self.ivars()
+            .modell
+            .borrow_mut()
+            .fern_anzeigen(angaben.name.clone(), zeilen.join("\n"));
+        self.anzeigen();
+    }
+
     /// Zeigt den Inhalt der Zwischenablage im aktiven Tab (C10).
     pub fn zwischenablage_anzeigen(&self, inhalt: Zwischenablageinhalt) {
         self.ivars()
@@ -1809,26 +1840,8 @@ impl Vorschaufenster {
         metadaten: &Metadaten,
         zaehlzeilen: &[Zusammenfassungszeile],
     ) -> String {
-        // Ein Ordner hat keine eigene Groesse; dieselbe Antwort wie die
-        // Groessenspalte aus C1.
-        let groesse = if metadaten.typ == Typ::Ordner {
-            "--".to_owned()
-        } else {
-            let bytes = i64::try_from(metadaten.groesse).unwrap_or(i64::MAX);
-            self.ivars()
-                .groessenformat
-                .stringFromByteCount(bytes)
-                .to_string()
-        };
-        let geaendert = match metadaten.geaendert.duration_since(std::time::UNIX_EPOCH) {
-            Ok(seit_epoche) => {
-                let datum = NSDate::dateWithTimeIntervalSince1970(seit_epoche.as_secs_f64());
-                self.ivars().datumsformat.stringFromDate(&datum).to_string()
-            }
-            // Ein Zeitpunkt vor 1970: moeglich, aber keine eigene Darstellung
-            // wert, wie in der Datumsspalte aus C1.
-            Err(_) => String::new(),
-        };
+        let groesse = self.groesse_text(metadaten.typ, metadaten.groesse);
+        let geaendert = self.datum_text(metadaten.geaendert);
         // Sechs Zeilen, je ein Tabelleneintrag mit einem Platzhalter; die
         // Zaehlzeilen treten unmittelbar hinter die sechste.
         let zeilen = [
@@ -1846,6 +1859,35 @@ impl Vorschaufenster {
             ),
         ];
         format!("{}{}", zeilen.join("\n"), zeilen_als_text(zaehlzeilen))
+    }
+
+    /// Die Groessenangabe einer Metadatenzeile.
+    ///
+    /// Ein Ordner hat keine eigene Groesse; dieselbe Antwort wie die
+    /// Groessenspalte aus C1.
+    fn groesse_text(&self, typ: Typ, groesse: u64) -> String {
+        if typ == Typ::Ordner {
+            "--".to_owned()
+        } else {
+            let bytes = i64::try_from(groesse).unwrap_or(i64::MAX);
+            self.ivars()
+                .groessenformat
+                .stringFromByteCount(bytes)
+                .to_string()
+        }
+    }
+
+    /// Die Datumsangabe einer Metadatenzeile.
+    fn datum_text(&self, geaendert: std::time::SystemTime) -> String {
+        match geaendert.duration_since(std::time::UNIX_EPOCH) {
+            Ok(seit_epoche) => {
+                let datum = NSDate::dateWithTimeIntervalSince1970(seit_epoche.as_secs_f64());
+                self.ivars().datumsformat.stringFromDate(&datum).to_string()
+            }
+            // Ein Zeitpunkt vor 1970: moeglich, aber keine eigene Darstellung
+            // wert, wie in der Datumsspalte aus C1.
+            Err(_) => String::new(),
+        }
     }
 
     /// Haengt den Zeitgeber in die Laufschleife, falls er noch nicht laeuft.

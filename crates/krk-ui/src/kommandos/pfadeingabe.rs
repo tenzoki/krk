@@ -17,9 +17,22 @@
 //! [`Ergebnis`] ist ein gewoehnlicher Rust-Wert und keine Ausfuehrung: diese
 //! Datei navigiert nicht, sie sagt der Ansicht, wohin. Angewandt wird das
 //! Ergebnis an genau einer Stelle in `crate::appkit::tabelle`.
+//!
+//! # In einem fernen Tab
+//!
+//! Steht das Dateifenster auf einem Ordner auf einem Server, ist der Text ein
+//! Pfad auf demselben Server, und [`fern_pruefen`] beantwortet ihn **rein
+//! lexikalisch und ohne Systemaufruf** (Entscheidung 15 des Plans
+//! `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`): absolut, oder
+//! mit `~/` unter dem Anmeldeverzeichnis. Ob dort ein Ordner steht, sagt der
+//! Lesevorgang im Tab und nicht diese Datei; eine Pruefung hier waere eine
+//! Anfrage an den Server, und die darf der Hauptfaden nicht stellen. Zurueck zu
+//! einem lokalen Ordner geht es ueber ein Lesezeichen, die Geraeteleiste oder
+//! das Angleichen von einem lokalen Fenster aus.
 
 use std::path::{Path, PathBuf};
 
+use krk_core::fern::Fernpfad;
 use krk_core::sprache::{Text, satz};
 use krk_core::verzeichnis::{aufwaerts, datenschutzsperre};
 
@@ -109,6 +122,39 @@ pub fn pruefen(pfad: &Path, angezeigt: &Path) -> Ergebnis {
             ordner,
             auswahl: Some(name),
         }
+    }
+}
+
+/// Wohin ein ferner Tab nach der Pruefung geht.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FernErgebnis {
+    /// Diesen Pfad auf demselben Server lesen.
+    Wechseln(Fernpfad),
+    /// Nicht verwertbar. Der Text geht in die Statuszeile aus C1.
+    Meldung(String),
+}
+
+/// Prueft einen Pfad fuer einen fernen Tab, rein lexikalisch.
+///
+/// `~` und `~/…` stehen fuer das Anmeldeverzeichnis, das der Server beim
+/// Aufbau genannt hat; jeder andere Text muss absolut sein, die Regel aus C2.
+/// `.` und `..` werden lexikalisch aufgeloest (`Fernpfad::aus_text`).
+/// **Kein Systemaufruf und keine Anfrage**: die Rumpfprobe
+/// `die_ferne_pfadeingabe_stellt_keinen_systemaufruf` haelt es.
+#[must_use]
+pub fn fern_pruefen(eingabe: &str, anmeldeverzeichnis: &Fernpfad) -> FernErgebnis {
+    let unter_heim = if eingabe == "~" {
+        Some("")
+    } else {
+        eingabe.strip_prefix("~/")
+    };
+    let text = match unter_heim {
+        Some(rest) => format!("{anmeldeverzeichnis}/{rest}"),
+        None => eingabe.to_owned(),
+    };
+    match Fernpfad::aus_text(&text) {
+        Some(pfad) => FernErgebnis::Wechseln(pfad),
+        None => FernErgebnis::Meldung(satz(Text::PfadNichtAbsolut, &[("pfad", &eingabe)])),
     }
 }
 
@@ -219,6 +265,75 @@ mod tests {
                 name: "idee.txt".to_owned()
             }
         );
+    }
+
+    fn heim() -> Fernpfad {
+        Fernpfad::aus_text("/home/kai").expect("absolut")
+    }
+
+    /// Ein ferner Pfad wird lexikalisch gedeutet: absolut, mit `~/` unter dem
+    /// Anmeldeverzeichnis, `..` aufgeloest; ein relativer Text meldet.
+    #[test]
+    fn ein_ferner_pfad_wird_lexikalisch_gedeutet() {
+        let wechsel =
+            |text: &str| FernErgebnis::Wechseln(Fernpfad::aus_text(text).expect("absolut"));
+        assert_eq!(fern_pruefen("/var/www", &heim()), wechsel("/var/www"));
+        assert_eq!(
+            fern_pruefen("/var/www/../log/", &heim()),
+            wechsel("/var/log")
+        );
+        assert_eq!(
+            fern_pruefen("~/htdocs", &heim()),
+            wechsel("/home/kai/htdocs")
+        );
+        assert_eq!(fern_pruefen("~", &heim()), wechsel("/home/kai"));
+        assert_eq!(fern_pruefen("~/", &heim()), wechsel("/home/kai"));
+        let FernErgebnis::Meldung(text) = fern_pruefen("htdocs", &heim()) else {
+            panic!("ein relativer ferner Pfad fuehrte zu einer Navigation");
+        };
+        assert!(
+            text.contains("htdocs"),
+            "die Meldung nennt den Pfad nicht: {text}"
+        );
+        assert!(
+            matches!(fern_pruefen("~kai/x", &heim()), FernErgebnis::Meldung(_)),
+            "`~konto` ist keine Schreibweise dieser Pruefung"
+        );
+    }
+
+    /// Die ferne Pfadeingabe stellt keinen Systemaufruf (Schritt 3 des Plans
+    /// der sftp-Ordner).
+    ///
+    /// Gelesen wird der Rumpf von [`fern_pruefen`] in dieser Datei und der
+    /// ferne Zweig von `pfad_anspringen` in `appkit/tabelle.rs`, dem einen
+    /// Anwender des Ergebnisses; keiner darf das Dateisystem fragen.
+    ///
+    /// **Was sie nicht sieht:** einen Systemaufruf in einer tiefer gerufenen
+    /// Funktion. `Fernpfad::aus_text` steht im Kern und traegt die Zusage in
+    /// seinem Modulkopf, und `Fernzugang::anmeldeverzeichnis` liest einen
+    /// gemerkten Wert unter einem Mutex, den keine Anfrage haelt.
+    #[test]
+    fn die_ferne_pfadeingabe_stellt_keinen_systemaufruf() {
+        let diese = include_str!("pfadeingabe.rs");
+        let rumpf = diese
+            .split_once(concat!("pub fn ", "fern_pruefen("))
+            .and_then(|(_, rest)| rest.split_once("\n}\n"))
+            .map(|(rumpf, _)| rumpf)
+            .expect("fern_pruefen steht in dieser Datei");
+        let tabelle = include_str!("../appkit/tabelle.rs");
+        let zweig = tabelle
+            .split_once(concat!("fn ", "fern_pfad_anspringen("))
+            .and_then(|(_, rest)| rest.split_once("\n    }\n"))
+            .map(|(rumpf, _)| rumpf)
+            .expect("fern_pfad_anspringen steht in appkit/tabelle.rs");
+        for (name, text) in [("fern_pruefen", rumpf), ("fern_pfad_anspringen", zweig)] {
+            for nadel in ["fs::", "metadata(", "canonicalize(", "read_dir("] {
+                assert!(
+                    !text.contains(nadel),
+                    "{name} enthaelt {nadel}: ein Systemaufruf auf dem Hauptfaden"
+                );
+            }
+        }
     }
 
     #[test]
