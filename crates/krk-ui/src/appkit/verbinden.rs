@@ -50,8 +50,9 @@
 //!
 //! **Was die Probe nicht sieht**, und was die Zusage deshalb nicht groesser
 //! macht, als sie ist: einen Weg, der den herausgegebenen Text **nach** dem
-//! einen Ruf weiterreicht, etwa in eine Meldung; sie zaehlt Rufer und liest
-//! keinen Datenfluss. Und **das `NSString` wird nicht getilgt**: es gehoert
+//! einen Ruf weiterreicht, etwa in eine Meldung; sie zaehlt Nennungen des
+//! Namens, Funktionsverweise ohne Klammer eingeschlossen, und liest keinen
+//! Datenfluss. Und **das `NSString` wird nicht getilgt**: es gehoert
 //! Foundation, und KRK kann seine Bytes nicht ueberschreiben. Getilgt wird der
 //! `String` aus `preisgeben` (`Zeroizing`), sobald [`einhaengen`] endet.
 //!
@@ -94,12 +95,14 @@
 //! `CFSTR("UIOption")` und `CFSTR("NoUI")` und kein Laufzeitsymbol, deshalb
 //! stehen sie hier als Zeichenketten. `NSURL`, `NSString`, `NSArray`,
 //! `NSMutableDictionary`, `NSFileManager` und `NSWorkspace` stehen seit 10.0,
-//! ebenso `URLWithString:`, `openURL:`, `sharedWorkspace`, `defaultManager`,
+//! ebenso `openURL:`, `sharedWorkspace`, `defaultManager`,
 //! `path`, `scheme`, `host` und `absoluteString`.
 //! `mountedVolumeURLsIncludingResourceValuesForKeys:options:` und
 //! `resourceValuesForKeys:error:` stehen seit 10.6 (`NSFileManager.h`,
 //! `NSURL.h`), `NSURLVolumeURLForRemountingKey` seit 10.7 (`NSURL.h`,
-//! `API_AVAILABLE(macos(10.7))`) — die hoechste Untergrenze dieser Datei. Die
+//! `API_AVAILABLE(macos(10.7))`). **`URLWithString:encodingInvalidCharacters:`
+//! steht seit macOS 14** (`NSURL.h`, `API_AVAILABLE(macos(14.0))`) — die
+//! hoechste Untergrenze dieser Datei, und sie liegt unter dem Zielsystem. Die
 //! CoreFoundation-Typen `CFArray` und `CFString` tragen in ihren Koepfen keine
 //! Angabe und stehen seit 10.0; `CFRetained` ist der zaehlende Zeiger der Kiste
 //! `objc2-core-foundation` und kein Systemtyp.
@@ -124,6 +127,7 @@ use std::path::PathBuf;
 use std::ptr::NonNull;
 
 use dispatch2::DispatchQueue;
+use objc2::rc::Retained;
 use objc2_app_kit::NSWorkspace;
 use objc2_core_foundation::{CFArray, CFRetained, CFString};
 use objc2_foundation::{
@@ -286,7 +290,7 @@ pub fn anhaengen(
 /// Passwort geht als `NULL`, damit NetFS eine Anmeldung ohne Passwort
 /// versucht statt eine mit leerem.
 fn einhaengen(url: &str, konto: Option<&str>, passwort: Passwort) -> Verbindungsausgang {
-    let Some(adresse) = NSURL::URLWithString(&NSString::from_str(url)) else {
+    let Some(adresse) = url_aus(url) else {
         return Verbindungsausgang::UngueltigeUrl;
     };
     let konto = konto.map(NSString::from_str);
@@ -413,15 +417,58 @@ fn gleiche_freigabe(eingehaengt: &str, gesucht: &str) -> bool {
 /// wie in [`super::standardprogramm`].
 #[must_use]
 pub fn uebergeben(url: &str) -> bool {
-    let Some(adresse) = NSURL::URLWithString(&NSString::from_str(url)) else {
+    let Some(adresse) = url_aus(url) else {
         return false;
     };
     NSWorkspace::sharedWorkspace().openURL(&adresse)
 }
 
+/// Das `NSURL` zu einer URL aus [`crate::tresorweg::Verbindungsplan`], oder
+/// `None`, wenn auch kodiert keine entsteht.
+///
+/// **Ausdruecklich mit `encodingInvalidCharacters:` und nicht ueber
+/// `URLWithString:`**: die Adresse steht so in der URL, wie der Nutzer sie
+/// eingetragen hat (Modulkopf von `krk_core::heimordner::verbindung`), und ein
+/// Leerzeichen oder ein Zeichen jenseits von ASCII im Pfad einer Freigabe
+/// (`nas.local/Daten Ordner`) wird hier prozentkodiert. `URLWithString:`
+/// tut das allein in Programmen, die gegen das SDK von macOS 14 oder spaeter
+/// gebunden sind, und hinge damit an der Bauumgebung. Was auch kodiert keine
+/// URL ergibt, etwa ein Leerzeichen im Rechnernamen oder ein Port aus
+/// Buchstaben, weist schon das Blatt „Verbinden“ ab, ueber dieselbe Funktion.
+#[must_use]
+pub fn url_aus(url: &str) -> Option<Retained<NSURL>> {
+    NSURL::URLWithString_encodingInvalidCharacters(&NSString::from_str(url), true)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Ein Leerzeichen und ein Umlaut im Pfad werden kodiert, eine schon
+    /// kodierte Adresse bleibt, wie sie ist, und ein Leerzeichen im
+    /// Rechnernamen oder ein Port aus Buchstaben ergeben keine URL.
+    #[test]
+    fn die_url_kodiert_was_sich_kodieren_laesst() {
+        let gezeigt = |url: &str| {
+            url_aus(url)
+                .and_then(|adresse| adresse.absoluteString())
+                .map(|text| text.to_string())
+        };
+        assert_eq!(
+            gezeigt("smb://nas.local/Daten Ordner").as_deref(),
+            Some("smb://nas.local/Daten%20Ordner")
+        );
+        assert_eq!(
+            gezeigt("smb://nas.local/Daten%20Ordner").as_deref(),
+            Some("smb://nas.local/Daten%20Ordner")
+        );
+        assert_eq!(
+            gezeigt("smb://nas.local/Bü ro").as_deref(),
+            Some("smb://nas.local/B%C3%BC%20ro")
+        );
+        assert_eq!(gezeigt("smb://nas local/x"), None);
+        assert_eq!(gezeigt("smb://nas.local:abc/x"), None);
+    }
 
     /// `Passwort::preisgeben` hat genau einen Rufer, in [`einhaengen`] dieser
     /// Datei (Akzeptanz (6) von Schritt 6, Entscheidung 11).
@@ -429,18 +476,39 @@ mod tests {
     /// **Gezaehlt wird ueber jede `.rs`-Datei unter `crates/`, Proben und
     /// Pruefmodule eingeschlossen**: auch eine Probe, die ein Passwort
     /// preisgaebe, um es zu vergleichen, waere ein zweiter Weg, und der Typ
-    /// verspricht genau einen. Die Erklaerung im Kern zaehlt nicht, sie ist
-    /// keine Rufstelle (`quellbaum::aufrufstellen`).
+    /// verspricht genau einen. **Gezaehlt wird jede Nennung des Namens als
+    /// ganzes Wort in einer Codezeile**, nicht nur die mit Klammer dahinter:
+    /// ein Funktionsverweis wie `.map(Passwort::preisgeben)` ist ein zweiter
+    /// Weg heraus, den `quellbaum::aufrufstellen` nicht saehe. Allein die
+    /// Erklaerung im Kern zaehlt nicht, erkannt am `fn` unmittelbar davor.
     ///
     /// **Was sie nicht sieht:** wohin der herausgegebene Text danach geht; sie
-    /// zaehlt Rufer und liest keinen Datenfluss (Modulkopf).
+    /// zaehlt Nennungen und liest keinen Datenfluss (Modulkopf). Und einen
+    /// Weg unter einem anderen Namen, etwa ueber `use … as anders;`.
     #[test]
     fn das_passwort_wird_allein_an_netfs_preisgegeben() {
         let name = concat!("preis", "geben");
+        let nennungen = |inhalt: &str| -> usize {
+            crate::quellbaum::codezeilen(inhalt)
+                .map(|zeile| {
+                    zeile
+                        .match_indices(name)
+                        .filter(|(stelle, _)| {
+                            let davor = &zeile[..*stelle];
+                            let danach = &zeile[stelle + name.len()..];
+                            let teil = |zeichen: char| zeichen.is_alphanumeric() || zeichen == '_';
+                            !davor.chars().next_back().is_some_and(teil)
+                                && !danach.chars().next().is_some_and(teil)
+                                && !davor.trim_end().ends_with("fn")
+                        })
+                        .count()
+                })
+                .sum()
+        };
         let rufer: Vec<(String, usize)> = crate::quellbaum::quelldateien()
             .into_iter()
             .map(|(datei, inhalt)| {
-                let zahl = crate::quellbaum::aufrufstellen(&inhalt, name);
+                let zahl = nennungen(&inhalt);
                 (datei, zahl)
             })
             .filter(|(_, zahl)| *zahl > 0)
@@ -453,6 +521,15 @@ mod tests {
             .map(|(rumpf, _)| rumpf)
             .expect("einhaengen steht im Code");
         assert!(rumpf.contains(concat!("passwort.preis", "geben()")));
+
+        // Die Zaehlung selbst: ein Funktionsverweis zaehlt, die Erklaerung
+        // und ein laengerer Name nicht.
+        let verweis = concat!("let x = p.map(Passwort::preis", "geben);");
+        let erklaerung = concat!("    pub fn preis", "geben(mut self) {");
+        let laenger = concat!("let y = preis", "geben_alle();");
+        assert_eq!(nennungen(verweis), 1);
+        assert_eq!(nennungen(erklaerung), 0);
+        assert_eq!(nennungen(laenger), 0);
     }
 
     /// Die Codes der Anmeldung und der Erreichbarkeit fallen in ihre Art,

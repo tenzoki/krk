@@ -563,7 +563,7 @@ use krk_core::verzeichnis::Richtung as Sortierrichtung;
 
 use crate::editormodell::{
     Ansicht, Dateityp, Editormodell, Geheimnisweg, Ladeausgang, Pinwechselausgang,
-    Sicherungsausgang, Suchlauf, geheimnisweg,
+    Schreibgangsperre, Sicherungsausgang, Suchlauf, geheimnisweg,
 };
 use crate::heimgriff::{self, Heimgriff};
 use crate::hervorhebung::{
@@ -3612,6 +3612,14 @@ impl Editorbereich {
             Some(ausgang) => self.melden(ausgang),
             None => self.takt_starten(),
         }
+    }
+
+    /// Warum ein Schreibgang neben dem Editor jetzt nicht an `secrets.txt`
+    /// schreiben darf; die Antwort steht bei
+    /// [`Editormodell::schreibgang_gesperrt`].
+    #[must_use]
+    pub fn schreibgang_gesperrt(&self) -> Option<Schreibgangsperre> {
+        self.ivars().modell.borrow().schreibgang_gesperrt()
     }
 
     /// Ob sich die PIN der gehaltenen Datei aendern laesst (Schritt 5.4b,

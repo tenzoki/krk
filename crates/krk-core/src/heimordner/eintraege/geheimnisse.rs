@@ -379,7 +379,24 @@ fn feldzeile(zeile: &str) -> Option<(usize, &str)> {
 
 /// Die vier Feldzeilen in der Grundform, jede samt Umbruch.
 fn feldzeilen_in_grundform(felder: [&str; 4]) -> String {
-    let mut zeilen = String::new();
+    let mut zeilen = String::with_capacity(grundform_laenge(felder));
+    feldzeilen_anhaengen(&mut zeilen, felder);
+    zeilen
+}
+
+/// Wie viele Bytes die vier Feldzeilen in der Grundform hoechstens tragen;
+/// damit waechst eine Zeichenkette, die sie aufnimmt, nicht unterwegs um und
+/// laesst keine Abschrift im freigegebenen Speicher zurueck.
+fn grundform_laenge(felder: [&str; 4]) -> usize {
+    FELDSCHLUESSEL
+        .iter()
+        .zip(felder)
+        .map(|(schluessel, wert)| schluessel.len() + wert.len() + 3)
+        .sum()
+}
+
+/// Haengt die vier Feldzeilen in der Grundform an `zeilen` an.
+fn feldzeilen_anhaengen(zeilen: &mut String, felder: [&str; 4]) {
     for (schluessel, wert) in FELDSCHLUESSEL.iter().zip(felder) {
         zeilen.push_str(schluessel);
         zeilen.push(':');
@@ -389,7 +406,6 @@ fn feldzeilen_in_grundform(felder: [&str; 4]) -> String {
         }
         zeilen.push('\n');
     }
-    zeilen
 }
 
 /// Weist einen Wert eines einzeiligen Feldes mit Zeilenumbruch ab.
@@ -430,12 +446,18 @@ pub fn hinzufuegen(stand: &str, entwurf: &Geheimnisentwurf) -> Result<Neustand, 
     }
     let notizen = entwurf.notizen.trim_end_matches('\n');
     notizen_pruefen(notizen)?;
-    let mut text = feldzeilen_in_grundform([
-        &entwurf.protokoll,
+    // Der Text traegt das neue Passwort: er tilgt sich beim Fallen und ist
+    // gleich so gross angelegt, dass er unterwegs nicht umzieht.
+    let felder = [
+        entwurf.protokoll.as_str(),
         &entwurf.adresse,
         &entwurf.konto,
         entwurf.passwort.als_text(),
-    ]);
+    ];
+    let mut text = Zeroizing::new(String::with_capacity(
+        grundform_laenge(felder) + notizen.len(),
+    ));
+    feldzeilen_anhaengen(&mut text, felder);
     text.push_str(notizen);
     if text.ends_with('\n') {
         let _ = text.pop();

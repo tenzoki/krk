@@ -992,6 +992,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VerbindenErstSichern => {
             "secrets.txt hat im Editor ungesicherte Änderungen; erst sichern, dann verbinden."
         }
+        Text::VerbindenPinNochNichtGesichert => {
+            "secrets.txt ist im Editor mit einer neuen PIN offen und noch nie gesichert; erst sichern, dann verbinden."
+        }
         Text::VerbindenAngelegt => "„{name}“ steht in secrets.txt und unter den Verbindungen.",
         Text::VerbindenOhneLesezeichen => "„{name}“ steht in secrets.txt; das Lesezeichen fehlt.",
         Text::VerbindenNameVergeben => "In secrets.txt steht schon ein Eintrag „{name}“.",
@@ -1009,6 +1012,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VerbindenFeldPasswort => "Passwort:",
         Text::VerbindenFeldNotizen => "Notizen:",
         Text::VerbindenNameLeer => "Der Name ist leer.",
+        Text::VerbindenKeineUrl => {
+            "Aus Protokoll und Adresse entsteht keine gültige URL, etwa wegen eines Leerzeichens im Rechnernamen."
+        }
     }
 }
 

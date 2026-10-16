@@ -9065,20 +9065,25 @@ impl Anwendungsdelegierter {
     /// „Verbinden…“ im Kontextmenue der Dateiliste (Schritt 7, Entscheidungen
     /// 13 bis 16): erst die Vorpruefungen, dann das Blatt.
     ///
-    /// **Haelt der Editor `secrets.txt` mit ungesichertem Stand, geht kein
-    /// Blatt auf** (Entscheidung 15): der Schreibgang schriebe die Datei unter
-    /// dem Editor weg, und sein naechstes Sichern stuende vor einer Aenderung
-    /// von aussen. Laeuft schon ein Gang an `secrets.txt`, ebenso nicht.
+    /// **Haelt der Editor `secrets.txt` mit ungesichertem Stand oder mit
+    /// einer eben festgelegten, nie gesicherten PIN, geht kein Blatt auf**
+    /// (Entscheidung 15): im ersten Fall schriebe der Schreibgang die Datei
+    /// unter dem Editor weg, im zweiten legte er eine zweite PIN mit frischem
+    /// Salz fest. Die Antwort steht bei
+    /// [`crate::editormodell::Editormodell::schreibgang_gesperrt`]. Laeuft
+    /// schon ein Gang an `secrets.txt`, ebenso nicht.
     fn verbindung_erfragen(&self, seite: Fensterseite) {
         if self.ivars().tresorgang.get() {
             self.antwort_zeigen(seite, text(Text::VerbindungLaeuftSchon));
             return;
         }
-        if let Some(editor) = self.ivars().editor.get()
-            && editor.haelt_geheimnisse()
-            && editor.hat_ungesicherten_stand()
+        if let Some(sperre) = self
+            .ivars()
+            .editor
+            .get()
+            .and_then(|editor| editor.schreibgang_gesperrt())
         {
-            self.antwort_zeigen(seite, text(Text::VerbindenErstSichern));
+            self.antwort_zeigen(seite, sperre.meldung());
             return;
         }
         self.verbindungsblatt_zeigen(seite, &Verbindungsentwurf::default(), None);
@@ -9200,6 +9205,11 @@ impl Anwendungsdelegierter {
     /// Lesezeichen entsteht ueber den einen Durchgang [`Self::lesezeichen_aendern`]
     /// mit [`Ziel::Verbindung`], das allein den Namen traegt, und ein Editor,
     /// der `secrets.txt` ohne ungesicherten Stand haelt, laedt sie neu.
+    /// **Das Lesezeichen schreibt `bookmarks.toml` auf dem Hauptfaden**, unter
+    /// der Schreibsperre der Ablage, wie jedes andere Lesezeichen (`cmd+d`);
+    /// die Probe `der_verbindungsweg_stellt_auf_dem_hauptfaden_nur_den_einen_stat`
+    /// fuehrt diesen Aufruf als zweite benannte Ausnahme neben
+    /// [`Self::notizordner_bereitstellen`].
     /// **Name vergeben**: das Blatt geht mit allen Feldern und dem Grund
     /// wieder auf. **Mittel abgewiesen**: ein gemerkter Schluessel faellt, und
     /// das PIN-Blatt geht wieder auf; die Felder bleiben. **Jeder andere
@@ -10258,9 +10268,12 @@ impl Anwendungsdelegierter {
     ///
     /// **Einer der zwei Schreiber des Merkers**, und der einzige, der
     /// `Schluesselmerker::merken` ruft (`der_merker_hat_genau_einen_schreiber`).
-    /// Gerufen allein ueber den Schluesselmelder des Editorbereichs, also nach
-    /// einem Oeffnen mit PIN, einem Festlegen oder einem „PIN ändern"; ein
-    /// Oeffnen mit dem gemerkten Schluessel kommt hier nie an und verlaengert
+    /// Gerufen von zwei Stellen: vom Schluesselmelder des Editorbereichs,
+    /// also nach einem Oeffnen mit PIN, einem Festlegen oder einem „PIN
+    /// ändern“, und von [`Self::gemerkt_falls`], also nach einem Klick auf
+    /// eine Verbindung oder einem „Verbinden…“, dessen Gang einen Schluessel
+    /// aus einer eben geprueften PIN liefert. Ein Oeffnen mit dem gemerkten
+    /// Schluessel kommt auf keinem der zwei Wege hier an und verlaengert
     /// damit keine Frist. Ein vorher gemerkter Schluessel faellt und wird
     /// getilgt.
     fn schluessel_merken(&self, schluessel: Schluessel) {
@@ -14499,7 +14512,7 @@ mod kontextproben {
             (
                 "verbindung_erfragen",
                 &[
-                    concat!("hat_ungesicherten_", "stand()"),
+                    concat!(".schreibgang_", "gesperrt()"),
                     concat!("self.verbindungsblatt_", "zeigen("),
                 ],
             ),
@@ -14563,8 +14576,9 @@ mod kontextproben {
     }
 
     /// Die zwei Verbindungswege stellen auf dem Hauptfaden keinen
-    /// Systemaufruf ausser dem einen `stat(2)` aus `tresorweg::groesse`
-    /// (Akzeptanz (7) von Schritt 6, Entscheidung 14).
+    /// Systemaufruf ausser dem einen `stat(2)` aus `tresorweg::groesse` und
+    /// den zwei benannten Ausnahmen (Akzeptanz (7) von Schritt 6,
+    /// Entscheidung 14).
     ///
     /// Gelesen werden die Codezeilen der Ruempfe auf dem Hauptfaden; sie
     /// tragen weder `fs::` noch `metadata(` noch `exists(`, und sie lesen
@@ -14572,11 +14586,24 @@ mod kontextproben {
     /// den Schreibgang oder die Vorbereitung. Der `stat(2)` steht genau einmal
     /// je Weg.
     ///
-    /// **Was sie nicht sieht:** einen Systemaufruf in einer tiefer gerufenen
-    /// Funktion. **Und eine Ausnahme ist benannt**: fehlt `secrets.txt`, ruft
-    /// `verbindungsschluessel_holen` den Helfer `notizordner_bereitstellen`,
-    /// der wie F2 auf dem Hauptfaden anlegt; das geschieht allein, wenn die
-    /// Datei fehlt, also einmal vor jeder ersten Verbindung.
+    /// **Zwei Ausnahmen sind benannt, und jede steht in genau einem Rumpf
+    /// genau einmal:**
+    ///
+    /// - `notizordner_bereitstellen` in `verbindungsschluessel_holen`: fehlt
+    ///   `secrets.txt`, legt der Helfer sie wie F2 auf dem Hauptfaden an; das
+    ///   geschieht allein, wenn die Datei fehlt, also einmal vor jeder ersten
+    ///   Verbindung in einem Notizordner.
+    /// - `lesezeichen_aendern` in `anhaengen_einziehen`: das Lesezeichen der
+    ///   neuen Verbindung entsteht ueber den einen Schreibweg jedes
+    ///   Lesezeichens, also unter der Schreibsperre der Ablage mit Lesen und
+    ///   atomarem Schreiben von `bookmarks.toml` auf dem Hauptfaden, derselbe
+    ///   Weg wie `cmd+d`, einmal je gelungenem „Verbinden…“ nach einer
+    ///   Handlung des Nutzers
+    ///   (`issues/261016-0532_*_der-anhaengeweg-schreibt-bookmarks-toml-auf-dem-hauptfaden-und-die-zusage-nennt-nur-den-einen-stat.md`).
+    ///
+    /// **Was sie nicht sieht:** einen Systemaufruf in einer anderen tiefer
+    /// gerufenen Funktion; die zwei Ausnahmen sind genau die, die sie mit
+    /// Namen kennt.
     #[test]
     fn der_verbindungsweg_stellt_auf_dem_hauptfaden_nur_den_einen_stat() {
         let datei = diese_datei();
@@ -14612,6 +14639,61 @@ mod kontextproben {
                 "verbindung_herstellen" | "verbindungsschluessel_holen"
             ));
             assert_eq!(stat, erwartet, "{name} stellt {stat} stat(2)");
+
+            let anlegen = rumpf
+                .matches(concat!(".notizordner_", "bereitstellen("))
+                .count();
+            let erwartet = usize::from(name == "verbindungsschluessel_holen");
+            assert_eq!(
+                anlegen, erwartet,
+                "{name} ruft notizordner_bereitstellen {anlegen}-mal"
+            );
+            let lesezeichen = rumpf.matches(concat!(".lesezeichen_", "aendern(")).count();
+            let erwartet = usize::from(name == "anhaengen_einziehen");
+            assert_eq!(
+                lesezeichen, erwartet,
+                "{name} ruft lesezeichen_aendern {lesezeichen}-mal"
+            );
+        }
+    }
+
+    /// Das Lesezeichen einer neuen Verbindung entsteht allein aus dem
+    /// getrimmten Namen des Entwurfs: Beschriftung und `verbindung` sind
+    /// derselbe Wert, und kein anderes Feld des Entwurfs steht im Rumpf von
+    /// `anhaengen_einziehen` (Akzeptanz (2) von Schritt 6, Entscheidung 8).
+    ///
+    /// **Das ist der Betriebsweg**; die Form der Datei haelt
+    /// `ein_verbindungslesezeichen_schreibt_allein_name_und_verbindung` in
+    /// `crates/krk-core/tests/ablage.rs`. **Was sie nicht sieht:** ein Feld,
+    /// das ueber eine Hilfsfunktion oder einen anderen Namen als `entwurf.`
+    /// in den Rumpf kommt; sie liest Zeilen und keinen Datenfluss.
+    #[test]
+    fn anhaengen_einziehen_baut_das_lesezeichen_allein_aus_dem_namen() {
+        let koerper = rumpf(&diese_datei(), "anhaengen_einziehen");
+        assert!(
+            koerper.contains(concat!("let name = entwurf.name.", "trim().to_owned();")),
+            "der Name ist nicht der getrimmte Name des Entwurfs"
+        );
+        let anlegen = koerper
+            .split_once(concat!("Aenderung::", "Anlegen {"))
+            .and_then(|(_, rest)| rest.split_once("};"))
+            .map(|(block, _)| block)
+            .expect("anhaengen_einziehen legt ein Lesezeichen an");
+        let gesucht: String = anlegen.split_whitespace().collect();
+        assert_eq!(
+            gesucht,
+            concat!(
+                "name:name.clone(),ziel:Ziel::",
+                "Verbindung{verbindung:name.clone(),},"
+            ),
+            "das Lesezeichen traegt etwas anderes als den Namen"
+        );
+        for feld in ["protokoll", "adresse", "konto", "passwort", "notizen"] {
+            let nadel = format!("entwurf.{feld}");
+            assert!(
+                !koerper.contains(&nadel),
+                "anhaengen_einziehen liest {nadel}"
+            );
         }
     }
 
@@ -15211,10 +15293,13 @@ mod merkerproben {
     }
 
     /// Akzeptanz (6): `Schluesselmerker::merken` hat in dieser Kiste genau
-    /// einen Rufer, `schluessel_merken`, und den ruft allein der
-    /// Schluesselmelder des Editorbereichs. Geleert wird der Merker allein in
-    /// `schluessel_verwerfen`, und das rufen allein das Beenden und der
-    /// abgewiesene Schluessel. **Was die Probe nicht sieht:** einen Aufruf von
+    /// einen Rufer, `schluessel_merken`, und den rufen genau zwei Stellen: der
+    /// Schluesselmelder des Editorbereichs in `oberflaeche_aufbauen` und
+    /// `gemerkt_falls`, das allein die Ausgaenge der zwei Verbindungswege
+    /// rufen (`verbindung_einziehen` einmal, `anhaengen_einziehen` zweimal).
+    /// Geleert wird der Merker allein in `schluessel_verwerfen`, und das rufen
+    /// allein das Beenden und der abgewiesene Schluessel, im Editor und auf
+    /// den zwei Verbindungswegen. **Was die Probe nicht sieht:** einen Aufruf von
     /// `merken` ueber einen anderen Namen, etwa ein `use … as`, und einen
     /// Rufer in einem Pruefmodul; gezaehlt wird `.merken(` im Betriebscode
     /// jeder Datei der Kiste.

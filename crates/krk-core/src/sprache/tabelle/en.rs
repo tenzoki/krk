@@ -950,6 +950,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VerbindenErstSichern => {
             "secrets.txt has unsaved changes in the editor; save first, then connect."
         }
+        Text::VerbindenPinNochNichtGesichert => {
+            "secrets.txt is open in the editor with a new PIN and has never been saved; save first, then connect."
+        }
         Text::VerbindenAngelegt => "“{name}” is in secrets.txt and among the connections.",
         Text::VerbindenOhneLesezeichen => "“{name}” is in secrets.txt; the bookmark is missing.",
         Text::VerbindenNameVergeben => "secrets.txt already has an entry “{name}”.",
@@ -965,6 +968,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VerbindenFeldPasswort => "Password:",
         Text::VerbindenFeldNotizen => "Notes:",
         Text::VerbindenNameLeer => "The name is empty.",
+        Text::VerbindenKeineUrl => {
+            "Protocol and address do not make a valid URL, for example because of a space in the host name."
+        }
     }
 }
 

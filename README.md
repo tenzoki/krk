@@ -345,15 +345,21 @@ Konto, Passwort und Notizen, eine je Feld aus dem Format oben. Die
 Passwortspalte zeigt den Klartext, wie die Rohansicht derselben Datei.
 
 **Ein eingegebener Schlüssel gilt zehn Minuten ab der Eingabe.** KRK merkt sich
-nach dem Öffnen mit PIN, dem Festlegen und „PIN ändern“ den abgeleiteten
-Schlüssel, nie die PIN, im Arbeitsspeicher und nie auf der Platte. Die Frist
+nach dem Öffnen mit PIN, dem Festlegen, „PIN ändern“ und der PIN, die ein Klick
+auf eine Verbindung oder „Verbinden…“ abfragt, den abgeleiteten Schlüssel, nie
+die PIN, im Arbeitsspeicher und nie auf der Platte. Die Frist
 verlängert sich nicht durch Benutzen und läuft im Ruhezustand des Macs weiter.
 Ein Schlüssel, der die Datei nicht öffnet, fällt sofort, und KRK fragt nach
 der PIN. Getilgt, also vor dem Freigeben mit Nullen überschrieben, werden die
-Schlüsselbytes beim Ablauf, beim Ersetzen und beim Beenden, dazu das Passwort
-einer Verbindung, sobald es gebraucht ist. Nicht getilgt werden die PIN, der
-entschlüsselte Text in Editor, Tabelle und Blatt, die Kopie des Passworts beim
-System und die inneren Arbeitsdaten der Verfahren.
+Schlüsselbytes beim Ablauf, beim Ersetzen und beim Beenden, das Passwort einer
+Verbindung, sobald es gebraucht ist, und der entschlüsselte Text, den ein Klick
+auf eine Verbindung und „Verbinden…“ lesen, sobald ihr Gang endet. Nicht
+getilgt werden die PIN, der entschlüsselte Text in Editor und Tabelle, was
+macOS für die Felder des Blattes „Verbinden“ hält, die übrigen Felder einer
+Verbindung neben dem Text, die Kopie des Passworts beim System, die inneren
+Arbeitsdaten der Verfahren und Reste, die das Verschieben oder Wachsen eines
+Werts im Speicher hinterlässt. Im Einzelnen steht das in `HowTo.md` unter „Was
+getilgt wird und was nicht“.
 
 **„Verbinden…“ im Kontextmenü der Dateiliste legt eine Verbindung an**: einen
 Eintrag am Ende von `secrets.txt` und ein Lesezeichen in der Gruppe

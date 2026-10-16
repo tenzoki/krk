@@ -642,6 +642,28 @@ enum Schutz {
     },
 }
 
+/// Warum ein Schreibgang neben dem Editor nicht an `secrets.txt` schreiben
+/// darf ([`Editormodell::schreibgang_gesperrt`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Schreibgangsperre {
+    /// Der Editor haelt einen ungesicherten Stand von `secrets.txt`.
+    Ungesichert,
+    /// Der Editor haelt `secrets.txt` mit einem Schluessel, dessen Kopf auf
+    /// keiner Platte steht: leer, festgelegt, nie gesichert.
+    OhneKopf,
+}
+
+impl Schreibgangsperre {
+    /// Der Satz fuer die Statuszeile.
+    #[must_use]
+    pub fn meldung(self) -> &'static str {
+        match self {
+            Self::Ungesichert => text(Text::VerbindenErstSichern),
+            Self::OhneKopf => text(Text::VerbindenPinNochNichtGesichert),
+        }
+    }
+}
+
 /// Was der Arbeitsfaden lesen soll.
 ///
 /// **Entschieden wird in [`Editormodell::oeffnen`] und nicht auf dem Faden**:
@@ -788,9 +810,11 @@ fn geheimnisse_laden(
     mittel: &Oeffnungsmittel,
 ) -> (Result<Gelesen, Abweisung>, Option<Pinform>) {
     match tresorweg::geheimnisse_lesen(pfad, mittel) {
-        Ok(entsperrt) => (
+        Ok(mut entsperrt) => (
             Ok(Gelesen {
-                stand: entsperrt.stand,
+                // Herausgenommen und nicht kopiert: der Text lebt im Editor
+                // weiter, und es faellt eine leere Zeichenkette.
+                stand: std::mem::take(&mut *entsperrt.stand),
                 schutz: Schutz::Verschluesselt {
                     schluessel: entsperrt.schluessel,
                     kopf_auf_platte: entsperrt.kopf_auf_platte,
@@ -1286,6 +1310,42 @@ impl Editormodell {
                 ..
             }
         )
+    }
+
+    /// Warum ein Schreibgang neben dem Editor jetzt nicht an `secrets.txt`
+    /// schreiben darf, oder `None`, wenn er darf (Entscheidung 15 des Plans
+    /// der sechs Felder, „Verbinden…“).
+    ///
+    /// **Zwei Lagen sperren, und beide haengen an einem Editor, der
+    /// `secrets.txt` haelt.** Haelt er einen ungesicherten Stand, schriebe
+    /// der Gang die Datei unter ihm weg, und sein naechstes Sichern stuende
+    /// vor einer Aenderung von aussen. Steht der Kopf seines Schluessels noch
+    /// auf keiner Platte (eine leere Datei, eben mit „PIN festlegen“
+    /// geoeffnet und nie gesichert), saehe der Gang eine leere Datei,
+    /// verlangte ein zweites Festlegen und schriebe mit frischem Salz; Editor
+    /// und Merker hielten danach zwei Schluessel fuer dieselbe Datei, und das
+    /// Neuladen des Editors scheiterte
+    /// (`issues/261016-0532_*_verbinden-an-einer-leeren-im-editor-offenen-secrets-txt-legt-eine-zweite-pin-fest.md`).
+    /// Gefragt wird die Buchfuehrung im [`Schutz`] und nicht die Platte.
+    #[must_use]
+    pub fn schreibgang_gesperrt(&self) -> Option<Schreibgangsperre> {
+        if !self.haelt_geheimnisse() {
+            return None;
+        }
+        if self.abweichung {
+            return Some(Schreibgangsperre::Ungesichert);
+        }
+        match self.schutz {
+            Schutz::Verschluesselt {
+                kopf_auf_platte: false,
+                ..
+            } => Some(Schreibgangsperre::OhneKopf),
+            Schutz::Verschluesselt {
+                kopf_auf_platte: true,
+                ..
+            }
+            | Schutz::Klartext => None,
+        }
     }
 
     /// Warum an der gehaltenen Datei keine Textmarke entsteht, oder `None`,
@@ -5117,6 +5177,53 @@ mod tests {
         assert!(grund.contains("erst sichern"), "{grund}");
         assert!(!modell.pin_wechselt());
         assert_eq!(std::fs::metadata(&pfad).expect("stat").len(), 0);
+    }
+
+    /// „Verbinden…“ darf an einer leeren `secrets.txt`, deren PIN der Editor
+    /// eben festgelegt und nie gesichert hat, nicht schreiben: der Gang legte
+    /// eine zweite PIN mit frischem Salz fest
+    /// (`issues/261016-0532_*_verbinden-an-einer-leeren-im-editor-offenen-secrets-txt-legt-eine-zweite-pin-fest.md`).
+    /// Nach dem ersten Sichern steht der Kopf, und die Sperre faellt; ein
+    /// ungesicherter Stand sperrt mit seinem eigenen Grund, eine gewoehnliche
+    /// Datei nie.
+    #[test]
+    fn ein_schreibgang_wartet_auf_den_kopf_und_den_gesicherten_stand() {
+        let ordner = Pruefordner::neu("geheim-schreibgang");
+        let (mut modell, pfad, _) = geheimnis_modell(&ordner);
+        std::fs::write(&pfad, b"").expect("leere Datei");
+        assert_eq!(modell.oeffnen(&pfad, mit_pin("2468")), None);
+        assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
+        assert!(!modell.hat_ungesicherten_stand());
+        assert_eq!(
+            modell.schreibgang_gesperrt(),
+            Some(Schreibgangsperre::OhneKopf),
+            "ohne Kopf auf der Platte haelt ein zweiter Gang eine zweite PIN fest"
+        );
+        assert!(
+            Schreibgangsperre::OhneKopf
+                .meldung()
+                .contains("erst sichern"),
+            "die Meldung nennt den Ausweg"
+        );
+
+        let _ = modell.bearbeiten("## A\nx\n".to_owned());
+        assert_eq!(
+            modell.schreibgang_gesperrt(),
+            Some(Schreibgangsperre::Ungesichert)
+        );
+        assert_eq!(modell.sichern(), Sicherungsausgang::Gesichert(pfad.clone()));
+        assert!(modell.pin_aenderbar(), "der Kopf steht auf der Platte");
+        assert_eq!(modell.schreibgang_gesperrt(), None);
+
+        let zweiter = Pruefordner::neu("geheim-schreibgang-frei");
+        let (mut gewoehnlich, secrets, _) = geheimnis_modell(&zweiter);
+        let andere = secrets.with_file_name("frei.txt");
+        std::fs::write(&andere, b"x\n").expect("schreiben");
+        assert_eq!(gewoehnlich.oeffnen(&andere, None), None);
+        assert_eq!(abwarten(&mut gewoehnlich), Ladeausgang::Geoeffnet);
+        let _ = gewoehnlich.bearbeiten("y\n".to_owned());
+        assert!(gewoehnlich.hat_ungesicherten_stand());
+        assert_eq!(gewoehnlich.schreibgang_gesperrt(), None);
     }
 
     /// Wird die Datei waehrend der Ableitung geschlossen, meldet der Wechsel

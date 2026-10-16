@@ -1504,6 +1504,9 @@ pub enum Text {
     VerbindungKeineAuswahl,
     /// „Verbinden…“, waehrend der Editor `secrets.txt` ungesichert haelt.
     VerbindenErstSichern,
+    /// „Verbinden…“, waehrend der Editor `secrets.txt` mit einer eben
+    /// festgelegten und nie gesicherten PIN haelt.
+    VerbindenPinNochNichtGesichert,
     /// „Verbinden…“ hat Eintrag und Lesezeichen angelegt; `{name}`.
     VerbindenAngelegt,
     /// Der Eintrag steht, das Lesezeichen fehlt; `{name}`.
@@ -1530,11 +1533,14 @@ pub enum Text {
     VerbindenFeldNotizen,
     /// Der Grund im Blatt „Verbinden“ bei leerem Namen.
     VerbindenNameLeer,
+    /// Das Blatt „Verbinden“: aus Protokoll und Adresse entsteht auch
+    /// kodiert keine URL.
+    VerbindenKeineUrl,
 }
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 647] = [
+    pub const ALLE: [Text; 649] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -2169,6 +2175,7 @@ impl Text {
         Text::VerbindungUngueltigeUrl,
         Text::VerbindungKeineAuswahl,
         Text::VerbindenErstSichern,
+        Text::VerbindenPinNochNichtGesichert,
         Text::VerbindenAngelegt,
         Text::VerbindenOhneLesezeichen,
         Text::VerbindenNameVergeben,
@@ -2182,6 +2189,7 @@ impl Text {
         Text::VerbindenFeldPasswort,
         Text::VerbindenFeldNotizen,
         Text::VerbindenNameLeer,
+        Text::VerbindenKeineUrl,
     ];
 }
 

@@ -1,0 +1,26 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "593e55cb-f040-4b1f-aebf-b5ca4040e130",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261016-0229-secrets-mit-sechs-feldern-schluesselcache-und-verbindungen/issues/261016-0532-howto-verspricht-ein-tilgen-des-verbindungspassworts-das-klick-und-anhaengeweg-nicht-halten.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "closed",
+    "disposition": {
+      "kind": "fixed",
+      "reason_ref": null
+    }
+  }
+}

@@ -4525,17 +4525,21 @@ fn eine_rundreise_ueber_alle_drei_sorten_liefert_dieselbe_datei() {
     assert_eq!(erster, zweiter, "die Datei ist byteweise dieselbe");
 }
 
-/// Eine Verbindung schreibt aus ihrem Eintrag in `secrets.txt` allein den
-/// Namen nach `bookmarks.toml` (261016, Akzeptanz (2) von Schritt 6,
+/// Ein Verbindungslesezeichen bringt in `bookmarks.toml` genau die zwei
+/// Schluessel `name` und `verbindung` mit (261016, Akzeptanz (2) von Schritt 6,
 /// Entscheidung 8).
 ///
-/// Die Probe legt einen Eintrag mit eindeutigen Feldwerten an, baut das
-/// Lesezeichen so, wie „Verbinden…“ es tut, aus dem Namen des Entwurfs, und
-/// sucht jeden uebrigen Wert in der geschriebenen Datei. **Was sie haelt, ist
-/// der Typ**: [`Ziel::Verbindung`] hat kein Feld fuer einen dieser Werte; die
-/// Probe faellt, sobald eines dazukommt und befuellt wird.
+/// **Was sie haelt, ist die Form der Datei**: die Probe baut das Lesezeichen
+/// selbst aus dem Namen eines Entwurfs mit eindeutigen Feldwerten und sucht
+/// jeden uebrigen Wert in der geschriebenen Datei. Faellt sie, hat
+/// [`Ziel::Verbindung`] ein Feld bekommen, das geschrieben wird. **Was sie
+/// nicht sieht:** aus welchem Feld der Betriebsweg Beschriftung und
+/// `verbindung` baut; das haelt die Quelltextprobe
+/// `anhaengen_einziehen_baut_das_lesezeichen_allein_aus_dem_namen` in
+/// `crates/krk-ui/src/appkit/anwendung.rs`
+/// (`issues/261016-0532_*_drei-proben-des-pakets-behaupten-mehr-als-sie-pruefen.md`).
 #[test]
-fn eine_verbindung_schreibt_aus_dem_eintrag_allein_den_namen() {
+fn ein_verbindungslesezeichen_schreibt_allein_name_und_verbindung() {
     use krk_core::heimordner::eintraege::geheimnisse::{Geheimnisentwurf, Passwort};
     let entwurf = Geheimnisentwurf {
         name: "Freigabe-Name-7f3a".to_owned(),

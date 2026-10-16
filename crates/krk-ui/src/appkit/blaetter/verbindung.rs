@@ -21,8 +21,9 @@
 //! denselben Feldern und dem Grund wieder. Die Notizen sind hier einzeilig;
 //! Absaetze schreibt der Nutzer in der Tabelle des Editors.
 //!
-//! **Geprueft wird ueber [`tresorweg::entwurf_pruefen`], und eine abgewiesene
-//! Eingabe schliesst das Blatt nicht**, wie im PIN-Blatt: die bestaetigende
+//! **Geprueft wird ueber [`pruefen`], also [`tresorweg::entwurf_pruefen`] und
+//! danach die Frage, ob eine URL entsteht, und eine abgewiesene Eingabe
+//! schliesst das Blatt nicht**, wie im PIN-Blatt: die bestaetigende
 //! Schaltflaeche ist abgeschaltet, solange die Pruefung nein sagt, und die
 //! Eingabetaste prueft vor dem Bestaetigen. Warum nicht, steht in der Zeile
 //! unter den Feldern.
@@ -73,11 +74,12 @@ use objc2::rc::Retained;
 use objc2_app_kit::{NSSecureTextField, NSTextAlignment, NSTextField, NSView, NSWindow};
 use objc2_foundation::{MainThreadMarker, NSPoint, NSRect, NSSize, NSString};
 
+use krk_core::heimordner::verbindung::{self, Verbindungsziel};
 use krk_core::sprache::{Text, text};
 
-use crate::tresorweg::{self, Verbindungsentwurf};
+use crate::tresorweg::{self, Entwurfsfehler, Verbindungsentwurf};
 
-use super::super::textautomatik;
+use super::super::{textautomatik, verbinden};
 use super::{Blatt, Blattgriff};
 
 /// Die Breite der Beigabe in Punkten; sie bestimmt die Breite des Blattes.
@@ -122,9 +124,20 @@ pub fn beschriftungen() -> Vec<&'static str> {
 
 /// Die Felder als Entwurf, in der Reihenfolge der Beschriftungen; fehlt ein
 /// Feld, gilt es als leer.
+///
+/// **Die Felder werden herausgenommen und nicht kopiert**: das Passwort
+/// wandert ohne Abschrift in sein `Zeroizing`, und in der Liste bleibt eine
+/// leere Zeichenkette zurueck. Eine Kopie je Tastendruck, die ungetilgt
+/// fiele, entsteht damit nicht
+/// (`issues/261016-0532_*_howto-verspricht-ein-tilgen-des-verbindungspassworts-das-klick-und-anhaengeweg-nicht-halten.md`).
 #[must_use]
-pub fn entwurf_aus(felder: &[String]) -> Verbindungsentwurf {
-    let feld = |stelle: usize| felder.get(stelle).cloned().unwrap_or_default();
+pub fn entwurf_aus(mut felder: Vec<String>) -> Verbindungsentwurf {
+    let mut feld = |stelle: usize| {
+        felder
+            .get_mut(stelle)
+            .map(std::mem::take)
+            .unwrap_or_default()
+    };
     Verbindungsentwurf {
         name: feld(0),
         protokoll: feld(1),
@@ -133,6 +146,22 @@ pub fn entwurf_aus(felder: &[String]) -> Verbindungsentwurf {
         passwort: zeroize::Zeroizing::new(feld(PASSWORTSTELLE)),
         notizen: feld(5),
     }
+}
+
+/// Die Pruefregel dieses Blattes: [`tresorweg::entwurf_pruefen`] und danach
+/// die Frage des Klicks, ob aus Protokoll, Adresse und Konto eine URL entsteht
+/// ([`verbinden::url_aus`]). Ohne die zweite naehme das Blatt eine Adresse mit
+/// Leerzeichen im Rechnernamen an, und erst der Klick wiese sie ab.
+fn pruefen(entwurf: &Verbindungsentwurf) -> Result<(), Entwurfsfehler> {
+    tresorweg::entwurf_pruefen(entwurf)?;
+    let ziel = verbindung::verbindungsziel(&entwurf.protokoll, &entwurf.adresse, &entwurf.konto)
+        .map_err(Entwurfsfehler::Ziel)?;
+    let url = match &ziel {
+        Verbindungsziel::Einhaengen { url, .. } | Verbindungsziel::Uebergeben { url } => url,
+    };
+    verbinden::url_aus(url)
+        .map(|_| ())
+        .ok_or(Entwurfsfehler::KeineUrl)
 }
 
 /// Die Werte eines Entwurfs in der Reihenfolge der Felder, fuer das erneute
@@ -232,23 +261,23 @@ pub fn zeigen(
                 .iter()
                 .map(|feld| feld.stringValue().to_string())
                 .collect();
-            entwurf_aus(&werte)
+            entwurf_aus(werte)
         }
     };
     let lesen = Rc::new(lesen);
 
     if let Some(knopf) = blatt.bestaetigende_schaltflaeche() {
-        knopf.setEnabled(tresorweg::entwurf_pruefen(&lesen()).is_ok());
+        knopf.setEnabled(pruefen(&lesen()).is_ok());
         let lesen = Rc::clone(&lesen);
         let grundzeile = grundzeile.clone();
         blatt.textaenderung_melden(Box::new(move || {
-            let geprueft = tresorweg::entwurf_pruefen(&lesen());
+            let geprueft = pruefen(&lesen());
             knopf.setEnabled(geprueft.is_ok());
             // Der Grund erst, wenn ein Feld etwas traegt, das nie gilt: ein
             // Zeilenumbruch oder ein unbekanntes Protokoll. Ein leerer Name
             // oder eine noch leere Adresse sind beim Tippen kein Fehler.
             let satz = match geprueft {
-                Err(fehler @ tresorweg::Entwurfsfehler::Umbruch) => fehler.meldung(),
+                Err(fehler @ Entwurfsfehler::Umbruch) => fehler.meldung(),
                 Err(_) | Ok(()) => String::new(),
             };
             grundzeile.setStringValue(&NSString::from_str(&satz));
@@ -257,13 +286,11 @@ pub fn zeigen(
     {
         let lesen = Rc::clone(&lesen);
         let grundzeile = grundzeile.clone();
-        blatt.bestaetigung_pruefen(Box::new(move || {
-            match tresorweg::entwurf_pruefen(&lesen()) {
-                Ok(()) => true,
-                Err(fehler) => {
-                    grundzeile.setStringValue(&NSString::from_str(&fehler.meldung()));
-                    false
-                }
+        blatt.bestaetigung_pruefen(Box::new(move || match pruefen(&lesen()) {
+            Ok(()) => true,
+            Err(fehler) => {
+                grundzeile.setStringValue(&NSString::from_str(&fehler.meldung()));
+                false
             }
         }));
     }
@@ -275,7 +302,7 @@ pub fn zeigen(
             }
             // Noch einmal geprueft und nicht vorausgesetzt, wie im PIN-Blatt.
             let entwurf = lesen();
-            if tresorweg::entwurf_pruefen(&entwurf).is_ok() {
+            if pruefen(&entwurf).is_ok() {
                 fertig(entwurf);
             }
         })
@@ -346,6 +373,28 @@ mod tests {
         assert_eq!(beschriftungen()[PASSWORTSTELLE], "Passwort:");
     }
 
+    /// Die Adresse, die auch kodiert keine URL ergibt, weist das Blatt ab,
+    /// wie es der Klick taete; ein Leerzeichen im Pfad einer Freigabe nimmt es
+    /// an, denn die URL kodiert es.
+    #[test]
+    fn das_blatt_weist_ab_was_keine_url_ergibt() {
+        let mit_adresse =
+            |adresse: &str| pruefen(&entwurf_aus(felder(["NAS", "smb", adresse, "", "", ""])));
+        assert_eq!(mit_adresse("nas.local/Daten Ordner"), Ok(()));
+        assert_eq!(
+            mit_adresse("nas local/daten"),
+            Err(Entwurfsfehler::KeineUrl)
+        );
+        assert_eq!(
+            mit_adresse("nas.local:abc/daten"),
+            Err(Entwurfsfehler::KeineUrl)
+        );
+        assert!(
+            Entwurfsfehler::KeineUrl.meldung().contains("URL"),
+            "die Meldung nennt den Grund"
+        );
+    }
+
     /// Die Pruefregel des Blattes (Akzeptanz (9) von Schritt 7): ein leerer
     /// Name, ein unbekanntes Protokoll, eine leere Adresse, `://` in der
     /// Adresse und ein Zeilenumbruch in einem Feld werden abgewiesen; ein
@@ -354,11 +403,11 @@ mod tests {
     fn die_pruefregel_des_blattes() {
         let gut = ["NAS", "smb", "nas.local/daten", "", "", ""];
         assert_eq!(
-            tresorweg::entwurf_pruefen(&entwurf_aus(&felder(gut))),
+            tresorweg::entwurf_pruefen(&entwurf_aus(felder(gut))),
             Ok(())
         );
         assert_eq!(
-            tresorweg::entwurf_pruefen(&entwurf_aus(&felder([
+            tresorweg::entwurf_pruefen(&entwurf_aus(felder([
                 "  ",
                 "smb",
                 "nas.local",
@@ -369,7 +418,7 @@ mod tests {
             Err(Entwurfsfehler::NameLeer)
         );
         assert_eq!(
-            tresorweg::entwurf_pruefen(&entwurf_aus(&felder([
+            tresorweg::entwurf_pruefen(&entwurf_aus(felder([
                 "NAS",
                 "gopher",
                 "nas.local",
@@ -382,11 +431,11 @@ mod tests {
             )))
         );
         assert_eq!(
-            tresorweg::entwurf_pruefen(&entwurf_aus(&felder(["NAS", "smb", " ", "", "", ""]))),
+            tresorweg::entwurf_pruefen(&entwurf_aus(felder(["NAS", "smb", " ", "", "", ""]))),
             Err(Entwurfsfehler::Ziel(Zielfehler::LeereAdresse))
         );
         assert_eq!(
-            tresorweg::entwurf_pruefen(&entwurf_aus(&felder([
+            tresorweg::entwurf_pruefen(&entwurf_aus(felder([
                 "NAS",
                 "smb",
                 "smb://nas.local",
@@ -400,7 +449,7 @@ mod tests {
             let mut werte = felder(gut);
             werte[stelle].push('\n');
             assert_eq!(
-                tresorweg::entwurf_pruefen(&entwurf_aus(&werte)),
+                tresorweg::entwurf_pruefen(&entwurf_aus(werte)),
                 Err(Entwurfsfehler::Umbruch),
                 "Feld {stelle}"
             );
@@ -419,7 +468,7 @@ mod tests {
             "geheim-4711",
             "Büro",
         ];
-        let entwurf = entwurf_aus(&felder(eingabe));
+        let entwurf = entwurf_aus(felder(eingabe));
         assert_eq!(werte(&entwurf), eingabe);
         assert!(!format!("{entwurf:?}").contains("geheim-4711"));
     }

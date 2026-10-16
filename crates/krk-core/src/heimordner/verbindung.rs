@@ -33,9 +33,12 @@
 //! (`tests/heimordner.rs`) haelt am Code dieser Datei, dass er den Typ nicht
 //! nennt. Kommentarzeilen liest sie nicht.
 //!
-//! Die Adresse wird nicht kodiert: sie steht so in der URL, wie der Nutzer sie
-//! eingetragen hat, ohne Leerraum an den Enden. Eine Adresse mit Zeichen, die
-//! keine URL traegt, weist erst der Weg in `krk-ui` ab, der die URL baut.
+//! Die Adresse wird hier nicht kodiert: sie steht so in der URL, wie der
+//! Nutzer sie eingetragen hat, ohne Leerraum an den Enden. Kodiert wird sie
+//! erst in `krk-ui`, wo aus der URL ein `NSURL` wird (`appkit::verbinden::url_aus`):
+//! ein Leerzeichen oder ein Zeichen jenseits von ASCII im Pfad wird dort
+//! prozentkodiert, und was auch kodiert keine URL ergibt, etwa ein Leerzeichen
+//! im Rechnernamen, weist schon das Blatt „Verbinden“ ab.
 
 use crate::sprache::{Text, satz, text};
 

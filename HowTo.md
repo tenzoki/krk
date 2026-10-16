@@ -1586,7 +1586,8 @@ mitlesen lässt, öffnet die Datei nicht.
 
 **Nach einer PIN-Eingabe merkt sich KRK den daraus abgeleiteten Schlüssel zehn
 Minuten lang im Arbeitsspeicher.** Gemerkt wird nach dem Öffnen mit der PIN,
-nach dem Festlegen einer neuen PIN und nach „PIN ändern“. In diesen zehn
+nach dem Festlegen einer neuen PIN, nach „PIN ändern“ und nach der PIN, die ein
+Klick auf eine Verbindung oder „Verbinden…“ abfragt. In diesen zehn
 Minuten öffnet `f4` die Datei ohne Blatt, und ein Klick auf eine Verbindung
 und „Verbinden…“ fragen ebenso nicht. Gespeichert wird der Schlüssel nirgends
 auf der Platte, und die PIN selbst merkt sich KRK nicht.
@@ -1619,13 +1620,20 @@ mit Nullen, bevor es den Speicher freigibt.
   beim Ablauf der Frist, beim Ersetzen durch „PIN ändern“, wenn er nicht passt,
   beim Beenden von KRK und wenn der Editor die Datei schließt.
 - Getilgt wird das Passwort einer Verbindung, sobald es nicht mehr gebraucht
-  wird: der Wert aus dem Blatt „Verbinden“ und der Wert, den ein Klick aus
+  wird: die Abschrift, die KRK bei jedem Tastendruck und beim Anlegen aus den
+  Feldern des Blattes „Verbinden“ liest, und der Wert, den ein Klick aus
   `secrets.txt` liest, nach dem Einhängen.
-- **Nicht** getilgt werden die PIN, der entschlüsselte Text, solange er im
-  Editor, in der Tabelle oder in den Feldern des Blattes „Verbinden“ steht,
-  die Kopie des Passworts, die KRK an das System zum Einhängen übergibt, die
-  inneren Arbeitsdaten der Verschlüsselungsverfahren und Reste, die das
-  Verschieben eines Werts im Speicher hinterlässt.
+- Getilgt wird der entschlüsselte Text von `secrets.txt`, den ein Klick auf
+  eine Verbindung und „Verbinden…“ lesen, sobald ihr Gang endet, mit allen
+  Passwörtern darin; ebenso der neue Text, den „Verbinden…“ verschlüsselt und
+  schreibt.
+- **Nicht** getilgt werden die PIN; der entschlüsselte Text, solange er im
+  Editor oder in der Tabelle steht; was macOS für die Felder des Blattes
+  „Verbinden“ hält, das Passwortfeld eingeschlossen; Name, Protokoll, Adresse,
+  Konto und Notizen, die KRK beim Verbinden und Anlegen neben dem Text hält;
+  die Kopie des Passworts, die KRK an das System zum Einhängen übergibt; die
+  inneren Arbeitsdaten der Verschlüsselungsverfahren; und Reste, die das
+  Verschieben oder Wachsen eines Werts im Speicher hinterlässt.
 
 Die Tilgung schützt also gegen einen Schlüssel, der nach Ablauf als Rest im
 Speicher steht. Gegen ein Programm, das den Speicher von KRK liest, solange die
@@ -1751,6 +1759,7 @@ das Lesezeichen in der Gruppe „Verbindungen“ an. Was dabei schiefgehen kann:
 | Die PIN ist falsch | Das PIN-Blatt geht wieder auf; die Felder bleiben erhalten. |
 | `secrets.txt` fehlt | KRK legt sie an wie `f2`, ohne sie zu öffnen, und fragt nach einer neuen PIN, zweimal. |
 | `secrets.txt` hat im Editor ungesicherte Änderungen | „Verbinden…“ weist ab, bevor das Blatt aufgeht: erst sichern. |
+| `secrets.txt` ist im Editor mit einer eben festgelegten PIN offen und noch nie gesichert | „Verbinden…“ weist ab, bevor das Blatt aufgeht: erst sichern. Sonst legte es eine zweite PIN fest, und der Editor öffnete die Datei danach nicht mehr. |
 | Der Eintrag steht, das Lesezeichen ließ sich nicht anlegen | Die Statuszeile sagt genau das. |
 
 Hält der Editor `secrets.txt` ohne ungesicherte Änderungen, lädt er sie nach

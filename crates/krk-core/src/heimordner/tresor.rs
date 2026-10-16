@@ -29,7 +29,11 @@
 //! - **der Klartext.** Der Editor haelt ihn in seiner Textflaeche und in seinem
 //!   Stand, solange die Datei offen ist, und ein Tilgen an dieser einen Stelle
 //!   erreichte die Textflaeche nicht (Spec, `## Constraints`). Dasselbe gilt
-//!   fuer [`Geoeffnet::klartext`].
+//!   fuer [`Geoeffnet::klartext`], soweit es dieses Modul betrifft: ein
+//!   gewoehnlicher `Vec`. **Die zwei Verbindungswege in `krk-ui` tilgen ihn
+//!   selbst**, `tresorweg::geheimnisse_lesen` nimmt ihn in ein `Zeroizing`
+//!   und haelt den Stand darin; der Editor nimmt den Stand heraus und
+//!   tilgt ihn nicht.
 //! - **eine Kopie, die eine Verschiebung zuruecklaesst.** Ein `Schluessel` wird
 //!   in Rust bitweise verschoben, und die Stelle, von der er wegzieht, ueberschreibt
 //!   niemand; getilgt wird allein die Stelle, an der er zuletzt faellt.

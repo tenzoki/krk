@@ -1071,6 +1071,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VerbindenErstSichern => {
             "secrets.txt a des modifications non enregistrées dans l’éditeur\u{202f}; enregistrez avant de vous connecter."
         }
+        Text::VerbindenPinNochNichtGesichert => {
+            "secrets.txt est ouvert dans l’éditeur avec un nouveau code PIN et n’a jamais été enregistré\u{202f}; enregistrez avant de vous connecter."
+        }
         Text::VerbindenAngelegt => {
             "«\u{a0}{name}\u{a0}» figure dans secrets.txt et parmi les connexions."
         }
@@ -1092,6 +1095,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VerbindenFeldPasswort => "Mot de passe\u{a0}:",
         Text::VerbindenFeldNotizen => "Notes\u{a0}:",
         Text::VerbindenNameLeer => "Le nom est vide.",
+        Text::VerbindenKeineUrl => {
+            "Le protocole et l’adresse ne donnent pas d’URL valide, par exemple à cause d’une espace dans le nom de l’ordinateur."
+        }
     }
 }
 

@@ -66,7 +66,18 @@
 //! [`verbindung_vorbereiten`] im [`Verbindungsplan::Einhaengen`], und in
 //! [`anhaengen`] im `Geheimnisentwurf`, den [`Verbindungsentwurf::entwurf`]
 //! baut. Herausgegeben wird es allein in `appkit/verbinden.rs`, an NetFS.
+//!
+//! **Was die zwei Wege tilgen und was nicht.** Der entschluesselte Text der
+//! Datei steht in [`Entsperrt::stand`] und vorher in den entschluesselten
+//! Bytes, beide in einem `Zeroizing`, und faellt getilgt, sobald der Gang
+//! endet; ebenso der neue Text, den [`anhaengen`] verschliesst. Nicht getilgt
+//! werden die uebrigen Felder des Eintrags neben dem Text (Name, Protokoll,
+//! Adresse, Konto, Notizen), die inneren Arbeitsdaten der Verfahren und Reste,
+//! die eine Zeichenkette beim Wachsen zuruecklaesst, etwa die der
+//! Sicherungsform. `HowTo.md` sagt dem Nutzer dasselbe, unter „Was getilgt
+//! wird und was nicht“.
 
+use std::borrow::Cow;
 use std::cell::RefCell;
 use std::io;
 use std::path::Path;
@@ -82,6 +93,7 @@ use krk_core::heimordner::verbindung::{self, Verbindungsziel, Zielfehler};
 use krk_core::sprache::{Text, text};
 use krk_core::text::Abweisung;
 use krk_core::text::datei::{self, Lesehindernis};
+use zeroize::Zeroizing;
 
 /// Die Grenze fuer das Lesen einer `secrets.txt`: die Editorgrenze fuer den
 /// Klartext, dazu der Kopf und die 16 Byte Pruefwert von Poly1305 (Kopftabelle
@@ -105,8 +117,15 @@ impl Chiffrat {
     /// **keine Ableitung**. Die Sicherungsform zuerst, damit der Rundlauf
     /// derselbe ist wie bei `notes.txt` (ein Stand ohne Schlussumbruch kommt
     /// mit einem zurueck).
+    ///
+    /// Eine Sicherungsform, die eine eigene Zeichenkette braucht (der Stand
+    /// endet ohne Umbruch), tilgt sich beim Fallen.
     pub fn verschliessen(stand: &str, schluessel: &Schluessel) -> Result<Chiffrat, Tresorfehler> {
-        let form = datei::sicherungsform(stand);
+        let mut gewachsen: Option<Zeroizing<String>> = None;
+        let form: &str = match datei::sicherungsform(stand) {
+            Cow::Borrowed(form) => form,
+            Cow::Owned(form) => gewachsen.insert(Zeroizing::new(form)),
+        };
         let bytes = tresor::verschliessen(form.as_bytes(), schluessel)?;
         Ok(Chiffrat(bytes))
     }
@@ -127,10 +146,16 @@ impl Chiffrat {
 
 /// Eine entsperrte `secrets.txt`: der Stand und der Schluessel, mit dem jede
 /// Sicherung verschliesst.
-#[derive(Debug)]
+///
+/// **Der Stand tilgt sich beim Fallen**, denn er traegt jedes Passwort der
+/// Datei: Klick und „Verbinden…“ lassen ihn am Ende ihres Fadens fallen, und
+/// der Editor nimmt ihn ueber `std::mem::take` heraus, sodass in seinem Fall
+/// eine leere Zeichenkette faellt und der Text im Editor weiterlebt. `Debug`
+/// zeigt ihn nicht
+/// (`issues/261016-0532_*_howto-verspricht-ein-tilgen-des-verbindungspassworts-das-klick-und-anhaengeweg-nicht-halten.md`).
 pub struct Entsperrt {
-    /// Der Klartext in gehaltener Form.
-    pub stand: String,
+    /// Der Klartext in gehaltener Form, getilgt beim Fallen.
+    pub stand: Zeroizing<String>,
     /// Der Schluessel aus dem Oeffnen oder, bei einer leeren Datei, aus der
     /// eben festgelegten PIN.
     pub schluessel: Schluessel,
@@ -141,6 +166,17 @@ pub struct Entsperrt {
     /// mit einem gehaltenen Schluessel verlaengert keine Frist (Entscheidung 3
     /// des Plans).
     pub eingegeben: bool,
+}
+
+impl std::fmt::Debug for Entsperrt {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Entsperrt")
+            .field("stand", &format_args!("<{} Bytes>", self.stand.len()))
+            .field("schluessel", &self.schluessel)
+            .field("kopf_auf_platte", &self.kopf_auf_platte)
+            .field("eingegeben", &self.eingegeben)
+            .finish()
+    }
 }
 
 /// Warum [`geheimnisse_lesen`] nichts entsperrt hat.
@@ -214,7 +250,7 @@ pub fn geheimnisse_lesen(pfad: &Path, mittel: &Oeffnungsmittel) -> Result<Entspe
             Oeffnungsmittel::Pin(pin) => {
                 let schluessel = tresor::neuer_schluessel(pin)
                     .map_err(|fehler| ohne_mittel(gesperrt(pfad, fehler.meldung())))?;
-                (Vec::new(), schluessel, true)
+                (Zeroizing::new(Vec::new()), schluessel, true)
             }
             Oeffnungsmittel::Schluessel(_) => {
                 return Err(Gesperrt {
@@ -231,16 +267,22 @@ pub fn geheimnisse_lesen(pfad: &Path, mittel: &Oeffnungsmittel) -> Result<Entspe
             datei_leer: false,
         })?;
         (
-            geoeffnet.klartext,
+            Zeroizing::new(geoeffnet.klartext),
             geoeffnet.schluessel,
             geoeffnet.eingegeben,
         )
     };
-    let stand = datei::einlesen(klartext).ok_or_else(|| {
-        ohne_mittel(Abweisung::NichtAlsTextLesbar {
-            pfad: pfad.to_path_buf(),
-        })
-    })?;
+    // Gewandelt wird geliehen und in genau eine neue Zeichenkette, die sich
+    // beim Fallen tilgt; die entschluesselten Bytes tilgt ihr `Zeroizing`.
+    // `datei::einlesen` naehme die Bytes und liesse sie bei einem Fehler
+    // ungetilgt fallen.
+    let stand = std::str::from_utf8(&klartext)
+        .map(|text| Zeroizing::new(datei::gehaltene_form(text).into_owned()))
+        .map_err(|_| {
+            ohne_mittel(Abweisung::NichtAlsTextLesbar {
+                pfad: pfad.to_path_buf(),
+            })
+        })?;
     Ok(Entsperrt {
         stand,
         schluessel,
@@ -271,7 +313,7 @@ pub struct Verbindungsentwurf {
     /// Das Konto.
     pub konto: String,
     /// Das Passwort, getilgt beim Fallen.
-    pub passwort: zeroize::Zeroizing<String>,
+    pub passwort: Zeroizing<String>,
     /// Die Notizen, im Blatt einzeilig.
     pub notizen: String,
 }
@@ -315,6 +357,10 @@ pub enum Entwurfsfehler {
     Ziel(Zielfehler),
     /// Ein Feld traegt einen Zeilenumbruch.
     Umbruch,
+    /// Aus Protokoll und Adresse entsteht auch kodiert keine URL; gefragt
+    /// vom Blatt ueber `appkit::verbinden::url_aus`, nicht von
+    /// [`entwurf_pruefen`], das ohne Foundation auskommt.
+    KeineUrl,
 }
 
 impl Entwurfsfehler {
@@ -325,6 +371,7 @@ impl Entwurfsfehler {
             Entwurfsfehler::NameLeer => text(Text::VerbindenNameLeer).to_owned(),
             Entwurfsfehler::Ziel(fehler) => fehler.meldung(),
             Entwurfsfehler::Umbruch => text(Text::AbweisungUmbruchImGeheimnisfeld).to_owned(),
+            Entwurfsfehler::KeineUrl => text(Text::VerbindenKeineUrl).to_owned(),
         }
     }
 }
@@ -334,9 +381,11 @@ impl Entwurfsfehler {
 /// Zeilenumbruch in einem Feld.
 ///
 /// **Protokoll und Adresse fragen dieselben zwei Regeln wie der Klick**
-/// (`verbindung::protokoll_pruefen`, `verbindung::adresse_pruefen`), damit
-/// das Blatt nichts annimmt, was der Klick danach abweist. Rein und ohne
-/// Fenster pruefbar.
+/// (`verbindung::protokoll_pruefen`, `verbindung::adresse_pruefen`). Rein
+/// und ohne Fenster pruefbar, und deshalb ohne die dritte Frage des Klicks,
+/// ob aus der Adresse eine URL entsteht: die stellt Foundation, und das Blatt
+/// fragt sie danach selbst (`appkit::blaetter::verbindung::pruefen`), damit
+/// es nichts annimmt, was der Klick danach abweist.
 pub fn entwurf_pruefen(entwurf: &Verbindungsentwurf) -> Result<(), Entwurfsfehler> {
     let felder = [
         entwurf.name.as_str(),
@@ -411,11 +460,11 @@ pub fn anhaengen(
     if !geheimnisse::name_frei(&entsperrt.stand, &entwurf.name) {
         return Anhaengausgang::NameVergeben { zu_merken };
     }
-    let neustand = match geheimnisse::hinzufuegen(&entsperrt.stand, entwurf) {
-        Ok(neustand) => neustand,
+    let neutext = match geheimnisse::hinzufuegen(&entsperrt.stand, entwurf) {
+        Ok(neustand) => Zeroizing::new(neustand.text),
         Err(abweisung) => return Anhaengausgang::Gescheitert(abweisung.meldung().to_owned()),
     };
-    let chiffrat = match Chiffrat::verschliessen(&neustand.text, &entsperrt.schluessel) {
+    let chiffrat = match Chiffrat::verschliessen(&neutext, &entsperrt.schluessel) {
         Ok(chiffrat) => chiffrat,
         Err(fehler) => return Anhaengausgang::Gescheitert(fehler.meldung()),
     };
@@ -568,7 +617,7 @@ mod tests {
         let mit_schluessel =
             geheimnisse_lesen(&pfad, &Oeffnungsmittel::Schluessel(schluessel.clone()))
                 .expect("der eigene Schluessel oeffnet");
-        assert_eq!(mit_schluessel.stand, "## A\nx\n");
+        assert_eq!(mit_schluessel.stand.as_str(), "## A\nx\n");
         assert!(!mit_schluessel.eingegeben);
         assert!(mit_schluessel.kopf_auf_platte);
 
@@ -588,6 +637,34 @@ mod tests {
         let falsch = geheimnisse_lesen(&pfad, &Oeffnungsmittel::Pin(pin("1111")))
             .expect_err("eine falsche PIN oeffnet nicht");
         assert!(falsch.mittel_abgewiesen);
+    }
+
+    /// `Debug` einer entsperrten Datei zeigt keinen Wert aus dem Klartext,
+    /// allein dessen Laenge
+    /// (`issues/261016-0532_*_howto-verspricht-ein-tilgen-des-verbindungspassworts-das-klick-und-anhaengeweg-nicht-halten.md`).
+    #[test]
+    fn debug_einer_entsperrten_datei_zeigt_keinen_klartext() {
+        let ordner = Pruefordner::neu("tresorweg-debug");
+        let pfad = ordner.pfad().join("secrets.txt");
+        let schluessel = kleiner_schluessel("0417", 5);
+        let klartext =
+            "## NAS\nprotocol: smb\naddress: nas.local\naccount: kai\npassword: geheim-4711\n";
+        Chiffrat::verschliessen(klartext, &schluessel)
+            .expect("verschliessen")
+            .schreiben(&pfad)
+            .expect("schreiben");
+
+        let entsperrt = geheimnisse_lesen(&pfad, &Oeffnungsmittel::Schluessel(schluessel))
+            .expect("der eigene Schluessel oeffnet");
+        assert_eq!(entsperrt.stand.as_str(), klartext);
+        let gezeigt = format!("{entsperrt:?}");
+        for wert in ["geheim-4711", "nas.local", "NAS", "kai", "smb"] {
+            assert!(!gezeigt.contains(wert), "Debug zeigt {wert}: {gezeigt}");
+        }
+        assert!(
+            gezeigt.contains(&format!("<{} Bytes>", klartext.len())),
+            "{gezeigt}"
+        );
     }
 
     /// Eine leere Datei: mit PIN entsteht ein neuer Schluessel, der als

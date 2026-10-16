@@ -726,8 +726,17 @@ pub mod notizen {
         if !schluss {
             neu.push('\n');
         }
-        neu.push_str(&themenzeile(thema));
-        neu.push_str(&textzeilen(text));
+        // Unmittelbar angehaengt und nicht ueber `themenzeile` und
+        // `textzeilen`: deren Zwischenkopie fiele ungetilgt, und fuer ein
+        // Geheimnis traegt `text` das Passwort. Die Kapazitaet oben reicht,
+        // also zieht `neu` unterwegs nicht um.
+        neu.push_str(THEMENMARKE);
+        neu.push_str(thema);
+        neu.push('\n');
+        if !text.is_empty() {
+            neu.push_str(text);
+            neu.push('\n');
+        }
         if !schluss {
             let _ = neu.pop();
         }
