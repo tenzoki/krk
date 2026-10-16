@@ -1,0 +1,30 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "0e561734-ced1-4d58-b7ef-532413899ec2",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/261016-1945-sftp-ordner-im-dateifenster-wie-lokal/decisions/261016-1946-auf-welchem-weg-wird-eine-sftp-verbindung-zu-einem-ordner-im-dateifenster.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": {
+      "kind": "other",
+      "path": "work-packages/261016-1945-sftp-ordner-im-dateifenster-wie-lokal/decisions/261016-1946-auf-welchem-weg-wird-eine-sftp-verbindung-zu-einem-ordner-im-dateifenster.md",
+      "sha256": "sha256:0f2e6d32ca6bd98f5bdce228ae7949be9773ac443cf1b18e7134b45875f844b5"
+    },
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

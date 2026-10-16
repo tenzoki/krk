@@ -50,6 +50,12 @@
 //! Systemaufruf; die Regel, nach der ein nutzersichtbarer Text entsteht,
 //! steht im Kopf jenes Moduls.
 //!
+//! `fern` spricht SFTP v3 ueber die Pipes eines Kindprozesses, damit ein
+//! Dateifenster einen Ordner auf einem Server zeigen kann. Jede Anfrage
+//! verlangt das Pfand `fern::Fernfaden`, das allein in einem Arbeitsfaden
+//! entsteht; eine Anfrage vom Hauptfaden aus uebersetzt nicht. Den Grund und
+//! die Grenzen schreibt der Kopf jenes Moduls aus.
+//!
 //! Der Kern kennt AppKit nicht. Das ist der Grund, aus dem er ohne Fenster
 //! testbar ist, und es ist die Grenze, die `krk-ui` von `krk-core` trennt.
 //!
@@ -69,6 +75,7 @@
 
 pub mod ablage;
 pub mod bild;
+pub mod fern;
 pub mod git;
 pub mod heimordner;
 pub mod leseprofil;

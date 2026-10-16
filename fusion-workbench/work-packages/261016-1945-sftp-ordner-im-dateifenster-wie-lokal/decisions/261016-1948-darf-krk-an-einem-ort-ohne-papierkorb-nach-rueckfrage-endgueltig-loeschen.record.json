@@ -1,0 +1,30 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "02985ace-97f3-4098-98b4-7e9bb2825cda",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/261016-1945-sftp-ordner-im-dateifenster-wie-lokal/decisions/261016-1948-darf-krk-an-einem-ort-ohne-papierkorb-nach-rueckfrage-endgueltig-loeschen.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": {
+      "kind": "other",
+      "path": "work-packages/261016-1945-sftp-ordner-im-dateifenster-wie-lokal/decisions/261016-1948-darf-krk-an-einem-ort-ohne-papierkorb-nach-rueckfrage-endgueltig-loeschen.md",
+      "sha256": "sha256:4af0b0076a7e01fc4118e587a3f89eea2b7648e4fdcbdbde59d4ca4bc8341e6f"
+    },
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

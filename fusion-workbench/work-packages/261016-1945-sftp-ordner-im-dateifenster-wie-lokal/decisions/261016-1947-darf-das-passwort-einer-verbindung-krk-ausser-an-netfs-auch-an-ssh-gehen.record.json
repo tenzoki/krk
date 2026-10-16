@@ -1,0 +1,30 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "43bbdd78-d05f-439d-922d-ac09cc0b027d",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/261016-1945-sftp-ordner-im-dateifenster-wie-lokal/decisions/261016-1947-darf-das-passwort-einer-verbindung-krk-ausser-an-netfs-auch-an-ssh-gehen.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": {
+      "kind": "other",
+      "path": "work-packages/261016-1945-sftp-ordner-im-dateifenster-wie-lokal/decisions/261016-1947-darf-das-passwort-einer-verbindung-krk-ausser-an-netfs-auch-an-ssh-gehen.md",
+      "sha256": "sha256:f2c0e301d85eb69e83e6f701c6d8312def3f0232e8711260965dce72020fd373"
+    },
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

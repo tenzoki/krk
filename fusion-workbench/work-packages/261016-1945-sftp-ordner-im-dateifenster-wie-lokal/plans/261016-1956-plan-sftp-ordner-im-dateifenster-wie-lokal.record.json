@@ -1,0 +1,68 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "5ae7ea43-a658-4b66-a56f-2ed614dc0671",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "plan",
+  "narrative": {
+    "path": "work-packages/261016-1945-sftp-ordner-im-dateifenster-wie-lokal/plans/261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md"
+  },
+  "filed_by": {
+    "actor": "implementation-planner",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "in_progress",
+    "steps": [
+      {
+        "id": "1",
+        "state": "done"
+      },
+      {
+        "id": "2",
+        "state": "in_progress"
+      },
+      {
+        "id": "3",
+        "state": "open"
+      },
+      {
+        "id": "4",
+        "state": "open"
+      },
+      {
+        "id": "5",
+        "state": "open"
+      },
+      {
+        "id": "6",
+        "state": "open"
+      },
+      {
+        "id": "7",
+        "state": "open"
+      },
+      {
+        "id": "8",
+        "state": "open"
+      },
+      {
+        "id": "9",
+        "state": "open"
+      }
+    ],
+    "criteria": [],
+    "acceptance": {
+      "ref": {
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "record_id": "e968d67c-1aa5-466e-9699-8e6fdbbe5b03"
+      },
+      "revision": "sha256:8f507e97abee5fc9c0339de98d475c76bd295a08adc898c0d6c25864bddfa811"
+    }
+  }
+}
