@@ -30,6 +30,17 @@
 //! Blaetter dieser Bauart zaehlen will, zaehlt die Rufer von
 //! [`Blatt::bestaetigung_pruefen`] und nicht diesen Kopf.
 //!
+//! **Seit dem 261016 kommen zwei aus der Arbeit an den Verbindungen dazu**:
+//! das Blatt „Verbinden“ ([`verbindung`]), das eine Verbindung in
+//! `secrets.txt` anlegt und wie das PIN-Blatt verdeckt ist, und das Blatt fuer
+//! einen unbekannten Rechnerschluessel ([`rechnerschluessel`]), das beim
+//! ersten Verbinden mit einem sftp-Server Rechner, Port und Fingerabdruecke
+//! zeigt. Das zweite haelt die Reihenfolge der Rueckfrage vor dem Raeumen:
+//! „Abbrechen“ vorn auf der Eingabetaste, „Annehmen“ hinten auf Cmd+Return.
+//! Die Rueckfrage vor dem Raeumen ([`loeschbestaetigung`]) hat seit demselben
+//! Tag eine zweite Gestalt, die vor dem endgueltigen Loeschen an einem Ort ohne
+//! Papierkorb fragt; sie ist kein weiteres Blatt.
+//!
 //! **Daneben liegt seit Stufe 3 der Home-Arbeit ein Blatt, das keines dieser
 //! Huelle ist**: der Ordnerdialog von „Ort waehlen…“ ([`ortwahl`]) ist ein
 //! `NSOpenPanel` und kein `NSAlert`, baut also weder ueber [`Blatt::neu`] noch

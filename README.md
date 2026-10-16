@@ -356,7 +356,8 @@ Verbindung, sobald es gebraucht ist, und der entschlüsselte Text, den ein Klick
 auf eine Verbindung und „Verbinden…“ lesen, sobald ihr Gang endet. Nicht
 getilgt werden die PIN, der entschlüsselte Text in Editor und Tabelle, was
 macOS für die Felder des Blattes „Verbinden“ hält, die übrigen Felder einer
-Verbindung neben dem Text, die Kopie des Passworts beim System, die inneren
+Verbindung neben dem Text, die Kopie des Passworts beim System und bei `ssh`
+samt der Abschrift in der Anmeldehilfe, die inneren
 Arbeitsdaten der Verfahren und Reste, die das Verschieben oder Wachsen eines
 Werts im Speicher hinterlässt. Im Einzelnen steht das in `HowTo.md` unter „Was
 getilgt wird und was nicht“.
@@ -372,11 +373,46 @@ Einträge unter demselben Namen, verbindet KRK nicht.
 | Protokoll | Weg |
 |---|---|
 | `smb`, `afp`, `nfs`, `ftp`, `webdav` (über `http://`), `webdavs` (über `https://`) | KRK hängt ein, mit Konto und Passwort als eigenen Werten |
-| `http`, `https`, `ssh`, `sftp`, `vnc` | KRK übergibt die Adresse an das System, **ohne Passwort**; bei `ssh`, `sftp` und `vnc` mit dem Konto davor |
+| `sftp` | KRK verbindet selbst über `/usr/bin/ssh` und zeigt den Ordner auf dem Server im aktiven Dateifenster |
+| `http`, `https`, `ssh`, `vnc` | KRK übergibt die Adresse an das System, **ohne Passwort**; bei `ssh` und `vnc` mit dem Konto davor |
 
-**Das Passwort verlässt KRK allein beim Einhängen**, als Argument an das
-System, das es an den Server schickt. In `bookmarks.toml` steht von einer
+**Das Passwort verlässt KRK an genau zwei Stellen**: beim Einhängen als
+Argument an das System, das es an den Server schickt, und bei `sftp` an `ssh`,
+über die Anmeldehilfe weiter unten. In `bookmarks.toml` steht von einer
 Verbindung allein ihr Name.
+
+### Ordner auf einem Server: was das Bündel aufruft
+
+**Für `sftp` startet KRK Programme des Systems und bringt keines mit**:
+`/usr/bin/ssh` trägt die Verbindung (`ssh -s … sftp`), `/usr/bin/ssh-keygen`
+fragt, ob ein Rechnerschlüssel bekannt ist, und rechnet die Fingerabdrücke,
+`/usr/bin/ssh-keyscan` holt die Schlüssel eines unbekannten Rechners.
+Verschlüsselung, Schlüssel, Agent und `~/.ssh/config` bleiben damit bei
+OpenSSH; KRK spricht über die Leitung von `ssh` allein das Dateiprotokoll SFTP
+in der Fassung 3. Verbunden wird immer mit `StrictHostKeyChecking=yes`. Einen
+unbekannten Schlüssel nimmt KRK erst an, wenn der Nutzer ihn im Blatt mit den
+Fingerabdrücken annimmt, und dann hängt es genau die gezeigten Zeilen an die
+erste `UserKnownHostsFile` an; einen geänderten Schlüssel weist es ab. Die
+Proben von `make check` brauchen dafür kein Netz: sie sprechen mit
+`/usr/libexec/sftp-server` des Systems über dieselben Leitungen.
+
+**Das Binärziel `krk` hat eine zweite Rolle, die Anmeldehilfe.** Mit Passwort
+setzt KRK in der Umgebung von `ssh` `SSH_ASKPASS` auf sein eigenes Programm,
+`SSH_ASKPASS_REQUIRE=force` und `KRK_ANMELDEHILFE` auf den Pfad eines Sockets
+in einem Ordner mit den Rechten `0700`. Fragt `ssh` nach dem Passwort, startet
+es `krk`; `main` prüft `KRK_ANMELDEHILFE` als erste Handlung, vor jeder
+Berührung von AppKit, holt das Passwort einmal am Socket ab, schreibt es auf
+seine Standardausgabe und endet. Kein Argument und keine Umgebungsvariable
+trägt das Passwort, und KRK gibt es je Aufbau höchstens einmal heraus. **Wer am
+Socket fragt, prüft KRK nicht**: ein Prozess desselben Benutzerkontos, der
+zuerst fragt, bekommt das Passwort, und danach scheitert die Anmeldung
+sichtbar. Wer `krk` von Hand mit gesetztem `KRK_ANMELDEHILFE` startet, bekommt
+deshalb keine Anwendung, sondern die Anmeldehilfe.
+
+**Ferne Ordner zählen nicht zu den zehn Geschwindigkeitszusagen**; sie
+gelten für lokale Ordner. Jede Anfrage an den Server stellt ein Arbeitsfaden,
+nie der Hauptfaden, sodass KRK auch bei einer langsamen Leitung bedienbar
+bleibt.
 
 **Eine ältere Fassung von KRK hält eine `bookmarks.toml` mit einer Verbindung
 für beschädigt.** Sie legt den Inhalt als `bookmarks.toml.beschaedigt` daneben,

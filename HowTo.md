@@ -251,6 +251,16 @@ Die dritte Zeile ist der Grund für die ganze Regel: ein gehaltener Rückschritt
 trägt nicht über die Grenze, an der der Filtertext leer wird. `cmd+delete` und
 `f8` gehen an dieser Unterscheidung vorbei und räumen in jeder Lage.
 
+**An einem Ort ohne Papierkorb löscht derselbe Befehl endgültig, nach einer
+eigenen Rückfrage.** Das betrifft jeden Ordner auf einem Server (siehe „Ordner
+auf einem Server“ unter „Verbindungen“) und eine eingehängte Freigabe, die
+keinen Papierkorb führt, etwa über `smb`. Die Rückfrage sagt dann „endgültig
+löschen“ und dass sich nichts zurückholen lässt, die Schaltfläche heißt
+„Endgültig löschen“, und vorbelegt ist „Abbrechen“: Return und Esc brechen ab,
+`cmd+return` löscht. Bis zur Fassung vom 261016 meldete KRK an solchen Orten
+nur, dass nichts gelöscht wurde. Ein Ort mit Papierkorb geht unverändert den
+Weg in den Papierkorb.
+
 **Die zwei Ankreuzfelder der Bereichsleiste am Fensterfuß gelten dem sichtbaren
 Tab, nicht dem Fenster.** „Deep" dehnt die Suche auf den Unterbaum aus und
 **steht ab Werk auf ein**. „Content" liest zusätzlich den Text der Dateien und
@@ -1635,7 +1645,8 @@ mit Nullen, bevor es den Speicher freigibt.
 - Getilgt wird das Passwort einer Verbindung, sobald es nicht mehr gebraucht
   wird: die Abschrift, die KRK bei jedem Tastendruck und beim Anlegen aus den
   Feldern des Blattes „Verbinden“ liest, und der Wert, den ein Klick aus
-  `secrets.txt` liest, nach dem Einhängen.
+  `secrets.txt` liest, nach dem Einhängen; bei einer `sftp`-Verbindung, sobald
+  KRK es an `ssh` gereicht hat oder der Aufbau endet.
 - Getilgt wird der entschlüsselte Text von `secrets.txt`, den ein Klick auf
   eine Verbindung und „Verbinden…“ lesen, sobald ihr Gang endet, mit allen
   Passwörtern darin; ebenso der neue Text, den „Verbinden…“ verschlüsselt und
@@ -1644,7 +1655,10 @@ mit Nullen, bevor es den Speicher freigibt.
   Editor oder in der Tabelle steht; was macOS für die Felder des Blattes
   „Verbinden“ hält, das Passwortfeld eingeschlossen; Name, Protokoll, Adresse,
   Konto und Notizen, die KRK beim Verbinden und Anlegen neben dem Text hält;
-  die Kopie des Passworts, die KRK an das System zum Einhängen übergibt; die
+  die Kopie des Passworts, die KRK an das System zum Einhängen übergibt; bei
+  `sftp` die Bytes im Puffer der Verbindung zu `ssh`, die Abschrift im kurzen
+  Hilfsprozess, der das Passwort an `ssh` weitergibt und danach endet, und
+  was `ssh` selbst damit tut; die
   inneren Arbeitsdaten der Verschlüsselungsverfahren; und Reste, die das
   Verschieben oder Wachsen eines Werts im Speicher hinterlässt.
 
@@ -1693,9 +1707,10 @@ erneute PIN“.
 
 **Das Passwort einer Verbindung geht an den Rechner, an dem man sich
 anmeldet.** Ein Klick auf eine Verbindung, die einhängt, reicht Konto und
-Passwort an das System weiter, und das System schickt sie an den Server. Der
-Eintrag in `secrets.txt` bestimmt, wohin. Eine Verbindung, die KRK an ein
-anderes Programm übergibt, bekommt nie ein Passwort.
+Passwort an das System weiter, und das System schickt sie an den Server. Eine
+`sftp`-Verbindung reicht das Passwort an `ssh`, und `ssh` schickt es an den
+Server. Der Eintrag in `secrets.txt` bestimmt, wohin. Eine Verbindung, die KRK
+an ein anderes Programm übergibt, bekommt nie ein Passwort.
 
 **Kopierter Text liegt im Klartext in der Zwischenablage.** `cmd+c` aus der
 Tabelle oder aus dem Rohtext ist erlaubt. Danach kann jedes Programm des
@@ -1750,7 +1765,8 @@ Wie die Datei aufgebaut ist und wie man sie ohne KRK entschlüsselt, steht in
 **Eine Verbindung ist ein Eintrag in `secrets.txt` und ein Lesezeichen in der
 Leiste, das ihn beim Namen nennt.** Ein Klick auf das Lesezeichen liest den
 Eintrag und stellt die Verbindung her, etwa zu einer Freigabe auf einem
-Netzlaufwerk.
+Netzlaufwerk oder, über `sftp`, zu einem Ordner auf einem Server, der dann im
+Dateifenster steht wie ein lokaler.
 
 #### Eine Verbindung anlegen
 
@@ -1807,7 +1823,7 @@ Textmarken öffnen dagegen weiter schon bei der Auswahl.
 
 KRK liest `secrets.txt` dafür mit dem gemerkten Schlüssel oder fragt nach der
 PIN, sucht den Eintrag mit dem Namen der Verbindung und verbindet je nach
-Protokoll auf einem von zwei Wegen. Gelesen wird der gesicherte Stand auf der
+Protokoll auf einem von drei Wegen. Gelesen wird der gesicherte Stand auf der
 Platte, nicht ein ungesicherter im Editor. Groß- und Kleinschreibung des
 Protokolls zählen nicht.
 
@@ -1816,11 +1832,13 @@ Protokolls zählen nicht.
 | `smb`, `afp`, `nfs`, `ftp` | einhängen | KRK hängt `<protokoll>://<adresse>` ein, mit Konto und Passwort |
 | `webdav`, `webdavs` | einhängen | ebenso, über `http://` beziehungsweise `https://` |
 | `http`, `https` | an das System | der Browser öffnet `<protokoll>://<adresse>`, ohne Konto und ohne Passwort |
-| `ssh`, `sftp`, `vnc` | an das System | das zuständige Programm öffnet `<protokoll>://<konto>@<adresse>`, ohne Passwort; ohne Konto fehlt `<konto>@` |
+| `sftp` | im Dateifenster | KRK verbindet selbst über `ssh` und zeigt den Ordner auf dem Server im aktiven Dateifenster; siehe „Ordner auf einem Server“ |
+| `ssh`, `vnc` | an das System | das zuständige Programm öffnet `<protokoll>://<konto>@<adresse>`, ohne Passwort; ohne Konto fehlt `<konto>@` |
 
-**Das Passwort verlässt KRK allein beim Einhängen**, als eigener Wert an das
-System und nie in einer Adresse. Die Programme, an die KRK übergibt, fragen
-selbst danach, wenn sie es brauchen. Die Adresse trägt kein Schema: `nas.local/daten`
+**Das Passwort verlässt KRK allein beim Einhängen und bei `sftp`**: beim
+Einhängen als eigener Wert an das System, bei `sftp` an `ssh`, und nie in einer
+Adresse. Die Programme, an die KRK übergibt, fragen selbst danach, wenn sie es
+brauchen. Die Adresse trägt kein Schema: `nas.local/daten`
 und nicht `smb://nas.local/daten`. **Beim Einhängen gehören `#` und `?` zum
 Pfad**: `nas.local/Daten#1` hängt den Ordner `Daten#1` ein und nicht `Daten`.
 An das System übergeben bleiben sie, was sie in einer Webadresse sind, also
@@ -1848,6 +1866,136 @@ bedienbar, abbrechen lässt es sich aber nicht.
 Der Klick wirkt trotzdem. `opt+return` weist man einzeln zu: **F1**, den Befehl
 in der Gruppe „Leiste und Fokus“ wählen, `cmd+t`, `opt+return` drücken,
 „Fertig“.
+
+#### Ordner auf einem Server
+
+**Eine `sftp`-Verbindung zeigt den Ordner auf dem Server im aktiven
+Dateifenster**, und Kopieren, Verschieben, Umbenennen, Anlegen und Löschen
+wirken dort wie in einem lokalen Ordner. KRK spricht dafür selbst mit dem
+Server, über das `ssh` des Systems (`/usr/bin/ssh`); ein weiteres Programm
+braucht es nicht, und was in `~/.ssh/config` steht, gilt weiter.
+
+**Die Adresse lautet `rechner[:port][/pfad]`**, das Konto steht in seinem
+eigenen Feld und nicht als `konto@` vor dem Rechner. Eine IPv6-Adresse mit Port
+schreibt man `[adresse]:port`.
+
+| Adresse | Was das Fenster zeigt |
+|---|---|
+| `ssh.example.org` oder `ssh.example.org:22` | das Anmeldeverzeichnis |
+| `ssh.example.org/~/htdocs` | `htdocs` unter dem Anmeldeverzeichnis |
+| `ssh.example.org/htdocs` | `/htdocs`, vom obersten Ordner des Servers aus |
+
+Das Blatt „Verbinden…“ weist schon beim Anlegen ab, was `ssh` anders läse als
+gemeint: einen leeren Rechner, einen Rechner mit Leerzeichen, mit `@` oder mit
+`-` am Anfang, und einen Port außerhalb von 1 bis 65535. Steht am angegebenen
+Pfad kein Ordner, zeigt das Fenster das Anmeldeverzeichnis, und die
+Statuszeile sagt, welcher Pfad gefehlt hat.
+
+**Angemeldet wird mit dem Passwort aus dem Eintrag oder, bei leerem
+Passwortfeld, mit Schlüssel.** Steht ein Passwort im Eintrag, meldet sich KRK
+damit an und versucht keinen Schlüssel. Ist das Feld leer, meldet sich `ssh`
+mit einem Schlüssel oder über den Agenten an, wie im Terminal, und fragt dabei
+nach nichts: ein Schlüssel mit Passphrase muss dafür im Agenten liegen. Fragt
+der Server nach dem Passwort ein zweites Mal, etwa nach einem zweiten Faktor,
+scheitert die Anmeldung; für einen solchen Server ist der Schlüssel im Agenten
+mit leerem Passwortfeld der Weg.
+
+**Das Passwort steht dabei in keinem Befehl, keiner Datei und keiner
+Umgebungsvariable.** KRK startet sich selbst als Anmeldehilfe für `ssh`, und
+die Hilfe holt das Passwort genau einmal über eine Verbindung in einem Ordner
+ab, den allein das eigene Benutzerkonto öffnen kann. **Wer dort fragt, prüft
+KRK nicht**: ein Programm, das unter demselben Benutzerkonto läuft und während
+des Aufbaus zuerst fragt, bekommt das Passwort. Danach bekommt niemand mehr
+etwas, auch `ssh` nicht, und die Anmeldung scheitert sichtbar. Ein solches
+Programm könnte ebenso `secrets.txt` lesen, solange KRK den Schlüssel gemerkt
+hält; was getilgt wird und was nicht, steht unter „Zehn Minuten ohne erneute
+PIN“.
+
+**Beim ersten Verbinden mit einem Rechner fragt KRK, ob es seinen Schlüssel
+annehmen soll.** Kennt `ssh` den Rechner noch nicht, holt KRK dessen Schlüssel
+und zeigt ein Blatt mit Rechner, Port und je Schlüssel dem Fingerabdruck
+`SHA256:…`. Diese Fingerabdrücke vergleicht man mit denen, die der Betreiber des
+Servers nennt. **Return und Esc brechen ab, `cmd+return` nimmt an**: KRK trägt
+genau die gezeigten Schlüssel in die erste Datei ein, die `ssh` für bekannte
+Rechner nennt (`UserKnownHostsFile`, ab Werk `~/.ssh/known_hosts`), und
+verbindet. Eingetragen wird angehängt, die Datei wird nie neu geschrieben;
+fehlen Ordner oder Datei, legt KRK sie mit den Rechten an, die `ssh` erwartet.
+Nach „Abbrechen“ sagt die Statuszeile, dass der Schlüssel unbekannt ist, und
+verbunden wird nicht.
+
+- **Ein Rechner hinter `ProxyJump` oder `ProxyCommand`** aus `~/.ssh/config`
+  lässt sich so nicht abfragen; die Statuszeile nennt den Grund. Den Schlüssel
+  trägt man dann selbst ein, etwa mit einem ersten `ssh` im Terminal.
+- **Mit `UserKnownHostsFile none`** gibt es kein Blatt, denn KRK wüsste nicht,
+  wohin es eintragen soll; die Statuszeile sagt, dass der Schlüssel unbekannt
+  ist.
+- **Hat sich der Schlüssel eines bekannten Rechners geändert, weist KRK die
+  Verbindung ab** und zeigt die Zeile, mit der `ssh` abgelehnt hat. Ein
+  Überschreiben bietet KRK nicht an. Wer sicher ist, dass der neue Schlüssel
+  stimmt, entfernt den alten im Terminal mit `ssh-keygen -R <rechner>` und
+  verbindet neu.
+
+**Was im Ordner auf dem Server geht:**
+
+- **Bewegen** wie lokal: hineingehen, aufwärts bis `/`, ein neuer Tab zeigt
+  denselben Ordner, „Ordner angleichen“ (`opt+cmd+s`) stellt das andere Fenster
+  auf ihn. Die Pfadeingabe (`shift+cmd+g`) nimmt einen Pfad auf demselben
+  Server, absolut oder mit `~/` vom Anmeldeverzeichnis aus. Zurück zu einem
+  lokalen Ordner geht es über ein Lesezeichen, die Geräteleiste oder „Ordner
+  angleichen“ aus einem lokalen Fenster.
+- **Der Fenstertitel** nennt `konto@rechner:/pfad`, mit abweichendem Port
+  `konto@rechner:port:/pfad`.
+- **Kopieren und Verschieben** in jede Richtung: vom Mac auf den Server, vom
+  Server auf den Mac, zwischen zwei Ordnern desselben Servers und zwischen
+  zwei Servern, auch durch Ziehen aus dem Finder oder aus dem anderen Fenster.
+  Fortschritt, Abbruch und das Blatt bei einem vorhandenen Namen sind dieselben
+  wie lokal; eine abgebrochene Datei wird am Ziel entfernt. **Mit gehen Rechte
+  und Änderungszeit, nicht aber erweiterte Attribute**: Finder-Etiketten,
+  Kommentare und andere Zusatzdaten einer Datei gehen auf dem Weg zum Server
+  verloren. Verknüpfungen bleiben Verknüpfungen; auf einen Server, der sich
+  nicht als OpenSSH ausweist, legt KRK keine an und nennt sie in der
+  Abschlussliste. Die Abschlussliste nennt Einträge auf einem Server als
+  `konto@rechner:/pfad`.
+- **Umbenennen, neuer Ordner und neue Datei** laufen als Vorgang wie ein
+  Kopieren, also einer zur Zeit. Ein vergebener Name wird nie überschrieben,
+  und die Statuszeile meldet ihn wie lokal. Auf einem Server, dessen
+  Dateisystem Groß- und Kleinschreibung nicht unterscheidet, scheitert deshalb
+  auch das Umbenennen von `a` in `A`.
+- **Löschen ist endgültig**, nach der eigenen Rückfrage aus „Der
+  Dateilistenfilter“: ein Ordner auf einem Server hat keinen Papierkorb.
+- **Der Filtertext** filtert über die Namen des angezeigten Ordners.
+
+**Was im Ordner auf dem Server nicht geht:**
+
+- **Ausgegraut** sind dort „Terminal öffnen“, „Mit dem Standardprogramm
+  öffnen“, beide Pfadkopien, „Bearbeiten“ und das Stapelumbenennen, dazu mit
+  dem Fokus im Dateifenster „Teilen“ und „Lesezeichen anlegen“. Die
+  Ankreuzfelder „Deep“ und „Content“ lassen sich nicht bedienen.
+- **Das Kontextmenü graut nichts aus**, sondern meldet: „Öffnen mit“, Zippen,
+  Entpacken, Duplizieren, „Im Finder öffnen“, „Im Finder anzeigen“ und
+  „Auswerfen“ sagen in der Statuszeile „Das geht an einem Ort auf einem Server
+  nicht.“ Dasselbe sagen `cmd+c` und `cmd+x`, die von dort keine
+  Dateiverweise ablegen, und ein Doppelklick auf eine Datei. Ein Doppelklick
+  auf eine Verknüpfung tritt ein, wenn sie auf einen Ordner zeigt.
+- **Die Vorschau** zeigt Name, Größe, Änderungszeit und Typ aus der Liste und
+  liest keinen Inhalt. Der Git-Bereich fragt einen Ordner auf einem Server
+  nicht.
+- **Änderungen, die jemand anders auf dem Server macht, erscheinen nicht von
+  selbst.** KRK liest den Ordner nach jedem eigenen Vorgang neu und sonst
+  beim nächsten Betreten.
+- **Große Ordner und große Dateien brauchen länger als lokal**, weil jede
+  Antwort über die Leitung kommt. KRK bleibt dabei bedienbar; die
+  Geschwindigkeitszusagen gelten für lokale Ordner.
+
+**Eine Verbindung je Server.** Ein zweiter Klick auf dieselbe Verbindung, ein
+neuer Tab und das andere Fenster nutzen die bestehende. **Reißt sie ab, baut
+KRK sie nicht von selbst neu auf**, denn dafür bräuchte es unter Umständen die
+PIN: der Tab sagt, dass die Verbindung getrennt ist, und ein Klick auf die
+Verbindung verbindet neu; danach liest jeder Tab auf diesem Server neu.
+
+**Nach einem Neustart steht ein Tab, der einen Ordner auf einem Server zeigte,
+wieder an dem lokalen Ordner, den er vor dem Verbinden zeigte.** KRK verbindet
+beim Start nicht und fragt dort nicht nach der PIN.
 
 #### Zurück auf eine ältere Fassung
 
