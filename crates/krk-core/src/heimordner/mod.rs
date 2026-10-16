@@ -11,7 +11,9 @@
 //! steht in [`eintraege`], das
 //! Anlegen von Ordner und Dateien samt der einmaligen Uebernahme der alten
 //! Zettel in [`bereitstellen`], das Dateiformat von `secrets.txt` mit Kopf,
-//! Ableitung und Verschluesselung in [`tresor`], das Lesen und Pruefen des
+//! Ableitung und Verschluesselung in [`tresor`], der zehn Minuten gemerkte
+//! Schluessel dazu in [`schluesselmerker`], die Protokolle und Ziele einer
+//! Verbindung aus `secrets.txt` in [`verbindung`], das Lesen und Pruefen des
 //! eingestellten Orts in [`ort`].
 //!
 //! # Zwei Formen, verglichen als Text
@@ -94,7 +96,9 @@
 mod bereitstellen;
 pub mod eintraege;
 pub mod ort;
+pub mod schluesselmerker;
 pub mod tresor;
+pub mod verbindung;
 
 pub use bereitstellen::{
     ALTE_ZETTEL, ALTER_GEHEIMNISNAME, AlteGeheimnisse, AlterZettel, Bereitstellung, Hindernis,

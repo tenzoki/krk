@@ -24,6 +24,19 @@
 //!   (`260926-2253_*_spec-termine-als-weitere-datei-im-heimordner.md`, A2).
 //!   Gelesen wird er deshalb mit [`Notizen::lesen`] und keinem zweiten Leser,
 //!   und die Handlungen in [`termine`] rechnen ueber [`notizen`].
+//! - **Ein Geheimnis** im Klartext von `secrets.txt` ist eine Notiz, deren Text
+//!   mit bis zu vier **Feldzeilen** beginnt
+//!   (`261016-0306_*_in-welcher-form-traegt-secrets-txt-sechs-felder-und-was-wird-aus-den-alten-eintraegen.md`,
+//!   Moeglichkeit 1): `## <Name>`, darunter hoechstens je einmal `protocol:`,
+//!   `address:`, `account:` und `password:`, alles danach sind die Notizen.
+//!   Die Leseregel steht in [`geheimnisse`]; gelesen wird mit
+//!   [`Notizen::lesen`], und die Handlungen dort rechnen ueber [`notizen`].
+//!   **Ein Eintrag im frueheren Format ist ohne Umbau ein Geheimnis mit leeren
+//!   Feldern**: das Thema ist der Name, der Text sind die Notizen. Er bekommt
+//!   seine Grundform mit allen vier Feldzeilen erst, wenn eine Handlung eine
+//!   seiner Zellen aendert, und Lesen und Schreiben ohne Handlung ergeben
+//!   dieselben Bytes; beim Uebergang geht also nichts verloren, weil nichts
+//!   geschrieben wird, das der Nutzer nicht beruehrt hat.
 //! - **Eine fremde Zeile**, die keiner Eintragsform folgt, bleibt erhalten. In
 //!   `tasks.txt` haengt sie an der Aufgabe ueber ihr und wandert mit ihr; in
 //!   `notes.txt` ist alles nach einer Themenzeile Notiztext. Was vor dem ersten
@@ -54,7 +67,9 @@
 //! [`Neustand`]: sie rechnet, der Editor wendet an. Die fuenf an `tasks.txt`
 //! stehen in [`aufgaben`], die vier an `notes.txt` in [`notizen`], die drei
 //! an `appointments.md` in [`termine`], dort neben der Anzeigeordnung nach
-//! dem Datum und der Frage nach dem heutigen Tag.
+//! dem Datum und der Frage nach dem heutigen Tag, die vier am Klartext von
+//! `secrets.txt` in [`geheimnisse`], dort neben der Suche eines Eintrags nach
+//! seinem Namen.
 //!
 //! **Eine Handlung schreibt allein die Zeilen neu, die sie beruehrt**, und die
 //! in der Grundform: Abhaken und Textaendern ersetzen die Kopfzeile ihres
@@ -472,6 +487,16 @@ pub enum Abweisung {
     /// [`Abweisung::ThemenzeileImNotiztext`], mit eigenem Wortlaut, weil „die
     /// naechste Notiz" in der Termintabelle falsch spraeche.
     KopfzeileImTermintext,
+    /// Name, Protokoll, Adresse, Konto oder Passwort eines Geheimnisses
+    /// traegt einen Zeilenumbruch (`\n` oder `\r`). Jedes dieser fuenf Felder
+    /// ist eine Zeile der Datei; was hinter dem Umbruch stuende, laese sich als
+    /// Notiz oder als naechstes Feld zurueck.
+    UmbruchImGeheimnisfeld,
+    /// Eine Zeile in den Notizen eines Geheimnisses beginnt mit `## `.
+    /// Dieselbe Regel wie [`Abweisung::ThemenzeileImNotiztext`], mit eigenem
+    /// Wortlaut, weil die naechste Zeile dort einen Eintrag und keine Notiz
+    /// eroeffnete.
+    KopfzeileInGeheimnisnotizen,
 }
 
 impl Abweisung {
@@ -484,6 +509,8 @@ impl Abweisung {
             Self::ThemenzeileImNotiztext => text(Text::AbweisungThemenzeileImNotiztext),
             Self::UngueltigesDatum => text(Text::AbweisungUngueltigesDatum),
             Self::KopfzeileImTermintext => text(Text::AbweisungKopfzeileImTermintext),
+            Self::UmbruchImGeheimnisfeld => text(Text::AbweisungUmbruchImGeheimnisfeld),
+            Self::KopfzeileInGeheimnisnotizen => text(Text::AbweisungKopfzeileInGeheimnisnotizen),
         }
     }
 }
@@ -657,13 +684,13 @@ pub mod notizen {
     }
 
     /// Die Themenzeile in der Grundform, samt Umbruch.
-    fn themenzeile(thema: &str) -> String {
+    pub(super) fn themenzeile(thema: &str) -> String {
         format!("{THEMENMARKE}{thema}\n")
     }
 
     /// Die Textzeilen eines Notiztextes, samt Umbruch; ein leerer Text hat
     /// keine.
-    fn textzeilen(text: &str) -> String {
+    pub(super) fn textzeilen(text: &str) -> String {
         if text.is_empty() {
             String::new()
         } else {
@@ -1080,3 +1107,9 @@ pub mod termine {
         Tag::aus_ortszeit(crate::verzeichnis::sys::ortszeit(SystemTime::now())?)
     }
 }
+
+// Die Form der Geheimnisse im Klartext von `secrets.txt`, ihre Handlungen und
+// die Suche eines Eintrags nach seinem Namen; eine eigene Datei, damit ihre
+// Aufzaehlungen in Spalte 0 stehen, wo die Probe ueber die `ALLE`-Listen sie
+// liest. Die Doku steht im Kopf jener Datei.
+pub mod geheimnisse;

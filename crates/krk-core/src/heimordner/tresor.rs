@@ -9,10 +9,42 @@
 //! Moeglichkeit 1). **Das Bedrohungsmodell ist allein das versehentliche Lesen
 //! durch Agenten, Werkzeuge und Indexer**; gegen jemanden, der die Datei kopiert
 //! und die zehntausend moeglichen PINs durchprobiert, schuetzt das Format nicht,
-//! und es sagt das auch nicht zu. Ebenso wenig sagt es zu, dass Schluessel oder
-//! Klartext im Speicher getilgt werden: der Editor haelt beide, solange die
-//! Datei offen ist, und ein Tilgen an dieser einen Stelle erreichte die
-//! Textflaeche nicht (Spec, `## Constraints`).
+//! und es sagt das auch nicht zu.
+//!
+//! # Was im Speicher getilgt wird und was nicht
+//!
+//! **Getilgt werden die 32 Schluesselbytes**: [`Schluessel`] ueberschreibt sie
+//! in `Drop` mit der Kiste `zeroize`, also jede Kopie, die faellt, ob sie der
+//! Editor hielt, der Schluesselmerker
+//! ([`super::schluesselmerker::Schluesselmerker`]) oder ein
+//! [`Oeffnungsmittel`]. Seit dem 261016 haelt der Prozess einen Schluessel
+//! zehn Minuten ueber das Schliessen der Datei hinaus
+//! (`261016-0306_*_wie-lange-gilt-ein-eingegebener-schluessel-fuer-secrets-txt-und-was-wird-gemerkt.md`,
+//! Moeglichkeit 1), und der soll nach Ablauf nicht als Rest im Speicher stehen.
+//!
+//! **Nicht getilgt werden, und das sagt dieses Modul ausdruecklich nicht zu:**
+//!
+//! - **die PIN.** [`Pin`] ist ein `Copy`-Typ; jede Uebergabe legt eine Kopie an,
+//!   die keiner faellen sieht, und ein `Drop` ist fuer `Copy` ausgeschlossen.
+//! - **der Klartext.** Der Editor haelt ihn in seiner Textflaeche und in seinem
+//!   Stand, solange die Datei offen ist, und ein Tilgen an dieser einen Stelle
+//!   erreichte die Textflaeche nicht (Spec, `## Constraints`). Dasselbe gilt
+//!   fuer [`Geoeffnet::klartext`].
+//! - **eine Kopie, die eine Verschiebung zuruecklaesst.** Ein `Schluessel` wird
+//!   in Rust bitweise verschoben, und die Stelle, von der er wegzieht, ueberschreibt
+//!   niemand; getilgt wird allein die Stelle, an der er zuletzt faellt.
+//! - **die inneren Zustaende der Verfahren.** `argon2` und `chacha20poly1305`
+//!   legen Arbeitsspeicher und Rundenschluessel an, und deren Merkmale
+//!   `zeroize` bleiben aus (Wurzel-`Cargo.toml`).
+//!
+//! **Dass `Drop` wirklich tilgt, beobachtet keine Probe am freigegebenen
+//! Speicher**: das liesse sich allein mit `unsafe` lesen, und `unsafe` steht im
+//! Kern allein in `verzeichnis/sys.rs`. Die Probe
+//! `ein_fallender_schluessel_tilgt_seine_bytes` beobachtet deshalb zwei Dinge,
+//! die sich ohne `unsafe` beobachten lassen: dass die Tilgung, die `Drop`
+//! ruft, die Bytes am lebenden Wert nullt, und am Quelltext, dass `Drop` sie
+//! ruft und nichts sonst tut. Dazwischen liegt die Zusage der Kiste, dass der
+//! Optimierer ihr Schreiben nicht streicht.
 //!
 //! # Der Kopf, Byte fuer Byte
 //!
@@ -48,7 +80,10 @@
 //! (`260926-0050_*_zieht-jede-sicherung-von-secrets-txt-ein-neues-salz-wenn-das-eine-halbe-sekunde-je-cmd-s-kostet.md`,
 //! Moeglichkeit 3). Abgeleitet wird deshalb an genau zwei Stellen, in
 //! [`oeffnen`] und in [`neuer_schluessel`]; [`verschliessen`] und
-//! [`oeffnen_mit`] nehmen den gehaltenen [`Schluessel`] und leiten nicht ab,
+//! [`oeffnen_mit`] nehmen den gehaltenen [`Schluessel`] und leiten nicht ab.
+//! [`oeffnen_mittels`] ist die eine Stelle ueber beiden Wegen des Oeffnens und
+//! leitet selbst nicht ab: mit [`Oeffnungsmittel::Pin`] geht sie ueber
+//! [`oeffnen`], mit [`Oeffnungsmittel::Schluessel`] ueber [`oeffnen_mit`],
 //! und ein `cmd+s` an
 //! `secrets.txt` kostet so viel wie an jeder anderen Datei. Die 24 Byte der
 //! Nonce von XChaCha20 sind gross genug, um sie je Sicherung zufaellig zu
@@ -269,9 +304,11 @@ impl Parameter {
 /// Parametern, aus denen er stammt.
 ///
 /// Der Editor haelt ihn, solange `secrets.txt` offen ist, und jede Sicherung
-/// verschliesst mit ihm, ohne neu abzuleiten. Salz und Parameter reisen mit,
-/// weil [`verschliessen`] sie in den Kopf schreibt. `Debug` zeigt die
-/// Schluesselbytes nicht; getilgt werden sie nicht (Modulkopf).
+/// verschliesst mit ihm, ohne neu abzuleiten; der Schluesselmerker haelt ihn
+/// zehn Minuten ab der Eingabe. Salz und Parameter reisen mit, weil
+/// [`verschliessen`] sie in den Kopf schreibt. `Debug` zeigt die
+/// Schluesselbytes nicht, und `Drop` tilgt sie; was das nicht erreicht, sagt
+/// der Modulkopf.
 #[derive(Clone, PartialEq, Eq)]
 pub struct Schluessel {
     schluessel: [u8; SCHLUESSELLAENGE],
@@ -279,7 +316,24 @@ pub struct Schluessel {
     parameter: Parameter,
 }
 
+impl Drop for Schluessel {
+    /// Tilgt die Schluesselbytes, bevor der Speicher freigegeben wird; Salz
+    /// und Parameter sind nicht geheim und bleiben. Der Rumpf ist allein der
+    /// Aufruf von [`Schluessel::tilgen`], und die Probe
+    /// `ein_fallender_schluessel_tilgt_seine_bytes` haelt das am Quelltext.
+    fn drop(&mut self) {
+        self.tilgen();
+    }
+}
+
 impl Schluessel {
+    /// Ueberschreibt die 32 Schluesselbytes mit Nullen, so dass der Optimierer
+    /// das Schreiben nicht streichen darf (`zeroize`). Allein aus `Drop`
+    /// gerufen; danach ist der Wert kein Schluessel mehr.
+    fn tilgen(&mut self) {
+        zeroize::Zeroize::zeroize(&mut self.schluessel);
+    }
+
     /// Das Salz, aus dem der Schluessel stammt.
     pub fn salz(&self) -> &[u8; SALZLAENGE] {
         &self.salz
@@ -477,6 +531,30 @@ pub struct Geoeffnet {
     pub klartext: Vec<u8>,
     /// Der abgeleitete Schluessel samt Salz und Parametern aus dem Kopf.
     pub schluessel: Schluessel,
+    /// Ob der Schluessel aus einer eben geprueften Eingabe stammt, also aus
+    /// einer PIN, die die Pruefung des Verfahrens bestanden hat. Nur dann darf
+    /// der Rufer ihn merken; ein Oeffnen mit einem gehaltenen Schluessel merkt
+    /// nicht neu und verlaengert damit keine Frist
+    /// (`261016-0306_*_wie-lange-gilt-ein-eingegebener-schluessel-fuer-secrets-txt-und-was-wird-gemerkt.md`).
+    pub eingegeben: bool,
+}
+
+/// Womit eine nicht leere `secrets.txt` geoeffnet wird: mit einer eben
+/// eingegebenen PIN, die abgeleitet werden muss, oder mit einem gehaltenen
+/// Schluessel, der es schon ist.
+///
+/// Ein Wert und kein Paar aus zwei `Option`: ein Oeffnen hat genau eines der
+/// beiden. `Debug` zeigt weder Ziffern noch Schluesselbytes, weil beide
+/// Bestandteile sie verbergen; der Schluessel wird getilgt, wenn das Mittel
+/// faellt, die PIN nicht (Modulkopf).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Oeffnungsmittel {
+    /// Eine eingegebene PIN; das Oeffnen leitet mit Salz und Parametern des
+    /// Kopfes ab und kostet die Zeit der Ableitung.
+    Pin(Pin),
+    /// Ein gehaltener Schluessel, etwa der gemerkte; das Oeffnen leitet nicht
+    /// ab.
+    Schluessel(Schluessel),
 }
 
 /// Leitet den Schluessel aus PIN, Salz und Parametern ab. Kostet die Zeit, die
@@ -559,6 +637,7 @@ pub fn oeffnen(bytes: &[u8], pin: &Pin) -> Result<Geoeffnet, Oeffnungsfehler> {
     Ok(Geoeffnet {
         klartext,
         schluessel,
+        eingegeben: true,
     })
 }
 
@@ -583,6 +662,34 @@ pub fn oeffnen_mit(bytes: &[u8], schluessel: &Schluessel) -> Result<Vec<u8>, Oef
         return Err(Oeffnungsfehler::PinFalschOderVeraendert);
     }
     entschluesseln(bytes, &kopf, schluessel)
+}
+
+/// Oeffnet eine nicht leere `secrets.txt` mit dem Mittel, das der Rufer
+/// hat; schreibt nie. **Die eine Stelle ueber beiden Wegen des Oeffnens**:
+/// mit einer PIN ueber [`oeffnen`], also mit Ableitung, mit einem Schluessel
+/// ueber [`oeffnen_mit`], also ohne. Selbst leitet sie nicht ab.
+///
+/// [`Geoeffnet::eingegeben`] sagt dem Rufer, ob er den Schluessel merken
+/// darf: ja allein nach einer PIN. Ein Schluessel, der nicht zur Datei
+/// gehoert (fremdes Salz, andere Parameter, veraendertes Byte), ist
+/// [`Oeffnungsfehler::PinFalschOderVeraendert`] wie eine falsche PIN; der
+/// Rufer verwirft ihn dann und fragt nach der PIN.
+#[must_use = "traegt den Klartext oder die eine Meldung; fallengelassen oeffnet sich nichts"]
+pub fn oeffnen_mittels(
+    bytes: &[u8],
+    mittel: &Oeffnungsmittel,
+) -> Result<Geoeffnet, Oeffnungsfehler> {
+    match mittel {
+        Oeffnungsmittel::Pin(pin) => oeffnen(bytes, pin),
+        Oeffnungsmittel::Schluessel(schluessel) => {
+            let klartext = oeffnen_mit(bytes, schluessel)?;
+            Ok(Geoeffnet {
+                klartext,
+                schluessel: schluessel.clone(),
+                eingegeben: false,
+            })
+        }
+    }
 }
 
 /// Die Entschluesselung hinter dem gelesenen Kopf, fuer [`oeffnen`] und
@@ -667,6 +774,74 @@ mod proben {
         assert_eq!(
             oeffnen_mit(b"", &schluessel),
             Err(Oeffnungsfehler::KopfBeschaedigt(Kopfschaden::Abgeschnitten))
+        );
+    }
+
+    /// Die Tilgung, die `Drop` ruft, nullt die 32 Byte am lebenden Wert und
+    /// laesst Salz und Parameter stehen; und `Drop` ruft genau sie und tut
+    /// nichts sonst. Den freigegebenen Speicher selbst liest die Probe nicht,
+    /// denn das ginge allein mit `unsafe` (Modulkopf, „Was im Speicher
+    /// getilgt wird und was nicht“).
+    #[test]
+    fn ein_fallender_schluessel_tilgt_seine_bytes() {
+        let pin = Pin::aus_eingabe("1357").expect("vier Ziffern");
+        let mut schluessel =
+            schluessel_ableiten(&pin, &[4; SALZLAENGE], klein()).expect("Ableitung");
+        assert_ne!(schluessel.schluessel, [0; SCHLUESSELLAENGE]);
+        schluessel.tilgen();
+        assert_eq!(schluessel.schluessel, [0; SCHLUESSELLAENGE]);
+        assert_eq!(schluessel.salz, [4; SALZLAENGE]);
+        assert_eq!(schluessel.parameter, klein());
+
+        let quelle = include_str!("tresor.rs");
+        let rumpf = quelle
+            .split("impl Drop for Schluessel {")
+            .nth(1)
+            .and_then(|rest| rest.split("\n}\n").next())
+            .expect("impl Drop for Schluessel steht in der Datei");
+        let code: Vec<&str> = rumpf
+            .lines()
+            .map(str::trim)
+            .filter(|zeile| !zeile.is_empty() && !zeile.starts_with("//"))
+            .collect();
+        assert_eq!(
+            code,
+            ["fn drop(&mut self) {", "self.tilgen();", "}"],
+            "Drop fuer Schluessel ruft allein tilgen"
+        );
+    }
+
+    /// `oeffnen_mittels` oeffnet mit beiden Mitteln dieselbe Datei und sagt,
+    /// ob der Schluessel aus einer Eingabe stammt; ein Schluessel mit fremdem
+    /// Salz wird wie eine falsche PIN abgewiesen.
+    #[test]
+    fn oeffnen_mittels_oeffnet_mit_pin_und_mit_schluessel() {
+        let pin = Pin::aus_eingabe("8642").expect("vier Ziffern");
+        let schluessel = schluessel_ableiten(&pin, &[2; SALZLAENGE], klein()).expect("Ableitung");
+        let datei = verschliessen(b"## NAS\n", &schluessel).expect("verschliessen");
+
+        let mit_pin =
+            oeffnen_mittels(&datei, &Oeffnungsmittel::Pin(pin)).expect("oeffnet mit der PIN");
+        assert_eq!(mit_pin.klartext, b"## NAS\n");
+        assert!(mit_pin.eingegeben);
+        assert_eq!(mit_pin.schluessel, schluessel);
+
+        let mit_schluessel =
+            oeffnen_mittels(&datei, &Oeffnungsmittel::Schluessel(schluessel.clone()))
+                .expect("oeffnet mit dem Schluessel");
+        assert_eq!(mit_schluessel.klartext, b"## NAS\n");
+        assert!(!mit_schluessel.eingegeben);
+        assert_eq!(mit_schluessel.schluessel, schluessel);
+
+        let fremd = schluessel_ableiten(&pin, &[3; SALZLAENGE], klein()).expect("Ableitung");
+        assert_eq!(
+            oeffnen_mittels(&datei, &Oeffnungsmittel::Schluessel(fremd)).map(|g| g.klartext),
+            Err(Oeffnungsfehler::PinFalschOderVeraendert)
+        );
+        let falsch = Pin::aus_eingabe("8643").expect("vier Ziffern");
+        assert_eq!(
+            oeffnen_mittels(&datei, &Oeffnungsmittel::Pin(falsch)).map(|g| g.klartext),
+            Err(Oeffnungsfehler::PinFalschOderVeraendert)
         );
     }
 

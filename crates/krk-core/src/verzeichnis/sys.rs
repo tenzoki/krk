@@ -1,5 +1,5 @@
-//! Die Systemschicht des Kerns: die sieben Schnittstellen, die KRK braucht, und
-//! die elf Funktionen, die sie binden.
+//! Die Systemschicht des Kerns: die acht Schnittstellen, die KRK braucht, und
+//! die zwoelf Funktionen, die sie binden.
 //!
 //! Dies ist das einzige Modul in `krk-core`, das die Regel `deny(unsafe_code)`
 //! aus `lib.rs` oeffnet. Die Regel lautet dort `deny` und nicht `forbid`, damit
@@ -24,10 +24,13 @@
 //!                        sperre_abgeben
 //! localtime_r(3)     ──> ortszeit             ──> operation::zippen
 //!                                             └─> leseprofil::bausteine
+//! clock_gettime_nsec_np(3)
+//!                    ──> wachzeit             ──> krk-ui, als `jetzt` an
+//!                                                 heimordner::schluesselmerker
 //! ```
 //!
-//! **Sieben ist die Zahl der Schnittstellen und nicht die der Bindungen: es sind
-//! sieben Schnittstellen und elf gebundene Funktionen, denn `copyfile(3)`
+//! **Acht ist die Zahl der Schnittstellen und nicht die der Bindungen: es sind
+//! acht Schnittstellen und zwoelf gebundene Funktionen, denn `copyfile(3)`
 //! braucht seine vier `copyfile_state_*`-Helfer.** Ohne sie liesse sich der
 //! Fortschrittsrueckruf nicht setzen und die Zahl der kopierten Bytes nicht
 //! abfragen; eine eigene Schnittstelle sind sie deshalb nicht, aber vier weitere
@@ -35,10 +38,12 @@
 //! liest ein Leser hier nach. Die Zeile steht wortgleich in `lib.rs` und in
 //! `verzeichnis/mod.rs`; die dritte Stelle hat der Defekt `260810-1017`
 //! nachgezogen, die fuenfte Schnittstelle die Runde 7, die sechste die
-//! Runde 18 und die siebte, `fsync(2)`, der Defekt vom 261004 (das Sichern auf
-//! einem Cryptomator-Tresor, siehe [`auf_die_platte_bringen`]). Gebunden sind
-//! alle elf in den fuenf `unsafe extern "C"`-Bloecken dieses Moduls; `fsync`
-//! steht im Block von `fcntl`, weil es dessen Rueckfall ist.
+//! Runde 18, die siebte, `fsync(2)`, der Defekt vom 261004 (das Sichern auf
+//! einem Cryptomator-Tresor, siehe [`auf_die_platte_bringen`]) und die achte,
+//! `clock_gettime_nsec_np(3)`, die Arbeit am gemerkten Schluessel von
+//! `secrets.txt` vom 261016 (siehe [`wachzeit`]). Gebunden sind alle zwoelf in
+//! den sechs `unsafe extern "C"`-Bloecken dieses Moduls; `fsync` steht im Block
+//! von `fcntl`, weil es dessen Rueckfall ist.
 //!
 //! **`flock(2)` ist die fuenfte, und sie ist die erste, die keine Datei liest
 //! oder schreibt, sondern eine Absprache zwischen zwei Prozessen traegt.** An
@@ -1371,6 +1376,53 @@ fn epochensekunden(zeitpunkt: SystemTime) -> Option<time_t> {
             ganze.checked_neg()
         }
     }
+}
+
+/// `CLOCK_MONOTONIC` aus dem SDK-Kopf `usr/include/_time.h`
+/// (`_CLOCK_MONOTONIC __CLOCK_AVAILABILITY = 6`, eingebunden ueber `time.h`;
+/// nachgelesen am 261016 im SDK unter
+/// `xcrun --show-sdk-path`). Der Typ `clockid_t` ist dort eine Aufzaehlung mit
+/// Werten ab null, also ein vorzeichenloser 32-Bit-Wert.
+const CLOCK_MONOTONIC: u32 = 6;
+
+unsafe extern "C" {
+    /// `__uint64_t clock_gettime_nsec_np(clockid_t)`
+    ///
+    /// Liefert die Uhr in Nanosekunden als eine Zahl und `0` bei einem Fehler.
+    /// Seit macOS 10.12 (`__CLOCK_AVAILABILITY` im selben Kopf), weit unter dem
+    /// Mindest-Zielsystem 15.0. Nicht variadisch, ein Argument.
+    fn clock_gettime_nsec_np(uhr: u32) -> u64;
+}
+
+/// Die Zeit seit dem Systemstart **einschliesslich jedes Ruhezustands**, als
+/// Spanne.
+///
+/// **Die eine Stelle im Baum, an der diese Uhr gelesen wird**; die Probe
+/// `die_wachzeit_wird_an_einer_stelle_gelesen` (`tests/heimordner.rs`) haelt
+/// das. Gebraucht wird sie fuer die zehn Minuten, die ein eingegebener
+/// Schluessel von `secrets.txt` gilt (`heimordner::schluesselmerker`): ein Mac,
+/// der eine Stunde schlaeft, darf danach nicht ohne PIN oeffnen.
+///
+/// **`std::time::Instant` taugt dafuer nicht**, und das ist am Quelltext der
+/// Toolchain 1.97.1 nachgelesen und nicht vermutet: `Instant::now` liest auf
+/// jedem Apple-Ziel `CLOCK_UPTIME_RAW`
+/// (`library/std/src/sys/time/unix.rs`, `Instant::CLOCK_ID`), und der Kommentar
+/// dort zitiert die Handbuchseite, nach der diese Uhr im Ruhezustand stehen
+/// bleibt. `CLOCK_MONOTONIC` laeuft dagegen nach `man clock_gettime` dieses
+/// Systems weiter, „while the system is asleep“, und eine verstellte Wanduhr
+/// beruehrt sie nicht.
+///
+/// Meldet das System einen Fehler, antwortet die Funktion mit null. Das
+/// laesst einen gemerkten Schluessel nicht laenger gelten, sondern kuerzer:
+/// eine Wachzeit vor dem Zeitpunkt des Merkens zaehlt der Merker als
+/// abgelaufen.
+#[must_use = "die gelesene Uhr ist die ganze Wirkung"]
+pub fn wachzeit() -> Duration {
+    // SICHERHEIT: `clock_gettime_nsec_np` nimmt eine Ganzzahl, beruehrt keinen
+    // Speicher des Aufrufers und liefert eine Ganzzahl; die Konstante ist die
+    // des SDK-Kopfes.
+    let nanosekunden = unsafe { clock_gettime_nsec_np(CLOCK_MONOTONIC) };
+    Duration::from_nanos(nanosekunden)
 }
 
 /// Macht aus einem Pfad eine nullterminierte Zeichenkette fuer die C-Aufrufe.

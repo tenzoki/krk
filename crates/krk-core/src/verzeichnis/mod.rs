@@ -31,9 +31,11 @@
 //! die beiden Sperren der Ablage und seit der Runde 18 `localtime_r(3)` fuer
 //! die buergerliche Ortszeit eines Zeitpunkts, und seit dem Defekt vom 261004
 //! `fsync(2)` als Rueckfall des atomaren Schreibens, wo ein Dateisystem
-//! `F_FULLFSYNC` nicht kennt. Das sind sieben Schnittstellen
-//! und elf gebundene Funktionen, denn `copyfile(3)` braucht seine vier
-//! `copyfile_state_*`-Helfer. [`leser`] macht aus der ersten der sieben
+//! `F_FULLFSYNC` nicht kennt, und seit dem 261016 `clock_gettime_nsec_np(3)`
+//! fuer die Wachzeit, an der die zehn Minuten eines gemerkten Schluessels
+//! gemessen werden. Das sind acht Schnittstellen
+//! und zwoelf gebundene Funktionen, denn `copyfile(3)` braucht seine vier
+//! `copyfile_state_*`-Helfer. [`leser`] macht aus der ersten der acht
 //! Schnittstellen den gestueckelten Lesevorgang auf einem Arbeitsfaden. [`eintrag`] beschreibt, was ein Eintrag traegt, und
 //! laesst sich von [`kollation`] die beiden Sortierschluessel bauen.
 //! [`modell`] haelt Eintraege und Sichtreihenfolge getrennt, und [`sortierung`]

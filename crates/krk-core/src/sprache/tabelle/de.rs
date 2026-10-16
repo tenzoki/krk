@@ -60,6 +60,19 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::AbweisungKopfzeileImTermintext => {
             "Eine Zeile im Termintext darf nicht mit „## “ beginnen, denn so beginnt der nächste Termin."
         }
+        Text::AbweisungUmbruchImGeheimnisfeld => {
+            "Name, Protokoll, Adresse, Konto und Passwort sind je eine Zeile und tragen keinen Zeilenumbruch."
+        }
+        Text::AbweisungKopfzeileInGeheimnisnotizen => {
+            "Eine Zeile in den Notizen darf nicht mit „## “ beginnen, denn so beginnt der nächste Eintrag."
+        }
+        Text::VerbindungProtokollUnbekannt => {
+            "Das Protokoll „{protokoll}“ kennt KRK nicht. Bekannt sind: {bekannte}."
+        }
+        Text::VerbindungAdresseLeer => "Die Adresse ist leer.",
+        Text::VerbindungAdresseMitSchema => {
+            "Die Adresse darf kein „://“ enthalten; das Schema kommt aus dem Protokoll."
+        }
         Text::ZaehlzeileDateien => "Dateien",
         Text::ZaehlzeileOrdner => "Ordner",
         Text::ZaehlzeileVerknuepfungen => "Verknüpfungen",

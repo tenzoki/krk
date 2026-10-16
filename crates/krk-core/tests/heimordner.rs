@@ -29,6 +29,9 @@ use gemeinsam::Pruefordner;
 use krk_core::ablage::einstellungen::Ortswert;
 use krk_core::ablage::merker::{self, Merker};
 use krk_core::ablage::{Ablage, Ablageort, Datei, Geladen, Grund};
+use krk_core::heimordner::eintraege::geheimnisse::{
+    self, Feld, Geheimnisentwurf, Geheimnisse, Passwort, Suchfehler,
+};
 use krk_core::heimordner::eintraege::{
     Abweisung, Aufgaben, Notiz, Notizen, Richtung, Tag, Termindatum, aufgabe_in_grundform,
     aufgaben, aufgabenzeile, ist_themenzeile, notizen, termindatum, termine,
@@ -38,9 +41,13 @@ use krk_core::heimordner::ort::{
     ort_lesen, ortswechsel, schon_der_ort, schreibform, schutzort, startzeile, wahlsatz,
     wechselsatz, zu_merken, zurueckgeschrieben,
 };
+use krk_core::heimordner::schluesselmerker::{GUELTIGKEIT, Schluesselmerker};
 use krk_core::heimordner::tresor::{
     self, FORMATVERSION, KOPFLAENGE, Kopf, Kopfschaden, Oeffnungsfehler, Parameter, Pin, Pinfehler,
     SALZLAENGE, Schluessel,
+};
+use krk_core::heimordner::verbindung::{
+    Protokoll, Verbindungsziel, Weg, Zielfehler, protokoll_pruefen, verbindungsziel,
 };
 use krk_core::heimordner::{
     ALTE_ZETTEL, ALTER_GEHEIMNISNAME, AlteGeheimnisse, Bereitstellung, Heimordner, Hindernis,
@@ -3443,6 +3450,658 @@ fn argon2_parameter_auf_dem_referenzgeraet_messen() {
         println!(
             "argon2id m={speicher_mib} MiB t={durchlaeufe} p=1: Median {:.3} s (min {:.3}, max {:.3})",
             zeiten[2], zeiten[0], zeiten[4]
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Der gemerkte Schluessel (Schritt 1 des Plans
+// `261016-0306_*_plan-secrets-mit-sechs-feldern-schluesselmerker-und-verbindungen.md`)
+// ---------------------------------------------------------------------------
+
+/// Eine Wachzeit in Sekunden; der Merker liest keine Uhr, die Proben reichen
+/// sie hinein.
+fn sekunden(n: u64) -> std::time::Duration {
+    std::time::Duration::from_secs(n)
+}
+
+/// Die Frist endet genau bei zehn Minuten: nach 599 Sekunden gilt der
+/// Schluessel, nach 600 nicht mehr, und danach ist er fort, auch fuer eine
+/// Frage mit frueherer Uhr.
+#[test]
+fn der_gemerkte_schluessel_gilt_bis_vor_der_zehnten_minute() {
+    assert_eq!(GUELTIGKEIT, sekunden(600));
+    let schluessel = kleiner_schluessel("0417");
+    let mut merker = Schluesselmerker::neu();
+    assert_eq!(merker.gueltiger(sekunden(1000)), None);
+
+    merker.merken(schluessel.clone(), sekunden(1000));
+    assert_eq!(merker.gueltiger(sekunden(1000)), Some(&schluessel));
+    assert_eq!(merker.restdauer(sekunden(1000)), Some(sekunden(600)));
+    assert_eq!(merker.gueltiger(sekunden(1599)), Some(&schluessel));
+    assert_eq!(merker.restdauer(sekunden(1599)), Some(sekunden(1)));
+    assert_eq!(merker.restdauer(sekunden(1600)), None);
+    assert_eq!(merker.gueltiger(sekunden(1600)), None);
+    assert_eq!(
+        merker.gueltiger(sekunden(1001)),
+        None,
+        "der abgelaufene Schluessel ist getilgt und kommt nicht wieder"
+    );
+}
+
+/// Die Frage verlaengert die Frist nicht: wer bis Sekunde 599 immer wieder
+/// fragt, hat bei Sekunde 600 trotzdem keinen Schluessel mehr.
+#[test]
+fn die_frage_verlaengert_die_frist_nicht() {
+    let mut merker = Schluesselmerker::neu();
+    merker.merken(kleiner_schluessel("0417"), sekunden(0));
+    for jetzt in (0..600).step_by(50) {
+        assert!(merker.gueltiger(sekunden(jetzt)).is_some(), "bei {jetzt} s");
+    }
+    assert!(merker.gueltiger(sekunden(599)).is_some());
+    assert!(merker.gueltiger(sekunden(600)).is_none());
+}
+
+/// Ersetzen nimmt den neuen Schluessel und setzt die Frist ab dem neuen
+/// Merken; Verwerfen leert den Merker.
+#[test]
+fn ersetzen_setzt_die_frist_neu_und_verwerfen_leert() {
+    let alt = kleiner_schluessel("1111");
+    let neu = kleiner_schluessel("2222");
+    assert_ne!(alt, neu);
+    let mut merker = Schluesselmerker::neu();
+    merker.merken(alt, sekunden(0));
+    merker.merken(neu.clone(), sekunden(500));
+    assert_eq!(merker.gueltiger(sekunden(1099)), Some(&neu));
+    assert_eq!(merker.gueltiger(sekunden(1100)), None);
+
+    merker.merken(neu, sekunden(2000));
+    merker.verwerfen();
+    assert_eq!(merker.gueltiger(sekunden(2000)), None);
+    assert_eq!(merker.restdauer(sekunden(2000)), None);
+    merker.verwerfen();
+}
+
+/// Eine Wachzeit vor dem Merken laesst den Schluessel nicht gelten, sondern
+/// fallen: die Null, mit der `wachzeit` einen Fehler beantwortet, verlaengert
+/// nichts.
+#[test]
+fn eine_uhr_vor_dem_merken_zaehlt_als_abgelaufen() {
+    let mut merker = Schluesselmerker::neu();
+    merker.merken(kleiner_schluessel("0417"), sekunden(100));
+    assert_eq!(merker.restdauer(sekunden(0)), None);
+    assert_eq!(merker.gueltiger(sekunden(0)), None);
+    assert_eq!(merker.gueltiger(sekunden(100)), None);
+}
+
+/// `Debug` des Merkers zeigt weder Schluesselbytes noch Salz.
+#[test]
+fn debug_des_merkers_zeigt_keinen_schluessel() {
+    let mut merker = Schluesselmerker::neu();
+    merker.merken(kleiner_schluessel("0417"), sekunden(7));
+    let text = format!("{merker:?}");
+    assert!(
+        !text.contains("salz") && !text.contains("schluessel:"),
+        "{text}"
+    );
+    assert!(text.contains("gemerkt_seit"), "{text}");
+}
+
+/// Die Wachzeit laeuft vorwaerts und ist nicht null.
+#[test]
+fn die_wachzeit_laeuft() {
+    let erste = krk_core::verzeichnis::sys::wachzeit();
+    let zweite = krk_core::verzeichnis::sys::wachzeit();
+    assert!(erste > std::time::Duration::ZERO);
+    assert!(zweite >= erste);
+}
+
+/// `CLOCK_MONOTONIC` wird an genau einer Stelle gelesen, in
+/// `verzeichnis::sys::wachzeit`, und der Merker liest keine Uhr: weder
+/// `Instant` noch `SystemTime` noch die Wachzeit.
+#[test]
+fn die_wachzeit_wird_an_einer_stelle_gelesen() {
+    let nadel = concat!("clock_gettime", "_nsec_np(");
+    let mut fundstellen = Vec::new();
+    for (name, inhalt) in gemeinsam::quelldateien() {
+        let treffer = inhalt
+            .lines()
+            .filter(|zeile| !zeile.trim_start().starts_with("//") && zeile.contains(nadel))
+            .count();
+        if treffer > 0 {
+            fundstellen.push((name, treffer));
+        }
+    }
+    assert_eq!(
+        fundstellen,
+        [("krk-core/src/verzeichnis/sys.rs".to_owned(), 2)],
+        "Bindung und ein Aufruf, beide in sys.rs"
+    );
+
+    let (_, sys) = gemeinsam::quelldateien()
+        .into_iter()
+        .find(|(name, _)| name == "krk-core/src/verzeichnis/sys.rs")
+        .expect("sys.rs steht im Baum");
+    let rumpf = sys
+        .split("pub fn wachzeit() -> Duration {")
+        .nth(1)
+        .and_then(|rest| rest.split("\n}\n").next())
+        .expect("wachzeit steht in sys.rs");
+    assert!(rumpf.contains(nadel) && rumpf.contains("CLOCK_MONOTONIC"));
+
+    let (_, merker) = gemeinsam::quelldateien()
+        .into_iter()
+        .find(|(name, _)| name == "krk-core/src/heimordner/schluesselmerker.rs")
+        .expect("schluesselmerker.rs steht im Baum");
+    for uhr in ["Instant", "SystemTime", "wachzeit("] {
+        assert!(
+            !merker
+                .lines()
+                .filter(|zeile| !zeile.trim_start().starts_with("//"))
+                .any(|zeile| zeile.contains(uhr)),
+            "der Merker liest selbst eine Uhr: {uhr}"
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Das Format der Geheimnisse (Schritt 2 desselben Plans)
+// ---------------------------------------------------------------------------
+
+/// Ein Stand im frueheren Format: zwei Spalten, Thema und Text.
+const GEHEIMNISSE_ALT: &str = "# Vorspann\n\n## Bank\nKontonummer 4711\nPIN beim Schalter\n\n## Mail\nkai@example.org\n\n## Leer\n";
+
+/// (1) Ein Stand im frueheren Format liest sich ohne Verlust: jedes Thema ist
+/// ein Name, jeder Text sind die Notizen, die Felder sind leer, und der
+/// Stand schreibt sich Byte fuer Byte zurueck.
+#[test]
+fn das_fruehere_format_liest_sich_ohne_verlust() {
+    let geheimnisse = Geheimnisse::lesen(GEHEIMNISSE_ALT);
+    assert_eq!(geheimnisse.anzahl(), 3);
+    let notizen = Notizen::lesen(GEHEIMNISSE_ALT);
+    for stelle in 0..3 {
+        let geheimnis = geheimnisse.geheimnis(stelle).expect("Eintrag");
+        let notiz = notizen.notiz(stelle).expect("Notiz");
+        assert_eq!(geheimnis.name, notiz.thema);
+        assert_eq!(geheimnis.notizen, notiz.text);
+        for feld in [Feld::Protokoll, Feld::Adresse, Feld::Konto, Feld::Passwort] {
+            assert_eq!(geheimnis.wert(feld), "", "{feld:?} an Stelle {stelle}");
+        }
+    }
+    assert_eq!(
+        geheimnisse.geheimnis(0).expect("Bank").notizen,
+        "Kontonummer 4711\nPIN beim Schalter"
+    );
+    assert_eq!(geheimnisse.schreiben(), GEHEIMNISSE_ALT);
+}
+
+/// (2) Ohne Handlung ist die Rundreise byte-treu, auch mit CRLF und ohne
+/// Schlussumbruch, und die Werte einer CRLF-Feldzeile tragen kein `\r`.
+#[test]
+fn die_rundreise_ohne_handlung_ist_byte_treu() {
+    for stand in [
+        GEHEIMNISSE_ALT,
+        "## NAS\r\nprotocol: smb\r\naddress: nas.local/daten\r\nNotiz\r\n",
+        "## NAS\nprotocol: smb\naddress: nas.local\naccount:\npassword: x",
+        "## Ohne Schluss\nText",
+        "",
+        "Nur Vorspann\n",
+    ] {
+        assert_eq!(Geheimnisse::lesen(stand).schreiben(), stand);
+    }
+    let crlf =
+        Geheimnisse::lesen("## NAS\r\nprotocol: smb\r\naddress: nas.local/daten\r\nNotiz\r\n");
+    let nas = crlf.geheimnis(0).expect("Eintrag");
+    assert_eq!(nas.protokoll, "smb");
+    assert_eq!(nas.adresse, "nas.local/daten");
+    assert_eq!(nas.notizen, "Notiz\r");
+}
+
+/// Die Leseregel: Schluessel ohne Ruecksicht auf Gross- und Kleinschreibung,
+/// nach dem Doppelpunkt nichts oder ein Leerzeichen, die erste andere Zeile
+/// beendet die Folge.
+#[test]
+fn die_feldzeilen_folgen_der_leseregel() {
+    let stand = "## A\nProtocol: SMB\nADDRESS:\nkonto: x\naccount: kai\n## B\naddress:nah\n## C\npassword: geheim\n\nprotocol: afp\n";
+    let geheimnisse = Geheimnisse::lesen(stand);
+    let a = geheimnisse.geheimnis(0).expect("A");
+    assert_eq!((a.protokoll, a.adresse, a.konto), ("SMB", "", ""));
+    assert_eq!(
+        a.notizen, "konto: x\naccount: kai",
+        "eine fremde Zeile beendet die Folge"
+    );
+    let b = geheimnisse.geheimnis(1).expect("B");
+    assert_eq!(
+        b.adresse, "",
+        "ohne Leerzeichen nach dem Doppelpunkt kein Feld"
+    );
+    assert_eq!(b.notizen, "address:nah");
+    let c = geheimnisse.geheimnis(2).expect("C");
+    assert_eq!(c.passwort, "geheim");
+    assert_eq!(c.protokoll, "", "eine Leerzeile beendet die Folge");
+    assert_eq!(c.notizen, "\nprotocol: afp");
+}
+
+/// (3) `aendern` an einem alten Eintrag schreibt ihn in der Grundform mit
+/// allen vier Feldzeilen, behaelt Notizen und Trenner und laesst jeden
+/// anderen Block Byte fuer Byte.
+#[test]
+fn aendern_schreibt_einen_alten_eintrag_in_der_grundform() {
+    let neu = geheimnisse::aendern(GEHEIMNISSE_ALT, 0, Feld::Konto, "kai")
+        .expect("zulaessig")
+        .expect("aendert");
+    assert_eq!(
+        neu.text,
+        "# Vorspann\n\n## Bank\nprotocol:\naddress:\naccount: kai\npassword:\nKontonummer 4711\nPIN beim Schalter\n\n## Mail\nkai@example.org\n\n## Leer\n"
+    );
+    assert_eq!(neu.auswahl, Some(0));
+    let bank = Geheimnisse::lesen(&neu.text)
+        .geheimnis(0)
+        .expect("Bank")
+        .clone();
+    assert_eq!(bank.konto, "kai");
+    assert_eq!(bank.notizen, "Kontonummer 4711\nPIN beim Schalter");
+
+    // Jede Spalte aendert genau ihr Feld.
+    for (feld, wert) in [
+        (Feld::Name, "Bank neu"),
+        (Feld::Protokoll, "smb"),
+        (Feld::Adresse, "nas.local/daten"),
+        (Feld::Konto, "kai"),
+        (Feld::Passwort, "Xq7"),
+        (Feld::Notizen, "neu\nzweizeilig"),
+    ] {
+        let neu = geheimnisse::aendern(GEHEIMNISSE_ALT, 1, feld, wert)
+            .expect("zulaessig")
+            .expect("aendert");
+        let vorher = Geheimnisse::lesen(GEHEIMNISSE_ALT);
+        let nachher = Geheimnisse::lesen(&neu.text);
+        for anderes in Feld::ALLE {
+            let erwartet = if anderes == feld {
+                wert.to_owned()
+            } else {
+                vorher.geheimnis(1).expect("Mail").wert(anderes).to_owned()
+            };
+            assert_eq!(
+                nachher.geheimnis(1).expect("Mail").wert(anderes),
+                erwartet,
+                "{feld:?} aendert {anderes:?}"
+            );
+        }
+        assert_eq!(nachher.geheimnis(0), vorher.geheimnis(0));
+        assert_eq!(nachher.geheimnis(2), vorher.geheimnis(2));
+        assert!(
+            neu.text.starts_with(
+                "# Vorspann\n\n## Bank\nKontonummer 4711\nPIN beim Schalter\n\n## Mail\n"
+            ) || feld == Feld::Name
+        );
+        assert!(neu.text.ends_with("\n\n## Leer\n"));
+    }
+
+    // Ohne Aenderung keine Handlung, auch fuer ein leeres Feld eines alten
+    // Eintrags; den gibt es nicht, ebenso keine.
+    assert_eq!(
+        geheimnisse::aendern(GEHEIMNISSE_ALT, 0, Feld::Konto, ""),
+        Ok(None)
+    );
+    assert_eq!(
+        geheimnisse::aendern(GEHEIMNISSE_ALT, 0, Feld::Name, "Bank"),
+        Ok(None)
+    );
+    assert_eq!(
+        geheimnisse::aendern(GEHEIMNISSE_ALT, 9, Feld::Konto, "x"),
+        Ok(None)
+    );
+}
+
+/// Das Dateiende bleibt: ein Stand ohne Schlussumbruch endet nach dem Aendern
+/// ebenso ohne.
+#[test]
+fn aendern_wahrt_das_dateiende() {
+    let neu = geheimnisse::aendern("## A\nText", 0, Feld::Protokoll, "ftp")
+        .expect("zulaessig")
+        .expect("aendert");
+    assert_eq!(
+        neu.text,
+        "## A\nprotocol: ftp\naddress:\naccount:\npassword:\nText"
+    );
+    let neu = geheimnisse::aendern("## A", 0, Feld::Adresse, "a.b")
+        .expect("zulaessig")
+        .expect("aendert");
+    assert_eq!(
+        neu.text,
+        "## A\nprotocol:\naddress: a.b\naccount:\npassword:"
+    );
+}
+
+/// (4) Eine Notizzeile `password: x` nach einer Grundform bleibt Notiz, auch
+/// wenn sie ueber das Aendern der Notizen hineinkommt.
+#[test]
+fn eine_notizzeile_wie_ein_feld_bleibt_nach_der_grundform_notiz() {
+    let stand = "## A\nprotocol: smb\naddress: x\naccount:\npassword: alt\npassword: neu\n";
+    let a = Geheimnisse::lesen(stand).geheimnis(0).expect("A").clone();
+    assert_eq!(a.passwort, "alt");
+    assert_eq!(a.notizen, "password: neu");
+
+    let neu = geheimnisse::aendern("## B\n", 0, Feld::Notizen, "password: x")
+        .expect("zulaessig")
+        .expect("aendert");
+    let b = Geheimnisse::lesen(&neu.text)
+        .geheimnis(0)
+        .expect("B")
+        .clone();
+    assert_eq!(b.passwort, "");
+    assert_eq!(b.notizen, "password: x");
+}
+
+/// (5) Ein doppelter Schluessel beendet die Feldfolge.
+#[test]
+fn ein_doppelter_schluessel_beendet_die_feldfolge() {
+    let stand = "## A\nprotocol: smb\nprotocol: afp\naddress: x\n";
+    let a = Geheimnisse::lesen(stand).geheimnis(0).expect("A").clone();
+    assert_eq!(a.protokoll, "smb");
+    assert_eq!(a.adresse, "");
+    assert_eq!(a.notizen, "protocol: afp\naddress: x");
+}
+
+/// Abweisungen: ein Zeilenumbruch in einem einzeiligen Feld und eine Zeile
+/// `## ` in den Notizen; der Stand bleibt.
+#[test]
+fn aendern_und_hinzufuegen_weisen_ab() {
+    for feld in [
+        Feld::Name,
+        Feld::Protokoll,
+        Feld::Adresse,
+        Feld::Konto,
+        Feld::Passwort,
+    ] {
+        for wert in ["a\nb", "a\rb"] {
+            assert_eq!(
+                geheimnisse::aendern(GEHEIMNISSE_ALT, 0, feld, wert),
+                Err(Abweisung::UmbruchImGeheimnisfeld),
+                "{feld:?}"
+            );
+        }
+    }
+    assert_eq!(
+        geheimnisse::aendern(GEHEIMNISSE_ALT, 0, Feld::Notizen, "a\n## b"),
+        Err(Abweisung::KopfzeileInGeheimnisnotizen)
+    );
+    let mut entwurf = Geheimnisentwurf {
+        name: "X".into(),
+        passwort: Passwort::neu("a\nb".into()),
+        ..Geheimnisentwurf::default()
+    };
+    assert_eq!(
+        geheimnisse::hinzufuegen("", &entwurf),
+        Err(Abweisung::UmbruchImGeheimnisfeld)
+    );
+    entwurf.passwort = Passwort::neu("ab".into());
+    entwurf.notizen = "## zweiter".into();
+    assert_eq!(
+        geheimnisse::hinzufuegen("", &entwurf),
+        Err(Abweisung::KopfzeileInGeheimnisnotizen)
+    );
+    assert!(!Abweisung::UmbruchImGeheimnisfeld.meldung().is_empty());
+    assert!(!Abweisung::KopfzeileInGeheimnisnotizen.meldung().is_empty());
+}
+
+/// `hinzufuegen` haengt einen Eintrag in der Grundform an, laesst jeden
+/// alten Byte fuer Byte und waehlt den neuen; ein leerer Entwurf ergibt einen
+/// leeren Eintrag mit vier leeren Feldzeilen.
+#[test]
+fn hinzufuegen_haengt_die_grundform_an() {
+    let entwurf = Geheimnisentwurf {
+        name: "NAS Buero".into(),
+        protokoll: "smb".into(),
+        adresse: "nas.local/daten".into(),
+        konto: "kai".into(),
+        passwort: Passwort::neu("Xq7".into()),
+        notizen: "Zugang nur im Bueronetz.\n".into(),
+    };
+    let neu = geheimnisse::hinzufuegen(GEHEIMNISSE_ALT, &entwurf).expect("zulaessig");
+    assert_eq!(
+        neu.text,
+        format!(
+            "{GEHEIMNISSE_ALT}## NAS Buero\nprotocol: smb\naddress: nas.local/daten\naccount: kai\npassword: Xq7\nZugang nur im Bueronetz.\n"
+        )
+    );
+    assert_eq!(neu.auswahl, Some(3));
+
+    let leer =
+        geheimnisse::hinzufuegen("## A\nText", &Geheimnisentwurf::default()).expect("zulaessig");
+    assert_eq!(
+        leer.text,
+        "## A\nText\n## \nprotocol:\naddress:\naccount:\npassword:"
+    );
+    assert_eq!(
+        geheimnisse::hinzufuegen("", &Geheimnisentwurf::default())
+            .expect("zulaessig")
+            .text,
+        "## \nprotocol:\naddress:\naccount:\npassword:\n"
+    );
+}
+
+/// Loeschen und Verschieben sind die der Notizen.
+#[test]
+fn loeschen_und_verschieben_rechnen_ueber_die_notizen() {
+    assert_eq!(
+        geheimnisse::loeschen(GEHEIMNISSE_ALT, 1),
+        notizen::loeschen(GEHEIMNISSE_ALT, 1)
+    );
+    assert_eq!(
+        geheimnisse::verschieben(GEHEIMNISSE_ALT, 1, Richtung::Hoch),
+        notizen::verschieben(GEHEIMNISSE_ALT, 1, Richtung::Hoch)
+    );
+}
+
+/// (6) `finden` mit keinem, einem und zwei Treffern, getrimmt verglichen;
+/// `name_frei` fragt dieselbe Regel.
+#[test]
+fn finden_trifft_keinen_einen_oder_mehrdeutig() {
+    let stand = "## NAS \nprotocol: smb\naddress: nas.local\naccount: kai\npassword: Xq7\n## Doppelt\n## Doppelt\nprotocol: afp\n";
+    assert_eq!(geheimnisse::finden(stand, "Fehlt"), Err(Suchfehler::Keiner));
+    assert_eq!(
+        geheimnisse::finden(stand, " Doppelt"),
+        Err(Suchfehler::Mehrdeutig(2))
+    );
+    let nas = geheimnisse::finden(stand, "NAS").expect("ein Treffer");
+    assert_eq!(nas.name, "NAS ");
+    assert_eq!(nas.protokoll, "smb");
+    assert_eq!(nas.adresse, "nas.local");
+    assert_eq!(nas.konto, "kai");
+    assert_eq!(nas.passwort, Passwort::neu("Xq7".into()));
+    assert!(!geheimnisse::name_frei(stand, " NAS"));
+    assert!(!geheimnisse::name_frei(stand, "Doppelt"));
+    assert!(geheimnisse::name_frei(stand, "Neu"));
+    assert_eq!(geheimnisse::finden("", "NAS"), Err(Suchfehler::Keiner));
+}
+
+/// (7) `Debug` eines `Passwort`, eines `Verbindungsdaten`, eines
+/// `Geheimnisentwurf` und eines `Geheimnis` enthaelt das Passwort nicht.
+#[test]
+fn debug_zeigt_kein_passwort() {
+    let geheim = "Zz9-unverwechselbar";
+    assert_eq!(
+        format!("{:?}", Passwort::neu(geheim.into())),
+        "Passwort(****)"
+    );
+    let stand =
+        format!("## NAS\nprotocol: smb\naddress: nas.local\naccount: kai\npassword: {geheim}\n");
+    let daten = geheimnisse::finden(&stand, "NAS").expect("ein Treffer");
+    let text = format!("{daten:?}");
+    assert!(!text.contains(geheim), "{text}");
+    assert!(text.contains("nas.local"), "{text}");
+    let entwurf = Geheimnisentwurf {
+        passwort: Passwort::neu(geheim.into()),
+        ..Geheimnisentwurf::default()
+    };
+    assert!(!format!("{entwurf:?}").contains(geheim));
+    let geheimnisse = Geheimnisse::lesen(&stand);
+    let geheimnis = geheimnisse.geheimnis(0).expect("NAS");
+    assert_eq!(geheimnis.passwort, geheim, "die Tabelle zeigt den Klartext");
+    assert!(!format!("{geheimnis:?}").contains(geheim));
+}
+
+/// `Feld::ALLE` nennt die Spalten in der Folge der Tabelle.
+#[test]
+fn die_spalten_stehen_in_der_folge_der_tabelle() {
+    assert_eq!(
+        Feld::ALLE,
+        [
+            Feld::Name,
+            Feld::Protokoll,
+            Feld::Adresse,
+            Feld::Konto,
+            Feld::Passwort,
+            Feld::Notizen
+        ]
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Protokolle und Verbindungsziel (Schritt 3 desselben Plans)
+// ---------------------------------------------------------------------------
+
+/// Jedes Protokoll mit Name, Schema und Weg, und die URL, die daraus mit
+/// Adresse und Konto entsteht.
+#[test]
+fn jedes_protokoll_hat_schema_weg_und_url() {
+    let erwartet = [
+        (Protokoll::Smb, "smb", "smb", Weg::Einhaengen),
+        (Protokoll::Afp, "afp", "afp", Weg::Einhaengen),
+        (Protokoll::Nfs, "nfs", "nfs", Weg::Einhaengen),
+        (Protokoll::Webdav, "webdav", "http", Weg::Einhaengen),
+        (Protokoll::Webdavs, "webdavs", "https", Weg::Einhaengen),
+        (Protokoll::Ftp, "ftp", "ftp", Weg::Einhaengen),
+        (Protokoll::Http, "http", "http", Weg::Uebergeben),
+        (Protokoll::Https, "https", "https", Weg::Uebergeben),
+        (Protokoll::Ssh, "ssh", "ssh", Weg::Uebergeben),
+        (Protokoll::Sftp, "sftp", "sftp", Weg::Uebergeben),
+        (Protokoll::Vnc, "vnc", "vnc", Weg::Uebergeben),
+    ];
+    assert_eq!(
+        Protokoll::ALLE.to_vec(),
+        erwartet.iter().map(|(p, ..)| *p).collect::<Vec<_>>()
+    );
+    for (protokoll, name, schema, weg) in erwartet {
+        assert_eq!(protokoll.name(), name);
+        assert_eq!(protokoll.url_schema(), schema);
+        assert_eq!(protokoll.weg(), weg);
+        assert_eq!(Protokoll::aus_text(name), Some(protokoll));
+        assert_eq!(Protokoll::aus_text(&name.to_uppercase()), Some(protokoll));
+        assert_eq!(Protokoll::aus_text(&format!(" {name}\t")), Some(protokoll));
+
+        let ziel = verbindungsziel(name, " host.local/teil ", "kai").expect("ein Ziel");
+        let mit_konto = matches!(protokoll, Protokoll::Ssh | Protokoll::Sftp | Protokoll::Vnc);
+        let url = if mit_konto {
+            format!("{schema}://kai@host.local/teil")
+        } else {
+            format!("{schema}://host.local/teil")
+        };
+        match weg {
+            Weg::Einhaengen => assert_eq!(
+                ziel,
+                Verbindungsziel::Einhaengen {
+                    url,
+                    konto: Some("kai".into())
+                }
+            ),
+            Weg::Uebergeben => assert_eq!(ziel, Verbindungsziel::Uebergeben { url }),
+        }
+    }
+}
+
+/// Ein Konto mit `@` und Leerzeichen wird in der URL der Uebergabe kodiert;
+/// beim Einhaengen reist es roh neben der URL; ein leeres Konto faellt weg.
+#[test]
+fn das_konto_wird_in_der_url_kodiert() {
+    assert_eq!(
+        verbindungsziel("ssh", "server", "kai @büro"),
+        Ok(Verbindungsziel::Uebergeben {
+            url: "ssh://kai%20%40b%C3%BCro@server".into()
+        })
+    );
+    assert_eq!(
+        verbindungsziel("SMB", "nas/daten", " kai @büro "),
+        Ok(Verbindungsziel::Einhaengen {
+            url: "smb://nas/daten".into(),
+            konto: Some("kai @büro".into())
+        })
+    );
+    assert_eq!(
+        verbindungsziel("vnc", "mac.local", "  "),
+        Ok(Verbindungsziel::Uebergeben {
+            url: "vnc://mac.local".into()
+        })
+    );
+    assert_eq!(
+        verbindungsziel("smb", "nas", ""),
+        Ok(Verbindungsziel::Einhaengen {
+            url: "smb://nas".into(),
+            konto: None
+        })
+    );
+    assert_eq!(
+        verbindungsziel("https", "example.org/pfad", "kai"),
+        Ok(Verbindungsziel::Uebergeben {
+            url: "https://example.org/pfad".into()
+        })
+    );
+}
+
+/// Unbekanntes Protokoll, leere Adresse und ein Schema in der Adresse sind
+/// Fehler, in dieser Reihenfolge geprueft; die Meldung nennt das Protokoll.
+#[test]
+fn ein_ziel_ohne_bekanntes_protokoll_oder_adresse_ist_ein_fehler() {
+    assert_eq!(
+        verbindungsziel(" rdp ", "host", ""),
+        Err(Zielfehler::UnbekanntesProtokoll("rdp".into()))
+    );
+    assert_eq!(
+        verbindungsziel("", "", ""),
+        Err(Zielfehler::UnbekanntesProtokoll(String::new()))
+    );
+    assert_eq!(
+        verbindungsziel("smb", "  ", ""),
+        Err(Zielfehler::LeereAdresse)
+    );
+    assert_eq!(
+        verbindungsziel("smb", "smb://nas", ""),
+        Err(Zielfehler::SchemaInDerAdresse)
+    );
+    assert_eq!(protokoll_pruefen("Webdavs"), Ok(Protokoll::Webdavs));
+    assert_eq!(
+        protokoll_pruefen("gopher"),
+        Err(Zielfehler::UnbekanntesProtokoll("gopher".into()))
+    );
+    let meldung = Zielfehler::UnbekanntesProtokoll("gopher".into()).meldung();
+    assert!(
+        meldung.contains("gopher") && meldung.contains("webdavs"),
+        "{meldung}"
+    );
+    assert!(!Zielfehler::LeereAdresse.meldung().is_empty());
+    assert!(Zielfehler::SchemaInDerAdresse.meldung().contains("://"));
+}
+
+/// Das Modul der Verbindungsziele nennt den Typ der Zugangsdaten nicht: kein
+/// Wert dort kann ein Passwort tragen. Gelesen werden die Codezeilen, nicht
+/// die Kommentare.
+#[test]
+fn das_verbindungsziel_nennt_den_typ_der_zugangsdaten_nicht() {
+    let (_, inhalt) = gemeinsam::quelldateien()
+        .into_iter()
+        .find(|(name, _)| name == "krk-core/src/heimordner/verbindung.rs")
+        .expect("verbindung.rs steht im Baum");
+    let code: Vec<&str> = inhalt
+        .lines()
+        .filter(|zeile| !zeile.trim_start().starts_with("//"))
+        .collect();
+    assert!(code.len() > 50, "verbindung.rs ist nicht gelesen");
+    for nadel in ["Passwort", "passwort", "geheimnisse", "password"] {
+        assert!(
+            !code.iter().any(|zeile| zeile.contains(nadel)),
+            "verbindung.rs nennt `{nadel}` im Code"
         );
     }
 }

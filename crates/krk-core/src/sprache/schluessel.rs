@@ -104,6 +104,17 @@ pub enum Text {
     AbweisungUngueltigesDatum,
     /// `Abweisung::KopfzeileImTermintext`.
     AbweisungKopfzeileImTermintext,
+    /// `Abweisung::UmbruchImGeheimnisfeld`.
+    AbweisungUmbruchImGeheimnisfeld,
+    /// `Abweisung::KopfzeileInGeheimnisnotizen`.
+    AbweisungKopfzeileInGeheimnisnotizen,
+    /// `Zielfehler::UnbekanntesProtokoll` in der Statuszeile und im Blatt
+    /// „Verbinden“; Platzhalter `{protokoll}` und `{bekannte}`.
+    VerbindungProtokollUnbekannt,
+    /// `Zielfehler::LeereAdresse`.
+    VerbindungAdresseLeer,
+    /// `Zielfehler::SchemaInDerAdresse`.
+    VerbindungAdresseMitSchema,
     /// Die erste Zaehlzeile des Default-Profils in der Vorschau.
     ZaehlzeileDateien,
     /// Die zweite Zaehlzeile des Default-Profils.
@@ -1450,7 +1461,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 606] = [
+    pub const ALLE: [Text; 611] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1489,6 +1500,11 @@ impl Text {
         Text::AbweisungThemenzeileImNotiztext,
         Text::AbweisungUngueltigesDatum,
         Text::AbweisungKopfzeileImTermintext,
+        Text::AbweisungUmbruchImGeheimnisfeld,
+        Text::AbweisungKopfzeileInGeheimnisnotizen,
+        Text::VerbindungProtokollUnbekannt,
+        Text::VerbindungAdresseLeer,
+        Text::VerbindungAdresseMitSchema,
         Text::ZaehlzeileDateien,
         Text::ZaehlzeileOrdner,
         Text::ZaehlzeileVerknuepfungen,

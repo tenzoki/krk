@@ -56,6 +56,19 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::AbweisungKopfzeileImTermintext => {
             "A line in the appointment text must not begin with “## ”, because that is how the next appointment begins."
         }
+        Text::AbweisungUmbruchImGeheimnisfeld => {
+            "Name, protocol, address, account and password are one line each and contain no line break."
+        }
+        Text::AbweisungKopfzeileInGeheimnisnotizen => {
+            "A line in the notes must not begin with “## ”, because that is how the next entry begins."
+        }
+        Text::VerbindungProtokollUnbekannt => {
+            "KRK does not know the protocol “{protokoll}”. Known protocols: {bekannte}."
+        }
+        Text::VerbindungAdresseLeer => "The address is empty.",
+        Text::VerbindungAdresseMitSchema => {
+            "The address must not contain “://”; the scheme comes from the protocol."
+        }
         Text::ZaehlzeileDateien => "Files",
         Text::ZaehlzeileOrdner => "Folders",
         Text::ZaehlzeileVerknuepfungen => "Symbolic links",

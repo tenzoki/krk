@@ -3,11 +3,22 @@
   "id": "ef8ed15f-a25a-4f26-a35a-55c3851901b6",
   "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
   "domain": "code",
-  "status": "open",
-  "claim": null,
+  "status": "claimed",
+  "claim": {
+    "checkout_id": "6c11b1f2",
+    "person": "Kai Stalmann <kai@stalmann.org>",
+    "claimed_at": "2026-10-16T00:55:31Z"
+  },
   "mode": {
-    "value": "ordinary",
-    "source": null
+    "value": "autonomous",
+    "source": {
+      "kind": "user-word",
+      "ref": {
+        "path": "work-packages/261016-0229-secrets-mit-sechs-feldern-schluesselcache-und-verbindungen/261016-0229-secrets-mit-sechs-feldern-schluesselcache-und-verbindungen.md",
+        "sha256": "sha256:551a856055fa404e2dcff8f49cce40a23101f59faa364cc50b49079b01c63e5b",
+        "kind": "other"
+      }
+    }
   },
   "origin": {
     "kind": "user-request",
@@ -21,7 +32,16 @@
     "path": "work-packages/261016-0229-secrets-mit-sechs-feldern-schluesselcache-und-verbindungen/261016-0229-secrets-mit-sechs-feldern-schluesselcache-und-verbindungen.md"
   },
   "depends_on": [],
-  "active_documents": [],
+  "active_documents": [
+    {
+      "ref": {
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "record_id": "2a7a850b-2c6f-4607-81c3-5eeacd468812"
+      },
+      "role": "plan",
+      "revision": "sha256:c5dceb18e8e9d70d0581fbfc2b13a82c3001dd07a81c4a3a218785eb77582a91"
+    }
+  ],
   "references": [],
   "evidence": [],
   "outcome": null,

@@ -64,6 +64,19 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::AbweisungKopfzeileImTermintext => {
             "Une ligne du texte du rendez-vous ne peut pas commencer par «\u{a0}##\u{a0}», car c’est ainsi que commence le rendez-vous suivant."
         }
+        Text::AbweisungUmbruchImGeheimnisfeld => {
+            "Le nom, le protocole, l’adresse, le compte et le mot de passe tiennent chacun sur une ligne et ne contiennent pas de saut de ligne."
+        }
+        Text::AbweisungKopfzeileInGeheimnisnotizen => {
+            "Une ligne des notes ne peut pas commencer par «\u{a0}##\u{a0}», car c’est ainsi que commence l’entrée suivante."
+        }
+        Text::VerbindungProtokollUnbekannt => {
+            "KRK ne connaît pas le protocole «\u{a0}{protokoll}\u{a0}». Protocoles connus\u{a0}: {bekannte}."
+        }
+        Text::VerbindungAdresseLeer => "L’adresse est vide.",
+        Text::VerbindungAdresseMitSchema => {
+            "L’adresse ne peut pas contenir «\u{a0}://\u{a0}», le schéma vient du protocole."
+        }
         Text::ZaehlzeileDateien => "Fichiers",
         Text::ZaehlzeileOrdner => "Dossiers",
         Text::ZaehlzeileVerknuepfungen => "Liens symboliques",
