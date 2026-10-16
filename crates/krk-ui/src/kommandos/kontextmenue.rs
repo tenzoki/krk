@@ -185,6 +185,15 @@
 //! zweiter interner Datentraeger vielleicht auch nicht —, beantwortet das
 //! System beim Auswerfen, und sein Wortlaut steht dann in der Statuszeile.
 //!
+//! Seit demselben Tag auch den Wert [`Kontextbefehl::Verbinden`] (Schritt 7
+//! des Plans
+//! `261016-0306_*_plan-secrets-mit-sechs-feldern-schluesselmerker-und-verbindungen.md`),
+//! **und fuer ihn rechnet dieses Modul nichts**: er wirkt auf keinen
+//! betroffenen Eintrag, sondern oeffnet das Blatt „Verbinden“, das einen
+//! Eintrag in `secrets.txt` und ein Lesezeichen in der Gruppe „Verbindungen“
+//! anlegt. Er steht deshalb unabhaengig von der Auswahl da und ist immer
+//! bedienbar; was er tut, steht beim Anwendungsdelegierten.
+//!
 //! # Eine feste Aufzaehlung neben einer Liste, deren Laenge erst zur Laufzeit feststeht
 //!
 //! Das Untermenue „Öffnen mit" (260918) traegt die Anwendungen, die das System
@@ -327,6 +336,13 @@ pub enum Kontextbefehl {
     /// Worauf er wirkt, rechnet [`auswurfbezug`]; das Auswerfen selbst steht in
     /// `crate::appkit::auswurf` und laeuft am Hauptfaden vorbei.
     Auswerfen,
+    /// Eine Verbindung anlegen: Eintrag in `secrets.txt` und Lesezeichen
+    /// (261016).
+    ///
+    /// **Der zweite Eintrag, der vor seiner Wirkung ein Blatt oeffnet**, das
+    /// Blatt „Verbinden“; er wirkt auf keinen betroffenen Eintrag und steht
+    /// deshalb unabhaengig von der Auswahl da.
+    Verbinden,
     /// Den angezeigten Ordner im Finder oeffnen.
     ImFinderOeffnen,
     /// Die betroffenen Eintraege im Finder aufdecken, also in einem
@@ -378,13 +394,15 @@ impl Kontextbefehl {
     /// **„Duplizieren…" steht hinter „Unzip" und vor den Finder-Eintraegen**
     /// (260930): „Zip" und „Unzip" bleiben ein Paar, die Finder-Eintraege
     /// bleiben am Ende beieinander. **„Auswerfen" steht aus demselben Grund
-    /// vor den Finder-Eintraegen** (261016).
-    pub const ALLE: [Kontextbefehl; 7] = [
+    /// vor den Finder-Eintraegen** (261016), und „Verbinden…“ hinter ihm, weil
+    /// beide vom Netz handeln.
+    pub const ALLE: [Kontextbefehl; 8] = [
         Kontextbefehl::OeffnenMit,
         Kontextbefehl::Zippen,
         Kontextbefehl::Entpacken,
         Kontextbefehl::Duplizieren,
         Kontextbefehl::Auswerfen,
+        Kontextbefehl::Verbinden,
         Kontextbefehl::ImFinderOeffnen,
         Kontextbefehl::ImFinderAnzeigen,
     ];
@@ -426,6 +444,7 @@ impl Kontextbefehl {
             Kontextbefehl::Entpacken => text(Text::KontextEntpacken),
             Kontextbefehl::Duplizieren => text(Text::KontextDuplizieren),
             Kontextbefehl::Auswerfen => text(Text::KontextAuswerfen),
+            Kontextbefehl::Verbinden => text(Text::KontextVerbinden),
             Kontextbefehl::ImFinderOeffnen => text(Text::KontextImFinderOeffnen),
             Kontextbefehl::ImFinderAnzeigen => text(Text::KontextImFinderAnzeigen),
         }
@@ -466,8 +485,9 @@ impl Kontextbefehl {
             Kontextbefehl::Entpacken => 3,
             Kontextbefehl::Duplizieren => 4,
             Kontextbefehl::Auswerfen => 5,
-            Kontextbefehl::ImFinderOeffnen => 6,
-            Kontextbefehl::ImFinderAnzeigen => 7,
+            Kontextbefehl::Verbinden => 6,
+            Kontextbefehl::ImFinderOeffnen => 7,
+            Kontextbefehl::ImFinderAnzeigen => 8,
         }
     }
 
@@ -1354,14 +1374,15 @@ mod tests {
     /// **„Duplizieren…" steht mit seinem Auslassungszeichen da** (260930): der
     /// Eintrag fragt vor seiner Wirkung, und ein Titel ohne das Zeichen
     /// verspraeche eine Wirkung auf den Klick.
-    const TAFEL: [(Kontextbefehl, &str, isize); 7] = [
+    const TAFEL: [(Kontextbefehl, &str, isize); 8] = [
         (Kontextbefehl::OeffnenMit, "Öffnen mit", 1),
         (Kontextbefehl::Zippen, "Zip", 2),
         (Kontextbefehl::Entpacken, "Unzip", 3),
         (Kontextbefehl::Duplizieren, "Duplizieren…", 4),
         (Kontextbefehl::Auswerfen, "Auswerfen", 5),
-        (Kontextbefehl::ImFinderOeffnen, "Im Finder öffnen", 6),
-        (Kontextbefehl::ImFinderAnzeigen, "Im Finder anzeigen", 7),
+        (Kontextbefehl::Verbinden, "Verbinden…", 6),
+        (Kontextbefehl::ImFinderOeffnen, "Im Finder öffnen", 7),
+        (Kontextbefehl::ImFinderAnzeigen, "Im Finder anzeigen", 8),
     ];
 
     /// Die Tafel ueber jeden Wert, an einem Stueck.
@@ -1440,11 +1461,11 @@ mod tests {
     /// begaenne die Zaehlung dort, loeste er das Packen aus.
     ///
     /// Die erste freie Marke hinter der Liste steht mit in der Tafel und
-    /// rueckt mit jedem weiteren Befehl um eins; seit dem 261016 ist es die
-    /// Acht.
+    /// rueckt mit jedem weiteren Befehl um eins; seit „Verbinden…“ (261016) ist
+    /// es die Neun.
     #[test]
     fn die_null_und_alles_daneben_benennen_keinen_befehl() {
-        for marke in [-1, 0, 8, 99] {
+        for marke in [-1, 0, 9, 99] {
             assert_eq!(
                 Kontextbefehl::von_menuemarke(marke),
                 None,

@@ -283,10 +283,11 @@ use krk_core::ablage::{
     Lesezeichenliste, Sitzung, Sitzungsrecht, Verschiebung, Ziel, Zugang, einstellungen,
     leseprofile, lesezeichen, pfade, werkszustand,
 };
+use krk_core::heimordner::eintraege::geheimnisse::Suchfehler;
 use krk_core::heimordner::ort::{self, Notizort, Ortsfehler};
 use krk_core::heimordner::schluesselmerker::Schluesselmerker;
-use krk_core::heimordner::tresor::Schluessel;
-use krk_core::heimordner::{self, Heimordner};
+use krk_core::heimordner::tresor::{Oeffnungsmittel, Pin, Schluessel};
+use krk_core::heimordner::{self, Heimordner, Sonderdatei};
 use krk_core::leseprofil::Profile;
 use krk_core::operation::{
     self, Abschluss, Art, Auftrag, Bericht, Konfliktantwort, Konfliktentscheid, Lauf, Meldung,
@@ -303,7 +304,7 @@ use crate::angezeigtedatei;
 use crate::auffrischung::{self, Dateifenstersicht};
 use crate::belegungsausgabe;
 use crate::belegungsmodell::Belegungsmodell;
-use crate::editormodell::{Ladeausgang, Pinform, Sicherungsausgang};
+use crate::editormodell::{Geheimnisweg, Ladeausgang, Pinform, Sicherungsausgang, geheimnisweg};
 use crate::fenstermodell::{
     BREITENSCHRITT, Bereich, Fenstermodell, Zeilenmass, sichtbar_in, spalte_sichtbar_in,
 };
@@ -330,7 +331,7 @@ use crate::messmodus::{Anweisung, Aufgabe, Handlung, Messlauf, Sitzungslage, Zus
 use crate::quicknote::{self, F10Wirkung, Kopierausgang, Rueckkehr};
 use crate::spalten::Spalte;
 use crate::tabs::{Auswahlversuch, Tabliste, Vormerkung, Wunschmeldung};
-use crate::tresorweg;
+use crate::tresorweg::{self, Anhaengausgang, Verbindungsentwurf, Verbindungshindernis};
 use crate::vorschaumodell::Blaetterrichtung;
 
 use super::aufteilung::Aufteilung;
@@ -360,6 +361,7 @@ use super::statuszeile::{self, Statuszeile};
 use super::tabelle::{Dateifenster, DateifensterQuelle, Rangmitnahme};
 use super::teilen;
 use super::terminal;
+use super::verbinden::{self, Verbindungsausgang, Verbindungsergebnis};
 use super::volumes::{self, Datentraeger, Datentraegerwache, Wechsel};
 use super::vorschau::Vorschaufenster;
 use super::weitereinstanz;
@@ -1164,6 +1166,15 @@ pub struct AnwendungsIvars {
     /// jedes Lesen selbst an der Wachzeit. Ein neuer Schluessel und das
     /// Verwerfen setzen ihn ausser Kraft (`invalidate`).
     ablaufwecker: RefCell<Option<Retained<NSTimer>>>,
+    /// Ob ein Gang an `secrets.txt` auf einem Arbeitsfaden laeuft: ein Klick
+    /// auf eine Verbindung oder der Schreibgang von „Verbinden…“ (Entscheidung
+    /// 20 des Plans der sechs Felder).
+    ///
+    /// **Einer fuer beide Wege**, weil zwei Schreibgaenge nebeneinander
+    /// dieselbe Datei lesen und der spaetere den Eintrag des frueheren
+    /// ueberschriebe. Gesetzt beim Start eines Fadens, geloescht in seinem
+    /// Ausgang auf dem Hauptfaden.
+    tresorgang: Cell<bool>,
 }
 
 define_class!(
@@ -1596,6 +1607,7 @@ impl Anwendungsdelegierter {
             ausloesetakt: OnceCell::new(),
             merker: Rc::new(RefCell::new(Schluesselmerker::neu())),
             ablaufwecker: RefCell::new(None),
+            tresorgang: Cell::new(false),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
@@ -2587,6 +2599,14 @@ impl Anwendungsdelegierter {
                 selbst.leistenauswahl_ausfuehren(&auswahl);
             }
         }));
+        // Der Klick auf eine Verbindung (Entscheidung 12 des Plans der sechs
+        // Felder), schwach aus demselben Grund.
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        leiste.quelle().verbinden_setzen(Box::new(move |name| {
+            if let Some(selbst) = schwach.load() {
+                selbst.verbindung_herstellen(name);
+            }
+        }));
     }
 
     /// Der Nutzer hat in der Leiste einen Eintrag ausgewaehlt (C5, C6).
@@ -2621,9 +2641,13 @@ impl Anwendungsdelegierter {
             // Kurz genug fuer die Statuszeile: sie ist einzeilig, und ein
             // laengerer Satz endet am rechten Rand des Dateifensters mit
             // drei Punkten. Gemessen am 260805 im laufenden Buendel.
+            let pfad = auswahl
+                .pfad()
+                .map(|pfad| pfad.display().to_string())
+                .unwrap_or_default();
             let antwort = satz(
                 Text::LesezeichenZielFehlt,
-                &[("name", &auswahl.name), ("pfad", &auswahl.pfad().display())],
+                &[("name", &auswahl.name), ("pfad", &pfad)],
             );
             self.antwort_zeigen(aktiv, &antwort);
             return;
@@ -2643,6 +2667,12 @@ impl Anwendungsdelegierter {
                 zeile,
                 zeileninhalt,
             } => self.textmarke_anspringen(datei, *zeile, zeileninhalt),
+            // **Eine Verbindung tut auf eine Auswahl nichts** (Entscheidung 12
+            // des Plans der sechs Felder): eine Pfeiltaste, die ueber sie
+            // laeuft, fragte sonst nach einer PIN oder haengte etwas ein.
+            // Verbunden wird allein auf den Klick (`Leistenquelle`, Handlung
+            // `zeileGeklickt:`) und auf „Verbindung herstellen“.
+            Ziel::Verbindung { .. } => {}
         }
     }
 
@@ -4531,6 +4561,10 @@ impl Anwendungsdelegierter {
             Kommando::LesezeichenLoeschen => self.lesezeichen_loeschen(),
             Kommando::LesezeichenHoch => self.lesezeichen_verschieben(Verschiebung::Hoch),
             Kommando::LesezeichenRunter => self.lesezeichen_verschieben(Verschiebung::Runter),
+            // **Ein eigener Zweig, wie bei `WeitereInstanz`**: ohne ihn fiele
+            // der Befehl durch den Auffangzweig unten und taete nichts
+            // (Schritt 8 des Plans der sechs Felder).
+            Kommando::VerbindungHerstellen => self.gewaehlte_verbindung_herstellen(),
             Kommando::FokusLeiste => self.fokus_holen(Fokus::Leiste),
             Kommando::FokusDateifenster => self.fokus_holen(Fokus::Dateifenster),
             // Wie `VorschauUmschalten` daneben: der Fokusbefehl holt seinen
@@ -5645,15 +5679,17 @@ impl Anwendungsdelegierter {
     ///
     /// Der Weg in vier Schritten, und jeder steht genau einmal im Baum:
     ///
-    /// 1. **Anlegen**, ueber [`heimordner::bereitstellen`]. Das ist sein
-    ///    einziger Rufer, und diese Funktion hat ihrerseits genau einen, den
-    ///    Zweig in `kommando_ausfuehren`; die Probe
+    /// 1. **Anlegen**, ueber [`heimordner::bereitstellen`] in
+    ///    [`Self::notizordner_bereitstellen`]. Jene hat zwei Rufer, diese
+    ///    Funktion und seit dem 261016 „Verbinden…“, und diese Funktion hat
+    ///    ihrerseits genau einen, den Zweig in `kommando_ausfuehren`; die Probe
     ///    `notizordnerproben::der_start_erreicht_weder_das_anlegen_noch_das_aufloesen`
-    ///    haelt beides. Damit legt der Start nichts an, auch nicht fuer einen
-    ///    wiederhergestellten Tab auf den Ordner. Jede Meldung geht als
+    ///    haelt alles mit Namen. Damit legt der Start nichts an, auch nicht fuer
+    ///    einen wiederhergestellten Tab auf den Ordner. Jede Meldung geht als
     ///    Befehlsantwort in die Statuszeile des aktiven Dateifensters; ein
     ///    [`heimordner::Hindernis`] oeffnet keinen Tab.
-    /// 2. **Aufloesen**, ueber [`Heimordner::aufgeloest_erneuern`], und erst
+    /// 2. **Aufloesen**, ueber [`Heimordner::aufgeloest_erneuern`], ebenfalls
+    ///    in [`Self::notizordner_bereitstellen`], und erst
     ///    nach dem Anlegen: `canonicalize` beruehrt das Ziel eines Verweises,
     ///    und das hat `bereitstellen` in diesem Augenblick ohnehin getan. Der
     ///    erneuerte Wert geht in den [`Heimgriff`], damit jeder Frager ihn sieht.
@@ -5669,6 +5705,44 @@ impl Anwendungsdelegierter {
     /// sichtbar war. Ein Blatt oeffnet sich auf keinem dieser Wege.
     fn notizordner_oeffnen(&self) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
+        let Some((heim, meldungen)) = self.notizordner_bereitstellen(aktiv) else {
+            return true;
+        };
+
+        let tabelle = self.dateifenster(aktiv).quelle();
+        let vorhanden = tabelle
+            .tabordner()
+            .iter()
+            .position(|ordner| heim.ist(ordner));
+        match vorhanden {
+            Some(stelle) => tabelle.tab_waehlen(stelle),
+            None => tabelle.tab_oeffnen(heim.geschrieben()),
+        }
+        // **Die Meldungen erst nach dem Tabwechsel**, damit sie in der
+        // Statuszeile des Tabs stehen, den der Nutzer jetzt ansieht. Mehrere
+        // Saetze gingen nacheinander in dieselbe Zeile, und stehen bliebe der
+        // letzte; zusammengefasst werden sie deshalb hier, in einer Antwort.
+        if !meldungen.is_empty() {
+            let antwort = meldungen.join("; ");
+            self.antwort_zeigen(aktiv, &antwort);
+        }
+        let _ = self.fokus_holen(Fokus::Dateifenster);
+        true
+    }
+
+    /// Die Schritte 1 und 2 von [`Self::notizordner_oeffnen`]: anlegen, was
+    /// fehlt, und aufloesen; liefert den erneuerten Notizordner und die Saetze
+    /// fuer die Statuszeile, oder `None`, nachdem der Grund in der Statuszeile
+    /// von `seite` steht.
+    ///
+    /// **Der eine Rufer von [`heimordner::bereitstellen`]**, und er selbst hat
+    /// zwei: F2 und, seit dem 261016, „Verbinden…“, wenn `secrets.txt` fehlt
+    /// (Entscheidung 14 des Plans der sechs Felder). Beide sind Befehle; der
+    /// Start erreicht keinen, und die Probe
+    /// `notizordnerproben::der_start_erreicht_weder_das_anlegen_noch_das_aufloesen`
+    /// haelt beides mit Namen. **Gilt kein Ort**, nennt die Statuszeile den
+    /// Grund aus [`heimgriff::lage`], und angelegt wird nichts.
+    fn notizordner_bereitstellen(&self, seite: Fensterseite) -> Option<(Heimordner, Vec<String>)> {
         // **`lage` und nicht `lesen`**: gilt kein Ort, nennt F2 den Grund und
         // legt nichts an. Den Schutzort, den `lesen` dann liefert, darf F2
         // nicht sehen; an ihm anzulegen waere der stille Rueckfall, den H2
@@ -5676,8 +5750,8 @@ impl Anwendungsdelegierter {
         let heim = match heimgriff::lage(&self.ivars().heim) {
             Ok(heim) => heim,
             Err(fehler) => {
-                self.antwort_zeigen(aktiv, &fehler.meldung());
-                return true;
+                self.antwort_zeigen(seite, &fehler.meldung());
+                return None;
             }
         };
         // **Im Durchgang der Ablage, wenn es einen gibt**: der Merker der
@@ -5701,34 +5775,15 @@ impl Anwendungsdelegierter {
         let bereitstellung = match ausgang {
             Ok(bereitstellung) => bereitstellung,
             Err(hindernis) => {
-                self.antwort_zeigen(aktiv, &hindernis.meldung(heim.anzeigename()));
-                return true;
+                self.antwort_zeigen(seite, &hindernis.meldung(heim.anzeigename()));
+                return None;
             }
         };
         let heim = heim.aufgeloest_erneuern();
         heimgriff::ersetzen(&self.ivars().heim, Notizlage::gilt(heim.clone()));
-
-        let tabelle = self.dateifenster(aktiv).quelle();
-        let vorhanden = tabelle
-            .tabordner()
-            .iter()
-            .position(|ordner| heim.ist(ordner));
-        match vorhanden {
-            Some(stelle) => tabelle.tab_waehlen(stelle),
-            None => tabelle.tab_oeffnen(heim.geschrieben()),
-        }
-        // **Die Meldungen erst nach dem Tabwechsel**, damit sie in der
-        // Statuszeile des Tabs stehen, den der Nutzer jetzt ansieht. Mehrere
-        // Saetze gingen nacheinander in dieselbe Zeile, und stehen bliebe der
-        // letzte; zusammengefasst werden sie deshalb hier, in einer Antwort.
         let mut meldungen = bereitstellung.meldungen();
         meldungen.extend(sperrsatz);
-        if !meldungen.is_empty() {
-            let antwort = meldungen.join("; ");
-            self.antwort_zeigen(aktiv, &antwort);
-        }
-        let _ = self.fokus_holen(Fokus::Dateifenster);
-        true
+        Some((heim, meldungen))
     }
 
     /// Der Ordner, in dem die alten Zettel `note-1.txt` und `note-2.txt`
@@ -8238,6 +8293,7 @@ impl Anwendungsdelegierter {
             Kontextbefehl::Entpacken => self.entpackauftrag_stellen(seite),
             Kontextbefehl::Duplizieren => self.duplikat_erfragen(seite),
             Kontextbefehl::Auswerfen => self.auswurf_beginnen(seite),
+            Kontextbefehl::Verbinden => self.verbindung_erfragen(seite),
             Kontextbefehl::ImFinderOeffnen => self.im_finder_oeffnen(seite),
             Kontextbefehl::ImFinderAnzeigen => self.im_finder_anzeigen(seite),
         }
@@ -8798,6 +8854,468 @@ impl Anwendungsdelegierter {
                 selbst.antwort_zeigen(seite, &operationen::auswurf_gescheitert(name, &fehler));
             }
         }
+    }
+
+    // ------------------------------------------------------------------
+    // Die Verbindungen (Schritte 6 bis 8 des Plans
+    // `261016-0306_*_plan-secrets-mit-sechs-feldern-schluesselmerker-und-verbindungen.md`)
+    // ------------------------------------------------------------------
+
+    /// Der Ort von `secrets.txt` im geltenden Notizordner, oder der Satz,
+    /// warum keiner gilt ([`heimgriff::lage`]).
+    fn geheimnisdatei(&self) -> Result<PathBuf, String> {
+        heimgriff::lage(&self.ivars().heim)
+            .map(|heim| {
+                heim.geschrieben()
+                    .join(Sonderdatei::Geheimnisse.dateiname())
+            })
+            .map_err(|fehler| fehler.meldung())
+    }
+
+    /// „Verbindung herstellen“: die in der Leiste gewaehlte Verbindung, oder
+    /// ein Satz, dass keine gewaehlt ist (Schritt 8).
+    ///
+    /// `true` in jedem Fall: der Befehl traegt `Wirkungsbereich::Leiste` und
+    /// erreicht diese Stelle nur mit dem Fokus in der Leiste.
+    fn gewaehlte_verbindung_herstellen(&self) -> bool {
+        match self.leiste().quelle().gewaehlte_verbindung() {
+            Some(name) => self.verbindung_herstellen(name),
+            None => {
+                let aktiv = self.ivars().modell.borrow().aktiv();
+                self.antwort_zeigen(aktiv, text(Text::VerbindungKeineAuswahl));
+            }
+        }
+        true
+    }
+
+    /// Stellt die Verbindung `name` aus `secrets.txt` her: der Klick auf ihre
+    /// Zeile und der Befehl „Verbindung herstellen“ (Entscheidungen 12 und 14).
+    ///
+    /// **Auf dem Hauptfaden steht hier ein einziger Systemaufruf**, der
+    /// `stat(2)` aus [`tresorweg::groesse`]: fehlt `secrets.txt` oder ist sie
+    /// leer, gibt es keinen Eintrag, und gemeldet wird das, ohne nach einer
+    /// PIN zu fragen. Sonst entscheidet [`geheimnisweg`] wie beim Oeffnen im
+    /// Editor: der gemerkte Schluessel geht ohne Blatt, ohne ihn fragt das
+    /// PIN-Blatt. Lesen, Finden und Verbinden laufen auf dem Faden
+    /// `krk-verbinden` ([`verbinden::herstellen`]); die Probe
+    /// `der_verbindungsweg_stellt_auf_dem_hauptfaden_nur_den_einen_stat` haelt
+    /// das am Rumpf.
+    ///
+    /// **Ein zweiter Anstoss, waehrend ein Gang laeuft, meldet es**
+    /// (Entscheidung 20) und startet keinen zweiten.
+    fn verbindung_herstellen(&self, name: String) {
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        if self.ivars().tresorgang.get() {
+            self.antwort_zeigen(aktiv, text(Text::VerbindungLaeuftSchon));
+            return;
+        }
+        let pfad = match self.geheimnisdatei() {
+            Ok(pfad) => pfad,
+            Err(grund) => {
+                self.antwort_zeigen(aktiv, &grund);
+                return;
+            }
+        };
+        let groesse = tresorweg::groesse(&pfad).ok();
+        if matches!(groesse, None | Some(0)) {
+            self.antwort_zeigen(
+                aktiv,
+                &satz(Text::VerbindungKeinEintrag, &[("name", &name)]),
+            );
+            return;
+        }
+        match geheimnisweg(
+            groesse,
+            tresorweg::gemerkter_schluessel(&self.ivars().merker),
+        ) {
+            Geheimnisweg::Mittel(mittel) => self.verbindung_starten(pfad, name, mittel),
+            Geheimnisweg::PinErfragen(form) => {
+                self.tresor_pin_erfragen(form, move |selbst, pin| {
+                    selbst.verbindung_starten(
+                        pfad.clone(),
+                        name.clone(),
+                        Oeffnungsmittel::Pin(pin),
+                    );
+                });
+            }
+        }
+    }
+
+    /// Startet den Faden `krk-verbinden` mit dem Mittel; der Ausgang kommt in
+    /// [`Self::verbindung_einziehen`] an.
+    fn verbindung_starten(&self, pfad: PathBuf, name: String, mittel: Oeffnungsmittel) {
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        if self.ivars().tresorgang.get() {
+            self.antwort_zeigen(aktiv, text(Text::VerbindungLaeuftSchon));
+            return;
+        }
+        let mit_schluessel = matches!(mittel, Oeffnungsmittel::Schluessel(_));
+        self.ivars().tresorgang.set(true);
+        self.antwort_zeigen(aktiv, &satz(Text::VerbindungLaeuft, &[("name", &name)]));
+        let (zurueck_pfad, zurueck_name) = (pfad.clone(), name.clone());
+        let gestartet = verbinden::herstellen(pfad, name.clone(), mittel, move |mtm, ergebnis| {
+            Anwendungsdelegierter::verbindung_einziehen(
+                mtm,
+                zurueck_pfad,
+                zurueck_name,
+                mit_schluessel,
+                ergebnis,
+            );
+        });
+        if let Err(fehler) = gestartet {
+            self.ivars().tresorgang.set(false);
+            let code = fehler.to_string();
+            self.antwort_zeigen(
+                aktiv,
+                &satz(
+                    Text::VerbindungFehlercode,
+                    &[("name", &name), ("code", &code)],
+                ),
+            );
+        }
+    }
+
+    /// Nimmt den Ausgang des Fadens `krk-verbinden` entgegen (Entscheidungen
+    /// 6, 10 und 20).
+    ///
+    /// Gerufen auf dem Hauptfaden aus [`verbinden::herstellen`]; den
+    /// Delegierten sucht sie dort, wo er steht, wie
+    /// [`Self::auswurf_einziehen`]. **Zuerst faellt die Sperre des Gangs und
+    /// wird ein Schluessel aus einer PIN gemerkt**, dann geschieht, was der
+    /// Ausgang sagt: ein Einhaengepunkt erscheint im aktiven Dateifenster, eine
+    /// URL geht an das System, und jedes Hindernis geht als Satz in die
+    /// Statuszeile. **Ein gemerkter Schluessel, der nicht oeffnet, faellt**, und
+    /// das PIN-Blatt geht auf, wie beim Oeffnen im Editor.
+    fn verbindung_einziehen(
+        mtm: MainThreadMarker,
+        pfad: PathBuf,
+        name: String,
+        mit_schluessel: bool,
+        ergebnis: Verbindungsergebnis,
+    ) {
+        let Some(selbst) = Self::delegierter(mtm) else {
+            return;
+        };
+        selbst.ivars().tresorgang.set(false);
+        selbst.gemerkt_falls(ergebnis.zu_merken);
+        let aktiv = selbst.ivars().modell.borrow().aktiv();
+        let mit_name = |schluessel: Text| satz(schluessel, &[("name", &name)]);
+        let antwort = match ergebnis.ausgang {
+            Verbindungsausgang::Eingehaengt(punkt)
+            | Verbindungsausgang::SchonEingehaengt(Some(punkt)) => {
+                selbst
+                    .dateifenster(aktiv)
+                    .quelle()
+                    .ordner_lesen(&punkt, None);
+                selbst.sitzung_vormerken();
+                let gezeigt = punkt.display().to_string();
+                satz(
+                    Text::VerbindungEingehaengt,
+                    &[("name", &name), ("pfad", &gezeigt)],
+                )
+            }
+            Verbindungsausgang::SchonEingehaengt(None) => mit_name(Text::VerbindungSchonVerbunden),
+            Verbindungsausgang::Uebergeben(url) => {
+                if verbinden::uebergeben(&url) {
+                    mit_name(Text::VerbindungUebergeben)
+                } else {
+                    mit_name(Text::VerbindungUebergabeAbgewiesen)
+                }
+            }
+            Verbindungsausgang::Hindernis(Verbindungshindernis::Gesperrt(gesperrt))
+                if gesperrt.mittel_abgewiesen && mit_schluessel =>
+            {
+                selbst.schluessel_verwerfen();
+                let form = Pinform::nach_groesse(gesperrt.datei_leer.then_some(0));
+                selbst.tresor_pin_erfragen(form, move |selbst, pin| {
+                    selbst.verbindung_starten(
+                        pfad.clone(),
+                        name.clone(),
+                        Oeffnungsmittel::Pin(pin),
+                    );
+                });
+                return;
+            }
+            Verbindungsausgang::Hindernis(Verbindungshindernis::Gesperrt(gesperrt)) => {
+                gesperrt.abweisung.meldung()
+            }
+            Verbindungsausgang::Hindernis(Verbindungshindernis::Suche(Suchfehler::Keiner)) => {
+                mit_name(Text::VerbindungKeinEintrag)
+            }
+            Verbindungsausgang::Hindernis(Verbindungshindernis::Suche(Suchfehler::Mehrdeutig(
+                zahl,
+            ))) => satz(
+                Text::VerbindungMehrdeutig,
+                &[("name", &name), ("zahl", &zahl)],
+            ),
+            Verbindungsausgang::Hindernis(Verbindungshindernis::Ziel(fehler)) => fehler.meldung(),
+            Verbindungsausgang::UngueltigeUrl => mit_name(Text::VerbindungUngueltigeUrl),
+            Verbindungsausgang::AnmeldungAbgewiesen => {
+                mit_name(Text::VerbindungAnmeldungAbgewiesen)
+            }
+            Verbindungsausgang::NichtErreichbar => mit_name(Text::VerbindungNichtErreichbar),
+            Verbindungsausgang::Fehlercode(code) => satz(
+                Text::VerbindungFehlercode,
+                &[("name", &name), ("code", &code)],
+            ),
+        };
+        selbst.antwort_zeigen(aktiv, &antwort);
+    }
+
+    /// „Verbinden…“ im Kontextmenue der Dateiliste (Schritt 7, Entscheidungen
+    /// 13 bis 16): erst die Vorpruefungen, dann das Blatt.
+    ///
+    /// **Haelt der Editor `secrets.txt` mit ungesichertem Stand, geht kein
+    /// Blatt auf** (Entscheidung 15): der Schreibgang schriebe die Datei unter
+    /// dem Editor weg, und sein naechstes Sichern stuende vor einer Aenderung
+    /// von aussen. Laeuft schon ein Gang an `secrets.txt`, ebenso nicht.
+    fn verbindung_erfragen(&self, seite: Fensterseite) {
+        if self.ivars().tresorgang.get() {
+            self.antwort_zeigen(seite, text(Text::VerbindungLaeuftSchon));
+            return;
+        }
+        if let Some(editor) = self.ivars().editor.get()
+            && editor.haelt_geheimnisse()
+            && editor.hat_ungesicherten_stand()
+        {
+            self.antwort_zeigen(seite, text(Text::VerbindenErstSichern));
+            return;
+        }
+        self.verbindungsblatt_zeigen(seite, &Verbindungsentwurf::default(), None);
+    }
+
+    /// Zeigt das Blatt „Verbinden“ mit den Feldern des Entwurfs und, wenn es
+    /// einen gibt, dem Grund, aus dem es wieder aufgeht.
+    ///
+    /// Der Rueckruf geht ueber die Hauptschlange weiter ([`spaeter`]), weil
+    /// darauf ein weiteres Blatt aufgehen kann, das PIN-Blatt, und der
+    /// Abschlussblock laeuft, waehrend AppKit dieses noch abbaut.
+    fn verbindungsblatt_zeigen(
+        &self,
+        seite: Fensterseite,
+        entwurf: &Verbindungsentwurf,
+        grund: Option<&str>,
+    ) {
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return;
+        };
+        let griff =
+            blaetter::verbindung::zeigen(self.mtm(), fenster, entwurf, grund, move |entwurf| {
+                spaeter(move |selbst| selbst.verbindungsschluessel_holen(seite, entwurf));
+            });
+        self.blatt_oeffnet(griff);
+    }
+
+    /// Holt den Schluessel fuer den Schreibgang: aus dem Merker oder ueber das
+    /// PIN-Blatt (Entscheidungen 5, 6 und 14).
+    ///
+    /// **Fehlt `secrets.txt`, legt [`Self::notizordner_bereitstellen`] sie
+    /// an**, denselben Weg wie F2, ohne einen Tab zu oeffnen, und es geht
+    /// weiter wie bei einer leeren Datei: das PIN-Blatt legt fest. Sonst
+    /// entscheidet [`geheimnisweg`] an der Groesse aus dem einen `stat(2)`.
+    fn verbindungsschluessel_holen(&self, seite: Fensterseite, entwurf: Verbindungsentwurf) {
+        let pfad = match self.geheimnisdatei() {
+            Ok(pfad) => pfad,
+            Err(grund) => {
+                self.antwort_zeigen(seite, &grund);
+                return;
+            }
+        };
+        let groesse = match tresorweg::groesse(&pfad) {
+            Ok(groesse) => Some(groesse),
+            Err(fehler) if fehler.kind() == std::io::ErrorKind::NotFound => {
+                let Some((_, meldungen)) = self.notizordner_bereitstellen(seite) else {
+                    return;
+                };
+                if !meldungen.is_empty() {
+                    let antwort = meldungen.join("; ");
+                    self.antwort_zeigen(seite, &antwort);
+                }
+                Some(0)
+            }
+            Err(_) => None,
+        };
+        match geheimnisweg(
+            groesse,
+            tresorweg::gemerkter_schluessel(&self.ivars().merker),
+        ) {
+            Geheimnisweg::Mittel(mittel) => self.verbindung_anhaengen(seite, pfad, entwurf, mittel),
+            Geheimnisweg::PinErfragen(form) => {
+                self.tresor_pin_erfragen(form, move |selbst, pin| {
+                    selbst.verbindung_anhaengen(
+                        seite,
+                        pfad.clone(),
+                        entwurf.clone(),
+                        Oeffnungsmittel::Pin(pin),
+                    );
+                });
+            }
+        }
+    }
+
+    /// Startet den Schreibgang auf dem Faden `krk-tresor`; der Ausgang kommt
+    /// in [`Self::anhaengen_einziehen`] an.
+    fn verbindung_anhaengen(
+        &self,
+        seite: Fensterseite,
+        pfad: PathBuf,
+        entwurf: Verbindungsentwurf,
+        mittel: Oeffnungsmittel,
+    ) {
+        if self.ivars().tresorgang.get() {
+            self.antwort_zeigen(seite, text(Text::VerbindungLaeuftSchon));
+            return;
+        }
+        let mit_schluessel = matches!(mittel, Oeffnungsmittel::Schluessel(_));
+        let name = entwurf.name.trim().to_owned();
+        self.ivars().tresorgang.set(true);
+        let zurueck = pfad.clone();
+        let gestartet =
+            verbinden::anhaengen(pfad, entwurf, mittel, move |mtm, entwurf, ausgang| {
+                Anwendungsdelegierter::anhaengen_einziehen(
+                    mtm,
+                    seite,
+                    zurueck,
+                    mit_schluessel,
+                    entwurf,
+                    ausgang,
+                );
+            });
+        if let Err(fehler) = gestartet {
+            self.ivars().tresorgang.set(false);
+            let grund = fehler.to_string();
+            self.antwort_zeigen(
+                seite,
+                &satz(
+                    Text::VerbindenNichtEingetragen,
+                    &[("name", &name), ("grund", &grund)],
+                ),
+            );
+        }
+    }
+
+    /// Nimmt den Ausgang des Schreibgangs entgegen (Entscheidungen 13 und 15).
+    ///
+    /// **Angehaengt**: ein Schluessel aus einer PIN wird gemerkt, das
+    /// Lesezeichen entsteht ueber den einen Durchgang [`Self::lesezeichen_aendern`]
+    /// mit [`Ziel::Verbindung`], das allein den Namen traegt, und ein Editor,
+    /// der `secrets.txt` ohne ungesicherten Stand haelt, laedt sie neu.
+    /// **Name vergeben**: das Blatt geht mit allen Feldern und dem Grund
+    /// wieder auf. **Mittel abgewiesen**: ein gemerkter Schluessel faellt, und
+    /// das PIN-Blatt geht wieder auf; die Felder bleiben. **Jeder andere
+    /// Fehler** geht in die Statuszeile, und die Felder fallen.
+    fn anhaengen_einziehen(
+        mtm: MainThreadMarker,
+        seite: Fensterseite,
+        pfad: PathBuf,
+        mit_schluessel: bool,
+        entwurf: Verbindungsentwurf,
+        ausgang: Anhaengausgang,
+    ) {
+        let Some(selbst) = Self::delegierter(mtm) else {
+            return;
+        };
+        selbst.ivars().tresorgang.set(false);
+        let name = entwurf.name.trim().to_owned();
+        match ausgang {
+            Anhaengausgang::Angehaengt { zu_merken } => {
+                selbst.gemerkt_falls(zu_merken);
+                let aenderung = Aenderung::Anlegen {
+                    name: name.clone(),
+                    ziel: Ziel::Verbindung {
+                        verbindung: name.clone(),
+                    },
+                };
+                let schluessel = if selbst.lesezeichen_aendern(seite, &aenderung) {
+                    Text::VerbindenAngelegt
+                } else {
+                    Text::VerbindenOhneLesezeichen
+                };
+                selbst.antwort_zeigen(seite, &satz(schluessel, &[("name", &name)]));
+                if let Some(editor) = selbst.ivars().editor.get()
+                    && editor.haelt_geheimnisse()
+                    && !editor.hat_ungesicherten_stand()
+                {
+                    editor.neu_laden();
+                }
+            }
+            Anhaengausgang::NameVergeben { zu_merken } => {
+                selbst.gemerkt_falls(zu_merken);
+                let grund = satz(Text::VerbindenNameVergeben, &[("name", &name)]);
+                selbst.verbindungsblatt_zeigen(seite, &entwurf, Some(&grund));
+            }
+            Anhaengausgang::MittelAbgewiesen { datei_leer, grund } => {
+                if mit_schluessel {
+                    selbst.schluessel_verwerfen();
+                } else {
+                    selbst.antwort_zeigen(seite, &grund);
+                }
+                let form = Pinform::nach_groesse(datei_leer.then_some(0));
+                selbst.tresor_pin_erfragen(form, move |selbst, pin| {
+                    selbst.verbindung_anhaengen(
+                        seite,
+                        pfad.clone(),
+                        entwurf.clone(),
+                        Oeffnungsmittel::Pin(pin),
+                    );
+                });
+            }
+            Anhaengausgang::Gescheitert(grund) => {
+                selbst.antwort_zeigen(
+                    seite,
+                    &satz(
+                        Text::VerbindenNichtEingetragen,
+                        &[("name", &name), ("grund", &grund)],
+                    ),
+                );
+            }
+        }
+    }
+
+    /// Zeigt das PIN-Blatt fuer einen Gang an `secrets.txt` ausserhalb des
+    /// Editors und reicht die PIN an `weiter` (Klick und „Verbinden…“).
+    ///
+    /// **Dasselbe Blatt wie vor dem Editor** ([`blaetter::pin::zeigen`]), mit
+    /// seinem Griff im Schlitz, damit `esc` es schliesst; abgebrochen wird
+    /// ohne Meldung, wie bei jedem Eingabeblatt.
+    fn tresor_pin_erfragen(
+        &self,
+        form: Pinform,
+        weiter: impl Fn(&Anwendungsdelegierter, Pin) + 'static,
+    ) {
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return;
+        };
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        let griff = blaetter::pin::zeigen(self.mtm(), fenster, form, move |eingabe| {
+            if let Some(selbst) = schwach.load() {
+                weiter(&selbst, eingabe.pin);
+            }
+        });
+        self.blatt_oeffnet(griff);
+    }
+
+    /// Merkt den Schluessel, wenn ein Gang an `secrets.txt` einen aus einer
+    /// eben geprueften PIN liefert (Entscheidung 3); ohne einen tut sie
+    /// nichts.
+    ///
+    /// **Der zweite Rufer von [`Self::schluessel_merken`]** neben dem
+    /// Schluesselmelder des Editorbereichs; die Probe
+    /// `der_merker_hat_genau_einen_schreiber` fuehrt beide mit Namen.
+    fn gemerkt_falls(&self, zu_merken: Option<Schluessel>) {
+        if let Some(schluessel) = zu_merken {
+            self.schluessel_merken(schluessel);
+        }
+    }
+
+    /// Der Anwendungsdelegierte, gesucht dort, wo er steht; fuer die
+    /// Rueckwege, die ueber die Hauptschlange ankommen, weil ein `Retained`
+    /// nicht ueber die Fadengrenze reist.
+    fn delegierter(mtm: MainThreadMarker) -> Option<Retained<Anwendungsdelegierter>> {
+        NSApplication::sharedApplication(mtm)
+            .delegate()?
+            .downcast::<Anwendungsdelegierter>()
+            .ok()
     }
 
     /// Deckt die betroffenen Eintraege im Finder auf (260907).
@@ -11330,6 +11848,24 @@ fn abbruch_ohne_meldung_nachtragen(zustand: &Arc<Vorgangszustand>) {
     }
 }
 
+/// Ruft `weiter` mit dem Anwendungsdelegierten einen Durchgang der
+/// Hauptschlange spaeter (261016).
+///
+/// Fuer den Rueckruf eines Blattes, auf den ein weiteres Blatt folgen kann:
+/// der Abschlussblock laeuft, waehrend AppKit das erste noch abbaut, wie bei
+/// [`Anwendungsdelegierter::blatt_geschlossen`] beschrieben. Derselbe Weg wie
+/// [`hauptfaden_wecken`], die Hauptschlange.
+fn spaeter(weiter: impl FnOnce(&Anwendungsdelegierter) + Send + 'static) {
+    DispatchQueue::main().exec_async(move || {
+        let Some(mtm) = MainThreadMarker::new() else {
+            return;
+        };
+        if let Some(selbst) = Anwendungsdelegierter::delegierter(mtm) {
+            weiter(&selbst);
+        }
+    });
+}
+
 /// Weckt den Hauptfaden, damit er den Stand des Vorgangs zeichnet.
 ///
 /// Der Block haelt nichts fest, was dem Hauptfaden gehoert: er sucht den
@@ -11823,7 +12359,7 @@ mod zweigproben {
     ///
     /// `NeuerungenZeigen` ist der erste, und bis zur krkhome-Arbeit hielt ihn
     /// eine eigene Probe im Pruefmodul der Neuerungen.
-    const BEFEHLE: [&str; 18] = [
+    const BEFEHLE: [&str; 19] = [
         "NeuerungenZeigen",
         "Notizordner",
         "OrtWaehlen",
@@ -11842,6 +12378,7 @@ mod zweigproben {
         "BildVor",
         "BildZurueck",
         "ZumBild",
+        "VerbindungHerstellen",
     ];
 
     #[test]
@@ -12230,28 +12767,60 @@ mod notizordnerproben {
         let datei = "krk-ui/src/appkit/anwendung.rs".to_owned();
         let quelle = diese_datei();
 
+        // Das Anlegen hat einen Rufer, den Helfer der Schritte 1 und 2, und
+        // der hat seit dem 261016 zwei, F2 und „Verbinden…“ bei fehlender
+        // `secrets.txt` (Akzeptanz (10) von Schritt 7 des Plans der sechs
+        // Felder). Beide sind Befehle; keiner ist der Start.
+        let helfer = concat!("notizordner_", "bereitstellen");
         assert_eq!(
             rufer(concat!("bereit", "stellen")),
             [(datei.clone(), 1)],
             "das Anlegen von ~/krkhome hat nicht genau einen Rufer im ausgelieferten Code"
         );
         assert_eq!(
-            aufrufstellen(&rumpf(&quelle, oeffnen), concat!("bereit", "stellen")),
+            aufrufstellen(&rumpf(&quelle, helfer), concat!("bereit", "stellen")),
             1,
-            "der eine Rufer des Anlegens ist nicht {oeffnen}"
+            "der eine Rufer des Anlegens ist nicht {helfer}"
+        );
+        assert_eq!(
+            rufer(helfer),
+            [(datei.clone(), 2)],
+            "{helfer} hat nicht genau zwei Rufer"
+        );
+        for befehl in [oeffnen, concat!("verbindungsschluessel_", "holen")] {
+            assert_eq!(
+                aufrufstellen(&rumpf(&quelle, befehl), helfer),
+                1,
+                "{befehl} ruft {helfer} nicht genau einmal"
+            );
+        }
+        let holen = concat!("verbindungsschluessel_", "holen");
+        assert_eq!(
+            rufer(holen),
+            [(datei.clone(), 1)],
+            "{holen} hat nicht einen Rufer"
+        );
+        assert_eq!(
+            aufrufstellen(
+                &rumpf(&quelle, concat!("verbindungsblatt_", "zeigen")),
+                holen
+            ),
+            1,
+            "der eine Rufer von {holen} ist nicht der Rueckruf des Blattes „Verbinden“"
         );
 
-        // Zwei Rufer seit Stufe 3 des einstellbaren Orts: F2 und „Ort
-        // waehlen…“, und beide sind Befehle; keiner davon ist der Start.
+        // Zwei Rufer seit Stufe 3 des einstellbaren Orts: F2 ueber den
+        // Helfer und „Ort waehlen…“, und beide sind Befehle; keiner davon ist
+        // der Start.
         assert_eq!(
             rufer(concat!("aufgeloest_", "erneuern")),
             [(datei.clone(), 2)],
             "das Aufloesen am Ziel hat nicht genau zwei Rufer im ausgelieferten Code"
         );
         assert_eq!(
-            aufrufstellen(&rumpf(&quelle, oeffnen), concat!("aufgeloest_", "erneuern")),
+            aufrufstellen(&rumpf(&quelle, helfer), concat!("aufgeloest_", "erneuern")),
             1,
-            "einer der Rufer des Aufloesens ist nicht {oeffnen}"
+            "einer der Rufer des Aufloesens ist nicht {helfer}"
         );
         assert_eq!(
             aufrufstellen(
@@ -12419,20 +12988,32 @@ mod notizordnerproben {
     /// bevor es anlegt; den Schutzort aus `heimgriff::lesen` sieht es nicht.
     #[test]
     fn f2_nennt_den_fehler_und_legt_ohne_ort_nichts_an() {
-        let f2 = rumpf(&diese_datei(), concat!("notizordner_", "oeffnen"));
+        let quelle = diese_datei();
+        // Seit dem 261016 stehen Lage und Anlegen im Helfer, den F2 und
+        // „Verbinden…“ teilen; F2 kehrt ohne Ergebnis des Helfers zurueck.
+        let f2 = rumpf(&quelle, concat!("notizordner_", "oeffnen"));
+        let helfer_ruf = f2
+            .find(concat!("self.notizordner_", "bereitstellen("))
+            .expect("F2 ruft den Helfer");
+        let zurueck_f2 = f2.find("return true;").expect("F2 kehrt ohne Ort zurueck");
+        assert!(helfer_ruf < zurueck_f2);
+        let helfer = rumpf(&quelle, concat!("notizordner_", "bereitstellen"));
         let stelle = |nadel: &str| {
-            f2.find(nadel)
-                .unwrap_or_else(|| panic!("{nadel} steht nicht im Rumpf von F2"))
+            helfer
+                .find(nadel)
+                .unwrap_or_else(|| panic!("{nadel} steht nicht im Rumpf des Helfers"))
         };
         let lage = stelle(concat!("heimgriff::", "lage("));
         let fehler = stelle("Err(fehler) =>");
-        let zurueck = stelle("return true;");
+        let zurueck = stelle("return None;");
         let anlegen = stelle(concat!("heimordner::bereit", "stellen("));
         assert!(lage < fehler && fehler < zurueck && zurueck < anlegen);
-        assert!(
-            !f2.contains(concat!("heimgriff::", "lesen(")),
-            "F2 liest den Schutzort mit"
-        );
+        for rumpf in [&f2, &helfer] {
+            assert!(
+                !rumpf.contains(concat!("heimgriff::", "lesen(")),
+                "F2 liest den Schutzort mit"
+            );
+        }
     }
 }
 
@@ -13599,7 +14180,7 @@ mod kontextproben {
         /// Befehl, Zweig und die Nadel, an der die Wirkung des Zweigs zu
         /// erkennen ist. Die Nadeln stehen zusammengesetzt da, aus demselben
         /// Grund wie in der Probe darueber.
-        const ZWEIGE: [(&str, &str, &str); 7] = [
+        const ZWEIGE: [(&str, &str, &str); 8] = [
             (
                 "Kontextbefehl::OeffnenMit",
                 "keine_anwendung_melden",
@@ -13630,6 +14211,13 @@ mod kontextproben {
                 "Kontextbefehl::Auswerfen",
                 "auswurf_beginnen",
                 concat!("auswurf::", "auswerfen("),
+            ),
+            // Die Wirkung von „Verbinden…“ ist das Blatt; was aus seinem
+            // Rueckruf wird, haelt `der_verbindungsweg_reisst_nirgends_ab`.
+            (
+                "Kontextbefehl::Verbinden",
+                "verbindung_erfragen",
+                concat!("verbindungsblatt_", "zeigen("),
             ),
             (
                 "Kontextbefehl::ImFinderOeffnen",
@@ -13857,6 +14445,173 @@ mod kontextproben {
                 !rumpf.contains(nadel),
                 "auswurf_beginnen enthaelt {nadel}: ein Systemaufruf auf dem Hauptfaden"
             );
+        }
+    }
+
+    /// Die zwei Verbindungswege reissen nirgends ab (261016, Schritte 6 bis 8
+    /// des Plans der sechs Felder).
+    ///
+    /// **Klick und Befehl**: der Befehl fragt die gewaehlte Verbindung, der
+    /// Klick kommt ueber die Senke der Leiste, beide gehen durch
+    /// `verbindung_herstellen` in den Faden und kommen in
+    /// `verbindung_einziehen` an. **„Verbinden…“**: Blatt, Schluessel,
+    /// Schreibgang, Ausgang, Lesezeichen mit `Ziel::Verbindung`. Und eine
+    /// Auswahl, die ueber eine Verbindung laeuft, tut nichts (Akzeptanz (5)
+    /// von Schritt 6).
+    ///
+    /// **Was sie nicht sieht:** ob eine Nadel in einem Zweig steht, den der
+    /// Rumpf nie erreicht; sie liest Zeilen und keinen Datenfluss.
+    #[test]
+    fn der_verbindungsweg_reisst_nirgends_ab() {
+        let datei = diese_datei();
+        let glieder: [(&str, &[&str]); 9] = [
+            (
+                "gewaehlte_verbindung_herstellen",
+                &[
+                    concat!(".gewaehlte_", "verbindung()"),
+                    concat!("self.verbindung_", "herstellen(name)"),
+                ],
+            ),
+            (
+                "verbindung_herstellen",
+                &[
+                    concat!("tresorweg::", "groesse("),
+                    concat!("geheimnis", "weg("),
+                    concat!("self.verbindung_", "starten("),
+                    concat!("self.tresor_pin_", "erfragen("),
+                ],
+            ),
+            (
+                "verbindung_starten",
+                &[
+                    concat!("verbinden::", "herstellen("),
+                    concat!("verbindung_", "einziehen("),
+                ],
+            ),
+            (
+                "verbindung_einziehen",
+                &[
+                    concat!("tresorgang.", "set(false)"),
+                    concat!("verbinden::", "uebergeben("),
+                    concat!(".ordner_", "lesen("),
+                ],
+            ),
+            (
+                "verbindung_erfragen",
+                &[
+                    concat!("hat_ungesicherten_", "stand()"),
+                    concat!("self.verbindungsblatt_", "zeigen("),
+                ],
+            ),
+            (
+                "verbindungsblatt_zeigen",
+                &[
+                    concat!("blaetter::verbindung::", "zeigen("),
+                    concat!("verbindungsschluessel_", "holen("),
+                ],
+            ),
+            (
+                "verbindungsschluessel_holen",
+                &[
+                    concat!("tresorweg::", "groesse("),
+                    concat!("self.verbindung_", "anhaengen("),
+                ],
+            ),
+            (
+                "verbindung_anhaengen",
+                &[
+                    concat!("verbinden::", "anhaengen("),
+                    concat!("anhaengen_", "einziehen("),
+                ],
+            ),
+            (
+                "anhaengen_einziehen",
+                &[
+                    concat!("tresorgang.", "set(false)"),
+                    concat!("selbst.lesezeichen_", "aendern(seite, &aenderung)"),
+                    concat!("Ziel::", "Verbindung {"),
+                    concat!("selbst.verbindungsblatt_", "zeigen("),
+                    concat!("selbst.tresor_pin_", "erfragen("),
+                ],
+            ),
+        ];
+        for (name, nadeln) in glieder {
+            let rumpf = rumpf(&datei, name);
+            for nadel in nadeln {
+                assert!(
+                    rumpf.contains(nadel),
+                    "{name} enthaelt {nadel} nicht: der Verbindungsweg reisst ab"
+                );
+            }
+        }
+        assert!(
+            rumpf(&datei, "leiste_einrichten")
+                .contains(concat!("selbst.verbindung_", "herstellen(name)")),
+            "die Senke des Klicks erreicht verbindung_herstellen nicht"
+        );
+
+        // Eine Auswahl, die ueber eine Verbindung laeuft, tut nichts.
+        let auswahl = rumpf(&datei, "leistenauswahl_ausfuehren");
+        let zweig = auswahl
+            .split_once(concat!("Ziel::", "Verbindung { .. } =>"))
+            .map(|(_, rest)| rest)
+            .expect("die Auswahl hat einen Zweig fuer die Verbindung");
+        assert!(
+            zweig.trim_start().starts_with("{}"),
+            "die Auswahl einer Verbindung tut etwas: {zweig}"
+        );
+    }
+
+    /// Die zwei Verbindungswege stellen auf dem Hauptfaden keinen
+    /// Systemaufruf ausser dem einen `stat(2)` aus `tresorweg::groesse`
+    /// (Akzeptanz (7) von Schritt 6, Entscheidung 14).
+    ///
+    /// Gelesen werden die Codezeilen der Ruempfe auf dem Hauptfaden; sie
+    /// tragen weder `fs::` noch `metadata(` noch `exists(`, und sie lesen
+    /// `secrets.txt` nicht selbst, weder ueber `geheimnisse_lesen` noch ueber
+    /// den Schreibgang oder die Vorbereitung. Der `stat(2)` steht genau einmal
+    /// je Weg.
+    ///
+    /// **Was sie nicht sieht:** einen Systemaufruf in einer tiefer gerufenen
+    /// Funktion. **Und eine Ausnahme ist benannt**: fehlt `secrets.txt`, ruft
+    /// `verbindungsschluessel_holen` den Helfer `notizordner_bereitstellen`,
+    /// der wie F2 auf dem Hauptfaden anlegt; das geschieht allein, wenn die
+    /// Datei fehlt, also einmal vor jeder ersten Verbindung.
+    #[test]
+    fn der_verbindungsweg_stellt_auf_dem_hauptfaden_nur_den_einen_stat() {
+        let datei = diese_datei();
+        for name in [
+            "gewaehlte_verbindung_herstellen",
+            "verbindung_herstellen",
+            "verbindung_starten",
+            "verbindung_einziehen",
+            "verbindung_erfragen",
+            "verbindungsblatt_zeigen",
+            "verbindungsschluessel_holen",
+            "verbindung_anhaengen",
+            "anhaengen_einziehen",
+            "tresor_pin_erfragen",
+        ] {
+            let rumpf = rumpf(&datei, name);
+            for nadel in [
+                "fs::",
+                "metadata(",
+                "exists(",
+                concat!("geheimnisse_", "lesen("),
+                concat!("tresorweg::", "anhaengen("),
+                concat!("verbindung_", "vorbereiten("),
+            ] {
+                assert!(
+                    !rumpf.contains(nadel),
+                    "{name} enthaelt {nadel}: ein Systemaufruf auf dem Hauptfaden"
+                );
+            }
+            let stat = rumpf.matches(concat!("tresorweg::", "groesse(")).count();
+            let erwartet = usize::from(matches!(
+                name,
+                "verbindung_herstellen" | "verbindungsschluessel_holen"
+            ));
+            assert_eq!(stat, erwartet, "{name} stellt {stat} stat(2)");
         }
     }
 
@@ -14488,25 +15243,61 @@ mod merkerproben {
                 + code
                     .matches(concat!("selbst.schluessel_", "merken("))
                     .count(),
-            1,
-            "schluessel_merken hat einen Rufer"
+            2,
+            "schluessel_merken hat zwei Rufer"
         );
         assert!(
             rumpf(&quelle, "oberflaeche_aufbauen")
                 .contains(concat!("selbst.schluessel_", "merken(schluessel)")),
-            "der eine Rufer ist der Schluesselmelder des Editorbereichs"
+            "der erste Rufer ist der Schluesselmelder des Editorbereichs"
         );
         assert!(rumpf(&quelle, "oberflaeche_aufbauen").contains("editor.schluesselmelder_setzen("));
+        // Der zweite ist der Helfer der Verbindungswege (261016), und ihn
+        // rufen allein die zwei Ausgaenge der Gaenge an `secrets.txt`.
+        assert!(
+            rumpf(&quelle, "gemerkt_falls")
+                .contains(concat!("self.schluessel_", "merken(schluessel)")),
+            "der zweite Rufer ist gemerkt_falls"
+        );
+        let gemerkt = concat!(".gemerkt_", "falls(");
+        assert_eq!(
+            code.matches(gemerkt).count(),
+            3,
+            "gemerkt_falls hat drei Rufstellen"
+        );
+        assert_eq!(
+            rumpf(&quelle, "verbindung_einziehen")
+                .matches(gemerkt)
+                .count(),
+            1
+        );
+        assert_eq!(
+            rumpf(&quelle, "anhaengen_einziehen")
+                .matches(gemerkt)
+                .count(),
+            2,
+            "angehaengt und Name vergeben: in beiden war die PIN richtig"
+        );
 
         let verwerfen = concat!("merker.borrow_mut().", "verwerfen()");
         assert_eq!(code.matches(verwerfen).count(), 1);
         assert!(rumpf(&quelle, "schluessel_verwerfen").contains(verwerfen));
+        let verwerfen_ruf = concat!("self.schluessel_", "verwerfen()");
         assert_eq!(
-            code.matches(concat!("self.schluessel_", "verwerfen()"))
-                .count(),
-            2,
-            "geleert wird beim Beenden und beim abgewiesenen Schluessel"
+            code.matches(verwerfen_ruf).count()
+                + code
+                    .matches(concat!("selbst.schluessel_", "verwerfen()"))
+                    .count(),
+            4,
+            "geleert wird beim Beenden, beim abgewiesenen Schluessel im Editor \
+             und auf den zwei Verbindungswegen"
         );
+        for weg in ["verbindung_einziehen", "anhaengen_einziehen"] {
+            assert!(
+                rumpf(&quelle, weg).contains(concat!("selbst.schluessel_", "verwerfen()")),
+                "{weg} verwirft einen abgewiesenen Schluessel nicht"
+            );
+        }
 
         // Der Editorbereich liest allein: kein `merken`, kein `verwerfen`.
         let editor = betriebscode(&datei("krk-ui/src/appkit/editor.rs"));

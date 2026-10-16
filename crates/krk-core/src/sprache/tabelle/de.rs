@@ -971,6 +971,44 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::HeimOhneSperreAngelegt => {
             "die Schreibsperre der Ablage lässt sich nicht nehmen ({fehler}); F2 hat ohne sie angelegt"
         }
+        Text::LeisteUeberschriftVerbindungen => "Verbindungen",
+        Text::LeisteSinnbildVerbindung => "Verbindung",
+        Text::KontextVerbinden => "Verbinden…",
+        Text::VerbindungKeinEintrag => "In secrets.txt steht kein Eintrag „{name}“.",
+        Text::VerbindungMehrdeutig => {
+            "In secrets.txt heißen {zahl} Einträge „{name}“; verbunden wird erst, wenn der Name eindeutig ist."
+        }
+        Text::VerbindungLaeuftSchon => "Eine Verbindung wird schon hergestellt.",
+        Text::VerbindungLaeuft => "Verbinde mit „{name}“ …",
+        Text::VerbindungEingehaengt => "„{name}“ ist verbunden: {pfad}",
+        Text::VerbindungSchonVerbunden => "„{name}“ ist schon verbunden.",
+        Text::VerbindungUebergeben => "„{name}“ ist an das System übergeben.",
+        Text::VerbindungUebergabeAbgewiesen => "Das System hat „{name}“ nicht angenommen.",
+        Text::VerbindungAnmeldungAbgewiesen => "Die Anmeldung an „{name}“ wurde abgewiesen.",
+        Text::VerbindungNichtErreichbar => "„{name}“ ist nicht erreichbar.",
+        Text::VerbindungFehlercode => "„{name}“ ließ sich nicht verbinden (Fehler {code}).",
+        Text::VerbindungUngueltigeUrl => "Aus der Adresse von „{name}“ entsteht keine gültige URL.",
+        Text::VerbindungKeineAuswahl => "In der Leiste ist keine Verbindung gewählt.",
+        Text::VerbindenErstSichern => {
+            "secrets.txt hat im Editor ungesicherte Änderungen; erst sichern, dann verbinden."
+        }
+        Text::VerbindenAngelegt => "„{name}“ steht in secrets.txt und unter den Verbindungen.",
+        Text::VerbindenOhneLesezeichen => "„{name}“ steht in secrets.txt; das Lesezeichen fehlt.",
+        Text::VerbindenNameVergeben => "In secrets.txt steht schon ein Eintrag „{name}“.",
+        Text::VerbindenNichtEingetragen => {
+            "„{name}“ ließ sich nicht in secrets.txt eintragen: {grund}"
+        }
+        Text::VerbindenFrage => "Neue Verbindung",
+        Text::VerbindenHinweis => {
+            "Die Felder gehen verschlüsselt in secrets.txt. In die Leiste kommt allein der Name."
+        }
+        Text::VerbindenFeldName => "Name:",
+        Text::VerbindenFeldProtokoll => "Protokoll:",
+        Text::VerbindenFeldAdresse => "Adresse:",
+        Text::VerbindenFeldKonto => "Konto:",
+        Text::VerbindenFeldPasswort => "Passwort:",
+        Text::VerbindenFeldNotizen => "Notizen:",
+        Text::VerbindenNameLeer => "Der Name ist leer.",
     }
 }
 
@@ -1122,6 +1160,7 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::LesezeichenLoeschen => "Lesezeichen löschen",
         Kommando::LesezeichenHoch => "Lesezeichen nach oben verschieben",
         Kommando::LesezeichenRunter => "Lesezeichen nach unten verschieben",
+        Kommando::VerbindungHerstellen => "Verbindung herstellen",
         Kommando::FokusLeiste => "Fokus in die Lesezeichen- und Geräteleiste",
         Kommando::FokusDateifenster => "Fokus zurück in das Dateifenster",
         Kommando::FokusVorschau => "Fokus in das Vorschaufenster",

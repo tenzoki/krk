@@ -1042,6 +1042,56 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::HeimOhneSperreAngelegt => {
             "le verrou d’écriture du dossier de données ne peut pas être pris ({fehler})\u{202f}; F2 a créé sans lui"
         }
+        Text::LeisteUeberschriftVerbindungen => "Connexions",
+        Text::LeisteSinnbildVerbindung => "Connexion",
+        Text::KontextVerbinden => "Se connecter…",
+        Text::VerbindungKeinEintrag => "Aucune entrée «\u{a0}{name}\u{a0}» dans secrets.txt.",
+        Text::VerbindungMehrdeutig => {
+            "{zahl} entrées de secrets.txt s’appellent «\u{a0}{name}\u{a0}»\u{202f}; la connexion attend un nom unique."
+        }
+        Text::VerbindungLaeuftSchon => "Une connexion est déjà en cours.",
+        Text::VerbindungLaeuft => "Connexion à «\u{a0}{name}\u{a0}» …",
+        Text::VerbindungEingehaengt => "«\u{a0}{name}\u{a0}» est connecté\u{a0}: {pfad}",
+        Text::VerbindungSchonVerbunden => "«\u{a0}{name}\u{a0}» est déjà connecté.",
+        Text::VerbindungUebergeben => "«\u{a0}{name}\u{a0}» a été transmis au système.",
+        Text::VerbindungUebergabeAbgewiesen => "Le système n’a pas accepté «\u{a0}{name}\u{a0}».",
+        Text::VerbindungAnmeldungAbgewiesen => {
+            "L’identification auprès de «\u{a0}{name}\u{a0}» a été refusée."
+        }
+        Text::VerbindungNichtErreichbar => "«\u{a0}{name}\u{a0}» est injoignable.",
+        Text::VerbindungFehlercode => {
+            "Impossible de connecter «\u{a0}{name}\u{a0}» (erreur {code})."
+        }
+        Text::VerbindungUngueltigeUrl => {
+            "L’adresse de «\u{a0}{name}\u{a0}» ne donne pas d’URL valide."
+        }
+        Text::VerbindungKeineAuswahl => {
+            "Aucune connexion n’est sélectionnée dans la barre latérale."
+        }
+        Text::VerbindenErstSichern => {
+            "secrets.txt a des modifications non enregistrées dans l’éditeur\u{202f}; enregistrez avant de vous connecter."
+        }
+        Text::VerbindenAngelegt => {
+            "«\u{a0}{name}\u{a0}» figure dans secrets.txt et parmi les connexions."
+        }
+        Text::VerbindenOhneLesezeichen => {
+            "«\u{a0}{name}\u{a0}» figure dans secrets.txt\u{202f}; le signet manque."
+        }
+        Text::VerbindenNameVergeben => "secrets.txt contient déjà une entrée «\u{a0}{name}\u{a0}».",
+        Text::VerbindenNichtEingetragen => {
+            "Impossible d’inscrire «\u{a0}{name}\u{a0}» dans secrets.txt\u{a0}: {grund}"
+        }
+        Text::VerbindenFrage => "Nouvelle connexion",
+        Text::VerbindenHinweis => {
+            "Les champs sont chiffrés dans secrets.txt. Seul le nom apparaît dans la barre latérale."
+        }
+        Text::VerbindenFeldName => "Nom\u{a0}:",
+        Text::VerbindenFeldProtokoll => "Protocole\u{a0}:",
+        Text::VerbindenFeldAdresse => "Adresse\u{a0}:",
+        Text::VerbindenFeldKonto => "Compte\u{a0}:",
+        Text::VerbindenFeldPasswort => "Mot de passe\u{a0}:",
+        Text::VerbindenFeldNotizen => "Notes\u{a0}:",
+        Text::VerbindenNameLeer => "Le nom est vide.",
     }
 }
 
@@ -1188,6 +1238,7 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::LesezeichenLoeschen => "Supprimer le signet",
         Kommando::LesezeichenHoch => "Déplacer le signet vers le haut",
         Kommando::LesezeichenRunter => "Déplacer le signet vers le bas",
+        Kommando::VerbindungHerstellen => "Établir la connexion",
         Kommando::FokusLeiste => "Focus sur la barre des signets et des volumes",
         Kommando::FokusDateifenster => "Focus de retour sur le volet de fichiers",
         Kommando::FokusVorschau => "Focus sur l’Aperçu",

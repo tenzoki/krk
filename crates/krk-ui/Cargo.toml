@@ -48,6 +48,12 @@ objc2-core-foundation = { workspace = true }
 # `objc2-foundation` sie fuehrt; hier steht sie als unmittelbare
 # Abhaengigkeit von `krk-ui`.
 dispatch2 = { workspace = true }
+# Das Passwort im Entwurf des Blattes „Verbinden“ (`tresorweg::Verbindungsentwurf`)
+# tilgt sich beim Fallen. Die Kiste steht schon im Baum, weil `krk-core` sie
+# fuer den Schluessel und das `Passwort` fuehrt; hier steht sie als
+# unmittelbare Abhaengigkeit, weil `krk-ui` den Typ `Zeroizing` nennt. Kein
+# weiteres Paket kommt dadurch dazu.
+zeroize = { workspace = true }
 # Die Syntaxhervorhebung der Formatansicht. Sie steht in `krk-ui` und nicht im
 # Kern, weil sie Farben liefert und Farben in KRK zur Oberflaeche gehoeren; der
 # Kern ist die Schicht ohne Fensterwerkzeug (`krk-core/src/lib.rs`). Die

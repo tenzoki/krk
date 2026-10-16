@@ -1642,6 +1642,7 @@ dependencies = [
  "syntect",
  "toml",
  "two-face",
+ "zeroize",
 ]
 
 [[package]]

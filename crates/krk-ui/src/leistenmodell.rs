@@ -7,7 +7,7 @@
 //! `crate::appkit::volumes` auf und reicht sie als gewoehnliche Rust-Werte
 //! herein.
 //!
-//! # Zwei Teile, eine Liste
+//! # Drei Teile, eine Liste
 //!
 //! ```text
 //! ┌───────────────────────┐
@@ -15,6 +15,8 @@
 //! │  📁 Projekte          │  aus bookmarks.toml, Reihenfolge = Reihenfolge
 //! │  📄 Die Lesestelle    │  eine Textmarke aus C6, dieselbe Liste
 //! │  📁 Sicherung (fehlt) │  ungueltig: der Ordner ist fort
+//! │ Verbindungen          │  Ueberschrift, nur mit mindestens einer Verbindung
+//! │  🌐 NAS Büro          │  eine Verbindung (261016), dieselbe Liste
 //! │ Geräte und Orte       │  Ueberschrift, nicht waehlbar
 //! │  📁 k1                │  das Benutzerverzeichnis
 //! │  📁 Macintosh HD      │  aus NSFileManager.mountedVolumeURLs…
@@ -25,6 +27,16 @@
 //! sagt, **was die Zeile oeffnet**: einen Ordner oder eine Stelle in einer
 //! Datei. Welches Systemsinnbild das ist, entscheidet die Ansicht; hier steht
 //! die Sorte und kein Bildname.
+//!
+//! **Die Verbindungen stehen in derselben Lesezeichenliste und bilden hier
+//! eine eigene Gruppe** (261016, Entscheidung 7 des Plans
+//! `261016-0306_*_plan-secrets-mit-sechs-feldern-schluesselmerker-und-verbindungen.md`).
+//! Welche Gruppe ein Eintrag hat, sagt `Ziel::gruppe` und kein Feld daneben;
+//! ihre Ueberschrift steht, sobald mindestens eine Verbindung abgelegt ist, und
+//! fehlt sonst, damit eine Leiste ohne Verbindungen aussieht wie vorher.
+//! [`Zeile::Lesezeichen`] traegt weiter die Stelle in der **einen** Liste; die
+//! Zeilen einer Gruppe sind die Eintraege dieser Gruppe in der Reihenfolge der
+//! Liste.
 //!
 //! C5 verlangt "trennt Lesezeichen sichtbar von Geraeten und Standardorten".
 //! Zwei Tabellen untereinander waeren die andere Antwort; sie haetten zwei
@@ -42,7 +54,7 @@
 
 use std::path::{Path, PathBuf};
 
-use krk_core::ablage::{Lesezeichen, Lesezeichenliste, Ziel};
+use krk_core::ablage::{Gruppe, Lesezeichen, Lesezeichenliste, Ziel};
 use krk_core::sprache::{Text, satz, text};
 
 /// Die Ueberschrift des oberen Teils, als Schluessel der Sprachtabelle.
@@ -50,6 +62,10 @@ pub const UEBERSCHRIFT_LESEZEICHEN: Text = Text::LeisteUeberschriftLesezeichen;
 
 /// Die Ueberschrift des unteren Teils, als Schluessel der Sprachtabelle.
 pub const UEBERSCHRIFT_GERAETE: Text = Text::LeisteUeberschriftGeraete;
+
+/// Die Ueberschrift der Verbindungen (261016), als Schluessel der
+/// Sprachtabelle.
+pub const UEBERSCHRIFT_VERBINDUNGEN: Text = Text::LeisteUeberschriftVerbindungen;
 
 /// Die Zeile eines ungueltigen Lesezeichens in der Leiste: der Name mit einem
 /// Zusatz (C5), als Schluessel der Sprachtabelle mit dem Platzhalter `{name}`.
@@ -83,7 +99,7 @@ impl Ort {
 /// Eine Zeile der Leiste.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Zeile {
-    /// Eine der beiden Ueberschriften. Nicht waehlbar.
+    /// Eine der Ueberschriften. Nicht waehlbar.
     Ueberschrift(Teil),
     /// Ein Lesezeichen an dieser Stelle der [`Lesezeichenliste`].
     Lesezeichen(usize),
@@ -99,11 +115,14 @@ impl Zeile {
     }
 }
 
-/// Welcher der beiden Teile der Leiste.
+/// Welcher der Teile der Leiste.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Teil {
     /// Der obere Teil mit den Lesezeichen des Nutzers.
     Lesezeichen,
+    /// Der mittlere Teil mit den Verbindungen (261016); er steht allein, wenn
+    /// mindestens eine abgelegt ist.
+    Verbindungen,
     /// Der untere Teil mit den Geraeten und Standardorten.
     Geraete,
 }
@@ -114,6 +133,7 @@ impl Teil {
     pub fn ueberschrift(self) -> &'static str {
         match self {
             Teil::Lesezeichen => text(UEBERSCHRIFT_LESEZEICHEN),
+            Teil::Verbindungen => text(UEBERSCHRIFT_VERBINDUNGEN),
             Teil::Geraete => text(UEBERSCHRIFT_GERAETE),
         }
     }
@@ -143,6 +163,8 @@ pub enum Sinnbild {
     Ordner,
     /// Die Zeile oeffnet eine Stelle in einer Datei (C6).
     Textstelle,
+    /// Die Zeile stellt auf einen Klick eine Verbindung her (261016).
+    Verbindung,
 }
 
 /// Was hinter einer ausgewaehlten Zeile steht.
@@ -171,19 +193,22 @@ pub struct Auswahl {
 }
 
 impl Auswahl {
-    /// Der Pfad, an dem das Ziel liegt: der Ordner oder die Datei.
+    /// Der Pfad, an dem das Ziel liegt: der Ordner oder die Datei; `None`
+    /// fuer eine Verbindung, die keinen Pfad hat (261016).
     ///
-    /// **Die eine Stelle, die beide Sorten auf einen Pfad bringt.** Der
+    /// **Die eine Stelle, die die Sorten mit Pfad auf einen Pfad bringt.** Der
     /// Aufrufer braucht ihn fuer den Satz ueber ein fehlendes Ziel, und der
     /// lautet fuer beide Sorten gleich: was fehlt, ist ein Eintrag im
-    /// Dateisystem, und welcher Art er waere, sagt der Satz nicht. Wer die
-    /// Sorte braucht, sieht auf [`Self::ziel`] und bekommt dort eine
-    /// vollstaendige Fallunterscheidung.
+    /// Dateisystem, und welcher Art er waere, sagt der Satz nicht. Eine
+    /// Verbindung ist nie ungueltig (`Lesezeichen::gueltig`), braucht diesen
+    /// Satz also nie. Wer die Sorte braucht, sieht auf [`Self::ziel`] und
+    /// bekommt dort eine vollstaendige Fallunterscheidung.
     #[must_use]
-    pub fn pfad(&self) -> &Path {
+    pub fn pfad(&self) -> Option<&Path> {
         match &self.ziel {
-            Ziel::Ordner { ordner, .. } => ordner,
-            Ziel::Textstelle { datei, .. } => datei,
+            Ziel::Ordner { ordner, .. } => Some(ordner),
+            Ziel::Textstelle { datei, .. } => Some(datei),
+            Ziel::Verbindung { .. } => None,
         }
     }
 }
@@ -392,6 +417,7 @@ impl Leistenmodell {
                 Some(match self.lesezeichen.get(stelle)?.lesezeichen.ziel {
                     Ziel::Ordner { .. } => Sinnbild::Ordner,
                     Ziel::Textstelle { .. } => Sinnbild::Textstelle,
+                    Ziel::Verbindung { .. } => Sinnbild::Verbindung,
                 })
             }
             Zeile::Ort(stelle) => {
@@ -500,6 +526,30 @@ impl Leistenmodell {
         }
     }
 
+    /// Der Name des Eintrags in `secrets.txt`, wenn die Zeile an dieser
+    /// Stelle eine Verbindung ist (261016).
+    ///
+    /// **Die eine Frage, die der Klick und der Befehl „Verbindung
+    /// herstellen“ stellen**: der Klick mit der angeklickten Zeile, der Befehl
+    /// mit der gewaehlten. Sie stellt keine Frage an das Dateisystem.
+    #[must_use]
+    pub fn verbindung_der_zeile(&self, stelle: usize) -> Option<String> {
+        let Zeile::Lesezeichen(stelle) = self.zeile(stelle)? else {
+            return None;
+        };
+        match &self.lesezeichen.get(stelle)?.lesezeichen.ziel {
+            Ziel::Verbindung { verbindung } => Some(verbindung.clone()),
+            Ziel::Ordner { .. } | Ziel::Textstelle { .. } => None,
+        }
+    }
+
+    /// Der Name des Eintrags in `secrets.txt`, wenn die gewaehlte Zeile eine
+    /// Verbindung ist (261016).
+    #[must_use]
+    pub fn gewaehlte_verbindung(&self) -> Option<String> {
+        self.verbindung_der_zeile(self.auswahl?)
+    }
+
     /// Das ausgewaehlte Lesezeichen als Wert, falls eines ausgewaehlt ist (C5).
     ///
     /// **Der Eintrag und nicht seine Stelle**, und darauf beruht seit der
@@ -545,11 +595,28 @@ impl Leistenmodell {
         }
     }
 
-    /// Baut die Zeilenliste aus den beiden Teilen neu auf.
+    /// Baut die Zeilenliste aus den Teilen neu auf.
+    ///
+    /// **Die Gruppe fragt die Sorte und nicht das Dateisystem**
+    /// (`Ziel::gruppe`). Die Ueberschrift der Verbindungen steht allein mit
+    /// mindestens einer Verbindung; die der Lesezeichen und der Geraete stehen
+    /// immer, wie vor den Verbindungen.
     fn zeilen_bauen(&mut self) {
-        let mut zeilen = Vec::with_capacity(self.lesezeichen.len() + self.orte.len() + 2);
+        let in_gruppe = |gruppe: Gruppe| {
+            self.lesezeichen
+                .iter()
+                .enumerate()
+                .filter(move |(_, gemerkt)| gemerkt.lesezeichen.ziel.gruppe() == gruppe)
+                .map(|(stelle, _)| Zeile::Lesezeichen(stelle))
+        };
+        let mut zeilen = Vec::with_capacity(self.lesezeichen.len() + self.orte.len() + 3);
         zeilen.push(Zeile::Ueberschrift(Teil::Lesezeichen));
-        zeilen.extend((0..self.lesezeichen.len()).map(Zeile::Lesezeichen));
+        zeilen.extend(in_gruppe(Gruppe::Lesezeichen));
+        let mut verbindungen = in_gruppe(Gruppe::Verbindungen).peekable();
+        if verbindungen.peek().is_some() {
+            zeilen.push(Zeile::Ueberschrift(Teil::Verbindungen));
+            zeilen.extend(verbindungen);
+        }
         zeilen.push(Zeile::Ueberschrift(Teil::Geraete));
         zeilen.extend((0..self.orte.len()).map(Zeile::Ort));
         self.zeilen = zeilen;
@@ -673,6 +740,74 @@ mod tests {
             zeile,
             zeileninhalt: zeileninhalt.to_owned(),
         }
+    }
+
+    /// Die Ueberschrift „Verbindungen“ steht allein mit mindestens einer
+    /// Verbindung, und die Teile stehen in der Folge Lesezeichen,
+    /// Verbindungen, Geraete; die Verbindungen einer gemischten Liste ziehen in
+    /// ihre Gruppe (Akzeptanz (4) von Schritt 6).
+    #[test]
+    fn die_verbindungen_stehen_als_eigene_gruppe_zwischen_lesezeichen_und_geraeten() {
+        let ohne = modell();
+        assert!(
+            !beschriftungen(&ohne)
+                .iter()
+                .any(|zeile| zeile == "Verbindungen"),
+            "ohne Verbindung keine Ueberschrift"
+        );
+
+        let mut modell = Leistenmodell::neu();
+        let ordner = std::env::temp_dir();
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![
+            Lesezeichen::verbindung("NAS"),
+            Lesezeichen::neu("Temp", &ordner),
+            Lesezeichen::verbindung("Server"),
+        ]));
+        modell.orte_setzen(vec![Ort::neu("Macintosh HD", "/")]);
+        assert_eq!(
+            beschriftungen(&modell),
+            [
+                "Lesezeichen",
+                "Temp",
+                "Verbindungen",
+                "NAS",
+                "Server",
+                "Geräte und Orte",
+                "Macintosh HD"
+            ]
+        );
+        assert_eq!(modell.sinnbild(3), Some(Sinnbild::Verbindung));
+        assert!(!modell.zeilen()[2].waehlbar());
+        assert!(!modell.ungueltig(3), "eine Verbindung ist nie ungueltig");
+        assert_eq!(modell.verbindung_der_zeile(4).as_deref(), Some("Server"));
+        assert_eq!(modell.verbindung_der_zeile(1), None, "ein Ordner ist keine");
+        assert_eq!(
+            modell.verbindung_der_zeile(2),
+            None,
+            "eine Ueberschrift auch nicht"
+        );
+    }
+
+    /// Die Pfeiltaste waehlt eine Verbindung und liefert ihre Auswahl ohne
+    /// Pfad; ob verbunden wird, entscheidet der Aufrufer, und der tut es auf
+    /// eine Auswahl nicht (Entscheidung 12, Akzeptanz (5) von Schritt 6). Der
+    /// Befehl fragt die gewaehlte Verbindung.
+    #[test]
+    fn eine_gewaehlte_verbindung_hat_keinen_pfad_und_nennt_ihren_eintrag() {
+        let mut modell = Leistenmodell::neu();
+        let mut umbenannt = Lesezeichen::verbindung("NAS");
+        umbenannt.name = "Büro".to_owned();
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![umbenannt]));
+        assert!(modell.auswahl_bewegen(1));
+        let auswahl = modell.gewaehlt().expect("die Verbindung ist gewaehlt");
+        assert_eq!(auswahl.pfad(), None);
+        assert!(auswahl.gueltig);
+        assert_eq!(auswahl.name, "Büro");
+        assert_eq!(
+            modell.gewaehlte_verbindung().as_deref(),
+            Some("NAS"),
+            "der Befehl nimmt den Eintrag und nicht die Beschriftung"
+        );
     }
 
     #[test]
@@ -803,7 +938,7 @@ mod tests {
             })
         );
         assert_eq!(
-            modell.gewaehlt().as_ref().map(Auswahl::pfad),
+            modell.gewaehlt().as_ref().and_then(Auswahl::pfad),
             Some(datei.as_path()),
             "der Pfad einer Textmarke ist ihre Datei"
         );
@@ -826,7 +961,7 @@ mod tests {
             .gewaehlt()
             .expect("die Textmarke liefert eine Auswahl");
         assert!(!auswahl.gueltig);
-        assert_eq!(auswahl.pfad(), Path::new("/gibt/es/nicht/datei.txt"));
+        assert_eq!(auswahl.pfad(), Some(Path::new("/gibt/es/nicht/datei.txt")));
     }
 
     #[test]

@@ -1,5 +1,6 @@
-//! Die Lesezeichen aus C5 und die Textmarken aus C6: frei benannte Verweise
-//! auf einen Ordner oder auf eine Zeile in einer Datei.
+//! Die Lesezeichen aus C5, die Textmarken aus C6 und die Verbindungen
+//! (261016): frei benannte Verweise auf einen Ordner, auf eine Zeile in einer
+//! Datei oder auf einen Eintrag in `secrets.txt`.
 //!
 //! Die Reihenfolge der Liste ist die Reihenfolge in der Leiste; ein eigenes
 //! Ordnungsfeld gibt es nicht, weil zwei Ordnungen zwei Wahrheiten waeren.
@@ -12,16 +13,31 @@
 //! des unteren Leistenteils. Das ist Ansichtszustand und wohnt in
 //! `krk-ui`; die Geraete kommen ohnehin vom System und werden nicht abgelegt.
 //!
-//! # Eine Liste mit zwei Sorten und keine zweite Liste
+//! # Eine Liste mit drei Sorten und keine zweite Liste
 //!
 //! Derselbe Grund, aus dem die Ordnung kein eigenes Feld bekommt, gilt fuer den
-//! Bestand: zwei Listen waeren zwei Wahrheiten. C6 sagt zu, dass beide Sorten
-//! in **einer** Datei und **einer** Ordnung stehen, und die Sorte ist deshalb
-//! eine Eigenschaft des einzelnen Eintrags ([`Ziel`]) und keine Eigenschaft der
-//! Liste. [`Lesezeichenliste`] kennt sie nicht: `anlegen`, `umbenennen`,
-//! `loeschen` und `verschieben` schieben Eintraege in einem `Vec` und fragen an
-//! keiner Stelle nach der Sorte. Damit wirken die vier Befehle aus C5 auf eine
-//! Textmarke wie auf eine Ordnermarke, ohne dass dafuer etwas gebaut wurde.
+//! Bestand: zwei Listen waeren zwei Wahrheiten. C6 sagt zu, dass Ordnermarken
+//! und Textmarken in **einer** Datei und **einer** Ordnung stehen, und die
+//! Sorte ist deshalb eine Eigenschaft des einzelnen Eintrags ([`Ziel`]) und
+//! keine Eigenschaft der Liste. `anlegen`, `umbenennen` und `loeschen` schieben
+//! Eintraege in einem `Vec` und fragen an keiner Stelle nach der Sorte. Damit
+//! wirken die Befehle aus C5 auf eine Textmarke wie auf eine Ordnermarke, ohne
+//! dass dafuer etwas gebaut wurde.
+//!
+//! **Die dritte Sorte, die Verbindung, steht in derselben Liste und bildet in
+//! der Leiste eine eigene Gruppe** (Entscheidung 7 des Plans
+//! `261016-0306_*_plan-secrets-mit-sechs-feldern-schluesselmerker-und-verbindungen.md`).
+//! Die Gruppe folgt aus der Sorte ([`Ziel::gruppe`]) und wird nirgends
+//! abgelegt; eine zweite Liste fuer die Verbindungen entsteht nicht. Allein
+//! [`Lesezeichenliste::verschieben`] fragt nach ihr: es tauscht mit dem
+//! naechsten Eintrag **derselben Gruppe**, denn in der Leiste stehen die zwei
+//! Gruppen getrennt, und ein Tausch ueber die Gruppengrenze hinweg aenderte
+//! auf dem Schirm nichts und kostete den Nutzer einen Tastendruck.
+//!
+//! **Eine Verbindung traegt aus `secrets.txt` allein den Namen**
+//! ([`Ziel::Verbindung`]): Protokoll, Adresse, Konto, Passwort und Notizen
+//! stehen in keinem Feld dieses Typs, also auch nie in `bookmarks.toml`
+//! (Entscheidung 8 desselben Plans).
 //!
 //! # Gueltig heisst: das Ziel steht noch da
 //!
@@ -89,21 +105,23 @@ pub struct Lesezeichen {
     pub ziel: Ziel,
 }
 
-/// Worauf ein Lesezeichen zeigt: die beiden Sorten aus C5 und C6.
+/// Worauf ein Lesezeichen zeigt: die beiden Sorten aus C5 und C6 und die
+/// Verbindung (261016).
 ///
 /// Eine **unmarkierte** Auswahl: in `bookmarks.toml` steht keine Sortenkennung,
-/// sondern allein das Feld `ordner` (mit dem wahlfreien `auswahl` daneben) oder
-/// das Feldtrio `datei`, `zeile` und `zeileninhalt`. Drei Eigenschaften machen diese Form zur richtigen, und alle
+/// sondern allein das Feld `ordner` (mit dem wahlfreien `auswahl` daneben),
+/// das Feldtrio `datei`, `zeile` und `zeileninhalt` oder das Feld
+/// `verbindung`. Drei Eigenschaften machen diese Form zur richtigen, und alle
 /// drei sind Zusagen und keine Bequemlichkeit:
 ///
 /// - **Eine bestehende Datei bleibt gueltig.** Ein Eintrag mit `name` und
 ///   `ordner` trifft [`Ziel::Ordner`] und wird unverandert gelesen. Das ist das
 ///   dreizehnte Abnahmekriterium von C6.
 /// - **Die Sorte ist eine Eigenschaft des Typs und keine Pruefung zur
-///   Laufzeit.** Genau eine der beiden Sorten liegt vor, nie beide und nie
-///   keine; mit zwei wahlfreien Feldern nebeneinander waere das eine Regel, an
-///   die sich jemand halten muesste. Es gibt deshalb keinen Konstruktor, der
-///   beide Sorten zugleich annimmt.
+///   Laufzeit.** Genau eine der Sorten liegt vor, nie zwei und nie keine; mit
+///   wahlfreien Feldern nebeneinander waere das eine Regel, an die sich jemand
+///   halten muesste. Es gibt deshalb keinen Konstruktor, der zwei Sorten
+///   zugleich annimmt.
 /// - **Die Datei bleibt von Hand lesbar**, wie C7 und C11 der Runde 1 es fuer
 ///   die Ablagedateien zusagen: keine Sortenkennung, kein
 ///   `typ = "textstelle"`, keine geschachtelte Tabelle.
@@ -167,6 +185,50 @@ pub enum Ziel {
         /// ausdruecklich fest.
         zeileninhalt: String,
     },
+    /// Ein Eintrag in `secrets.txt`, mit dessen Zugangsdaten ein Klick die
+    /// Verbindung herstellt (261016).
+    ///
+    /// **Allein der Name des Eintrags und kein Wert daraus** (Entscheidung 8
+    /// des Plans im Modulkopf): Protokoll, Adresse, Konto, Passwort und
+    /// Notizen liest der Klick jedes Mal aus der verschluesselten Datei. Der
+    /// Name ist der Schluessel, und er muss dort eindeutig sein; zwei Eintraege
+    /// gleichen Namens verbinden nicht (`heimordner::eintraege::geheimnisse::finden`).
+    ///
+    /// **Ein eigenes Feld neben `name`**, weil `name` die Beschriftung ist, die
+    /// der Nutzer umbenennen darf; das Umbenennen aendert `verbindung` nicht
+    /// und trennt die Marke damit nicht von ihrem Eintrag (Entscheidung 9).
+    ///
+    /// Steht als letzte Variante, weil die unmarkierte Auswahl die Varianten
+    /// der Reihe nach versucht und ein Eintrag mit `ordner` oder `datei` nie
+    /// hier ankommen soll; ohne `verbindung` kommt keiner hier an.
+    Verbindung {
+        /// Der Name des Eintrags in `secrets.txt`.
+        verbindung: String,
+    },
+}
+
+/// Die Gruppe, in der ein Lesezeichen in der Leiste steht (261016).
+///
+/// Sie folgt allein aus der Sorte ([`Ziel::gruppe`]) und wird nicht abgelegt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Gruppe {
+    /// Ordnermarken und Textmarken, die Gruppe „Lesezeichen“.
+    Lesezeichen,
+    /// Verbindungen, die Gruppe „Verbindungen“.
+    Verbindungen,
+}
+
+impl Ziel {
+    /// Die Gruppe, in der ein Lesezeichen mit diesem Ziel in der Leiste
+    /// steht; vollstaendig und ohne Auffangzweig, damit eine weitere Sorte
+    /// ihre Gruppe beim Uebersetzen bekommt.
+    #[must_use]
+    pub fn gruppe(&self) -> Gruppe {
+        match self {
+            Ziel::Ordner { .. } | Ziel::Textstelle { .. } => Gruppe::Lesezeichen,
+            Ziel::Verbindung { .. } => Gruppe::Verbindungen,
+        }
+    }
 }
 
 impl Default for Ziel {
@@ -214,12 +276,30 @@ impl Lesezeichen {
         }
     }
 
+    /// Ein Lesezeichen auf einen Eintrag in `secrets.txt` (261016): die
+    /// Beschriftung und der Name des Eintrags, anfangs derselbe.
+    pub fn verbindung(name: impl Into<String>) -> Self {
+        let name = name.into();
+        Self {
+            ziel: Ziel::Verbindung {
+                verbindung: name.clone(),
+            },
+            name,
+        }
+    }
+
     /// Ob das Ziel, auf das es zeigt, noch da ist (C5, C6).
     ///
-    /// Beide Zweige stellen **genau eine Frage an das Dateisystem und lesen
-    /// keine Datei**; das elfte Abnahmekriterium von C6 verlangt es, und der
-    /// tragende Grund steht im Modulkopf unter "Gueltig heisst: das Ziel steht
-    /// noch da".
+    /// Die Zweige fuer Ordner und Textstelle stellen **genau eine Frage an das
+    /// Dateisystem und lesen keine Datei**; das elfte Abnahmekriterium von C6
+    /// verlangt es, und der tragende Grund steht im Modulkopf unter "Gueltig
+    /// heisst: das Ziel steht noch da".
+    ///
+    /// **Eine Verbindung ist immer gueltig und fragt nichts** (Entscheidung 7
+    /// des Plans im Modulkopf): ob ihr Eintrag in `secrets.txt` besteht, laesst
+    /// sich ohne Entschluesseln nicht sagen, und diese Frage kostete mehr als
+    /// einen Systemaufruf, naemlich eine PIN. Fehlt der Eintrag, sagt es der
+    /// Klick in der Statuszeile.
     ///
     /// Gefragt wird nach der Art des Eintrags und nicht nach irgendeinem: ein
     /// Ordner-Lesezeichen, an dessen Stelle inzwischen eine Datei liegt, laesst
@@ -234,6 +314,7 @@ impl Lesezeichen {
         match &self.ziel {
             Ziel::Ordner { ordner, .. } => ordner.is_dir(),
             Ziel::Textstelle { datei, .. } => datei.is_file(),
+            Ziel::Verbindung { .. } => true,
         }
     }
 }
@@ -441,17 +522,22 @@ impl Lesezeichenliste {
     /// Schiebt das Lesezeichen an dieser Stelle einen Platz weiter (C5).
     ///
     /// Liefert die neue Stelle, oder `None`, wenn es dort keines gibt oder es
-    /// schon am Rand steht. Am Rand geschieht nichts und wird nichts gemeldet:
-    /// das ist dieselbe Antwort, die die Auswahl in der Dateiliste am Listenende
-    /// gibt.
+    /// schon am Rand **seiner Gruppe** steht. Am Rand geschieht nichts und wird
+    /// nichts gemeldet: das ist dieselbe Antwort, die die Auswahl in der
+    /// Dateiliste am Listenende gibt.
+    ///
+    /// **Getauscht wird mit dem naechsten Eintrag derselben Gruppe**
+    /// ([`Ziel::gruppe`], seit dem 261016), und Eintraege der anderen Gruppe
+    /// dazwischen bleiben, wo sie sind. Die Leiste zeigt die zwei Gruppen
+    /// getrennt; der Nachbar auf dem Schirm ist der naechste der Gruppe und
+    /// nicht der naechste der Liste.
     pub fn verschieben(&mut self, stelle: usize, richtung: Verschiebung) -> Option<usize> {
+        let gruppe = self.eintraege.get(stelle)?.ziel.gruppe();
+        let gleiche = |kandidat: &usize| self.eintraege[*kandidat].ziel.gruppe() == gruppe;
         let ziel = match richtung {
-            Verschiebung::Hoch => stelle.checked_sub(1)?,
-            Verschiebung::Runter => stelle + 1,
+            Verschiebung::Hoch => (0..stelle).rev().find(gleiche)?,
+            Verschiebung::Runter => (stelle + 1..self.eintraege.len()).find(gleiche)?,
         };
-        if stelle >= self.eintraege.len() || ziel >= self.eintraege.len() {
-            return None;
-        }
         self.eintraege.swap(stelle, ziel);
         Some(ziel)
     }
@@ -606,6 +692,7 @@ mod tests {
                 Ziel::Textstelle { .. } => {
                     assert!(!*ist_ordner, "{} ist keine Textmarke", marke.name)
                 }
+                Ziel::Verbindung { .. } => panic!("{} ist keine Verbindung", marke.name),
             }
         }
     }
@@ -638,6 +725,71 @@ mod tests {
         assert_eq!(liste.verschieben(0, Verschiebung::Hoch), None);
         assert_eq!(liste.verschieben(2, Verschiebung::Runter), None);
         assert_eq!(namen(&liste), ["Eins", "Drei", "Zwei"]);
+    }
+
+    /// Eine Verbindung gehoert zur Gruppe „Verbindungen“, Ordner- und
+    /// Textmarke zur Gruppe „Lesezeichen“ (261016).
+    #[test]
+    fn die_gruppe_folgt_aus_der_sorte() {
+        assert_eq!(ordner("/p").gruppe(), Gruppe::Lesezeichen);
+        assert_eq!(
+            Lesezeichen::textstelle("T", "/t.rs", 1, "x").ziel.gruppe(),
+            Gruppe::Lesezeichen
+        );
+        assert_eq!(
+            Lesezeichen::verbindung("NAS").ziel.gruppe(),
+            Gruppe::Verbindungen
+        );
+    }
+
+    /// Verschieben tauscht mit dem naechsten Eintrag derselben Gruppe und
+    /// laesst die andere Gruppe stehen; am Rand der Gruppe haelt es an
+    /// (Akzeptanz (3) von Schritt 6).
+    #[test]
+    fn verschieben_bleibt_in_der_gruppe() {
+        let mut liste = Lesezeichenliste::aus(vec![
+            Lesezeichen::neu("Eins", "/eins"),
+            Lesezeichen::verbindung("NAS"),
+            Lesezeichen::neu("Zwei", "/zwei"),
+            Lesezeichen::verbindung("Server"),
+        ]);
+        assert_eq!(liste.verschieben(2, Verschiebung::Hoch), Some(0));
+        assert_eq!(namen(&liste), ["Zwei", "NAS", "Eins", "Server"]);
+        assert_eq!(liste.verschieben(1, Verschiebung::Runter), Some(3));
+        assert_eq!(namen(&liste), ["Zwei", "Server", "Eins", "NAS"]);
+        assert_eq!(
+            liste.verschieben(1, Verschiebung::Hoch),
+            None,
+            "die erste Verbindung steht am Rand ihrer Gruppe"
+        );
+        assert_eq!(
+            liste.verschieben(2, Verschiebung::Runter),
+            None,
+            "das letzte Lesezeichen steht am Rand seiner Gruppe"
+        );
+        assert_eq!(namen(&liste), ["Zwei", "Server", "Eins", "NAS"]);
+    }
+
+    /// Eine Verbindung ist immer gueltig, gleich wie ihr Eintrag heisst; die
+    /// Frage stellt keinen Systemaufruf (Entscheidung 7).
+    #[test]
+    fn eine_verbindung_ist_immer_gueltig() {
+        assert!(Lesezeichen::verbindung("gibt es nicht").gueltig());
+    }
+
+    /// Umbenennen aendert allein die Beschriftung und nicht den Namen des
+    /// Eintrags in `secrets.txt` (Entscheidung 9).
+    #[test]
+    fn umbenennen_laesst_den_eintrag_einer_verbindung_stehen() {
+        let mut liste = Lesezeichenliste::aus(vec![Lesezeichen::verbindung("NAS")]);
+        assert!(liste.umbenennen(0, "Büro"));
+        assert_eq!(liste.eintraege[0].name, "Büro");
+        assert_eq!(
+            liste.eintraege[0].ziel,
+            Ziel::Verbindung {
+                verbindung: "NAS".to_owned()
+            }
+        );
     }
 
     #[test]

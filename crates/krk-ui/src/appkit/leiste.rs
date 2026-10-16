@@ -36,6 +36,24 @@
 //! ueber dieselbe Senke. Zeigt ein Lesezeichen ins Leere, geht statt des
 //! Ordners der Grund an den Aufrufer.
 //!
+//! # Ein Klick verbindet, eine Auswahl nicht (261016)
+//!
+//! **Fuer eine Verbindung gilt der Satz darueber nicht.** Ihre Auswahl tut
+//! nichts; verbunden wird allein auf einen ausdruecklichen Anstoss, den
+//! Mausklick auf die Zeile oder den Befehl „Verbindung herstellen“
+//! (Entscheidung 12 des Plans
+//! `261016-0306_*_plan-secrets-mit-sechs-feldern-schluesselmerker-und-verbindungen.md`).
+//! Eine Pfeiltaste, die ueber eine Verbindung laeuft, fragt sonst je Zeile
+//! nach einer PIN oder haengt eine Freigabe ein.
+//!
+//! Der Klick kommt deshalb nicht ueber die Auswahlmeldung, sondern ueber die
+//! `action` der Tabelle ([`Leistenquelle`] ist ihr Ziel): AppKit sendet sie
+//! auf jeden Mausklick, auch auf eine schon gewaehlte Zeile, und nie auf eine
+//! Bewegung der Auswahl von der Tastatur. Welche Zeile geklickt wurde, sagt
+//! `clickedRow`; ob sie eine Verbindung ist, sagt
+//! [`Leistenmodell::verbindung_der_zeile`], und die Senke dafuer haelt der
+//! Anwendungsdelegierte.
+//!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
 //! `NSView`, `NSScrollView`, `NSTableView`, `NSTableColumn`, `NSTextField`,
@@ -43,7 +61,12 @@
 //! `NSNotification` und `NSString` stehen seit macOS 10.0 zur Verfuegung,
 //! ebenso die drei bedienten Protokolle `NSTableViewDataSource`,
 //! `NSTableViewDelegate` und `NSControlTextEditingDelegate`. Das Buendel zielt
-//! auf 15.0 (`.cargo/config.toml`).
+//! auf 15.0 (`.cargo/config.toml`). Fuer den Klick (261016) kommen
+//! `setTarget:`, `setAction:` (`NSControl.h`) und `clickedRow`
+//! (`NSTableView.h`) hinzu, alle drei ohne eigene Angabe und damit seit 10.0;
+//! das Sinnbild der Verbindung, der Systemname `network`, geht durch dieselbe
+//! `imageWithSystemSymbolName:accessibilityDescription:` wie die zwei
+//! anderen, seit 11.0.
 //!
 //! **Etliche Beruehrungen sind juenger als ihre Klasse, und alle liegen unter
 //! dem Zielsystem:**
@@ -87,8 +110,8 @@
 use std::cell::RefCell;
 
 use objc2::rc::Retained;
-use objc2::runtime::ProtocolObject;
-use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send};
+use objc2::runtime::{AnyObject, ProtocolObject};
+use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSAutoresizingMaskOptions, NSColor, NSControlTextEditingDelegate, NSFont, NSFontWeightRegular,
     NSImage, NSImageScaling, NSImageView, NSScrollView, NSTableColumn,
@@ -134,6 +157,9 @@ const SINNBILD_ORDNER: &str = "folder";
 /// Der Systemname des Sinnbilds fuer eine Stelle in einer Datei (C6).
 const SINNBILD_TEXTSTELLE: &str = "doc.text";
 
+/// Der Systemname des Sinnbilds fuer eine Verbindung (261016).
+const SINNBILD_VERBINDUNG: &str = "network";
+
 /// Die Breite, mit der eine Zelle entsteht, bevor die Tabelle sie auslegt.
 ///
 /// Der Wert selbst ist gleichgueltig; das Verhaeltnis in ihm ist es nicht. Eine
@@ -152,6 +178,10 @@ const AUFBAUBREITE: f64 = 200.0;
 /// die Statuszeile, die Leiste kennt beide nicht.
 pub type Auswahlsenke = Box<dyn Fn(Auswahl)>;
 
+/// Was ein Klick auf eine Verbindung meldet: den Namen ihres Eintrags in
+/// `secrets.txt` (261016).
+pub type Verbindungssenke = Box<dyn Fn(String)>;
+
 /// Was die Datenquelle der Leiste haelt.
 pub struct LeistenIvars {
     /// Die Tabelle, der die Quelle Aenderungen meldet.
@@ -166,6 +196,9 @@ pub struct LeistenIvars {
     /// Wahlfrei, weil die Quelle vor dem Anwendungsdelegierten zur Welt kommt,
     /// wie die Rueckrufe des Dateifensters auch.
     gewaehlt: RefCell<Option<Auswahlsenke>>,
+    /// Was bei einem Klick auf eine Verbindung zu tun ist (261016); wahlfrei
+    /// aus demselben Grund wie [`Self::gewaehlt`].
+    verbinden: RefCell<Option<Verbindungssenke>>,
     /// Wahr, solange die Quelle die Auswahl der Tabelle selbst setzt.
     ///
     /// Ohne dieses Kennzeichen liefe jede Bewegung doppelt: die Quelle setzt
@@ -258,6 +291,28 @@ define_class!(
             }
         }
     }
+
+    impl Leistenquelle {
+        /// Die `action` der Tabelle: ein Mausklick auf eine Zeile (261016).
+        ///
+        /// AppKit sendet sie nach der Auswahlmeldung, also hat
+        /// [`Leistenquelle::auswahl_geaendert`] eine neu gewaehlte Zeile schon
+        /// gemeldet; fuer eine Verbindung tut jene Meldung nichts, und
+        /// verbunden wird allein hier. Ein Klick neben die Zeilen meldet
+        /// `clickedRow` als `-1` und tut nichts.
+        // SAFETY: Die Signatur ist die einer Handlung von AppKit, ein Absender
+        // und kein Rueckgabewert.
+        #[unsafe(method(zeileGeklickt:))]
+        fn zeile_geklickt(&self, _absender: Option<&AnyObject>) {
+            let Ok(zeile) = usize::try_from(self.ivars().tabelle.clickedRow()) else {
+                return;
+            };
+            let name = self.ivars().modell.borrow().verbindung_der_zeile(zeile);
+            if let Some(name) = name {
+                self.verbindung_melden(name);
+            }
+        }
+    }
 );
 
 impl Leistenquelle {
@@ -267,6 +322,7 @@ impl Leistenquelle {
             tabelle,
             modell: RefCell::new(Leistenmodell::neu()),
             gewaehlt: RefCell::new(None),
+            verbinden: RefCell::new(None),
             setzt_selbst: RefCell::new(false),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
@@ -276,6 +332,31 @@ impl Leistenquelle {
     /// Hinterlegt, was bei einer Auswahl zu tun ist.
     pub fn auswahl_setzen(&self, melden: Auswahlsenke) {
         *self.ivars().gewaehlt.borrow_mut() = Some(melden);
+    }
+
+    /// Hinterlegt, was bei einem Klick auf eine Verbindung zu tun ist
+    /// (261016).
+    pub fn verbinden_setzen(&self, verbinden: Verbindungssenke) {
+        *self.ivars().verbinden.borrow_mut() = Some(verbinden);
+    }
+
+    /// Der Name des Eintrags in `secrets.txt`, wenn die gewaehlte Zeile eine
+    /// Verbindung ist; die Frage des Befehls „Verbindung herstellen“
+    /// (261016).
+    #[must_use]
+    pub fn gewaehlte_verbindung(&self) -> Option<String> {
+        self.ivars().modell.borrow().gewaehlte_verbindung()
+    }
+
+    /// Meldet einen Klick auf eine Verbindung an den Halter.
+    ///
+    /// Die Ausleihe des Modells ist beim Aufruf schon zu Ende; die der Senke
+    /// haelt, solange der Rueckruf laeuft, wie in [`Self::auswahl_melden`].
+    fn verbindung_melden(&self, name: String) {
+        let verbinden = self.ivars().verbinden.borrow();
+        if let Some(verbinden) = verbinden.as_ref() {
+            verbinden(name);
+        }
     }
 
     /// Uebernimmt die Lesezeichen des Nutzers (C5).
@@ -539,6 +620,7 @@ fn sinnbildansicht(
     let (name, beschreibung) = match sinnbild {
         Sinnbild::Ordner => (SINNBILD_ORDNER, text(Text::TypOrdner)),
         Sinnbild::Textstelle => (SINNBILD_TEXTSTELLE, text(Text::LeisteSinnbildTextstelle)),
+        Sinnbild::Verbindung => (SINNBILD_VERBINDUNG, text(Text::LeisteSinnbildVerbindung)),
     };
     let bild = NSImage::imageWithSystemSymbolName_accessibilityDescription(
         &NSString::from_str(name),
@@ -612,6 +694,14 @@ impl Leiste {
         unsafe {
             tabelle.setDataSource(Some(ProtocolObject::from_ref(&*quelle)));
             tabelle.setDelegate(Some(ProtocolObject::from_ref(&*quelle)));
+        }
+        // Der Klick auf eine Verbindung (261016). Das Ziel haelt die Tabelle
+        // schwach, wie Datenquelle und Delegierten; `Leiste` haelt die Quelle.
+        // SAFETY: `zeileGeklickt:` ist oben mit der Signatur einer Handlung
+        // erklaert, und das Ziel ist die Quelle, die sie beantwortet.
+        unsafe {
+            tabelle.setTarget(Some(&quelle));
+            tabelle.setAction(Some(sel!(zeileGeklickt:)));
         }
 
         Self { sicht, quelle }

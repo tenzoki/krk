@@ -1469,11 +1469,72 @@ pub enum Text {
     /// `heimordner_oeffnen`: F2 hat ohne die Schreibsperre der Ablage
     /// angelegt; `{fehler}`.
     HeimOhneSperreAngelegt,
+    /// `Teil::Verbindungen`: die Ueberschrift der Gruppe der Verbindungen in der
+    /// Leiste.
+    LeisteUeberschriftVerbindungen,
+    /// `Sinnbild::Verbindung`: die Beschreibung des Sinnbilds fuer VoiceOver.
+    LeisteSinnbildVerbindung,
+    /// `Kontextbefehl::Verbinden`.
+    KontextVerbinden,
+    /// Der Klick auf eine Verbindung findet keinen Eintrag; `{name}`.
+    VerbindungKeinEintrag,
+    /// Der Klick findet mehrere Eintraege gleichen Namens; `{name}`, `{zahl}`.
+    VerbindungMehrdeutig,
+    /// Ein zweiter Klick, waehrend eine Verbindung hergestellt wird.
+    VerbindungLaeuftSchon,
+    /// Die Statuszeile, waehrend eine Verbindung hergestellt wird; `{name}`.
+    VerbindungLaeuft,
+    /// Eine Freigabe ist eingehaengt; `{name}`, `{pfad}`.
+    VerbindungEingehaengt,
+    /// NetFS meldet `EEXIST`, und kein passender Einhaengepunkt ist zu finden; `{name}`.
+    VerbindungSchonVerbunden,
+    /// Eine Adresse ist an das System uebergeben; `{name}`.
+    VerbindungUebergeben,
+    /// Das System nimmt die Adresse nicht an; `{name}`.
+    VerbindungUebergabeAbgewiesen,
+    /// NetFS weist die Anmeldung ab; `{name}`.
+    VerbindungAnmeldungAbgewiesen,
+    /// NetFS erreicht den Rechner nicht; `{name}`.
+    VerbindungNichtErreichbar,
+    /// NetFS meldet einen anderen Fehler; `{name}`, `{code}`.
+    VerbindungFehlercode,
+    /// Aus Protokoll und Adresse entsteht keine URL; `{name}`.
+    VerbindungUngueltigeUrl,
+    /// „Verbindung herstellen“ ohne gewaehlte Verbindung in der Leiste.
+    VerbindungKeineAuswahl,
+    /// „Verbinden…“, waehrend der Editor `secrets.txt` ungesichert haelt.
+    VerbindenErstSichern,
+    /// „Verbinden…“ hat Eintrag und Lesezeichen angelegt; `{name}`.
+    VerbindenAngelegt,
+    /// Der Eintrag steht, das Lesezeichen fehlt; `{name}`.
+    VerbindenOhneLesezeichen,
+    /// Der Grund im Blatt „Verbinden“, wenn der Name in `secrets.txt` schon steht; `{name}`.
+    VerbindenNameVergeben,
+    /// Der Schreibgang nach `secrets.txt` ist gescheitert; `{name}`, `{grund}`.
+    VerbindenNichtEingetragen,
+    /// Die Frage oben im Blatt „Verbinden“.
+    VerbindenFrage,
+    /// Der Text unter der Frage im Blatt „Verbinden“.
+    VerbindenHinweis,
+    /// Die Beschriftung des Namensfeldes im Blatt „Verbinden“.
+    VerbindenFeldName,
+    /// Die Beschriftung des Protokollfeldes.
+    VerbindenFeldProtokoll,
+    /// Die Beschriftung des Adressfeldes.
+    VerbindenFeldAdresse,
+    /// Die Beschriftung des Kontofeldes.
+    VerbindenFeldKonto,
+    /// Die Beschriftung des Passwortfeldes.
+    VerbindenFeldPasswort,
+    /// Die Beschriftung des Notizenfeldes.
+    VerbindenFeldNotizen,
+    /// Der Grund im Blatt „Verbinden“ bei leerem Namen.
+    VerbindenNameLeer,
 }
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 617] = [
+    pub const ALLE: [Text; 647] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -2091,6 +2152,36 @@ impl Text {
         Text::StartSitzungsrechtNichtAngefordert,
         Text::StartLesezeichenNichtGeladen,
         Text::HeimOhneSperreAngelegt,
+        Text::LeisteUeberschriftVerbindungen,
+        Text::LeisteSinnbildVerbindung,
+        Text::KontextVerbinden,
+        Text::VerbindungKeinEintrag,
+        Text::VerbindungMehrdeutig,
+        Text::VerbindungLaeuftSchon,
+        Text::VerbindungLaeuft,
+        Text::VerbindungEingehaengt,
+        Text::VerbindungSchonVerbunden,
+        Text::VerbindungUebergeben,
+        Text::VerbindungUebergabeAbgewiesen,
+        Text::VerbindungAnmeldungAbgewiesen,
+        Text::VerbindungNichtErreichbar,
+        Text::VerbindungFehlercode,
+        Text::VerbindungUngueltigeUrl,
+        Text::VerbindungKeineAuswahl,
+        Text::VerbindenErstSichern,
+        Text::VerbindenAngelegt,
+        Text::VerbindenOhneLesezeichen,
+        Text::VerbindenNameVergeben,
+        Text::VerbindenNichtEingetragen,
+        Text::VerbindenFrage,
+        Text::VerbindenHinweis,
+        Text::VerbindenFeldName,
+        Text::VerbindenFeldProtokoll,
+        Text::VerbindenFeldAdresse,
+        Text::VerbindenFeldKonto,
+        Text::VerbindenFeldPasswort,
+        Text::VerbindenFeldNotizen,
+        Text::VerbindenNameLeer,
     ];
 }
 

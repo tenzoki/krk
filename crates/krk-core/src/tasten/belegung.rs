@@ -961,6 +961,13 @@ pub enum Kommando {
     LesezeichenHoch,
     /// Das ausgewaehlte Lesezeichen einen Platz nach unten schieben (C5).
     LesezeichenRunter,
+    /// Die in der Leiste gewaehlte Verbindung herstellen (261016).
+    ///
+    /// **Der Anstoss von der Tastatur**, neben dem Mausklick auf die Zeile;
+    /// eine Auswahl, die mit den Pfeiltasten ueber eine Verbindung laeuft,
+    /// verbindet nicht (Entscheidung 12 des Plans
+    /// `261016-0306_*_plan-secrets-mit-sechs-feldern-schluesselmerker-und-verbindungen.md`).
+    VerbindungHerstellen,
     /// Den Eingabefokus in die Lesezeichen- und Geraeteleiste setzen (C5).
     FokusLeiste,
     /// Den Eingabefokus zurueck in das aktive Dateifenster setzen (C5).
@@ -1321,7 +1328,7 @@ const _: () = assert!(Kommando::KENNUNGEN.len() <= u16::MAX as usize);
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 103] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 104] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -1396,6 +1403,7 @@ impl Kommando {
         (Kommando::LesezeichenLoeschen, "lesezeichen_loeschen"),
         (Kommando::LesezeichenHoch, "lesezeichen_hoch"),
         (Kommando::LesezeichenRunter, "lesezeichen_runter"),
+        (Kommando::VerbindungHerstellen, "verbindung_herstellen"),
         (Kommando::FokusLeiste, "fokus_leiste"),
         (Kommando::FokusDateifenster, "fokus_dateifenster"),
         (Kommando::FokusVorschau, "fokus_vorschau"),
@@ -1744,7 +1752,8 @@ impl Kommando {
             Kommando::LesezeichenUmbenennen
             | Kommando::LesezeichenLoeschen
             | Kommando::LesezeichenHoch
-            | Kommando::LesezeichenRunter => Wirkungsbereich::Leiste,
+            | Kommando::LesezeichenRunter
+            | Kommando::VerbindungHerstellen => Wirkungsbereich::Leiste,
             // Drei der vier Tabbefehle aus C1. Sie bedienen nach C6 auch die
             // Tabs des Vorschaufensters und wirken auf den Bereich mit Tabs,
             // der den Fokus hat; so fuehrt es die Auslieferungsbelegung seit

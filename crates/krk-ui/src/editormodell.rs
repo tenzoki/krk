@@ -4822,7 +4822,27 @@ mod tests {
             })
             .filter(|(_, zahl)| *zahl > 0)
             .collect();
-        assert_eq!(rufer, [("krk-ui/src/editormodell.rs".to_owned(), 3)]);
+        // Seit dem 261016 dazu genau einer in `tresorweg.rs`, und zwar in
+        // `anhaengen`, dem Schreibgang von „Verbinden…“ (Akzeptanz (5) von
+        // Schritt 7 des Plans der sechs Felder).
+        assert_eq!(
+            rufer,
+            [
+                ("krk-ui/src/editormodell.rs".to_owned(), 3),
+                ("krk-ui/src/tresorweg.rs".to_owned(), 1)
+            ]
+        );
+        // Eine freie Funktion endet auf `}` in Spalte 0, nicht auf der
+        // Einrueckung einer Methode wie bei `rumpf_von`.
+        let anhaengen = weg
+            .split_once(concat!("pub fn ", "anhaengen("))
+            .and_then(|(_, rest)| rest.split_once("\n}\n"))
+            .map(|(rumpf, _)| rumpf)
+            .expect("anhaengen steht in tresorweg.rs");
+        assert!(
+            anhaengen.contains(schreibruf),
+            "der eine Rufer in tresorweg.rs ist nicht anhaengen"
+        );
         for name in [
             concat!("pub fn sichern", "(&mut self)"),
             concat!("pub fn ueberschreiben", "(&mut self)"),

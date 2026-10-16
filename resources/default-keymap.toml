@@ -39,7 +39,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 110 Funktionen mit zusammen 112 Kombinationen.
+# Ausgeliefert sind 111 Funktionen mit zusammen 113 Kombinationen.
 #
 # Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
@@ -599,6 +599,10 @@ tasten = ["opt+up"]
 [[funktion]]
 id = "lesezeichen_runter"
 tasten = ["opt+down"]
+
+[[funktion]]
+id = "verbindung_herstellen"
+tasten = ["opt+return"]
 
 [[funktion]]
 id = "fokus_leiste"

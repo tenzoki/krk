@@ -40,6 +40,32 @@
 //! Geschrieben wird der Merker allein beim Anwendungsdelegierten
 //! (`schluessel_merken`, `schluessel_verwerfen`); gelesen wird er ueber
 //! [`gemerkter_schluessel`].
+//!
+//! # Die zwei Wege der Verbindungen (Schritte 6 und 7 des Plans)
+//!
+//! ```text
+//!  Klick ──> verbindung_vorbereiten(pfad, name, mittel)
+//!              geheimnisse_lesen ──> geheimnisse::finden ──> verbindung::verbindungsziel
+//!          ──> Vorbereitung { zu_merken, plan: Verbindungsplan | Verbindungshindernis }
+//!
+//!  „Verbinden…“ ──> anhaengen(pfad, entwurf, mittel)
+//!              geheimnisse_lesen ──> name_frei ──> geheimnisse::hinzufuegen
+//!              ──> Chiffrat::verschliessen ──> Chiffrat::schreiben
+//!          ──> Anhaengausgang
+//! ```
+//!
+//! **Beide laufen auf einem Arbeitsfaden und lesen den gesicherten Stand der
+//! Platte**, nie den ungesicherten des Editors (Entscheidung 15). Beide
+//! sagen, ob ein Schluessel aus einer eben geprueften PIN stammt
+//! (`zu_merken`); gemerkt wird er beim Anwendungsdelegierten und nicht hier.
+//! [`anhaengen`] ist der **zweite Rufer** von [`Chiffrat::schreiben`] neben
+//! dem Sichern des Editors, und die Probe
+//! `kein_weg_schreibt_klartext_nach_secrets_txt` fuehrt ihn mit Namen.
+//!
+//! **Das Passwort reist hier als `Passwort` und nie als Text**: aus
+//! [`verbindung_vorbereiten`] im [`Verbindungsplan::Einhaengen`], und in
+//! [`anhaengen`] im `Geheimnisentwurf`, den [`Verbindungsentwurf::entwurf`]
+//! baut. Herausgegeben wird es allein in `appkit/verbinden.rs`, an NetFS.
 
 use std::cell::RefCell;
 use std::io;
@@ -47,10 +73,12 @@ use std::path::Path;
 use std::time::Duration;
 
 use krk_core::ablage::atomar;
+use krk_core::heimordner::eintraege::geheimnisse::{self, Geheimnisentwurf, Passwort, Suchfehler};
 use krk_core::heimordner::schluesselmerker::Schluesselmerker;
 use krk_core::heimordner::tresor::{
     self, Oeffnungsfehler, Oeffnungsmittel, Schluessel, Tresorfehler,
 };
+use krk_core::heimordner::verbindung::{self, Verbindungsziel, Zielfehler};
 use krk_core::sprache::{Text, text};
 use krk_core::text::Abweisung;
 use krk_core::text::datei::{self, Lesehindernis};
@@ -221,6 +249,274 @@ pub fn geheimnisse_lesen(pfad: &Path, mittel: &Oeffnungsmittel) -> Result<Entspe
     })
 }
 
+/// Die Felder des Blattes „Verbinden“, so wie der Nutzer sie getippt hat
+/// (Entscheidung 13 des Plans).
+///
+/// **Sie bleiben bis zum Ausgang des Schreibgangs im Speicher**, damit eine
+/// falsche PIN oder ein vergebener Name keine Eingabe kostet: das Blatt geht
+/// mit genau diesen Feldern wieder auf. Das Passwort steht dafuer als Text in
+/// einem `Zeroizing`, das sich beim Fallen tilgt, und nicht als `Passwort`:
+/// das Feld des Blattes muss es wieder anzeigen koennen, und ein zweiter Weg
+/// aus `Passwort` heraus naehme dem Typ die Zusage, die er haelt (sein einer
+/// Weg heraus geht an NetFS). Zum `Passwort` wird es in [`Self::entwurf`],
+/// unmittelbar vor dem Schreibgang. `Debug` zeigt es nicht.
+#[derive(Clone, Default, PartialEq, Eq)]
+pub struct Verbindungsentwurf {
+    /// Der Name des Eintrags und der Beschriftung in der Leiste.
+    pub name: String,
+    /// Das Protokoll als Text.
+    pub protokoll: String,
+    /// Die Adresse.
+    pub adresse: String,
+    /// Das Konto.
+    pub konto: String,
+    /// Das Passwort, getilgt beim Fallen.
+    pub passwort: zeroize::Zeroizing<String>,
+    /// Die Notizen, im Blatt einzeilig.
+    pub notizen: String,
+}
+
+impl std::fmt::Debug for Verbindungsentwurf {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Verbindungsentwurf")
+            .field("name", &self.name)
+            .field("protokoll", &self.protokoll)
+            .field("adresse", &self.adresse)
+            .field("konto", &self.konto)
+            .field("passwort", &"****")
+            .field("notizen", &self.notizen)
+            .finish()
+    }
+}
+
+impl Verbindungsentwurf {
+    /// Der Eintrag fuer `geheimnisse::hinzufuegen`, die Felder ohne Leerraum
+    /// an den Enden bis auf Passwort und Notizen, die so gelten, wie sie
+    /// getippt sind.
+    #[must_use]
+    pub fn entwurf(&self) -> Geheimnisentwurf {
+        Geheimnisentwurf {
+            name: self.name.trim().to_owned(),
+            protokoll: self.protokoll.trim().to_owned(),
+            adresse: self.adresse.trim().to_owned(),
+            konto: self.konto.trim().to_owned(),
+            passwort: Passwort::neu(self.passwort.to_string()),
+            notizen: self.notizen.clone(),
+        }
+    }
+}
+
+/// Warum das Blatt „Verbinden“ seine Felder noch nicht annimmt.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Entwurfsfehler {
+    /// Der Name ist leer.
+    NameLeer,
+    /// Protokoll oder Adresse taugen nicht; den Satz liefert der Kern.
+    Ziel(Zielfehler),
+    /// Ein Feld traegt einen Zeilenumbruch.
+    Umbruch,
+}
+
+impl Entwurfsfehler {
+    /// Der Satz fuer die Zeile unter den Feldern des Blattes.
+    #[must_use]
+    pub fn meldung(&self) -> String {
+        match self {
+            Entwurfsfehler::NameLeer => text(Text::VerbindenNameLeer).to_owned(),
+            Entwurfsfehler::Ziel(fehler) => fehler.meldung(),
+            Entwurfsfehler::Umbruch => text(Text::AbweisungUmbruchImGeheimnisfeld).to_owned(),
+        }
+    }
+}
+
+/// Die Pruefregel des Blattes „Verbinden“ (Entscheidung 16): Name nicht
+/// leer, Protokoll bekannt, Adresse nicht leer und ohne `://`, kein
+/// Zeilenumbruch in einem Feld.
+///
+/// **Protokoll und Adresse fragen dieselben zwei Regeln wie der Klick**
+/// (`verbindung::protokoll_pruefen`, `verbindung::adresse_pruefen`), damit
+/// das Blatt nichts annimmt, was der Klick danach abweist. Rein und ohne
+/// Fenster pruefbar.
+pub fn entwurf_pruefen(entwurf: &Verbindungsentwurf) -> Result<(), Entwurfsfehler> {
+    let felder = [
+        entwurf.name.as_str(),
+        &entwurf.protokoll,
+        &entwurf.adresse,
+        &entwurf.konto,
+        entwurf.passwort.as_str(),
+        &entwurf.notizen,
+    ];
+    if felder.iter().any(|feld| feld.contains(['\n', '\r'])) {
+        return Err(Entwurfsfehler::Umbruch);
+    }
+    if entwurf.name.trim().is_empty() {
+        return Err(Entwurfsfehler::NameLeer);
+    }
+    verbindung::protokoll_pruefen(&entwurf.protokoll).map_err(Entwurfsfehler::Ziel)?;
+    verbindung::adresse_pruefen(&entwurf.adresse).map_err(Entwurfsfehler::Ziel)?;
+    Ok(())
+}
+
+/// Was [`anhaengen`] ausgerichtet hat (Entscheidung 13).
+#[derive(Debug)]
+#[must_use = "der Ausgang entscheidet, ob ein Lesezeichen entsteht oder das Blatt wieder aufgeht"]
+pub enum Anhaengausgang {
+    /// Der Eintrag steht am Ende von `secrets.txt`.
+    Angehaengt {
+        /// Der Schluessel, wenn er aus einer eben geprueften PIN stammt.
+        zu_merken: Option<Schluessel>,
+    },
+    /// Ein Eintrag gleichen Namens steht schon da; geschrieben ist nichts.
+    NameVergeben {
+        /// Wie bei [`Anhaengausgang::Angehaengt`]: die PIN war richtig.
+        zu_merken: Option<Schluessel>,
+    },
+    /// Das Mittel oeffnet die Datei nicht: falsche PIN, fremder Schluessel,
+    /// veraendertes Byte, oder ein Schluessel an einer leeren Datei.
+    MittelAbgewiesen {
+        /// Ob die Datei leer gelesen wurde; die PIN wird dann festgelegt.
+        datei_leer: bool,
+        /// Der Satz fuer die Statuszeile, derselbe wie im Editor.
+        grund: String,
+    },
+    /// Jeder andere Fehler, mit seinem Satz; geschrieben ist nichts, oder
+    /// das Schreiben selbst ist gescheitert.
+    Gescheitert(String),
+}
+
+/// Haengt einen Eintrag in der Grundform an `secrets.txt` an, in einem
+/// Schreibgang (Entscheidung 13): lesen, oeffnen, Name frei?, anhaengen,
+/// verschliessen, atomar schreiben. Laeuft auf dem Faden `krk-tresor`.
+///
+/// **Ein vergebener Name und ein abgewiesenes Mittel schreiben nichts**, und
+/// jede Abweisung vor dem Schreiben laesst Bytes und Stempel der Datei, wie
+/// sie sind. Eine leere Datei bekommt mit einer PIN ihren ersten Schluessel
+/// und ihr erstes Chiffrat, wie das erste Sichern im Editor.
+pub fn anhaengen(
+    pfad: &Path,
+    entwurf: &Geheimnisentwurf,
+    mittel: &Oeffnungsmittel,
+) -> Anhaengausgang {
+    let entsperrt = match geheimnisse_lesen(pfad, mittel) {
+        Ok(entsperrt) => entsperrt,
+        Err(gesperrt) if gesperrt.mittel_abgewiesen => {
+            return Anhaengausgang::MittelAbgewiesen {
+                datei_leer: gesperrt.datei_leer,
+                grund: gesperrt.abweisung.meldung(),
+            };
+        }
+        Err(gesperrt) => return Anhaengausgang::Gescheitert(gesperrt.abweisung.meldung()),
+    };
+    let zu_merken = entsperrt.eingegeben.then(|| entsperrt.schluessel.clone());
+    if !geheimnisse::name_frei(&entsperrt.stand, &entwurf.name) {
+        return Anhaengausgang::NameVergeben { zu_merken };
+    }
+    let neustand = match geheimnisse::hinzufuegen(&entsperrt.stand, entwurf) {
+        Ok(neustand) => neustand,
+        Err(abweisung) => return Anhaengausgang::Gescheitert(abweisung.meldung().to_owned()),
+    };
+    let chiffrat = match Chiffrat::verschliessen(&neustand.text, &entsperrt.schluessel) {
+        Ok(chiffrat) => chiffrat,
+        Err(fehler) => return Anhaengausgang::Gescheitert(fehler.meldung()),
+    };
+    match chiffrat.schreiben(pfad) {
+        Ok(()) => Anhaengausgang::Angehaengt { zu_merken },
+        Err(fehler) => Anhaengausgang::Gescheitert(fehler.to_string()),
+    }
+}
+
+/// Was der Faden `krk-verbinden` nach dem Lesen tun soll (Entscheidung 10).
+#[derive(Debug)]
+pub enum Verbindungsplan {
+    /// Ueber NetFS einhaengen, Konto und Passwort als eigene Argumente.
+    Einhaengen {
+        /// `<schema>://<adresse>`, ohne Konto.
+        url: String,
+        /// Das Konto, wenn der Eintrag eines nennt.
+        konto: Option<String>,
+        /// Das Passwort; leer heisst, NetFS bekommt keines.
+        passwort: Passwort,
+    },
+    /// An das System uebergeben, ohne Passwort.
+    Uebergeben {
+        /// `<schema>://[konto@]adresse`.
+        url: String,
+    },
+}
+
+/// Warum aus einem Klick keine Verbindung entsteht, bevor NetFS gefragt ist.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Verbindungshindernis {
+    /// `secrets.txt` laesst sich mit dem Mittel nicht entsperren.
+    Gesperrt(Gesperrt),
+    /// Kein Eintrag oder mehrere tragen den Namen.
+    Suche(Suchfehler),
+    /// Protokoll oder Adresse des Eintrags taugen nicht.
+    Ziel(Zielfehler),
+}
+
+/// Was [`verbindung_vorbereiten`] liefert.
+#[derive(Debug)]
+pub struct Vorbereitung {
+    /// Der Schluessel, wenn er aus einer eben geprueften PIN stammt; auch
+    /// dann, wenn danach kein Eintrag passt, denn die PIN war richtig.
+    pub zu_merken: Option<Schluessel>,
+    /// Der Plan oder das Hindernis.
+    pub plan: Result<Verbindungsplan, Verbindungshindernis>,
+}
+
+/// Liest `secrets.txt`, findet den Eintrag `name` und baut daraus den Plan
+/// der Verbindung (Entscheidungen 9 und 10). Laeuft auf dem Faden
+/// `krk-verbinden`.
+///
+/// **Eine leere Datei hat keinen Eintrag**, und ein Schluessel, der dabei
+/// aus einer PIN entstuende, gehoerte zu keiner Datei; er wird nicht gemerkt.
+/// Der Klick kommt hier mit einer leeren Datei ohnehin nicht an, er fragt
+/// vorher die Groesse (Entscheidung 14).
+pub fn verbindung_vorbereiten(pfad: &Path, name: &str, mittel: &Oeffnungsmittel) -> Vorbereitung {
+    let entsperrt = match geheimnisse_lesen(pfad, mittel) {
+        Ok(entsperrt) => entsperrt,
+        Err(gesperrt) => {
+            return Vorbereitung {
+                zu_merken: None,
+                plan: Err(Verbindungshindernis::Gesperrt(gesperrt)),
+            };
+        }
+    };
+    if !entsperrt.kopf_auf_platte {
+        return Vorbereitung {
+            zu_merken: None,
+            plan: Err(Verbindungshindernis::Suche(Suchfehler::Keiner)),
+        };
+    }
+    let zu_merken = entsperrt.eingegeben.then(|| entsperrt.schluessel.clone());
+    let plan = geheimnisse::finden(&entsperrt.stand, name)
+        .map_err(Verbindungshindernis::Suche)
+        .and_then(|daten| {
+            let ziel = verbindung::verbindungsziel(&daten.protokoll, &daten.adresse, &daten.konto)
+                .map_err(Verbindungshindernis::Ziel)?;
+            Ok(match ziel {
+                Verbindungsziel::Einhaengen { url, konto } => Verbindungsplan::Einhaengen {
+                    url,
+                    konto,
+                    passwort: daten.passwort,
+                },
+                Verbindungsziel::Uebergeben { url } => Verbindungsplan::Uebergeben { url },
+            })
+        });
+    Vorbereitung { zu_merken, plan }
+}
+
+/// Die Groesse von `secrets.txt`: der eine `stat(2)`, den die zwei Wege der
+/// Verbindungen auf dem Hauptfaden stellen (Entscheidung 14).
+///
+/// Wie `Editorbereich::datei_oeffnen` fuer das PIN-Blatt: gelesen wird
+/// nichts, entschieden wird allein, ob es die Datei gibt, ob sie leer ist und
+/// welche Form das PIN-Blatt hat. Ein Fehler mit `NotFound` heisst, sie fehlt.
+pub fn groesse(pfad: &Path) -> io::Result<u64> {
+    std::fs::metadata(pfad).map(|daten| daten.len())
+}
+
 /// Die Wachzeit, an der der Merker gefragt und beschrieben wird: die eine
 /// Stelle dieser Kiste, die `verzeichnis::sys::wachzeit` liest
 /// (`CLOCK_MONOTONIC`, zaehlt den Ruhezustand mit).
@@ -337,6 +633,257 @@ mod tests {
             krk_core::heimordner::schluesselmerker::GUELTIGKEIT,
             "die Frage verlaengert nichts"
         );
+    }
+
+    /// Ein Entwurf mit eindeutigen Feldwerten.
+    fn verbindungsentwurf(name: &str) -> Verbindungsentwurf {
+        Verbindungsentwurf {
+            name: name.to_owned(),
+            protokoll: "smb".to_owned(),
+            adresse: "nas.local/daten".to_owned(),
+            konto: "kai".to_owned(),
+            passwort: zeroize::Zeroizing::new("geheim-4711".to_owned()),
+            notizen: "Zugang nur im Büronetz.".to_owned(),
+        }
+    }
+
+    /// Der Klartext einer verschluesselten Datei, geoeffnet mit der PIN.
+    fn klartext(pfad: &Path, ziffern: &str) -> String {
+        let bytes = std::fs::read(pfad).expect("lesen");
+        let geoeffnet = tresor::oeffnen(&bytes, &pin(ziffern)).expect("die PIN oeffnet");
+        String::from_utf8(geoeffnet.klartext).expect("UTF-8")
+    }
+
+    /// Akzeptanz (1) von Schritt 7: an eine leere Datei haengt der
+    /// Schreibgang mit einer festgelegten PIN das erste Chiffrat, das mit
+    /// dieser PIN aufgeht und genau den Eintrag in der Grundform traegt; der
+    /// Schluessel ist zu merken.
+    #[test]
+    fn anhaengen_an_eine_leere_datei_schreibt_das_erste_chiffrat() {
+        let ordner = Pruefordner::neu("tresorweg-anhaengen-leer");
+        let pfad = ordner.pfad().join("secrets.txt");
+        std::fs::write(&pfad, b"").expect("leere Datei");
+
+        let ausgang = anhaengen(
+            &pfad,
+            &verbindungsentwurf("NAS").entwurf(),
+            &Oeffnungsmittel::Pin(pin("2468")),
+        );
+        assert!(
+            matches!(ausgang, Anhaengausgang::Angehaengt { zu_merken: Some(_) }),
+            "{ausgang:?}"
+        );
+        assert_eq!(
+            klartext(&pfad, "2468"),
+            "## NAS\nprotocol: smb\naddress: nas.local/daten\naccount: kai\n\
+             password: geheim-4711\nZugang nur im Büronetz.\n"
+        );
+    }
+
+    /// Akzeptanz (2): an eine Datei im alten Format bleiben alle alten
+    /// Eintraege Byte fuer Byte, und der neue steht hinten; mit einem
+    /// gehaltenen Schluessel ist nichts zu merken.
+    #[test]
+    fn anhaengen_an_das_alte_format_laesst_die_alten_eintraege_stehen() {
+        let ordner = Pruefordner::neu("tresorweg-anhaengen-alt");
+        let pfad = ordner.pfad().join("secrets.txt");
+        let schluessel = kleiner_schluessel("0417", 5);
+        let alt = "Vorspann\n## Bank\nPIN 1234\n\n## Mail\nkai@example.org\n";
+        Chiffrat::verschliessen(alt, &schluessel)
+            .expect("verschliessen")
+            .schreiben(&pfad)
+            .expect("schreiben");
+
+        let ausgang = anhaengen(
+            &pfad,
+            &verbindungsentwurf("NAS").entwurf(),
+            &Oeffnungsmittel::Schluessel(schluessel),
+        );
+        assert!(
+            matches!(ausgang, Anhaengausgang::Angehaengt { zu_merken: None }),
+            "{ausgang:?}"
+        );
+        let neu = klartext(&pfad, "0417");
+        assert!(neu.starts_with(alt), "die alten Eintraege bleiben: {neu}");
+        assert!(
+            neu[alt.len()..].contains("## NAS\nprotocol: smb\n"),
+            "{neu}"
+        );
+    }
+
+    /// Akzeptanz (3) und (4): ein vergebener Name und eine falsche PIN
+    /// schreiben nichts; Bytes und Stempel bleiben.
+    #[test]
+    fn ein_vergebener_name_und_eine_falsche_pin_schreiben_nichts() {
+        let ordner = Pruefordner::neu("tresorweg-anhaengen-nichts");
+        let pfad = ordner.pfad().join("secrets.txt");
+        let schluessel = kleiner_schluessel("0417", 5);
+        Chiffrat::verschliessen("## NAS\nalt\n", &schluessel)
+            .expect("verschliessen")
+            .schreiben(&pfad)
+            .expect("schreiben");
+        let vorher = std::fs::read(&pfad).expect("lesen");
+        let stempel = std::fs::metadata(&pfad)
+            .and_then(|daten| daten.modified())
+            .expect("Stempel");
+
+        let vergeben = anhaengen(
+            &pfad,
+            &verbindungsentwurf("  NAS ").entwurf(),
+            &Oeffnungsmittel::Pin(pin("0417")),
+        );
+        assert!(
+            matches!(
+                vergeben,
+                Anhaengausgang::NameVergeben { zu_merken: Some(_) }
+            ),
+            "{vergeben:?}"
+        );
+        let falsch = anhaengen(
+            &pfad,
+            &verbindungsentwurf("Server").entwurf(),
+            &Oeffnungsmittel::Pin(pin("1111")),
+        );
+        assert!(
+            matches!(
+                falsch,
+                Anhaengausgang::MittelAbgewiesen {
+                    datei_leer: false,
+                    ..
+                }
+            ),
+            "{falsch:?}"
+        );
+
+        assert_eq!(std::fs::read(&pfad).expect("lesen"), vorher);
+        assert_eq!(
+            std::fs::metadata(&pfad)
+                .and_then(|daten| daten.modified())
+                .expect("Stempel"),
+            stempel
+        );
+    }
+
+    /// Ein Schluessel an einer leeren Datei ist ein abgewiesenes Mittel mit
+    /// leerer Datei: die PIN wird festgelegt (Entscheidung 6).
+    #[test]
+    fn ein_schluessel_an_einer_leeren_datei_fuehrt_auf_das_festlegen() {
+        let ordner = Pruefordner::neu("tresorweg-anhaengen-schluessel-leer");
+        let pfad = ordner.pfad().join("secrets.txt");
+        std::fs::write(&pfad, b"").expect("leere Datei");
+        let ausgang = anhaengen(
+            &pfad,
+            &verbindungsentwurf("NAS").entwurf(),
+            &Oeffnungsmittel::Schluessel(kleiner_schluessel("0417", 5)),
+        );
+        assert!(
+            matches!(
+                ausgang,
+                Anhaengausgang::MittelAbgewiesen {
+                    datei_leer: true,
+                    ..
+                }
+            ),
+            "{ausgang:?}"
+        );
+        assert_eq!(std::fs::metadata(&pfad).expect("stat").len(), 0);
+    }
+
+    /// Der Plan einer Verbindung: einhaengen mit Konto und Passwort neben der
+    /// URL, uebergeben ohne Passwort; keiner, mehrere und ein unbekanntes
+    /// Protokoll sind Hindernisse; eine PIN liefert den Schluessel zum Merken
+    /// auch dann, wenn kein Eintrag passt.
+    #[test]
+    fn der_plan_einer_verbindung_folgt_dem_eintrag() {
+        let ordner = Pruefordner::neu("tresorweg-vorbereiten");
+        let pfad = ordner.pfad().join("secrets.txt");
+        let schluessel = kleiner_schluessel("0417", 5);
+        let stand = "## NAS\nprotocol: smb\naddress: nas.local/daten\naccount: kai\n\
+                     password: geheim\n\n## Shell\nprotocol: SSH\naddress: host\n\
+                     account: root\npassword: x\n\n## Doppelt\n\n## Doppelt\n\n\
+                     ## Alt\nprotocol: gopher\naddress: a\n";
+        Chiffrat::verschliessen(stand, &schluessel)
+            .expect("verschliessen")
+            .schreiben(&pfad)
+            .expect("schreiben");
+        let mittel = Oeffnungsmittel::Schluessel(schluessel);
+
+        let nas = verbindung_vorbereiten(&pfad, " NAS ", &mittel);
+        assert!(
+            nas.zu_merken.is_none(),
+            "ein gehaltener Schluessel merkt nicht neu"
+        );
+        match nas.plan {
+            Ok(Verbindungsplan::Einhaengen {
+                url,
+                konto,
+                passwort,
+            }) => {
+                assert_eq!(url, "smb://nas.local/daten");
+                assert_eq!(konto.as_deref(), Some("kai"));
+                assert!(!passwort.ist_leer());
+                assert!(!format!("{passwort:?}").contains("geheim"));
+            }
+            anders => panic!("{anders:?}"),
+        }
+        match verbindung_vorbereiten(&pfad, "Shell", &mittel).plan {
+            Ok(Verbindungsplan::Uebergeben { url }) => assert_eq!(url, "ssh://root@host"),
+            anders => panic!("{anders:?}"),
+        }
+        assert!(matches!(
+            verbindung_vorbereiten(&pfad, "Fehlt", &mittel).plan,
+            Err(Verbindungshindernis::Suche(Suchfehler::Keiner))
+        ));
+        assert!(matches!(
+            verbindung_vorbereiten(&pfad, "Doppelt", &mittel).plan,
+            Err(Verbindungshindernis::Suche(Suchfehler::Mehrdeutig(2)))
+        ));
+        assert!(matches!(
+            verbindung_vorbereiten(&pfad, "Alt", &mittel).plan,
+            Err(Verbindungshindernis::Ziel(
+                Zielfehler::UnbekanntesProtokoll(_)
+            ))
+        ));
+
+        let mit_pin = verbindung_vorbereiten(&pfad, "Fehlt", &Oeffnungsmittel::Pin(pin("0417")));
+        assert!(mit_pin.zu_merken.is_some(), "die PIN war richtig");
+        let falsch = verbindung_vorbereiten(&pfad, "NAS", &Oeffnungsmittel::Pin(pin("1111")));
+        assert!(falsch.zu_merken.is_none());
+        assert!(matches!(
+            falsch.plan,
+            Err(Verbindungshindernis::Gesperrt(Gesperrt {
+                mittel_abgewiesen: true,
+                ..
+            }))
+        ));
+    }
+
+    /// Eine leere Datei hat keinen Eintrag, und ein Schluessel, der dabei aus
+    /// einer PIN entstuende, wird nicht gemerkt.
+    #[test]
+    fn eine_leere_datei_hat_keinen_eintrag_und_nichts_zu_merken() {
+        let ordner = Pruefordner::neu("tresorweg-vorbereiten-leer");
+        let pfad = ordner.pfad().join("secrets.txt");
+        std::fs::write(&pfad, b"").expect("leere Datei");
+        let vorbereitung = verbindung_vorbereiten(&pfad, "NAS", &Oeffnungsmittel::Pin(pin("2468")));
+        assert!(vorbereitung.zu_merken.is_none());
+        assert!(matches!(
+            vorbereitung.plan,
+            Err(Verbindungshindernis::Suche(Suchfehler::Keiner))
+        ));
+    }
+
+    /// `Debug` eines Entwurfs zeigt das Passwort nicht, und der Entwurf fuer
+    /// den Kern nimmt die Felder ohne Leerraum an den Enden.
+    #[test]
+    fn der_entwurf_verbirgt_das_passwort() {
+        let mut entwurf = verbindungsentwurf(" NAS ");
+        entwurf.protokoll = " smb ".to_owned();
+        assert!(!format!("{entwurf:?}").contains("geheim-4711"));
+        let kern = entwurf.entwurf();
+        assert_eq!(kern.name, "NAS");
+        assert_eq!(kern.protokoll, "smb");
+        assert!(!format!("{kern:?}").contains("geheim-4711"));
     }
 
     /// In dieser Kiste liest allein [`wachzeit`] die Uhr des Merkers, und

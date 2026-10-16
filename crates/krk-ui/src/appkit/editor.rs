@@ -9181,6 +9181,11 @@ mod tests {
     /// Antwort `Ueberschreiben`. Fuer `.neu_laden()` gilt dasselbe mit der
     /// Antwort `NeuLaden`. Ein dritter Rufer, etwa ein `cmd+s`, das still
     /// ueberschreibt, macht die Probe rot.
+    /// Der Name einer Nadel `.name()` ohne Punkt und Klammern.
+    fn name_der_nadel(nadel: &str) -> &str {
+        nadel.trim_start_matches('.').trim_end_matches("()")
+    }
+
     #[test]
     fn das_ueberschreiben_hat_genau_einen_rufer() {
         use super::super::anwendung::quelltextproben::{datei, rumpf};
@@ -9210,7 +9215,26 @@ mod tests {
                         .collect::<Vec<_>>()
                 })
                 .collect();
-            assert_eq!(rufer.len(), 2, "{nadel}: {rufer:#?}");
+            // `.neu_laden()` hat seit dem 261016 einen dritten Rufer:
+            // `anhaengen_einziehen` laedt `secrets.txt` nach „Verbinden…“
+            // neu, und zwar allein ohne ungesicherten Stand, verwirft also
+            // nichts (Entscheidung 15 des Plans der sechs Felder).
+            let erwartet = if name_der_nadel(nadel) == "neu_laden" {
+                3
+            } else {
+                2
+            };
+            assert_eq!(rufer.len(), erwartet, "{nadel}: {rufer:#?}");
+            if erwartet == 3 {
+                let anhaengen = rumpf(&anwendung, "anhaengen_einziehen");
+                let frage = anhaengen
+                    .find(concat!("!editor.hat_ungesicherten_", "stand()"))
+                    .expect("das Neuladen fragt nach dem ungesicherten Stand");
+                let ruf = anhaengen
+                    .find(nadel)
+                    .expect("anhaengen_einziehen laedt neu");
+                assert!(frage < ruf);
+            }
             let name = nadel.trim_start_matches('.').trim_end_matches("()");
             assert!(
                 rumpf(&editor, name).contains(&format!("modell.borrow_mut(){nadel}")),

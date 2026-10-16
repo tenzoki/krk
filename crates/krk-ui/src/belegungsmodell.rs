@@ -423,6 +423,7 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::LesezeichenLoeschen
         | Kommando::LesezeichenHoch
         | Kommando::LesezeichenRunter
+        | Kommando::VerbindungHerstellen
         | Kommando::FokusLeiste
         | Kommando::FokusDateifenster
         | Kommando::LeisteUmschalten => Funktionsbereich::LeisteUndFokus,

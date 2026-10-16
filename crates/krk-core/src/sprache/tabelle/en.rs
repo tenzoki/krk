@@ -929,6 +929,42 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::HeimOhneSperreAngelegt => {
             "the write lock of the data folder cannot be taken ({fehler}); F2 created without it"
         }
+        Text::LeisteUeberschriftVerbindungen => "Connections",
+        Text::LeisteSinnbildVerbindung => "Connection",
+        Text::KontextVerbinden => "Connect…",
+        Text::VerbindungKeinEintrag => "secrets.txt has no entry “{name}”.",
+        Text::VerbindungMehrdeutig => {
+            "{zahl} entries in secrets.txt are named “{name}”; connecting waits for a unique name."
+        }
+        Text::VerbindungLaeuftSchon => "A connection is already being made.",
+        Text::VerbindungLaeuft => "Connecting to “{name}” …",
+        Text::VerbindungEingehaengt => "“{name}” is connected: {pfad}",
+        Text::VerbindungSchonVerbunden => "“{name}” is already connected.",
+        Text::VerbindungUebergeben => "“{name}” was handed to the system.",
+        Text::VerbindungUebergabeAbgewiesen => "The system did not accept “{name}”.",
+        Text::VerbindungAnmeldungAbgewiesen => "The login to “{name}” was rejected.",
+        Text::VerbindungNichtErreichbar => "“{name}” cannot be reached.",
+        Text::VerbindungFehlercode => "Could not connect “{name}” (error {code}).",
+        Text::VerbindungUngueltigeUrl => "The address of “{name}” does not make a valid URL.",
+        Text::VerbindungKeineAuswahl => "No connection is selected in the sidebar.",
+        Text::VerbindenErstSichern => {
+            "secrets.txt has unsaved changes in the editor; save first, then connect."
+        }
+        Text::VerbindenAngelegt => "“{name}” is in secrets.txt and among the connections.",
+        Text::VerbindenOhneLesezeichen => "“{name}” is in secrets.txt; the bookmark is missing.",
+        Text::VerbindenNameVergeben => "secrets.txt already has an entry “{name}”.",
+        Text::VerbindenNichtEingetragen => "Could not add “{name}” to secrets.txt: {grund}",
+        Text::VerbindenFrage => "New Connection",
+        Text::VerbindenHinweis => {
+            "The fields go into secrets.txt encrypted. Only the name appears in the sidebar."
+        }
+        Text::VerbindenFeldName => "Name:",
+        Text::VerbindenFeldProtokoll => "Protocol:",
+        Text::VerbindenFeldAdresse => "Address:",
+        Text::VerbindenFeldKonto => "Account:",
+        Text::VerbindenFeldPasswort => "Password:",
+        Text::VerbindenFeldNotizen => "Notes:",
+        Text::VerbindenNameLeer => "The name is empty.",
     }
 }
 
@@ -1068,6 +1104,7 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::LesezeichenLoeschen => "Delete Bookmark",
         Kommando::LesezeichenHoch => "Move Bookmark Up",
         Kommando::LesezeichenRunter => "Move Bookmark Down",
+        Kommando::VerbindungHerstellen => "Establish Connection",
         Kommando::FokusLeiste => "Focus Bookmarks and Volumes Bar",
         Kommando::FokusDateifenster => "Focus Back to File Pane",
         Kommando::FokusVorschau => "Focus Preview",

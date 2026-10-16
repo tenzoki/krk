@@ -208,7 +208,10 @@
 //! `NSWindow`, `NSObject`, `NSString` und `NSNotification` stehen seit macOS
 //! 10.0 zur Verfuegung, ebenso die Protokolle `NSControlTextEditingDelegate`
 //! und `NSTextFieldDelegate` samt der beiden hier beantworteten Methoden
-//! `control:textView:doCommandBySelector:` und `controlTextDidChange:` samt
+//! `control:textView:doCommandBySelector:` und `controlTextDidChange:`, seit
+//! dem 261016 auch `controlTextDidBeginEditing:` mit dem Schluessel
+//! `NSFieldEditor` im `userInfo` der Meldung (`NSControl.h`, ohne eigene
+//! Angabe), samt
 //! der darin verglichenen Befehle `insertNewline:`, `cancelOperation:` und
 //! `insertNewlineIgnoringFieldEditor:` (`NSResponder.h`), dazu
 //! die Aufzaehlungen `NSAlertStyle` und `NSEventModifierFlags` und die
@@ -261,6 +264,7 @@ pub mod startmeldungen;
 pub mod suche;
 pub mod uebersprungen;
 pub mod ungesichert;
+pub mod verbindung;
 pub mod zeilennummer;
 
 use std::cell::RefCell;
@@ -268,7 +272,7 @@ use std::rc::Rc;
 
 use block2::RcBlock;
 use objc2::rc::Retained;
-use objc2::runtime::{ProtocolObject, Sel};
+use objc2::runtime::{AnyObject, ProtocolObject, Sel};
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSAlert, NSAlertFirstButtonReturn, NSAlertStyle, NSButton, NSControl, NSControlStateValueOff,
@@ -283,6 +287,9 @@ use krk_core::sprache::{Text, text};
 ///
 /// `true` heisst bestaetigt.
 type Antwortweg = Box<dyn Fn(bool)>;
+
+/// Was der Waechter beim Beginn einer Bearbeitung mit dem Feldeditor tut.
+type Bearbeitungsbeginn = Rc<dyn Fn(&NSTextView)>;
 
 /// Was der Eingabewaechter haelt.
 pub struct WaechterIvars {
@@ -319,6 +326,14 @@ pub struct WaechterIvars {
     /// und setzt einen Zeilenumbruch ins Feld, statt die Schaltflaeche
     /// auszuloesen, die der erlaeuternde Text des Blattes ansagt.
     wahl: RefCell<Option<Box<dyn Fn()>>>,
+    /// Was zu tun ist, wenn in einem bewachten Feld eine Bearbeitung beginnt,
+    /// mit dem Feldeditor, den AppKit dafuer einsetzt (261016).
+    ///
+    /// Wahlfrei, weil es allein das Blatt „Verbinden“ setzt: es schaltet am
+    /// Feldeditor die Automatiken ab, bevor das erste Wort fertig ist
+    /// ([`Blatt::bearbeitungsbeginn_melden`]). Ein `Rc` aus demselben Grund
+    /// wie bei [`Self::aenderung`].
+    beginn: RefCell<Option<Bearbeitungsbeginn>>,
 }
 
 define_class!(
@@ -392,6 +407,28 @@ define_class!(
                 aenderung();
             }
         }
+
+        /// In einem bewachten Feld beginnt eine Bearbeitung (261016).
+        ///
+        /// Den Feldeditor nennt die Meldung unter dem Schluessel
+        /// `NSFieldEditor` in ihrem `userInfo` (`NSControl.h`). Die Ausleihe
+        /// endet vor dem Aufruf, wie in [`Eingabewaechter::text_geaendert`].
+        // SAFETY: Die Signatur entspricht der des Protokolls.
+        #[unsafe(method(controlTextDidBeginEditing:))]
+        fn bearbeitung_beginnt(&self, meldung: &objc2_foundation::NSNotification) {
+            let beginn = self.ivars().beginn.borrow().clone();
+            let Some(beginn) = beginn else {
+                return;
+            };
+            let schluessel: &AnyObject = ns_string!("NSFieldEditor").as_ref();
+            let editor = meldung
+                .userInfo()
+                .and_then(|info| info.objectForKey(schluessel))
+                .and_then(|editor| editor.downcast::<NSTextView>().ok());
+            if let Some(editor) = editor {
+                beginn(&editor);
+            }
+        }
     }
 
     // SAFETY: `NSTextFieldDelegate` hat nur wahlfreie Methoden.
@@ -406,6 +443,7 @@ impl Eingabewaechter {
             aenderung: RefCell::new(None),
             pruefung: RefCell::new(None),
             wahl: RefCell::new(None),
+            beginn: RefCell::new(None),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
@@ -976,6 +1014,21 @@ impl Blatt {
     pub fn textaenderung_melden(&self, melden: Box<dyn Fn()>) {
         if let Some(waechter) = &self.waechter {
             *waechter.ivars().aenderung.borrow_mut() = Some(Rc::from(melden));
+        }
+    }
+
+    /// Hinterlegt, was beim Beginn jeder Bearbeitung in einem bewachten Feld
+    /// mit dessen Feldeditor geschieht (261016).
+    ///
+    /// Der Weg des Blattes „Verbinden“ ([`verbindung`]): es ruft daran
+    /// `textautomatik::automatiken_abschalten`, denn seine Felder bekommen den
+    /// Feldeditor des Blattfensters, den KRK nicht selbst baut, und eine
+    /// Automatik, die beim Tippen ersetzt, aenderte still Konto oder Passwort.
+    /// Ohne einen Waechter geschieht nichts, wie bei
+    /// [`Self::textaenderung_melden`].
+    pub fn bearbeitungsbeginn_melden(&self, melden: Box<dyn Fn(&NSTextView)>) {
+        if let Some(waechter) = &self.waechter {
+            *waechter.ivars().beginn.borrow_mut() = Some(Rc::from(melden));
         }
     }
 

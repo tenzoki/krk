@@ -292,7 +292,7 @@ use crate::text::datei::EDITORGRENZE;
 
 pub use einstellungen::Einstellungen;
 pub use lesezeichen::{
-    Aenderung, Ausgang, Lesezeichen, Lesezeichenliste, Namenshinweis, Verschiebung, Ziel,
+    Aenderung, Ausgang, Gruppe, Lesezeichen, Lesezeichenliste, Namenshinweis, Verschiebung, Ziel,
 };
 pub use pfade::{Ablageort, Datei, Ersatz, Leerbefund};
 pub use sitzung::{

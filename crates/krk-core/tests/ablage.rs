@@ -4497,6 +4497,83 @@ fn eine_rundreise_ueber_beide_sorten_liefert_dieselbe_datei() {
     assert_eq!(erster, zweiter, "die Datei ist byteweise dieselbe");
 }
 
+/// Eine Rundreise ueber alle drei Sorten liefert dieselbe Datei (261016,
+/// Akzeptanz (1) von Schritt 6 des Plans der sechs Felder): die Verbindung
+/// tritt als dritte unmarkierte Sorte neben Ordner- und Textmarke, und die
+/// zwei aelteren lesen sich unveraendert.
+#[test]
+fn eine_rundreise_ueber_alle_drei_sorten_liefert_dieselbe_datei() {
+    let (_ordner, ablage) = ablage("lesezeichen-drei-sorten");
+    let mut eintraege = gemischte_liste().eintraege;
+    eintraege.insert(1, Lesezeichen::verbindung("NAS Buero"));
+    let mut umbenannt = Lesezeichen::verbindung("Server");
+    umbenannt.name = "Mein Server".to_owned();
+    eintraege.push(umbenannt);
+    let liste = Lesezeichenliste::aus(eintraege);
+
+    gesichert(&ablage, Datei::Lesezeichen, &liste)
+        .expect("bookmarks.toml laesst sich nicht schreiben");
+    let erster = fs::read(ablage.pfad(Datei::Lesezeichen)).expect("lesen gescheitert");
+
+    let geladen: Geladen<Lesezeichenliste> = geladen(&ablage, Datei::Lesezeichen);
+    assert!(!geladen.ist_ersetzt(), "{:?}", geladen.ersetzung);
+    assert_eq!(geladen.wert, liste, "der Wert ueberlebt die Rundreise");
+
+    gesichert(&ablage, Datei::Lesezeichen, &geladen.wert)
+        .expect("bookmarks.toml laesst sich nicht ein zweites Mal schreiben");
+    let zweiter = fs::read(ablage.pfad(Datei::Lesezeichen)).expect("lesen gescheitert");
+    assert_eq!(erster, zweiter, "die Datei ist byteweise dieselbe");
+}
+
+/// Eine Verbindung schreibt aus ihrem Eintrag in `secrets.txt` allein den
+/// Namen nach `bookmarks.toml` (261016, Akzeptanz (2) von Schritt 6,
+/// Entscheidung 8).
+///
+/// Die Probe legt einen Eintrag mit eindeutigen Feldwerten an, baut das
+/// Lesezeichen so, wie „Verbinden…“ es tut, aus dem Namen des Entwurfs, und
+/// sucht jeden uebrigen Wert in der geschriebenen Datei. **Was sie haelt, ist
+/// der Typ**: [`Ziel::Verbindung`] hat kein Feld fuer einen dieser Werte; die
+/// Probe faellt, sobald eines dazukommt und befuellt wird.
+#[test]
+fn eine_verbindung_schreibt_aus_dem_eintrag_allein_den_namen() {
+    use krk_core::heimordner::eintraege::geheimnisse::{Geheimnisentwurf, Passwort};
+    let entwurf = Geheimnisentwurf {
+        name: "Freigabe-Name-7f3a".to_owned(),
+        protokoll: "smb".to_owned(),
+        adresse: "rechner-c41e.local/freigabe-9b20".to_owned(),
+        konto: "konto-5d77".to_owned(),
+        passwort: Passwort::neu("passwort-e18c".to_owned()),
+        notizen: "notiz-2a96".to_owned(),
+    };
+    let (_ordner, ablage) = ablage("lesezeichen-verbindung-allein-name");
+    let liste = Lesezeichenliste::aus(vec![Lesezeichen::verbindung(entwurf.name.clone())]);
+    gesichert(&ablage, Datei::Lesezeichen, &liste)
+        .expect("bookmarks.toml laesst sich nicht schreiben");
+    let text = fs::read_to_string(ablage.pfad(Datei::Lesezeichen)).expect("lesen gescheitert");
+
+    assert!(
+        text.contains(&entwurf.name),
+        "der Name steht darin:\n{text}"
+    );
+    for wert in [
+        "rechner-c41e",
+        "freigabe-9b20",
+        "konto-5d77",
+        "passwort-e18c",
+        "notiz-2a96",
+    ] {
+        assert!(
+            !text.contains(wert),
+            "{wert} steht in bookmarks.toml:\n{text}"
+        );
+    }
+    let schluessel: Vec<&str> = text
+        .lines()
+        .filter_map(|zeile| zeile.split_once(" = ").map(|(links, _)| links.trim()))
+        .collect();
+    assert_eq!(schluessel, ["name", "verbindung"], "{text}");
+}
+
 /// Eine Ordnermarke mit gemerktem Eintrag uebersteht die Rundreise, und eine
 /// ohne schreibt kein Feld `auswahl` (260925).
 ///
