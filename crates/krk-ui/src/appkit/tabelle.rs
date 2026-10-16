@@ -1631,6 +1631,22 @@ impl DateifensterQuelle {
             .map(Path::to_path_buf)
     }
 
+    /// Ob der sichtbare Tab einen Ordner auf einem Server zeigt.
+    ///
+    /// Am Wert des Tabs und ohne Systemaufruf, ohne den Ort zu kopieren;
+    /// gefragt von `Anwendungsdelegierter::lage` fuer `Lage::aktiv_fern`, von
+    /// `Anwendungsdelegierter::bereichsleiste_nachziehen` fuer die Schalter
+    /// „Deep“ und „Content“ und von `kontextbefehl_ausfuehren` (Entscheidung 13
+    /// des Plans der sftp-Ordner).
+    pub fn zeigt_fern(&self) -> bool {
+        self.ivars()
+            .tabs
+            .borrow()
+            .aktiver()
+            .lokaler_ordner()
+            .is_none()
+    }
+
     /// Die lokalen Ordner aller Tabs, in der Reihenfolge der Leiste (C9);
     /// `None` fuer einen fernen Tab.
     pub fn tabordner(&self) -> Vec<Option<PathBuf>> {

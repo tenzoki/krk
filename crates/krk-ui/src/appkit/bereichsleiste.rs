@@ -141,7 +141,7 @@
 //! Verfuegung, ebenso `initWithFrame:`, `setFrame:`, `frame`, `addSubview:`,
 //! `setAutoresizingMask:`, `resizeSubviewsWithOldSize:` (`NSView.h:122`),
 //! `sizeToFit`, `setFont:`, `setTextColor:`, `setTag:`, `tag`, `setState:`,
-//! `state`, `setToolTip:`, `setStringValue:`, `refusesFirstResponder`
+//! `state`, `setEnabled:` (`NSControl.h`, ohne eigene Angabe), `setToolTip:`, `setStringValue:`, `refusesFirstResponder`
 //! (`NSControl.h:30`, ohne eigene Angabe), `systemFontOfSize:` und
 //! `smallSystemFontSize`; die drei Werte von `NSControlStateValue`
 //! (`NSCell.h:71-74`) und der Wert `NSLineBreakByTruncatingTail` der
@@ -808,7 +808,7 @@ impl Bereichsleiste {
     ///
     /// **`tief`, `inhalt` und `filter` kommen aus einer anderen Quelle als die
     /// beiden ersten Argumente**, und die Leiste erfaehrt davon nichts: sie
-    /// bekommt fuenf Werte und schreibt sie.
+    /// bekommt sechs Werte und schreibt sie.
     /// `filter` ist der fertige Text des Etiketts aus
     /// [`crate::filteranzeige::anzeigetext`]; `None` leert es und nimmt
     /// seinen Hinweistext weg, damit ein Verweilen ueber der leeren Stelle
@@ -817,12 +817,20 @@ impl Bereichsleiste {
     /// das ist die Naht, an der eine Antwort "je Fenster" auf
     /// `decisions/260814-1830_*_gilt-das-ankreuzfeld-deep-je-tab-oder-je-fenster.md`
     /// anfiele, ohne diese Datei zu beruehren.
+    ///
+    /// **`suche_bedienbar` schaltet „Deep“ und „Content“ ab, und sonst
+    /// nichts**: zeigt der sichtbare Tab des aktiven Dateifensters einen
+    /// Ordner auf einem Server, bekommt er keinen Durchlauf, und ein
+    /// bedienbarer Schalter dort waere still wirkungslos (Entscheidung 13 des
+    /// Plans der sftp-Ordner). Der Stand der zwei Schalter bleibt dabei, wie
+    /// das Modell ihn fuehrt; abgeschaltet heisst nicht ausgeschaltet.
     pub fn zustaende_setzen(
         &self,
         sichtbar: &Sichtbarkeit,
         spalten: &Spaltensichtbarkeit,
         tief: bool,
         inhalt: bool,
+        suche_bedienbar: bool,
         filter: Option<&str>,
     ) {
         for bereich in Bereich::ALLE {
@@ -842,6 +850,8 @@ impl Bereichsleiste {
         }
         zustand_setzen(&self.tiefenschalter, tief);
         zustand_setzen(&self.inhaltsschalter, inhalt);
+        self.tiefenschalter.setEnabled(suche_bedienbar);
+        self.inhaltsschalter.setEnabled(suche_bedienbar);
         match filter {
             Some(anzeige) => {
                 self.filteretikett

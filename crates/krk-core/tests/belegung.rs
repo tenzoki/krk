@@ -3682,3 +3682,43 @@ fn nach_dem_sichern_traegt_jede_funktion_name_in_der_geltenden_sprache() {
         );
     }
 }
+
+/// Genau diese Kommandos brauchen einen lokalen Ort, und keines sonst
+/// (Entscheidung 13 des Plans der sftp-Ordner).
+///
+/// Der Kern sagt, welcher Befehl seinen Gegenstand als lokalen Pfad aus dem
+/// aktiven Dateifenster nimmt; ausgegraut wird in `krk-ui`. Die Liste steht
+/// ausgeschrieben, damit ein weiteres `Lokal` bewusst hier landet. Die
+/// Vollstaendigkeit ueber alle Kommandos haelt der Uebersetzer, denn
+/// `Kommando::ortsbedarf` verzweigt ohne Auffangzweig; diese Probe haelt die
+/// Zuordnung.
+#[test]
+fn genau_diese_kommandos_brauchen_einen_lokalen_ort() {
+    use krk_core::tasten::Ortsbedarf;
+
+    const LOKAL: [Kommando; 8] = [
+        Kommando::TerminalOeffnen,
+        Kommando::MitStandardprogrammOeffnen,
+        Kommando::OrdnerpfadKopieren,
+        Kommando::EintragspfadKopieren,
+        Kommando::Bearbeiten,
+        Kommando::TiefeSucheUmschalten,
+        Kommando::InhaltssucheUmschalten,
+        Kommando::UmbenennenStapel,
+    ];
+    const LOKAL_IM_DATEIFENSTER: [Kommando; 3] = [
+        Kommando::Teilen,
+        Kommando::LesezeichenAnlegen,
+        Kommando::EditorRundweg,
+    ];
+    for (kommando, _) in Kommando::KENNUNGEN {
+        let erwartet = if LOKAL.contains(&kommando) {
+            Ortsbedarf::Lokal
+        } else if LOKAL_IM_DATEIFENSTER.contains(&kommando) {
+            Ortsbedarf::LokalImDateifenster
+        } else {
+            Ortsbedarf::Ueberall
+        };
+        assert_eq!(kommando.ortsbedarf(), erwartet, "{kommando:?}");
+    }
+}

@@ -99,8 +99,13 @@
 //!    steht bei (3) und nicht als fuenfter Bestandteil, weil sie wie der
 //!    Fokus nach dem Wirkungsbereich fragt und nicht nach der Lage; die
 //!    Ausnahmeliste hebt sie deshalb ebenso wenig auf. Aus demselben Grund
-//!    stehen hier die Datei, die der Editor haelt ([`datei_passt`]), und seit
-//!    der Bildfolge, ob die Vorschau eine Bildfolge zeigt ([`folge_passt`]).
+//!    stehen hier die Datei, die der Editor haelt ([`datei_passt`]), seit
+//!    der Bildfolge, ob die Vorschau eine Bildfolge zeigt ([`folge_passt`]),
+//!    und seit den sftp-Ordnern, ob der Befehl einen lokalen Ort braucht und
+//!    der aktive Tab einen fernen zeigt ([`ort_passt`]). Die letzte fragt
+//!    nicht den Wirkungsbereich, sondern den Ortsbedarf des Befehls; sie
+//!    steht trotzdem hier, weil sie wie die anderen nach dem **Befehl** fragt
+//!    und die Ausnahmeliste sie deshalb nicht aufhebt.
 //! 4. **Das Schluesselfenster gehoert KRK.** Es ist das Hauptfenster oder ein
 //!    Blatt, das daran haengt; steht ein fremdes Fenster vorn, wirkt kein
 //!    Befehl.
@@ -175,7 +180,7 @@
 //! fest. Eine Ordnungszahl steht hier bewusst nicht: sie altert mit jedem
 //! neuen Eintrag, die Regel darueber nicht.
 
-use krk_core::tasten::{Kommando, Wirkungsbereich};
+use krk_core::tasten::{Kommando, Ortsbedarf, Wirkungsbereich};
 
 use super::fokus::{self, Fokus};
 use super::operationen;
@@ -266,6 +271,14 @@ pub struct Lage {
     /// Dieselbe Bauart wie [`Lage::editorform`]: der Kern sagt, dass die Frage
     /// zu stellen ist, und die Oberflaeche beantwortet sie.
     pub bildfolge: bool,
+    /// Ob der sichtbare Tab des aktiven Dateifensters einen Ordner auf einem
+    /// Server zeigt (Entscheidung 13 des Plans der sftp-Ordner).
+    ///
+    /// Erhoben von `Anwendungsdelegierter::lage` ueber
+    /// `DateifensterQuelle::zeigt_fern`, am Wert des Tabs und ohne
+    /// Systemaufruf; gelesen allein von [`ort_passt`]. Vor dem Aufbau der
+    /// Oberflaeche ist es `false`.
+    pub aktiv_fern: bool,
 }
 
 /// Was der Editor gerade zeigt: Text in der Textflaeche oder die Eintraege
@@ -453,6 +466,20 @@ impl Anspruch {
         }
     }
 
+    /// Welchen Ort der Befehl im aktiven Dateifenster braucht.
+    ///
+    /// Die Dateiablage braucht keinen: `copy:` und `cut:` melden an einem
+    /// fernen Ort selbst, dass sie dort keine Verweise ablegen (Entscheidung
+    /// 13 des Plans der sftp-Ordner), und das Einfuegen in den Filter wirkt
+    /// dort wie lokal.
+    #[must_use]
+    fn ortsbedarf(self) -> Ortsbedarf {
+        match self {
+            Anspruch::Kommando(kommando) => kommando.ortsbedarf(),
+            Anspruch::Dateiablage => Ortsbedarf::Ueberall,
+        }
+    }
+
     /// Ob der Befehl auf der Ausnahmeliste steht.
     ///
     /// Die Dateiablage steht nicht darauf, und die Liste waechst mit ihr
@@ -487,6 +514,29 @@ fn gestattet(anspruch: Anspruch, lage: Lage) -> bool {
         && form_passt(bereich, lage.editorform)
         && datei_passt(bereich, lage.pin_aenderbar, lage.eintragsdatei)
         && folge_passt(bereich, lage.bildfolge)
+        && ort_passt(anspruch.ortsbedarf(), lage.aktiv_fern, lage.fokus)
+}
+
+/// Ob der Ort des aktiven Dateifensters dem Ortsbedarf des Befehls genuegt
+/// (Entscheidung 13 des Plans der sftp-Ordner).
+///
+/// **Vollstaendig ueber [`Ortsbedarf`] und ohne Auffangzweig**, wie
+/// [`form_passt`]. An einem lokalen Ort sagt sie zu jedem Befehl ja, und die
+/// Regel antwortet dort, wie sie vor den sftp-Ordnern antwortete; die Probe
+/// `an_einem_lokalen_ort_aendert_der_ortsbedarf_nichts` haelt das.
+///
+/// **Sie fragt neben `aktiv_fern` den Fokus, und das ist eine Abweichung vom
+/// Plan**, der allein `aktiv_fern` nennt: [`Ortsbedarf::LokalImDateifenster`]
+/// sagt nur mit dem Fokus im Dateifenster nein, weil die drei Befehle mit
+/// diesem Wert ihren Gegenstand sonst aus Editor oder Vorschau nehmen. Der
+/// Grund steht bei [`Ortsbedarf`].
+#[must_use = "fallengelassen laeuft der Befehl am fernen Ort weiter"]
+fn ort_passt(bedarf: Ortsbedarf, aktiv_fern: bool, fokus: Fokus) -> bool {
+    match bedarf {
+        Ortsbedarf::Ueberall => true,
+        Ortsbedarf::Lokal => !aktiv_fern,
+        Ortsbedarf::LokalImDateifenster => !(aktiv_fern && fokus == Fokus::Dateifenster),
+    }
 }
 
 /// Ob der Editor in der Form ist, die dieser Wirkungsbereich verlangt (die
@@ -998,6 +1048,7 @@ mod tests {
             pin_aenderbar: false,
             eintragsdatei: false,
             bildfolge: false,
+            aktiv_fern: false,
         }
     }
 
@@ -1347,12 +1398,12 @@ mod tests {
 
     /// Jede Lage, die die Regel unterscheidet: jeder Fokus, jede Form, alle
     /// acht Achtel aus Blattstand, Ersthelferbefund und Schluesselfenster und
-    /// beide Werte von `pin_aenderbar`, von `eintragsdatei` und von
-    /// `bildfolge`.
+    /// beide Werte von `pin_aenderbar`, von `eintragsdatei`, von `bildfolge`
+    /// und von `aktiv_fern`.
     ///
-    /// **Die zweite Dimension von `bildfolge` steht von Hand da**: das Literal
-    /// in [`lage_in`] zwingt nur zu einem Wert, und eine Schleife ueber beide
-    /// ergaenzt niemand von selbst.
+    /// **Die zweite Dimension von `bildfolge` und von `aktiv_fern` steht von
+    /// Hand da**: das Literal in [`lage_in`] zwingt nur zu einem Wert, und eine
+    /// Schleife ueber beide ergaenzt niemand von selbst.
     fn jede_lage() -> Vec<Lage> {
         let mut lagen = Vec::new();
         for fokus in JEDER_FOKUS {
@@ -1361,12 +1412,15 @@ mod tests {
                     for pin_aenderbar in [false, true] {
                         for eintragsdatei in [false, true] {
                             for bildfolge in [false, true] {
-                                lagen.push(Lage {
-                                    pin_aenderbar,
-                                    eintragsdatei,
-                                    bildfolge,
-                                    ..lage_in(blatt, appkit, krk, fokus, form)
-                                });
+                                for aktiv_fern in [false, true] {
+                                    lagen.push(Lage {
+                                        pin_aenderbar,
+                                        eintragsdatei,
+                                        bildfolge,
+                                        aktiv_fern,
+                                        ..lage_in(blatt, appkit, krk, fokus, form)
+                                    });
+                                }
                             }
                         }
                     }
@@ -1388,6 +1442,18 @@ mod tests {
     /// eines Blattes zulaessig und jener nicht. Zwei Absicherungen gegen einen
     /// leeren Lauf: mindestens ein Paar, und mindestens eine Lage, in der die
     /// engere zulaessig ist.
+    ///
+    /// **Seit den sftp-Ordnern gilt die Aussage fuer die Bereiche und nicht
+    /// fuer den Ortsbedarf.** Ein weiterer Befehl, den an einem fernen Ort
+    /// allein sein eigener Ortsbedarf anhaelt — etwa das Umschalten der tiefen
+    /// Suche neben „Eintrag hinzufügen“ —, wird an derselben Lage mit lokalem
+    /// Ort gefragt. Was die Probe damit nicht mehr sieht: eine engere
+    /// Funktion, die am fernen Ort durchkommt, waehrend ihre weitere dort
+    /// ausgegraut ist. Unter den ausgelieferten Teilungen trifft das allein
+    /// `return` mit „Zum angezeigten Bild springen“ und „Mit dem
+    /// Standardprogramm öffnen“, und dort nur in einer Lage, die der Betrieb
+    /// nicht kennt: an einem fernen Ort steht keine Bildfolge
+    /// (`Anwendungsdelegierter::bildfolge_steht`).
     #[test]
     fn eine_verengung_ist_nie_ohne_ihren_weiteren_bereich_zulaessig() {
         let lagen = jede_lage();
@@ -1402,8 +1468,18 @@ mod tests {
                 for &lage in &lagen {
                     if zulaessig(eine, lage) {
                         engere_zulaessig += 1;
+                        // Der Ortsbedarf ist eine Eigenschaft des einzelnen
+                        // Befehls und nicht seines Bereichs: haelt allein er
+                        // den weiteren am fernen Ort an, sagt das ueber die
+                        // Verengung der Bereiche nichts. Gefragt wird dann an
+                        // derselben Lage mit lokalem Ort, und dort muss der
+                        // weitere zulaessig sein wie vor den sftp-Ordnern.
+                        let ohne_ort = Lage {
+                            aktiv_fern: false,
+                            ..lage
+                        };
                         assert!(
-                            zulaessig(andere, lage),
+                            zulaessig(andere, lage) || zulaessig(andere, ohne_ort),
                             "{eine:?} verengt {andere:?} und ist ohne ihn zulaessig in {lage:?}"
                         );
                     }
@@ -2522,5 +2598,147 @@ mod tests {
             umgekehrt > 0,
             "die Richtung ist in keiner Lage gewaehlt worden"
         );
+    }
+
+    /// An einem fernen Ort sind genau diese Befehle ausgegraut, und keiner
+    /// sonst (Entscheidung 13 des Plans der sftp-Ordner).
+    ///
+    /// **Gemessen an der Regel und nicht am Ortsbedarf allein**: ein Befehl
+    /// zaehlt als ausgegraut, wenn es eine Lage gibt, in der er mit lokalem
+    /// Ort zulaessig ist und mit fernem nicht. Die Namen stehen ausgeschrieben
+    /// da; ein weiteres `Ortsbedarf::Lokal` im Kern macht die Probe rot, und
+    /// die richtige Antwort darauf ist ein Name mehr hier, bewusst.
+    ///
+    /// Die drei Befehle mit `Ortsbedarf::LokalImDateifenster` sind daneben
+    /// mit dem Fokus im Editor auch am fernen Ort zulaessig, wo sie es lokal
+    /// sind; daran haengt, dass Teilen, Textmarke und Rundweg an einer
+    /// lokalen Datei im Editor weiter wirken.
+    ///
+    /// **Was sie nicht sieht:** ob der Ausfuehrungszweig eines Befehls, der
+    /// hier zulaessig bleibt, am fernen Ort wirklich wirkt oder meldet. Das
+    /// halten die Zweige selbst, ueber `lokaler_ordner_oder_melden` und
+    /// `betroffene_oder_melden` beim Anwendungsdelegierten.
+    #[test]
+    fn an_einem_fernen_ort_sind_genau_diese_befehle_ausgegraut() {
+        const AUSGEGRAUT: [Kommando; 11] = [
+            Kommando::TerminalOeffnen,
+            Kommando::MitStandardprogrammOeffnen,
+            Kommando::Teilen,
+            Kommando::OrdnerpfadKopieren,
+            Kommando::EintragspfadKopieren,
+            Kommando::LesezeichenAnlegen,
+            Kommando::Bearbeiten,
+            Kommando::TiefeSucheUmschalten,
+            Kommando::InhaltssucheUmschalten,
+            Kommando::UmbenennenStapel,
+            // Der Rundweg oeffnet mit dem Fokus in der Dateiliste den
+            // ausgewaehlten Eintrag im Editor, wie `Bearbeiten`; der Plan
+            // nennt ihn nicht, der Bearbeiter hat ihn gefunden.
+            Kommando::EditorRundweg,
+        ];
+        let lagen = jede_lage();
+        let mut gefunden = Vec::new();
+        for (kommando, _) in Kommando::KENNUNGEN {
+            let ausgegraut = lagen.iter().filter(|lage| !lage.aktiv_fern).any(|&lokal| {
+                let fern = Lage {
+                    aktiv_fern: true,
+                    ..lokal
+                };
+                zulaessig(kommando, lokal) && !zulaessig(kommando, fern)
+            });
+            if ausgegraut {
+                gefunden.push(kommando);
+            }
+        }
+        for kommando in AUSGEGRAUT {
+            assert!(
+                gefunden.contains(&kommando),
+                "{kommando:?} ist an einem fernen Ort nicht ausgegraut"
+            );
+        }
+        for kommando in &gefunden {
+            assert!(
+                AUSGEGRAUT.contains(kommando),
+                "{kommando:?} ist an einem fernen Ort ausgegraut und steht nicht in der Liste"
+            );
+        }
+
+        // Kopieren, Verschieben, Loeschen, Umbenennen und Anlegen bleiben
+        // zulaessig: die naechsten Schritte bauen sie, bis dahin melden sie.
+        let (blatt, appkit, krk) = OHNE_HINDERNIS;
+        let fern_in_der_liste = Lage {
+            aktiv_fern: true,
+            ..lage(blatt, appkit, krk, Fokus::Dateifenster)
+        };
+        for kommando in [
+            Kommando::Kopieren,
+            Kommando::Verschieben,
+            Kommando::InPapierkorb,
+            Kommando::Umbenennen,
+            Kommando::OrdnerAnlegen,
+            Kommando::DateiAnlegen,
+            Kommando::Oeffnen,
+            Kommando::OrdnerAufwaerts,
+            Kommando::OrdnerAngleichen,
+            Kommando::Pfadeingabe,
+        ] {
+            assert!(
+                zulaessig(kommando, fern_in_der_liste),
+                "{kommando:?} ist an einem fernen Ort ausgegraut"
+            );
+        }
+
+        // Mit dem Fokus im Editor wirken die drei, deren Gegenstand der Fokus
+        // waehlt, auch vor einem fernen Dateifenster.
+        let fern_im_editor = Lage {
+            fokus: Fokus::Editor,
+            ..fern_in_der_liste
+        };
+        for kommando in [
+            Kommando::Teilen,
+            Kommando::LesezeichenAnlegen,
+            Kommando::EditorRundweg,
+        ] {
+            assert!(
+                zulaessig(kommando, fern_im_editor),
+                "{kommando:?} ist mit dem Fokus im Editor vor einem fernen Ort ausgegraut"
+            );
+            assert!(
+                !zulaessig(kommando, fern_in_der_liste),
+                "{kommando:?} ist mit dem Fokus in der Liste an einem fernen Ort zulaessig"
+            );
+        }
+    }
+
+    /// An einem lokalen Ort aendert der Ortsbedarf nichts: jede Lage mit
+    /// `aktiv_fern = false` gibt dieselbe Antwort wie vor den sftp-Ordnern.
+    ///
+    /// **Zwei Haelften.** Die erste steht hier: [`ort_passt`] sagt mit
+    /// lokalem Ort zu jedem Ortsbedarf in jedem Fokus ja, und weil sie in
+    /// [`gestattet`] als letztes Glied einer Konjunktion steht, faellt sie an
+    /// einem lokalen Ort aus der Regel heraus. Eine zweite Fassung des alten
+    /// Rumpfs zum Vergleich steht bewusst nicht da: sie waere die Regel ein
+    /// zweites Mal. Die zweite Haelfte ist die Tafel
+    /// `die_tafel_aus_allen_faellen_geht_auf`, die ihre Lagen ueber
+    /// [`lage_in`] mit `aktiv_fern = false` baut und mit unveraenderten
+    /// Erwartungen gruen bleibt.
+    ///
+    /// **Was sie nicht sieht:** ein Glied, das jemand vor `ort_passt` in den
+    /// Rumpf setzt und das den Ort selbst fragt. Sie liest die Funktion und
+    /// nicht den Rumpf.
+    #[test]
+    fn an_einem_lokalen_ort_aendert_der_ortsbedarf_nichts() {
+        for bedarf in [
+            Ortsbedarf::Ueberall,
+            Ortsbedarf::Lokal,
+            Ortsbedarf::LokalImDateifenster,
+        ] {
+            for fokus in JEDER_FOKUS {
+                assert!(
+                    ort_passt(bedarf, false, fokus),
+                    "{bedarf:?} sagt an einem lokalen Ort mit dem Fokus {fokus:?} nein"
+                );
+            }
+        }
     }
 }

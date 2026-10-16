@@ -4219,7 +4219,22 @@ impl Anwendungsdelegierter {
                 .get()
                 .is_some_and(|editor| editor.haelt_eintragsdatei()),
             bildfolge: self.bildfolge_steht(),
+            aktiv_fern: self.aktiv_fern(),
         }
+    }
+
+    /// Ob der sichtbare Tab des aktiven Dateifensters fern ist; der Wert von
+    /// `Lage::aktiv_fern` (Entscheidung 13 des Plans der sftp-Ordner).
+    ///
+    /// **Allein von [`Self::lage`] gerufen**, wie [`Self::bildfolge_steht`],
+    /// und am Wert des Tabs ohne Systemaufruf. Vor dem Aufbau der Oberflaeche
+    /// gibt es keinen Tab und also keinen fernen.
+    fn aktiv_fern(&self) -> bool {
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        self.ivars()
+            .dateifenster
+            .get()
+            .is_some_and(|dateifenster| dateifenster[aktiv.index()].quelle().zeigt_fern())
     }
 
     /// Ob die Vorschau eine Bildfolge zeigt, die zu dem gehoert, was das
@@ -6931,10 +6946,22 @@ impl Anwendungsdelegierter {
         let quelle = self.dateifenster(aktiv).quelle();
         let tief = quelle.tiefe_suche_steht();
         let inhalt = quelle.inhaltssuche_steht();
+        // An einem fernen Ort gibt es keinen Durchlauf; die zwei Schalter
+        // sind dort nicht bedienbar (Entscheidung 13 des Plans der
+        // sftp-Ordner). Nachgezogen wird bei jedem Tab- und Ordnerwechsel,
+        // ueber den Melder des Ordnerwechsels.
+        let suche_bedienbar = !quelle.zeigt_fern();
         // Der Text des Filteretiketts, gerechnet ohne AppKit; die Ausleihe
         // des Tabmodells endet in `filtertext`, bevor die Leiste schreibt.
         let filter = filteranzeige::anzeigetext(&quelle.filtertext());
-        leiste.zustaende_setzen(&sichtbar, &spalten, tief, inhalt, filter.as_deref());
+        leiste.zustaende_setzen(
+            &sichtbar,
+            &spalten,
+            tief,
+            inhalt,
+            suche_bedienbar,
+            filter.as_deref(),
+        );
     }
 
     /// Raeumt die Antwort auf den vorigen Tastenbefehl an **beiden**
@@ -8375,6 +8402,15 @@ impl Anwendungsdelegierter {
     /// aendert das nichts, der Zweig ist so duenn wie die anderen; was sich
     /// aendert, steht dort.
     fn kontextbefehl_ausfuehren(&self, seite: Fensterseite, befehl: Kontextbefehl) {
+        // An einem fernen Ort meldet jeder Eintrag, der einen lokalen braucht,
+        // statt zu wirken, und zwar hier vor der Zuordnung und nicht je Zweig
+        // (Entscheidung 13 des Plans der sftp-Ordner). Gefragt am Wert des
+        // Tabs, ohne Systemaufruf.
+        let fern = self.dateifenster(seite).quelle().zeigt_fern();
+        if kontextmenue::am_fernen_ort_meldet(befehl, fern) {
+            self.am_fernen_ort_melden(seite);
+            return;
+        }
         match befehl {
             Kontextbefehl::OeffnenMit => self.keine_anwendung_melden(seite),
             Kontextbefehl::Zippen => self.zipauftrag_stellen(seite),
@@ -14583,6 +14619,36 @@ mod kontextproben {
                 "{zweig} ruft {wirkung} nicht: der Zweig ist da und wirkt nicht"
             );
         }
+    }
+
+    /// Die Verzweigung des Kontextmenues fragt den Ort, bevor sie einem
+    /// Zweig zuordnet (Entscheidung 13 des Plans der sftp-Ordner).
+    ///
+    /// Gehalten wird die Reihenfolge im Rumpf: die Frage
+    /// `kontextmenue::am_fernen_ort_meldet` steht vor dem `match`, und auf sie
+    /// folgt die Meldung. Welche Befehle melden, haelt
+    /// `jeder_kontextbefehl_meldet_an_einem_fernen_ort` in
+    /// [`crate::kommandos::kontextmenue`].
+    ///
+    /// **Was sie nicht sieht:** ob `zeigt_fern` die richtige Seite fragt; sie
+    /// liest Zeilen und keinen Datenfluss.
+    #[test]
+    fn das_kontextmenue_fragt_den_ort_vor_der_zuordnung() {
+        let datei = diese_datei();
+        let verzweigung = rumpf(&datei, "kontextbefehl_ausfuehren");
+        let frage = verzweigung
+            .find(concat!("kontextmenue::", "am_fernen_ort_meldet("))
+            .expect("kontextbefehl_ausfuehren fragt den Ort nicht");
+        let meldung = verzweigung
+            .find(concat!("am_fernen_ort_", "melden(seite)"))
+            .expect("kontextbefehl_ausfuehren meldet den fernen Ort nicht");
+        let zuordnung = verzweigung
+            .find("match befehl")
+            .expect("kontextbefehl_ausfuehren ordnet nicht zu");
+        assert!(
+            frage < meldung && meldung < zuordnung,
+            "die Frage nach dem Ort steht nicht vor der Zuordnung"
+        );
     }
 
     /// Der Duplikatweg reisst nirgends ab: Klick, Blatt, Auftrag, erneute

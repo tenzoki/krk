@@ -726,6 +726,40 @@ pub enum Seite {
     Beide,
 }
 
+/// Welchen Ort ein [`Kommando`] im aktiven Dateifenster braucht
+/// (Entscheidung 13 des Plans
+/// `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md` im Arbeitspaket
+/// `261016-1945-sftp-ordner-im-dateifenster-wie-lokal`).
+///
+/// **Eine Frage neben dem Wirkungsbereich und keine Haelfte von ihm.** Der
+/// Wirkungsbereich sagt, wo der Fokus stehen muss; der Ortsbedarf, ob der
+/// Befehl seinen Gegenstand als lokalen Pfad braucht. Ein Tab, der einen
+/// Ordner auf einem Server zeigt, hat keinen, und die Oberflaeche graut einen
+/// solchen Befehl dort aus (`ort_passt` in `krk_ui::kommandos::zulaessigkeit`).
+/// Ob der aktive Tab fern ist, weiss allein die Oberflaeche; der Kern sagt,
+/// dass die Frage zu stellen ist, wie bei den Bereichen, die eine Form des
+/// Editors verlangen.
+///
+/// **Drei Werte und nicht zwei, und das ist eine Abweichung vom Plan, der
+/// zwei nennt.** Drei Befehle nehmen ihren Gegenstand je nach Fokus aus dem
+/// Dateifenster oder aus Editor und Vorschau: das Teilen, das Anlegen eines
+/// Lesezeichens (mit dem Fokus im Editor eine Textmarke) und der Rundweg in
+/// den Editor. Mit [`Ortsbedarf::Lokal`] graute ein ferner Tab im aktiven
+/// Dateifenster sie auch dort aus, wo sie an einer lokalen Datei im Editor
+/// wirken; sie tragen deshalb [`Ortsbedarf::LokalImDateifenster`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Ortsbedarf {
+    /// Wirkt an jedem Ort, lokal wie fern.
+    Ueberall,
+    /// Braucht einen lokalen Ordner im aktiven Dateifenster, gleich wo der
+    /// Fokus steht.
+    Lokal,
+    /// Braucht einen lokalen Ordner im aktiven Dateifenster, solange der Fokus
+    /// im Dateifenster steht; mit dem Fokus anderswo nimmt der Befehl seinen
+    /// Gegenstand nicht von dort.
+    LokalImDateifenster,
+}
+
 /// Was ein Tastendruck im Dateifenster ausloest.
 ///
 /// **Nicht der Wortschatz der Belegung.** Die Belegung kennt jede Funktion aus
@@ -1896,6 +1930,137 @@ impl Kommando {
             stelle += 1;
         }
         panic!("jedes Kommando steht in KENNUNGEN")
+    }
+
+    /// Welchen Ort dieses Kommando im aktiven Dateifenster braucht
+    /// (Entscheidung 13 des Plans der sftp-Ordner).
+    ///
+    /// **Vollstaendig und ohne Auffangzweig**: ein neues Kommando haelt den Bau
+    /// hier an und bekommt seinen Ortsbedarf bewusst. Was die drei Werte
+    /// heissen, steht bei [`Ortsbedarf`].
+    ///
+    /// **Was `Ueberall` traegt, wirkt am fernen Ort oder meldet dort selbst.**
+    /// Kopieren, Verschieben, In den Papierkorb, Anlegen und Umbenennen stehen
+    /// darunter, weil die naechsten Schritte des Plans sie an einem fernen Ort
+    /// bauen; bis dahin meldet ihr Ausfuehrungszweig, dass es dort nicht geht.
+    /// Navigation, Markierung, Sortierung, Pfadeingabe und Angleichen wirken
+    /// dort schon.
+    #[must_use]
+    pub const fn ortsbedarf(self) -> Ortsbedarf {
+        match self {
+            // Sie lesen den lokalen Ordner oder lokale Pfade des aktiven
+            // Dateifensters: das Terminal, das Standardprogramm, die zwei
+            // Pfadkopierer, der Editor, die zwei Suchschalter der
+            // Bereichsleiste (ein ferner Tab bekommt keinen Durchlauf) und
+            // das Stapelumbenennen.
+            Kommando::TerminalOeffnen
+            | Kommando::MitStandardprogrammOeffnen
+            | Kommando::OrdnerpfadKopieren
+            | Kommando::EintragspfadKopieren
+            | Kommando::Bearbeiten
+            | Kommando::TiefeSucheUmschalten
+            | Kommando::InhaltssucheUmschalten
+            | Kommando::UmbenennenStapel => Ortsbedarf::Lokal,
+            // Mit dem Fokus im Dateifenster nehmen sie die betroffenen
+            // Eintraege oder den angezeigten Ordner, sonst die Datei in Editor
+            // oder Vorschau.
+            Kommando::Teilen | Kommando::LesezeichenAnlegen | Kommando::EditorRundweg => {
+                Ortsbedarf::LokalImDateifenster
+            }
+            Kommando::AuswahlHoch
+            | Kommando::AuswahlRunter
+            | Kommando::SeiteHoch
+            | Kommando::SeiteRunter
+            | Kommando::Listenanfang
+            | Kommando::Listenende
+            | Kommando::Oeffnen
+            | Kommando::OrdnerAufwaerts
+            | Kommando::OrdnerDerDatei
+            | Kommando::OrdnerAngleichen
+            | Kommando::Pfadeingabe
+            | Kommando::MarkierungUmschalten
+            | Kommando::AlleMarkieren
+            | Kommando::MarkierungAufheben
+            | Kommando::MarkierungUmkehren
+            | Kommando::SortierungName
+            | Kommando::SortierungGroesse
+            | Kommando::SortierungDatum
+            | Kommando::SortierungTyp
+            | Kommando::SortierrichtungUmkehren
+            | Kommando::VersteckteUmschalten
+            | Kommando::SpalteGroesseUmschalten
+            | Kommando::SpalteDatumUmschalten
+            | Kommando::SpalteTypUmschalten
+            | Kommando::ZwischenablageSpringen
+            | Kommando::ZwischenablageAnsehen
+            | Kommando::TabNeu
+            | Kommando::TabSchliessen
+            | Kommando::TabNaechster
+            | Kommando::TabVoriger
+            | Kommando::FensterWechseln
+            | Kommando::LeisteUmschalten
+            | Kommando::ErstesFensterUmschalten
+            | Kommando::ZweitesFensterUmschalten
+            | Kommando::VorschauUmschalten
+            | Kommando::FensterEinblenden
+            | Kommando::FensterSchliessen
+            | Kommando::BereichVerbreitern
+            | Kommando::BereichVerschmaelern
+            | Kommando::Kopieren
+            | Kommando::Verschieben
+            | Kommando::InPapierkorb
+            | Kommando::Abbrechen
+            | Kommando::OrdnerAnlegen
+            | Kommando::DateiAnlegen
+            | Kommando::Umbenennen
+            | Kommando::LesezeichenUmbenennen
+            | Kommando::LesezeichenLoeschen
+            | Kommando::LesezeichenHoch
+            | Kommando::LesezeichenRunter
+            | Kommando::VerbindungHerstellen
+            | Kommando::FokusLeiste
+            | Kommando::FokusDateifenster
+            | Kommando::FokusVorschau
+            | Kommando::FokusEditor
+            | Kommando::EditorSchliessen
+            | Kommando::EditorUmschalten
+            | Kommando::EditorAnsichtUmschalten
+            | Kommando::EditorSichern
+            | Kommando::EditorZeileSpringen
+            | Kommando::EditorSuchen
+            | Kommando::EditorWeitersuchen
+            | Kommando::EditorRueckwaertsSuchen
+            | Kommando::EditorErsetzen
+            | Kommando::EditorAlleErsetzen
+            | Kommando::QuicknoteUmschalten
+            | Kommando::QuicknoteKopieren
+            | Kommando::QuicknoteLeeren
+            | Kommando::EintragHinzufuegen
+            | Kommando::EintragBearbeiten
+            | Kommando::EintragHoch
+            | Kommando::EintragRunter
+            | Kommando::EintragLoeschen
+            | Kommando::AufgabeAbhaken
+            | Kommando::PinAendern
+            | Kommando::TermineRichtungUmkehren
+            | Kommando::BelegungAnsehen
+            | Kommando::BelegungsdateiAnsehen
+            | Kommando::Beenden
+            | Kommando::WeitereInstanz
+            | Kommando::Notizordner
+            | Kommando::OrtWaehlen
+            | Kommando::VorschauVergroessern
+            | Kommando::VorschauVerkleinern
+            | Kommando::VorschauAusgangsgroesse
+            | Kommando::GitBereichUmschalten
+            | Kommando::FokusGit
+            | Kommando::SpalteMarkeUmschalten
+            | Kommando::NeuerungenZeigen
+            | Kommando::Werkseinstellungen
+            | Kommando::BildVor
+            | Kommando::BildZurueck
+            | Kommando::ZumBild => Ortsbedarf::Ueberall,
+        }
     }
 }
 

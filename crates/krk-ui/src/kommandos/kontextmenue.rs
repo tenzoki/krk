@@ -249,6 +249,7 @@ use std::path::{Path, PathBuf};
 
 use krk_core::operation::umbenennen::{Namensfehler, name_pruefen, namen_teilen};
 use krk_core::sprache::{Text, text};
+use krk_core::tasten::Ortsbedarf;
 use krk_core::verzeichnis::{Ordnermodell, Typ};
 
 /// Die Endung, an der ein Archiv erkannt und mit der eines benannt wird.
@@ -506,6 +507,54 @@ impl Kontextbefehl {
         Kontextbefehl::ALLE
             .into_iter()
             .find(|befehl| befehl.menuemarke() == marke)
+    }
+
+    /// Welchen Ort der Befehl im Dateifenster des Rechtsklicks braucht
+    /// (Entscheidung 13 des Plans der sftp-Ordner).
+    ///
+    /// **Das Kontextmenue graut nach seiner Regel nichts aus**; ein Befehl,
+    /// der hier [`Ortsbedarf::Lokal`] traegt, meldet an einem fernen Ort beim
+    /// Klick `Text::AmFernenOrtNichtVerfuegbar`, und zwar an einer Stelle,
+    /// vor der Zuordnung in `Anwendungsdelegierter::kontextbefehl_ausfuehren`,
+    /// gefragt ueber [`am_fernen_ort_meldet`].
+    ///
+    /// **„Verbinden…“ wirkt an jedem Ort**: es legt eine Verbindung an und
+    /// fragt keinen Eintrag der Liste. **„Auswerfen“ braucht einen lokalen
+    /// Ort**, und das ist keine Aenderung seines Verhaltens: in einem fernen
+    /// Ordner steht kein Einhaengepunkt, und sein Zweig meldete dort schon
+    /// vorher dasselbe ueber `betroffene_oder_melden`. Der Plan rechnet beide
+    /// zur Leiste; dort bleiben sie, wie sie sind.
+    ///
+    /// Vollstaendig und ohne Auffangzweig. [`Ortsbedarf::LokalImDateifenster`]
+    /// traegt keiner: der Gegenstand eines Eintrags dieses Menues kommt immer
+    /// aus dem Dateifenster des Rechtsklicks.
+    #[must_use]
+    pub fn ortsbedarf(self) -> Ortsbedarf {
+        match self {
+            Kontextbefehl::OeffnenMit
+            | Kontextbefehl::Zippen
+            | Kontextbefehl::Entpacken
+            | Kontextbefehl::Duplizieren
+            | Kontextbefehl::Auswerfen
+            | Kontextbefehl::ImFinderOeffnen
+            | Kontextbefehl::ImFinderAnzeigen => Ortsbedarf::Lokal,
+            Kontextbefehl::Verbinden => Ortsbedarf::Ueberall,
+        }
+    }
+}
+
+/// Ob ein angeklickter Eintrag des Kontextmenues statt seiner Wirkung meldet,
+/// dass er an einem fernen Ort nicht geht (Entscheidung 13 des Plans der
+/// sftp-Ordner).
+///
+/// `fern` sagt, ob das Dateifenster des Rechtsklicks einen Ordner auf einem
+/// Server zeigt. Rein und ohne Fenster pruefbar; der eine Rufer ist
+/// `Anwendungsdelegierter::kontextbefehl_ausfuehren`, vor seiner Zuordnung.
+#[must_use = "fallengelassen liefe der Eintrag am fernen Ort in seinen Zweig"]
+pub fn am_fernen_ort_meldet(befehl: Kontextbefehl, fern: bool) -> bool {
+    match befehl.ortsbedarf() {
+        Ortsbedarf::Ueberall => false,
+        Ortsbedarf::Lokal | Ortsbedarf::LokalImDateifenster => fern,
     }
 }
 
@@ -1338,6 +1387,31 @@ mod tests {
     use krk_core::verzeichnis::{Eintrag, Typ};
 
     use super::*;
+
+    /// Jeder Kontextbefehl meldet an einem fernen Ort, ausser „Verbinden…“,
+    /// und an einem lokalen meldet keiner (Entscheidung 13 des Plans der
+    /// sftp-Ordner).
+    ///
+    /// Ueber [`Kontextbefehl::ALLE`], die die Probe
+    /// `jede_alle_liste_fuehrt_genau_die_varianten_ihrer_aufzaehlung` gegen
+    /// die Aufzaehlung haelt; ein weiterer Befehl ist damit vom Tag an
+    /// gehalten. Dass `kontextbefehl_ausfuehren` die Frage vor seiner
+    /// Zuordnung stellt, haelt `das_kontextmenue_fragt_den_ort_vor_der_zuordnung`
+    /// beim Anwendungsdelegierten.
+    #[test]
+    fn jeder_kontextbefehl_meldet_an_einem_fernen_ort() {
+        for befehl in Kontextbefehl::ALLE {
+            assert!(
+                !am_fernen_ort_meldet(befehl, false),
+                "{befehl:?} meldet an einem lokalen Ort"
+            );
+            assert_eq!(
+                am_fernen_ort_meldet(befehl, true),
+                befehl != Kontextbefehl::Verbinden,
+                "{befehl:?} antwortet an einem fernen Ort falsch"
+            );
+        }
+    }
 
     fn eintrag(name: &str, typ: Typ) -> Eintrag {
         Eintrag::mit_versteckt(
