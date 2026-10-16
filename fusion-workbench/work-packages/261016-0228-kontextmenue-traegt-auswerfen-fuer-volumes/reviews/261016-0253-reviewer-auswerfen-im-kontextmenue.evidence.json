@@ -1,0 +1,28 @@
+{
+  "schema": "fusion.evidence/v1",
+  "id": "f38d9a12-b220-41b5-9386-dffc41f12a06",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "subject": {
+    "git_tree": "fd4b5b05e4f92bb9ad21864dc19fb3cdf5d1e954",
+    "git_range": null
+  },
+  "brief_revision": "sha256:bde98534c438334f37a55cd3c63e01c0ddb088c8204a8d9c1708d58fddaa0e34",
+  "plan_revision": null,
+  "role": {
+    "profile": "reviewer",
+    "version": "13.0.0"
+  },
+  "host": "claude-code",
+  "execution_policy": "claude-guided",
+  "verdict": "accept",
+  "uncertainties": [],
+  "checks": [],
+  "report": {
+    "path": "work-packages/261016-0228-kontextmenue-traegt-auswerfen-fuer-volumes/reviews/261016-0253-reviewer-auswerfen-im-kontextmenue.md",
+    "sha256": "sha256:3bb886d58bcefda1244a461ff20ff597086095f8da1126c955498f78acf6248a",
+    "kind": "review"
+  },
+  "predecessor": null,
+  "accepted_at": "2026-10-16T00:54:18Z",
+  "extensions": {}
+}

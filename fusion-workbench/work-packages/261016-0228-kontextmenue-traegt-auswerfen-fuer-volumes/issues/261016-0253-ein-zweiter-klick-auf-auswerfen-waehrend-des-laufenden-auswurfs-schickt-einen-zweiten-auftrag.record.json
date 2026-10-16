@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "76239a42-15b0-4663-a41c-427fbfd7f5f9",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261016-0228-kontextmenue-traegt-auswerfen-fuer-volumes/issues/261016-0253-ein-zweiter-klick-auf-auswerfen-waehrend-des-laufenden-auswurfs-schickt-einen-zweiten-auftrag.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

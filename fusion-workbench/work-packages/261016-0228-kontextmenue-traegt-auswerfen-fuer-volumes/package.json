@@ -3,7 +3,7 @@
   "id": "a98ceb0a-28fc-4666-aa85-0835d12ab9e6",
   "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
   "domain": "code",
-  "status": "claimed",
+  "status": "done",
   "claim": {
     "checkout_id": "6c11b1f2",
     "person": "Kai Stalmann <kai@stalmann.org>",
@@ -35,7 +35,20 @@
   "active_documents": [],
   "references": [],
   "evidence": [],
-  "outcome": null,
+  "outcome": {
+    "class": "completed",
+    "reason": "Kontextmenue der Dateiliste traegt Auswerfen fuer eingehaengte Datentraeger (bb2f861); make check und Buendelbau gruen, Durchsicht accept",
+    "evidence": [
+      {
+        "ref": {
+          "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+          "record_id": "f38d9a12-b220-41b5-9386-dffc41f12a06",
+          "revision": "sha256:4c12f489cb13da07e3e372328d0d25cf47c1197327d0a20c2c6a0270e22a37f5"
+        },
+        "policy": "claude-guided"
+      }
+    ]
+  },
   "provenance": {
     "source": "created",
     "legacy_fields": {}
