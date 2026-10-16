@@ -32,3 +32,6 @@ Der Klartext von `secrets.txt` hat heute die Form von `notes.txt`: je Eintrag ei
 ## Recommendation
 
 Wir empfehlen Möglichkeit 1, nach dem Muster der Termine („Ein Termin ist eine Notiz, deren Thema ein Datum ist“, Modulkopf von `heimordner/eintraege.rs`). Die Leseregel lautet genau: nach der Themenzeile wird eine ununterbrochene Folge von Zeilen als Feldzeilen gelesen, solange jede mit einem der vier Schlüssel, einem Doppelpunkt und danach nichts oder einem Leerzeichen beginnt **und** dieser Schlüssel in der Folge noch nicht stand; die erste andere Zeile beendet die Folge. Die Grundform schreibt alle vier Feldzeilen, leer als `protocol:` ohne Leerzeichen dahinter. Weil eine geschriebene Grundform alle vier Schlüssel trägt, endet die Folge danach in jedem Fall, und eine Notizzeile, die wie eine Feldzeile aussieht, bleibt Notiz. Ein alter Eintrag bekommt seine Grundform beim ersten Ändern einer seiner Zellen und nicht vorher; die Schlüssel sind englisch, damit die Datei in jeder der drei Sprachen der Oberfläche dieselbe bleibt.
+
+---
+Implemented: crates/krk-core/src/heimordner/eintraege/geheimnisse.rs (Modulkopf), crates/krk-ui/src/appkit/eintragsansicht.rs — Feldform mit vier Feldzeilen und Uebergang ohne Umbaulauf gebaut, Tabelle mit sechs Spalten in 4add5e1

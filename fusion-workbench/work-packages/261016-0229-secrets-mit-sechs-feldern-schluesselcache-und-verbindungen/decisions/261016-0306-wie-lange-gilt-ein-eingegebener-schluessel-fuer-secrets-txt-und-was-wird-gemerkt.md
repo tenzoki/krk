@@ -42,3 +42,6 @@ Wir empfehlen Möglichkeit 1. Im Einzelnen:
 - **„PIN ändern“ ersetzt den gemerkten Schlüssel durch den neuen**, gemessen ab dem Wechsel: der Nutzer hat eben die neue PIN eingegeben, und der alte Schlüssel öffnet die Datei ohnehin nicht mehr. Die Prüfung der alten PIN geschieht dafür nicht mehr am Vergleich mit einer gehaltenen PIN, sondern durch Ableiten mit Salz und Parametern des gehaltenen Schlüssels und Vergleich der Schlüssel; `Schutz::Verschluesselt` hält danach keine PIN mehr.
 
 Teilweise abgelöst wird damit `260926-0007_*_wie-lange-gilt-eine-eingegebene-pin.md`: dessen Regel für die offene Datei bleibt, das „jedes neue Öffnen fragt erneut“ gilt ab dieser Arbeit erst nach Ablauf des Merkers.
+
+---
+Implemented: crates/krk-core/src/heimordner/schluesselmerker.rs, crates/krk-ui/src/tresorweg.rs, crates/krk-ui/src/appkit/anwendung.rs (schluessel_merken) — Abgeleiteter Schluessel zehn Minuten ab Eingabe ueber CLOCK_MONOTONIC gemerkt, mit zeroize getilgt, PIN aendern ersetzt ihn
