@@ -1491,6 +1491,17 @@ pub fn auswurf_beginnt(name: &str) -> String {
     satz(Text::AuswurfBeginnt, &[("name", &name)])
 }
 
+/// Der Satz auf einen zweiten Klick, waehrend derselbe Datentraeger noch
+/// ausgeworfen wird (261016).
+///
+/// Der Rufer stellt in diesem Fall keinen zweiten Auftrag an das System: dessen
+/// Antwort auf den zweiten traefe einen Datentraeger, der gerade aushaengt, und
+/// koennte als Fehlschlag nach dem Erfolg in der Statuszeile stehen bleiben.
+#[must_use]
+pub fn auswurf_laeuft_schon(name: &str) -> String {
+    satz(Text::AuswurfLaeuftSchon, &[("name", &name)])
+}
+
 /// Der Satz, wenn das System den Auswurf bestaetigt hat (261016).
 #[must_use]
 pub fn auswurf_erfolgt(name: &str) -> String {

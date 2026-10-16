@@ -10,3 +10,6 @@ Der Modulkopf von appkit nennt finder das eine Modul ohne Rückgabe, auswurf ist
 **Richtung.** Den Satz über `finder` so fassen, dass er die Eigenschaft nennt, die ihn trennt (der Aufrufer erfährt nie, ob das Aufdecken gelang), statt einer Einzigkeit, die mit jedem weiteren Modul kippt (`critical-stance.md` §5).
 
 **Abnahme.** Kein Satz im Modulkopf von `appkit/mod.rs` behauptet für `finder` oder `auswurf` eine Einzigkeit, die das jeweils andere Modul ebenfalls erfüllt.
+
+---
+Resolved: `crates/krk-ui/src/appkit/mod.rs`, Modulkopf, Absaetze zu `finder`, `auswurf` und neu `verbinden`. `finder` traegt die trennende Eigenschaft (der Aufrufer erfaehrt nie, ob das Aufdecken gelang: kein Rueckgabewert, keine spaetere Antwort), `auswurf` gibt ebenfalls nichts zurueck und unterscheidet sich durch die spaetere Antwort auf fremdem Faden; die Einzigkeit „das eine Modul, dessen Antwort spaeter kommt“ ist gefallen, weil `verbinden::herstellen` und `verbinden::anhaengen` ebenso spaeter ueber die Hauptschlange antworten (dazu sofort `io::Result<()>` fuer den Fadenstart). Keine Zahl. Verification: `make check` — exit 0.

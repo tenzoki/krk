@@ -650,6 +650,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "rien à éjecter\u{a0}: aucun volume monté parmi les éléments sélectionnés"
         }
         Text::AuswurfBeginnt => "éjection de {name}…",
+        Text::AuswurfLaeuftSchon => "l’éjection de {name} est déjà en cours…",
         Text::AuswurfErfolgt => "{name} a été éjecté",
         Text::AuswurfGescheitert => "{name} n’a pas pu être éjecté\u{a0}: {fehler}",
         Text::AblageWeistTextAb => "le presse-papiers n’a pas accepté le texte",

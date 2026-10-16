@@ -889,6 +889,9 @@ pub enum Text {
     /// `operationen::auswurf_beginnt`; `{name}` ist der Name des
     /// Datentraegers.
     AuswurfBeginnt,
+    /// `operationen::auswurf_laeuft_schon`: ein zweiter Klick, waehrend das
+    /// System den Datentraeger noch aushaengt; `{name}` wie oben.
+    AuswurfLaeuftSchon,
     /// `operationen::auswurf_erfolgt`; `{name}` wie oben.
     AuswurfErfolgt,
     /// `operationen::auswurf_gescheitert`; `{name}` wie oben, `{fehler}` ist
@@ -1546,7 +1549,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 651] = [
+    pub const ALLE: [Text; 652] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1920,6 +1923,7 @@ impl Text {
         Text::KeinFinder,
         Text::NichtsAuszuwerfen,
         Text::AuswurfBeginnt,
+        Text::AuswurfLaeuftSchon,
         Text::AuswurfErfolgt,
         Text::AuswurfGescheitert,
         Text::AblageWeistTextAb,

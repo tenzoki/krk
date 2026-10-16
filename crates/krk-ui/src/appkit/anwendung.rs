@@ -1059,6 +1059,16 @@ pub struct AnwendungsIvars {
     /// steht; warum, steht im Modulkopf von [`kontextmenue`] unter „Was der
     /// 261016 hinzugelegt hat“.
     einhaengepunkte: RefCell<Vec<PathBuf>>,
+    /// Die Einhaengepunkte, deren Auswurf beim System liegt und noch nicht
+    /// beantwortet ist (261016).
+    ///
+    /// Gesetzt in [`Anwendungsdelegierter::auswurf_beginnen`] vor dem Auftrag,
+    /// geraeumt in [`Anwendungsdelegierter::auswurf_einziehen`] vor der
+    /// Verzweigung nach dem Ergebnis, also bei Erfolg und bei Fehlschlag. Ein
+    /// Einhaengepunkt darin wird nicht ein zweites Mal beauftragt: bis die
+    /// Datentraegerwache das Aushaengen meldet, steht er weiter in
+    /// [`Self::einhaengepunkte`], und ein zweiter Klick faende ihn dort.
+    laufende_auswuerfe: RefCell<Vec<PathBuf>>,
     /// Der gebuendelte Schreiber fuer `session.toml`.
     ///
     /// Leer im Messmodus und dann, wenn sich der Ablageordner nicht oeffnen
@@ -1589,6 +1599,7 @@ impl Anwendungsdelegierter {
             dateisystemwache: RefCell::new(None),
             datentraegerwache: OnceCell::new(),
             einhaengepunkte: RefCell::new(Vec::new()),
+            laufende_auswuerfe: RefCell::new(Vec::new()),
             sitzungsschreiber: RefCell::new(None),
             schreibfehler_gemeldet: Cell::new(false),
             vorgang: RefCell::new(None),
@@ -8786,6 +8797,12 @@ impl Anwendungsdelegierter {
     ///
     /// **Der Name im Satz ist der letzte Bestandteil des Einhaengepunkts**, also
     /// der, den der Nutzer in der Dateiliste angeklickt hat.
+    ///
+    /// **Ein Datentraeger, dessen Auswurf schon beim System liegt, wird nicht
+    /// noch einmal beauftragt** ([`AnwendungsIvars::laufende_auswuerfe`]); die
+    /// Statuszeile sagt [`operationen::auswurf_laeuft_schon`]. Die Probe
+    /// `ein_laufender_auswurf_wird_nicht_ein_zweites_mal_beauftragt` haelt die
+    /// Reihenfolge am Rumpf.
     fn auswurf_beginnen(&self, seite: Fensterseite) {
         let betroffen = self.dateifenster(seite).quelle().betroffene_eintraege();
         let datentraeger =
@@ -8799,6 +8816,19 @@ impl Anwendungsdelegierter {
                 .file_name()
                 .map(|teil| teil.to_string_lossy().into_owned())
                 .unwrap_or_else(|| einhaengepunkt.display().to_string());
+            if self
+                .ivars()
+                .laufende_auswuerfe
+                .borrow()
+                .contains(&einhaengepunkt)
+            {
+                self.antwort_zeigen(seite, &operationen::auswurf_laeuft_schon(&name));
+                continue;
+            }
+            self.ivars()
+                .laufende_auswuerfe
+                .borrow_mut()
+                .push(einhaengepunkt.clone());
             self.antwort_zeigen(seite, &operationen::auswurf_beginnt(&name));
             let pfad = einhaengepunkt.clone();
             auswurf::auswerfen(&einhaengepunkt, move |mtm, ergebnis| {
@@ -8828,6 +8858,11 @@ impl Anwendungsdelegierter {
     ///
     /// **Bei einem Fehlschlag steht der Wortlaut des Systems in der
     /// Statuszeile**, und sonst geschieht nichts: der Datentraeger ist noch da.
+    ///
+    /// **Vor beiden Zweigen gibt sie den Einhaengepunkt in
+    /// [`AnwendungsIvars::laufende_auswuerfe`] frei**, damit nach einem
+    /// Fehlschlag ein neuer Versuch moeglich ist und nach einem Erfolg ein
+    /// spaeter wieder eingehaengter Datentraeger desselben Namens.
     fn auswurf_einziehen(
         mtm: MainThreadMarker,
         seite: Fensterseite,
@@ -8841,6 +8876,11 @@ impl Anwendungsdelegierter {
         let Ok(selbst) = delegierter.downcast::<Anwendungsdelegierter>() else {
             return;
         };
+        selbst
+            .ivars()
+            .laufende_auswuerfe
+            .borrow_mut()
+            .retain(|laufend| laufend != einhaengepunkt);
         match ergebnis {
             Ok(()) => {
                 selbst.antwort_zeigen(seite, &operationen::auswurf_erfolgt(name));
@@ -14467,6 +14507,63 @@ mod kontextproben {
                  erreicht den Schirm nicht"
             );
         }
+    }
+
+    /// Ein laufender Auswurf wird nicht ein zweites Mal beauftragt (261016).
+    ///
+    /// **Am Rumpf von `auswurf_beginnen`** steht die Frage nach
+    /// `laufende_auswuerfe` vor dem Satz `auswurf_laeuft_schon`, der vor dem
+    /// `continue`, und erst danach wird der Einhaengepunkt vermerkt und der
+    /// Auftrag gestellt. **Am Rumpf von `auswurf_einziehen`** wird der Vermerk
+    /// geraeumt, bevor nach dem Ergebnis verzweigt wird, also auf dem Zweig
+    /// `Ok` wie auf `Err`.
+    ///
+    /// **Was sie nicht sieht:** ob die Frage und das Raeumen denselben
+    /// Einhaengepunkt meinen, und ob das System den Abschlussblock je ruft;
+    /// ruft es ihn nie, bleibt der Datentraeger bis zum Ende des Prozesses
+    /// gesperrt, und das zeigt allein das laufende Buendel.
+    #[test]
+    fn ein_laufender_auswurf_wird_nicht_ein_zweites_mal_beauftragt() {
+        fn stelle(rumpf: &str, nadel: &str, wo: &str) -> usize {
+            rumpf
+                .find(nadel)
+                .unwrap_or_else(|| panic!("{wo} enthaelt {nadel} nicht"))
+        }
+        let datei = diese_datei();
+
+        let beginnen = rumpf(&datei, "auswurf_beginnen");
+        let folge = [
+            ".contains(&einhaengepunkt)",
+            concat!("operationen::", "auswurf_laeuft_schon("),
+            "continue;",
+            "laufende_auswuerfe",
+            ".push(einhaengepunkt.clone())",
+            concat!("auswurf::", "auswerfen("),
+        ];
+        let frage = stelle(&beginnen, "laufende_auswuerfe", "auswurf_beginnen");
+        let mut vorige = frage;
+        for nadel in folge {
+            let ab = vorige + 1;
+            let hier = ab
+                + beginnen[ab..].find(nadel).unwrap_or_else(|| {
+                    panic!("auswurf_beginnen fuehrt {nadel} nicht nach der vorigen Stelle")
+                });
+            vorige = hier;
+        }
+
+        let einziehen = rumpf(&datei, "auswurf_einziehen");
+        let raeumen = stelle(
+            &einziehen,
+            ".retain(|laufend| laufend != einhaengepunkt)",
+            "auswurf_einziehen",
+        );
+        let vermerk = stelle(&einziehen, "laufende_auswuerfe", "auswurf_einziehen");
+        let verzweigung = stelle(&einziehen, "match ergebnis", "auswurf_einziehen");
+        assert!(
+            vermerk < raeumen && raeumen < verzweigung,
+            "auswurf_einziehen raeumt den laufenden Auswurf nicht vor der Verzweigung \
+             nach dem Ergebnis"
+        );
     }
 
     /// Der Auswurfweg stellt auf dem Hauptfaden keinen Systemaufruf (261016).

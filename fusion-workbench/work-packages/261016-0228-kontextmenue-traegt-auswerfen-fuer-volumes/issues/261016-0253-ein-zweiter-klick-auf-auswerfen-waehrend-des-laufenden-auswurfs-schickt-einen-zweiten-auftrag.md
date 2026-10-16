@@ -12,3 +12,6 @@ Ein zweiter Klick auf „Auswerfen“ während des laufenden Auswurfs schickt ei
 **Richtung.** Eine Menge laufender Auswürfe in den Ivars, gesetzt in `auswurf_beginnen`, geräumt in `auswurf_einziehen`; ein Einhängepunkt darin wird nicht noch einmal beauftragt, und die Statuszeile sagt „<name> wird ausgeworfen …“ erneut.
 
 **Abnahme.** Eine Probe am Rumpf von `auswurf_beginnen` hält, dass ein laufender Auswurf vor `auswurf::auswerfen(` ausgeschlossen wird; `auswurf_einziehen` räumt den Eintrag auf beiden Zweigen (`Ok` und `Err`).
+
+---
+Resolved: `crates/krk-ui/src/appkit/anwendung.rs` fuehrt `AnwendungsIvars::laufende_auswuerfe`; `auswurf_beginnen` fragt die Liste je Einhaengepunkt vor `auswurf::auswerfen(`, meldet einen laufenden mit `operationen::auswurf_laeuft_schon` (neu in `crates/krk-ui/src/kommandos/operationen.rs`, Schluessel `Text::AuswurfLaeuftSchon` in `crates/krk-core/src/sprache/schluessel.rs` und den drei Tabellen `de.rs`, `fr.rs`, `en.rs`) und `continue`, vermerkt sonst und beauftragt; `auswurf_einziehen` raeumt den Vermerk vor `match ergebnis`, also auf `Ok` und `Err`. Probe `ein_laufender_auswurf_wird_nicht_ein_zweites_mal_beauftragt` im Pruefmodul derselben Datei haelt beide Reihenfolgen am Rumpf. Verification: `make check` — exit 0.

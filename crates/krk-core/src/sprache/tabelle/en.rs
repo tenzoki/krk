@@ -573,6 +573,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "nothing to eject: none of the selected entries is a mounted volume"
         }
         Text::AuswurfBeginnt => "ejecting {name} …",
+        Text::AuswurfLaeuftSchon => "{name} is already being ejected …",
         Text::AuswurfErfolgt => "{name} was ejected",
         Text::AuswurfGescheitert => "{name} could not be ejected: {fehler}",
         Text::AblageWeistTextAb => "the clipboard did not accept the text",

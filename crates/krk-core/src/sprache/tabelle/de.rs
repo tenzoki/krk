@@ -599,6 +599,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "nichts auszuwerfen: unter den gewählten Einträgen steht kein eingehängter Datenträger"
         }
         Text::AuswurfBeginnt => "{name} wird ausgeworfen …",
+        Text::AuswurfLaeuftSchon => "{name} wird schon ausgeworfen …",
         Text::AuswurfErfolgt => "{name} wurde ausgeworfen",
         Text::AuswurfGescheitert => "{name} ließ sich nicht auswerfen: {fehler}",
         Text::AblageWeistTextAb => "die Zwischenablage hat den Text nicht angenommen",

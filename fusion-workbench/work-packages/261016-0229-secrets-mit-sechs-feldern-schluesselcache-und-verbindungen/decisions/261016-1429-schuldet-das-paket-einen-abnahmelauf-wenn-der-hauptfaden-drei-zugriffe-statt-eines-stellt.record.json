@@ -1,0 +1,30 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "f23f987a-47bb-4299-9ce2-920a62b8051c",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/261016-0229-secrets-mit-sechs-feldern-schluesselcache-und-verbindungen/decisions/261016-1429-schuldet-das-paket-einen-abnahmelauf-wenn-der-hauptfaden-drei-zugriffe-statt-eines-stellt.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": {
+      "kind": "other",
+      "path": "work-packages/261016-0229-secrets-mit-sechs-feldern-schluesselcache-und-verbindungen/decisions/261016-1429-schuldet-das-paket-einen-abnahmelauf-wenn-der-hauptfaden-drei-zugriffe-statt-eines-stellt.md",
+      "sha256": "sha256:25cf4b8023c3c7500077f7f0759cf8ac4ea70c52240e75593a313f4bf1fe52c2"
+    },
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

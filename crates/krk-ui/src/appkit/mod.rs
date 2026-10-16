@@ -161,16 +161,22 @@
 //! `NSWorkspace::activateFileViewerSelectingURLs:`. Wieder ein Modul je Frage,
 //! und die Abgrenzung zu [`terminal`] steht in seinem Modulkopf: jenes uebergibt
 //! einen Ordner an eine ueber ihre Buendelkennung **benannte** Anwendung, dieses
-//! deckt Eintraege auf und benennt niemanden. Es ist daneben das eine Modul
-//! dieser Reihe, dessen Aufruf **nichts** zurueckgibt; was der Aufrufer
-//! stattdessen prueft, steht dort.
+//! deckt Eintraege auf und benennt niemanden. **Der Aufrufer erfaehrt nie, ob
+//! das Aufdecken gelang**: es gibt weder einen Rueckgabewert noch eine
+//! spaetere Antwort; was er stattdessen prueft, steht dort.
 //! [`auswurf`] haelt die eine vom 261016: das Auswerfen eines eingehaengten
 //! Datentraegers ueber `NSFileManager::unmountVolumeAtURL:options:completionHandler:`.
-//! Es ist das eine Modul dieser Reihe, dessen Antwort spaeter und auf einem
-//! fremden Faden kommt; wie sie auf den Hauptfaden zurueckfindet, steht dort.
+//! Sein Aufruf gibt ebenfalls nichts zurueck, aber anders als bei [`finder`]
+//! kommt die Antwort des Systems, spaeter und auf einem fremden Faden; wie sie
+//! auf den Hauptfaden zurueckfindet, steht dort.
 //! Welcher Eintrag ein Datentraeger ist, entscheidet es nicht: das tut
 //! `crate::kommandos::kontextmenue::auswurfbezug` an der Liste, die [`volumes`]
 //! aufgezaehlt hat.
+//! [`verbinden`] haelt die eine vom 261016: das Herstellen einer Verbindung
+//! aus `secrets.txt` und das Anhaengen eines neuen Eintrags, je auf einem
+//! eigenen Faden. Seine Antwort kommt wie die von [`auswurf`] spaeter ueber
+//! die Hauptschlange; sein Aufruf meldet daneben sofort, ob sich der Faden
+//! starten liess.
 //! [`teilen`] haelt die eine aus C1 der Runde 6: die Uebergabe von Eintraegen
 //! an die Freigabedienste des Systems ueber `NSSharingServicePicker`, dazu den
 //! **einen** Menuebauer, den die drei Flaechen mit Kontextmenue rufen. Ein
