@@ -275,10 +275,40 @@ vorzeichenlose Ganzzahlen in der Bytefolge *little-endian*.
    Kopf, Chiffrat samt Prüfwert ab Byte 60. **Die ganzen 60 Byte des Kopfes sind
    die zusätzlichen authentifizierten Daten**, so wie sie in der Datei stehen.
 
-Heraus kommt Text in UTF-8, in derselben Form wie `notes.txt`: je Eintrag eine
-Zeile `## <Thema>` und der Text darunter, mit einem Zeilenumbruch am Ende. Wer
-eine Zahl im Kopf ändert, bekommt beim Entschlüsseln dieselbe Abweisung wie mit
-einer falschen PIN. Werkzeuge auf der Grundlage von libsodium rechnen Argon2id
+Heraus kommt Text in UTF-8, in der Form von `notes.txt` mit einer Verengung: je
+Eintrag eine Zeile `## <Name>`, darunter bis zu vier Feldzeilen und danach die
+Notizen, mit einem Zeilenumbruch am Ende. Ein Eintrag mit allen sechs Feldern
+sieht so aus:
+
+```text
+## NAS Büro
+protocol: smb
+address: nas.local/daten
+account: kai
+password: geheim
+Zugang nur im Büronetz.
+```
+
+**Die Leseregel:** Nach der Zeile `## <Name>` gilt eine ununterbrochene Folge
+von Zeilen als Feldzeilen, solange jede mit `protocol`, `address`, `account`
+oder `password` beginnt (ohne Rücksicht auf Groß- und Kleinschreibung), danach
+ein Doppelpunkt und dann nichts oder ein Leerzeichen, und ihr Schlüssel in der
+Folge noch nicht stand. Der Wert ist der Rest der Zeile nach dem einen
+Leerzeichen, ohne Zeilenumbruch und ohne ein `\r` davor. Die erste andere Zeile
+beendet die Folge; ab ihr stehen die Notizen. KRK schreibt die Schlüssel klein
+und, sobald ein Eintrag geändert wird, alle vier Feldzeilen, eine leere als
+`protocol:` ohne Leerzeichen dahinter; nach einer solchen vollen Form bleibt
+eine Notizzeile, die wie eine Feldzeile aussieht, eine Notiz.
+
+**Ein Eintrag aus der Zeit vor den Feldern ist eine gültige Form davon**: ohne
+Feldzeilen ist sein Thema der Name und sein Text die Notizen. KRK schreibt
+solche Einträge nicht um, solange niemand sie ändert, und eine Datei, die nur
+gelesen und gesichert wird, bleibt Byte für Byte, wie sie war. Die
+verbindliche Quelle der Leseregel ist der Modulkopf von
+`crates/krk-core/src/heimordner/eintraege/geheimnisse.rs`.
+
+Wer eine Zahl im Kopf ändert, bekommt beim Entschlüsseln dieselbe Abweisung wie
+mit einer falschen PIN. Werkzeuge auf der Grundlage von libsodium rechnen Argon2id
 allein mit einer Spur; für eine Datei mit `p = 1`, wie KRK sie heute schreibt,
 genügt das.
 
@@ -304,6 +334,50 @@ Die Grenzen verhindern, dass ein beschädigter Kopf den Ladefaden für eine
 Ableitung über Terabytes anhält. Sie lassen zugleich Raum, die Parameter
 anzuheben. Hebt eine spätere Fassung sie über diese Grenzen, gilt ihre Datei
 einem älteren KRK als beschädigt, und ihr Inhalt bleibt unberührt.
+
+## Der gemerkte Schlüssel und die Verbindungen
+
+Die Bedienung steht in `HowTo.md` unter „Geheimnisse in `secrets.txt`“ und
+„Verbindungen“; hier stehen die Zusagen, auf die man sich beim Betrieb verlässt.
+
+**Die Tabelle der Geheimnisse hat sechs Spalten**: Name, Protokoll, Adresse,
+Konto, Passwort und Notizen, eine je Feld aus dem Format oben. Die
+Passwortspalte zeigt den Klartext, wie die Rohansicht derselben Datei.
+
+**Ein eingegebener Schlüssel gilt zehn Minuten ab der Eingabe.** KRK merkt sich
+nach dem Öffnen mit PIN, dem Festlegen und „PIN ändern“ den abgeleiteten
+Schlüssel, nie die PIN, im Arbeitsspeicher und nie auf der Platte. Die Frist
+verlängert sich nicht durch Benutzen und läuft im Ruhezustand des Macs weiter.
+Ein Schlüssel, der die Datei nicht öffnet, fällt sofort, und KRK fragt nach
+der PIN. Getilgt, also vor dem Freigeben mit Nullen überschrieben, werden die
+Schlüsselbytes beim Ablauf, beim Ersetzen und beim Beenden, dazu das Passwort
+einer Verbindung, sobald es gebraucht ist. Nicht getilgt werden die PIN, der
+entschlüsselte Text in Editor, Tabelle und Blatt, die Kopie des Passworts beim
+System und die inneren Arbeitsdaten der Verfahren.
+
+**„Verbinden…“ im Kontextmenü der Dateiliste legt eine Verbindung an**: einen
+Eintrag am Ende von `secrets.txt` und ein Lesezeichen in der Gruppe
+„Verbindungen“ der Leiste, die zwischen den Lesezeichen und den Geräten steht,
+sobald es eine Verbindung gibt. **Ein Mausklick auf ein solches Lesezeichen
+oder `opt+return` mit dem Fokus in der Leiste stellt sie her**; die Pfeiltasten
+wählen nur. Welcher Eintrag gemeint ist, sagt allein sein Name, und stehen zwei
+Einträge unter demselben Namen, verbindet KRK nicht.
+
+| Protokoll | Weg |
+|---|---|
+| `smb`, `afp`, `nfs`, `ftp`, `webdav` (über `http://`), `webdavs` (über `https://`) | KRK hängt ein, mit Konto und Passwort als eigenen Werten |
+| `http`, `https`, `ssh`, `sftp`, `vnc` | KRK übergibt die Adresse an das System, **ohne Passwort**; bei `ssh`, `sftp` und `vnc` mit dem Konto davor |
+
+**Das Passwort verlässt KRK allein beim Einhängen**, als Argument an das
+System, das es an den Server schickt. In `bookmarks.toml` steht von einer
+Verbindung allein ihr Name.
+
+**Eine ältere Fassung von KRK hält eine `bookmarks.toml` mit einer Verbindung
+für beschädigt.** Sie legt den Inhalt als `bookmarks.toml.beschaedigt` daneben,
+falls dort noch keine solche Kopie liegt, und startet ohne Lesezeichen. Zurück
+auf der neuen Fassung holt man die Lesezeichen bei ausgeschaltetem KRK aus
+dieser Kopie zurück; wie, steht in `HowTo.md` unter „Zurück auf eine ältere
+Fassung“.
 
 ---
 

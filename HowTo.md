@@ -670,10 +670,13 @@ daneben, welches Dateifenster das aktive ist.
 
 ## Lesezeichen
 
-Die Leiste ganz links führt eine Liste mit zwei Überschriften. Oben die
+Die Leiste ganz links führt eine Liste mit bis zu drei Überschriften. Oben die
 Lesezeichen aus `bookmarks.toml`, in der Reihenfolge, in der sie dort stehen;
-unten „Geräte und Orte", die bei jedem Aufbau frisch vom System kommen und nie
-abgelegt werden.
+darunter „Verbindungen“, ebenfalls aus `bookmarks.toml`, aber nur, sobald dort
+mindestens eine Verbindung steht; unten „Geräte und Orte", die bei jedem Aufbau
+frisch vom System kommen und nie abgelegt werden. Wie eine Verbindung entsteht
+und was ein Klick auf sie tut, steht unter „Verbindungen“ im Abschnitt über den
+Notizordner.
 
 | Taste | Wirkung |
 |---|---|
@@ -690,11 +693,22 @@ Löschen und Umbenennen tragen eigene Kombinationen, weil `delete` und
 **`cmd+d` legt zwei verschiedene Sorten an, je nach Fokus.** Im Dateifenster
 merkt es den angezeigten Ordner. Im Editor merkt es die Zeile der Schreibmarke
 als Textmarke. Beide Sorten stehen in derselben Liste, und das Sinnbild vor der
-Beschriftung sagt, welche es ist.
+Beschriftung sagt, welche es ist. Eine dritte Sorte, die Verbindung, legt
+`cmd+d` nie an; sie entsteht allein über „Verbinden…“ im Kontextmenü der
+Dateiliste.
+
+**Umbenennen und Verschieben wirken auf Verbindungen wie auf Lesezeichen.**
+`ctrl+u` ändert allein die Beschriftung in der Leiste, und die Verbindung findet
+ihren Eintrag in `secrets.txt` weiter unter dem alten Namen. `opt+up` und
+`opt+down` verschieben innerhalb der eigenen Gruppe und nie über eine
+Überschrift hinweg. `ctrl+delete` nimmt allein das Lesezeichen; der Eintrag in
+`secrets.txt` bleibt stehen.
 
 Ein Lesezeichen, dessen Ziel fort ist, bleibt stehen und trägt den Zusatz
 „(fehlt)". Die Zeile ist zusätzlich grau, aber das Wort ist das Kennzeichen,
-nicht die Farbe.
+nicht die Farbe. Eine Verbindung trägt den Zusatz nie: ob ihr Eintrag in
+`secrets.txt` noch steht, weiß KRK erst nach dem Entschlüsseln, und die Leiste
+entschlüsselt nichts.
 
 ---
 
@@ -902,7 +916,9 @@ Ordner schon aus einer früheren Fassung hat, bekommt `appointments.md` beim
 nächsten `f2` dazu; die übrigen Dateien bleiben, wie sie sind. Eine vorhandene Datei
 überschreibt KRK nie. Wer aus einer früheren Fassung noch eine `.secrets.txt`
 mit Punkt hat, findet sie nach dem nächsten `f2` als `secrets.txt` wieder;
-was dabei im Einzelnen geschieht, steht unter „Geheimnisse in `secrets.txt`“. Beim Start legt KRK nichts an, auch nicht für einen
+was dabei im Einzelnen geschieht, steht unter „Geheimnisse in `secrets.txt`“.
+Fehlt `secrets.txt`, legt „Verbinden…“ im Kontextmenü der Dateiliste Ordner
+und Dateien auf demselben Weg an wie `f2`, nur ohne einen Tab zu öffnen. Beim Start legt KRK nichts an, auch nicht für einen
 wiederhergestellten Tab auf den Ordner. Steht an der Stelle des Notizordners
 eine gewöhnliche Datei, oder fehlt der Ordner darüber, etwa weil ein Laufwerk
 nicht eingehängt ist, nennt die Statuszeile den Grund, und kein Tab geht auf.
@@ -1215,8 +1231,10 @@ einer offenen Zelle heraus wird diese zuerst übernommen, und lässt sie sich
 nicht übernehmen, entsteht nichts. **In der Rohansicht einer der vier
 Eintragsdateien wirkt derselbe Befehl ebenso**, auch über `shift+cmd+return`:
 KRK hängt den leeren Eintrag als Text ans Ende, also `- [ ] ` in `tasks.txt`,
-`## ` in `notes.txt` und `secrets.txt` und `## ` mit dem heutigen Datum in
-`appointments.md`, und die Schreibmarke steht am Ende dieser Zeile. Ein
+`## ` in `notes.txt`, `## ` mit den vier leeren Feldzeilen `protocol:`,
+`address:`, `account:` und `password:` darunter in `secrets.txt` und `## ` mit
+dem heutigen Datum in `appointments.md`, und die Schreibmarke steht am Ende der
+ersten Zeile des neuen Eintrags. Ein
 `cmd+z` nimmt ihn zurück. In jeder anderen Datei, in der Quicknote und
 außerhalb des Editors holt `cmd+n` wie bisher das Fenster zurück („Fenster
 einblenden“); vor einer Eintragsdatei bleibt dieser Befehl über das Menü
@@ -1431,10 +1449,38 @@ Tastenzuweisung.
 
 ### Geheimnisse in `secrets.txt`
 
-**`secrets.txt` hält Einträge, die kein Programm nebenbei mitlesen soll.** Sie
-hat dieselbe Form wie `notes.txt`, ein Thema je Zeile `## <Thema>` und der Text
-darunter. Auf der Platte steht sie aber nur verschlüsselt, und geöffnet wird sie
-mit einer vierstelligen PIN.
+**`secrets.txt` hält Einträge, die kein Programm nebenbei mitlesen soll.** Jeder
+Eintrag trägt sechs Felder: Name, Protokoll, Adresse, Konto, Passwort und
+Notizen. Auf der Platte steht die Datei nur verschlüsselt, und geöffnet wird
+sie mit einer vierstelligen PIN. Die Felder Protokoll, Adresse, Konto und
+Passwort braucht man nur für eine Verbindung (unter „Verbindungen“); ein
+Eintrag, der allein einen Namen und Notizen trägt, ist ebenso gültig.
+
+Im entschlüsselten Text ist ein Eintrag eine Notiz wie in `notes.txt`, deren
+Text mit bis zu vier Feldzeilen beginnt:
+
+```text
+## NAS Büro
+protocol: smb
+address: nas.local/daten
+account: kai
+password: geheim
+Zugang nur im Büronetz.
+```
+
+Die Zeile `## <Name>` beginnt den Eintrag. Danach liest KRK eine
+ununterbrochene Folge von Zeilen als Felder, solange jede mit `protocol:`,
+`address:`, `account:` oder `password:` beginnt (Groß- und Kleinschreibung
+gleich) und ihr Schlüssel in dieser Folge noch nicht stand. Die erste andere
+Zeile beendet die Felder, und alles ab ihr sind die Notizen.
+
+**Einträge aus der Zeit vor den sechs Feldern bleiben, wie sie sind.** Ihr
+Thema erscheint als Name, ihr Text als Notizen, die vier mittleren Spalten
+sind leer. KRK schreibt dafür nichts um: erst wer eine Zelle eines solchen
+Eintrags ändert, gibt ihm die volle Form mit allen vier Feldzeilen, leere als
+`protocol:` ohne Wert. Jeder andere Eintrag bleibt dabei Byte für Byte. Beginnt
+der Text eines alten Eintrags mit einer Zeile wie `password: …`, steht diese
+Zeile danach in der Spalte, die ihr Wortlaut nennt; verloren geht nichts.
 
 **Die Datei steht in der Liste wie jede andere.** Ihr Name beginnt nicht mit
 einem Punkt, der Umschalter für versteckte Einträge (`shift+cmd+h`) betrifft sie
@@ -1483,8 +1529,8 @@ sind oder die Wiederholung abweicht, bleibt die bestätigende Schaltfläche
 abgeschaltet, und eine Zeile unter den Feldern nennt den Grund. `Esc` schließt
 das Blatt, und die Datei bleibt zu.
 
-Danach steht der Inhalt im Editor, in der Formatansicht als dieselbe Tabelle
-wie bei `notes.txt`, mit denselben Griffen. `ctrl+cmd+e` zeigt den Rohtext.
+Danach steht der Inhalt im Editor, in der Formatansicht als Tabelle mit sechs
+Spalten (unter „Die Tabelle der Geheimnisse“). `ctrl+cmd+e` zeigt den Rohtext.
 `cmd+s` sichert verschlüsselt und dauert so lange wie bei jeder anderen Datei;
 die Wartezeit von rund einer halben Sekunde fällt allein beim Öffnen, beim
 Festlegen und beim Ändern der PIN an.
@@ -1496,9 +1542,11 @@ sich nicht unterscheiden. Für einen neuen Versuch wieder `f4`. Ist schon der
 Anfang der Datei unlesbar, sagt die Statuszeile „Der Kopf der Datei ist
 beschädigt“ und nennt den Grund. KRK sperrt nach Fehlversuchen nicht.
 
-**Die PIN gilt, solange die Datei im Editor offen ist.** Wer den Editor
-schließt, darin eine andere Datei öffnet oder KRK beendet, verschließt den
-Inhalt wieder, und das nächste Öffnen fragt erneut. Den Editor nur auszublenden
+**Die PIN gilt, solange die Datei im Editor offen ist, und darüber hinaus
+zehn Minuten.** Wer den Editor schließt, darin eine andere Datei öffnet oder
+KRK beendet, verschließt den Inhalt wieder. Ein neues Öffnen innerhalb von zehn
+Minuten nach der letzten PIN-Eingabe fragt aber nicht erneut; die Einzelheiten
+stehen unter „Zehn Minuten ohne erneute PIN“. Den Editor nur auszublenden
 (`opt+cmd+b`) verschließt nichts.
 
 **Eine neue PIN steht erst mit dem ersten `cmd+s` in der Datei.** Wer nach dem
@@ -1509,6 +1557,79 @@ nächste Öffnen fragt wieder nach einer neuen PIN.
 als neue Datei.** Das Blatt fragt dann nach einer neuen PIN und nicht nach der
 alten. Der frühere Inhalt ist in diesem Fall schon mit dem Abschneiden fort,
 nicht erst mit der neuen PIN.
+
+#### Die Tabelle der Geheimnisse
+
+**Die Formatansicht zeigt sechs Spalten**: Name, Protokoll, Adresse, Konto,
+Passwort und Notizen, die Einträge in der Reihenfolge der Datei. Die Griffe
+sind die der Notiztabelle (unter „Notizen in der Tabelle bearbeiten“):
+Doppelklick öffnet eine Zelle, `cmd+n` und `shift+cmd+return` legen einen
+leeren Eintrag ans Ende, `opt+cmd+up` und `opt+cmd+down` verschieben, `delete`
+und `shift+cmd+delete` löschen den ganzen Eintrag, `cmd+z` nimmt jede Handlung
+zurück, und erst `cmd+s` schreibt.
+
+**Fünf Spalten sind einzeilig, die Notizen nicht.** In Name, Protokoll,
+Adresse, Konto und Passwort beendet `return` die Zelle, ein Zeilenumbruch,
+etwa aus der Zwischenablage, wird abgewiesen, und **`esc` verwirft eine
+geänderte Zelle**, wie die Datumszelle der Termine. In den Notizen schreibt
+`return` einen Umbruch, und `esc` übernimmt die geänderte Zelle wie in der
+Notiztabelle. Eine Zeile in den Notizen, die mit `## ` beginnt, weist KRK ab,
+denn so beginnt der nächste Eintrag. `tab` und `shift+tab` gehen von Zelle zu
+Zelle.
+
+**Die Passwortspalte zeigt das Passwort im Klartext.** Die Rohansicht derselben
+Datei zeigt es ohnehin, und eine Verdeckung allein in der Tabelle verspräche
+einen Schutz, den die zweite Ansicht nicht hält. Wer neben sich jemanden
+mitlesen lässt, öffnet die Datei nicht.
+
+#### Zehn Minuten ohne erneute PIN
+
+**Nach einer PIN-Eingabe merkt sich KRK den daraus abgeleiteten Schlüssel zehn
+Minuten lang im Arbeitsspeicher.** Gemerkt wird nach dem Öffnen mit der PIN,
+nach dem Festlegen einer neuen PIN und nach „PIN ändern“. In diesen zehn
+Minuten öffnet `f4` die Datei ohne Blatt, und ein Klick auf eine Verbindung
+und „Verbinden…“ fragen ebenso nicht. Gespeichert wird der Schlüssel nirgends
+auf der Platte, und die PIN selbst merkt sich KRK nicht.
+
+- **Die Frist zählt ab der Eingabe und verlängert sich nicht.** Ein Öffnen mit
+  dem gemerkten Schlüssel setzt sie nicht neu; zehn Minuten nach der letzten
+  Eingabe fragt das nächste Öffnen wieder nach der PIN. „PIN ändern“ ersetzt
+  den gemerkten Schlüssel durch den neuen, und die Frist beginnt dann neu.
+- **Der Ruhezustand zählt mit.** Wer den Mac zuklappt und nach einer Stunde
+  wieder öffnet, wird nach der PIN gefragt. Eine verstellte Uhrzeit berührt
+  die Frist nicht.
+- **Eine offene Datei bleibt offen.** Läuft die Frist ab, während
+  `secrets.txt` im Editor steht, bleibt sie entsperrt, bis der Editor sie
+  schließt; die Frist betrifft allein das nächste Öffnen.
+- **Ein Schlüssel, der nicht passt, fällt.** Hat jemand die PIN in einer
+  zweiten KRK-Instanz geändert, den Notizordner gewechselt oder die Datei
+  verändert, öffnet der gemerkte Schlüssel nicht. KRK vergisst ihn dann und
+  zeigt das PIN-Blatt.
+- **Eine Datei mit null Bytes fragt immer nach einer neuen PIN**, auch
+  innerhalb der Frist, denn eine neue Datei bekommt ein neues Salz und damit
+  einen neuen Schlüssel.
+- **Vorzeitig vergessen lässt er sich allein durch Beenden.** Einen eigenen
+  Befehl dafür gibt es nicht, und auch das Sperren des Bildschirms lässt den
+  Schlüssel stehen.
+
+**Was getilgt wird und was nicht.** Getilgt heißt: KRK überschreibt die Bytes
+mit Nullen, bevor es den Speicher freigibt.
+
+- Getilgt werden die 32 Bytes des Schlüssels, sobald eine Kopie davon fällt:
+  beim Ablauf der Frist, beim Ersetzen durch „PIN ändern“, wenn er nicht passt,
+  beim Beenden von KRK und wenn der Editor die Datei schließt.
+- Getilgt wird das Passwort einer Verbindung, sobald es nicht mehr gebraucht
+  wird: der Wert aus dem Blatt „Verbinden“ und der Wert, den ein Klick aus
+  `secrets.txt` liest, nach dem Einhängen.
+- **Nicht** getilgt werden die PIN, der entschlüsselte Text, solange er im
+  Editor, in der Tabelle oder in den Feldern des Blattes „Verbinden“ steht,
+  die Kopie des Passworts, die KRK an das System zum Einhängen übergibt, die
+  inneren Arbeitsdaten der Verschlüsselungsverfahren und Reste, die das
+  Verschieben eines Werts im Speicher hinterlässt.
+
+Die Tilgung schützt also gegen einen Schlüssel, der nach Ablauf als Rest im
+Speicher steht. Gegen ein Programm, das den Speicher von KRK liest, solange die
+Datei offen ist, schützt sie nicht.
 
 #### Eine vergessene PIN
 
@@ -1541,11 +1662,19 @@ sie nicht.
   Rechner oder mit mehreren Kernen zugleich weniger. Wer den Notizordner in
   einen synchronisierten Speicher legt, legt dort auch eine solche Kopie ab.
 - einem Programm, das mitliest, solange die Datei im Editor offen ist; dann
-  steht der Inhalt im Klartext im Speicher.
+  steht der Inhalt im Klartext im Speicher. Ebenso während der zehn Minuten,
+  in denen KRK den Schlüssel gemerkt hält: wer dann den Speicher liest, findet
+  den Schlüssel.
 - Schadsoftware, die unter dem eigenen Benutzerkonto läuft.
 
-KRK sagt auch nicht zu, dass Schlüssel und Klartext nach dem Schließen aus dem
-Speicher getilgt werden.
+Was KRK im Speicher tilgt und was nicht, steht unter „Zehn Minuten ohne
+erneute PIN“.
+
+**Das Passwort einer Verbindung geht an den Rechner, an dem man sich
+anmeldet.** Ein Klick auf eine Verbindung, die einhängt, reicht Konto und
+Passwort an das System weiter, und das System schickt sie an den Server. Der
+Eintrag in `secrets.txt` bestimmt, wohin. Eine Verbindung, die KRK an ein
+anderes Programm übergibt, bekommt nie ein Passwort.
 
 **Kopierter Text liegt im Klartext in der Zwischenablage.** `cmd+c` aus der
 Tabelle oder aus dem Rohtext ist erlaubt. Danach kann jedes Programm des
@@ -1582,7 +1711,8 @@ von KRK geändert, weist der Befehl ab wie das Sichern.
 den Stand, der auf der Platte steht, neu mit der neuen PIN. Was im Editor seit
 dem letzten `cmd+s` dazugekommen ist, bleibt im Editor und geht erst mit dem
 nächsten `cmd+s` auf die Platte, dann unter der neuen PIN. Ab dem Ende des
-Befehls öffnet allein die neue PIN die Datei.
+Befehls öffnet allein die neue PIN die Datei, und für die nächsten zehn
+Minuten merkt sich KRK den Schlüssel der neuen PIN statt des alten.
 
 **Mit einer eigenen `keymap.toml` trägt „PIN ändern“ keine Taste.** KRK hängt
 den Befehl beim Start unbelegt an, und über das Hauptmenü „Home“ ist er
@@ -1593,3 +1723,101 @@ nötig und setzt die ganze eigene Belegung zurück.
 
 Wie die Datei aufgebaut ist und wie man sie ohne KRK entschlüsselt, steht in
 `README.md` unter „Das Dateiformat von `secrets.txt`“.
+
+### Verbindungen
+
+**Eine Verbindung ist ein Eintrag in `secrets.txt` und ein Lesezeichen in der
+Leiste, das ihn beim Namen nennt.** Ein Klick auf das Lesezeichen liest den
+Eintrag und stellt die Verbindung her, etwa zu einer Freigabe auf einem
+Netzlaufwerk.
+
+#### Eine Verbindung anlegen
+
+**„Verbinden…“ steht im Kontextmenü der Dateiliste**, gleich was angeklickt
+ist. Es öffnet ein Blatt mit sechs Feldern, denselben wie in der Tabelle; das
+Passwortfeld zeigt Punkte statt Zeichen, und die Notizen sind hier eine Zeile
+(Absätze schreibt man danach in der Tabelle). „Anlegen“ bleibt abgeschaltet,
+bis der Name nicht leer ist, das Protokoll eines aus der Tabelle unten ist, die
+Adresse nicht leer ist und kein `://` enthält und kein Feld einen
+Zeilenumbruch trägt; die Zeile unter den Feldern nennt den Grund.
+
+Nach „Anlegen“ fragt KRK nach der PIN, außer der Schlüssel ist noch gemerkt.
+Dann hängt es den Eintrag in der vollen Form ans Ende von `secrets.txt` und legt
+das Lesezeichen in der Gruppe „Verbindungen“ an. Was dabei schiefgehen kann:
+
+| Lage | Was geschieht |
+|---|---|
+| Der Name steht in `secrets.txt` schon | Das Blatt geht mit allen Feldern wieder auf und nennt den Grund; geschrieben ist nichts. |
+| Die PIN ist falsch | Das PIN-Blatt geht wieder auf; die Felder bleiben erhalten. |
+| `secrets.txt` fehlt | KRK legt sie an wie `f2`, ohne sie zu öffnen, und fragt nach einer neuen PIN, zweimal. |
+| `secrets.txt` hat im Editor ungesicherte Änderungen | „Verbinden…“ weist ab, bevor das Blatt aufgeht: erst sichern. |
+| Der Eintrag steht, das Lesezeichen ließ sich nicht anlegen | Die Statuszeile sagt genau das. |
+
+Hält der Editor `secrets.txt` ohne ungesicherte Änderungen, lädt er sie nach
+dem Anlegen neu und zeigt den neuen Eintrag.
+
+**In `bookmarks.toml` steht von der Verbindung allein ihr Name.** Protokoll,
+Adresse, Konto, Passwort und Notizen stehen nur verschlüsselt in
+`secrets.txt`.
+
+#### Eine Verbindung herstellen
+
+**Ein Mausklick auf die Zeile verbindet**, auch auf eine schon gewählte. Von
+der Tastatur verbindet **„Verbindung herstellen“** auf `opt+return`, mit dem
+Fokus in der Leiste. **Die Pfeiltasten wählen nur**: eine Auswahl, die mit
+`up` und `down` über eine Verbindung läuft, stellt keine her. Ordner und
+Textmarken öffnen dagegen weiter schon bei der Auswahl.
+
+KRK liest `secrets.txt` dafür mit dem gemerkten Schlüssel oder fragt nach der
+PIN, sucht den Eintrag mit dem Namen der Verbindung und verbindet je nach
+Protokoll auf einem von zwei Wegen. Gelesen wird der gesicherte Stand auf der
+Platte, nicht ein ungesicherter im Editor. Groß- und Kleinschreibung des
+Protokolls zählen nicht.
+
+| Protokoll | Weg | Was geschieht |
+|---|---|---|
+| `smb`, `afp`, `nfs`, `ftp` | einhängen | KRK hängt `<protokoll>://<adresse>` ein, mit Konto und Passwort |
+| `webdav`, `webdavs` | einhängen | ebenso, über `http://` beziehungsweise `https://` |
+| `http`, `https` | an das System | der Browser öffnet `<protokoll>://<adresse>`, ohne Konto und ohne Passwort |
+| `ssh`, `sftp`, `vnc` | an das System | das zuständige Programm öffnet `<protokoll>://<konto>@<adresse>`, ohne Passwort; ohne Konto fehlt `<konto>@` |
+
+**Das Passwort verlässt KRK allein beim Einhängen**, als eigener Wert an das
+System und nie in einer Adresse. Die Programme, an die KRK übergibt, fragen
+selbst danach, wenn sie es brauchen. Die Adresse trägt kein Schema: `nas.local/daten`
+und nicht `smb://nas.local/daten`.
+
+Nach einem gelungenen Einhängen zeigt das aktive Dateifenster den
+Einhängepunkt. Ist die Freigabe schon eingehängt, zeigt KRK den vorhandenen
+Einhängepunkt, oder meldet „schon verbunden“, wenn es ihn nicht findet. Alle
+anderen Ausgänge meldet die Statuszeile:
+
+- kein Eintrag mit diesem Namen, auch wenn `secrets.txt` fehlt oder leer ist
+  (dann fragt KRK gar nicht erst nach der PIN);
+- **mehrere Einträge mit diesem Namen**: KRK verbindet dann nicht, denn es
+  wüsste nicht, mit welchem; Abhilfe ist ein eindeutiger Name in
+  `secrets.txt`;
+- ein Protokoll, das KRK nicht kennt;
+- eine abgewiesene Anmeldung, ein nicht erreichbarer Rechner, sonst die
+  Fehlernummer des Systems.
+
+Ein zweiter Klick, während eine Verbindung noch hergestellt wird, meldet das
+und startet keine zweite. Das Einhängen läuft im Hintergrund; KRK bleibt dabei
+bedienbar, abbrechen lässt es sich aber nicht.
+
+**Mit einer eigenen `keymap.toml` trägt „Verbindung herstellen“ keine Taste.**
+Der Klick wirkt trotzdem. `opt+return` weist man einzeln zu: **F1**, den Befehl
+in der Gruppe „Leiste und Fokus“ wählen, `cmd+t`, `opt+return` drücken,
+„Fertig“.
+
+#### Zurück auf eine ältere Fassung
+
+**Eine Fassung von KRK von vor den Verbindungen versteht eine `bookmarks.toml`
+mit einer Verbindung nicht.** Sie hält die Datei für beschädigt, legt ihren
+Inhalt als `bookmarks.toml.beschaedigt` daneben und startet ohne Lesezeichen;
+was sie danach in `bookmarks.toml` schreibt, kennt die früheren Lesezeichen
+nicht mehr. Steht schon eine `bookmarks.toml.beschaedigt` aus einem früheren
+Anlass da, bleibt die ältere und die neue Kopie entfällt. Wer zur neuen Fassung
+zurückkehrt, beendet KRK, legt `bookmarks.toml` beiseite und benennt
+`bookmarks.toml.beschaedigt` in `bookmarks.toml` um. Wer vorher weiß, dass er
+zurückgeht, löscht die Verbindungen in der Leiste zuerst; die Einträge in
+`secrets.txt` bleiben dabei stehen.
