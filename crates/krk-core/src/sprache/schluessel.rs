@@ -199,6 +199,9 @@ pub enum Text {
     VorgangFernGetrennt,
     /// `operation::fern`: der Server legt keine Verknuepfung an.
     VorgangFernKeineVerknuepfung,
+    /// `operation::fern`: ein ferner Ordner liefert mehr Namen, als ein
+    /// Vorgang annimmt; `{zahl}` ist die Grenze.
+    VorgangFernOrdnerZuVieleNamen,
     /// `operation::fern`: ein Name oder Verweis ist kein UTF-8 und laesst sich
     /// auf dem Server nicht anlegen.
     VorgangFernNameOhneUtf8,
@@ -1621,7 +1624,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 678] = [
+    pub const ALLE: [Text; 679] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1700,6 +1703,7 @@ impl Text {
         Text::VorgangDateiangabenNichtKopiert,
         Text::VorgangFernGetrennt,
         Text::VorgangFernKeineVerknuepfung,
+        Text::VorgangFernOrdnerZuVieleNamen,
         Text::VorgangFernNameOhneUtf8,
         Text::VorgangZielNichtInPapierkorb,
         Text::EntpackenEintragFuehrtHeraus,

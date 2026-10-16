@@ -565,6 +565,110 @@ fn verschieben_auf_demselben_server_benennt_um_und_ueber_die_grenze_entfernt_es_
     );
 }
 
+/// Ein Abbild, das unter einem Ordner eingehaengt ist und beim Fallen wieder
+/// ausgehaengt wird: ein zweites Dateisystem fuer den Server des Systems.
+///
+/// Haelt keinen Pruefordner: das Abbild und der Einhaengepunkt liegen in dem
+/// der Probe, und dieser Wert faellt vor ihm, weil er nach ihm entsteht.
+struct Einhaengung {
+    punkt: PathBuf,
+}
+
+impl Einhaengung {
+    /// Legt unter `ordner` ein Abbild von einem Megabyte mit HFS+ an und
+    /// haengt es unter `ordner/volume` ein, ohne es im Finder zu zeigen.
+    fn neu(ordner: &Pruefordner) -> Self {
+        let abbild = ordner.unter("volume.dmg");
+        let punkt = ordner.ordner("volume");
+        let hdiutil = |argumente: &[&std::ffi::OsStr]| {
+            let stand = std::process::Command::new("/usr/bin/hdiutil")
+                .args(argumente)
+                .status()
+                .expect("hdiutil laesst sich nicht starten");
+            assert!(stand.success(), "hdiutil {argumente:?} ist gescheitert");
+        };
+        hdiutil(&[
+            "create".as_ref(),
+            "-quiet".as_ref(),
+            "-size".as_ref(),
+            "1m".as_ref(),
+            "-fs".as_ref(),
+            "HFS+".as_ref(),
+            "-layout".as_ref(),
+            "NONE".as_ref(),
+            "-volname".as_ref(),
+            "krkprobe".as_ref(),
+            abbild.as_os_str(),
+        ]);
+        hdiutil(&[
+            "attach".as_ref(),
+            "-quiet".as_ref(),
+            "-nobrowse".as_ref(),
+            "-mountpoint".as_ref(),
+            punkt.as_os_str(),
+            abbild.as_os_str(),
+        ]);
+        Einhaengung { punkt }
+    }
+}
+
+impl Drop for Einhaengung {
+    fn drop(&mut self) {
+        // Scheitert das Aushaengen, bleibt das Abbild eingehaengt, und der
+        // Pruefordner darueber laesst sich nicht ganz abraeumen; eine Probe
+        // wird davon nicht rot, aber `hdiutil info` zeigt den Rest.
+        let _ = std::process::Command::new("/usr/bin/hdiutil")
+            .args(["detach", "-quiet", "-force"])
+            .arg(&self.punkt)
+            .status();
+    }
+}
+
+/// Verschieben auf demselben Server ueber die Grenze zweier Dateisysteme dort
+/// kommt an, und die Quelle ist danach fort (Befund
+/// `261017-0004-verschieben-auf-demselben-server-ueber-eine-mount-grenze-des-servers-scheitert-ohne-ausweichweg`).
+///
+/// Der Server des Systems beantwortet `RENAME` von der Platte in das
+/// eingehaengte Abbild mit `FAILURE`, denn `link(2)` und `rename(2)` scheitern
+/// dort an `EXDEV`. Bis zur Behebung stand der Eintrag danach mit diesem
+/// Grund im Bericht, und die Quelle blieb, wo sie war; jetzt wird kopiert und
+/// die Quelle entfernt wie ueber eine Grenze zwischen zwei Servern, eine
+/// Datei wie ein Ordner samt Inhalt.
+#[test]
+fn verschieben_ueber_eine_grenze_auf_dem_server_kopiert_und_entfernt_die_quelle() {
+    let ordner = Pruefordner::neu("fern-verschieben-grenze");
+    let datei = ordner.datei("f.txt", b"f");
+    let baum = ordner.ordner("baum");
+    fs::write(baum.join("a.txt"), b"a").expect("a.txt");
+    let volume = Einhaengung::neu(&ordner);
+    assert_ne!(
+        fs::metadata(&datei).expect("f.txt").dev(),
+        fs::metadata(&volume.punkt).expect("volume").dev(),
+        "das Abbild ist kein eigenes Dateisystem"
+    );
+
+    let server = zugang("server.test");
+    let ausgang = fahren(
+        Fernauftrag::verschieben(
+            vec![fern(&server, &datei), fern(&server, &baum)],
+            fern(&server, &volume.punkt),
+        ),
+        Konfliktantwort::Abbrechen,
+    );
+    ohne_uebersprungene(&ausgang.bericht);
+    assert!(ausgang.konflikte.is_empty(), "{:?}", ausgang.konflikte);
+    assert_eq!(
+        fs::read(volume.punkt.join("f.txt")).expect("f.txt am Ziel"),
+        b"f"
+    );
+    assert_eq!(
+        fs::read(volume.punkt.join("baum/a.txt")).expect("a.txt am Ziel"),
+        b"a"
+    );
+    assert!(!datei.exists(), "die Datei steht noch in der Quelle");
+    assert!(!baum.exists(), "der Ordner steht noch in der Quelle");
+}
+
 /// Eine Verknuepfung kommt als Verknuepfung mit ihrem Verweis an, auf den
 /// Server und von dort zurueck; ihrem Ziel folgt keine der zwei Richtungen.
 #[test]

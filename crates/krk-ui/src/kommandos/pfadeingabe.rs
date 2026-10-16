@@ -27,8 +27,18 @@
 //! mit `~/` unter dem Anmeldeverzeichnis. Ob dort ein Ordner steht, sagt der
 //! Lesevorgang im Tab und nicht diese Datei; eine Pruefung hier waere eine
 //! Anfrage an den Server, und die darf der Hauptfaden nicht stellen. Zurueck zu
-//! einem lokalen Ordner geht es ueber ein Lesezeichen, die Geraeteleiste oder
-//! das Angleichen von einem lokalen Fenster aus.
+//! einem lokalen Ordner geht es ueber ein Lesezeichen, die Geraeteleiste, das
+//! Angleichen von einem lokalen Fenster aus oder die Zwischenablage.
+//!
+//! **Die Zwischenablage traegt in einem fernen Tab einen Pfad auf diesem Mac**,
+//! nie einen auf dem Server: was dort steht, kommt aus dem Finder, aus „Pfad
+//! kopieren“ eines lokalen Fensters oder als Dateiverweis, und keiner dieser
+//! Wege legt einen Serverpfad ab; die Pfadkopien sind am fernen Ort
+//! ausgegraut. „Zur Zwischenablage springen“ prueft den Pfad deshalb mit
+//! [`pruefen_fuer_fernen_tab`] wie lokal und stellt den Tab auf den lokalen
+//! Ordner (Befund
+//! `261017-0004-zur-zwischenablage-springen-liest-in-einem-fernen-tab-einen-lokalen-pfad-als-serverpfad`).
+//! Die Pfadeingabe von Hand bleibt beim Pfad auf dem Server.
 
 use std::path::{Path, PathBuf};
 
@@ -65,6 +75,22 @@ pub enum Ergebnis {
 /// Der Pfad muss absolut sein. Diese Regel ist die von C2, und C10 erbt sie.
 #[must_use]
 pub fn pruefen(pfad: &Path, angezeigt: &Path) -> Ergebnis {
+    pruefen_gegen(pfad, Some(angezeigt))
+}
+
+/// Prueft einen lokalen Pfad fuer einen Tab, der einen Ordner auf einem
+/// Server zeigt: dieselbe Pruefung wie [`pruefen`], nur liegt keine Datei
+/// schon vor dem Nutzer, und eine Datei fuehrt immer in ihren Ordner.
+///
+/// Gerufen wird sie von „Zur Zwischenablage springen“ in einem fernen Tab
+/// (Modulkopf, „In einem fernen Tab“): der Pfad dort ist ein Pfad auf diesem
+/// Mac und nie einer auf dem Server.
+#[must_use]
+pub fn pruefen_fuer_fernen_tab(pfad: &Path) -> Ergebnis {
+    pruefen_gegen(pfad, None)
+}
+
+fn pruefen_gegen(pfad: &Path, angezeigt: Option<&Path>) -> Ergebnis {
     if !pfad.is_absolute() {
         return Ergebnis::Meldung(satz(Text::PfadNichtAbsolut, &[("pfad", &pfad.display())]));
     }
@@ -115,7 +141,7 @@ pub fn pruefen(pfad: &Path, angezeigt: &Path) -> Ergebnis {
     let Some((ordner, name)) = aufwaerts(pfad) else {
         return Ergebnis::Meldung(satz(Text::PfadInKeinemOrdner, &[("pfad", &pfad.display())]));
     };
-    if gleicher_ordner(&ordner, angezeigt) {
+    if angezeigt.is_some_and(|angezeigt| gleicher_ordner(&ordner, angezeigt)) {
         Ergebnis::NurAuswahl { name }
     } else {
         Ergebnis::Wechseln {
@@ -334,6 +360,77 @@ mod tests {
                 );
             }
         }
+    }
+
+    /// Fuer einen fernen Tab liegt keine Datei schon vor dem Nutzer: eine
+    /// Datei fuehrt in ihren lokalen Ordner, mit Auswahl, auch wenn es der
+    /// Ordner ist, aus dem der Tab vor dem Verbinden kam.
+    #[test]
+    fn fuer_einen_fernen_tab_fuehrt_eine_lokale_datei_in_ihren_ordner() {
+        let ordner = Pruefordner::neu("fern-zwischenablage");
+        let datei = ordner.unter("idee.txt");
+        fs::write(&datei, b"x").expect("Datei");
+
+        assert_eq!(
+            pruefen_fuer_fernen_tab(&datei),
+            Ergebnis::Wechseln {
+                ordner: ordner.pfad().to_path_buf(),
+                auswahl: Some("idee.txt".to_owned())
+            }
+        );
+        assert_eq!(
+            pruefen_fuer_fernen_tab(ordner.pfad()),
+            Ergebnis::Wechseln {
+                ordner: ordner.pfad().to_path_buf(),
+                auswahl: None
+            }
+        );
+        assert!(matches!(
+            pruefen_fuer_fernen_tab(Path::new("htdocs")),
+            Ergebnis::Meldung(_)
+        ));
+    }
+
+    /// „Zur Zwischenablage springen“ liest in einem fernen Tab einen Pfad auf
+    /// diesem Mac und nie einen auf dem Server (Befund
+    /// `261017-0004-zur-zwischenablage-springen-liest-in-einem-fernen-tab-einen-lokalen-pfad-als-serverpfad`).
+    ///
+    /// Bis zur Behebung ging der Pfad aus der Zwischenablage an
+    /// `pfad_anspringen`, das ihn in einem fernen Tab an
+    /// `fern_pfad_anspringen` reichte. Gelesen werden die Rumpfe in
+    /// `appkit/tabelle.rs`: der Sprung ruft `lokalen_pfad_anspringen`, und
+    /// dessen ferner Zweig prueft lokal und erreicht den fernen Weg nicht.
+    ///
+    /// **Was sie nicht sieht:** ob `ordner_lesen` den fernen Tab wirklich auf
+    /// lokal stellt; das haelt `Tabliste::ordner_setzen` mit `Tabort::Lokal`.
+    #[test]
+    fn die_zwischenablage_liest_in_einem_fernen_tab_einen_lokalen_pfad() {
+        let tabelle = include_str!("../appkit/tabelle.rs");
+        let rumpf = |name: &str| {
+            tabelle
+                .split_once(&format!("fn {name}("))
+                .and_then(|(_, rest)| rest.split_once("\n    }\n"))
+                .map(|(rumpf, _)| rumpf)
+                .unwrap_or_else(|| panic!("{name} steht in appkit/tabelle.rs"))
+        };
+        let sprung = rumpf(concat!("zwischenablage", "_springen"));
+        assert!(
+            sprung.contains("self.lokalen_pfad_anspringen(&pfad)"),
+            "der Sprung aus der Zwischenablage geht nicht ueber den lokalen Weg"
+        );
+        assert!(
+            !sprung.contains("self.pfad_anspringen("),
+            "der Sprung aus der Zwischenablage erreicht den Weg der Pfadeingabe"
+        );
+        let lokal = rumpf(concat!("lokalen_pfad", "_anspringen"));
+        let (_, ferner_zweig) = lokal
+            .split_once("Ort::Fern(_) =>")
+            .expect("lokalen_pfad_anspringen verzweigt ueber den Ort");
+        assert!(ferner_zweig.contains("pruefen_fuer_fernen_tab("));
+        assert!(
+            !ferner_zweig.contains("fern_pfad_anspringen("),
+            "ein ferner Tab liest den Pfad der Zwischenablage als Serverpfad"
+        );
     }
 
     #[test]

@@ -124,6 +124,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::VorgangFernGetrennt => "die Verbindung zum Server ist getrennt",
         Text::VorgangFernKeineVerknuepfung => "der Server legt keine Verknüpfung an",
+        Text::VorgangFernOrdnerZuVieleNamen => {
+            "der Ordner auf dem Server liefert mehr als {zahl} Namen und wird ausgelassen"
+        }
         Text::VorgangFernNameOhneUtf8 => {
             "der Name ist kein UTF-8 und lässt sich auf dem Server nicht anlegen"
         }
@@ -1164,8 +1167,8 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         ),
         Zahlwort::GekuerztWeitere => ("… und {n} weitere", "… und {n} weitere"),
         Zahlwort::FernNamenUebersprungen => (
-            "Ein Name ohne UTF-8 ist übersprungen.",
-            "{n} Namen ohne UTF-8 sind übersprungen.",
+            "Ein Name ist übersprungen: er ist kein UTF-8 oder kein gültiger Dateiname.",
+            "{n} Namen sind übersprungen: sie sind kein UTF-8 oder keine gültigen Dateinamen.",
         ),
     }
 }

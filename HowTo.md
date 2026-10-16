@@ -1949,8 +1949,10 @@ verbunden wird nicht.
   denselben Ordner, „Ordner angleichen“ (`opt+cmd+s`) stellt das andere Fenster
   auf ihn. Die Pfadeingabe (`shift+cmd+g`) nimmt einen Pfad auf demselben
   Server, absolut oder mit `~/` vom Anmeldeverzeichnis aus. Zurück zu einem
-  lokalen Ordner geht es über ein Lesezeichen, die Geräteleiste oder „Ordner
-  angleichen“ aus einem lokalen Fenster.
+  lokalen Ordner geht es über ein Lesezeichen, die Geräteleiste, „Ordner
+  angleichen“ aus einem lokalen Fenster oder „Zur Zwischenablage springen“
+  (`opt+cmd+g`): **der Pfad in der Zwischenablage gilt immer als Pfad auf dem
+  Mac**, nie als Pfad auf dem Server, und der Tab wechselt dorthin.
 - **Der Fenstertitel** nennt `konto@rechner:/pfad`, mit abweichendem Port
   `konto@rechner:port:/pfad`.
 - **Kopieren und Verschieben** in jede Richtung: vom Mac auf den Server, vom

@@ -23,6 +23,7 @@ use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use gemeinsam::{Pruefordner, quelldateien};
 use krk_core::fern::kanal::HILFE_VARIABLE;
@@ -37,7 +38,7 @@ use krk_core::fern::rechnerschluessel::{
 use krk_core::fern::{
     Adressfehler, Anmeldung, BLOCK, Fernfaden, Fernfehler, Fernpfad, Fernziel, Fernzugang,
     Gespraech, Herkunft, Kanalplan, OFFENE_LESUNGEN, Serverkennung, Startpfad, Trennungsgrund,
-    Zugangsfehler, Zugangsregister, Zustand, faden, fernziel, ssh_plan,
+    Zugangsfehler, Zugangsregister, Zustand, faden, fernziel, ist_einzelner_name, ssh_plan,
 };
 use krk_core::heimordner::verbindung::{Verbindungsziel, Zielfehler, verbindungsziel};
 use krk_core::ort::FernerOrt;
@@ -625,6 +626,49 @@ fn ein_scheiternder_aufbau_nennt_die_fehlerausgabe() {
         }
         anderes => panic!("die Eroeffnung muss scheitern: {anderes:?}"),
     }
+}
+
+/// Ein Enkelprozess, der die Fehlerausgabe offen haelt, haelt die Trennung
+/// nicht auf: eine wartende Anfrage bekommt binnen einer Sekunde `Getrennt`,
+/// sobald die Ausgabe des Kindes endet (Befund
+/// `261017-0004-das-gespraech-meldet-getrennt-erst-nach-dem-join-des-fehlerfadens-und-kann-an-einem-enkelprozess-haengen`).
+///
+/// Das Kind antwortet auf `INIT` mit `VERSION`, laesst ein `sleep` mit seiner
+/// Fehlerausgabe zurueck, liest `INIT` und das erste Byte der Anfrage und
+/// endet. Bis zur Behebung wartete die Trennung auf das Ende der
+/// Fehlerausgabe, also auf das `sleep`, und die Anfrage blieb fuenf Sekunden
+/// ohne Antwort; so haelt im Betrieb ein `ProxyCommand`, der `ssh` ueberlebt,
+/// jeden Leser und jeden Vorgang fest.
+#[test]
+fn ein_enkel_mit_offener_fehlerausgabe_haelt_die_trennung_nicht_auf() {
+    // VERSION: Laenge 5, Typ 2, Fassung 3. `INIT` sind neun Bytes, das
+    // zehnte gehoert schon der Anfrage.
+    const SKRIPT: &str = "printf '\\000\\000\\000\\005\\002\\000\\000\\000\\003'; \
+                          sleep 5 >&2 & \
+                          head -c 10 >/dev/null; \
+                          exit 0";
+    let (antwort, dauer) = im_fernfaden(|pfand| {
+        let kind = Command::new("/bin/sh")
+            .arg("-c")
+            .arg(SKRIPT)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .expect("sh laesst sich nicht starten");
+        let g = Gespraech::eroeffnen(pfand, kind, "probe").expect("VERSION kommt an");
+        let beginn = Instant::now();
+        let antwort = g.realpath(pfand, "/");
+        (antwort, beginn.elapsed())
+    });
+    assert!(
+        matches!(antwort, Err(Fernfehler::Getrennt(_))),
+        "die wartende Anfrage: {antwort:?}"
+    );
+    assert!(
+        dauer < Duration::from_secs(1),
+        "die Trennung kam erst nach {dauer:?}"
+    );
 }
 
 /// `VERSION` nennt Fassung 3 und die Erweiterungen von OpenSSH; `REALPATH`,
@@ -1750,6 +1794,65 @@ fn ein_name_ohne_utf8_wird_uebersprungen_und_gezaehlt() {
         (Typ::Datei, 0, std::time::UNIX_EPOCH),
         "ohne Angaben: Datei, null Bytes, die Unix-Epoche"
     );
+}
+
+/// Die eine Namensregel fuer ferne Namen weist leere Namen, `.`, `..`, Namen
+/// mit `/` und Namen mit NUL ab, und der Leser zaehlt, was sie abweist, wie
+/// einen Namen ohne UTF-8 (Befund
+/// `261017-0004-der-ferne-leser-laesst-namen-mit-schraegstrich-leere-namen-und-nul-in-die-liste`).
+///
+/// Bis zur Behebung liess der Leser `../../x`, einen leeren Namen und einen
+/// mit NUL als Zeile in die Liste. Am reinen Schritt und nicht am Server: das
+/// Dateisystem des Macs nimmt keinen dieser Namen an.
+#[test]
+fn ein_name_mit_schraegstrich_leer_oder_mit_nul_wird_uebersprungen_und_gezaehlt() {
+    for abgewiesen in ["", "a/b", "../../x", "/", "a\0b", ".", ".."] {
+        assert!(
+            !ist_einzelner_name(abgewiesen),
+            "{abgewiesen:?} gilt als einzelner Name"
+        );
+        assert!(
+            Fernpfad::wurzel().verbinden(abgewiesen).is_none(),
+            "verbinden nimmt {abgewiesen:?} an"
+        );
+    }
+    for angenommen in ["a.b", ".versteckt", "...", "a b", "\u{e4}"] {
+        assert!(
+            ist_einzelner_name(angenommen),
+            "{angenommen:?} gilt nicht als einzelner Name"
+        );
+    }
+
+    let name = |bytes: &[u8]| Name {
+        name: bytes.to_vec(),
+        lang: Vec::new(),
+        attribute: Attribute::default(),
+    };
+    let namen = vec![
+        name(b"."),
+        name(b".."),
+        name(b"gut.txt"),
+        name(b"../../x"),
+        name(b""),
+        name(b"a\0b"),
+        name(b"kaputt-\xff"),
+        name(b"a.b"),
+    ];
+    for unbrauchbar in [&namen[3], &namen[4], &namen[5]] {
+        assert!(
+            matches!(fern_eintrag(unbrauchbar), Fernname::KeinEinzelnerName),
+            "{:?} ist ein Eintrag",
+            unbrauchbar.name
+        );
+    }
+    let mut gesammelt = Vec::new();
+    assert_eq!(
+        namen_aufnehmen(namen, &mut gesammelt),
+        4,
+        "drei abgewiesene Namen und einer ohne UTF-8; `.` und `..` zaehlen nicht"
+    );
+    let gelesen: Vec<&str> = gesammelt.iter().map(|e| e.name.as_str()).collect();
+    assert_eq!(gelesen, ["gut.txt", "a.b"]);
 }
 
 /// Ein abgebrochener ferner Lesevorgang schickt genau ein `Fertig`, und das

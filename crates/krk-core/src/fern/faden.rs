@@ -24,7 +24,7 @@
 //! Das Pfand laesst sich nicht in einen Abschluss bewegen, der `Send` verlangt,
 //! etwa den eines weiteren Fadens oder der Hauptschlange:
 //!
-//! ```compile_fail
+//! ```compile_fail,E0277
 //! use krk_core::fern::{Fernfaden, faden};
 //!
 //! fn braucht_send<T: Send>(_: T) {}

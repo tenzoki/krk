@@ -56,5 +56,5 @@ pub use gespraech::{
     Trennung, Trennungsgrund, Zustand,
 };
 pub use kanal::{Anmeldung, Kanalplan, ssh_plan};
-pub use pfad::Fernpfad;
+pub use pfad::{Fernpfad, ist_einzelner_name};
 pub use zugang::{Fernzugang, Herkunft, Startordner, Zugangsfehler, Zugangsregister};

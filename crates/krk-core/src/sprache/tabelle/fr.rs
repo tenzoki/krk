@@ -136,6 +136,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::VorgangFernGetrennt => "la connexion au serveur est coupée",
         Text::VorgangFernKeineVerknuepfung => "le serveur ne crée pas de lien symbolique",
+        Text::VorgangFernOrdnerZuVieleNamen => {
+            "le dossier sur le serveur contient plus de {zahl} noms et est laissé de côté"
+        }
         Text::VorgangFernNameOhneUtf8 => {
             "le nom n’est pas en UTF-8 et ne peut pas être créé sur le serveur"
         }
@@ -1246,8 +1249,8 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         ),
         Zahlwort::GekuerztWeitere => ("… et {n} autre", "… et {n} autres"),
         Zahlwort::FernNamenUebersprungen => (
-            "Un nom qui n’est pas en UTF-8 a été ignoré.",
-            "{n} noms qui ne sont pas en UTF-8 ont été ignorés.",
+            "Un nom a été ignoré\u{a0}: il n’est pas en UTF-8 ou n’est pas un nom de fichier valide.",
+            "{n} noms ont été ignorés\u{a0}: ils ne sont pas en UTF-8 ou ne sont pas des noms de fichier valides.",
         ),
     }
 }

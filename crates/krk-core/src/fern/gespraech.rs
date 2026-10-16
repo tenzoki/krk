@@ -12,7 +12,8 @@
 //!                                                   jede wartende Anfrage: Getrennt
 //!                                                Fehlerfaden krk-sftp-fehler
 //!                                                   haelt die letzten Zeilen der
-//!                                                   Fehlerausgabe
+//!                                                   Fehlerausgabe; die Trennung
+//!                                                   wartet hoechstens FEHLERFRIST
 //! ```
 //!
 //! **Geschrieben wird von den anfragenden Faeden selbst, gelesen allein vom
@@ -38,11 +39,14 @@
 //! zerlegen laesst, oder eine Antwort auf eine Kennung, die niemand gestellt
 //! hat, dann ist das Gespraech getrennt. Der Gespraechsfaden beendet bei
 //! Unsinn den Prozess, erntet ihn in jedem Fall mit `wait`, wartet das Ende
-//! der Fehlerausgabe ab und setzt erst dann den [`Zustand::Getrennt`]; so
-//! traegt die [`Trennung`] die Zeilen, mit denen `ssh` sein Scheitern
-//! begruendet. Jede wartende Anfrage bekommt [`Fernfehler::Getrennt`], jede
-//! spaetere ebenso, ohne dass noch ein Byte geschrieben wird. Ein neues
-//! Gespraech baut der Zugang, nicht dieses Modul.
+//! der Fehlerausgabe ab, **hoechstens `FEHLERFRIST` lang**, und setzt dann
+//! den [`Zustand::Getrennt`]; so traegt die [`Trennung`] die Zeilen, mit denen
+//! `ssh` sein Scheitern begruendet, und ein Enkelprozess, der die
+//! Fehlerausgabe ueber das Ende von `ssh` hinaus offen haelt, haelt die
+//! Trennung nicht auf (`Fehlerfaden::abwarten`). Jede wartende Anfrage
+//! bekommt [`Fernfehler::Getrennt`], jede spaetere ebenso, ohne dass noch ein
+//! Byte geschrieben wird. Ein neues Gespraech baut der Zugang, nicht dieses
+//! Modul.
 //!
 //! **Wer das Gespraech fallen laesst, schliesst die Standardeingabe des Kindes
 //! und wartet auf nichts**; auch auf dem Hauptfaden ist das Fallenlassen
@@ -56,18 +60,23 @@
 //! wartenden Arbeitsfaden fest, bis die Verbindung faellt; gegen eine tote
 //! Leitung stehen die Optionen `ServerAliveInterval` und `ServerAliveCountMax`
 //! des `ssh`-Aufrufs, gegen einen lebenden, aber stummen Server steht nichts.
+//! Ebenso haelt ein lebender Server, der nichts mehr liest, jeden Schreiber
+//! fest, sobald die Pipe voll ist, und zwar unter dem Mutex der Eingabe, also
+//! auch jeden weiteren; ein Abbruch durch den Nutzer loest das nicht.
 //! Und der Gespraechsfaden erntet den Prozess, nachdem seine Ausgabe endete;
 //! ein Prozess, der seine Ausgabe schliesst und trotzdem weiterlaeuft, hielte
-//! die Trennung auf. `ssh` und `sftp-server` tun das nicht.
+//! die Trennung auf. `ssh` und `sftp-server` tun das nicht. Fuer die
+//! Fehlerausgabe gilt das nicht: auf sie wartet die Trennung nur eine Frist.
 
 use std::collections::{HashMap, VecDeque};
 use std::fmt;
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::ops::ControlFlow;
-use std::process::{Child, ChildStdin, ChildStdout};
-use std::sync::mpsc::{self, Receiver, Sender};
+use std::process::{Child, ChildStderr, ChildStdin, ChildStdout};
+use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread::{self, JoinHandle};
+use std::time::Duration;
 
 use super::faden::Fernfaden;
 use super::paket::{
@@ -87,6 +96,10 @@ pub const OFFENE_SCHREIBUNGEN: usize = 16;
 
 /// Wie viele Zeilen der Fehlerausgabe eine [`Trennung`] mitnimmt.
 const FEHLERZEILEN: usize = 8;
+
+/// Wie lange eine Trennung hoechstens auf das Ende der Fehlerausgabe wartet
+/// ([`Fehlerfaden::abwarten`]).
+const FEHLERFRIST: Duration = Duration::from_millis(200);
 
 /// Wie viele Bytes einer Zeile der Fehlerausgabe gehalten werden. Der Rest
 /// der Zeile bis zu ihrem Ende wird gelesen und verworfen; die Statuszeile
@@ -257,7 +270,56 @@ type Fehlerzeilen = Arc<Mutex<VecDeque<String>>>;
 
 /// Was der Gespraechsfaden nach seinem Start bekommt: das Kind, seine
 /// Ausgabe und den Fehlerfaden, den er nach der Trennung abwartet.
-type Uebergabe = (Child, ChildStdout, JoinHandle<()>);
+type Uebergabe = (Child, ChildStdout, Fehlerfaden);
+
+/// Der Faden, der die Fehlerausgabe liest, mit dem Zeichen seines Endes.
+///
+/// Das Zeichen ist ein Kanal, dessen einziger Sender im Faden lebt und mit
+/// ihm faellt, auch bei einem Absturz; [`Fehlerfaden::abwarten`] wartet
+/// daran mit einer Frist, was ein `join` nicht kann.
+struct Fehlerfaden {
+    faden: JoinHandle<()>,
+    ende: Receiver<()>,
+}
+
+impl Fehlerfaden {
+    /// Startet den Faden `krk-sftp-fehler` ueber der Fehlerausgabe `fehler`.
+    fn starten(fehler: ChildStderr, zeilen: &Fehlerzeilen) -> io::Result<Self> {
+        let (zeichen, ende) = mpsc::channel::<()>();
+        let zeilen = Arc::clone(zeilen);
+        let faden = thread::Builder::new()
+            .name("krk-sftp-fehler".to_owned())
+            .spawn(move || {
+                let _zeichen = zeichen;
+                fehlerausgabe_lesen(fehler, &zeilen);
+            })?;
+        Ok(Fehlerfaden { faden, ende })
+    }
+
+    /// Wartet hoechstens [`FEHLERFRIST`] auf das Ende der Fehlerausgabe und
+    /// erntet den Faden, wenn sie endete; sonst laeuft er losgelassen weiter,
+    /// bis der letzte Halter der Pipe sie schliesst.
+    ///
+    /// **Die Frist ist der Schutz vor einem Enkelprozess**: ein
+    /// `ProxyCommand` aus `~/.ssh/config`, der `ssh` ueberlebt, haelt die
+    /// Fehlerausgabe offen, und ein `join` ohne Frist hielte dann die Trennung
+    /// und mit ihr jede wartende Anfrage fest (Befund
+    /// `261017-0004-das-gespraech-meldet-getrennt-erst-nach-dem-join-des-fehlerfadens-und-kann-an-einem-enkelprozess-haengen`).
+    /// Endet das Kind selbst, schliesst es damit seine Fehlerausgabe, und die
+    /// Zeilen, mit denen `ssh` sein Scheitern begruendet, sind gelesen, lange
+    /// bevor die Frist ablaeuft. Was ein Enkel spaeter schreibt, fehlt in der
+    /// Trennung.
+    fn abwarten(self) {
+        match self.ende.recv_timeout(FEHLERFRIST) {
+            Ok(()) | Err(RecvTimeoutError::Disconnected) => {
+                // Ein abgestuerzter Fehlerfaden laesst die bis dahin gehaltenen
+                // Zeilen stehen; mehr gibt es dann nicht.
+                let _ = self.faden.join();
+            }
+            Err(RecvTimeoutError::Timeout) => drop(self.faden),
+        }
+    }
+}
 
 /// Ein SFTP-Gespraech ueber die Pipes eines Kindprozesses.
 pub struct Gespraech {
@@ -300,11 +362,7 @@ impl Gespraech {
         };
 
         let zeilen: Fehlerzeilen = Arc::new(Mutex::new(VecDeque::new()));
-        let fuer_den_fehlerfaden = Arc::clone(&zeilen);
-        let fehlerfaden = match thread::Builder::new()
-            .name("krk-sftp-fehler".to_owned())
-            .spawn(move || fehlerausgabe_lesen(fehler, &fuer_den_fehlerfaden))
-        {
+        let fehlerfaden = match Fehlerfaden::starten(fehler, &zeilen) {
             Ok(faden) => faden,
             Err(fehler) => {
                 let grund = Trennungsgrund::Aufbau(format!("kein Fehlerfaden: {fehler}"));
@@ -899,7 +957,7 @@ fn zeile_halten(zeile: &mut Vec<u8>, zeilen: &Fehlerzeilen) {
 fn gespraech_fuehren(
     kind: Child,
     mut ausgabe: ChildStdout,
-    fehlerfaden: JoinHandle<()>,
+    fehlerfaden: Fehlerfaden,
     zeilen: &Fehlerzeilen,
     tabelle: &Mutex<Tabelle>,
 ) {
@@ -934,14 +992,15 @@ fn gespraech_fuehren(
 }
 
 /// Beendet das Kind, wenn der Grund es verlangt, erntet es, wartet das Ende
-/// der Fehlerausgabe ab und schreibt die [`Trennung`].
+/// der Fehlerausgabe ab, hoechstens [`FEHLERFRIST`] lang
+/// ([`Fehlerfaden::abwarten`]), und schreibt die [`Trennung`].
 ///
 /// Beendet wird bei Unsinn, einem Lesefehler und einem gescheiterten Aufbau:
 /// dann spricht das Kind noch und haette sonst keinen Grund zu enden. Endete
 /// seine Ausgabe, endet es von selbst.
 fn abschliessen(
     mut kind: Child,
-    fehlerfaden: Option<JoinHandle<()>>,
+    fehlerfaden: Option<Fehlerfaden>,
     zeilen: Option<&Fehlerzeilen>,
     grund: Trennungsgrund,
 ) -> Trennung {
@@ -958,9 +1017,7 @@ fn abschliessen(
     }
     let ausgang = kind.wait().ok().and_then(|stand| stand.code());
     if let Some(fehlerfaden) = fehlerfaden {
-        // Ein abgestuerzter Fehlerfaden laesst die bis dahin gehaltenen Zeilen
-        // stehen; mehr gibt es dann nicht.
-        let _ = fehlerfaden.join();
+        fehlerfaden.abwarten();
     }
     let fehlerausgabe = zeilen
         .map(|zeilen| sperren(zeilen).iter().cloned().collect())

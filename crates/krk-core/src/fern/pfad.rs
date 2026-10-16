@@ -56,10 +56,10 @@ impl Fernpfad {
     }
 
     /// Der Pfad mit `name` darunter, oder `None`, wenn `name` keine einzelne
-    /// Komponente ist: leer, `.`, `..` oder mit `/`.
+    /// Komponente ist ([`ist_einzelner_name`]).
     #[must_use]
     pub fn verbinden(&self, name: &str) -> Option<Self> {
-        if name.is_empty() || name == "." || name == ".." || name.contains('/') {
+        if !ist_einzelner_name(name) {
             return None;
         }
         if self.ist_wurzel() {
@@ -104,6 +104,22 @@ impl Fernpfad {
     pub fn als_text(&self) -> &str {
         &self.0
     }
+}
+
+/// Ob `name` eine einzelne Komponente eines Pfads auf einem Server ist: nicht
+/// leer, nicht `.` oder `..`, ohne `/` und ohne NUL.
+///
+/// **Die eine Namensregel fuer ferne Namen.** [`Fernpfad::verbinden`] fragt
+/// sie, bevor es einen Pfad baut, und der Leser eines fernen Ordners
+/// (`verzeichnis::leser::fern_eintrag`) fragt sie fuer jeden Namen aus
+/// `READDIR`; ein Name, den sie abweist, laesst sich nicht ansteuern und
+/// steht deshalb nicht in der Liste. NUL weist sie ab, weil SFTP einen Pfad
+/// mit seiner Laenge traegt, der Server ihn aber als C-Zeichenkette an sein
+/// System gibt: dort endete der Name am NUL, und die Anfrage meinte einen
+/// anderen Eintrag als den der Liste.
+#[must_use]
+pub fn ist_einzelner_name(name: &str) -> bool {
+    !(name.is_empty() || name == "." || name == ".." || name.contains(['/', '\0']))
 }
 
 impl fmt::Display for Fernpfad {

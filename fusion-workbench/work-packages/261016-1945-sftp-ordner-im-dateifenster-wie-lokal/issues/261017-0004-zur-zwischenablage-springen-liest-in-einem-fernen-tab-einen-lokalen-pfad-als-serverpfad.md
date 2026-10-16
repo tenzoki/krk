@@ -19,3 +19,7 @@ Das ist bewusst zu entscheiden. Möglich ist, in einem fernen Tab einen absolute
 **Abnahme**
 
 Eine Probe der Zulässigkeit oder des Sprungs zeigt das gewählte Verhalten für einen fernen Tab und einen absoluten lokalen Pfad in der Zwischenablage. `an_einem_fernen_ort_sind_genau_diese_befehle_ausgegraut` ist entsprechend nachgezogen.
+
+---
+
+Resolved: gewaehlt ist der lokale Sprung, das Kommando bleibt `Ortsbedarf::Ueberall` und `an_einem_fernen_ort_sind_genau_diese_befehle_ausgegraut` unveraendert. `crates/krk-ui/src/appkit/tabelle.rs`: `zwischenablage_springen` geht ueber `lokalen_pfad_anspringen`, das in einem fernen Tab mit `pfadeingabe::pruefen_fuer_fernen_tab` prueft und ueber `ergebnis_anwenden` und `ordner_lesen` den Tab auf den lokalen Ordner stellt; die Pfadeingabe von Hand bleibt beim Serverpfad. `crates/krk-ui/src/kommandos/pfadeingabe.rs`: `pruefen_fuer_fernen_tab` (eine Datei fuehrt immer in ihren Ordner), Modulkopf, Abschnitt „In einem fernen Tab“. `HowTo.md`, „Ordner auf einem Server“, Punkt „Bewegen“: der Pfad in der Zwischenablage gilt immer als Pfad auf dem Mac. Proben im Pruefmodul von `pfadeingabe.rs`: `fuer_einen_fernen_tab_fuehrt_eine_lokale_datei_in_ihren_ordner` und die Rumpfprobe `die_zwischenablage_liest_in_einem_fernen_tab_einen_lokalen_pfad`.

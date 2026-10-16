@@ -3263,13 +3263,18 @@ impl DateifensterQuelle {
     /// Der zweite Ausloeser desselben Navigationswegs. Der Unterschied zur
     /// Pfadeingabe von Hand ist allein, woher der Wert kommt; die Pruefung und
     /// die Navigation dahinter sind dieselben.
+    ///
+    /// **Bis auf einen fernen Tab**: der Pfad aus der Zwischenablage ist dort
+    /// ein Pfad auf diesem Mac und nicht auf dem Server, und
+    /// [`Self::lokalen_pfad_anspringen`] stellt den Tab auf den lokalen Ordner
+    /// (Modulkopf von `kommandos/pfadeingabe.rs`, „In einem fernen Tab“).
     fn zwischenablage_springen(&self) {
         let Some(inhalt) = super::zwischenablage::lesen() else {
             self.befehlsantwort_zeigen(text(Text::TabelleZwischenablageLeer));
             return;
         };
         match zwischenablage::deuten(&inhalt) {
-            Ziel::Pfad(pfad) => self.pfad_anspringen(&pfad),
+            Ziel::Pfad(pfad) => self.lokalen_pfad_anspringen(&pfad),
             Ziel::Web(adresse) => {
                 if !super::zwischenablage::im_browser_oeffnen(&adresse) {
                     self.befehlsantwort_zeigen(&satz(
@@ -3286,19 +3291,38 @@ impl DateifensterQuelle {
 
     /// Prueft einen Pfad und geht dorthin.
     ///
-    /// **Die eine Stelle, die ein geprueftes Ergebnis anwendet.** Beide
-    /// Ausloeser oben enden hier, und ein zweiter Navigationsweg daneben
+    /// Beide Ausloeser oben enden hier, die Zwischenablage ueber
+    /// [`Self::lokalen_pfad_anspringen`], und ein lokales Ergebnis wendet allein
+    /// [`Self::ergebnis_anwenden`] an; ein zweiter Navigationsweg daneben
     /// entsteht nicht. Was geprueft wird, steht in
     /// [`crate::kommandos::pfadeingabe`] und ist ohne Fenster pruefbar.
     ///
-    /// In einem fernen Tab ist der Text ein Pfad auf demselben Server, und
-    /// [`Self::fern_pfad_anspringen`] wendet ihn an.
+    /// In einem fernen Tab ist der Text der Pfadeingabe ein Pfad auf
+    /// demselben Server, und [`Self::fern_pfad_anspringen`] wendet ihn an.
     fn pfad_anspringen(&self, pfad: &Path) {
         let angezeigt = match self.angezeigter_ort() {
             Ort::Lokal(ordner) => ordner,
             Ort::Fern(ort) => return self.fern_pfad_anspringen(pfad, ort),
         };
-        match pfadeingabe::pruefen(pfad, &angezeigt) {
+        self.ergebnis_anwenden(pfadeingabe::pruefen(pfad, &angezeigt));
+    }
+
+    /// Springt zu einem Pfad auf diesem Mac, auch aus einem fernen Tab: der
+    /// Weg der Zwischenablage. Lokal ist es [`Self::pfad_anspringen`]; in
+    /// einem fernen Tab prueft [`pfadeingabe::pruefen_fuer_fernen_tab`] den
+    /// Pfad, und ein Wechsel stellt den Tab auf den lokalen Ordner.
+    fn lokalen_pfad_anspringen(&self, pfad: &Path) {
+        match self.angezeigter_ort() {
+            Ort::Lokal(_) => self.pfad_anspringen(pfad),
+            Ort::Fern(_) => {
+                self.ergebnis_anwenden(pfadeingabe::pruefen_fuer_fernen_tab(pfad));
+            }
+        }
+    }
+
+    /// Wendet ein lokales Pruefergebnis an; die eine Stelle dafuer.
+    fn ergebnis_anwenden(&self, ergebnis: Ergebnis) {
+        match ergebnis {
             Ergebnis::Wechseln { ordner, auswahl } => {
                 self.ordner_lesen(&ordner, auswahl.map(Vormerkung::still));
             }

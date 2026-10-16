@@ -54,11 +54,15 @@
 //! denn jede Anfrage verlangt das Pfand, das nur dort entsteht; ein
 //! Lesevorgang kann den Hauptfaden deshalb nicht an das Netz haengen.
 //!
-//! **Namen, die kein UTF-8 sind, fallen weg und werden gezaehlt**
-//! ([`namen_aufnehmen`], [`Lesevorgang::uebersprungen`]): ein ersetzter Name
-//! zeigte auf keinen Eintrag mehr, und jede spaetere Anfrage an ihm ginge ins
-//! Leere. Ein lokaler Lesevorgang zaehlt immer null; das Dateisystem des Macs
-//! nimmt solche Namen gar nicht erst an.
+//! **Namen, die kein UTF-8 sind, und Namen, die die Namensregel
+//! [`crate::fern::ist_einzelner_name`] abweist, fallen weg und werden
+//! gezaehlt** ([`namen_aufnehmen`], [`Lesevorgang::uebersprungen`]): ein
+//! ersetzter Name zeigte auf keinen Eintrag mehr, und ein leerer Name oder
+//! einer mit `/` oder NUL laesst sich nicht ansteuern; jede spaetere Anfrage
+//! an ihm ginge ins Leere oder an einen anderen Eintrag. `.` und `..` liefert
+//! jeder Server, sie fallen weg und zaehlen nicht. Ein lokaler Lesevorgang
+//! zaehlt immer null; das Dateisystem des Macs nimmt solche Namen gar nicht
+//! erst an.
 
 use std::io;
 use std::path::{Path, PathBuf};
@@ -194,7 +198,8 @@ pub struct Lesevorgang {
     abbruch: Arc<AtomicBool>,
     meldungen: Receiver<Meldung>,
     faden: Option<JoinHandle<()>>,
-    /// Wie viele Namen der Lauf uebersprungen hat, weil sie kein UTF-8 sind.
+    /// Wie viele Namen der Lauf uebersprungen hat, weil sie kein UTF-8 sind
+    /// oder sich nicht ansteuern lassen (Modulkopf).
     ///
     /// Neben dem Kanal und nicht in [`Meldung::Fertig`]: die Meldung ist ein
     /// Vertrag mit jedem, der sie zerlegt, und ein weiteres Feld darin aenderte
@@ -287,8 +292,8 @@ impl Lesevorgang {
     }
 
     /// Wie viele Namen dieser Lauf uebersprungen hat, weil sie kein UTF-8
-    /// sind; lokal immer null. Endgueltig, sobald [`Meldung::Fertig`]
-    /// empfangen ist (siehe das Feld).
+    /// sind oder sich nicht ansteuern lassen; lokal immer null. Endgueltig,
+    /// sobald [`Meldung::Fertig`] empfangen ist (siehe das Feld).
     #[must_use]
     pub fn uebersprungen(&self) -> u64 {
         self.uebersprungen.load(Ordering::Acquire)
@@ -544,6 +549,9 @@ pub enum Fernname {
     Punkt,
     /// Ein Name, der kein UTF-8 ist: keiner, und gezaehlt.
     KeinUtf8,
+    /// Ein Name, den [`crate::fern::ist_einzelner_name`] abweist, etwa mit `/`,
+    /// leer oder mit NUL: keiner, und gezaehlt wie ein Name ohne UTF-8.
+    KeinEinzelnerName,
 }
 
 /// Der Eintrag zu einem Namen aus `READDIR`, ohne Anfrage und ohne Netz
@@ -562,6 +570,9 @@ pub fn fern_eintrag(name: &Name) -> Fernname {
     let Ok(text) = std::str::from_utf8(&name.name) else {
         return Fernname::KeinUtf8;
     };
+    if !fern::ist_einzelner_name(text) {
+        return Fernname::KeinEinzelnerName;
+    }
     let attribute = &name.attribute;
     let typ = match attribute.rechte.map(|rechte| rechte & S_IFMT) {
         Some(S_IFDIR) => Typ::Ordner,
@@ -583,7 +594,8 @@ pub fn fern_eintrag(name: &Name) -> Fernname {
 }
 
 /// Nimmt die Namen einer Antwort auf `READDIR` in `gesammelt` auf und liefert,
-/// wie viele davon uebersprungen sind, weil sie kein UTF-8 sind.
+/// wie viele davon uebersprungen sind, weil sie kein UTF-8 sind oder sich
+/// nicht ansteuern lassen.
 ///
 /// Rein und ohne Netz: die Zaehlung steht hier und nicht im Lesefaden, damit
 /// eine Probe sie erreicht. Das Dateisystem des Macs nimmt keinen Namen an,
@@ -595,7 +607,7 @@ pub fn namen_aufnehmen(namen: Vec<Name>, gesammelt: &mut Vec<Eintrag>) -> u64 {
         match fern_eintrag(name) {
             Fernname::Eintrag(eintrag) => gesammelt.push(eintrag),
             Fernname::Punkt => {}
-            Fernname::KeinUtf8 => uebersprungen += 1,
+            Fernname::KeinUtf8 | Fernname::KeinEinzelnerName => uebersprungen += 1,
         }
     }
     uebersprungen

@@ -114,6 +114,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::VorgangFernGetrennt => "the connection to the server is closed",
         Text::VorgangFernKeineVerknuepfung => "the server does not create symbolic links",
+        Text::VorgangFernOrdnerZuVieleNamen => {
+            "the folder on the server lists more than {zahl} names and is left out"
+        }
         Text::VorgangFernNameOhneUtf8 => {
             "the name is not UTF-8 and cannot be created on the server"
         }
@@ -1106,8 +1109,8 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         ),
         Zahlwort::GekuerztWeitere => ("… and {n} more", "… and {n} more"),
         Zahlwort::FernNamenUebersprungen => (
-            "One name that is not UTF-8 was skipped.",
-            "{n} names that are not UTF-8 were skipped.",
+            "One name was skipped: it is not UTF-8 or not a valid file name.",
+            "{n} names were skipped: they are not UTF-8 or not valid file names.",
         ),
     }
 }

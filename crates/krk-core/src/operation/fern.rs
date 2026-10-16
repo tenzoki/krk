@@ -15,6 +15,7 @@
 //!                                                                  │            sonst: konflikt_klaeren
 //!                                                                  └─> eintrag_verschieben
 //!                                                                        derselbe Server: RENAME
+//!                                                                          FAILURE, Ziel frei: wie sonst
 //!                                                                        sonst: kopieren, dann Quelle entfernen
 //!                                                     je Quelle: eintrag_umbenennen  (RENAME)
 //!                                                                eintrag_anlegen     (MKDIR, OPEN CREAT|EXCL)
@@ -118,7 +119,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use crate::fern::paket::{Attribute, Name, S_IFDIR, S_IFLNK, S_IFMT, S_IFREG, oeffnen, status};
 use crate::fern::{
     self as fernzugriff, Ausstehend, BLOCK, Fernfaden, Fernfehler, Fernpfad, Gespraech, Handle,
-    OFFENE_SCHREIBUNGEN, Serverkennung,
+    OFFENE_SCHREIBUNGEN, Serverkennung, ist_einzelner_name,
 };
 use crate::ort::Ort;
 use crate::sprache::{Text, Zahlwort, anzahl, satz, text};
@@ -522,6 +523,10 @@ fn namensgrund_ohne_ziel(name: &str) -> String {
 /// stehen blieb, steht mit seinem Grund im Bericht, und die naechste Quelle
 /// kommt dran. Die Angaben vorweg liefern die Groesse fuer den Bericht und
 /// melden eine Quelle, die es nicht mehr gibt, mit ihrem Grund.
+///
+/// **Der Abbruch wirkt mitten im Baum**: gefragt wird vor jedem `READDIR` und
+/// vor jedem Eintrag ([`fern_baum_entfernen`]). Was bis dahin entfernt ist,
+/// bleibt entfernt; der Rest steht, und der Vorgang endet als abgebrochen.
 fn eintrag_loeschen(pfand: &Fernfaden, quelle: &Stelle, steuerung: &mut Steuerung) -> Ablauf {
     let bezeichnung = quelle.bezeichnung();
     let angaben = match quelle.angaben(pfand) {
@@ -531,8 +536,10 @@ fn eintrag_loeschen(pfand: &Fernfaden, quelle: &Stelle, steuerung: &mut Steuerun
             return Ablauf::Weiter;
         }
     };
-    match quelle.baum_entfernen(pfand) {
+    let entfernt = quelle.baum_entfernen(pfand, &|| steuerung.abgebrochen());
+    match entfernt {
         Ok(()) => steuerung.eintrag_fertig(&bezeichnung, angaben.groesse),
+        Err(Fehlschlag::Abgebrochen) => return Ablauf::Abgebrochen,
         Err(fehler) => steuerung.ueberspringen(&bezeichnung, grund(&fehler)),
     }
     Ablauf::Weiter
@@ -815,7 +822,9 @@ fn tauschen(pfand: &Fernfaden, zwischen: &Stelle, ziel: &Stelle) -> Tausch {
         Ok(name) => name,
         Err(_) => return Tausch::ZielBlieb(Fehlschlag::KeinEintrag),
     };
-    if let Err(fehler) = ziel.baum_entfernen(pfand) {
+    // Ohne Abbruchfrage: ein halb entferntes Ziel waere schlimmer als ein
+    // Tausch, der zu Ende laeuft, denn der Ersatz liegt schon vollstaendig da.
+    if let Err(fehler) = ziel.baum_entfernen(pfand, &nie_abgebrochen) {
         return Tausch::ZielBlieb(fehler);
     }
     match zwischen.umbenennen_in(pfand, &name) {
@@ -826,8 +835,11 @@ fn tauschen(pfand: &Fernfaden, zwischen: &Stelle, ziel: &Stelle) -> Tausch {
 
 /// Entfernt einen Ersatz, der nicht an die Stelle des Ziels kommt; scheitert
 /// das, steht es im Bericht.
+///
+/// Ohne Abbruchfrage: gerufen wird es gerade nach einem Abbruch, und der Rest
+/// soll trotzdem fort.
 fn rest_wegraeumen(pfand: &Fernfaden, zwischen: &Stelle, steuerung: &mut Steuerung) {
-    if let Err(fehler) = zwischen.baum_entfernen(pfand)
+    if let Err(fehler) = zwischen.baum_entfernen(pfand, &nie_abgebrochen)
         && !fehler.ist_nicht_da()
     {
         steuerung.ueberspringen(
@@ -981,8 +993,9 @@ fn ordner_fuellen(
     steuerung: &mut Steuerung,
 ) -> Ablauf {
     let bezeichnung = quelle.bezeichnung();
-    let Some(kinder) = kinder_lesen(pfand, quelle, steuerung) else {
-        return Ablauf::Weiter;
+    let kinder = match kinder_lesen(pfand, quelle, steuerung) {
+        Ok(kinder) => kinder,
+        Err(ablauf) => return ablauf,
     };
     for (unterquelle, unterangaben) in kinder {
         if steuerung.abgebrochen() {
@@ -1020,26 +1033,34 @@ fn ordner_fuellen(
 }
 
 /// Die Kinder eines Ordners als Stellen, mit den Angaben, die das Lesen schon
-/// mitbrachte. `None` heisst: der Ordner liess sich nicht lesen, und das
-/// steht im Bericht. Namen ohne UTF-8 kommen gezaehlt in den Bericht, weil
-/// sich kein Pfad auf dem Server zu ihnen bauen laesst.
+/// mitbrachte. Namen ohne UTF-8 und Namen, die die Namensregel abweist, kommen
+/// gezaehlt in den Bericht, weil sich kein Pfad auf dem Server zu ihnen bauen
+/// laesst.
+///
+/// `Err` traegt, wie der Rufer endet: [`Ablauf::Weiter`], wenn der Ordner sich
+/// nicht lesen liess, und das steht im Bericht; [`Ablauf::Abgebrochen`], wenn
+/// der Nutzer waehrend des Lesens abbrach. **Der Abbruch muss als Abbruch
+/// zurueck**: ein Verschieben ueber eine Grenze entfernt seine Quelle, sobald
+/// seit ihrem Beginn nichts uebersprungen ist, und ein still beendeter
+/// Ordner liesse sie mit halb kopiertem Inhalt entfernen.
 fn kinder_lesen(
     pfand: &Fernfaden,
     quelle: &Stelle,
     steuerung: &mut Steuerung,
-) -> Option<Vec<(Stelle, Option<Angaben>)>> {
+) -> Result<Vec<(Stelle, Option<Angaben>)>, Ablauf> {
     let bezeichnung = quelle.bezeichnung();
-    let liste = match quelle.liste(pfand) {
+    let liste = match quelle.liste(pfand, &|| steuerung.abgebrochen()) {
         Ok(liste) => liste,
+        Err(Fehlschlag::Abgebrochen) => return Err(Ablauf::Abgebrochen),
         Err(fehler) => {
             steuerung.ueberspringen(&bezeichnung, grund(&fehler));
-            return None;
+            return Err(Ablauf::Weiter);
         }
     };
-    if liste.ohne_utf8 > 0 {
+    if liste.unansteuerbar > 0 {
         steuerung.ueberspringen(
             &bezeichnung,
-            anzahl(Zahlwort::FernNamenUebersprungen, liste.ohne_utf8, &[]),
+            anzahl(Zahlwort::FernNamenUebersprungen, liste.unansteuerbar, &[]),
         );
     }
     let mut kinder = Vec::with_capacity(liste.kinder.len());
@@ -1052,7 +1073,7 @@ fn kinder_lesen(
             ),
         }
     }
-    Some(kinder)
+    Ok(kinder)
 }
 
 /// Die Angaben eines Kindes: die mitgebrachten, sonst ein eigenes `LSTAT`.
@@ -1089,6 +1110,16 @@ fn unterangaben_holen(
 /// Grenze**, zwischen Geraet und Server oder zwischen zwei Servern, wird
 /// kopiert und danach die Quelle entfernt, allein wenn nichts uebersprungen
 /// wurde: die Regel von `verschieben::ueber_datentraeger`.
+///
+/// **Eine Grenze kann auch auf dem Server liegen**: zwischen zwei
+/// Dateisystemen dort scheitert `RENAME` an `EXDEV`, und SFTP v3 meldet das
+/// als `FAILURE`. Steht am Ziel dann nichts, ist es kein Konflikt, und der Weg
+/// ist derselbe wie ueber eine Grenze zwischen Servern
+/// ([`Fehlschlag::kann_eine_grenze_des_servers_heissen`]), wie lokal
+/// `verschieben` bei `EXDEV` auf `ueber_datentraeger` ausweicht.
+/// Jedes andere Scheitern, etwa „keine Rechte“, bleibt ein Fehler des
+/// Eintrags: ein Kopieren daneben haette dort eine Kopie hinterlassen, wo der
+/// Nutzer ein Verschieben verlangt hat.
 fn eintrag_verschieben(
     pfand: &Fernfaden,
     quelle: &Stelle,
@@ -1108,6 +1139,9 @@ fn eintrag_verschieben(
             Some(Err(fehler)) => fehler,
         };
         let Some(vorhanden) = vorhandenes_ziel(pfand, &fehler, &ziel) else {
+            if fehler.kann_eine_grenze_des_servers_heissen() {
+                return ueber_die_grenze(pfand, quelle, angaben, ziel, steuerung);
+            }
             steuerung.ueberspringen(&bezeichnung, grund(&fehler));
             return Ablauf::Weiter;
         };
@@ -1234,8 +1268,9 @@ fn verschmelzen(
     steuerung: &mut Steuerung,
 ) -> Ablauf {
     let bezeichnung = quelle.bezeichnung();
-    let Some(kinder) = kinder_lesen(pfand, quelle, steuerung) else {
-        return Ablauf::Weiter;
+    let kinder = match kinder_lesen(pfand, quelle, steuerung) {
+        Ok(kinder) => kinder,
+        Err(ablauf) => return ablauf,
     };
     for (unterquelle, unterangaben) in kinder {
         if steuerung.abgebrochen() {
@@ -1299,7 +1334,9 @@ fn ueber_die_grenze(
         }
         return Ablauf::Weiter;
     }
-    if let Err(fehler) = quelle.baum_entfernen(pfand) {
+    // Ohne Abbruchfrage: die Kopie ist vollstaendig, und eine halb entfernte
+    // Quelle haelt niemand mehr fuer verschoben oder fuer unberuehrt.
+    if let Err(fehler) = quelle.baum_entfernen(pfand, &nie_abgebrochen) {
         steuerung.ueberspringen(
             &bezeichnung,
             satz(
@@ -1329,6 +1366,9 @@ enum Fehlschlag {
     KeineVerknuepfung,
     /// Der Pfad benennt keinen Eintrag, etwa die Wurzel des Servers.
     KeinEintrag,
+    /// Ein ferner Ordner liefert mehr Namen als diese Grenze
+    /// ([`HOECHSTENS_NAMEN`]).
+    ZuVieleNamen(usize),
     /// Der Nutzer hat abgebrochen.
     Abgebrochen,
 }
@@ -1343,6 +1383,7 @@ impl Fehlschlag {
             | Fehlschlag::KeineGewoehnlicheDatei
             | Fehlschlag::KeineVerknuepfung
             | Fehlschlag::KeinEintrag
+            | Fehlschlag::ZuVieleNamen(_)
             | Fehlschlag::Abgebrochen => false,
         }
     }
@@ -1369,8 +1410,28 @@ impl Fehlschlag {
             | Fehlschlag::KeineGewoehnlicheDatei
             | Fehlschlag::KeineVerknuepfung
             | Fehlschlag::KeinEintrag
+            | Fehlschlag::ZuVieleNamen(_)
             | Fehlschlag::Abgebrochen => false,
         }
+    }
+
+    /// Ob ein gescheitertes `RENAME` auf demselben Server eine Grenze
+    /// zwischen zwei Dateisystemen dort sein kann: allein `FAILURE`, denn
+    /// OpenSSH meldet `EXDEV` so, und SFTP v3 kennt keinen eigenen Code dafuer.
+    ///
+    /// Gefragt wird sie allein, nachdem [`vorhandenes_ziel`] nein gesagt hat;
+    /// ein `FAILURE` an einem vergebenen Namen ist ein Konflikt und kommt
+    /// nicht hierher. Ist der Grund ein anderer, scheitert das Kopieren
+    /// danach mit seinem eigenen Grund, und die Quelle bleibt, weil
+    /// [`ueber_die_grenze`] sie allein ohne Uebersprungenes entfernt.
+    fn kann_eine_grenze_des_servers_heissen(&self) -> bool {
+        matches!(
+            self,
+            Fehlschlag::Fern(Fernfehler::Status {
+                code: status::FAILURE,
+                ..
+            })
+        )
     }
 }
 
@@ -1410,6 +1471,9 @@ fn grund(fehler: &Fehlschlag) -> String {
         Fehlschlag::KeineGewoehnlicheDatei => text(Text::VorgangKeineGewoehnlicheDatei).to_owned(),
         Fehlschlag::KeineVerknuepfung => text(Text::VorgangFernKeineVerknuepfung).to_owned(),
         Fehlschlag::KeinEintrag => text(Text::VorgangPfadBenenntKeinenEintrag).to_owned(),
+        Fehlschlag::ZuVieleNamen(grenze) => {
+            satz(Text::VorgangFernOrdnerZuVieleNamen, &[("zahl", grenze)])
+        }
         // Ein Abbruch endet den Vorgang und kommt nicht in die Abschlussliste;
         // der Zweig steht, weil die Unterscheidung vollstaendig ist.
         Fehlschlag::Abgebrochen => Fernfehler::Abgebrochen.to_string(),
@@ -1506,7 +1570,34 @@ fn sekunden(zeit: SystemTime) -> u32 {
 /// Die Kinder eines Ordners: Name und, wo das Lesen sie mitbrachte, Angaben.
 struct Liste {
     kinder: Vec<(String, Option<Angaben>)>,
-    ohne_utf8: u64,
+    /// Wie viele Namen kein UTF-8 sind oder die Namensregel nicht bestehen.
+    unansteuerbar: u64,
+}
+
+/// Wie viele Namen ein ferner Ordner in Kopieren, Verschieben und Loeschen
+/// hoechstens liefern darf, bevor der Vorgang ihn mit
+/// [`Fehlschlag::ZuVieleNamen`] auslaesst.
+///
+/// Ein solcher Ordner wird ganz gelesen, bevor der erste Eintrag drankommt;
+/// die Grenze haelt einen Server, der nie `EOF` sendet, davon ab, den
+/// Speicher von KRK unbegrenzt wachsen zu lassen. Eine Million Namen sind
+/// mit Attributen einige hundert Megabyte, weit ueber jedem Ordner, den man
+/// von Hand kopiert. Das Dateifenster liest in Stapeln und kennt keine Grenze.
+const HOECHSTENS_NAMEN: usize = 1_000_000;
+
+/// Die Frage, ob der Nutzer abgebrochen hat, fuer die Wege, die einen fernen
+/// Ordner lesen oder einen Baum entfernen.
+///
+/// Eine Frage und kein Verweis auf die [`Steuerung`], weil zwei Wege sie
+/// bewusst nie bejahen: das Wegraeumen nach einem Abbruch und das Entfernen
+/// eines Ziels, dessen Ersatz schon vollstaendig daneben liegt
+/// ([`nie_abgebrochen`]).
+type Abbruchfrage<'a> = &'a dyn Fn() -> bool;
+
+/// Die Abbruchfrage der Wege, die zu Ende laufen sollen, auch nach einem
+/// Abbruch.
+fn nie_abgebrochen() -> bool {
+    false
 }
 
 /// Ein Eintrag, lokal oder auf einem Server, mit dem Gespraech, ueber das er
@@ -1722,8 +1813,9 @@ impl Stelle {
 
     /// Die Kinder dieses Ordners. Lokal ueber den Leser aus Schritt 2 der
     /// Runde 1, fern ueber `OPENDIR` und `READDIR`, deren Attribute die
-    /// Angaben gleich mitbringen.
-    fn liste(&self, pfand: &Fernfaden) -> Result<Liste, Fehlschlag> {
+    /// Angaben gleich mitbringen; fern fragt es `abbruch` vor jedem `READDIR`
+    /// ([`fern_namen`]).
+    fn liste(&self, pfand: &Fernfaden, abbruch: Abbruchfrage<'_>) -> Result<Liste, Fehlschlag> {
         match self {
             Stelle::Lokal(pfad) => {
                 let eintraege = lesen(pfad).map_err(Fehlschlag::Lokal)?;
@@ -1732,23 +1824,30 @@ impl Stelle {
                         .into_iter()
                         .map(|eintrag| (eintrag.name, None))
                         .collect(),
-                    ohne_utf8: 0,
+                    unansteuerbar: 0,
                 })
             }
             Stelle::Fern {
                 gespraech, pfad, ..
             } => {
-                let namen = fern_namen(pfand, gespraech, pfad).map_err(Fehlschlag::Fern)?;
+                let namen = fern_namen(pfand, gespraech, pfad, abbruch, HOECHSTENS_NAMEN)?;
                 let mut liste = Liste {
                     kinder: Vec::with_capacity(namen.len()),
-                    ohne_utf8: 0,
+                    unansteuerbar: 0,
                 };
                 for eintrag in namen {
                     let Ok(name) = String::from_utf8(eintrag.name) else {
-                        liste.ohne_utf8 += 1;
+                        liste.unansteuerbar += 1;
                         continue;
                     };
                     if name == "." || name == ".." {
+                        continue;
+                    }
+                    // Dieselbe Regel wie der Leser des Dateifensters
+                    // (`verzeichnis::leser::fern_eintrag`): ein Name, zu dem
+                    // sich kein Pfad bauen laesst, zaehlt wie einer ohne UTF-8.
+                    if !ist_einzelner_name(&name) {
+                        liste.unansteuerbar += 1;
                         continue;
                     }
                     let angaben = eintrag
@@ -1855,13 +1954,19 @@ impl Stelle {
         }
     }
 
-    /// Entfernt den Eintrag endgueltig, einen Ordner samt Inhalt.
-    fn baum_entfernen(&self, pfand: &Fernfaden) -> Result<(), Fehlschlag> {
+    /// Entfernt den Eintrag endgueltig, einen Ordner samt Inhalt. Fern fragt
+    /// es `abbruch` vor jedem Eintrag ([`fern_baum_entfernen`]); lokal geht es
+    /// ueber `loeschen::baum_entfernen`, das keinen Abbruch kennt.
+    fn baum_entfernen(
+        &self,
+        pfand: &Fernfaden,
+        abbruch: Abbruchfrage<'_>,
+    ) -> Result<(), Fehlschlag> {
         match self {
             Stelle::Lokal(pfad) => loeschen::baum_entfernen(pfad).map_err(Fehlschlag::Lokal),
             Stelle::Fern {
                 gespraech, pfad, ..
-            } => fern_baum_entfernen(pfand, gespraech, pfad).map_err(Fehlschlag::Fern),
+            } => fern_baum_entfernen(pfand, gespraech, pfad, abbruch),
         }
     }
 
@@ -2099,18 +2204,37 @@ impl Schreibziel {
 
 /// Alle Namen eines fernen Ordners: `OPENDIR`, `READDIR` bis zum Ende,
 /// `CLOSE`.
+///
+/// **Vor jedem `READDIR` fragt es `abbruch`**, wie der Leser des
+/// Dateifensters und wie die Uebertragung zwischen zwei Bloecken; ein Abbruch
+/// wirkt damit nach hoechstens einer Antwort und nicht erst nach dem ganzen
+/// Ordner. Mehr als `grenze` Namen nimmt es nicht an und endet mit
+/// [`Fehlschlag::ZuVieleNamen`] ([`HOECHSTENS_NAMEN`]). Das Handle faellt in
+/// jedem Fall.
 fn fern_namen(
     pfand: &Fernfaden,
     gespraech: &Gespraech,
     pfad: &Fernpfad,
-) -> Result<Vec<Name>, Fernfehler> {
-    let handle = gespraech.opendir(pfand, pfad.als_text())?;
+    abbruch: Abbruchfrage<'_>,
+    grenze: usize,
+) -> Result<Vec<Name>, Fehlschlag> {
+    let handle = gespraech
+        .opendir(pfand, pfad.als_text())
+        .map_err(Fehlschlag::Fern)?;
     let mut namen = Vec::new();
     let gelesen = loop {
+        if abbruch() {
+            break Err(Fehlschlag::Abgebrochen);
+        }
         match gespraech.readdir(pfand, &handle) {
-            Ok(Some(stapel)) => namen.extend(stapel),
+            Ok(Some(stapel)) => {
+                if namen.len().saturating_add(stapel.len()) > grenze {
+                    break Err(Fehlschlag::ZuVieleNamen(grenze));
+                }
+                namen.extend(stapel);
+            }
             Ok(None) => break Ok(()),
-            Err(fehler) => break Err(fehler),
+            Err(fehler) => break Err(Fehlschlag::Fern(fehler)),
         }
     };
     // Ein gescheitertes Schliessen nach dem Lesen aendert nichts an den
@@ -2121,32 +2245,240 @@ fn fern_namen(
 
 /// Entfernt einen Eintrag auf dem Server endgueltig, einen Ordner samt
 /// Inhalt, und haelt am ersten Fehler an, wie `loeschen::baum_entfernen`.
+///
+/// Vor jedem Eintrag fragt es `abbruch`, und das Lesen jedes Ordners fragt
+/// ihn vor jedem `READDIR` ([`fern_namen`]).
 fn fern_baum_entfernen(
     pfand: &Fernfaden,
     gespraech: &Gespraech,
     pfad: &Fernpfad,
-) -> Result<(), Fernfehler> {
-    let angaben = gespraech.lstat(pfand, pfad.als_text())?;
-    if !angaben.ist_ordner() {
-        return gespraech.remove(pfand, pfad.als_text());
+    abbruch: Abbruchfrage<'_>,
+) -> Result<(), Fehlschlag> {
+    if abbruch() {
+        return Err(Fehlschlag::Abgebrochen);
     }
-    for eintrag in fern_namen(pfand, gespraech, pfad)? {
-        // Ein Name ohne UTF-8 laesst sich nicht ansteuern; er bleibt stehen,
-        // und das `RMDIR` darunter scheitert dann mit seinem Grund.
+    let angaben = gespraech
+        .lstat(pfand, pfad.als_text())
+        .map_err(Fehlschlag::Fern)?;
+    if !angaben.ist_ordner() {
+        return gespraech
+            .remove(pfand, pfad.als_text())
+            .map_err(Fehlschlag::Fern);
+    }
+    for eintrag in fern_namen(pfand, gespraech, pfad, abbruch, HOECHSTENS_NAMEN)? {
+        // Ein Name ohne UTF-8 oder einer, den die Namensregel abweist, laesst
+        // sich nicht ansteuern; er bleibt stehen, und das `RMDIR` darunter
+        // scheitert dann mit seinem Grund.
         let Ok(name) = String::from_utf8(eintrag.name) else {
             continue;
         };
         let Some(kind) = pfad.verbinden(&name) else {
             continue;
         };
-        fern_baum_entfernen(pfand, gespraech, &kind)?;
+        fern_baum_entfernen(pfand, gespraech, &kind, abbruch)?;
     }
-    gespraech.rmdir(pfand, pfad.als_text())
+    gespraech
+        .rmdir(pfand, pfad.als_text())
+        .map_err(Fehlschlag::Fern)
 }
 
 #[cfg(test)]
 mod tests {
+    use std::cell::Cell;
+    use std::process::{Command, Stdio};
+
     use super::*;
+    use crate::fern::faden;
+    use crate::operation::fortschritt::Steuerung;
+
+    /// Ein frischer Ordner unter dem Temporaerverzeichnis, mit Prozesskennung
+    /// und Probennamen.
+    ///
+    /// Bewusst keine weitere Pruefordner-Fassung mit `Drop`, aus dem Grund,
+    /// den `operation/verschieben.rs` an seiner gleichgebauten Hilfe nennt:
+    /// abgeraeumt wird von Hand mit [`abraeumen`] am Ende jeder Probe, und
+    /// ein Rest einer abgebrochenen Probe faellt beim naechsten Anlegen.
+    fn pruefpfad(probe: &str) -> PathBuf {
+        let pfad = fs::canonicalize(std::env::temp_dir())
+            .expect("das Temporaerverzeichnis laesst sich aufloesen")
+            .join(format!("krk-fern-operation-{probe}-{}", std::process::id()));
+        abraeumen(&pfad);
+        fs::create_dir_all(&pfad).expect("der Pruefordner laesst sich nicht anlegen");
+        pfad
+    }
+
+    fn abraeumen(pfad: &Path) {
+        let _ = fs::remove_dir_all(pfad);
+    }
+
+    /// Fuehrt `arbeit` mit einem Gespraech zum Server des Systems aus, auf
+    /// einem Faden mit Pfand.
+    fn mit_gespraech<T: Send + 'static>(
+        arbeit: impl FnOnce(&Fernfaden, &Arc<Gespraech>) -> T + Send + 'static,
+    ) -> T {
+        faden("krk-probe-fern".to_owned(), move |pfand| {
+            let kind = Command::new("/usr/libexec/sftp-server")
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .expect("sftp-server laesst sich nicht starten");
+            let gespraech =
+                Gespraech::eroeffnen(pfand, kind, "probe").expect("das Gespraech kommt nicht auf");
+            arbeit(pfand, &Arc::new(gespraech))
+        })
+        .expect("kein Faden fuer die Probe")
+        .join()
+        .unwrap_or_else(|absturz| std::panic::resume_unwind(absturz))
+    }
+
+    fn fernpfad(pfad: &Path) -> Fernpfad {
+        Fernpfad::aus_text(pfad.to_str().expect("Pruefpfade sind UTF-8")).expect("absolut")
+    }
+
+    /// Ein Abbruch waehrend des Lesens eines fernen Ordners wirkt vor dem
+    /// naechsten `READDIR` und nicht erst nach dem ganzen Ordner (Befund
+    /// `261017-0004-ferne-ordnerlisten-in-kopieren-verschieben-und-loeschen-fragen-keinen-abbruch-und-haben-keine-obergrenze`).
+    ///
+    /// Der Ordner traegt 10 000 Eintraege, der Server des Systems liefert
+    /// hoechstens einige hundert je `READDIR`. Die Abbruchfrage sagt beim
+    /// zweiten Mal ja; gezaehlt wird, wie oft sie gefragt wurde, und das ist
+    /// die Zahl der Anfragen, die das Lesen bis dahin stellte. Bis zur
+    /// Behebung gab es diese Frage nicht, und das Lesen lief bis `EOF`.
+    #[test]
+    fn ein_abbruch_beim_lesen_eines_fernen_ordners_wirkt_vor_dem_naechsten_readdir() {
+        let ordner = pruefpfad("abbruch-liste");
+        for i in 0..10_000 {
+            File::create(ordner.join(format!("d-{i:05}"))).expect("Datei");
+        }
+        let pfad = fernpfad(&ordner);
+        let (ergebnis, gefragt) = mit_gespraech(move |pfand, gespraech| {
+            let gefragt = Cell::new(0_u32);
+            let abbruch = || {
+                gefragt.set(gefragt.get() + 1);
+                gefragt.get() >= 2
+            };
+            let ergebnis = fern_namen(pfand, gespraech, &pfad, &abbruch, HOECHSTENS_NAMEN)
+                .map(|namen| namen.len());
+            (ergebnis, gefragt.get())
+        });
+        abraeumen(&ordner);
+        assert!(
+            matches!(ergebnis, Err(Fehlschlag::Abgebrochen)),
+            "das Lesen endete mit {:?}",
+            ergebnis.as_ref().map_err(grund)
+        );
+        assert_eq!(
+            gefragt, 2,
+            "nach einem READDIR gefragt, beim zweiten abgebrochen"
+        );
+    }
+
+    /// Mehr Namen als die Grenze nimmt das Lesen nicht an, und der Grund
+    /// nennt sie.
+    #[test]
+    fn ein_ferner_ordner_ueber_der_grenze_wird_mit_grund_ausgelassen() {
+        let ordner = pruefpfad("grenze");
+        for i in 0..300 {
+            File::create(ordner.join(format!("d-{i:03}"))).expect("Datei");
+        }
+        let pfad = fernpfad(&ordner);
+        let ergebnis = mit_gespraech(move |pfand, gespraech| {
+            let unter =
+                fern_namen(pfand, gespraech, &pfad, &nie_abgebrochen, 400).map(|namen| namen.len());
+            let ueber =
+                fern_namen(pfand, gespraech, &pfad, &nie_abgebrochen, 50).map(|namen| namen.len());
+            (unter, ueber)
+        });
+        abraeumen(&ordner);
+        let (unter, ueber) = ergebnis;
+        assert_eq!(unter.ok(), Some(302), "300 Dateien, dazu `.` und `..`");
+        match ueber {
+            Err(fehler @ Fehlschlag::ZuVieleNamen(50)) => {
+                assert!(grund(&fehler).contains("50"), "{}", grund(&fehler));
+            }
+            anderes => panic!("ueber der Grenze: {:?}", anderes.map_err(|f| grund(&f))),
+        }
+    }
+
+    /// Das endgueltige Loeschen eines fernen Baums fragt den Abbruch je
+    /// Eintrag. Gefragt wird vor dem Ordner, vor jedem `READDIR` (zwei bei zwanzig
+    /// Namen) und vor jedem Kind; beim sechsten Mal sagt die Frage ja, also nach
+    /// dem ersten Kind, und der Rest steht noch da.
+    #[test]
+    fn das_entfernen_eines_fernen_baums_haelt_beim_abbruch_an() {
+        let ordner = pruefpfad("abbruch-baum");
+        let baum = ordner.join("baum");
+        fs::create_dir(&baum).expect("Ordner");
+        for i in 0..20 {
+            File::create(baum.join(format!("d-{i:02}"))).expect("Datei");
+        }
+        let pfad = fernpfad(&baum);
+        let ergebnis = mit_gespraech(move |pfand, gespraech| {
+            let gefragt = Cell::new(0_u32);
+            let abbruch = || {
+                gefragt.set(gefragt.get() + 1);
+                gefragt.get() > 5
+            };
+            fern_baum_entfernen(pfand, gespraech, &pfad, &abbruch).map_err(|f| grund(&f))
+        });
+        let uebrig = fs::read_dir(&baum).map(Iterator::count).unwrap_or(0);
+        abraeumen(&ordner);
+        assert!(
+            matches!(ergebnis, Err(ref text) if text == &grund(&Fehlschlag::Abgebrochen)),
+            "{ergebnis:?}"
+        );
+        assert!(
+            uebrig > 0 && uebrig < 20,
+            "{uebrig} von 20 Eintraegen stehen noch"
+        );
+    }
+
+    /// Ein Abbruch waehrend des Lesens der fernen Quelle kommt als Abbruch
+    /// zurueck, und ein Verschieben ueber eine Grenze laesst die Quelle
+    /// stehen.
+    ///
+    /// Haelt die Rueckgabe von `kinder_lesen`: endete das Lesen still, saehe
+    /// [`ueber_die_grenze`] nichts Uebersprungenes und entfernte die Quelle,
+    /// deren Inhalt nie angekommen ist.
+    #[test]
+    fn ein_abbruch_beim_lesen_der_quelle_laesst_sie_beim_verschieben_stehen() {
+        let ordner = pruefpfad("abbruch-verschieben");
+        let quelle = ordner.join("quelle");
+        let ziel = ordner.join("ziel");
+        fs::create_dir(&quelle).expect("Ordner");
+        fs::create_dir(&ziel).expect("Ordner");
+        fs::write(quelle.join("a.txt"), b"a").expect("Datei");
+        let (q, z) = (quelle.clone(), ziel.clone());
+        let ablauf = mit_gespraech(move |pfand, gespraech| {
+            let quelle = Stelle::Fern {
+                gespraech: Arc::clone(gespraech),
+                kennung: Serverkennung::neu("rechner", None, Some("kai")),
+                pfad: fernpfad(&q),
+            };
+            let Ok(angaben) = quelle.angaben(pfand) else {
+                panic!("die Quelle steht nicht da");
+            };
+            let mut steuerung = Steuerung::neu(
+                Arc::new(AtomicBool::new(true)),
+                None,
+                Konfliktregel::default(),
+            );
+            let ablauf = ueber_die_grenze(
+                pfand,
+                &quelle,
+                &angaben,
+                Stelle::Lokal(z.join("quelle")),
+                &mut steuerung,
+            );
+            (ablauf, steuerung.uebersprungen_stand())
+        });
+        let steht = quelle.join("a.txt").exists();
+        abraeumen(&ordner);
+        assert!(ablauf.0 == Ablauf::Abgebrochen, "der Lauf ging weiter");
+        assert_eq!(ablauf.1, 0, "ein Abbruch ist kein uebersprungener Eintrag");
+        assert!(steht, "die Quelle ist trotz Abbruch entfernt");
+    }
 
     /// Die Regel, welches Scheitern ein vergebener Name sein kann, Fall fuer
     /// Fall (Befund
@@ -2192,6 +2524,7 @@ mod tests {
             (Fehlschlag::KeineGewoehnlicheDatei, false),
             (Fehlschlag::KeineVerknuepfung, false),
             (Fehlschlag::KeinEintrag, false),
+            (Fehlschlag::ZuVieleNamen(1), false),
             (Fehlschlag::Abgebrochen, false),
         ];
         for (fehler, erwartet) in tafel {
