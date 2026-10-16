@@ -424,6 +424,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::KontextZippen => "Zip",
         Text::KontextEntpacken => "Unzip",
         Text::KontextDuplizieren => "Dupliquer…",
+        Text::KontextAuswerfen => "Éjecter",
         Text::KontextImFinderOeffnen => "Ouvrir dans le Finder",
         Text::KontextImFinderAnzeigen => "Afficher dans le Finder",
         Text::BereichLesezeichen => "Signets",
@@ -626,6 +627,12 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::KeinFinder => {
             "le Finder n’est pas accessible\u{a0}: le système n’a nommé aucune application pour cela"
         }
+        Text::NichtsAuszuwerfen => {
+            "rien à éjecter\u{a0}: aucun volume monté parmi les éléments sélectionnés"
+        }
+        Text::AuswurfBeginnt => "éjection de {name}…",
+        Text::AuswurfErfolgt => "{name} a été éjecté",
+        Text::AuswurfGescheitert => "{name} n’a pas pu être éjecté\u{a0}: {fehler}",
         Text::AblageWeistTextAb => "le presse-papiers n’a pas accepté le texte",
         Text::AbgelegtEiner => "copié\u{a0}: {name}",
         Text::AbgelegtMehrere => "{n} entrées copiées",

@@ -267,7 +267,7 @@ Hauptmenü, und wer eine Taste will, weist sie in der Belegungsansicht zu.
 ## Eine Datei duplizieren
 
 **Der Eintrag steht allein im Menü der rechten Maustaste über der Dateiliste**
-und heißt „Duplizieren…“, zwischen „Unzip“ und „Im Finder öffnen“. Eine Taste
+und heißt „Duplizieren…“, zwischen „Unzip“ und „Auswerfen“. Eine Taste
 trägt er nicht, und im Hauptmenü steht er nicht; in der Belegungsansicht (F1)
 findet man ihn deshalb auch nicht, denn er ist keine Funktion, die sich einer
 Taste zuweisen ließe.
@@ -324,6 +324,37 @@ zu hinterlassen. Jeder andere Fehlschlag, etwa fehlende Rechte, ein voller
 Datenträger oder eine inzwischen verschwundene Datei, öffnet das Blatt nicht
 erneut, sondern steht mit seinem Grund in der Liste der übersprungenen
 Einträge, die nach dem Vorgang aufgeht.
+
+---
+
+## Einen Datenträger auswerfen
+
+**Auch dieser Eintrag steht allein im Menü der rechten Maustaste über der
+Dateiliste** und heißt „Auswerfen“, zwischen „Duplizieren…“ und „Im Finder
+öffnen“. Eine Taste trägt er nicht, und im Hauptmenü steht er nicht.
+
+**Er wirft eingehängte Datenträger aus**: ein geöffnetes Disk-Image (DMG), einen
+USB-Stick, eine Netzfreigabe. Der gewöhnliche Weg dorthin ist `/Volumes`: dort
+steht jeder eingehängte Datenträger als Ordner, und ein Rechtsklick darauf und
+„Auswerfen“ wirft ihn aus. Betroffen ist, worauf auch `f5` und `f6` wirken; sind
+mehrere Datenträger markiert, gehen alle. Ein Disk-Image wird dabei abgemeldet,
+ein Laufwerk mit mehreren Partitionen verschwindet ganz, wie beim Auswerfen im
+Finder.
+
+**Bei einem gewöhnlichen Ordner oder einer Datei tut er nichts** und sagt es:
+„nichts auszuwerfen: unter den gewählten Einträgen steht kein eingehängter
+Datenträger“. Ein Ordner **auf** einem Datenträger ist kein Datenträger; wer
+ihn auswerfen will, geht in den übergeordneten Ordner und klickt auf den
+Datenträger selbst. Als Datenträger gilt, was auch die Leiste links unter
+„Geräte und Orte“ zeigt; den Startdatenträger wirft KRK nie aus.
+
+**Die Statuszeile begleitet den Auswurf.** Zuerst steht dort „<name> wird
+ausgeworfen …“, danach „<name> wurde ausgeworfen“, und die Liste in `/Volumes`
+verliert den Eintrag. Stand ein Tab auf dem Datenträger, wechselt er wie bei
+jedem anderen Auswurf ins Benutzerverzeichnis, und die Statuszeile nennt das.
+Weist das System den Auswurf ab, meist weil noch ein Programm eine Datei darauf
+offen hält, steht „<name> ließ sich nicht auswerfen: …“ da, mit dem Grund in
+den Worten des Systems; der Datenträger bleibt dann eingehängt.
 
 ---
 

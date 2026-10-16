@@ -398,6 +398,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::KontextZippen => "Zip",
         Text::KontextEntpacken => "Unzip",
         Text::KontextDuplizieren => "Duplizieren…",
+        Text::KontextAuswerfen => "Auswerfen",
         Text::KontextImFinderOeffnen => "Im Finder öffnen",
         Text::KontextImFinderAnzeigen => "Im Finder anzeigen",
         Text::BereichLesezeichen => "Lesezeichen",
@@ -575,6 +576,12 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::KeinFinder => {
             "der Finder ist nicht erreichbar: das System hat keine Anwendung dafür genannt"
         }
+        Text::NichtsAuszuwerfen => {
+            "nichts auszuwerfen: unter den gewählten Einträgen steht kein eingehängter Datenträger"
+        }
+        Text::AuswurfBeginnt => "{name} wird ausgeworfen …",
+        Text::AuswurfErfolgt => "{name} wurde ausgeworfen",
+        Text::AuswurfGescheitert => "{name} ließ sich nicht auswerfen: {fehler}",
         Text::AblageWeistTextAb => "die Zwischenablage hat den Text nicht angenommen",
         Text::AbgelegtEiner => "kopiert: {name}",
         Text::AbgelegtMehrere => "{n} Einträge kopiert",

@@ -35,6 +35,7 @@
 //!           ──> volumes  ──> crate::auffrischung        zwischenablage
 //!           ──> terminal              ──> statuszeile
 //!           ──> finder
+//!           ──> auswurf
 //!           ──> hinweis                                 standardprogramm
 //!           ──> teilen
 //!           ──> vorschau ──> crate::vorschaumodell  ──> tableiste
@@ -163,6 +164,13 @@
 //! deckt Eintraege auf und benennt niemanden. Es ist daneben das eine Modul
 //! dieser Reihe, dessen Aufruf **nichts** zurueckgibt; was der Aufrufer
 //! stattdessen prueft, steht dort.
+//! [`auswurf`] haelt die eine vom 261016: das Auswerfen eines eingehaengten
+//! Datentraegers ueber `NSFileManager::unmountVolumeAtURL:options:completionHandler:`.
+//! Es ist das eine Modul dieser Reihe, dessen Antwort spaeter und auf einem
+//! fremden Faden kommt; wie sie auf den Hauptfaden zurueckfindet, steht dort.
+//! Welcher Eintrag ein Datentraeger ist, entscheidet es nicht: das tut
+//! `crate::kommandos::kontextmenue::auswurfbezug` an der Liste, die [`volumes`]
+//! aufgezaehlt hat.
 //! [`teilen`] haelt die eine aus C1 der Runde 6: die Uebergabe von Eintraegen
 //! an die Freigabedienste des Systems ueber `NSSharingServicePicker`, dazu den
 //! **einen** Menuebauer, den die drei Flaechen mit Kontextmenue rufen. Ein
@@ -236,6 +244,7 @@
 mod abwurf;
 mod anwendung;
 mod aufteilung;
+mod auswurf;
 mod belegungsansicht;
 mod bereichsleiste;
 mod betrachter;

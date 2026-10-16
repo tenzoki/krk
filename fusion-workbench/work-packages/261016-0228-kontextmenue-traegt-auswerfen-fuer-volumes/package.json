@@ -1,0 +1,44 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "a98ceb0a-28fc-4666-aa85-0835d12ab9e6",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "claimed",
+  "claim": {
+    "checkout_id": "6c11b1f2",
+    "person": "Kai Stalmann <kai@stalmann.org>",
+    "claimed_at": "2026-10-16T00:28:54Z"
+  },
+  "mode": {
+    "value": "autonomous",
+    "source": {
+      "kind": "user-word",
+      "ref": {
+        "path": "work-packages/261016-0228-kontextmenue-traegt-auswerfen-fuer-volumes/261016-0228-kontextmenue-traegt-auswerfen-fuer-volumes.md",
+        "sha256": "sha256:bde98534c438334f37a55cd3c63e01c0ddb088c8204a8d9c1708d58fddaa0e34",
+        "kind": "other"
+      }
+    }
+  },
+  "origin": {
+    "kind": "user-request",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "user",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "narrative": {
+    "path": "work-packages/261016-0228-kontextmenue-traegt-auswerfen-fuer-volumes/261016-0228-kontextmenue-traegt-auswerfen-fuer-volumes.md"
+  },
+  "depends_on": [],
+  "active_documents": [],
+  "references": [],
+  "evidence": [],
+  "outcome": null,
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {}
+}

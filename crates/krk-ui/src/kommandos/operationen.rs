@@ -1469,6 +1469,47 @@ pub fn kein_finder() -> String {
     text(Text::KeinFinder).to_owned()
 }
 
+/// Der Satz, wenn „Auswerfen" keinen Datentraeger vorfindet (261016).
+///
+/// **Ein Satz fuer beide Lagen**, nichts betroffen und nichts davon ein
+/// Einhaengepunkt: der Nutzer bekommt in beiden dieselbe Auskunft, dass er auf
+/// keinen eingehaengten Datentraeger gezeigt hat, und der Weg heraus ist
+/// derselbe. Der Rufer ist der Auswurf-Zweig des Kontextmenues
+/// (`Anwendungsdelegierter::auswurf_beginnen`), auf eine leere Liste aus
+/// [`super::kontextmenue::auswurfbezug`].
+#[must_use]
+pub fn nichts_auszuwerfen() -> String {
+    text(Text::NichtsAuszuwerfen).to_owned()
+}
+
+/// Der Satz, solange ein Datentraeger ausgeworfen wird (261016).
+///
+/// Das System antwortet erst nach einer Weile, bei einer Netzfreigabe auch
+/// nach Sekunden; bis dahin sagt die Statuszeile, dass der Klick angekommen ist.
+#[must_use]
+pub fn auswurf_beginnt(name: &str) -> String {
+    satz(Text::AuswurfBeginnt, &[("name", &name)])
+}
+
+/// Der Satz, wenn das System den Auswurf bestaetigt hat (261016).
+#[must_use]
+pub fn auswurf_erfolgt(name: &str) -> String {
+    satz(Text::AuswurfErfolgt, &[("name", &name)])
+}
+
+/// Der Satz, wenn das System den Auswurf abgewiesen hat (261016).
+///
+/// `fehler` ist der Wortlaut des Systems (`localizedDescription`) und damit
+/// in der Sprache, die macOS fuer KRK gewaehlt hat; bei einer noch offenen
+/// Datei nennt er, dass der Datentraeger in Gebrauch ist.
+#[must_use]
+pub fn auswurf_gescheitert(name: &str, fehler: &str) -> String {
+    satz(
+        Text::AuswurfGescheitert,
+        &[("name", &name), ("fehler", &fehler)],
+    )
+}
+
 /// Die gemeinsame Haelfte der Saetze darueber.
 ///
 /// **Mehrere Eingaenge und ein Rumpf, und die Aufteilung hat einen Grund.** Bis

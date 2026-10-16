@@ -382,6 +382,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::KontextZippen => "Zip",
         Text::KontextEntpacken => "Unzip",
         Text::KontextDuplizieren => "Duplicate…",
+        Text::KontextAuswerfen => "Eject",
         Text::KontextImFinderOeffnen => "Open in Finder",
         Text::KontextImFinderAnzeigen => "Show in Finder",
         Text::BereichLesezeichen => "Bookmarks",
@@ -549,6 +550,12 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "nothing to unzip: there are several archives here, and the selection points at none of them"
         }
         Text::KeinFinder => "the Finder is not reachable: the system named no application for it",
+        Text::NichtsAuszuwerfen => {
+            "nothing to eject: none of the selected entries is a mounted volume"
+        }
+        Text::AuswurfBeginnt => "ejecting {name} …",
+        Text::AuswurfErfolgt => "{name} was ejected",
+        Text::AuswurfGescheitert => "{name} could not be ejected: {fehler}",
         Text::AblageWeistTextAb => "the clipboard did not accept the text",
         Text::AbgelegtEiner => "copied: {name}",
         Text::AbgelegtMehrere => "{n} entries copied",

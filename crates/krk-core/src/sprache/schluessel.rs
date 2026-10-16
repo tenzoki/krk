@@ -550,6 +550,8 @@ pub enum Text {
     KontextEntpacken,
     /// `Kontextbefehl::Duplizieren`.
     KontextDuplizieren,
+    /// `Kontextbefehl::Auswerfen`.
+    KontextAuswerfen,
     /// `Kontextbefehl::ImFinderOeffnen`.
     KontextImFinderOeffnen,
     /// `Kontextbefehl::ImFinderAnzeigen`.
@@ -858,6 +860,17 @@ pub enum Text {
     MehrereArchive,
     /// `operationen::kein_finder`.
     KeinFinder,
+    /// `operationen::nichts_auszuwerfen`: unter den betroffenen Eintraegen
+    /// steht kein bekannter Einhaengepunkt.
+    NichtsAuszuwerfen,
+    /// `operationen::auswurf_beginnt`; `{name}` ist der Name des
+    /// Datentraegers.
+    AuswurfBeginnt,
+    /// `operationen::auswurf_erfolgt`; `{name}` wie oben.
+    AuswurfErfolgt,
+    /// `operationen::auswurf_gescheitert`; `{name}` wie oben, `{fehler}` ist
+    /// der Wortlaut des Systems.
+    AuswurfGescheitert,
     /// `operationen::ablage_weist_ab`.
     AblageWeistTextAb,
     /// `operationen::ablagemeldung` fuer einen Eintrag; `{name}`.
@@ -1437,7 +1450,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 601] = [
+    pub const ALLE: [Text; 606] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1664,6 +1677,7 @@ impl Text {
         Text::KontextZippen,
         Text::KontextEntpacken,
         Text::KontextDuplizieren,
+        Text::KontextAuswerfen,
         Text::KontextImFinderOeffnen,
         Text::KontextImFinderAnzeigen,
         Text::BereichLesezeichen,
@@ -1797,6 +1811,10 @@ impl Text {
         Text::KeinArchiv,
         Text::MehrereArchive,
         Text::KeinFinder,
+        Text::NichtsAuszuwerfen,
+        Text::AuswurfBeginnt,
+        Text::AuswurfErfolgt,
+        Text::AuswurfGescheitert,
         Text::AblageWeistTextAb,
         Text::AbgelegtEiner,
         Text::AbgelegtMehrere,

@@ -21,6 +21,10 @@
 //!  sichtbare Zeilen ─────┴──> duplikatbezug() ──> die eine gewoehnliche Datei,
 //!                                                 die dupliziert wird, oder
 //!                                                 der Grund, warum keine
+//!
+//!  betroffene Eintraege ─┐
+//!  Einhaengepunkte ──────┴──> auswurfbezug() ──> die Datentraeger, die
+//!                                                ausgeworfen werden
 //! ```
 //!
 //! # Die eine Frage dieses Moduls
@@ -160,6 +164,27 @@
 //! Einordnung in die Aufzaehlung — Titel, Marke und der Zweig, den der
 //! Uebersetzer einfordert.
 //!
+//! # Was der 261016 hinzugelegt hat
+//!
+//! Den Wert [`Kontextbefehl::Auswerfen`] und mit ihm die Regel
+//! [`auswurfbezug`]. **Ob ein Eintrag ein Datentraeger ist, fragt sie nicht das
+//! Dateisystem**, weder beim Menuebau noch beim Klick: weder die Geraetenummer
+//! noch der Einhaengepunkt stehen im [`krk_core::verzeichnis::Eintrag`], und
+//! eine Frage danach waere ein Systemaufruf auf dem Hauptfaden, je Rechtsklick
+//! und je betroffenem Eintrag. Die Antwort steht stattdessen in der Liste der
+//! Einhaengepunkte, die der Anwendungsdelegierte beim Start und nach jeder
+//! Meldung der Datentraegerwache neu aufzaehlt, im selben Zug wie die
+//! Geraeteleiste. Eine zweite Aufzaehlung daneben entsteht damit nicht, und
+//! die Liste ist so frisch wie die Leiste, die der Nutzer vor sich hat.
+//!
+//! **Der Eintrag steht immer da und ist immer bedienbar**, wie jeder Eintrag
+//! dieses Menues: findet die Regel nichts, meldet die Statuszeile es
+//! ([`super::operationen::nichts_auszuwerfen`]), dieselbe Antwort, die Unzip
+//! auf einen Ordner ohne Archiv gibt. Ob das System den Datentraeger
+//! tatsaechlich auswerfen kann — der Startdatentraeger kann es nicht, ein
+//! zweiter interner Datentraeger vielleicht auch nicht —, beantwortet das
+//! System beim Auswerfen, und sein Wortlaut steht dann in der Statuszeile.
+//!
 //! # Eine feste Aufzaehlung neben einer Liste, deren Laenge erst zur Laufzeit feststeht
 //!
 //! Das Untermenue „Öffnen mit" (260918) traegt die Anwendungen, die das System
@@ -295,6 +320,13 @@ pub enum Kontextbefehl {
     /// danach geschieht, steht bei `Art::Duplizieren` im Kern und im Zweig
     /// beim Anwendungsdelegierten.
     Duplizieren,
+    /// Jeden betroffenen eingehaengten Datentraeger auswerfen (261016).
+    ///
+    /// Ein geoeffnetes DMG, ein USB-Laufwerk, eine Netzfreigabe: was als
+    /// Einhaengepunkt in der Liste steht, die auch die Geraeteleiste fuellt.
+    /// Worauf er wirkt, rechnet [`auswurfbezug`]; das Auswerfen selbst steht in
+    /// `crate::appkit::auswurf` und laeuft am Hauptfaden vorbei.
+    Auswerfen,
     /// Den angezeigten Ordner im Finder oeffnen.
     ImFinderOeffnen,
     /// Die betroffenen Eintraege im Finder aufdecken, also in einem
@@ -345,12 +377,14 @@ impl Kontextbefehl {
     /// und weil die zwei Finder-Eintraege am Ende beieinander bleiben sollen.
     /// **„Duplizieren…" steht hinter „Unzip" und vor den Finder-Eintraegen**
     /// (260930): „Zip" und „Unzip" bleiben ein Paar, die Finder-Eintraege
-    /// bleiben am Ende beieinander.
-    pub const ALLE: [Kontextbefehl; 6] = [
+    /// bleiben am Ende beieinander. **„Auswerfen" steht aus demselben Grund
+    /// vor den Finder-Eintraegen** (261016).
+    pub const ALLE: [Kontextbefehl; 7] = [
         Kontextbefehl::OeffnenMit,
         Kontextbefehl::Zippen,
         Kontextbefehl::Entpacken,
         Kontextbefehl::Duplizieren,
+        Kontextbefehl::Auswerfen,
         Kontextbefehl::ImFinderOeffnen,
         Kontextbefehl::ImFinderAnzeigen,
     ];
@@ -391,6 +425,7 @@ impl Kontextbefehl {
             Kontextbefehl::Zippen => text(Text::KontextZippen),
             Kontextbefehl::Entpacken => text(Text::KontextEntpacken),
             Kontextbefehl::Duplizieren => text(Text::KontextDuplizieren),
+            Kontextbefehl::Auswerfen => text(Text::KontextAuswerfen),
             Kontextbefehl::ImFinderOeffnen => text(Text::KontextImFinderOeffnen),
             Kontextbefehl::ImFinderAnzeigen => text(Text::KontextImFinderAnzeigen),
         }
@@ -430,8 +465,9 @@ impl Kontextbefehl {
             Kontextbefehl::Zippen => 2,
             Kontextbefehl::Entpacken => 3,
             Kontextbefehl::Duplizieren => 4,
-            Kontextbefehl::ImFinderOeffnen => 5,
-            Kontextbefehl::ImFinderAnzeigen => 6,
+            Kontextbefehl::Auswerfen => 5,
+            Kontextbefehl::ImFinderOeffnen => 6,
+            Kontextbefehl::ImFinderAnzeigen => 7,
         }
     }
 
@@ -667,6 +703,50 @@ pub fn duplikatbezug(modell: &Ordnermodell, betroffen: &[PathBuf]) -> Duplikatbe
         Typ::Ordner => Duplikatbefund::Ordner { name },
         Typ::Verknuepfung => Duplikatbefund::Verknuepfung { name },
     }
+}
+
+/// Worauf „Auswerfen" wirkt: jeder betroffene Eintrag, der ein bekannter
+/// Einhaengepunkt ist (261016).
+///
+/// **Ohne Dateizugriff**, wie alles in diesem Modul. Ob ein Ordner ein
+/// eingehaengter Datentraeger ist, sagt hier keine Frage an das Dateisystem,
+/// sondern die Liste `einhaengepunkte`: die Einhaengepunkte, die
+/// `crate::appkit::volumes::eingehaengte` zuletzt aufgezaehlt hat, also
+/// dieselbe Aufzaehlung, aus der die Geraeteleiste ihren unteren Teil baut. Sie
+/// wird beim Start und nach jedem Ein- und Aushaengen erneuert und nicht beim
+/// Rechtsklick; warum, steht im Modulkopf unter „Was der 261016 hinzugelegt
+/// hat".
+///
+/// **Verglichen wird der Pfad, wie er dasteht.** Die betroffenen Eintraege
+/// kommen als `ordner.join(name)` herein ([`super::operationen::betroffene`]),
+/// die Einhaengepunkte als Pfade des Systems, in aller Regel unter `/Volumes`.
+/// Wer `/Volumes` ueber eine Verknuepfung ansteuert, bekommt deshalb keinen
+/// Treffer und die Meldung, dass nichts auszuwerfen ist; einen falschen Treffer
+/// kann der Vergleich nicht erzeugen.
+///
+/// **Die Wurzel `/` ist nie auswerfbar**, auch wenn sie in der Liste steht —
+/// die Aufzaehlung fuehrt den Startdatentraeger mit. Sie erreicht diese Regel
+/// ohnehin kaum, denn als betroffener Eintrag muesste sie in einem Ordner
+/// stehen; in `/Volumes` steht an ihrer Stelle eine Verknuepfung, deren Pfad
+/// kein Einhaengepunkt ist.
+///
+/// **Eintraege, die keine Einhaengepunkte sind, fallen still heraus**, wie bei
+/// Unzip die Eintraege, die keine Archive sind. Kommt eine leere Liste
+/// zurueck, meldet der Aufrufer
+/// [`super::operationen::nichts_auszuwerfen`]; eine Ersatzregel ueber die
+/// sichtbaren Zeilen gibt es nicht, denn ein Datentraeger, auf den der Nutzer
+/// nicht gezeigt hat, wird nicht ausgeworfen.
+///
+/// `#[must_use]`: die Liste entscheidet, was ausgeworfen wird; fiele sie still
+/// weg, klickte der Nutzer und nichts geschaehe.
+#[must_use]
+pub fn auswurfbezug(betroffen: &[PathBuf], einhaengepunkte: &[PathBuf]) -> Vec<PathBuf> {
+    betroffen
+        .iter()
+        .filter(|pfad| pfad.parent().is_some())
+        .filter(|pfad| einhaengepunkte.contains(pfad))
+        .cloned()
+        .collect()
 }
 
 /// Was Unzip vorgefunden hat.
@@ -1274,13 +1354,14 @@ mod tests {
     /// **„Duplizieren…" steht mit seinem Auslassungszeichen da** (260930): der
     /// Eintrag fragt vor seiner Wirkung, und ein Titel ohne das Zeichen
     /// verspraeche eine Wirkung auf den Klick.
-    const TAFEL: [(Kontextbefehl, &str, isize); 6] = [
+    const TAFEL: [(Kontextbefehl, &str, isize); 7] = [
         (Kontextbefehl::OeffnenMit, "Öffnen mit", 1),
         (Kontextbefehl::Zippen, "Zip", 2),
         (Kontextbefehl::Entpacken, "Unzip", 3),
         (Kontextbefehl::Duplizieren, "Duplizieren…", 4),
-        (Kontextbefehl::ImFinderOeffnen, "Im Finder öffnen", 5),
-        (Kontextbefehl::ImFinderAnzeigen, "Im Finder anzeigen", 6),
+        (Kontextbefehl::Auswerfen, "Auswerfen", 5),
+        (Kontextbefehl::ImFinderOeffnen, "Im Finder öffnen", 6),
+        (Kontextbefehl::ImFinderAnzeigen, "Im Finder anzeigen", 7),
     ];
 
     /// Die Tafel ueber jeden Wert, an einem Stueck.
@@ -1359,11 +1440,11 @@ mod tests {
     /// begaenne die Zaehlung dort, loeste er das Packen aus.
     ///
     /// Die erste freie Marke hinter der Liste steht mit in der Tafel und
-    /// rueckt mit jedem weiteren Befehl um eins; seit dem 260930 ist es die
-    /// Sieben.
+    /// rueckt mit jedem weiteren Befehl um eins; seit dem 261016 ist es die
+    /// Acht.
     #[test]
     fn die_null_und_alles_daneben_benennen_keinen_befehl() {
-        for marke in [-1, 0, 7, 99] {
+        for marke in [-1, 0, 8, 99] {
             assert_eq!(
                 Kontextbefehl::von_menuemarke(marke),
                 None,
@@ -2215,5 +2296,79 @@ mod tests {
 
         assert_eq!(ziel, ordner.join("Projekte.zip"));
         assert_eq!(quellen, betroffen);
+    }
+
+    // ------------------------------------------------------------------
+    // Auswerfen (261016)
+    // ------------------------------------------------------------------
+
+    /// Die Einhaengepunkte der Proben: der Startdatentraeger, ein DMG und eine
+    /// Netzfreigabe, so wie die Aufzaehlung des Systems sie liefert.
+    fn einhaengepunkte() -> Vec<PathBuf> {
+        vec![
+            PathBuf::from("/"),
+            PathBuf::from("/Volumes/Installer"),
+            PathBuf::from("/Volumes/Freigabe"),
+        ]
+    }
+
+    /// Ein Rechtsklick auf ein Volume in `/Volumes` trifft genau dieses.
+    #[test]
+    fn ein_einhaengepunkt_unter_den_betroffenen_wird_ausgeworfen() {
+        let volumes = Path::new("/Volumes");
+        let betroffen = vec![volumes.join("Installer")];
+        assert_eq!(
+            auswurfbezug(&betroffen, &einhaengepunkte()),
+            vec![PathBuf::from("/Volumes/Installer")]
+        );
+    }
+
+    /// Ein gewoehnlicher Ordner, eine Datei und ein Ordner **auf** einem
+    /// Datentraeger sind keine Einhaengepunkte, und ohne einen bleibt die
+    /// Liste leer: der Aufrufer meldet dann, dass nichts auszuwerfen ist.
+    #[test]
+    fn was_kein_einhaengepunkt_ist_wird_nicht_ausgeworfen() {
+        let betroffen = vec![
+            PathBuf::from("/tmp/Projekte"),
+            PathBuf::from("/tmp/Projekte/bericht.txt"),
+            PathBuf::from("/Volumes/Installer/Programme"),
+            PathBuf::from("/Volumes/Installer2"),
+        ];
+        assert!(auswurfbezug(&betroffen, &einhaengepunkte()).is_empty());
+        assert!(auswurfbezug(&[], &einhaengepunkte()).is_empty());
+    }
+
+    /// Mehrere markierte Volumes werden alle ausgeworfen, in der Reihenfolge
+    /// der Zeilen; was dazwischen kein Einhaengepunkt ist, faellt still
+    /// heraus, wie bei Unzip ein Eintrag, der kein Archiv ist.
+    #[test]
+    fn mehrere_volumes_werden_alle_ausgeworfen_und_der_rest_faellt_heraus() {
+        let betroffen = vec![
+            PathBuf::from("/Volumes/Freigabe"),
+            PathBuf::from("/Volumes/Notizen.txt"),
+            PathBuf::from("/Volumes/Installer"),
+        ];
+        assert_eq!(
+            auswurfbezug(&betroffen, &einhaengepunkte()),
+            vec![
+                PathBuf::from("/Volumes/Freigabe"),
+                PathBuf::from("/Volumes/Installer"),
+            ]
+        );
+    }
+
+    /// Die Wurzel ist nie auswerfbar, auch wenn die Aufzaehlung sie als
+    /// Einhaengepunkt fuehrt.
+    #[test]
+    fn die_wurzel_wird_nie_ausgeworfen() {
+        assert!(auswurfbezug(&[PathBuf::from("/")], &einhaengepunkte()).is_empty());
+    }
+
+    /// Ohne bekannte Einhaengepunkte wird nichts ausgeworfen, auch nicht ein
+    /// Pfad unter `/Volumes`: entschieden wird an der Liste und nicht am Ort.
+    #[test]
+    fn ohne_bekannte_einhaengepunkte_wird_nichts_ausgeworfen() {
+        let betroffen = vec![PathBuf::from("/Volumes/Installer")];
+        assert!(auswurfbezug(&betroffen, &[]).is_empty());
     }
 }

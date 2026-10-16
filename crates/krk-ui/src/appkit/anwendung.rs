@@ -329,6 +329,7 @@ use crate::tabs::{Auswahlversuch, Tabliste, Vormerkung, Wunschmeldung};
 use crate::vorschaumodell::Blaetterrichtung;
 
 use super::aufteilung::Aufteilung;
+use super::auswurf::{self, Auswurfergebnis};
 use super::belegungsansicht::{self, Belegungsquelle};
 use super::bereichsleiste::{Bereichsleiste, Kommandomelder};
 use super::betrachter::Zoom;
@@ -1041,6 +1042,16 @@ pub struct AnwendungsIvars {
     /// Die Beobachtung der Datentraeger (C9). Sie steht fuer die ganze
     /// Laufzeit, weil sie an keinem Pfad haengt.
     datentraegerwache: OnceCell<Datentraegerwache>,
+    /// Die Einhaengepunkte der Datentraeger, die [`volumes::eingehaengte`]
+    /// zuletzt aufgezaehlt hat (261016).
+    ///
+    /// Erneuert im selben Zug wie die Geraeteleiste, in
+    /// [`Anwendungsdelegierter::geraete_uebernehmen`], also beim Start und
+    /// nach jeder Meldung der Datentraegerwache. Gelesen beim Klick auf
+    /// „Auswerfen“, damit dort keine Frage an das System auf dem Hauptfaden
+    /// steht; warum, steht im Modulkopf von [`kontextmenue`] unter „Was der
+    /// 261016 hinzugelegt hat“.
+    einhaengepunkte: RefCell<Vec<PathBuf>>,
     /// Der gebuendelte Schreiber fuer `session.toml`.
     ///
     /// Leer im Messmodus und dann, wenn sich der Ablageordner nicht oeffnen
@@ -1532,6 +1543,7 @@ impl Anwendungsdelegierter {
             belegungsansicht: RefCell::new(None),
             dateisystemwache: RefCell::new(None),
             datentraegerwache: OnceCell::new(),
+            einhaengepunkte: RefCell::new(Vec::new()),
             sitzungsschreiber: RefCell::new(None),
             schreibfehler_gemeldet: Cell::new(false),
             vorgang: RefCell::new(None),
@@ -2519,7 +2531,7 @@ impl Anwendungsdelegierter {
         };
         let leiste = self.leiste();
         leiste.quelle().lesezeichen_setzen(&geladen);
-        leiste.quelle().orte_setzen(orte());
+        self.geraete_uebernehmen();
 
         // Der Rueckruf haelt den Delegierten **schwach**, sonst schloesse sich
         // der Ring Delegierter → Leiste → Quelle → Rueckruf → Delegierter.
@@ -3245,7 +3257,23 @@ impl Anwendungsdelegierter {
         if self.ivars().leiste.get().is_none() {
             return;
         }
-        self.leiste().quelle().orte_setzen(orte());
+        self.geraete_uebernehmen();
+    }
+
+    /// Zaehlt die Datentraeger auf und gibt sie an die Leiste und an die
+    /// Auswurfregel weiter (261016).
+    ///
+    /// **Eine Aufzaehlung fuer zwei Abnehmer**: die Geraeteleiste bekommt die
+    /// Orte samt Benutzerverzeichnis, [`AnwendungsIvars::einhaengepunkte`] die
+    /// blossen Einhaengepunkte. Zwei Aufzaehlungen nebeneinander koennten
+    /// zwischen sich ein Ein- oder Aushaengen haben, und dann boete das
+    /// Kontextmenue einen Datentraeger zum Auswerfen an, den die Leiste nicht
+    /// zeigt, oder umgekehrt.
+    fn geraete_uebernehmen(&self) {
+        let datentraeger = volumes::eingehaengte();
+        *self.ivars().einhaengepunkte.borrow_mut() =
+            datentraeger.iter().map(|ort| ort.pfad.clone()).collect();
+        self.leiste().quelle().orte_setzen(orte(datentraeger));
     }
 
     /// Richtet den einen Eintrittspunkt fuer Tastendruecke ein.
@@ -8164,6 +8192,7 @@ impl Anwendungsdelegierter {
             Kontextbefehl::Zippen => self.zipauftrag_stellen(seite),
             Kontextbefehl::Entpacken => self.entpackauftrag_stellen(seite),
             Kontextbefehl::Duplizieren => self.duplikat_erfragen(seite),
+            Kontextbefehl::Auswerfen => self.auswurf_beginnen(seite),
             Kontextbefehl::ImFinderOeffnen => self.im_finder_oeffnen(seite),
             Kontextbefehl::ImFinderAnzeigen => self.im_finder_anzeigen(seite),
         }
@@ -8629,6 +8658,100 @@ impl Anwendungsdelegierter {
         }
         if !terminal::ordner_oeffnen(FINDERKENNUNG, &ordner) {
             self.antwort_zeigen(seite, &operationen::kein_finder());
+        }
+    }
+
+    /// Wirft jeden betroffenen eingehaengten Datentraeger aus (261016).
+    ///
+    /// **Der Zweig von [`Kontextbefehl::Auswerfen`].** Er wirkt auf dieselbe
+    /// Menge wie jeder Eintrag dieses Menues, [`operationen::betroffene`] ueber
+    /// `betroffene_eintraege`, und welche davon Datentraeger sind, entscheidet
+    /// [`kontextmenue::auswurfbezug`] an der Liste
+    /// [`AnwendungsIvars::einhaengepunkte`] und nicht diese Stelle. Findet sie
+    /// keinen, meldet die Statuszeile es ([`operationen::nichts_auszuwerfen`]);
+    /// der Eintrag bleibt dabei bedienbar wie jeder andere des Menues.
+    ///
+    /// **Auf dem Hauptfaden steht hier kein Dateisystemaufruf**: die Menge
+    /// kommt aus dem Ordnermodell, die Liste aus den Ivars, und das Auswerfen
+    /// selbst geht ueber [`auswurf::auswerfen`] an das System, das asynchron
+    /// antwortet. Die Probe
+    /// `der_auswurfweg_stellt_auf_dem_hauptfaden_keinen_systemaufruf` haelt das
+    /// am Rumpf.
+    ///
+    /// **Kein laufender Vorgang haelt ihn auf**, wie die Finder-Eintraege: er
+    /// stellt keinen Auftrag an die Operationsmaschine. Kopiert ein Vorgang
+    /// gerade auf den Datentraeger, weist das System den Auswurf als „in
+    /// Gebrauch“ ab, und die Statuszeile nennt es.
+    ///
+    /// **Der Name im Satz ist der letzte Bestandteil des Einhaengepunkts**, also
+    /// der, den der Nutzer in der Dateiliste angeklickt hat.
+    fn auswurf_beginnen(&self, seite: Fensterseite) {
+        let betroffen = self.dateifenster(seite).quelle().betroffene_eintraege();
+        let datentraeger =
+            kontextmenue::auswurfbezug(&betroffen.pfade, &self.ivars().einhaengepunkte.borrow());
+        if datentraeger.is_empty() {
+            self.antwort_zeigen(seite, &operationen::nichts_auszuwerfen());
+            return;
+        }
+        for einhaengepunkt in datentraeger {
+            let name = einhaengepunkt
+                .file_name()
+                .map(|teil| teil.to_string_lossy().into_owned())
+                .unwrap_or_else(|| einhaengepunkt.display().to_string());
+            self.antwort_zeigen(seite, &operationen::auswurf_beginnt(&name));
+            let pfad = einhaengepunkt.clone();
+            auswurf::auswerfen(&einhaengepunkt, move |mtm, ergebnis| {
+                Anwendungsdelegierter::auswurf_einziehen(mtm, seite, &pfad, &name, ergebnis);
+            });
+        }
+    }
+
+    /// Nimmt die Antwort des Systems auf einen Auswurf entgegen (261016).
+    ///
+    /// Gerufen auf dem Hauptfaden aus [`auswurf::auswerfen`]; den Delegierten
+    /// sucht sie dort, wo er steht, wie [`Self::vorgang_einziehen`], weil ein
+    /// `Retained` nicht ueber die Fadengrenze reist.
+    ///
+    /// **Bei Erfolg drei Schritte, in dieser Reihenfolge.** Zuerst der Satz in
+    /// der Statuszeile der Seite, aus der der Rechtsklick kam. Dann
+    /// [`auffrischung::datentraeger_verloren`]: jeder Tab, der noch auf dem
+    /// Datentraeger stand, weicht auf das Benutzerverzeichnis aus, derselbe Weg
+    /// wie bei der Meldung der Datentraegerwache und mit derselben Meldung.
+    /// Meist hat die Wache das schon getan, denn das System meldet das
+    /// Aushaengen an `NSWorkspace`; ein zweiter Aufruf richtet nichts an, und
+    /// dieser haengt nicht davon ab, in welcher Reihenfolge Wache und Antwort
+    /// eintreffen. Zuletzt liest [`auffrischung::ordner_neu_lesen`] den Ordner
+    /// neu, in dem der Einhaengepunkt stand, gewoehnlich `/Volumes`, damit der
+    /// ausgeworfene Datentraeger aus der Liste verschwindet, ohne auf die
+    /// Dateisystemwache zu warten.
+    ///
+    /// **Bei einem Fehlschlag steht der Wortlaut des Systems in der
+    /// Statuszeile**, und sonst geschieht nichts: der Datentraeger ist noch da.
+    fn auswurf_einziehen(
+        mtm: MainThreadMarker,
+        seite: Fensterseite,
+        einhaengepunkt: &Path,
+        name: &str,
+        ergebnis: Auswurfergebnis,
+    ) {
+        let Some(delegierter) = NSApplication::sharedApplication(mtm).delegate() else {
+            return;
+        };
+        let Ok(selbst) = delegierter.downcast::<Anwendungsdelegierter>() else {
+            return;
+        };
+        match ergebnis {
+            Ok(()) => {
+                selbst.antwort_zeigen(seite, &operationen::auswurf_erfolgt(name));
+                let ausweichziel = benutzerverzeichnis();
+                auffrischung::datentraeger_verloren(&*selbst, einhaengepunkt, name, &ausweichziel);
+                if let Some(darueber) = einhaengepunkt.parent() {
+                    auffrischung::ordner_neu_lesen(&*selbst, darueber);
+                }
+            }
+            Err(fehler) => {
+                selbst.antwort_zeigen(seite, &operationen::auswurf_gescheitert(name, &fehler));
+            }
         }
     }
 
@@ -11105,6 +11228,10 @@ fn benutzerverzeichnis() -> PathBuf {
 /// Der untere Teil der Leiste: das Benutzerverzeichnis und die eingehaengten
 /// Datentraeger (C5).
 ///
+/// Die Datentraeger kommen seit dem 261016 herein und werden nicht hier
+/// aufgezaehlt: [`Anwendungsdelegierter::geraete_uebernehmen`] braucht dieselbe
+/// Aufzaehlung auch fuer die Auswurfregel.
+///
 /// Hier und nicht in [`super::volumes`], weil das Benutzerverzeichnis kein
 /// Datentraeger ist: es kommt aus `krk_core::ablage::pfade`, und jenes Modul
 /// beantwortet die Frage nach den Datentraegern und nur die. Es steht zuoberst,
@@ -11113,14 +11240,14 @@ fn benutzerverzeichnis() -> PathBuf {
 /// Sein Name ist der letzte Namensteil, also der Anmeldename. Ihn ueber
 /// `NSFileManager.displayNameAtPath:` zu uebersetzen brachte nichts: das System
 /// liefert fuer das Benutzerverzeichnis denselben Namen.
-fn orte() -> Vec<Ort> {
+fn orte(datentraeger: Vec<Ort>) -> Vec<Ort> {
     let zuhause = benutzerverzeichnis();
     let name = zuhause
         .file_name()
         .map(|teil| teil.to_string_lossy().into_owned())
         .unwrap_or_else(|| zuhause.display().to_string());
     let mut orte = vec![Ort::neu(name, zuhause)];
-    orte.extend(super::volumes::eingehaengte());
+    orte.extend(datentraeger);
     orte
 }
 
@@ -13340,7 +13467,7 @@ mod kontextproben {
         /// Befehl, Zweig und die Nadel, an der die Wirkung des Zweigs zu
         /// erkennen ist. Die Nadeln stehen zusammengesetzt da, aus demselben
         /// Grund wie in der Probe darueber.
-        const ZWEIGE: [(&str, &str, &str); 6] = [
+        const ZWEIGE: [(&str, &str, &str); 7] = [
             (
                 "Kontextbefehl::OeffnenMit",
                 "keine_anwendung_melden",
@@ -13363,6 +13490,14 @@ mod kontextproben {
                 "Kontextbefehl::Duplizieren",
                 "duplikat_erfragen",
                 concat!("namenseingabe::", "geprueft_zeigen("),
+            ),
+            // Die Wirkung des Auswerfens ist der Aufruf an das System; seine
+            // Antwort kommt spaeter, und was sie bewirkt, haelt
+            // `der_auswurfweg_reisst_nirgends_ab`.
+            (
+                "Kontextbefehl::Auswerfen",
+                "auswurf_beginnen",
+                concat!("auswurf::", "auswerfen("),
             ),
             (
                 "Kontextbefehl::ImFinderOeffnen",
@@ -13520,6 +13655,76 @@ mod kontextproben {
                     "{name} enthaelt {nadel}: ein Systemaufruf auf dem Hauptfaden"
                 );
             }
+        }
+    }
+
+    /// Der Auswurfweg reisst nirgends ab: Regel, Aufruf, Antwort (261016).
+    ///
+    /// **Die Tafel darueber sieht nur das erste Glied**, den Aufruf an das
+    /// System. Was aus dessen Antwort wird, steht in `auswurf_einziehen`, und
+    /// ohne diese Probe koennte der Rueckruf eine andere Funktion erreichen,
+    /// der Erfolg die Tabs auf dem Datentraeger stehen lassen oder der
+    /// Fehlschlag still bleiben, und jede andere Probe bliebe gruen.
+    ///
+    /// **Was sie nicht sieht:** ob die Nadel in einem Zweig steht, den der
+    /// Rumpf nie erreicht, und ob das System den Abschlussblock je ruft. Das
+    /// zweite sagt allein das laufende Buendel mit einem eingehaengten
+    /// Datentraeger.
+    #[test]
+    fn der_auswurfweg_reisst_nirgends_ab() {
+        let datei = diese_datei();
+
+        let beginnen = rumpf(&datei, "auswurf_beginnen");
+        for nadel in [
+            concat!("kontextmenue::", "auswurfbezug("),
+            concat!("operationen::", "nichts_auszuwerfen("),
+            concat!("auswurf_", "einziehen("),
+        ] {
+            assert!(
+                beginnen.contains(nadel),
+                "auswurf_beginnen enthaelt {nadel} nicht: der Auswurf reisst ab"
+            );
+        }
+
+        let einziehen = rumpf(&datei, "auswurf_einziehen");
+        for nadel in [
+            concat!("operationen::", "auswurf_erfolgt("),
+            concat!("operationen::", "auswurf_gescheitert("),
+            concat!("auffrischung::", "datentraeger_verloren("),
+            concat!("auffrischung::", "ordner_neu_lesen("),
+        ] {
+            assert!(
+                einziehen.contains(nadel),
+                "auswurf_einziehen enthaelt {nadel} nicht: die Antwort des Systems \
+                 erreicht den Schirm nicht"
+            );
+        }
+    }
+
+    /// Der Auswurfweg stellt auf dem Hauptfaden keinen Systemaufruf (261016).
+    ///
+    /// Dieselbe Bauform wie
+    /// `der_duplikatweg_stellt_auf_dem_hauptfaden_keinen_systemaufruf`, mit
+    /// derselben Grenze: gelesen werden die Codezeilen des Rumpfes und nicht
+    /// der Aufrufbaum darunter. `auswurfbezug` traegt seine Zusage im eigenen
+    /// Doc-Kommentar, und `auswurf::auswerfen` fragt das Dateisystem nicht,
+    /// sondern reicht den Auswurf an das System weiter, das asynchron
+    /// antwortet. Gemessen sind `fs::`, `metadata(`, `exists(` und
+    /// `volumes::eingehaengte(`: das letzte waere die Aufzaehlung der
+    /// Datentraeger beim Klick statt beim Ein- und Aushaengen.
+    #[test]
+    fn der_auswurfweg_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
+        let rumpf = rumpf(&diese_datei(), "auswurf_beginnen");
+        for nadel in [
+            "fs::",
+            "metadata(",
+            "exists(",
+            concat!("volumes::", "eingehaengte("),
+        ] {
+            assert!(
+                !rumpf.contains(nadel),
+                "auswurf_beginnen enthaelt {nadel}: ein Systemaufruf auf dem Hauptfaden"
+            );
         }
     }
 

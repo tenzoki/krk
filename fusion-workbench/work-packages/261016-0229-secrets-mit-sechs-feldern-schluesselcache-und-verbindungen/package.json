@@ -1,0 +1,33 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "ef8ed15f-a25a-4f26-a35a-55c3851901b6",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "open",
+  "claim": null,
+  "mode": {
+    "value": "ordinary",
+    "source": null
+  },
+  "origin": {
+    "kind": "user-request",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "user",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "narrative": {
+    "path": "work-packages/261016-0229-secrets-mit-sechs-feldern-schluesselcache-und-verbindungen/261016-0229-secrets-mit-sechs-feldern-schluesselcache-und-verbindungen.md"
+  },
+  "depends_on": [],
+  "active_documents": [],
+  "references": [],
+  "evidence": [],
+  "outcome": null,
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {}
+}
