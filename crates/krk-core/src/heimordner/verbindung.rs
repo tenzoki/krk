@@ -8,15 +8,23 @@
 //! **Reine Funktionen ohne Systemaufruf**: das Einhaengen und die Uebergabe an
 //! das System stehen in `krk-ui`, und sie fragen hier nur, was sie tun sollen.
 //!
-//! # Zwei Wege
+//! # Drei Wege
 //!
-//! | Protokoll | Weg | URL |
+//! | Protokoll | Weg | Ziel |
 //! |---|---|---|
 //! | `smb`, `afp`, `nfs`, `ftp` | einhaengen | `<protokoll>://<adresse>`, `#` und `?` kodiert |
 //! | `webdav` | einhaengen | `http://<adresse>`, `#` und `?` kodiert |
 //! | `webdavs` | einhaengen | `https://<adresse>`, `#` und `?` kodiert |
 //! | `http`, `https` | uebergeben | `<protokoll>://<adresse>` |
-//! | `ssh`, `sftp`, `vnc` | uebergeben | `<protokoll>://[<konto>@]<adresse>` |
+//! | `ssh`, `vnc` | uebergeben | `<protokoll>://[<konto>@]<adresse>` |
+//! | `sftp` | sftp | [`Fernziel`]: Rechner, Port, Konto, Startordner |
+//!
+//! **`sftp` spricht KRK seit dem Arbeitspaket
+//! `261016-1945-sftp-ordner-im-dateifenster-wie-lokal` selbst**, ueber das
+//! `ssh` des Systems (`crate::fern`); bis dahin ging es wie `ssh` an das
+//! System, das dafuer meist kein Programm kennt. Sein Ziel ist keine URL,
+//! sondern ein zerlegtes [`Fernziel`], und die Regel dafuer steht in
+//! `crate::fern::adresse` und wird hier allein gerufen.
 //!
 //! **Beim Einhaengen steht das Konto nicht in der URL**, sondern reist als
 //! eigener Wert neben ihr ([`Verbindungsziel::Einhaengen`]), weil die Bindung
@@ -49,6 +57,7 @@
 //! ergibt, etwa ein Leerzeichen im Rechnernamen, weist schon das Blatt
 //! „Verbinden“ ab.
 
+use crate::fern::adresse::{self, Adressfehler, Fernziel};
 use crate::sprache::{Text, satz, text};
 
 /// Ein Protokoll, das KRK fuer eine Verbindung kennt.
@@ -76,7 +85,7 @@ pub enum Protokoll {
     Https,
     /// SSH, an das Terminal uebergeben.
     Ssh,
-    /// SFTP, an das Programm uebergeben, das das System dafuer nennt.
+    /// SFTP, von KRK selbst gesprochen, ueber das `ssh` des Systems.
     Sftp,
     /// VNC, an die Bildschirmfreigabe uebergeben.
     Vnc,
@@ -91,6 +100,8 @@ pub enum Weg {
     /// KRK gibt die URL an das System, das das zustaendige Programm oeffnet;
     /// ohne Zugangsdaten.
     Uebergeben,
+    /// KRK spricht SFTP selbst, ueber `/usr/bin/ssh -s … sftp`.
+    Sftp,
 }
 
 impl Protokoll {
@@ -148,11 +159,8 @@ impl Protokoll {
             | Protokoll::Webdav
             | Protokoll::Webdavs
             | Protokoll::Ftp => Weg::Einhaengen,
-            Protokoll::Http
-            | Protokoll::Https
-            | Protokoll::Ssh
-            | Protokoll::Sftp
-            | Protokoll::Vnc => Weg::Uebergeben,
+            Protokoll::Http | Protokoll::Https | Protokoll::Ssh | Protokoll::Vnc => Weg::Uebergeben,
+            Protokoll::Sftp => Weg::Sftp,
         }
     }
 
@@ -177,7 +185,8 @@ impl Protokoll {
 
     /// Ob ein Konto in die URL der Uebergabe gehoert: bei `ssh`, `sftp` und
     /// `vnc` ja, bei `http` und `https` nie, und beim Einhaengen steht es nie
-    /// in der URL.
+    /// in der URL. Bei `sftp` fragt es seit dem eigenen Weg niemand mehr; der
+    /// Wert bleibt, damit die Fallunterscheidung vollstaendig bleibt.
     fn konto_in_der_url(self) -> bool {
         match self {
             Protokoll::Ssh | Protokoll::Sftp | Protokoll::Vnc => true,
@@ -210,6 +219,8 @@ pub enum Verbindungsziel {
         /// `<schema>://[<konto>@]<adresse>`, das Konto prozentkodiert.
         url: String,
     },
+    /// SFTP, von KRK selbst gesprochen.
+    Sftp(Fernziel),
 }
 
 /// Warum aus einem Eintrag kein Ziel entsteht.
@@ -223,6 +234,8 @@ pub enum Zielfehler {
     /// Die Adresse traegt schon ein Schema (`://`); das Schema kommt aus dem
     /// Protokoll.
     SchemaInDerAdresse,
+    /// Die Adresse einer sftp-Verbindung taugt nicht (`crate::fern::adresse`).
+    Fernadresse(Adressfehler),
 }
 
 impl Zielfehler {
@@ -240,6 +253,15 @@ impl Zielfehler {
             }
             Zielfehler::LeereAdresse => text(Text::VerbindungAdresseLeer).to_owned(),
             Zielfehler::SchemaInDerAdresse => text(Text::VerbindungAdresseMitSchema).to_owned(),
+            Zielfehler::Fernadresse(Adressfehler::RechnerLeer) => {
+                text(Text::FernRechnerLeer).to_owned()
+            }
+            Zielfehler::Fernadresse(Adressfehler::RechnerUngueltig(rechner)) => {
+                satz(Text::FernRechnerUngueltig, &[("rechner", rechner)])
+            }
+            Zielfehler::Fernadresse(Adressfehler::PortUngueltig(port)) => {
+                satz(Text::FernPortUngueltig, &[("port", port)])
+            }
         }
     }
 }
@@ -268,8 +290,9 @@ pub fn adresse_pruefen(adresse: &str) -> Result<&str, Zielfehler> {
 /// Das Ziel aus Protokoll, Adresse und Konto eines Eintrags, wie sie in
 /// `secrets.txt` stehen.
 ///
-/// Geprueft wird zuerst das Protokoll, dann die Adresse. Das Konto ist frei
-/// und darf leer sein; ohne Leerraum an den Enden genommen.
+/// Geprueft wird zuerst das Protokoll, dann die Adresse, bei `sftp` danach
+/// ihre Form ([`adresse::fernziel`]). Das Konto ist frei und darf leer sein;
+/// ohne Leerraum an den Enden genommen.
 pub fn verbindungsziel(
     protokoll: &str,
     adresse: &str,
@@ -292,6 +315,9 @@ pub fn verbindungsziel(
         Weg::Uebergeben => Verbindungsziel::Uebergeben {
             url: format!("{schema}://{adresse}"),
         },
+        Weg::Sftp => Verbindungsziel::Sftp(
+            adresse::fernziel(adresse, konto).map_err(Zielfehler::Fernadresse)?,
+        ),
     })
 }
 

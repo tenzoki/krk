@@ -77,6 +77,13 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VerbindungAdresseMitSchema => {
             "L’adresse ne peut pas contenir «\u{a0}://\u{a0}», le schéma vient du protocole."
         }
+        Text::FernRechnerLeer => "L’adresse ne nomme aucun hôte avant le port ou le chemin.",
+        Text::FernRechnerUngueltig => {
+            "«\u{a0}{rechner}\u{a0}» n’est pas un nom d’hôte\u{a0}: ni espace, ni «\u{a0}@\u{a0}», ni «\u{a0}-\u{a0}» au début\u{202f}; le compte a son propre champ."
+        }
+        Text::FernPortUngueltig => {
+            "«\u{a0}{port}\u{a0}» n’est pas un port\u{202f}; seules les valeurs de 1 à 65535 sont admises."
+        }
         Text::ZaehlzeileDateien => "Fichiers",
         Text::ZaehlzeileOrdner => "Dossiers",
         Text::ZaehlzeileVerknuepfungen => "Liens symboliques",
@@ -1071,6 +1078,15 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::VerbindungKeineAuswahl => {
             "Aucune connexion n’est sélectionnée dans la barre latérale."
+        }
+        Text::FernVerbindungAbgewiesen => {
+            "Impossible de connecter «\u{a0}{name}\u{a0}»\u{a0}: {grund}"
+        }
+        Text::FernRechnerschluesselUnbekannt => {
+            "La clé de l’hôte {rechner} est inconnue\u{202f}; «\u{a0}{name}\u{a0}» ne se connectera que lorsqu’elle figurera dans known_hosts."
+        }
+        Text::FernStartordnerFehlt => {
+            "«\u{a0}{name}\u{a0}» est connecté, mais {pfad} n’est pas un dossier\u{202f}; {heim} est affiché."
         }
         Text::VerbindenErstSichern => {
             "secrets.txt a des modifications non enregistrées dans l’éditeur\u{202f}; enregistrez avant de vous connecter."

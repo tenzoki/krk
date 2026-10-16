@@ -1,5 +1,7 @@
 //! Abnahme des SFTP-Gespraechs im Kern (Schritt 1 des Plans
-//! `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`).
+//! `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`) und von
+//! Adresse, `ssh`-Aufruf, Vorpruefung des Rechnerschluessels und Zugang
+//! (Schritt 2).
 //!
 //! **Kein Netz, kein `ssh`.** Jede Probe, die spricht, startet
 //! `/usr/libexec/sftp-server` unmittelbar als Kindprozess und fuehrt das
@@ -18,18 +20,26 @@ mod gemeinsam;
 use std::collections::BTreeSet;
 use std::fs;
 use std::ops::ControlFlow;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
+use std::sync::Arc;
 
 use gemeinsam::{Pruefordner, quelldateien};
+use krk_core::fern::kanal::HILFE_VARIABLE;
 use krk_core::fern::paket::{
     Anfrage, Antwort, Attribute, Name, PAKETGRENZE, Paket, Paketfehler, oeffnen, paket_lesen,
     status,
 };
-use krk_core::fern::{
-    BLOCK, Fernfaden, Fernfehler, Fernpfad, Gespraech, OFFENE_LESUNGEN, Trennungsgrund, Zustand,
-    faden,
+use krk_core::fern::rechnerschluessel::{
+    Sshkonfiguration, in_datei_bekannt, konfiguration_lesen, suchname,
 };
+use krk_core::fern::{
+    Adressfehler, Anmeldung, BLOCK, Fernfaden, Fernfehler, Fernpfad, Fernziel, Fernzugang,
+    Gespraech, Herkunft, Kanalplan, OFFENE_LESUNGEN, Serverkennung, Startpfad, Trennungsgrund,
+    Zugangsfehler, Zugangsregister, Zustand, faden, fernziel, ssh_plan,
+};
+use krk_core::heimordner::verbindung::{Verbindungsziel, Zielfehler, verbindungsziel};
+use krk_core::ort::FernerOrt;
 
 /// Der Server des Systems, ohne `ssh` davor.
 const SFTP_SERVER: &str = "/usr/libexec/sftp-server";
@@ -806,4 +816,466 @@ fn fernfaden_entsteht_an_genau_einer_stelle() {
         umsetzungen.is_empty(),
         "fuer das Pfand ist ein Merkmal von Hand umgesetzt: {umsetzungen:?}"
     );
+}
+
+// ----------------------------------------------------------------------
+// Schritt 2: Adresse, ssh-Aufruf, Rechnerschluessel, Zugang
+// ----------------------------------------------------------------------
+
+/// Die drei Zeilen der Tabelle in Entscheidung 7, Port, IPv6 und Konto, und
+/// die Abweisungen: leerer Rechner, Leerraum, fuehrendes `-`, `@`, Port
+/// ausserhalb von 1 bis 65535.
+#[test]
+fn eine_sftp_adresse_wird_in_rechner_port_und_startordner_zerlegt() {
+    let ziel = |adresse: &str, konto: &str| fernziel(adresse, konto).expect("ein Ziel");
+    let absolut = |text: &str| Startpfad::Absolut(Fernpfad::aus_text(text).expect("absolut"));
+
+    assert_eq!(
+        ziel(" ssh.strato.de ", " stalmann.org "),
+        Fernziel {
+            rechner: "ssh.strato.de".into(),
+            port: None,
+            konto: Some("stalmann.org".into()),
+            startpfad: Startpfad::Anmeldeverzeichnis,
+        }
+    );
+    assert_eq!(ziel("ssh.strato.de:22", "").port, Some(22));
+    assert_eq!(ziel("ssh.strato.de:22", "").konto, None);
+    assert_eq!(
+        ziel("ssh.strato.de/~/htdocs", "").startpfad,
+        Startpfad::UnterAnmeldeverzeichnis("htdocs".into())
+    );
+    assert_eq!(
+        ziel("ssh.strato.de/htdocs", "").startpfad,
+        absolut("/htdocs")
+    );
+    assert_eq!(
+        ziel("ssh.strato.de:2222/var/www/", "").startpfad,
+        absolut("/var/www")
+    );
+    for nur_heim in ["host/", "host/~", "host/~/"] {
+        assert_eq!(
+            ziel(nur_heim, "").startpfad,
+            Startpfad::Anmeldeverzeichnis,
+            "{nur_heim}"
+        );
+    }
+
+    let sechs = ziel("[2001:db8::1]:2222/~/a/b", "kai");
+    assert_eq!(sechs.rechner, "2001:db8::1");
+    assert_eq!(sechs.port, Some(2222));
+    assert_eq!(
+        sechs.startpfad,
+        Startpfad::UnterAnmeldeverzeichnis("a/b".into())
+    );
+    assert_eq!(ziel("[::1]", "").rechner, "::1");
+    let ohne_klammer = ziel("fe80::1", "");
+    assert_eq!(
+        (ohne_klammer.rechner.as_str(), ohne_klammer.port),
+        ("fe80::1", None)
+    );
+
+    assert_eq!(fernziel(":22", ""), Err(Adressfehler::RechnerLeer));
+    assert_eq!(fernziel("/htdocs", ""), Err(Adressfehler::RechnerLeer));
+    for falsch in ["-oProxyCommand=x", "kai@host", "ho st", "[::1", "[::1]x"] {
+        assert!(
+            matches!(fernziel(falsch, ""), Err(Adressfehler::RechnerUngueltig(_))),
+            "{falsch}"
+        );
+    }
+    for port in ["0", "65536", "x", ""] {
+        assert_eq!(
+            fernziel(&format!("host:{port}"), ""),
+            Err(Adressfehler::PortUngueltig(port.into())),
+            "{port}"
+        );
+    }
+
+    // Derselbe Weg ueber das Verbindungsziel, das Blatt und Klick fragen.
+    assert_eq!(
+        verbindungsziel("sftp", "ssh.strato.de:22", "stalmann.org"),
+        Ok(Verbindungsziel::Sftp(ziel(
+            "ssh.strato.de:22",
+            "stalmann.org"
+        )))
+    );
+    assert_eq!(
+        verbindungsziel("sftp", "host:99999", ""),
+        Err(Zielfehler::Fernadresse(Adressfehler::PortUngueltig(
+            "99999".into()
+        )))
+    );
+    assert!(
+        Zielfehler::Fernadresse(Adressfehler::RechnerUngueltig("kai@host".into()))
+            .meldung()
+            .contains("kai@host")
+    );
+
+    // Die Kennung schreibt den Rechner klein und zeigt Konto und Port.
+    let kennung = ziel("SSH.Strato.de:2222", "kai").kennung();
+    assert_eq!(kennung.rechner(), "ssh.strato.de");
+    assert_eq!(kennung.to_string(), "kai@ssh.strato.de:2222");
+    assert_eq!(sechs.kennung().to_string(), "kai@[2001:db8::1]:2222");
+}
+
+/// Der Aufruf von `ssh` fuer beide Anmeldungen: absolute Programmpfade, die
+/// festen Optionen, `--` unmittelbar vor dem Rechner, `sftp` als letztes
+/// Argument. Mit Passwort tragen Argumente und Umgebung allein die Pfade von
+/// Socket und Programm, ohne Passwort gar keine Umgebung.
+///
+/// **Was sie nicht sieht, und warum das genuegt:** ob ein Passwort durch
+/// einen anderen Weg in den Aufruf kaeme. `ssh_plan` bekommt keines, die
+/// Signatur nimmt allein Ziel und Anmeldung, und die Anmeldung traegt zwei
+/// Pfade; die Probe haelt deshalb die ganze Liste fest und nicht nur das
+/// Fehlen eines Wortes.
+#[test]
+fn der_ssh_aufruf_traegt_die_festen_optionen_und_nie_ein_passwort() {
+    let ziel = fernziel("ssh.strato.de:22/~/htdocs", "stalmann.org").expect("ein Ziel");
+    let feste = [
+        "StrictHostKeyChecking=yes",
+        "ConnectTimeout=10",
+        "ServerAliveInterval=15",
+        "ServerAliveCountMax=3",
+        "ForwardAgent=no",
+        "ForwardX11=no",
+        "ClearAllForwardings=yes",
+        "PermitLocalCommand=no",
+        "RemoteCommand=none",
+        "RequestTTY=no",
+    ];
+    let erwartet = |anmeldeoptionen: &[&str]| -> Vec<String> {
+        let mut argumente = Vec::new();
+        for option in feste.iter().chain(anmeldeoptionen) {
+            argumente.push("-o".to_owned());
+            argumente.push((*option).to_owned());
+        }
+        argumente.extend(
+            [
+                "-p",
+                "22",
+                "-l",
+                "stalmann.org",
+                "-s",
+                "--",
+                "ssh.strato.de",
+                "sftp",
+            ]
+            .map(str::to_owned),
+        );
+        argumente
+    };
+    let als_text = |plan: &Kanalplan| -> Vec<String> {
+        plan.argumente
+            .iter()
+            .map(|argument| argument.to_str().expect("UTF-8").to_owned())
+            .collect()
+    };
+
+    let ohne = ssh_plan(&ziel, Anmeldung::OhnePasswort);
+    assert_eq!(ohne.programm, Path::new("/usr/bin/ssh"));
+    assert_eq!(als_text(&ohne), erwartet(&["BatchMode=yes"]));
+    assert!(ohne.umgebung.is_empty());
+
+    let socket = Path::new("/var/folders/xy/T/krk-1-0/s");
+    let programm = Path::new("/Applications/KRK.app/Contents/MacOS/krk");
+    let mit = ssh_plan(
+        &ziel,
+        Anmeldung::Passwort {
+            hilfe: socket,
+            programm,
+        },
+    );
+    assert_eq!(mit.programm, Path::new("/usr/bin/ssh"));
+    assert_eq!(
+        als_text(&mit),
+        erwartet(&[
+            "BatchMode=no",
+            "PubkeyAuthentication=no",
+            "PreferredAuthentications=keyboard-interactive,password",
+            "NumberOfPasswordPrompts=1",
+        ])
+    );
+    let umgebung: Vec<(String, String)> = mit
+        .umgebung
+        .iter()
+        .map(|(name, wert)| {
+            (
+                name.to_str().expect("UTF-8").to_owned(),
+                wert.to_str().expect("UTF-8").to_owned(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        umgebung,
+        [
+            ("SSH_ASKPASS".to_owned(), programm.display().to_string()),
+            ("SSH_ASKPASS_REQUIRE".to_owned(), "force".to_owned()),
+            (HILFE_VARIABLE.to_owned(), socket.display().to_string()),
+        ]
+    );
+    for (_, wert) in &umgebung {
+        assert!(Path::new(wert).is_absolute() || wert == "force", "{wert}");
+    }
+
+    // Ohne Port und Konto fallen `-p` und `-l` weg, und der Rechner steht
+    // weiter unmittelbar hinter `--`.
+    let knapp = ssh_plan(
+        &fernziel("host", "").expect("ein Ziel"),
+        Anmeldung::OhnePasswort,
+    );
+    let knapp = als_text(&knapp);
+    assert!(!knapp.iter().any(|a| a == "-p" || a == "-l"));
+    assert_eq!(&knapp[knapp.len() - 4..], ["-s", "--", "host", "sftp"]);
+}
+
+/// Ein Schluessel fuer die Proben, frisch von `ssh-keygen`, als
+/// `<typ> <schluessel>`.
+fn probeschluessel(ordner: &Pruefordner) -> String {
+    let datei = ordner.unter("schluessel");
+    let stand = Command::new("/usr/bin/ssh-keygen")
+        .args(["-q", "-t", "ed25519", "-N", "", "-C", "probe", "-f"])
+        .arg(&datei)
+        .stdin(Stdio::null())
+        .status()
+        .expect("ssh-keygen laesst sich nicht starten");
+    assert!(stand.success());
+    let oeffentlich = fs::read_to_string(datei.with_extension("pub")).expect("lesen");
+    oeffentlich
+        .split_whitespace()
+        .take(2)
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+/// Ein Rechner, dessen Name in `known_hosts` steht, wird gefunden, unter dem
+/// Namen, den `ssh` fuer Port, Alias und Rechner sucht; auch gehasht.
+#[test]
+fn ein_bekannter_rechner_wird_in_known_hosts_gefunden() {
+    let ordner = Pruefordner::neu("fern-bekannt");
+    let schluessel = probeschluessel(&ordner);
+    let datei = ordner.datei(
+        "known_hosts",
+        format!("example.test {schluessel}\n[example.test]:2222 {schluessel}\n"),
+    );
+    let konfiguration = |port: u16, alias: Option<&str>| Sshkonfiguration {
+        hostname: "example.test".into(),
+        port,
+        hostkeyalias: alias.map(str::to_owned),
+        dateien: vec![datei.clone()],
+    };
+    assert_eq!(suchname(&konfiguration(22, None)), "example.test");
+    assert_eq!(suchname(&konfiguration(2222, None)), "[example.test]:2222");
+    assert_eq!(
+        suchname(&konfiguration(2222, Some("example.test"))),
+        "example.test"
+    );
+    for port in [22, 2222] {
+        let name = suchname(&konfiguration(port, None));
+        assert_eq!(in_datei_bekannt(&name, &datei).ok(), Some(true), "{name}");
+    }
+
+    let gehasht = ordner.datei("gehasht", format!("example.test {schluessel}\n"));
+    let stand = Command::new("/usr/bin/ssh-keygen")
+        .arg("-H")
+        .arg("-f")
+        .arg(&gehasht)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .status()
+        .expect("ssh-keygen -H");
+    assert!(stand.success());
+    assert!(
+        !fs::read_to_string(&gehasht)
+            .expect("lesen")
+            .contains("example.test")
+    );
+    assert_eq!(in_datei_bekannt("example.test", &gehasht).ok(), Some(true));
+
+    // Die Zeilen von `ssh -G`, wie `ssh` 9.9 sie ausgibt.
+    let gelesen = konfiguration_lesen(
+        "user kai\nhostname example.test\nport 2222\n\
+         globalknownhostsfile /etc/ssh/ssh_known_hosts /etc/ssh/ssh_known_hosts2\n\
+         userknownhostsfile ~/.ssh/known_hosts /x/known_hosts2\nhostkeyalias none\n",
+        Some(Path::new("/Users/kai")),
+    )
+    .expect("hostname und port stehen da");
+    assert_eq!(
+        gelesen,
+        Sshkonfiguration {
+            hostname: "example.test".into(),
+            port: 2222,
+            hostkeyalias: None,
+            dateien: [
+                "/Users/kai/.ssh/known_hosts",
+                "/x/known_hosts2",
+                "/etc/ssh/ssh_known_hosts",
+                "/etc/ssh/ssh_known_hosts2",
+            ]
+            .map(PathBuf::from)
+            .to_vec(),
+        }
+    );
+    assert_eq!(konfiguration_lesen("port 22\n", None), None);
+}
+
+/// Ein Rechner, der nicht in `known_hosts` steht, auch nicht unter einem
+/// anderen Port, wird nicht gefunden.
+#[test]
+fn ein_unbekannter_nicht() {
+    let ordner = Pruefordner::neu("fern-unbekannt");
+    let schluessel = probeschluessel(&ordner);
+    let datei = ordner.datei("known_hosts", format!("example.test {schluessel}\n"));
+    for name in ["anders.test", "[example.test]:2222"] {
+        assert_eq!(in_datei_bekannt(name, &datei).ok(), Some(false), "{name}");
+    }
+}
+
+/// Ein Zugang auf dem Server des Systems, ohne `ssh` davor.
+fn serverplan() -> Kanalplan {
+    Kanalplan::nur(SFTP_SERVER)
+}
+
+/// Ein zweiter Aufbau zum selben Server nimmt den lebenden, offenen Zugang
+/// und bereitet nichts vor; ein Aufbau zu einem anderen Server baut einen
+/// zweiten; faellt der letzte Halter, baut der naechste Aufruf neu.
+#[test]
+fn ein_zweiter_aufbau_zum_selben_server_nimmt_den_lebenden_zugang() {
+    im_fernfaden(|pfand| {
+        let register = Zugangsregister::neu();
+        let kennung = Serverkennung::neu("Server.Test", None, Some("kai"));
+        let mut vorbereitet = 0;
+        let mut holen = |kennung: &Serverkennung| {
+            register
+                .zugang(pfand, kennung, "Probe", || {
+                    vorbereitet += 1;
+                    Ok::<_, ()>((serverplan(), ()))
+                })
+                .expect("der Zugang steht")
+        };
+        let (erster, herkunft) = holen(&kennung);
+        assert_eq!(herkunft, Herkunft::Neu);
+        assert_eq!(erster.verbindung(), "Probe");
+        let (zweiter, herkunft) = holen(&Serverkennung::neu("server.test", None, Some("kai")));
+        assert_eq!(herkunft, Herkunft::Lebend);
+        assert!(Arc::ptr_eq(&erster, &zweiter));
+        let (anderer, herkunft) = holen(&Serverkennung::neu("server.test", Some(22), Some("kai")));
+        assert_eq!(herkunft, Herkunft::Neu);
+        assert!(!Arc::ptr_eq(&erster, &anderer));
+        drop((erster, zweiter));
+        let (dritter, herkunft) = holen(&kennung);
+        assert_eq!(herkunft, Herkunft::Neu);
+        drop((dritter, anderer));
+        assert_eq!(vorbereitet, 3);
+    });
+}
+
+/// Ein getrennter Zugang bekommt beim naechsten Aufbau ein neues Gespraech:
+/// derselbe Zugang, ein anderer Kindprozess, wieder offen. Eine Vorbereitung,
+/// die abbricht, laesst ihn getrennt.
+#[test]
+fn ein_getrennter_zugang_bekommt_ein_neues_gespraech() {
+    im_fernfaden(|pfand| {
+        let register = Zugangsregister::neu();
+        let kennung = Serverkennung::neu("server.test", None, None);
+        let (zugang, _) = register
+            .zugang(pfand, &kennung, "Probe", || Ok::<_, ()>((serverplan(), ())))
+            .expect("der Zugang steht");
+        let alter_prozess = zugang.gespraech().prozesskennung();
+        let beendet = Command::new("/bin/kill")
+            .arg("-9")
+            .arg(alter_prozess.to_string())
+            .status()
+            .expect("kill laesst sich nicht starten");
+        assert!(beendet.success());
+        // Der Gespraechsfaden setzt den Zustand, sobald er das Ende liest.
+        let anfang = std::time::Instant::now();
+        while !zugang.getrennt() {
+            assert!(
+                anfang.elapsed() < std::time::Duration::from_secs(10),
+                "die Trennung kommt nicht an"
+            );
+            std::thread::yield_now();
+        }
+
+        let abgebrochen = register.zugang(pfand, &kennung, "Probe", || {
+            Err::<(Kanalplan, ()), _>("nein")
+        });
+        assert!(matches!(
+            abgebrochen,
+            Err(Zugangsfehler::Vorbereitung("nein"))
+        ));
+        assert!(zugang.getrennt(), "ohne Vorbereitung kein neues Gespraech");
+
+        let (wieder, herkunft) = register
+            .zugang(pfand, &kennung, "Probe", || Ok::<_, ()>((serverplan(), ())))
+            .expect("der Zugang steht wieder");
+        assert_eq!(herkunft, Herkunft::NeuVerbunden);
+        assert!(Arc::ptr_eq(&zugang, &wieder));
+        assert!(!zugang.getrennt());
+        assert_ne!(zugang.gespraech().prozesskennung(), alter_prozess);
+        let anmeldeverzeichnis = zugang.anmeldeverzeichnis();
+        assert!(
+            zugang
+                .gespraech()
+                .stat(pfand, anmeldeverzeichnis.als_text())
+                .expect("das neue Gespraech antwortet")
+                .ist_ordner()
+        );
+    });
+}
+
+/// Der Startordner wird auf dem Server aufgeloest: ein vorhandener Ordner
+/// gilt, ein fehlender Pfad und eine Datei fuehren auf das
+/// Anmeldeverzeichnis und nennen den verlangten Pfad. Ein fernen Ort
+/// vergleicht und zeigt sich ueber Kennung und Pfad.
+#[test]
+fn der_startordner_wird_auf_dem_server_aufgeloest() {
+    let ordner = Pruefordner::neu("fern-start");
+    ordner.ordner("htdocs");
+    ordner.datei("datei", "x");
+    let echt = fs::canonicalize(ordner.pfad()).expect("canonicalize");
+    let wurzel = text(&echt);
+    let w = wurzel.clone();
+    let ausgaenge = im_fernfaden(move |pfand| {
+        let wurzel = w;
+        let kennung = Serverkennung::neu("server.test", None, Some("kai"));
+        let zugang =
+            Fernzugang::aufbauen(pfand, kennung, "Probe", &serverplan()).expect("der Zugang steht");
+        let heim = zugang.anmeldeverzeichnis();
+        let start = |pfad: &str| {
+            zugang
+                .startordner(
+                    pfand,
+                    &Startpfad::Absolut(Fernpfad::aus_text(pfad).expect("absolut")),
+                )
+                .expect("eine Antwort")
+        };
+        let ort = |pfad: Fernpfad| FernerOrt {
+            zugang: Arc::clone(&zugang),
+            pfad,
+        };
+        let gefunden = start(&format!("{wurzel}/htdocs"));
+        let fehlt = start(&format!("{wurzel}/fehlt"));
+        let datei = start(&format!("{wurzel}/datei"));
+        let heimstart = zugang
+            .startordner(pfand, &Startpfad::Anmeldeverzeichnis)
+            .expect("eine Antwort");
+        let gleich = ort(gefunden.pfad.clone()) == ort(gefunden.pfad.clone());
+        let ungleich = ort(gefunden.pfad.clone()) == ort(heim.clone());
+        let gezeigt = ort(Fernpfad::aus_text("/a/b").expect("absolut")).to_string();
+        (
+            heim, gefunden, fehlt, datei, heimstart, gleich, ungleich, gezeigt,
+        )
+    });
+    let (heim, gefunden, fehlt, datei, heimstart, gleich, ungleich, gezeigt) = ausgaenge;
+    assert_eq!(gefunden.pfad.als_text(), format!("{wurzel}/htdocs"));
+    assert_eq!(gefunden.fehlte, None);
+    assert_eq!(fehlt.pfad, heim);
+    assert_eq!(fehlt.fehlte, Some(format!("{wurzel}/fehlt")));
+    assert_eq!(datei.pfad, heim);
+    assert_eq!(datei.fehlte, Some(format!("{wurzel}/datei")));
+    assert_eq!(heimstart.pfad, heim);
+    assert!(gleich && !ungleich);
+    assert_eq!(gezeigt, "kai@server.test:/a/b");
 }

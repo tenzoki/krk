@@ -115,6 +115,13 @@ pub enum Text {
     VerbindungAdresseLeer,
     /// `Zielfehler::SchemaInDerAdresse`.
     VerbindungAdresseMitSchema,
+    /// `Adressfehler::RechnerLeer`: vor Port oder Pfad einer sftp-Adresse
+    /// steht kein Rechner.
+    FernRechnerLeer,
+    /// `Adressfehler::RechnerUngueltig`; Platzhalter `{rechner}`.
+    FernRechnerUngueltig,
+    /// `Adressfehler::PortUngueltig`; Platzhalter `{port}`.
+    FernPortUngueltig,
     /// Die erste Zaehlzeile des Default-Profils in der Vorschau.
     ZaehlzeileDateien,
     /// Die zweite Zaehlzeile des Default-Profils.
@@ -1490,7 +1497,8 @@ pub enum Text {
     EditorWartetAufTresorgang,
     /// Die Statuszeile, waehrend eine Verbindung hergestellt wird; `{name}`.
     VerbindungLaeuft,
-    /// Eine Freigabe ist eingehaengt; `{name}`, `{pfad}`.
+    /// Eine Freigabe ist eingehaengt oder eine sftp-Verbindung steht;
+    /// `{name}`, `{pfad}`.
     VerbindungEingehaengt,
     /// NetFS meldet `EEXIST`, und kein passender Einhaengepunkt ist zu finden; `{name}`.
     VerbindungSchonVerbunden,
@@ -1498,9 +1506,9 @@ pub enum Text {
     VerbindungUebergeben,
     /// Das System nimmt die Adresse nicht an; `{name}`.
     VerbindungUebergabeAbgewiesen,
-    /// NetFS weist die Anmeldung ab; `{name}`.
+    /// NetFS oder `ssh` weist die Anmeldung ab; `{name}`.
     VerbindungAnmeldungAbgewiesen,
-    /// NetFS erreicht den Rechner nicht; `{name}`.
+    /// NetFS oder `ssh` erreicht den Rechner nicht; `{name}`.
     VerbindungNichtErreichbar,
     /// NetFS meldet einen anderen Fehler; `{name}`, `{code}`.
     VerbindungFehlercode,
@@ -1508,6 +1516,14 @@ pub enum Text {
     VerbindungUngueltigeUrl,
     /// „Verbindung herstellen“ ohne gewaehlte Verbindung in der Leiste.
     VerbindungKeineAuswahl,
+    /// `ssh` scheitert aus einem anderen Grund als Anmeldung oder
+    /// Erreichbarkeit; `{name}`, `{grund}` (die letzte Zeile von `ssh`).
+    FernVerbindungAbgewiesen,
+    /// `ssh` kennt den Schluessel des Rechners nicht; `{name}`, `{rechner}`.
+    FernRechnerschluesselUnbekannt,
+    /// Der Startordner einer sftp-Verbindung fehlt, gezeigt wird das
+    /// Anmeldeverzeichnis; `{name}`, `{pfad}` (verlangt), `{heim}`.
+    FernStartordnerFehlt,
     /// „Verbinden…“, waehrend der Editor `secrets.txt` ungesichert haelt.
     VerbindenErstSichern,
     /// „Verbinden…“, waehrend der Editor `secrets.txt` mit einer eben
@@ -1549,7 +1565,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 652] = [
+    pub const ALLE: [Text; 658] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1593,6 +1609,9 @@ impl Text {
         Text::VerbindungProtokollUnbekannt,
         Text::VerbindungAdresseLeer,
         Text::VerbindungAdresseMitSchema,
+        Text::FernRechnerLeer,
+        Text::FernRechnerUngueltig,
+        Text::FernPortUngueltig,
         Text::ZaehlzeileDateien,
         Text::ZaehlzeileOrdner,
         Text::ZaehlzeileVerknuepfungen,
@@ -2185,6 +2204,9 @@ impl Text {
         Text::VerbindungFehlercode,
         Text::VerbindungUngueltigeUrl,
         Text::VerbindungKeineAuswahl,
+        Text::FernVerbindungAbgewiesen,
+        Text::FernRechnerschluesselUnbekannt,
+        Text::FernStartordnerFehlt,
         Text::VerbindenErstSichern,
         Text::VerbindenPinNochNichtGesichert,
         Text::VerbindenEditorLaedt,

@@ -63,9 +63,11 @@
 //! `kein_weg_schreibt_klartext_nach_secrets_txt` fuehrt ihn mit Namen.
 //!
 //! **Das Passwort reist hier als `Passwort` und nie als Text**: aus
-//! [`verbindung_vorbereiten`] im [`Verbindungsplan::Einhaengen`], und in
-//! [`anhaengen`] im `Geheimnisentwurf`, den [`Verbindungsentwurf::entwurf`]
-//! baut. Herausgegeben wird es allein in `appkit/verbinden.rs`, an NetFS.
+//! [`verbindung_vorbereiten`] im [`Verbindungsplan::Einhaengen`] und im
+//! [`Verbindungsplan::Sftp`], und in [`anhaengen`] im `Geheimnisentwurf`, den
+//! [`Verbindungsentwurf::entwurf`] baut. Herausgegeben wird es allein an zwei
+//! Stellen: in `appkit/verbinden.rs` an NetFS und in `anmeldehilfe.rs` an
+//! `ssh`.
 //!
 //! **Was die zwei Wege tilgen und was nicht.** Der entschluesselte Text der
 //! Datei steht in [`Entsperrt::stand`] und vorher in den entschluesselten
@@ -84,6 +86,7 @@ use std::path::Path;
 use std::time::Duration;
 
 use krk_core::ablage::atomar;
+use krk_core::fern::Fernziel;
 use krk_core::heimordner::eintraege::geheimnisse::{self, Geheimnisentwurf, Passwort, Suchfehler};
 use krk_core::heimordner::schluesselmerker::Schluesselmerker;
 use krk_core::heimordner::tresor::{
@@ -380,8 +383,10 @@ impl Entwurfsfehler {
 /// leer, Protokoll bekannt, Adresse nicht leer und ohne `://`, kein
 /// Zeilenumbruch in einem Feld.
 ///
-/// **Protokoll und Adresse fragen dieselben zwei Regeln wie der Klick**
-/// (`verbindung::protokoll_pruefen`, `verbindung::adresse_pruefen`). Rein
+/// **Protokoll und Adresse fragen dieselbe Regel wie der Klick**
+/// (`verbindung::verbindungsziel`), bei `sftp` samt der Form der Adresse
+/// (Entscheidung 7 des Plans
+/// `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`). Rein
 /// und ohne Fenster pruefbar, und deshalb ohne die dritte Frage des Klicks,
 /// ob aus der Adresse eine URL entsteht: die stellt Foundation, und das Blatt
 /// fragt sie danach selbst (`appkit::blaetter::verbindung::pruefen`), damit
@@ -401,8 +406,8 @@ pub fn entwurf_pruefen(entwurf: &Verbindungsentwurf) -> Result<(), Entwurfsfehle
     if entwurf.name.trim().is_empty() {
         return Err(Entwurfsfehler::NameLeer);
     }
-    verbindung::protokoll_pruefen(&entwurf.protokoll).map_err(Entwurfsfehler::Ziel)?;
-    verbindung::adresse_pruefen(&entwurf.adresse).map_err(Entwurfsfehler::Ziel)?;
+    verbindung::verbindungsziel(&entwurf.protokoll, &entwurf.adresse, &entwurf.konto)
+        .map_err(Entwurfsfehler::Ziel)?;
     Ok(())
 }
 
@@ -491,6 +496,14 @@ pub enum Verbindungsplan {
         /// `<schema>://[konto@]adresse`.
         url: String,
     },
+    /// SFTP ueber `ssh`; das Passwort geht, wenn es nicht leer ist, ueber die
+    /// Anmeldehilfe an `ssh` (`crate::anmeldehilfe`).
+    Sftp {
+        /// Rechner, Port, Konto und Startordner.
+        ziel: Fernziel,
+        /// Das Passwort; leer heisst, `ssh` meldet sich ohne an.
+        passwort: Passwort,
+    },
 }
 
 /// Warum aus einem Klick keine Verbindung entsteht, bevor NetFS gefragt ist.
@@ -551,6 +564,10 @@ pub fn verbindung_vorbereiten(pfad: &Path, name: &str, mittel: &Oeffnungsmittel)
                     passwort: daten.passwort,
                 },
                 Verbindungsziel::Uebergeben { url } => Verbindungsplan::Uebergeben { url },
+                Verbindungsziel::Sftp(ziel) => Verbindungsplan::Sftp {
+                    ziel,
+                    passwort: daten.passwort,
+                },
             })
         });
     Vorbereitung { zu_merken, plan }

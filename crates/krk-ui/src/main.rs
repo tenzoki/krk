@@ -14,8 +14,9 @@
 //! Sie lautet auch nicht `forbid`, weil `forbid` sich nicht mehr oeffnen
 //! liesse und `appkit` die Ausnahme braucht.
 //!
-//! Achtzehn Module liegen ausdruecklich **neben** `appkit` und nicht darin, und
-//! keines von ihnen nennt eine `objc2`-Kiste. `messmodus` haelt den Ablauf der
+//! Die uebrigen Module liegen ausdruecklich **neben** `appkit` und nicht darin,
+//! und keines von ihnen nennt eine `objc2`-Kiste; wie viele es sind, sagen die
+//! `mod`-Zeilen darunter und keine Zahl an dieser Stelle. `messmodus` haelt den Ablauf der
 //! Fruehmessung. `fenstermodell` haelt das aktive Dateifenster, die
 //! Sichtbarkeit der sechs Bereiche und ihre Breiten. `tabs` haelt die Tabs eines
 //! Dateifensters samt ihrem Inhalt und der Reihenfolge, in der sie gelesen
@@ -70,8 +71,13 @@
 //! Start aus `settings.toml`, erneuert ihn bei F2 und reicht Abschriften des
 //! Griffs an jeden, der fragt. Die Erkennung selbst steht im Kern, in
 //! `krk_core::heimordner`.
+//! `anmeldehilfe` haelt beide Haelften des Weges, auf dem das Passwort einer
+//! sftp-Verbindung an `ssh` kommt: den Socket in KRK und die Hilfsrolle, in
+//! der `ssh` dieses Binaerziel als `SSH_ASKPASS` startet. Die Rolle fragt
+//! `main` als erste Handlung, vor jeder Beruehrung von AppKit und der Sprache.
 
 mod angezeigtedatei;
+mod anmeldehilfe;
 mod appkit;
 mod auffrischung;
 mod belegungsausgabe;
@@ -123,6 +129,12 @@ const MARKE_MENUE_PROTOKOLL: &str = "--menue-protokoll";
 const AUFRUFFEHLER: i32 = 2;
 
 fn main() {
+    // Die Hilfsrolle steht vor allem anderen: startet `ssh` dieses Programm
+    // als `SSH_ASKPASS`, ist das einzige Argument der Abfragetext, und weder
+    // die Befehlszeile noch die Sprache noch AppKit duerfen ihn sehen.
+    if let Some(ausgang) = anmeldehilfe::rolle() {
+        std::process::exit(ausgang);
+    }
     // Unbekannte Marken werden uebergangen und nicht bemaengelt: LaunchServices
     // haengt einem ueber den Finder gestarteten Buendel eigene an. Eine
     // fehlerhafte `--messmodus`-Angabe ist etwas anderes: sie ist genannt, aber

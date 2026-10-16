@@ -3,11 +3,18 @@
 //! `261016-0306_*_plan-secrets-mit-sechs-feldern-schluesselmerker-und-verbindungen.md`).
 //!
 //! ```text
-//!  Hauptfaden                      Faden krk-verbinden
-//!  herstellen(pfad, name, mittel) ──> tresorweg::verbindung_vorbereiten
+//!  Hauptfaden                      Faden krk-verbinden (fern::faden, mit Pfand)
+//!  herstellen(pfad, name, mittel, register)
+//!                                ──> tresorweg::verbindung_vorbereiten
 //!                                       │  Einhaengen: NetFSMountURLSync(url, konto, passwort)
 //!                                       │              EEXIST: Einhaengepunkt suchen
 //!                                       │  Uebergeben: nur die URL
+//!                                       │  Sftp: register.zugang(kennung, …)
+//!                                       │          lebend: nehmen
+//!                                       │          sonst: rechnerschluessel::vorpruefen,
+//!                                       │                 anmeldehilfe::passwort_reichen,
+//!                                       │                 ssh_plan, Gespraech
+//!                                       │        zugang.startordner(startpfad)
 //!                                       v
 //!  fertig(mtm, Verbindungsergebnis) <── DispatchQueue::main()
 //!  uebergeben(url) ──> NSWorkspace.openURL:
@@ -31,16 +38,37 @@
 //! darunter im Kern; was danach auf dem Schirm geschieht, beim
 //! Anwendungsdelegierten.
 //!
-//! # Das Passwort verlaesst KRK allein hier, als Argument von NetFS
+//! # Das Passwort verlaesst KRK an zwei Stellen: hier an NetFS, und an `ssh`
 //!
-//! **Der eine Rufer von `Passwort::preisgeben` steht in [`einhaengen`]**, und
-//! die Probe `das_passwort_wird_allein_an_netfs_preisgegeben` haelt das am
-//! Quelltext der Kisten (Entscheidung 11). Der herausgegebene Text geht
+//! **Ein Rufer von `Passwort::preisgeben` steht in [`einhaengen`], der zweite
+//! in `crate::anmeldehilfe::passwort_reichen`**, und die Probe
+//! `das_passwort_wird_allein_an_netfs_und_ssh_preisgegeben` haelt beide am
+//! Quelltext der Kisten (Entscheidung 11 des Plans der sechs Felder, Entscheid
+//! `261016-1947-darf-das-passwort-einer-verbindung-krk-ausser-an-netfs-auch-an-ssh-gehen.md`).
+//! Der Sftp-Zweig dieser Datei reicht das Passwort als `Passwort` an die
+//! Anmeldehilfe weiter und sieht seinen Text nie. Der herausgegebene Text geht
 //! unmittelbar in ein `NSString` und von dort als Argument `passwd` an
 //! `NetFSMountURLSync`; er steht in keiner Meldung, keiner URL und keinem
 //! Protokoll. Die Uebergabe an das System ([`uebergeben`]) bekommt nie ein
 //! Passwort, denn [`crate::tresorweg::Verbindungsplan::Uebergeben`] traegt
 //! keines.
+//!
+//! # sftp: KRK spricht selbst, und der Hauptfaden wartet auf nichts
+//!
+//! Eine sftp-Verbindung wird kein Einhaengepunkt, sondern ein ferner Ort
+//! (`krk_core::ort::FernerOrt`) auf einem Zugang je Server
+//! (`krk_core::fern::zugang`). **Der Faden `krk-verbinden` startet ueber
+//! `fern::faden` und haelt damit das Pfand**, ohne das keine Anfrage an einen
+//! Server uebersetzt; das gilt fuer jedes Protokoll, die anderen Zweige
+//! uebergehen das Pfand. Das Register der Zugaenge reist als Abschrift seines
+//! Griffs mit; gelesen und geschrieben wird es allein auf diesem Faden.
+//!
+//! **Woran `ssh` scheiterte, liest [`trennungsart`] aus den Zeilen seiner
+//! Fehlerausgabe**, und nur bei Ausgang 255, mit dem `ssh` eigene Fehler
+//! meldet. OpenSSH uebersetzt seine Meldungen nicht, also tragen sie in jeder
+//! Sprache denselben Wortlaut. Das ist eine Bequemlichkeit und keine Zusage:
+//! eine Zeile, die keiner der Listen entspricht, geht unveraendert in die
+//! Statuszeile, und eine falsche Einordnung verliert deshalb nie den Grund.
 //!
 //! **Dieser Weg steht neben und nicht unter der Regel um
 //! `Editormodell::haelt_geheimnisse`.** Jene Regel gilt Editorinhalt; der
@@ -135,9 +163,16 @@ use objc2_foundation::{
     NSURLVolumeURLForRemountingKey, NSVolumeEnumerationOptions, ns_string,
 };
 
+use krk_core::fern::rechnerschluessel::{self, Schluesselstand};
+use krk_core::fern::{
+    Anmeldung, Fernfaden, Fernfehler, Fernziel, Kanalplan, Trennung, Zugangsfehler,
+    Zugangsregister, ssh_plan,
+};
 use krk_core::heimordner::eintraege::geheimnisse::Passwort;
 use krk_core::heimordner::tresor::{Oeffnungsmittel, Schluessel};
+use krk_core::ort::FernerOrt;
 
+use crate::anmeldehilfe::{self, Anmeldehilfe};
 use crate::tresorweg::{self, Verbindungshindernis, Verbindungsplan};
 
 /// `EEXIST` aus `sys/errno.h`: NetFS meldet damit eine schon eingehaengte
@@ -157,6 +192,25 @@ const ANMELDUNG_ABGEWIESEN: [c_int; 6] = [EAUTH, 13, -5997, -5045, -5046, -5999]
 /// `sys/errno.h`: `ENETUNREACH` (51), `ETIMEDOUT` (60), `ECONNREFUSED` (61),
 /// `EHOSTDOWN` (64), `EHOSTUNREACH` (65).
 const NICHT_ERREICHBAR: [c_int; 5] = [51, 60, 61, 64, 65];
+
+/// Der Ausgang, mit dem `ssh` einen eigenen Fehler meldet (`man ssh`, EXIT
+/// STATUS).
+const SSH_EIGENER_FEHLER: i32 = 255;
+
+/// Zeilen, mit denen `ssh` eine abgewiesene Anmeldung meldet.
+const SSH_ANMELDUNG_ABGEWIESEN: [&str; 1] = ["Permission denied"];
+
+/// Zeilen, mit denen `ssh` einen unerreichbaren Rechner meldet; der Wortlaut
+/// ist der von `strerror(3)` und `gai_strerror(3)` hinter dem Rechnernamen.
+const SSH_NICHT_ERREICHBAR: [&str; 7] = [
+    "Could not resolve hostname",
+    "Connection refused",
+    "Connection timed out",
+    "Operation timed out",
+    "No route to host",
+    "Network is unreachable",
+    "Host is down",
+];
 
 #[link(name = "NetFS", kind = "framework")]
 unsafe extern "C" {
@@ -196,6 +250,22 @@ pub enum Verbindungsausgang {
     NichtErreichbar,
     /// Jeder andere Code von NetFS.
     Fehlercode(c_int),
+    /// Eine sftp-Verbindung steht: der ferne Ort des Startordners, und der
+    /// verlangte Startordner, wenn er fehlte und das Anmeldeverzeichnis an
+    /// seine Stelle trat.
+    Fern {
+        /// Der Startordner auf dem Server.
+        ort: FernerOrt,
+        /// Der verlangte Ordner, wenn er fehlte.
+        startordner_fehlte: Option<String>,
+    },
+    /// `ssh` kennt den Rechnerschluessel nicht; der Name, unter dem
+    /// gesucht wurde.
+    RechnerschluesselUnbekannt(String),
+    /// Eine sftp-Verbindung scheiterte aus einem anderen Grund als Anmeldung
+    /// oder Erreichbarkeit; die letzte Zeile von `ssh` oder der Grund des
+    /// Gespraechs.
+    FernAbgewiesen(String),
 }
 
 /// Was der Faden zurueckgibt: den Ausgang und den Schluessel, falls er aus
@@ -220,36 +290,147 @@ pub fn herstellen(
     pfad: PathBuf,
     name: String,
     mittel: Oeffnungsmittel,
+    register: Zugangsregister,
     fertig: impl FnOnce(MainThreadMarker, Verbindungsergebnis) + Send + 'static,
 ) -> io::Result<()> {
-    let _faden = std::thread::Builder::new()
-        .name("krk-verbinden".to_owned())
-        .spawn(move || {
-            let vorbereitung = tresorweg::verbindung_vorbereiten(&pfad, &name, &mittel);
-            drop(mittel);
-            let ausgang = match vorbereitung.plan {
-                Err(hindernis) => Verbindungsausgang::Hindernis(hindernis),
-                Ok(Verbindungsplan::Uebergeben { url }) => Verbindungsausgang::Uebergeben(url),
-                Ok(Verbindungsplan::Einhaengen {
-                    url,
-                    konto,
-                    passwort,
-                }) => einhaengen(&url, konto.as_deref(), passwort),
+    let _faden = krk_core::fern::faden("krk-verbinden".to_owned(), move |pfand| {
+        let vorbereitung = tresorweg::verbindung_vorbereiten(&pfad, &name, &mittel);
+        drop(mittel);
+        let ausgang = match vorbereitung.plan {
+            Err(hindernis) => Verbindungsausgang::Hindernis(hindernis),
+            Ok(Verbindungsplan::Uebergeben { url }) => Verbindungsausgang::Uebergeben(url),
+            Ok(Verbindungsplan::Einhaengen {
+                url,
+                konto,
+                passwort,
+            }) => einhaengen(&url, konto.as_deref(), passwort),
+            Ok(Verbindungsplan::Sftp { ziel, passwort }) => {
+                fern_verbinden(pfand, &register, &name, &ziel, passwort)
+            }
+        };
+        let ergebnis = Verbindungsergebnis {
+            zu_merken: vorbereitung.zu_merken,
+            ausgang,
+        };
+        DispatchQueue::main().exec_async(move || {
+            let Some(mtm) = MainThreadMarker::new() else {
+                // Kann nicht eintreten: die Hauptschlange laeuft auf dem
+                // Hauptfaden. Dieselbe Erwaegung wie in `auswurf`.
+                return;
             };
-            let ergebnis = Verbindungsergebnis {
-                zu_merken: vorbereitung.zu_merken,
-                ausgang,
-            };
-            DispatchQueue::main().exec_async(move || {
-                let Some(mtm) = MainThreadMarker::new() else {
-                    // Kann nicht eintreten: die Hauptschlange laeuft auf dem
-                    // Hauptfaden. Dieselbe Erwaegung wie in `auswurf`.
-                    return;
-                };
-                fertig(mtm, ergebnis);
-            });
-        })?;
+            fertig(mtm, ergebnis);
+        });
+    })?;
     Ok(())
+}
+
+/// Warum die Vorbereitung eines sftp-Aufbaus abbrach, bevor `ssh` startete.
+enum Fernhindernis {
+    /// Der Rechnerschluessel ist unbekannt; der Suchname.
+    Unbekannt(String),
+    /// Eine Frage der Vorpruefung oder der Start der Anmeldehilfe scheiterte.
+    Gescheitert(String),
+}
+
+/// Stellt eine sftp-Verbindung her; laeuft auf dem Faden `krk-verbinden`
+/// (Entscheidungen 3 bis 7 des Plans
+/// `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`).
+///
+/// Ein lebender, offener Zugang zum selben Server wird genommen, ohne
+/// Vorpruefung und ohne dass das Passwort die Datei verlaesst; sonst fragt
+/// [`rechnerschluessel::vorpruefen`], ob `ssh` den Rechner kennt, und erst
+/// dann entsteht mit Passwort die Anmeldehilfe. Sie lebt bis zum Ende des
+/// Aufbaus und faellt dann, gleich wie er ausging.
+fn fern_verbinden(
+    pfand: &Fernfaden,
+    register: &Zugangsregister,
+    name: &str,
+    ziel: &Fernziel,
+    passwort: Passwort,
+) -> Verbindungsausgang {
+    let vorbereiten = move || -> Result<(Kanalplan, Option<Anmeldehilfe>), Fernhindernis> {
+        match rechnerschluessel::vorpruefen(ziel) {
+            Ok(Schluesselstand::Bekannt) => {}
+            Ok(Schluesselstand::Unbekannt { suchname }) => {
+                return Err(Fernhindernis::Unbekannt(suchname));
+            }
+            Err(grund) => return Err(Fernhindernis::Gescheitert(grund)),
+        }
+        if passwort.ist_leer() {
+            return Ok((ssh_plan(ziel, Anmeldung::OhnePasswort), None));
+        }
+        let programm = std::env::current_exe()
+            .map_err(|fehler| Fernhindernis::Gescheitert(fehler.to_string()))?;
+        let hilfe = anmeldehilfe::passwort_reichen(passwort, &anmeldehilfe::hilfeort())
+            .map_err(|fehler| Fernhindernis::Gescheitert(fehler.to_string()))?;
+        let plan = ssh_plan(
+            ziel,
+            Anmeldung::Passwort {
+                hilfe: hilfe.socket(),
+                programm: &programm,
+            },
+        );
+        Ok((plan, Some(hilfe)))
+    };
+    let zugang = match register.zugang(pfand, &ziel.kennung(), name, vorbereiten) {
+        Ok((zugang, _)) => zugang,
+        Err(Zugangsfehler::Vorbereitung(Fernhindernis::Unbekannt(suchname))) => {
+            return Verbindungsausgang::RechnerschluesselUnbekannt(suchname);
+        }
+        Err(Zugangsfehler::Vorbereitung(Fernhindernis::Gescheitert(grund))) => {
+            return Verbindungsausgang::FernAbgewiesen(grund);
+        }
+        Err(Zugangsfehler::Fern(fehler)) => return fernfehlerart(&fehler),
+    };
+    match zugang.startordner(pfand, &ziel.startpfad) {
+        Ok(start) => Verbindungsausgang::Fern {
+            ort: FernerOrt {
+                zugang,
+                pfad: start.pfad,
+            },
+            startordner_fehlte: start.fehlte,
+        },
+        Err(fehler) => fernfehlerart(&fehler),
+    }
+}
+
+/// Die Art eines Fehlers beim sftp-Aufbau. Rein und ohne Netz pruefbar.
+#[must_use]
+fn fernfehlerart(fehler: &Fernfehler) -> Verbindungsausgang {
+    match fehler {
+        Fernfehler::Getrennt(trennung) => trennungsart(trennung),
+        Fernfehler::Status { .. }
+        | Fernfehler::Protokoll(_)
+        | Fernfehler::NichtAngeboten(_)
+        | Fernfehler::Abgebrochen => Verbindungsausgang::FernAbgewiesen(fehler.to_string()),
+    }
+}
+
+/// Die Art einer Trennung beim Aufbau, nach den Zeilen der Fehlerausgabe von
+/// `ssh` (Modulkopf). Ohne passende Zeile, oder wenn nicht `ssh` selbst mit
+/// 255 endete, geht die letzte Zeile oder der Grund weiter.
+#[must_use]
+fn trennungsart(trennung: &Trennung) -> Verbindungsausgang {
+    let traegt = |muster: &[&str]| {
+        trennung
+            .fehlerausgabe
+            .iter()
+            .any(|zeile| muster.iter().any(|teil| zeile.contains(teil)))
+    };
+    if trennung.ausgang == Some(SSH_EIGENER_FEHLER) {
+        if traegt(&SSH_ANMELDUNG_ABGEWIESEN) {
+            return Verbindungsausgang::AnmeldungAbgewiesen;
+        }
+        if traegt(&SSH_NICHT_ERREICHBAR) {
+            return Verbindungsausgang::NichtErreichbar;
+        }
+    }
+    let grund = trennung
+        .fehlerausgabe
+        .last()
+        .cloned()
+        .unwrap_or_else(|| trennung.grund.to_string());
+    Verbindungsausgang::FernAbgewiesen(grund)
 }
 
 /// Haengt den Entwurf auf dem Faden `krk-tresor` an `secrets.txt` an und ruft
@@ -518,8 +699,13 @@ mod tests {
         assert_eq!(gezeigt("smb://nas.local:abc/x"), None);
     }
 
-    /// `Passwort::preisgeben` hat genau einen Rufer, in [`einhaengen`] dieser
-    /// Datei (Akzeptanz (6) von Schritt 6, Entscheidung 11).
+    /// `Passwort::preisgeben` hat genau zwei Rufer: [`einhaengen`] dieser
+    /// Datei, an NetFS (Akzeptanz (6) von Schritt 6, Entscheidung 11), und
+    /// `passwort_reichen` in `anmeldehilfe.rs`, an `ssh` (Entscheid
+    /// `261016-1947-darf-das-passwort-einer-verbindung-krk-ausser-an-netfs-auch-an-ssh-gehen.md`,
+    /// Akzeptanz von Schritt 2 des Plans
+    /// `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`), je
+    /// einmal.
     ///
     /// **Gezaehlt wird ueber jede `.rs`-Datei unter `crates/`, Proben und
     /// Pruefmodule eingeschlossen**: auch eine Probe, die ein Passwort
@@ -534,7 +720,7 @@ mod tests {
     /// zaehlt Nennungen und liest keinen Datenfluss (Modulkopf). Und einen
     /// Weg unter einem anderen Namen, etwa ueber `use … as anders;`.
     #[test]
-    fn das_passwort_wird_allein_an_netfs_preisgegeben() {
+    fn das_passwort_wird_allein_an_netfs_und_ssh_preisgegeben() {
         let name = concat!("preis", "geben");
         let nennungen = |inhalt: &str| -> usize {
             crate::quellbaum::codezeilen(inhalt)
@@ -561,14 +747,29 @@ mod tests {
             })
             .filter(|(_, zahl)| *zahl > 0)
             .collect();
-        assert_eq!(rufer, [("krk-ui/src/appkit/verbinden.rs".to_owned(), 1)]);
-        let quelle = include_str!("verbinden.rs");
-        let rumpf = quelle
-            .split_once("fn einhaengen(")
-            .and_then(|(_, rest)| rest.split_once("\n}\n"))
-            .map(|(rumpf, _)| rumpf)
-            .expect("einhaengen steht im Code");
-        assert!(rumpf.contains(concat!("passwort.preis", "geben()")));
+        assert_eq!(
+            rufer,
+            [
+                ("krk-ui/src/anmeldehilfe.rs".to_owned(), 1),
+                ("krk-ui/src/appkit/verbinden.rs".to_owned(), 1),
+            ]
+        );
+        let rumpf = |quelle: &'static str, kopf: &str| {
+            quelle
+                .split_once(kopf)
+                .and_then(|(_, rest)| rest.split_once("\n}\n"))
+                .map(|(rumpf, _)| rumpf)
+                .unwrap_or_else(|| panic!("{kopf} steht nicht im Code"))
+        };
+        let ruf = concat!("passwort.preis", "geben()");
+        assert!(rumpf(include_str!("verbinden.rs"), "fn einhaengen(").contains(ruf));
+        assert!(
+            rumpf(
+                include_str!("../anmeldehilfe.rs"),
+                "pub fn passwort_reichen("
+            )
+            .contains(ruf)
+        );
 
         // Die Zaehlung selbst: ein Funktionsverweis zaehlt, die Erklaerung
         // und ein laengerer Name nicht.
@@ -600,6 +801,59 @@ mod tests {
         assert!(matches!(
             fehlerart(-128),
             Verbindungsausgang::Fehlercode(-128)
+        ));
+    }
+
+    /// Eine Trennung beim sftp-Aufbau faellt nach den Zeilen von `ssh` in ihre
+    /// Art, aber nur bei Ausgang 255; jede andere traegt die letzte Zeile oder
+    /// den Grund weiter.
+    #[test]
+    fn eine_trennung_von_ssh_faellt_in_ihre_art() {
+        use krk_core::fern::Trennungsgrund;
+        let trennung = |zeilen: &[&str], ausgang: Option<i32>| Trennung {
+            grund: Trennungsgrund::AusgabeEndete,
+            fehlerausgabe: zeilen.iter().map(|zeile| (*zeile).to_owned()).collect(),
+            ausgang,
+        };
+        assert!(matches!(
+            trennungsart(&trennung(
+                &["kai@ssh.example.org: Permission denied (publickey,password)."],
+                Some(255)
+            )),
+            Verbindungsausgang::AnmeldungAbgewiesen
+        ));
+        for zeile in [
+            "ssh: Could not resolve hostname nirgends.test: nodename nor servname provided, or not known",
+            "ssh: connect to host 10.0.0.1 port 22: Operation timed out",
+            "ssh: connect to host localhost port 2: Connection refused",
+        ] {
+            assert!(
+                matches!(
+                    trennungsart(&trennung(&[zeile], Some(255))),
+                    Verbindungsausgang::NichtErreichbar
+                ),
+                "{zeile}"
+            );
+        }
+        match trennungsart(&trennung(&["Host key verification failed."], Some(255))) {
+            Verbindungsausgang::FernAbgewiesen(grund) => {
+                assert_eq!(grund, "Host key verification failed.");
+            }
+            anders => panic!("{anders:?}"),
+        }
+        match trennungsart(&trennung(&["Permission denied"], Some(1))) {
+            Verbindungsausgang::FernAbgewiesen(grund) => assert_eq!(grund, "Permission denied"),
+            anders => panic!("{anders:?}"),
+        }
+        match trennungsart(&trennung(&[], None)) {
+            Verbindungsausgang::FernAbgewiesen(grund) => {
+                assert_eq!(grund, Trennungsgrund::AusgabeEndete.to_string());
+            }
+            anders => panic!("{anders:?}"),
+        }
+        assert!(matches!(
+            fernfehlerart(&Fernfehler::Protokoll("x".to_owned())),
+            Verbindungsausgang::FernAbgewiesen(_)
         ));
     }
 
@@ -668,6 +922,7 @@ mod tests {
             Verbindungsziel::Einhaengen { url, .. } | Verbindungsziel::Uebergeben { url } => {
                 url_aus(&url).expect("eine URL")
             }
+            Verbindungsziel::Sftp(ziel) => panic!("keine URL fuer {ziel:?}"),
         };
         let pfad = |adresse: Retained<NSURL>| adresse.path().map(|pfad| pfad.to_string());
         assert_eq!(

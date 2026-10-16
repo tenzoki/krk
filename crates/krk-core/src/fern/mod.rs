@@ -25,6 +25,12 @@
 //!   Trennung.
 //! - [`faden`](mod@faden) haelt jede Anfrage vom Hauptfaden fern, beim Uebersetzen.
 //! - [`pfad`] rechnet an Pfaden auf dem Server, rein lexikalisch.
+//! - [`adresse`] zerlegt die Adresse einer Verbindung in Rechner, Port, Konto
+//!   und Startordner.
+//! - [`kanal`] rechnet den Aufruf von `ssh` aus und startet ihn.
+//! - [`rechnerschluessel`] fragt vor dem Verbinden, ob `ssh` den Schluessel
+//!   des Rechners kennt.
+//! - [`zugang`] haelt ein Gespraech je Server und baut es neu auf.
 //!
 //! **Die Proben brauchen kein Netz.** `tests/fern.rs` startet
 //! `/usr/libexec/sftp-server` unmittelbar als Kindprozess und spricht mit ihm
@@ -33,14 +39,22 @@
 //! ist der Server des Nutzers: ob er `RENAME` nach dem Entwurf beantwortet,
 //! sagt allein der Test gegen ihn.
 
+pub mod adresse;
 pub mod faden;
 pub mod gespraech;
+pub mod kanal;
 pub mod paket;
 pub mod pfad;
+pub mod rechnerschluessel;
+pub mod zugang;
+
+pub use adresse::{Adressfehler, Fernziel, Serverkennung, Startpfad, fernziel};
 
 pub use faden::{Fernfaden, faden};
 pub use gespraech::{
     Ausstehend, BLOCK, Fernfehler, Gespraech, Handle, OFFENE_LESUNGEN, Trennung, Trennungsgrund,
     Zustand,
 };
+pub use kanal::{Anmeldung, Kanalplan, ssh_plan};
 pub use pfad::Fernpfad;
+pub use zugang::{Fernzugang, Herkunft, Startordner, Zugangsfehler, Zugangsregister};

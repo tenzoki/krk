@@ -69,6 +69,11 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VerbindungAdresseMitSchema => {
             "The address must not contain “://”; the scheme comes from the protocol."
         }
+        Text::FernRechnerLeer => "The address names no host before the port or path.",
+        Text::FernRechnerUngueltig => {
+            "“{rechner}” is not a host name: no whitespace, no “@” and no leading “-”; the account has its own field."
+        }
+        Text::FernPortUngueltig => "“{port}” is not a port; allowed are 1 to 65535.",
         Text::ZaehlzeileDateien => "Files",
         Text::ZaehlzeileOrdner => "Folders",
         Text::ZaehlzeileVerknuepfungen => "Symbolic links",
@@ -951,6 +956,13 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VerbindungFehlercode => "Could not connect “{name}” (error {code}).",
         Text::VerbindungUngueltigeUrl => "The address of “{name}” does not make a valid URL.",
         Text::VerbindungKeineAuswahl => "No connection is selected in the sidebar.",
+        Text::FernVerbindungAbgewiesen => "Could not connect “{name}”: {grund}",
+        Text::FernRechnerschluesselUnbekannt => {
+            "The key of host {rechner} is unknown; “{name}” connects only once it is in known_hosts."
+        }
+        Text::FernStartordnerFehlt => {
+            "“{name}” is connected, but {pfad} is not a folder; showing {heim}."
+        }
         Text::VerbindenErstSichern => {
             "secrets.txt has unsaved changes in the editor; save first, then connect."
         }

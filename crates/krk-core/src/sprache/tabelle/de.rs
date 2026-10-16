@@ -73,6 +73,11 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VerbindungAdresseMitSchema => {
             "Die Adresse darf kein „://“ enthalten; das Schema kommt aus dem Protokoll."
         }
+        Text::FernRechnerLeer => "Vor Port oder Pfad der Adresse steht kein Rechner.",
+        Text::FernRechnerUngueltig => {
+            "„{rechner}“ ist kein Rechnername: kein Leerraum, kein „@“ und kein „-“ am Anfang; das Konto steht in seinem eigenen Feld."
+        }
+        Text::FernPortUngueltig => "„{port}“ ist kein Port; erlaubt sind 1 bis 65535.",
         Text::ZaehlzeileDateien => "Dateien",
         Text::ZaehlzeileOrdner => "Ordner",
         Text::ZaehlzeileVerknuepfungen => "Verknüpfungen",
@@ -993,6 +998,13 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VerbindungFehlercode => "„{name}“ ließ sich nicht verbinden (Fehler {code}).",
         Text::VerbindungUngueltigeUrl => "Aus der Adresse von „{name}“ entsteht keine gültige URL.",
         Text::VerbindungKeineAuswahl => "In der Leiste ist keine Verbindung gewählt.",
+        Text::FernVerbindungAbgewiesen => "„{name}“ ließ sich nicht verbinden: {grund}",
+        Text::FernRechnerschluesselUnbekannt => {
+            "Der Schlüssel des Rechners {rechner} ist unbekannt; „{name}“ verbindet erst, wenn er in known_hosts steht."
+        }
+        Text::FernStartordnerFehlt => {
+            "„{name}“ ist verbunden, aber {pfad} ist kein Ordner; gezeigt wird {heim}."
+        }
         Text::VerbindenErstSichern => {
             "secrets.txt hat im Editor ungesicherte Änderungen; erst sichern, dann verbinden."
         }

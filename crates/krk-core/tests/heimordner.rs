@@ -3977,7 +3977,7 @@ fn jedes_protokoll_hat_schema_weg_und_url() {
         (Protokoll::Http, "http", "http", Weg::Uebergeben),
         (Protokoll::Https, "https", "https", Weg::Uebergeben),
         (Protokoll::Ssh, "ssh", "ssh", Weg::Uebergeben),
-        (Protokoll::Sftp, "sftp", "sftp", Weg::Uebergeben),
+        (Protokoll::Sftp, "sftp", "sftp", Weg::Sftp),
         (Protokoll::Vnc, "vnc", "vnc", Weg::Uebergeben),
     ];
     assert_eq!(
@@ -4008,6 +4008,15 @@ fn jedes_protokoll_hat_schema_weg_und_url() {
                 }
             ),
             Weg::Uebergeben => assert_eq!(ziel, Verbindungsziel::Uebergeben { url }),
+            // Seit dem Arbeitspaket der sftp-Ordner ist das Ziel keine URL,
+            // sondern ein zerlegtes Fernziel; die Zerlegung im Einzelnen
+            // haelt `tests/fern.rs`.
+            Weg::Sftp => assert_eq!(
+                ziel,
+                Verbindungsziel::Sftp(
+                    krk_core::fern::fernziel("host.local/teil", "kai").expect("ein Ziel")
+                )
+            ),
         }
     }
 }

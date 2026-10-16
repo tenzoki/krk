@@ -158,6 +158,9 @@ fn pruefen(entwurf: &Verbindungsentwurf) -> Result<(), Entwurfsfehler> {
         .map_err(Entwurfsfehler::Ziel)?;
     let url = match &ziel {
         Verbindungsziel::Einhaengen { url, .. } | Verbindungsziel::Uebergeben { url } => url,
+        // Eine sftp-Verbindung wird keine URL: ihr Ziel hat der Kern schon
+        // zerlegt und geprueft.
+        Verbindungsziel::Sftp(_) => return Ok(()),
     };
     verbinden::url_aus(url)
         .map(|_| ())

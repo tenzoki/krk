@@ -80,6 +80,7 @@ pub mod git;
 pub mod heimordner;
 pub mod leseprofil;
 pub mod operation;
+pub mod ort;
 pub mod sprache;
 pub mod stapelumbenennen;
 pub mod tasten;

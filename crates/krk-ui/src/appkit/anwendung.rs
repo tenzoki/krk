@@ -283,6 +283,7 @@ use krk_core::ablage::{
     Lesezeichenliste, Sitzung, Sitzungsrecht, Verschiebung, Ziel, Zugang, einstellungen,
     leseprofile, lesezeichen, pfade, werkszustand,
 };
+use krk_core::fern::Zugangsregister;
 use krk_core::heimordner::eintraege::geheimnisse::Suchfehler;
 use krk_core::heimordner::ort::{self, Notizort, Ortsfehler};
 use krk_core::heimordner::schluesselmerker::Schluesselmerker;
@@ -1185,6 +1186,14 @@ pub struct AnwendungsIvars {
     /// ueberschriebe. Gesetzt beim Start eines Fadens, geloescht in seinem
     /// Ausgang auf dem Hauptfaden.
     tresorgang: Cell<bool>,
+    /// Die Zugaenge zu sftp-Servern, je Server einer (Entscheidung 3 des
+    /// Plans `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`).
+    ///
+    /// **Der Hauptfaden haelt allein den Griff** und reicht eine Abschrift an
+    /// den Faden `krk-verbinden`; die Tabelle darin liest und schreibt nur
+    /// dieser Faden, und jede ihrer Methoden verlangt das Pfand eines
+    /// Arbeitsfadens.
+    fernzugaenge: Zugangsregister,
 }
 
 define_class!(
@@ -1619,6 +1628,7 @@ impl Anwendungsdelegierter {
             merker: Rc::new(RefCell::new(Schluesselmerker::neu())),
             ablaufwecker: RefCell::new(None),
             tresorgang: Cell::new(false),
+            fernzugaenge: Zugangsregister::neu(),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
@@ -9038,15 +9048,22 @@ impl Anwendungsdelegierter {
         self.ivars().tresorgang.set(true);
         self.antwort_zeigen(aktiv, &satz(Text::VerbindungLaeuft, &[("name", &name)]));
         let (zurueck_pfad, zurueck_name) = (pfad.clone(), name.clone());
-        let gestartet = verbinden::herstellen(pfad, name.clone(), mittel, move |mtm, ergebnis| {
-            Anwendungsdelegierter::verbindung_einziehen(
-                mtm,
-                zurueck_pfad,
-                zurueck_name,
-                mit_schluessel,
-                ergebnis,
-            );
-        });
+        let register = self.ivars().fernzugaenge.clone();
+        let gestartet = verbinden::herstellen(
+            pfad,
+            name.clone(),
+            mittel,
+            register,
+            move |mtm, ergebnis| {
+                Anwendungsdelegierter::verbindung_einziehen(
+                    mtm,
+                    zurueck_pfad,
+                    zurueck_name,
+                    mit_schluessel,
+                    ergebnis,
+                );
+            },
+        );
         if let Err(fehler) = gestartet {
             self.ivars().tresorgang.set(false);
             let code = fehler.to_string();
@@ -9142,6 +9159,36 @@ impl Anwendungsdelegierter {
             Verbindungsausgang::Fehlercode(code) => satz(
                 Text::VerbindungFehlercode,
                 &[("name", &name), ("code", &code)],
+            ),
+            // Bis der Tab einen fernen Ort zeigen kann (Schritt 3 des Plans
+            // der sftp-Ordner), nennt die Statuszeile ihn allein. Der Ort
+            // faellt am Ende dieses Zweigs; ist er der letzte Halter seines
+            // Zugangs, schliesst der Zugang, ohne zu warten.
+            Verbindungsausgang::Fern {
+                ort,
+                startordner_fehlte: None,
+            } => satz(
+                Text::VerbindungEingehaengt,
+                &[("name", &name), ("pfad", &ort.to_string())],
+            ),
+            Verbindungsausgang::Fern {
+                ort,
+                startordner_fehlte: Some(verlangt),
+            } => satz(
+                Text::FernStartordnerFehlt,
+                &[
+                    ("name", &name),
+                    ("pfad", &verlangt),
+                    ("heim", &ort.to_string()),
+                ],
+            ),
+            Verbindungsausgang::RechnerschluesselUnbekannt(suchname) => satz(
+                Text::FernRechnerschluesselUnbekannt,
+                &[("name", &name), ("rechner", &suchname)],
+            ),
+            Verbindungsausgang::FernAbgewiesen(grund) => satz(
+                Text::FernVerbindungAbgewiesen,
+                &[("name", &name), ("grund", &grund)],
             ),
         };
         selbst.antwort_zeigen(aktiv, &antwort);
@@ -14889,6 +14936,15 @@ mod kontextproben {
     /// den Schreibgang oder die Vorbereitung. Der `stat(2)` steht genau einmal
     /// je Weg.
     ///
+    /// **Seit dem sftp-Weg (Schritt 2 des Plans
+    /// `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`) tragen sie
+    /// auch keinen Prozessstart und keinen Schritt des Aufbaus**: kein
+    /// `Command::`, keine Anmeldehilfe, keine Vorpruefung des
+    /// Rechnerschluessels, kein Aufbau eines Zugangs und keine Frage an das
+    /// Register. Dass ein Aufbau den Hauptfaden nicht erreicht, haelt ohnehin
+    /// das Pfand `Fernfaden` beim Uebersetzen; die Nadeln halten den Rest, der
+    /// ohne Pfand auskommt, etwa den Start von `ssh -G`.
+    ///
     /// **Zwei Ausnahmen sind benannt, und jede steht in genau einem Rumpf
     /// genau einmal:**
     ///
@@ -14930,6 +14986,12 @@ mod kontextproben {
                 concat!("geheimnisse_", "lesen("),
                 concat!("tresorweg::", "anhaengen("),
                 concat!("verbindung_", "vorbereiten("),
+                concat!("Command", "::"),
+                concat!("anmeldehilfe", "::"),
+                concat!("rechnerschluessel", "::"),
+                concat!("Fernzugang", "::"),
+                concat!(".zugang", "("),
+                concat!("ssh_", "plan("),
             ] {
                 assert!(
                     !rumpf.contains(nadel),
