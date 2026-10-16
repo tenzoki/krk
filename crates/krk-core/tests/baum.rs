@@ -349,10 +349,15 @@ fn nur_benannte_dateien_erreichen_das_atomare_schreiben() {
             "krk-core/tests/ablage.rs".to_owned(),
             // Die Markdown-Ausgabe nach ~/Downloads, ausserhalb des Ordners.
             "krk-ui/src/belegungsausgabe.rs".to_owned(),
-            // Der Editor sichert `secrets.txt` als Chiffrat, ausserhalb des
-            // Ablageordners; der Weg nimmt allein ein `Chiffrat` (Schritt 5.4a
-            // der krkhome-Arbeit).
+            // Die Proben des Editors fangen das Bild der Nachbardatei vor dem
+            // `rename` ueber `vorbereiten` ab; der Betriebscode schreibt
+            // `secrets.txt` seit dem 261016 ueber `tresorweg.rs`.
             "krk-ui/src/editormodell.rs".to_owned(),
+            // `secrets.txt` geht als Chiffrat auf die Platte, ausserhalb des
+            // Ablageordners; der Weg nimmt allein ein `Chiffrat` (Schritt 5.4a
+            // der krkhome-Arbeit, herausgehoben in Schritt 5 des Plans der
+            // sechs Felder).
+            "krk-ui/src/tresorweg.rs".to_owned(),
         ],
         "eine andere Datei als die benannten kann das atomare Schreiben erreichen"
     );

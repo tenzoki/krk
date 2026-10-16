@@ -101,6 +101,7 @@ mod quellbaum;
 mod quicknote;
 mod spalten;
 mod tabs;
+mod tresorweg;
 mod vorschaumodell;
 
 /// Die Befehlszeilenmarke, die den Protokollmodus des Ereignisabgriffs

@@ -548,10 +548,12 @@ use objc2::rc::autoreleasepool;
 use objc2_foundation::{NSDate, NSDefaultRunLoopMode};
 
 use krk_core::heimordner::Sonderdatei;
+use krk_core::heimordner::eintraege::geheimnisse::{self, Geheimnisentwurf};
 use krk_core::heimordner::eintraege::{
     self, Aufgaben, Block, Neustand, Notizen, Richtung, Tag, aufgaben, notizen, termine,
 };
-use krk_core::heimordner::tresor::Pin;
+use krk_core::heimordner::schluesselmerker::Schluesselmerker;
+use krk_core::heimordner::tresor::{Oeffnungsmittel, Pin, Schluessel};
 use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
 use krk_core::tasten::Kommando;
 use krk_core::text::{
@@ -560,8 +562,8 @@ use krk_core::text::{
 use krk_core::verzeichnis::Richtung as Sortierrichtung;
 
 use crate::editormodell::{
-    Ansicht, Dateityp, Editormodell, Ladeausgang, Pinform, Pinwechselausgang, Sicherungsausgang,
-    Suchlauf,
+    Ansicht, Dateityp, Editormodell, Geheimnisweg, Ladeausgang, Pinwechselausgang,
+    Sicherungsausgang, Suchlauf, geheimnisweg,
 };
 use crate::heimgriff::{self, Heimgriff};
 use crate::hervorhebung::{
@@ -569,6 +571,7 @@ use crate::hervorhebung::{
 };
 use crate::kommandos::zulaessigkeit::Editorform;
 use crate::quicknote::Rueckkehr;
+use crate::tresorweg;
 
 use super::bereichsleiste::Kommandomelder;
 use super::blaetter::suche::Suchwahl;
@@ -951,7 +954,23 @@ impl Eintragsantwort {
     /// Falsches sagt.
     #[must_use]
     pub fn text(self, art: Eintragsart) -> &'static str {
-        use Eintragsart::{Aufgaben as A, Notizen as N, Termine as T};
+        /// Die Spalte der Tafel unten: eine je Familie von Saetzen.
+        #[derive(Clone, Copy)]
+        enum Satzfamilie {
+            A,
+            N,
+            T,
+        }
+        use Satzfamilie::{A, N, T};
+        // Die Geheimnistabelle antwortet mit den Saetzen der Notiztabelle,
+        // wie bis zum 261016, als sie sich als Notizen zeigte: ein Geheimnis
+        // traegt die Form einer Notiz, und eigene Saetze sagten nichts
+        // anderes. Vollstaendig und ohne Auffangzweig.
+        let art = match art {
+            Eintragsart::Aufgaben => A,
+            Eintragsart::Notizen | Eintragsart::Geheimnisse => N,
+            Eintragsart::Termine => T,
+        };
         let schluessel = match (self, art) {
             (Self::KeineTabelle, A) => Text::EintragKeineAufgabentabelle,
             (Self::KeineTabelle, N) => Text::EintragKeineNotiztabelle,
@@ -1057,7 +1076,9 @@ fn handlung_rechnen(
     let antwort = |antwort| Editormeldung::Eintrag(art, antwort);
     let anzahl = match art {
         Eintragsart::Aufgaben => Aufgaben::lesen(stand).bloecke().len(),
-        Eintragsart::Notizen | Eintragsart::Termine => Notizen::lesen(stand).bloecke().len(),
+        Eintragsart::Notizen | Eintragsart::Termine | Eintragsart::Geheimnisse => {
+            Notizen::lesen(stand).bloecke().len()
+        }
     };
     let gewaehlt = zeile.filter(|stelle| *stelle < anzahl);
     let ohne_auswahl = (antwort(A::KeinEintragGewaehlt), None);
@@ -1066,6 +1087,11 @@ fn handlung_rechnen(
             let neu = match art {
                 Eintragsart::Aufgaben => aufgaben::hinzufuegen(stand, ""),
                 Eintragsart::Notizen => notizen::hinzufuegen(stand, "", ""),
+                // Ein leerer Eintrag in der Grundform, mit allen vier
+                // Feldzeilen (Entscheidung 1 des Plans der sechs Felder).
+                Eintragsart::Geheimnisse => {
+                    geheimnisse::hinzufuegen(stand, &Geheimnisentwurf::default())
+                }
                 Eintragsart::Termine => match heute {
                     Some(heute) => Ok(termine::hinzufuegen(stand, heute)),
                     None => return (antwort(A::HeuteUnbestimmt), None),
@@ -1090,6 +1116,7 @@ fn handlung_rechnen(
             let verschoben = match art {
                 Eintragsart::Aufgaben => aufgaben::verschieben(stand, stelle, richtung),
                 Eintragsart::Notizen => notizen::verschieben(stand, stelle, richtung),
+                Eintragsart::Geheimnisse => geheimnisse::verschieben(stand, stelle, richtung),
                 // Oben beantwortet; die Zeile steht, damit die Unterscheidung
                 // vollstaendig bleibt.
                 Eintragsart::Termine => None,
@@ -1106,6 +1133,7 @@ fn handlung_rechnen(
             let geloescht = gewaehlt.and_then(|stelle| match art {
                 Eintragsart::Aufgaben => aufgaben::loeschen(stand, stelle),
                 Eintragsart::Notizen => notizen::loeschen(stand, stelle),
+                Eintragsart::Geheimnisse => geheimnisse::loeschen(stand, stelle),
                 Eintragsart::Termine => termine::loeschen(stand, stelle),
             });
             match geloescht {
@@ -1597,7 +1625,8 @@ fn quicknotekopf() -> &'static str {
 /// **Rein und ohne Fenster pruefbar.** In der Aufgabentabelle ist es der Text
 /// der Aufgabe, in der Notiztabelle Thema oder Text der Notiz je nach Spalte,
 /// in der Termintabelle Datum oder Text des Termins, und die andere Haelfte
-/// bleibt, wie die Ableitung sie zeigt. Die Zelle nennt eine Stelle im Stand
+/// bleibt, wie die Ableitung sie zeigt. In der Geheimnistabelle ist es das
+/// Feld der Spalte, und der Eintrag geht in die Grundform. Die Zelle nennt eine Stelle im Stand
 /// und keine Zeile des Schirms. `Ok(None)`: kein
 /// Umbau, weil nichts geaendert ist, es den Eintrag nicht gibt oder der Editor
 /// keine Tabelle zeigt.
@@ -1610,9 +1639,15 @@ fn zellenrechnung(
     match form {
         Editorform::Text | Editorform::Quicknote => Ok(None),
         Editorform::Aufgaben => aufgaben::text_aendern(stand, zelle.stelle, text),
-        // Die Geheimnisse tragen die Form der Notizen und rechnen ueber
-        // denselben Kern (Schritt 5.4b).
-        Editorform::Notizen | Editorform::Geheimnisse => {
+        // Die Geheimnisse rechnen je Spalte ueber `geheimnisse::aendern`,
+        // das den beruehrten Eintrag in die Grundform bringt und jeden
+        // anderen Byte fuer Byte laesst (Entscheidungen 1, 2 und 18 des Plans
+        // der sechs Felder).
+        Editorform::Geheimnisse => match eintragsansicht::feld_der_spalte(zelle.spalte) {
+            Some(feld) => geheimnisse::aendern(stand, zelle.stelle, feld, text),
+            None => Ok(None),
+        },
+        Editorform::Notizen => {
             let Some(alt) = Notizen::lesen(stand).notiz(zelle.stelle) else {
                 return Ok(None);
             };
@@ -1647,6 +1682,12 @@ fn zellenrechnung(
 /// Absaetze und richtet sich nach der Notizzelle, die uebernimmt, weil ein
 /// Verwerfen ohne Meldung mehrere Absaetze verloere. Ohne laufende Zelle gilt
 /// die Terminzelle; `zelle_uebernehmen` findet dann keine und tut nichts.
+///
+/// **Die Geheimnistabelle unterscheidet ebenso nach Spalte** (Entscheidung 18
+/// des Plans der sechs Felder): Name, Protokoll, Adresse, Konto und Passwort
+/// sind einzeilig und verwerfen wie die Datumszelle, die Notizen tragen
+/// Absaetze und uebernehmen wie die Notizzelle. Ohne laufende Zelle gilt die
+/// Notizenzelle, aus demselben Grund wie bei den Terminen.
 #[must_use]
 fn esc_regel(form: Editorform, spalte: Option<usize>) -> Editorform {
     match form {
@@ -1654,6 +1695,12 @@ fn esc_regel(form: Editorform, spalte: Option<usize>) -> Editorform {
             Editorform::Aufgaben
         }
         Editorform::Termine => Editorform::Notizen,
+        Editorform::Geheimnisse
+            if spalte.is_some()
+                && spalte != eintragsansicht::mehrzeilige_spalte(Eintragsart::Geheimnisse) =>
+        {
+            Editorform::Aufgaben
+        }
         Editorform::Text
         | Editorform::Aufgaben
         | Editorform::Notizen
@@ -1705,10 +1752,10 @@ enum Tauschschritt {
 /// die Notiztabelle; bis dahin zeigte sie Markdown in der Textflaeche.
 ///
 /// **`secrets.txt` hat seit Schritt 5.4b ihre eigene Form**,
-/// [`Editorform::Geheimnisse`]. Sie zeigt dieselbe Notiztabelle, weil ihre
-/// Eintraege die Form von `notes.txt` tragen ([`eintragsart_der_form`]), und
-/// ist ein eigener Wert, weil der Befehl „PIN ändern" aus Schritt 5.5 allein
-/// in ihr wirkt.
+/// [`Editorform::Geheimnisse`], ein eigener Wert, weil der Befehl „PIN
+/// ändern" aus Schritt 5.5 allein in ihr wirkt. Seit dem 261016 zeigt sie die
+/// Geheimnistabelle mit sechs Spalten ([`eintragsart_der_form`]); bis dahin
+/// zeigte sie die Notiztabelle.
 #[must_use]
 fn editorform(ansicht: Ansicht, typ: Dateityp) -> Editorform {
     match (ansicht, typ) {
@@ -1792,14 +1839,16 @@ fn flaeche_der_form(form: Editorform) -> Flaeche {
 }
 
 /// Die Art der Eintragstabelle, die eine Form zeigt; `None` fuer die
-/// Textflaeche. Die Geheimnisse stehen hier als Notizen: dieselbe Tabelle,
-/// dieselben Spalten, dieselben Meldungen (Schritt 5.4b).
+/// Textflaeche. Die Geheimnisse haben seit dem 261016 ihre eigene Art mit
+/// sechs Spalten (Plan der sechs Felder, Schritt 4); bis dahin standen sie
+/// hier als Notizen.
 #[must_use]
 fn eintragsart_der_form(form: Editorform) -> Option<Eintragsart> {
     match form {
         Editorform::Text | Editorform::Quicknote => None,
         Editorform::Aufgaben => Some(Eintragsart::Aufgaben),
-        Editorform::Notizen | Editorform::Geheimnisse => Some(Eintragsart::Notizen),
+        Editorform::Notizen => Some(Eintragsart::Notizen),
+        Editorform::Geheimnisse => Some(Eintragsart::Geheimnisse),
         Editorform::Termine => Some(Eintragsart::Termine),
     }
 }
@@ -1816,9 +1865,8 @@ fn eintragsart_des_typs(typ: Dateityp) -> Option<Eintragsart> {
     match typ {
         Dateityp::Markdown | Dateityp::Sonstiges => None,
         Dateityp::Eintraege(Sonderdatei::Aufgaben) => Some(Eintragsart::Aufgaben),
-        Dateityp::Eintraege(Sonderdatei::Notizen | Sonderdatei::Geheimnisse) => {
-            Some(Eintragsart::Notizen)
-        }
+        Dateityp::Eintraege(Sonderdatei::Notizen) => Some(Eintragsart::Notizen),
+        Dateityp::Eintraege(Sonderdatei::Geheimnisse) => Some(Eintragsart::Geheimnisse),
         Dateityp::Eintraege(Sonderdatei::Termine) => Some(Eintragsart::Termine),
     }
 }
@@ -1842,7 +1890,9 @@ fn schreibstelle_im_letzten_eintrag(art: Eintragsart, stand: &str) -> usize {
     };
     match art {
         Eintragsart::Aufgaben => stelle(Aufgaben::lesen(stand).bloecke()),
-        Eintragsart::Notizen | Eintragsart::Termine => stelle(Notizen::lesen(stand).bloecke()),
+        Eintragsart::Notizen | Eintragsart::Termine | Eintragsart::Geheimnisse => {
+            stelle(Notizen::lesen(stand).bloecke())
+        }
     }
 }
 
@@ -2026,6 +2076,10 @@ pub type Ausgangsmelder = Box<dyn Fn(Ladeausgang, Oeffnungsherkunft)>;
 /// [`EditorIvars::meldungsmelder`]).
 pub type Meldungsmelder = Box<dyn Fn(Editormeldung)>;
 
+/// Die Senke fuer einen Schluessel aus einer eben geprueften Eingabe (siehe
+/// [`EditorIvars::schluesselmelder`]).
+pub type Schluesselmelder = Box<dyn Fn(Schluessel)>;
+
 /// Was der Editorbereich haelt.
 pub struct EditorIvars {
     /// Die Ansicht, die in die Aufteilung gehaengt wird: Kopf und Bildlauf
@@ -2115,6 +2169,22 @@ pub struct EditorIvars {
     /// PIN-Blatt (Schritt 5.4b der krkhome-Arbeit). Ein Griff und keine
     /// Abschrift, aus demselben Grund wie im Modell.
     heim: Heimgriff,
+    /// Der Schluesselmerker des Prozesses, derselbe `Rc`, den der
+    /// Anwendungsdelegierte haelt (Entscheidung 4 des Plans der sechs
+    /// Felder).
+    ///
+    /// **Hier allein gelesen**, ueber `tresorweg::gemerkter_schluessel` in
+    /// [`Editorbereich::datei_oeffnen`]: gilt ein gemerkter Schluessel und ist
+    /// `secrets.txt` nicht leer, oeffnet sie ohne PIN-Blatt. Geschrieben wird
+    /// er beim Anwendungsdelegierten; ein Schluessel aus einer Eingabe geht
+    /// ueber [`Self::schluesselmelder`] dorthin.
+    merker: Rc<RefCell<Schluesselmerker>>,
+    /// Die Senke fuer einen Schluessel aus einer eben geprueften Eingabe:
+    /// Oeffnen mit PIN, Festlegen, „PIN ändern" (Entscheidung 3 des Plans
+    /// der sechs Felder). Sie fuehrt zu `Anwendungsdelegierter::schluessel_merken`
+    /// und haelt den Delegierten **schwach**; `None`, solange der Aufbau nicht
+    /// so weit ist.
+    schluesselmelder: RefCell<Option<Schluesselmelder>>,
     /// Das laufende Einfaerben, falls eines laeuft (C3).
     ///
     /// Hoechstens eines. Der Editor haelt hoechstens eine Datei und zeigt
@@ -2332,7 +2402,14 @@ impl Editorbereich {
     /// Modell fragt ihn, wenn es eine gelesene Datei uebernimmt, und ordnet
     /// `notes.txt` und `tasks.txt` im erkannten `~/krkhome/` damit als
     /// [`crate::editormodell::Dateityp::Eintraege`] ein.
-    pub fn bauen(mtm: MainThreadMarker, heim: Heimgriff) -> Retained<Self> {
+    ///
+    /// `merker` ist der Schluesselmerker des Prozesses, ebenfalls geteilt;
+    /// der Editorbereich liest ihn allein ([`EditorIvars::merker`]).
+    pub fn bauen(
+        mtm: MainThreadMarker,
+        heim: Heimgriff,
+        merker: Rc<RefCell<Schluesselmerker>>,
+    ) -> Retained<Self> {
         let bereich = Editorsicht::neu(mtm, NSRect::new(NSPoint::ZERO, AUFBAUGROESSE));
         bereich.setAutoresizingMask(
             NSAutoresizingMaskOptions::ViewWidthSizable
@@ -2379,6 +2456,8 @@ impl Editorbereich {
             gezeigt: Cell::new(Flaeche::Textflaeche),
             modell: RefCell::new(Editormodell::neu(heim.clone())),
             heim,
+            merker,
+            schluesselmelder: RefCell::new(None),
             takt: RefCell::new(None),
             melden: RefCell::new(None),
             herkunft: Cell::new(Oeffnungsherkunft::Befehl),
@@ -2716,6 +2795,33 @@ impl Editorbereich {
         *self.ivars().meldungsmelder.borrow_mut() = Some(melden);
     }
 
+    /// Traegt die Senke fuer Schluessel aus einer geprueften Eingabe ein
+    /// (siehe [`EditorIvars::schluesselmelder`]).
+    pub fn schluesselmelder_setzen(&self, melden: Schluesselmelder) {
+        *self.ivars().schluesselmelder.borrow_mut() = Some(melden);
+    }
+
+    /// Reicht einen Schluessel aus einer eben geprueften Eingabe weiter, falls
+    /// das Modell einen haelt (Entscheidung 3 des Plans der sechs Felder).
+    ///
+    /// **Gerufen nach jedem Einzug, der einen bringen kann**: nach dem Laden,
+    /// nach der Antwort auf die Nachfrage aus C4 und nach dem Wechsel der
+    /// PIN. Die Ausleihe des Modells endet, bevor der Melder laeuft.
+    fn schluessel_weiterreichen(&self) {
+        let schluessel = self
+            .ivars()
+            .modell
+            .borrow_mut()
+            .eingegebenen_schluessel_nehmen();
+        let Some(schluessel) = schluessel else {
+            return;
+        };
+        let melden = self.ivars().schluesselmelder.borrow();
+        if let Some(melden) = melden.as_ref() {
+            melden(schluessel);
+        }
+    }
+
     /// Gibt eine Meldung an die Senke, falls jemand zuhoert.
     fn meldung_melden(&self, meldung: Editormeldung) {
         let melden = self.ivars().meldungsmelder.borrow();
@@ -2868,7 +2974,9 @@ impl Editorbereich {
     /// offen, und ihren Grund hat die Pruefung schon gemeldet. Verworfen wird
     /// dort nicht, weil eine Notizzelle mehrere Absaetze tragen kann, die ein
     /// Verwerfen ohne Meldung verloere. Die Tabelle der Geheimnisse folgt
-    /// derselben Regel (C7, Schritt 5.4b).
+    /// seit dem 261016 je Spalte einer der beiden Regeln, wie die Termine
+    /// (Entscheidung 18 des Plans der sechs Felder): die fuenf einzeiligen
+    /// Spalten verwerfen, die Notizen uebernehmen.
     ///
     /// **Die Termintabelle folgt je Spalte einer der beiden Regeln** (T3.9 der
     /// Termine), nach [`esc_regel`]: die Datumszelle ist einzeilig und
@@ -3245,8 +3353,11 @@ impl Editorbereich {
                 Dateityp::Eintraege(Sonderdatei::Aufgaben) => {
                     Zeilen::Aufgaben(eintragsansicht::aufgabenzeilen(modell.stand()))
                 }
-                Dateityp::Eintraege(Sonderdatei::Notizen | Sonderdatei::Geheimnisse) => {
+                Dateityp::Eintraege(Sonderdatei::Notizen) => {
                     Zeilen::Notizen(eintragsansicht::notizzeilen(modell.stand()))
+                }
+                Dateityp::Eintraege(Sonderdatei::Geheimnisse) => {
+                    Zeilen::Geheimnisse(eintragsansicht::geheimniszeilen(modell.stand()))
                 }
                 // Der heutige Tag ueber die eine Stelle im Kern, an der die Uhr
                 // fuer die Termine gelesen wird; allein fuer diese Datei.
@@ -3432,6 +3543,9 @@ impl Editorbereich {
         let sonderdatei =
             heimgriff::lesen(&self.ivars().heim).and_then(|heim| heim.sonderdatei_genau(pfad));
         let haelt_bereits = self.ivars().modell.borrow().haelt_bereits(pfad);
+        // Das Mittel des einen Ladeauftrags unten: keines fuer jede andere
+        // Datei, der gemerkte Schluessel fuer `secrets.txt`, wenn er gilt.
+        let mut mittel = None;
         match oeffnungsweg(herkunft, sonderdatei, haelt_bereits) {
             Oeffnungsweg::Laden => {}
             Oeffnungsweg::Unterlassen => return,
@@ -3441,17 +3555,28 @@ impl Editorbereich {
                 // hinter dem Blatt an.
                 self.ivars().modell.borrow_mut().laden_aufgeben();
                 let groesse = std::fs::metadata(pfad).ok().map(|daten| daten.len());
-                self.melden(Ladeausgang::PinVerlangt {
-                    pfad: pfad.to_path_buf(),
-                    form: Pinform::nach_groesse(groesse),
-                });
-                return;
+                // Ein gemerkter Schluessel oeffnet ohne Blatt, ausser an einer
+                // leeren Datei (Entscheidungen 3 und 6 des Plans der sechs
+                // Felder); gefragt wird er erst hier, damit ein Oeffnen ohne
+                // `secrets.txt` den Merker nicht beruehrt.
+                let gemerkt = tresorweg::gemerkter_schluessel(&self.ivars().merker);
+                match geheimnisweg(groesse, gemerkt) {
+                    Geheimnisweg::PinErfragen(form) => {
+                        self.melden(Ladeausgang::PinVerlangt {
+                            pfad: pfad.to_path_buf(),
+                            form,
+                        });
+                        return;
+                    }
+                    Geheimnisweg::Mittel(gemerkt) => mittel = Some(gemerkt),
+                }
             }
         }
-        // Ohne PIN: fuer jede andere Datei der gewoehnliche Weg, und fuer die
-        // schon gehaltene `secrets.txt` die Abkuerzung `SchonOffen`, denn die
-        // PIN gilt, solange die Datei offen ist.
-        let sofort = self.ivars().modell.borrow_mut().oeffnen(pfad, None);
+        // Ohne Mittel: fuer jede andere Datei der gewoehnliche Weg, und fuer
+        // die schon gehaltene `secrets.txt` die Abkuerzung `SchonOffen`, denn
+        // ihr Schluessel gilt, solange die Datei offen ist. Mit dem gemerkten
+        // Schluessel: `secrets.txt` ohne Blatt.
+        let sofort = self.ivars().modell.borrow_mut().oeffnen(pfad, mittel);
         match sofort {
             Some(ausgang) => self.melden(ausgang),
             None => self.takt_starten(),
@@ -3478,7 +3603,11 @@ impl Editorbereich {
     /// steht, bearbeitet niemand eine.
     pub fn geheimnisse_oeffnen(&self, pfad: &Path, pin: Pin) {
         self.ivars().herkunft.set(Oeffnungsherkunft::Befehl);
-        let sofort = self.ivars().modell.borrow_mut().oeffnen(pfad, Some(pin));
+        let sofort = self
+            .ivars()
+            .modell
+            .borrow_mut()
+            .oeffnen(pfad, Some(Oeffnungsmittel::Pin(pin)));
         match sofort {
             Some(ausgang) => self.melden(ausgang),
             None => self.takt_starten(),
@@ -3680,6 +3809,7 @@ impl Editorbereich {
             self.stand_erneuern(Verlauf::Faellt);
             self.flaeche_waehlen();
         }
+        self.schluessel_weiterreichen();
         self.melden(ausgang);
     }
 
@@ -3765,6 +3895,8 @@ impl Editorbereich {
     /// umgeschluesselt wird allein die Datei.
     fn pinwechsel_einziehen(&self) {
         let ausgang = self.ivars().modell.borrow_mut().pinwechsel_einziehen();
+        // Der neue Schluessel ersetzt den gemerkten, bevor die Meldung geht.
+        self.schluessel_weiterreichen();
         let meldung = match ausgang {
             None => return,
             Some(Pinwechselausgang::Geaendert(pfad)) => Editormeldung::PinGeaendert { pfad },
@@ -3790,6 +3922,7 @@ impl Editorbereich {
             self.stand_erneuern(Verlauf::Faellt);
             self.flaeche_waehlen();
         }
+        self.schluessel_weiterreichen();
         self.melden(ausgang);
     }
 
@@ -5415,6 +5548,8 @@ mod tests {
     use objc2::runtime::{AnyClass, AnyProtocol, Sel};
     use objc2_app_kit::{NSResponder, NSTextInputTraitType, NSWritingToolsBehavior};
     use objc2_foundation::NSNumber;
+
+    use krk_core::heimordner::eintraege::geheimnisse::Feld;
 
     use super::*;
     // Die lesende Seite der Merkmalsfrage bildet denselben Setzernamen wie die
@@ -7891,7 +8026,7 @@ mod tests {
             .find(concat!("self.quicknote_", "verlassen()"))
             .expect("datei_oeffnen verlaesst die Quicknote nicht");
         let modell = rumpf
-            .find(concat!(".oeffnen(pfad, ", "None)"))
+            .find(concat!(".oeffnen(pfad, ", "mittel)"))
             .expect("datei_oeffnen oeffnet nicht mehr ueber das Modell");
         assert!(zelle < abgewiesen && abgewiesen < verlassen && verlassen < modell);
     }
@@ -7951,8 +8086,9 @@ mod tests {
             eintragsart_der_form(Editorform::Notizen),
             Some(Eintragsart::Notizen)
         );
-        // Seit Schritt 5.4b eine eigene Form, in derselben Tabelle und Art
-        // wie die Notizen; die Rohansicht zeigt die Textflaeche.
+        // Seit Schritt 5.4b eine eigene Form in derselben Tabelle, seit dem
+        // 261016 mit eigener Art und sechs Spalten (Plan der sechs Felder,
+        // Schritt 4); die Rohansicht zeigt die Textflaeche.
         let geheimnisse = Dateityp::Eintraege(Sonderdatei::Geheimnisse);
         assert_eq!(
             editorform(Ansicht::Format, geheimnisse),
@@ -7961,7 +8097,7 @@ mod tests {
         assert_eq!(flaeche_der_form(Editorform::Geheimnisse), Flaeche::Tabelle);
         assert_eq!(
             eintragsart_der_form(Editorform::Geheimnisse),
-            Some(Eintragsart::Notizen)
+            Some(Eintragsart::Geheimnisse)
         );
         assert_eq!(editorform(Ansicht::Roh, geheimnisse), Editorform::Text);
         for typ in [Dateityp::Markdown, Dateityp::Sonstiges] {
@@ -8030,7 +8166,7 @@ mod tests {
             .find("oeffnungsweg(herkunft")
             .expect("datei_oeffnen entscheidet den Weg nicht");
         let auftrag = oeffnen
-            .find(".oeffnen(pfad, None)")
+            .find(".oeffnen(pfad, mittel)")
             .expect("datei_oeffnen erteilt keinen Ladeauftrag");
         assert!(
             frage < weg && weg < auftrag,
@@ -8052,6 +8188,20 @@ mod tests {
             .map(|(zweig, _)| zweig)
             .expect("der Zweig des PIN-Bedarfs fehlt");
         assert!(pin.contains("Ladeausgang::PinVerlangt"));
+        // Der gemerkte Schluessel wird allein fuer `secrets.txt` gefragt, im
+        // Zweig des PIN-Bedarfs und vor dem Blatt (Schritt 5d des Plans der
+        // sechs Felder).
+        let merker = pin
+            .find(concat!("tresorweg::gemerkter_", "schluessel("))
+            .expect("der PIN-Bedarf fragt den Merker");
+        assert!(merker < pin.find("Ladeausgang::PinVerlangt").unwrap_or(0));
+        assert_eq!(
+            oeffnen
+                .matches(concat!("gemerkter_", "schluessel("))
+                .count(),
+            1,
+            "der Merker wird einmal gefragt"
+        );
         assert!(
             !pin.contains(".oeffnen("),
             "der PIN-Bedarf erteilt einen Ladeauftrag"
@@ -9743,6 +9893,170 @@ mod tests {
     /// **umgekehrter** Reihenfolge der Datei.
     const TERMINE: &str = "Vorspann\n## 261003\ndrei\n## 261002 09:30\nzwei\n## 261001\neins\n";
 
+    /// Ein Klartext von `secrets.txt` mit einem Eintrag in der Grundform und
+    /// einem des frueheren Formats (Entscheidungen 1 und 2 des Plans der
+    /// sechs Felder).
+    const GEHEIMNISSE: &str = "## NAS\nprotocol: smb\naddress: nas.local/daten\naccount: kai\npassword: geheim\nNur im Buero.\n\n## Alt\nerste Zeile\nzweite Zeile\n";
+
+    /// Schritt 4 des Plans der sechs Felder: die Geheimnistabelle zeigt
+    /// sechs Spalten in der Folge der Felder, ein Eintrag des frueheren
+    /// Formats erscheint mit leeren Feldern und vollstaendigen Notizen, und
+    /// Stelle und Zeile sind dieselbe Zahl, durch die Naht gerechnet.
+    #[test]
+    fn die_geheimnistabelle_zeigt_sechs_spalten_und_alte_eintraege_mit_leeren_feldern() {
+        let zeilen = eintragsansicht::geheimniszeilen(GEHEIMNISSE);
+        assert_eq!(zeilen.len(), 2);
+        let neu = &zeilen[0];
+        for (feld, wert) in [
+            (Feld::Name, "NAS"),
+            (Feld::Protokoll, "smb"),
+            (Feld::Adresse, "nas.local/daten"),
+            (Feld::Konto, "kai"),
+            (Feld::Passwort, "geheim"),
+            (Feld::Notizen, "Nur im Buero."),
+        ] {
+            assert_eq!(neu.feld(feld), wert, "{feld:?}");
+            assert_eq!(
+                neu.wert(eintragsansicht::spalte_des_feldes(feld)),
+                wert,
+                "{feld:?}: die Spalte zeigt das Feld"
+            );
+        }
+        let alt = &zeilen[1];
+        assert_eq!(alt.feld(Feld::Name), "Alt");
+        for feld in [Feld::Protokoll, Feld::Adresse, Feld::Konto, Feld::Passwort] {
+            assert_eq!(alt.feld(feld), "", "{feld:?} ist leer");
+        }
+        assert_eq!(alt.feld(Feld::Notizen), "erste Zeile\nzweite Zeile");
+        assert!(
+            !format!("{zeilen:?}").contains("geheim"),
+            "Debug zeigt das Passwort nicht"
+        );
+
+        let zeilen = Zeilen::from(zeilen);
+        assert_eq!(zeilen.art(), Eintragsart::Geheimnisse);
+        assert_eq!(eintragsansicht::spaltenzahl(Eintragsart::Geheimnisse), 6);
+        assert_eq!(
+            eintragsansicht::mehrzeilige_spalte(Eintragsart::Geheimnisse),
+            Some(eintragsansicht::spalte_des_feldes(Feld::Notizen))
+        );
+        for stelle in 0..2 {
+            assert_eq!(zeilen.zeile_der_stelle(stelle), Some(stelle));
+            assert_eq!(zeilen.stelle_der_zeile(stelle), Some(stelle));
+        }
+        assert_eq!(zeilen.stelle_der_zeile(2), None);
+        assert_eq!(zeilen.zeile_der_stelle(2), None);
+    }
+
+    /// Schritt 4: das Aendern einer Zelle aendert genau ihr Feld, in jeder
+    /// der sechs Spalten, und laesst den anderen Eintrag Byte fuer Byte; ein
+    /// unveraenderter Wert ist kein Umbau.
+    #[test]
+    fn jede_spalte_der_geheimnistabelle_aendert_genau_ihr_feld() {
+        for feld in Feld::ALLE {
+            let spalte = eintragsansicht::spalte_des_feldes(feld);
+            let zelle = Zelle { stelle: 0, spalte };
+            let neustand = zellenrechnung(Editorform::Geheimnisse, GEHEIMNISSE, zelle, "neu")
+                .expect("ein Wert ohne Umbruch ist zulaessig")
+                .expect("ein geaenderter Wert ist ein Umbau");
+            let vorher = eintragsansicht::geheimniszeilen(GEHEIMNISSE);
+            let nachher = eintragsansicht::geheimniszeilen(&neustand.text);
+            for anderes in Feld::ALLE {
+                let erwartet = if anderes == feld {
+                    "neu"
+                } else {
+                    vorher[0].feld(anderes)
+                };
+                assert_eq!(
+                    nachher[0].feld(anderes),
+                    erwartet,
+                    "{feld:?} -> {anderes:?}"
+                );
+            }
+            assert_eq!(nachher[1], vorher[1], "{feld:?}: der andere Eintrag bleibt");
+            assert!(
+                neustand
+                    .text
+                    .ends_with("## Alt\nerste Zeile\nzweite Zeile\n"),
+                "{feld:?}: der andere Eintrag bleibt Byte fuer Byte"
+            );
+            let gleich = vorher[0].feld(feld).to_owned();
+            assert_eq!(
+                zellenrechnung(Editorform::Geheimnisse, GEHEIMNISSE, zelle, &gleich),
+                Ok(None),
+                "{feld:?}: unveraendert ist kein Umbau"
+            );
+        }
+        // Am alten Eintrag schreibt das Aendern die Grundform.
+        let zelle = Zelle {
+            stelle: 1,
+            spalte: eintragsansicht::spalte_des_feldes(Feld::Konto),
+        };
+        let neustand = zellenrechnung(Editorform::Geheimnisse, GEHEIMNISSE, zelle, "kai")
+            .expect("zulaessig")
+            .expect("ein Umbau");
+        assert!(neustand.text.ends_with(
+            "## Alt\nprotocol:\naddress:\naccount: kai\npassword:\nerste Zeile\nzweite Zeile\n"
+        ));
+        // Ein Umbruch in einer einzeiligen Spalte wird abgewiesen.
+        let zelle = Zelle {
+            stelle: 0,
+            spalte: eintragsansicht::spalte_des_feldes(Feld::Adresse),
+        };
+        assert_eq!(
+            zellenrechnung(Editorform::Geheimnisse, GEHEIMNISSE, zelle, "a\nb"),
+            Err(eintraege::Abweisung::UmbruchImGeheimnisfeld)
+        );
+        // `return` schreibt allein in der Notizenspalte einen Umbruch.
+        for feld in Feld::ALLE {
+            let befehl = eintragsansicht::zellenbefehl(
+                Eintragsart::Geheimnisse,
+                eintragsansicht::spalte_des_feldes(feld),
+                sel!(insertNewline:),
+            );
+            let erwartet = if feld == Feld::Notizen {
+                eintragsansicht::Zellenbefehl::Umbruch
+            } else {
+                eintragsansicht::Zellenbefehl::Appkit
+            };
+            assert_eq!(befehl, erwartet, "{feld:?}");
+        }
+    }
+
+    /// Schritt 4: `tab` fuehrt durch alle sechs Spalten und dann in die
+    /// naechste Zeile, `shift+tab` zurueck.
+    #[test]
+    fn tab_fuehrt_durch_die_sechs_spalten_der_geheimnistabelle() {
+        let zeilen = Zeilen::from(eintragsansicht::geheimniszeilen(GEHEIMNISSE));
+        let zelle = |stelle, spalte| Zelle { stelle, spalte };
+        for spalte in 0..5 {
+            assert_eq!(
+                eintragsansicht::naechste_zelle(zelle(0, spalte), true, &zeilen),
+                Some(zelle(0, spalte + 1))
+            );
+            assert_eq!(
+                eintragsansicht::naechste_zelle(zelle(0, spalte + 1), false, &zeilen),
+                Some(zelle(0, spalte))
+            );
+        }
+        assert_eq!(
+            eintragsansicht::naechste_zelle(zelle(0, 5), true, &zeilen),
+            Some(zelle(1, 0))
+        );
+        assert_eq!(
+            eintragsansicht::naechste_zelle(zelle(1, 0), false, &zeilen),
+            Some(zelle(0, 5))
+        );
+        assert_eq!(
+            eintragsansicht::naechste_zelle(zelle(1, 5), true, &zeilen),
+            None
+        );
+        assert_eq!(
+            eintragsansicht::naechste_zelle(zelle(0, 0), false, &zeilen),
+            None
+        );
+    }
+
     /// Der feste Tag der Proben, statt der Uhr.
     fn tag(jahr: u16, monat: u8, tag: u8) -> Tag {
         Tag::neu(jahr, monat, tag).expect("ein Tag im Kalender")
@@ -9944,6 +10258,7 @@ mod tests {
             (Editorform::Aufgaben, AUFGABEN),
             (Editorform::Notizen, NOTIZEN),
             (Editorform::Geheimnisse, NOTIZEN),
+            (Editorform::Geheimnisse, GEHEIMNISSE),
             (Editorform::Termine, TERMINE),
         ] {
             let art = eintragsart_der_form(form).expect("eine Tabellenform");
@@ -10024,6 +10339,14 @@ mod tests {
                 termine::hinzufuegen(TERMINE, heute),
                 "## 261005",
             ),
+            // Ein leeres Geheimnis in der Grundform, alle vier Feldzeilen.
+            (
+                Eintragsart::Geheimnisse,
+                GEHEIMNISSE,
+                geheimnisse::hinzufuegen(GEHEIMNISSE, &Geheimnisentwurf::default())
+                    .expect("ein leerer Eintrag ist zulaessig"),
+                "## ",
+            ),
         ] {
             let (meldung, neustand) =
                 handlung_rechnen(stand, art, Handlung::Hinzufuegen, None, Some(heute));
@@ -10038,8 +10361,16 @@ mod tests {
                 kopf,
                 "{art:?}: die Marke steht am Ende der neuen Kopfzeile"
             );
-            assert!(
-                matches!(&neustand.text[stelle..], "" | "\n"),
+            // Hinter der Marke steht hoechstens der Umbruch; beim Geheimnis
+            // davor noch die vier leeren Feldzeilen der Grundform.
+            let rest = if art == Eintragsart::Geheimnisse {
+                "\nprotocol:\naddress:\naccount:\npassword:"
+            } else {
+                ""
+            };
+            assert_eq!(
+                neustand.text[stelle..].trim_end_matches('\n'),
+                rest,
                 "{art:?}: hinter der Marke steht hoechstens der Umbruch"
             );
 
@@ -10200,12 +10531,26 @@ mod tests {
             Editorform::Notizen
         );
         assert_eq!(esc_regel(Editorform::Termine, None), Editorform::Notizen);
-        for form in [
-            Editorform::Text,
-            Editorform::Aufgaben,
-            Editorform::Notizen,
-            Editorform::Geheimnisse,
-        ] {
+        // Die Geheimnistabelle (Entscheidung 18 des Plans der sechs Felder):
+        // die fuenf einzeiligen Spalten verwerfen, die Notizen uebernehmen.
+        for feld in Feld::ALLE {
+            let spalte = eintragsansicht::spalte_des_feldes(feld);
+            let erwartet = if feld == Feld::Notizen {
+                Editorform::Geheimnisse
+            } else {
+                Editorform::Aufgaben
+            };
+            assert_eq!(
+                esc_regel(Editorform::Geheimnisse, Some(spalte)),
+                erwartet,
+                "{feld:?}"
+            );
+        }
+        assert_eq!(
+            esc_regel(Editorform::Geheimnisse, None),
+            Editorform::Geheimnisse
+        );
+        for form in [Editorform::Text, Editorform::Aufgaben, Editorform::Notizen] {
             for spalte in [None, Some(DATUMSSPALTE), Some(TERMINSPALTE)] {
                 assert_eq!(esc_regel(form, spalte), form, "{form:?} {spalte:?}");
             }

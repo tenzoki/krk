@@ -174,18 +174,22 @@
 //! behandeln ist, und `None`, wenn der Aufrufer nichts zu tun hat und auf den
 //! Faden wartet.
 //!
-//! # `secrets.txt`: gelesen mit PIN, gesichert als Chiffrat
+//! # `secrets.txt`: gelesen mit PIN oder Schluessel, gesichert als Chiffrat
 //!
 //! Seit Schritt 5.4a der krkhome-Arbeit (C7) haelt das Modell neben dem Stand
-//! einen [`Schutz`], und er entscheidet, wie der Stand auf die Platte geht:
+//! einen [`Schutz`], und er entscheidet, wie der Stand auf die Platte geht.
+//! **Lesen und Schreibtyp stehen seit dem 261016 in `crate::tresorweg`**
+//! (Schritt 5 des Plans der sechs Felder), weil der Verbindungsweg dieselbe
+//! Datei liest; dieses Modul ruft sie und uebersetzt:
 //!
 //! ```text
-//!  oeffnen(pfad, pin) ──> secrets.txt? ──nein, ohne PIN──> Faden: datei::oeffnen
-//!                              │                             Schutz::Klartext
-//!                              ├──ja, ohne PIN──> Abgewiesen, kein Faden
-//!                              └──ja, mit PIN───> Faden: leer? neuer_schluessel
-//!                                                      : tresor::oeffnen
-//!                                                 Schutz::Verschluesselt
+//!  oeffnen(pfad, mittel) ──> secrets.txt? ──nein, ohne Mittel──> Faden: datei::oeffnen
+//!                              │                               Schutz::Klartext
+//!                              ├──ja, ohne Mittel──> Abgewiesen, kein Faden
+//!                              └──ja, PIN oder Schluessel──> Faden:
+//!                                      tresorweg::geheimnisse_lesen
+//!                                 Schutz::Verschluesselt (eingegeben? merken)
+//!                                 Schluessel passt nicht? SchluesselAbgewiesen
 //!
 //!  sichern ──> Stempel gleich? ──> Klartext:       secrets.txt? nicht schreiben
 //!                                                  sonst datei::sichern
@@ -193,10 +197,19 @@
 //!                                                  ──> Chiffrat::schreiben
 //! ```
 //!
-//! Abgeleitet wird allein auf dem Arbeitsfaden, beim Oeffnen, und nie beim
-//! Sichern. Die Proben `kein_weg_schreibt_klartext_nach_secrets_txt` und
+//! **Der gemerkte Schluessel** (zehn Minuten ab der Eingabe) kommt als
+//! `Oeffnungsmittel::Schluessel` herein und leitet nicht ab; ob er gilt,
+//! fragt `Editorbereich::datei_oeffnen` und nicht dieses Modul, das den
+//! Merker nicht kennt. Ein Schluessel aus einer eben geprueften Eingabe geht
+//! ueber [`Editormodell::eingegebenen_schluessel_nehmen`] hinaus, ein Oeffnen
+//! mit dem gemerkten nie. Passt der gemerkte nicht, ist der Ausgang
+//! [`Ladeausgang::SchluesselAbgewiesen`], und der Empfaenger verwirft ihn und
+//! fragt nach der PIN (Entscheidung 6).
+//!
+//! Abgeleitet wird allein auf dem Arbeitsfaden, beim Oeffnen mit PIN, und nie
+//! beim Sichern. Die Proben `kein_weg_schreibt_klartext_nach_secrets_txt` und
 //! `die_sperre_fragt_die_sonderdatei_vor_dem_lesen` halten die Wege am
-//! Quelltext; die Faelle, in denen sich die Erkennung zwischen Oeffnen und
+//! Quelltext, und beide lesen dieses Modul und `tresorweg.rs` zusammen; die Faelle, in denen sich die Erkennung zwischen Oeffnen und
 //! Sichern aendert, stehen an [`Editormodell::uebernehmen`] und
 //! [`Editormodell::sichern`]. **Unter einer dritten Schreibweise** (ein
 //! zweiter Verweis anderswo) erkennt der Pfadtext `secrets.txt` nicht; die
@@ -212,10 +225,11 @@
 //! auch er leitet nicht auf dem rufenden Faden ab:
 //!
 //! ```text
-//!  pin_aendern(alte, neue) ──> alte == gehaltene? ──> Faden „krk-pin“: neuer_schluessel
+//!  pin_aendern(alte, neue) ──> Faden „krk-pin“: alte mit Salz des gehaltenen
+//!                             ableiten, == gehaltener? ──> neuer_schluessel(neue)
 //!  pinwechsel_einziehen   ──> Stempel gleich? ──> Platte lesen ──> oeffnen_mit(gehaltener)
 //!                             ──> Chiffrat::verschliessen(neuer) ──> Chiffrat::schreiben
-//!                             ──> Stempel neu, Schutz mit neuem Schluessel und neuer PIN
+//!                             ──> Stempel neu, Schutz mit neuem Schluessel, zu merken
 //! ```
 //!
 //! Umgeschluesselt wird der Stand der Platte und nicht der des Editors; was
@@ -299,14 +313,13 @@ use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread;
 use std::time::{Duration, SystemTime};
 
-use krk_core::ablage::atomar;
-use krk_core::heimordner::tresor::{self, Pin, Schluessel, Tresorfehler};
+use krk_core::heimordner::tresor::{self, Oeffnungsmittel, Pin, Schluessel, Tresorfehler};
 use krk_core::heimordner::{Heimordner, Sonderdatei};
 use krk_core::sprache::{Text, satz, text};
-use krk_core::text::datei::Lesehindernis;
 use krk_core::text::{Abweisung, Treffer, datei, suche};
 
 use crate::heimgriff::{self, Heimgriff};
+use crate::tresorweg::{self, Chiffrat, GEHEIMNISGRENZE, gesperrt};
 
 /// Welche der beiden Ansichten aus C3 die Textflaeche zeigt.
 ///
@@ -562,6 +575,11 @@ struct Geladen {
     ergebnis: Result<Gelesen, Abweisung>,
     /// Der Stempel, **vor** dem Lesen erhoben; siehe [`Ladevorgang::starten`].
     stempel: Option<Stempel>,
+    /// Gesetzt, wenn ein **Schluessel** als Mittel abgewiesen wurde, mit der
+    /// Form, in der danach nach der PIN zu fragen ist (Entscheidung 6 des
+    /// Plans der sechs Felder): er gehoert nicht zur Datei, oder die Datei ist
+    /// leer. Eine falsche PIN setzt es nicht; sie bleibt eine Abweisung.
+    schluessel_abgewiesen: Option<Pinform>,
 }
 
 /// Eine gelesene Datei: der Stand und der Schutz, unter dem er gesichert wird.
@@ -573,6 +591,9 @@ struct Geladen {
 struct Gelesen {
     stand: String,
     schutz: Schutz,
+    /// Ob der Schluessel im Schutz aus einer eben geprueften Eingabe stammt
+    /// (`tresorweg::Entsperrt::eingegeben`); nur dann wird er gemerkt.
+    eingegeben: bool,
 }
 
 /// Wie der gehaltene Stand auf die Platte geht (Schritt 5.4a des Plans der
@@ -584,8 +605,9 @@ struct Gelesen {
 /// gibt es nicht, also kann der Editor keinen Stand halten, dessen Schutz aus
 /// einer anderen Datei stammt.
 ///
-/// Getilgt wird beim Fortwerfen nichts: der Spec sagt kein Tilgen des
-/// Speichers zu, und die Textflaeche haelt den Klartext ohnehin.
+/// **Getilgt wird beim Fortwerfen der Schluessel**, ueber `Drop` von
+/// `tresor::Schluessel`; der Klartext nicht, denn die Textflaeche haelt ihn
+/// ohnehin (Modulkopf von `krk_core::heimordner::tresor`).
 #[derive(Debug, Default)]
 enum Schutz {
     /// Jede Datei ausser `secrets.txt`: gesichert wird der Stand in seiner
@@ -598,12 +620,13 @@ enum Schutz {
     Verschluesselt {
         /// Der Schluessel aus dem Oeffnen oder, bei einer leeren Datei, aus
         /// der neu festgelegten PIN; jede Sicherung verschliesst mit ihm.
+        ///
+        /// **Er gilt, solange die Datei offen ist**, auch ueber die zehn
+        /// Minuten des Schluesselmerkers hinaus (Entscheidung 5 des Plans der
+        /// sechs Felder). Eine PIN haelt der Schutz seit dem 261016 nicht
+        /// mehr: „PIN ändern" vergleicht die alte, indem es sie mit Salz und
+        /// Parametern dieses Schluessels ableitet ([`Editormodell::pin_aendern`]).
         schluessel: Schluessel,
-        /// Die PIN, allein fuer den Vergleich der alten PIN beim Aendern
-        /// ([`Editormodell::pin_aendern`], Schritt 5.5). Nach dem
-        /// Bedrohungsmodell unerheblich, weil der Speicher den Klartext
-        /// ohnehin haelt.
-        pin: Pin,
         /// Ob auf der Platte ein Kopf mit dieser PIN steht: gesetzt, wenn die
         /// Datei nicht leer gelesen wurde oder ein Sichern gelungen ist.
         ///
@@ -623,44 +646,16 @@ enum Schutz {
 ///
 /// **Entschieden wird in [`Editormodell::oeffnen`] und nicht auf dem Faden**:
 /// ob ein Pfad `secrets.txt` im erkannten Heimordner ist, fragt das Modell,
-/// bevor es einen Faden startet, und `secrets.txt` ohne PIN bekommt gar
+/// bevor es einen Faden startet, und `secrets.txt` ohne Mittel bekommt gar
 /// keinen.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 enum Leseauftrag {
     /// Eine gewoehnliche Textdatei, ueber `krk_core::text::datei::oeffnen`.
     Text,
-    /// `secrets.txt` mit der eingegebenen PIN; `datei::oeffnen` wird dafuer
-    /// nie erreicht.
-    Geheimnisse(Pin),
-}
-
-/// Die Bytes, die von einem verschluesselten Stand auf die Platte gehen.
-///
-/// **Ein eigener Typ, damit der Schreibweg fuer `secrets.txt` keinen
-/// Klartext annehmen kann**: [`Chiffrat::schreiben`] nimmt allein diesen Wert,
-/// und er entsteht an genau einer Stelle, in [`Chiffrat::verschliessen`], aus
-/// `tresor::verschliessen`. Das Feld ist privat; die Probe
-/// `kein_weg_schreibt_klartext_nach_secrets_txt` haelt die eine Baustelle.
-#[derive(Debug)]
-struct Chiffrat(Vec<u8>);
-
-impl Chiffrat {
-    /// Der Stand in seiner Sicherungsform, verschlossen mit dem gehaltenen
-    /// Schluessel: frische Nonce, Salz und Parameter aus dem Schluessel,
-    /// **keine Ableitung**. Die Sicherungsform zuerst, damit der Rundlauf
-    /// derselbe ist wie bei `notes.txt` (ein Stand ohne Schlussumbruch kommt
-    /// mit einem zurueck).
-    fn verschliessen(stand: &str, schluessel: &Schluessel) -> Result<Chiffrat, Tresorfehler> {
-        let form = datei::sicherungsform(stand);
-        let bytes = tresor::verschliessen(form.as_bytes(), schluessel)?;
-        Ok(Chiffrat(bytes))
-    }
-
-    /// Der Schreibweg des Alltags: atomar, erst in die Nachbardatei, dann
-    /// `rename`. Die Nachbardatei traegt damit zu keinem Zeitpunkt Klartext.
-    fn schreiben(&self, ziel: &Path) -> io::Result<()> {
-        atomar::schreiben(ziel, &mut self.0.as_slice())
-    }
+    /// `secrets.txt` mit einer eingegebenen PIN oder einem gehaltenen
+    /// Schluessel, ueber `tresorweg::geheimnisse_lesen`; `datei::oeffnen`
+    /// wird dafuer nie erreicht.
+    Geheimnisse(Oeffnungsmittel),
 }
 
 /// Ein laufender Wechsel der PIN: die Ableitung des neuen Schluessels auf
@@ -669,43 +664,73 @@ impl Chiffrat {
 /// **Derselbe Zuschnitt wie [`Ladevorgang`]**: ein Faden je Wechsel, genau
 /// eine Meldung ueber einen `sync_channel(1)`, abgeholt vom selben
 /// Einzugstakt ueber [`Editormodell::pinwechsel_einziehen`]. Auf dem Faden
-/// laeuft allein die Ableitung, [`tresor::neuer_schluessel`] mit frischem Salz
-/// und den Parametern des Codes; gelesen, entschluesselt und geschrieben wird
-/// danach auf dem rufenden Faden, damit der Stand, der umgeschluesselt wird,
-/// der ist, der im Augenblick des Schreibens auf der Platte steht, und nicht
-/// der vor einer halben Sekunde.
+/// laufen allein die zwei Ableitungen: erst die der alten PIN mit Salz und
+/// Parametern des gehaltenen Schluessels, deren Ergebnis mit ihm verglichen
+/// wird, dann die der neuen, [`tresor::neuer_schluessel`] mit frischem Salz
+/// und den Parametern des Codes (Schritt 5c des Plans der sechs Felder).
+/// Gelesen, entschluesselt und geschrieben wird danach auf dem rufenden
+/// Faden, damit der Stand, der umgeschluesselt wird, der ist, der im
+/// Augenblick des Schreibens auf der Platte steht, und nicht der vor einer
+/// halben Sekunde.
 #[derive(Debug)]
 struct Pinwechsel {
-    empfaenger: Receiver<Result<Schluessel, Tresorfehler>>,
+    empfaenger: Receiver<Result<Schluessel, Pinwechselfehler>>,
     /// Die Datei, deren PIN geaendert wird.
     pfad: PathBuf,
-    /// Die neue PIN; sie ersetzt die gehaltene, sobald der neue Kopf steht.
-    neue: Pin,
+}
+
+/// Warum der Faden des PIN-Wechsels keinen neuen Schluessel liefert.
+#[derive(Debug)]
+enum Pinwechselfehler {
+    /// Die alte PIN ergibt mit Salz und Parametern des gehaltenen Schluessels
+    /// einen anderen Schluessel.
+    AlteStimmtNicht,
+    /// Das System versagte unter einer der zwei Ableitungen.
+    Tresor(Tresorfehler),
 }
 
 impl Pinwechsel {
-    /// Startet die Ableitung fuer die neue PIN.
+    /// Startet die zwei Ableitungen: die alte PIN zum Vergleich, die neue
+    /// fuer den neuen Kopf.
+    ///
+    /// **Verglichen wird auf dem Faden und nicht davor**: seit dem 261016
+    /// haelt der Editor keine PIN mehr, sondern allein den Schluessel, und
+    /// die alte PIN ist richtig genau dann, wenn sie mit dessen Salz und
+    /// Parametern denselben Schluessel ergibt. Die Ableitung kostet die halbe
+    /// Sekunde, die auf den Hauptfaden nicht gehoert.
     ///
     /// **Das Startergebnis wird nicht fallengelassen**: ohne Faden kaeme nie
     /// eine Meldung, und der Nutzer bekommt den Grund, statt auf eine Antwort
     /// zu warten, die nicht kommt (`kein_fadenstart_im_baum_wirft_seinen_rueckgabewert_weg`).
-    fn starten(pfad: PathBuf, neue: Pin) -> Result<Self, String> {
+    fn starten(pfad: PathBuf, gehalten: Schluessel, alte: Pin, neue: Pin) -> Result<Self, String> {
         // Tiefe 1 genuegt: der Faden schickt genau eine Meldung.
         let (sender, empfaenger) = sync_channel(1);
         thread::Builder::new()
             .name("krk-pin".to_owned())
             .spawn(move || {
-                let _ = SyncSender::send(&sender, tresor::neuer_schluessel(&neue));
+                let _ = SyncSender::send(&sender, pinwechsel_ableiten(&gehalten, &alte, &neue));
             })
             .map_err(|fehler| {
                 mit_pin_bleibt(Text::PinNichtAbleitbarGrund, &[("fehler", &fehler)])
             })?;
-        Ok(Self {
-            empfaenger,
-            pfad,
-            neue,
-        })
+        Ok(Self { empfaenger, pfad })
     }
+}
+
+/// Die Arbeit des Fadens `krk-pin`: die alte PIN gegen den gehaltenen
+/// Schluessel pruefen, dann den neuen ableiten. Eine falsche alte PIN kostet
+/// damit eine Ableitung und keine zweite.
+fn pinwechsel_ableiten(
+    gehalten: &Schluessel,
+    alte: &Pin,
+    neue: &Pin,
+) -> Result<Schluessel, Pinwechselfehler> {
+    let geprueft = tresor::schluessel_ableiten(alte, gehalten.salz(), gehalten.parameter())
+        .map_err(Pinwechselfehler::Tresor)?;
+    if geprueft != *gehalten {
+        return Err(Pinwechselfehler::AlteStimmtNicht);
+    }
+    tresor::neuer_schluessel(neue).map_err(Pinwechselfehler::Tresor)
 }
 
 /// Wie ein Wechsel der PIN ausgegangen ist (Schritt 5.5).
@@ -731,12 +756,6 @@ fn mit_pin_bleibt(schluessel: Text, werte: &[(&str, &dyn fmt::Display)]) -> Stri
     satz(schluessel, &alle)
 }
 
-/// Die Grenze fuer das Lesen einer `secrets.txt`: die Editorgrenze fuer den
-/// Klartext, dazu der Kopf und die 16 Byte Pruefwert von Poly1305 (Kopftabelle
-/// im Modulkopf von `krk_core::heimordner::tresor`). Mehr kann ein Chiffrat
-/// nicht tragen, dessen Klartext der Editor annimmt.
-const GEHEIMNISGRENZE: u64 = datei::EDITORGRENZE + tresor::KOPFLAENGE as u64 + 16;
-
 /// Der Satz der Statuszeile, wenn `cmd+d` im Editor an `secrets.txt` eine
 /// Textmarke anlegen soll; die Regel steht an
 /// [`Editormodell::textmarke_verweigert`]. Eine Funktion und keine
@@ -746,76 +765,52 @@ pub fn keine_textmarke_in_geheimnissen() -> &'static str {
     text(Text::EditorKeineTextmarkeInGeheimnissen)
 }
 
-/// Eine Abweisung fuer `secrets.txt`, im Wortlaut des Editors: der Pfad,
-/// "laesst sich nicht im Editor oeffnen:" und der Grund.
-///
-/// **`KeinGueltigesZiel` und kein neuer Wert**, weil der Satz passt und die
-/// Behandlung dieselbe ist: der bisherige Stand bleibt, der Grund geht in die
-/// Statuszeile. Fuer eine falsche PIN und ein veraendertes Byte ist der Grund
-/// derselbe, `Oeffnungsfehler::meldung`.
-fn gesperrt(pfad: &Path, grund: String) -> Abweisung {
-    Abweisung::KeinGueltigesZiel {
-        pfad: pfad.to_path_buf(),
-        grund,
-        mangel: false,
-    }
-}
-
 /// Liest eine gewoehnliche Textdatei; die eine Stelle, die dafuer
 /// `krk_core::text::datei::oeffnen` ruft.
 fn text_lesen(pfad: &Path) -> Result<Gelesen, Abweisung> {
     datei::oeffnen(pfad).map(|stand| Gelesen {
         stand,
         schutz: Schutz::Klartext,
+        eingegeben: false,
     })
 }
 
-/// Liest `secrets.txt` mit der PIN und leitet dabei ab; laeuft auf dem
-/// Arbeitsfaden, weil die Ableitung rund eine halbe Sekunde kostet.
+/// Liest `secrets.txt` ueber den einen Weg in `crate::tresorweg` und
+/// macht daraus, was der Editor haelt: Stand und Schutz.
 ///
-/// **Die Leere wird an den gelesenen Bytes entschieden und nicht an einem
-/// `stat(2)` davor**: null Bytes heisst neue Datei, und dann entsteht der
-/// Schluessel aus der eben festgelegten PIN mit frischem Salz. Geschrieben
-/// wird hier nichts; eine leere Datei bleibt leer, bis gesichert wird.
-///
-/// Jeder Fehler ist eine Abweisung mit genau einem Grund: fuer eine falsche PIN
-/// und eine veraenderte Datei derselbe, fuer einen beschaedigten Kopf der
-/// Schaden, fuer ein Versagen des Systems dessen Satz.
-fn geheimnisse_lesen(pfad: &Path, pin: &Pin) -> Result<Gelesen, Abweisung> {
-    let bytes = datei::bis_zur_grenze_lesen(pfad, GEHEIMNISGRENZE).map_err(|hindernis| {
-        let (grund, mangel) = match hindernis {
-            Lesehindernis::ZuGross => (Text::EditorGeheimnisseZuGross, false),
-            Lesehindernis::KeineDatei => (Text::EditorKeineGewoehnlicheDatei, false),
-            Lesehindernis::Deskriptormangel => (Text::EditorGeheimnisseKeinDateizugriff, true),
-            Lesehindernis::Fehler => (Text::EditorGeheimnisseNichtLesbar, false),
-        };
-        Abweisung::KeinGueltigesZiel {
-            pfad: pfad.to_path_buf(),
-            grund: text(grund).to_owned(),
-            mangel,
+/// **Gelesen und entsperrt wird allein in `tresorweg::geheimnisse_lesen`**;
+/// hier wird allein uebersetzt. Ein abgewiesener **Schluessel** traegt die
+/// Form, in der danach nach der PIN gefragt wird (Entscheidung 6 des Plans der
+/// sechs Felder); eine falsche PIN bleibt eine Abweisung wie bisher, und das
+/// Blatt geht nicht wieder auf.
+fn geheimnisse_laden(
+    pfad: &Path,
+    mittel: &Oeffnungsmittel,
+) -> (Result<Gelesen, Abweisung>, Option<Pinform>) {
+    match tresorweg::geheimnisse_lesen(pfad, mittel) {
+        Ok(entsperrt) => (
+            Ok(Gelesen {
+                stand: entsperrt.stand,
+                schutz: Schutz::Verschluesselt {
+                    schluessel: entsperrt.schluessel,
+                    kopf_auf_platte: entsperrt.kopf_auf_platte,
+                },
+                eingegeben: entsperrt.eingegeben,
+            }),
+            None,
+        ),
+        Err(gesperrt) => {
+            let form = if gesperrt.datei_leer {
+                Pinform::Festlegen
+            } else {
+                Pinform::Eingeben
+            };
+            let abgewiesen = (gesperrt.mittel_abgewiesen
+                && matches!(mittel, Oeffnungsmittel::Schluessel(_)))
+            .then_some(form);
+            (Err(gesperrt.abweisung), abgewiesen)
         }
-    })?;
-    let kopf_auf_platte = !bytes.is_empty();
-    let (klartext, schluessel) = if bytes.is_empty() {
-        let schluessel =
-            tresor::neuer_schluessel(pin).map_err(|fehler| gesperrt(pfad, fehler.meldung()))?;
-        (Vec::new(), schluessel)
-    } else {
-        let geoeffnet =
-            tresor::oeffnen(&bytes, pin).map_err(|fehler| gesperrt(pfad, fehler.meldung()))?;
-        (geoeffnet.klartext, geoeffnet.schluessel)
-    };
-    let stand = datei::einlesen(klartext).ok_or_else(|| Abweisung::NichtAlsTextLesbar {
-        pfad: pfad.to_path_buf(),
-    })?;
-    Ok(Gelesen {
-        stand,
-        schutz: Schutz::Verschluesselt {
-            schluessel,
-            pin: *pin,
-            kopf_auf_platte,
-        },
-    })
+    }
 }
 
 /// Ein laufendes Laden einer Datei in den Editor.
@@ -883,11 +878,18 @@ impl Ladevorgang {
             .name("krk-editor".to_owned())
             .spawn(move || {
                 let stempel = Stempel::von_pfad(&fuer_faden);
-                let ergebnis = match auftrag {
-                    Leseauftrag::Text => text_lesen(&fuer_faden),
-                    Leseauftrag::Geheimnisse(pin) => geheimnisse_lesen(&fuer_faden, &pin),
+                let (ergebnis, schluessel_abgewiesen) = match &auftrag {
+                    Leseauftrag::Text => (text_lesen(&fuer_faden), None),
+                    Leseauftrag::Geheimnisse(mittel) => geheimnisse_laden(&fuer_faden, mittel),
                 };
-                let _ = SyncSender::send(&sender, Geladen { ergebnis, stempel });
+                let _ = SyncSender::send(
+                    &sender,
+                    Geladen {
+                        ergebnis,
+                        stempel,
+                        schluessel_abgewiesen,
+                    },
+                );
             });
         if let Err(fehler) = ergebnis {
             // Ohne Faden kommt nie eine Meldung; der Kanal ist zu diesem
@@ -978,6 +980,22 @@ pub enum Ladeausgang {
         /// Festlegen oder eingeben, nach der Groesse der Datei.
         form: Pinform,
     },
+    /// `secrets.txt` sollte mit dem gemerkten Schluessel aufgehen, und er
+    /// oeffnet sie nicht: ein anderer Notizordner, eine von einer zweiten
+    /// Instanz geaenderte PIN, ein veraendertes Byte, oder die Datei ist
+    /// inzwischen leer (Entscheidung 6 des Plans der sechs Felder).
+    ///
+    /// **Nichts hat sich bewegt.** Der Empfaenger verwirft den gemerkten
+    /// Schluessel und zeigt das PIN-Blatt in der genannten Form, wie bei
+    /// [`Self::PinVerlangt`]. Ein eigener Wert und nicht `PinVerlangt`, weil
+    /// allein hier der Merker zu leeren ist, und das ist Sache des einen
+    /// Schreibers beim Anwendungsdelegierten.
+    SchluesselAbgewiesen {
+        /// Die Datei, fuer die gefragt wird.
+        pfad: PathBuf,
+        /// Festlegen fuer eine leere Datei, sonst eingeben.
+        form: Pinform,
+    },
 }
 
 /// In welcher Form das PIN-Blatt fragt (C7).
@@ -1016,6 +1034,36 @@ impl Pinform {
             Some(0) => Pinform::Festlegen,
             Some(_) | None => Pinform::Eingeben,
         }
+    }
+}
+
+/// Womit `secrets.txt` auf einen Befehl hin aufgeht (Schritt 5d des Plans
+/// der sechs Felder); entschieden von [`geheimnisweg`] und befolgt in
+/// `Editorbereich::datei_oeffnen`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Geheimnisweg {
+    /// Mit dem gemerkten Schluessel, ohne Blatt und ohne Ableitung.
+    Mittel(Oeffnungsmittel),
+    /// Erst das PIN-Blatt in der genannten Form.
+    PinErfragen(Pinform),
+}
+
+/// Der Weg zu `secrets.txt`, aus ihrer Groesse und dem gemerkten Schluessel,
+/// falls einer gilt.
+///
+/// **Rein und ohne Fenster pruefbar.** Eine leere Datei geht immer ueber
+/// das Festlegen, auch mit gueltigem Merker, weil eine neue Datei ein frisches
+/// Salz bekommt (Entscheidung 6). Sonst oeffnet ein gemerkter Schluessel ohne
+/// Blatt; ohne einen fragt das Blatt in der Form nach der Groesse. Eine Datei
+/// ohne erhebbare Groesse geht mit dem Schluessel, wenn einer gilt: das Lesen
+/// danach weist sie dann mit seinem eigenen Grund ab, und passt der Schluessel
+/// nicht, fuehrt [`Ladeausgang::SchluesselAbgewiesen`] doch auf das Blatt.
+#[must_use]
+pub fn geheimnisweg(groesse: Option<u64>, gemerkt: Option<Schluessel>) -> Geheimnisweg {
+    match (groesse, gemerkt) {
+        (Some(0), _) => Geheimnisweg::PinErfragen(Pinform::Festlegen),
+        (_, Some(schluessel)) => Geheimnisweg::Mittel(Oeffnungsmittel::Schluessel(schluessel)),
+        (groesse, None) => Geheimnisweg::PinErfragen(Pinform::nach_groesse(groesse)),
     }
 }
 
@@ -1151,6 +1199,17 @@ pub struct Editormodell {
     /// fragt deshalb im Augenblick des Schreibens, ob der Editor die Datei
     /// noch haelt.
     pinwechsel: Option<Pinwechsel>,
+    /// Ein Schluessel aus einer eben geprueften Eingabe, der noch nicht an
+    /// den Schluesselmerker weitergereicht ist (Entscheidung 3 des Plans der
+    /// sechs Felder): aus einem Oeffnen mit PIN, einem Festlegen oder einem
+    /// gelungenen „PIN ändern".
+    ///
+    /// **Abgeholt ueber [`Self::eingegebenen_schluessel_nehmen`]**, vom
+    /// Editorbereich nach jedem Einzug; das Modell kennt den Merker nicht,
+    /// denn ihn schreibt allein der Anwendungsdelegierte. Ein Oeffnen mit
+    /// einem gehaltenen Schluessel setzt das Feld nie, und damit verlaengert
+    /// es keine Frist.
+    zu_merken: Option<Schluessel>,
 }
 
 impl Editormodell {
@@ -1368,19 +1427,21 @@ impl Editormodell {
     /// Uebergang aus der Vorschau, `cmd+e` und jeder kuenftige Weg sie erben,
     /// ohne sie zu kennen (Schritt 5.4a des Plans der krkhome-Arbeit). Gefragt
     /// wird die Erkennung ([`Self::ist_geheimnisdatei`]), **bevor** ein Faden
-    /// startet: ohne `pin` kommt `secrets.txt` sofort als
+    /// startet: ohne `mittel` kommt `secrets.txt` sofort als
     /// [`Ladeausgang::Abgewiesen`] zurueck, ohne dass ein Byte gelesen wurde,
     /// und `krk_core::text::datei::oeffnen` wird fuer sie nie erreicht. Mit
-    /// `pin` liest und leitet der Faden ab ([`geheimnisse_lesen`]). Eine `pin`
-    /// fuer eine andere Datei weist ab, statt sie zu uebergehen: wer eine PIN
-    /// mitgibt, meint eine verschluesselte Datei, und ein stilles Oeffnen im
-    /// Klartext waere die falsche Seite des Irrtums.
+    /// einem Mittel, einer eingegebenen PIN oder seit dem 261016 dem gemerkten
+    /// Schluessel, liest und entsperrt der Faden ueber
+    /// `tresorweg::geheimnisse_lesen`. Ein Mittel fuer eine andere Datei weist
+    /// ab, statt es zu uebergehen: wer eines mitgibt, meint eine
+    /// verschluesselte Datei, und ein stilles Oeffnen im Klartext waere die
+    /// falsche Seite des Irrtums.
     ///
     /// **Die gehaltene Datei bleibt davon unberuehrt**: haelt der Editor
-    /// `secrets.txt` schon, gilt die PIN, solange die Datei offen ist, und die
-    /// Abkuerzung darueber greift vor der Sperre.
+    /// `secrets.txt` schon, gilt ihr Schluessel, solange die Datei offen ist,
+    /// und die Abkuerzung darueber greift vor der Sperre.
     #[must_use]
-    pub fn oeffnen(&mut self, pfad: &Path, pin: Option<Pin>) -> Option<Ladeausgang> {
+    pub fn oeffnen(&mut self, pfad: &Path, mittel: Option<Oeffnungsmittel>) -> Option<Ladeausgang> {
         if self.haelt_bereits(pfad) {
             // Der Nutzer hat die gehaltene Datei verlangt; ein Lesen, das noch
             // laeuft, gehoert damit niemandem mehr. Ohne diese Zeile gehoerten
@@ -1388,7 +1449,7 @@ impl Editormodell {
             self.ladevorgang = None;
             return Some(Ladeausgang::SchonOffen);
         }
-        self.lesen_beginnen(pfad, pin, Uebernahme::MitNachfrage)
+        self.lesen_beginnen(pfad, mittel, Uebernahme::MitNachfrage)
     }
 
     /// Liest die gehaltene Datei neu und ersetzt ihren Stand, auch einen
@@ -1403,11 +1464,12 @@ impl Editormodell {
     /// **Gelesen wird ueber denselben Weg wie beim Oeffnen**, mit derselben
     /// Sperre fuer `secrets.txt` in [`Self::lesen_beginnen`]; allein die
     /// Abkuerzung [`Ladeausgang::SchonOffen`] aus [`Self::oeffnen`] gilt hier
-    /// nicht, denn genau die gehaltene Datei soll neu gelesen werden. Die PIN
-    /// ist die gehaltene: haelt der Editor `secrets.txt` entsperrt, liest und
-    /// leitet der Faden mit ihr ab, und eine von aussen geaenderte PIN weist
-    /// ab wie jedes Oeffnen. Ohne Schluessel geht keine PIN mit, und eine
-    /// `secrets.txt` weist die Sperre dann ab, bevor ein Byte gelesen ist.
+    /// nicht, denn genau die gehaltene Datei soll neu gelesen werden. Das
+    /// Mittel ist der gehaltene Schluessel: haelt der Editor `secrets.txt`
+    /// entsperrt, entschluesselt der Faden mit ihm und ohne Ableitung, und eine
+    /// von aussen geaenderte PIN weist ab wie jedes Oeffnen. Ohne Schluessel
+    /// geht kein Mittel mit, und eine `secrets.txt` weist die Sperre dann ab,
+    /// bevor ein Byte gelesen ist.
     ///
     /// **Eine Abweisung laesst den Stand stehen**, samt Abweichung: der Nutzer
     /// verliert seine Aenderungen erst, wenn die Platte sie wirklich ersetzt.
@@ -1417,11 +1479,13 @@ impl Editormodell {
     #[must_use]
     pub fn neu_laden(&mut self) -> Option<Ladeausgang> {
         let pfad = self.pfad.clone()?;
-        let pin = match &self.schutz {
+        let mittel = match &self.schutz {
             Schutz::Klartext => None,
-            Schutz::Verschluesselt { pin, .. } => Some(*pin),
+            Schutz::Verschluesselt { schluessel, .. } => {
+                Some(Oeffnungsmittel::Schluessel(schluessel.clone()))
+            }
         };
-        self.lesen_beginnen(&pfad, pin, Uebernahme::Verwerfend)
+        self.lesen_beginnen(&pfad, mittel, Uebernahme::Verwerfend)
     }
 
     /// Beginnt das Lesen eines Pfades, hinter der Sperre fuer `secrets.txt`.
@@ -1435,12 +1499,12 @@ impl Editormodell {
     fn lesen_beginnen(
         &mut self,
         pfad: &Path,
-        pin: Option<Pin>,
+        mittel: Option<Oeffnungsmittel>,
         uebernahme: Uebernahme,
     ) -> Option<Ladeausgang> {
-        let auftrag = match (self.ist_geheimnisdatei(pfad), pin) {
+        let auftrag = match (self.ist_geheimnisdatei(pfad), mittel) {
             (false, None) => Leseauftrag::Text,
-            (true, Some(pin)) => Leseauftrag::Geheimnisse(pin),
+            (true, Some(mittel)) => Leseauftrag::Geheimnisse(mittel),
             (true, None) => {
                 // Auch hier gehoert ein laufendes Lesen niemandem mehr: der
                 // letzte Befehl des Nutzers galt dieser Datei.
@@ -1532,7 +1596,7 @@ impl Editormodell {
     /// irgendein Feld sich bewegt.
     fn uebernehmen(&mut self, pfad: PathBuf, geladen: Geladen) -> Ladeausgang {
         match geladen.ergebnis {
-            Ok(Gelesen { stand, schutz }) => {
+            Ok(Gelesen { stand, schutz, .. }) => {
                 if matches!(schutz, Schutz::Klartext) && self.ist_geheimnisdatei(&pfad) {
                     return Ladeausgang::Abgewiesen(gesperrt(
                         &pfad,
@@ -1638,6 +1702,28 @@ impl Editormodell {
         match vorgang.empfaenger.try_recv() {
             Ok(geladen) => {
                 self.ladevorgang = None;
+                // Ein Schluessel, der beim Oeffnen nicht passt, fuehrt auf das
+                // PIN-Blatt; beim Neuladen bleibt es die Abweisung wie bisher,
+                // denn dort ist es der gehaltene und nicht der gemerkte.
+                if let (Uebernahme::MitNachfrage, Some(form)) =
+                    (uebernahme, geladen.schluessel_abgewiesen)
+                {
+                    return Some(Ladeausgang::SchluesselAbgewiesen {
+                        pfad: geladener_pfad,
+                        form,
+                    });
+                }
+                // Eine eben gepruefte Eingabe wird gemerkt, sobald sie
+                // geprueft ist, auch wenn die Datei auf die Nachfrage aus C4
+                // wartet: die PIN war richtig, gleich wie der Nutzer antwortet.
+                if let Ok(Gelesen {
+                    schutz: Schutz::Verschluesselt { schluessel, .. },
+                    eingegeben: true,
+                    ..
+                }) = &geladen.ergebnis
+                {
+                    self.zu_merken = Some(schluessel.clone());
+                }
                 Some(match uebernahme {
                     Uebernahme::MitNachfrage => {
                         self.uebernehmen_oder_zurueckhalten(geladener_pfad, geladen)
@@ -1920,11 +2006,13 @@ impl Editormodell {
     /// Beginnt den Wechsel der PIN der gehaltenen `secrets.txt` (C7.15,
     /// Schritt 5.5 des Plans der krkhome-Arbeit).
     ///
-    /// **Die alte PIN wird gegen die gehaltene verglichen**, bevor irgendetwas
-    /// anlaeuft; eine falsche weist ab, und nichts ist geschehen. Dann startet
-    /// die Ableitung des neuen Schluessels auf einem benannten Faden
-    /// ([`Pinwechsel`]), mit frischem Salz und den Parametern des Codes, also
-    /// auch mit angehobenen
+    /// **Die alte PIN wird auf dem Faden gegen den gehaltenen Schluessel
+    /// geprueft** (Schritt 5c des Plans der sechs Felder): abgeleitet mit
+    /// dessen Salz und Parametern, muss sie denselben Schluessel ergeben. Eine
+    /// falsche weist mit dem bisherigen Satz ab, als
+    /// [`Pinwechselausgang::Gescheitert`], und geschrieben ist nichts. Dann
+    /// leitet derselbe Faden den neuen Schluessel ab ([`Pinwechsel`]), mit
+    /// frischem Salz und den Parametern des Codes, also auch mit angehobenen
     /// (`260926-0050_*_zieht-jede-sicherung-von-secrets-txt-ein-neues-salz-wenn-das-eine-halbe-sekunde-je-cmd-s-kostet.md`,
     /// Moeglichkeit 3). Den Ausgang holt [`Self::pinwechsel_einziehen`] ab.
     ///
@@ -1936,16 +2024,13 @@ impl Editormodell {
         let Some(pfad) = self.pfad.clone() else {
             return Err(mit_pin_bleibt(Text::PinKeineDatei, &[]));
         };
-        let Schutz::Verschluesselt { pin, .. } = &self.schutz else {
+        let Schutz::Verschluesselt { schluessel, .. } = &self.schutz else {
             return Err(mit_pin_bleibt(
                 Text::PinNichtVerschluesselt,
                 &[("pfad", &pfad.display())],
             ));
         };
-        if *pin != alte {
-            return Err(mit_pin_bleibt(Text::PinAlteStimmtNicht, &[]));
-        }
-        self.pinwechsel = Some(Pinwechsel::starten(pfad, neue)?);
+        self.pinwechsel = Some(Pinwechsel::starten(pfad, schluessel.clone(), alte, neue)?);
         Ok(())
     }
 
@@ -1953,6 +2038,17 @@ impl Editormodell {
     #[must_use]
     pub fn pin_wechselt(&self) -> bool {
         self.pinwechsel.is_some()
+    }
+
+    /// Nimmt den Schluessel aus einer eben geprueften Eingabe heraus, falls
+    /// einer wartet; danach wartet keiner mehr.
+    ///
+    /// **Der eine Weg eines Schluessels aus dem Modell zum Schluesselmerker.**
+    /// Der Editorbereich fragt nach jedem Einzug und reicht ihn ueber seinen
+    /// Melder an den Anwendungsdelegierten, der allein den Merker schreibt.
+    #[must_use]
+    pub fn eingegebenen_schluessel_nehmen(&mut self) -> Option<Schluessel> {
+        self.zu_merken.take()
     }
 
     /// Holt den Ausgang eines Wechsels der PIN ab und schreibt den neuen Kopf
@@ -1969,9 +2065,10 @@ impl Editormodell {
     /// allein im Speicher, und der Schreibweg nimmt allein ein [`Chiffrat`].
     ///
     /// Danach steht der Stempel neu, damit das naechste Sichern keine fremde
-    /// Aenderung meldet, und der Schutz traegt den neuen Schluessel, die neue
-    /// PIN und `kopf_auf_platte`. Scheitert ein Schritt, bleibt alles, wie es
-    /// war, Platte und Schutz.
+    /// Aenderung meldet, der Schutz traegt den neuen Schluessel und
+    /// `kopf_auf_platte`, und der neue Schluessel wartet auf
+    /// [`Self::eingegebenen_schluessel_nehmen`]. Scheitert ein Schritt, bleibt
+    /// alles, wie es war, Platte und Schutz.
     #[must_use]
     pub fn pinwechsel_einziehen(&mut self) -> Option<Pinwechselausgang> {
         self.pinwechsel_einziehen_ueber(|ziel, chiffrat| chiffrat.schreiben(ziel))
@@ -1995,10 +2092,16 @@ impl Editormodell {
                 )));
             }
         };
-        let Pinwechsel { pfad, neue, .. } = self.pinwechsel.take()?;
+        let Pinwechsel { pfad, .. } = self.pinwechsel.take()?;
         let neuer = match geliefert {
             Ok(neuer) => neuer,
-            Err(fehler) => {
+            Err(Pinwechselfehler::AlteStimmtNicht) => {
+                return Some(Pinwechselausgang::Gescheitert(mit_pin_bleibt(
+                    Text::PinAlteStimmtNicht,
+                    &[],
+                )));
+            }
+            Err(Pinwechselfehler::Tresor(fehler)) => {
                 return Some(Pinwechselausgang::Gescheitert(mit_pin_bleibt(
                     Text::PinGrundBleibt,
                     &[("grund", &fehler.meldung())],
@@ -2009,9 +2112,11 @@ impl Editormodell {
             match self.umschluesseln(&pfad, &neuer, chiffrat_schreiben) {
                 Ok(()) => {
                     self.stempel = Stempel::von_pfad(&pfad);
+                    // Der neue Schluessel ersetzt den gemerkten (Entscheidung
+                    // 3 des Plans der sechs Felder): eine gepruefte Eingabe.
+                    self.zu_merken = Some(neuer.clone());
                     self.schutz = Schutz::Verschluesselt {
                         schluessel: neuer,
-                        pin: neue,
                         kopf_auf_platte: true,
                     };
                     Pinwechselausgang::Geaendert(pfad)
@@ -2076,9 +2181,10 @@ impl Editormodell {
     /// die danach noch eintraefe oder wartete, gehoerte zu einer Datei, die
     /// niemand mehr will.
     ///
-    /// **Der Schutz faellt mit**, samt Schluessel und PIN: die PIN gilt,
-    /// solange die Datei offen ist, und nicht laenger (C7). Getilgt wird der
-    /// Speicher dabei nicht; siehe [`Schutz`].
+    /// **Der Schutz faellt mit**, samt Schluessel: er gilt, solange die Datei
+    /// offen ist (C7), und danach allein der gemerkte beim
+    /// Anwendungsdelegierten, zehn Minuten ab der Eingabe. Getilgt wird der
+    /// Schluessel des Schutzes beim Fallen; siehe [`Schutz`].
     pub fn schliessen(&mut self) {
         self.pfad = None;
         self.stand.clear();
@@ -2329,6 +2435,7 @@ impl Editormodell {
 mod tests {
     use super::*;
     use crate::pruefordner::Pruefordner;
+    use krk_core::ablage::atomar;
 
     /// Wartet, bis der Arbeitsfaden geliefert hat.
     ///
@@ -3759,6 +3866,11 @@ mod tests {
         Pin::aus_eingabe(ziffern).expect("vier Ziffern")
     }
 
+    /// Eine eingegebene PIN als Mittel des Oeffnens.
+    fn mit_pin(ziffern: &str) -> Option<Oeffnungsmittel> {
+        Some(Oeffnungsmittel::Pin(pin(ziffern)))
+    }
+
     /// Wie [`abwarten`], mit einer Schranke fuer die Ableitung: mit den
     /// Parametern des Codes kostet sie rund eine halbe Sekunde, unter der
     /// Last der uebrigen Proben mehr.
@@ -3853,7 +3965,7 @@ mod tests {
         let klartext = format!("## Konto\n{GEHEIM}\n");
         verschlossen_ablegen(&pfad, &klartext, "0417");
 
-        assert_eq!(modell.oeffnen(&pfad, Some(pin("0417"))), None);
+        assert_eq!(modell.oeffnen(&pfad, mit_pin("0417")), None);
         assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
         assert_eq!(modell.stand(), klartext);
         assert_eq!(modell.typ(), Dateityp::Eintraege(Sonderdatei::Geheimnisse));
@@ -3878,7 +3990,7 @@ mod tests {
         verschlossen_ablegen(&geschrieben, &format!("## Konto\n{GEHEIM}\n"), "0417");
         for pfad in [geschrieben.clone(), ziel.join("secrets.txt")] {
             let mut frisch = Editormodell::neu(modell.heim.clone());
-            assert_eq!(frisch.oeffnen(&pfad, Some(pin("0417"))), None);
+            assert_eq!(frisch.oeffnen(&pfad, mit_pin("0417")), None);
             assert_eq!(abwarten_mit_ableitung(&mut frisch), Ladeausgang::Geoeffnet);
             assert_eq!(
                 frisch.textmarke_verweigert(),
@@ -3889,7 +4001,7 @@ mod tests {
         }
 
         std::fs::write(&geschrieben, b"").expect("leere secrets.txt");
-        assert_eq!(modell.oeffnen(&geschrieben, Some(pin("0417"))), None);
+        assert_eq!(modell.oeffnen(&geschrieben, mit_pin("0417")), None);
         assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
         assert_eq!(
             modell.textmarke_verweigert(),
@@ -3942,7 +4054,7 @@ mod tests {
         verschlossen_ablegen(&pfad, GEHEIM, "0417");
         let original = std::fs::read(&pfad).expect("lesen");
 
-        assert_eq!(modell.oeffnen(&pfad, Some(pin("1234"))), None);
+        assert_eq!(modell.oeffnen(&pfad, mit_pin("1234")), None);
         let falsch = meldung_von(&abwarten_mit_ableitung(&mut modell));
         assert!(
             falsch.contains("PIN falsch oder Datei verändert"),
@@ -3957,13 +4069,13 @@ mod tests {
         let letztes = veraendert.len() - 1;
         veraendert[letztes] ^= 0x01;
         std::fs::write(&pfad, &veraendert).expect("schreiben");
-        assert_eq!(modell.oeffnen(&pfad, Some(pin("0417"))), None);
+        assert_eq!(modell.oeffnen(&pfad, mit_pin("0417")), None);
         let geaendert = meldung_von(&abwarten_mit_ableitung(&mut modell));
         assert_eq!(geaendert, falsch, "eine Meldung fuer beide Faelle");
         assert_eq!(std::fs::read(&pfad).expect("lesen"), veraendert);
 
         std::fs::write(&pfad, "kein Kopf").expect("schreiben");
-        assert_eq!(modell.oeffnen(&pfad, Some(pin("0417"))), None);
+        assert_eq!(modell.oeffnen(&pfad, mit_pin("0417")), None);
         let kopf = meldung_von(&abwarten_mit_ableitung(&mut modell));
         assert!(kopf.contains("Kopf der Datei ist beschädigt"), "{kopf}");
         assert_eq!(std::fs::read(&pfad).expect("lesen"), b"kein Kopf");
@@ -3984,13 +4096,13 @@ mod tests {
             .expect("Kopf")
             .salz();
 
-        assert_eq!(modell.oeffnen(&pfad, Some(pin("0417"))), None);
+        assert_eq!(modell.oeffnen(&pfad, mit_pin("0417")), None);
         assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
         let _ = modell.bearbeiten(format!("## Konto\n{GEHEIM}"));
 
         let mut abbild = None;
         let ausgang = modell.sichern_ueber(Fremdpruefung::Pruefen, |ziel, chiffrat| {
-            let nachbar = atomar::vorbereiten(ziel, &mut chiffrat.0.as_slice())?;
+            let nachbar = atomar::vorbereiten(ziel, &mut chiffrat.bytes())?;
             abbild = Some(std::fs::read(nachbar.nachbarpfad())?);
             nachbar.umbenennen()
         });
@@ -4015,7 +4127,7 @@ mod tests {
 
         modell.schliessen();
         assert!(matches!(modell.schutz, Schutz::Klartext));
-        assert_eq!(modell.oeffnen(&pfad, Some(pin("0417"))), None);
+        assert_eq!(modell.oeffnen(&pfad, mit_pin("0417")), None);
         assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
         assert_eq!(modell.stand(), format!("## Konto\n{GEHEIM}\n"));
     }
@@ -4028,7 +4140,7 @@ mod tests {
         let ordner = Pruefordner::neu("geheim-zweimal");
         let (mut modell, pfad, _) = geheimnis_modell(&ordner);
         verschlossen_ablegen(&pfad, &format!("{GEHEIM}\n"), "0417");
-        assert_eq!(modell.oeffnen(&pfad, Some(pin("0417"))), None);
+        assert_eq!(modell.oeffnen(&pfad, mit_pin("0417")), None);
         assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
 
         assert_eq!(modell.sichern(), Sicherungsausgang::Gesichert(pfad.clone()));
@@ -4051,7 +4163,7 @@ mod tests {
         let ordner = Pruefordner::neu("geheim-fremd");
         let (mut modell, pfad, _) = geheimnis_modell(&ordner);
         verschlossen_ablegen(&pfad, "## A\nx\n", "0417");
-        assert_eq!(modell.oeffnen(&pfad, Some(pin("0417"))), None);
+        assert_eq!(modell.oeffnen(&pfad, mit_pin("0417")), None);
         assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
         let _ = modell.bearbeiten(format!("## A\n{GEHEIM}\n"));
 
@@ -4079,7 +4191,7 @@ mod tests {
         let salz_vorher = *tresor::Kopf::lesen(&std::fs::read(&pfad).expect("lesen"))
             .expect("Kopf")
             .salz();
-        assert_eq!(modell.oeffnen(&pfad, Some(pin("0417"))), None);
+        assert_eq!(modell.oeffnen(&pfad, mit_pin("0417")), None);
         assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
         let _ = modell.bearbeiten(format!("## A\n{GEHEIM}\n"));
 
@@ -4091,7 +4203,7 @@ mod tests {
 
         let mut abbild = None;
         let ausgang = modell.sichern_ueber(Fremdpruefung::Uebergehen, |ziel, chiffrat| {
-            let nachbar = atomar::vorbereiten(ziel, &mut chiffrat.0.as_slice())?;
+            let nachbar = atomar::vorbereiten(ziel, &mut chiffrat.bytes())?;
             abbild = Some(std::fs::read(nachbar.nachbarpfad())?);
             nachbar.umbenennen()
         });
@@ -4114,7 +4226,7 @@ mod tests {
         assert!(!modell.fremd_geaendert());
 
         modell.schliessen();
-        assert_eq!(modell.oeffnen(&pfad, Some(pin("0417"))), None);
+        assert_eq!(modell.oeffnen(&pfad, mit_pin("0417")), None);
         assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
         assert_eq!(modell.stand(), format!("## A\n{GEHEIM}\n"));
     }
@@ -4123,11 +4235,11 @@ mod tests {
     /// Editor haelt die Datei danach weiter entsperrt mit dem Stand der
     /// Platte.
     #[test]
-    fn das_neu_laden_einer_secrets_txt_liest_mit_der_gehaltenen_pin() {
+    fn das_neu_laden_einer_secrets_txt_liest_mit_dem_gehaltenen_schluessel() {
         let ordner = Pruefordner::neu("geheim-neu-laden");
         let (mut modell, pfad, _) = geheimnis_modell(&ordner);
         verschlossen_ablegen(&pfad, "## A\nalt\n", "0417");
-        assert_eq!(modell.oeffnen(&pfad, Some(pin("0417"))), None);
+        assert_eq!(modell.oeffnen(&pfad, mit_pin("0417")), None);
         assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
         let _ = modell.bearbeiten(format!("## A\n{GEHEIM}\n"));
 
@@ -4143,6 +4255,184 @@ mod tests {
         assert!(!modell.hat_ungesicherten_stand());
     }
 
+    // ---------------------------------------------------------------------
+    // Der gemerkte Schluessel (Schritt 5 des Plans der sechs Felder)
+    // ---------------------------------------------------------------------
+
+    /// Der Schluessel, mit dem [`verschlossen_ablegen`] verschliesst.
+    fn abgelegter_schluessel(ziffern: &str) -> Schluessel {
+        let klein = tresor::Parameter::neu(64, 1, 1).expect("gueltige Parameter");
+        tresor::schluessel_ableiten(&pin(ziffern), &[5; tresor::SALZLAENGE], klein)
+            .expect("Ableitung")
+    }
+
+    /// Akzeptanz (1) und (3) im Modell, mit einem eingespielten Merker und
+    /// der Wachzeit als Parameter: das erste Oeffnen mit PIN liefert den
+    /// Schluessel zum Merken; innerhalb der Frist oeffnet ein zweites Oeffnen
+    /// mit dem gemerkten Schluessel ohne PIN, und es liefert keinen Schluessel
+    /// zum Merken, verlaengert die Frist also nicht.
+    #[test]
+    fn innerhalb_der_frist_oeffnet_der_gemerkte_schluessel_und_merkt_nicht_neu() {
+        use krk_core::heimordner::schluesselmerker::Schluesselmerker;
+        use std::time::Duration;
+        let ordner = Pruefordner::neu("geheim-merker-frist");
+        let (mut modell, pfad, ziel) = geheimnis_modell(&ordner);
+        verschlossen_ablegen(&pfad, "## A\nx\n", "0417");
+
+        assert_eq!(modell.oeffnen(&pfad, mit_pin("0417")), None);
+        assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
+        let eingegeben = modell
+            .eingegebenen_schluessel_nehmen()
+            .expect("das Oeffnen mit PIN liefert den Schluessel zum Merken");
+        assert_eq!(eingegeben, abgelegter_schluessel("0417"));
+        assert_eq!(modell.eingegebenen_schluessel_nehmen(), None, "einmal");
+
+        let mut merker = Schluesselmerker::neu();
+        let beginn = Duration::from_secs(1000);
+        merker.merken(eingegeben, beginn);
+        modell.schliessen();
+
+        let jetzt = beginn + Duration::from_secs(599);
+        let gemerkt = merker.gueltiger(jetzt).cloned();
+        let mittel = match geheimnisweg_im_modell(Some(1), gemerkt) {
+            Ok(mittel) => mittel,
+            Err(form) => panic!("innerhalb der Frist geht kein Blatt auf, sondern {form:?}"),
+        };
+        // Ueber die zweite Schreibweise, damit `SchonOffen` nicht greift.
+        let zweite = ziel.join("secrets.txt");
+        assert_eq!(modell.oeffnen(&zweite, Some(mittel)), None);
+        assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
+        assert_eq!(modell.stand(), "## A\nx\n");
+        assert_eq!(
+            modell.eingegebenen_schluessel_nehmen(),
+            None,
+            "ein Oeffnen mit dem gemerkten Schluessel merkt nicht neu"
+        );
+        assert_eq!(
+            merker.restdauer(jetzt),
+            Some(Duration::from_secs(1)),
+            "die Frist laeuft ab dem Merken weiter"
+        );
+    }
+
+    /// Akzeptanz (2): nach Ablauf gilt der gemerkte Schluessel nicht mehr,
+    /// und der Weg fuehrt auf das PIN-Blatt; eine leere Datei geht auch mit
+    /// gueltigem Merker ueber das Festlegen (Entscheidung 6).
+    #[test]
+    fn nach_ablauf_und_an_einer_leeren_datei_geht_das_pin_blatt_auf() {
+        use krk_core::heimordner::schluesselmerker::Schluesselmerker;
+        use std::time::Duration;
+        let mut merker = Schluesselmerker::neu();
+        let beginn = Duration::from_secs(50);
+        merker.merken(abgelegter_schluessel("0417"), beginn);
+
+        let gemerkt = merker.gueltiger(beginn).cloned();
+        assert_eq!(
+            geheimnisweg_im_modell(Some(0), gemerkt),
+            Err(Pinform::Festlegen),
+            "eine leere Datei bekommt ein frisches Salz"
+        );
+        let abgelaufen = merker.gueltiger(beginn + Duration::from_secs(600)).cloned();
+        assert_eq!(abgelaufen, None);
+        assert_eq!(
+            geheimnisweg_im_modell(Some(4096), abgelaufen),
+            Err(Pinform::Eingeben)
+        );
+        assert_eq!(
+            merker.restdauer(beginn),
+            None,
+            "der abgelaufene ist getilgt"
+        );
+    }
+
+    /// Akzeptanz (4) im Modell: ein gemerkter Schluessel mit fremdem Salz
+    /// oeffnet nicht, und der Ausgang ist `SchluesselAbgewiesen` mit der
+    /// Form `Eingeben`; nichts hat sich bewegt. An einer leeren Datei ist die
+    /// Form `Festlegen`. Mit einer falschen PIN bleibt es die Abweisung wie
+    /// bisher. Dass der Empfaenger den Merker leert, haelt
+    /// `der_abgewiesene_schluessel_faellt_vor_dem_blatt` beim
+    /// Anwendungsdelegierten.
+    #[test]
+    fn ein_fremder_gemerkter_schluessel_fuehrt_auf_das_pin_blatt() {
+        let ordner = Pruefordner::neu("geheim-merker-fremd");
+        let (mut modell, pfad, _) = geheimnis_modell(&ordner);
+        verschlossen_ablegen(&pfad, "## A\nx\n", "0417");
+        let klein = tresor::Parameter::neu(64, 1, 1).expect("gueltige Parameter");
+        let fremd = tresor::schluessel_ableiten(&pin("0417"), &[9; tresor::SALZLAENGE], klein)
+            .expect("Ableitung");
+
+        assert_eq!(
+            modell.oeffnen(&pfad, Some(Oeffnungsmittel::Schluessel(fremd.clone()))),
+            None
+        );
+        assert_eq!(
+            abwarten_mit_ableitung(&mut modell),
+            Ladeausgang::SchluesselAbgewiesen {
+                pfad: pfad.clone(),
+                form: Pinform::Eingeben,
+            }
+        );
+        assert!(!modell.haelt_datei());
+        assert_eq!(modell.eingegebenen_schluessel_nehmen(), None);
+
+        std::fs::write(&pfad, b"").expect("leere Datei");
+        assert_eq!(
+            modell.oeffnen(&pfad, Some(Oeffnungsmittel::Schluessel(fremd))),
+            None
+        );
+        assert_eq!(
+            abwarten_mit_ableitung(&mut modell),
+            Ladeausgang::SchluesselAbgewiesen {
+                pfad: pfad.clone(),
+                form: Pinform::Festlegen,
+            }
+        );
+        assert_eq!(std::fs::metadata(&pfad).expect("stat").len(), 0);
+
+        verschlossen_ablegen(&pfad, "## A\nx\n", "0417");
+        assert_eq!(modell.oeffnen(&pfad, mit_pin("1111")), None);
+        assert!(matches!(
+            abwarten_mit_ableitung(&mut modell),
+            Ladeausgang::Abgewiesen(_)
+        ));
+    }
+
+    /// [`geheimnisweg`] in der Form, die die Proben vergleichen: `Ok` ist
+    /// das Mittel, `Err` die Form des Blattes.
+    fn geheimnisweg_im_modell(
+        groesse: Option<u64>,
+        gemerkt: Option<Schluessel>,
+    ) -> Result<Oeffnungsmittel, Pinform> {
+        match geheimnisweg(groesse, gemerkt) {
+            Geheimnisweg::Mittel(mittel) => Ok(mittel),
+            Geheimnisweg::PinErfragen(form) => Err(form),
+        }
+    }
+
+    /// Akzeptanz (5), die gelungene Haelfte: „PIN ändern" mit der richtigen
+    /// alten PIN schreibt, und der neue Schluessel wartet aufs Merken; er ist
+    /// der, mit dem die Datei danach aufgeht.
+    #[test]
+    fn nach_dem_aendern_wartet_der_neue_schluessel_aufs_merken() {
+        let ordner = Pruefordner::neu("geheim-merker-pin");
+        let (mut modell, pfad) = entsperrt(&ordner, "## A\nx\n");
+        let alter = modell
+            .eingegebenen_schluessel_nehmen()
+            .expect("das Oeffnen mit PIN liefert den Schluessel");
+        assert_eq!(modell.pin_aendern(pin("0417"), pin("8642")), Ok(()));
+        assert_eq!(
+            pinwechsel_abwarten(&mut modell, alltagsweg),
+            Pinwechselausgang::Geaendert(pfad.clone())
+        );
+        let neuer = modell
+            .eingegebenen_schluessel_nehmen()
+            .expect("der neue Schluessel wartet aufs Merken");
+        assert_ne!(neuer, alter);
+        let platte = std::fs::read(&pfad).expect("lesen");
+        assert!(tresor::oeffnen_mit(&platte, &neuer).is_ok());
+        assert!(tresor::oeffnen_mit(&platte, &alter).is_err());
+    }
+
     /// Die neue Datei: null Bytes mit PIN oeffnen leitet einen neuen Schluessel
     /// ab und schreibt nichts, die Datei bleibt null Bytes. Nach dem ersten
     /// Sichern oeffnet sie allein diese PIN, und ein leerer Stand gibt ein
@@ -4154,7 +4444,7 @@ mod tests {
         let (mut modell, pfad, _) = geheimnis_modell(&ordner);
         std::fs::write(&pfad, b"").expect("leere Datei");
 
-        assert_eq!(modell.oeffnen(&pfad, Some(pin("2468"))), None);
+        assert_eq!(modell.oeffnen(&pfad, mit_pin("2468")), None);
         assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
         assert_eq!(modell.stand(), "");
         let Schutz::Verschluesselt { schluessel, .. } = &modell.schutz else {
@@ -4168,7 +4458,7 @@ mod tests {
             "Oeffnen und Schliessen ohne Sichern schreiben nichts"
         );
 
-        assert_eq!(modell.oeffnen(&pfad, Some(pin("2468"))), None);
+        assert_eq!(modell.oeffnen(&pfad, mit_pin("2468")), None);
         assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
         let _ = modell.bearbeiten(format!("## Neu\n{GEHEIM}\n"));
         assert_eq!(modell.sichern(), Sicherungsausgang::Gesichert(pfad.clone()));
@@ -4263,7 +4553,7 @@ mod tests {
         assert!(!modell.haelt_datei());
 
         // Mit PIN: die Geheimnisse, und gesichert wird allein Chiffrat.
-        assert_eq!(modell.oeffnen(&dritte, Some(pin("0417"))), None);
+        assert_eq!(modell.oeffnen(&dritte, mit_pin("0417")), None);
         assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
         assert!(matches!(modell.schutz, Schutz::Verschluesselt { .. }));
         assert_eq!(modell.typ(), Dateityp::Eintraege(Sonderdatei::Geheimnisse));
@@ -4327,7 +4617,7 @@ mod tests {
         let ordner = Pruefordner::neu("geheim-andere");
         let (mut modell, _, ziel) = geheimnis_modell(&ordner);
         let ausgang = modell
-            .oeffnen(&ziel.join("notes.txt"), Some(pin("0417")))
+            .oeffnen(&ziel.join("notes.txt"), mit_pin("0417"))
             .expect("der Ausgang steht sofort fest");
         assert!(meldung_von(&ausgang).contains("keine verschlüsselte Datei"));
         assert!(!modell.laedt_noch());
@@ -4341,7 +4631,7 @@ mod tests {
         let ordner = Pruefordner::neu("geheim-fort");
         let (mut modell, pfad, _) = geheimnis_modell(&ordner);
         verschlossen_ablegen(&pfad, "## A\nx\n", "0417");
-        assert_eq!(modell.oeffnen(&pfad, Some(pin("0417"))), None);
+        assert_eq!(modell.oeffnen(&pfad, mit_pin("0417")), None);
         assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
         modell.schliessen();
         assert!(matches!(
@@ -4349,7 +4639,7 @@ mod tests {
             Some(Ladeausgang::Abgewiesen(_))
         ));
 
-        assert_eq!(modell.oeffnen(&pfad, Some(pin("0417"))), None);
+        assert_eq!(modell.oeffnen(&pfad, mit_pin("0417")), None);
         assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
         let gewoehnlich = ordner.datei("gewoehnlich.txt", "offen\n");
         assert_eq!(modell.oeffnen(&gewoehnlich, None), None);
@@ -4429,7 +4719,7 @@ mod tests {
         );
         let oeffnen = rumpf_von(&code, concat!("pub fn oeff", "nen(&mut self"));
         assert!(oeffnen.contains(concat!(
-            "self.lesen_beginnen(pfad, pin, Uebernahme::",
+            "self.lesen_beginnen(pfad, mittel, Uebernahme::",
             "MitNachfrage)"
         )));
         let neu_laden = rumpf_von(&code, concat!("pub fn neu_", "laden(&mut self"));
@@ -4450,30 +4740,65 @@ mod tests {
             "{lesen} hat genau einen Rufer"
         );
         assert!(rumpf_von(&code, concat!("fn text_", "lesen(")).contains(lesen));
+
+        // Seit dem 261016 liest `tresorweg.rs` die Datei (Schritt 5a des
+        // Plans der sechs Felder), und die Probe liest es mit: dort steht
+        // kein Klartextweg, und der Geheimnisauftrag erreicht ihn allein ueber
+        // `geheimnisse_laden`.
+        let weg = code_vor_den_proben("krk-ui/src/tresorweg.rs");
+        assert!(!weg.contains(lesen), "der Tresorweg liest nie im Klartext");
+        assert!(weg.contains(concat!(
+            "datei::bis_zur_grenze_lesen(pfad, ",
+            "GEHEIMNISGRENZE)"
+        )));
+        assert!(weg.contains(concat!("tresor::oeffnen_", "mittels(&bytes, mittel)")));
+        let starten = rumpf_von(
+            &code,
+            concat!("fn starten(pfad: PathBuf, auftrag", ": Leseauftrag"),
+        );
+        assert!(starten.contains(concat!(
+            "Leseauftrag::Geheimnisse(mittel) => geheimnisse_",
+            "laden(&fuer_faden, mittel)"
+        )));
+        assert_eq!(
+            code.matches(concat!("tresorweg::geheimnisse_", "lesen("))
+                .count(),
+            1,
+            "das Modell liest secrets.txt allein in geheimnisse_laden"
+        );
     }
 
-    /// Kein Weg dieses Moduls schreibt Klartext nach `secrets.txt`:
+    /// Kein Weg dieses Moduls und des Tresorwegs schreibt Klartext nach
+    /// `secrets.txt`. **Seit dem 261016 liest die Probe beide Dateien**
+    /// (Schritt 5a des Plans der sechs Felder), weil `Chiffrat` nach
+    /// `tresorweg.rs` gezogen ist; jede Zaehlung gilt fuer beide zusammen und
+    /// ist nicht lockerer als vorher:
     ///
     /// - das atomare Schreiben steht genau einmal da, in `Chiffrat::schreiben`,
     ///   und das nimmt allein ein `Chiffrat`;
     /// - ein `Chiffrat` entsteht genau an einer Stelle, aus
     ///   `tresor::verschliessen`, nach der Sicherungsform;
+    /// - `Chiffrat::schreiben` hat genau die benannten Rufer: das Sichern,
+    ///   das Ueberschreiben und den Wechsel der PIN, alle hier;
     /// - der Klartextweg `datei::sichern` steht genau einmal da, im Sichern,
     ///   und hinter der Frage nach `secrets.txt`;
     /// - in der ganzen Kiste ruft allein dieses Modul `datei::sichern`.
     #[test]
     fn kein_weg_schreibt_klartext_nach_secrets_txt() {
-        let code = code_vor_den_proben("krk-ui/src/editormodell.rs");
+        let modell = code_vor_den_proben("krk-ui/src/editormodell.rs");
+        let weg = code_vor_den_proben("krk-ui/src/tresorweg.rs");
+        let beide = |nadel: &str| modell.matches(nadel).count() + weg.matches(nadel).count();
 
         let atomar_schreiben = concat!("atomar::", "schreiben(");
-        assert_eq!(code.matches(atomar_schreiben).count(), 1);
-        let schreiben = rumpf_von(&code, concat!("fn schreiben(&self, ziel", ": &Path)"));
+        assert_eq!(beide(atomar_schreiben), 1);
+        let schreiben = rumpf_von(&weg, concat!("pub fn schreiben(&self, ziel", ": &Path)"));
         assert!(schreiben.contains(atomar_schreiben));
         assert!(schreiben.contains(concat!("self.", "0.as_slice()")));
+        assert!(!modell.contains(concat!("atomar::", "vorbereiten(")));
 
-        assert_eq!(code.matches(concat!("Chiffrat", "(")).count(), 2);
-        assert!(code.contains(concat!("struct Chiffrat", "(Vec<u8>);")));
-        let verschliessen = rumpf_von(&code, concat!("fn verschliessen(stand", ": &str"));
+        assert_eq!(beide(concat!("Chiffrat", "(")), 2);
+        assert!(weg.contains(concat!("pub struct Chiffrat", "(Vec<u8>);")));
+        let verschliessen = rumpf_von(&weg, concat!("pub fn verschliessen(stand", ": &str"));
         assert!(verschliessen.contains(concat!("Ok(Chiffrat", "(bytes))")));
         let form = verschliessen
             .find(concat!("datei::sicherungs", "form(stand)"))
@@ -4482,14 +4807,33 @@ mod tests {
             .find(concat!("tresor::", "verschliessen("))
             .expect("verschlossen wird im Tresor");
         assert!(form < tresor);
-        assert_eq!(
-            code.matches(concat!("tresor::", "verschliessen(")).count(),
-            1
-        );
+        assert_eq!(beide(concat!("tresor::", "verschliessen(")), 1);
+
+        // Die Rufer von `Chiffrat::schreiben`, mit Namen: in der Kiste allein
+        // die drei Wege dieses Modells.
+        let schreibruf = concat!("chiffrat.", "schreiben(");
+        let rufer: Vec<(String, usize)> = crate::quellbaum::quelldateien()
+            .into_iter()
+            .filter(|(name, _)| name.starts_with("krk-ui/"))
+            .map(|(name, inhalt)| {
+                let code = betriebscode(&inhalt);
+                let zahl = code.matches(schreibruf).count();
+                (name, zahl)
+            })
+            .filter(|(_, zahl)| *zahl > 0)
+            .collect();
+        assert_eq!(rufer, [("krk-ui/src/editormodell.rs".to_owned(), 3)]);
+        for name in [
+            concat!("pub fn sichern", "(&mut self)"),
+            concat!("pub fn ueberschreiben", "(&mut self)"),
+            concat!("pub fn pinwechsel_", "einziehen(&mut self)"),
+        ] {
+            assert!(rumpf_von(&modell, name).contains(schreibruf), "{name}");
+        }
 
         let klartext = concat!("datei::", "sichern(");
-        assert_eq!(code.matches(klartext).count(), 1);
-        let sichern = rumpf_von(&code, concat!("fn sichern_", "ueber("));
+        assert_eq!(beide(klartext), 1);
+        let sichern = rumpf_von(&modell, concat!("fn sichern_", "ueber("));
         let frage = sichern
             .find(concat!("self.ist_geheimnis", "datei(&pfad)"))
             .expect("der Klartextweg fragt die Erkennung");
@@ -4505,6 +4849,22 @@ mod tests {
             .map(|(name, _)| name)
             .collect();
         assert_eq!(rufer, vec!["krk-ui/src/editormodell.rs".to_owned()]);
+    }
+
+    /// Der Betriebscode einer Datei: ihre Codezeilen bis zum ersten
+    /// Pruefmodul in Spalte 0, gleich wie es heisst.
+    fn betriebscode(inhalt: &str) -> String {
+        let mut zeilen = Vec::new();
+        let mut davor_cfg = false;
+        for zeile in crate::quellbaum::codezeilen(inhalt) {
+            if davor_cfg && (zeile.starts_with("mod ") || zeile.starts_with("pub(super) mod ")) {
+                let _ = zeilen.pop();
+                break;
+            }
+            davor_cfg = zeile == concat!("#[cfg(", "test)]");
+            zeilen.push(zeile);
+        }
+        zeilen.join("\n")
     }
 
     /// Die Form des PIN-Blattes folgt der Groesse (Schritt 5.4b): null Bytes
@@ -4551,7 +4911,7 @@ mod tests {
     fn entsperrt(ordner: &Pruefordner, klartext: &str) -> (Editormodell, PathBuf) {
         let (mut modell, pfad, _) = geheimnis_modell(ordner);
         verschlossen_ablegen(&pfad, klartext, "0417");
-        assert_eq!(modell.oeffnen(&pfad, Some(pin("0417"))), None);
+        assert_eq!(modell.oeffnen(&pfad, mit_pin("0417")), None);
         assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
         assert!(modell.pin_aenderbar());
         (modell, pfad)
@@ -4580,7 +4940,7 @@ mod tests {
         assert!(modell.pin_wechselt());
         let mut abbild = None;
         let ausgang = pinwechsel_abwarten(&mut modell, |ziel, chiffrat| {
-            let nachbar = atomar::vorbereiten(ziel, &mut chiffrat.0.as_slice())?;
+            let nachbar = atomar::vorbereiten(ziel, &mut chiffrat.bytes())?;
             abbild = Some(std::fs::read(nachbar.nachbarpfad())?);
             nachbar.umbenennen()
         });
@@ -4631,26 +4991,40 @@ mod tests {
         );
     }
 
-    /// Eine falsche alte PIN weist ab, bevor irgendetwas anlaeuft: kein
-    /// Faden, keine Bytes geaendert, der Schutz wie vorher.
+    /// Eine falsche alte PIN weist ab, ohne zu schreiben (Schritt 5c des
+    /// Plans der sechs Felder): verglichen wird auf dem Faden, indem die alte
+    /// PIN mit Salz und Parametern des gehaltenen Schluessels abgeleitet wird,
+    /// und der Ausgang ist `Gescheitert` mit dem bisherigen Satz. Keine Bytes
+    /// geaendert, der Schutz wie vorher, und kein Schluessel wartet aufs
+    /// Merken.
     #[test]
     fn eine_falsche_alte_pin_weist_ab_und_laesst_alles_stehen() {
         let ordner = Pruefordner::neu("geheim-pin-falsch");
         let (mut modell, pfad) = entsperrt(&ordner, "## A\nx\n");
         let vorher = std::fs::read(&pfad).expect("lesen");
+        let gehalten = match &modell.schutz {
+            Schutz::Verschluesselt { schluessel, .. } => schluessel.clone(),
+            Schutz::Klartext => panic!("entsperrt haelt einen Schluessel"),
+        };
+        let _ = modell.eingegebenen_schluessel_nehmen();
 
-        let grund = modell
-            .pin_aendern(pin("1111"), pin("2222"))
-            .expect_err("die falsche alte PIN weist ab");
-        assert!(grund.contains("alte PIN stimmt nicht"), "{grund}");
-        assert!(grund.contains("die PIN bleibt, wie sie war"), "{grund}");
+        assert_eq!(modell.pin_aendern(pin("1111"), pin("2222")), Ok(()));
+        match pinwechsel_abwarten(&mut modell, |_, _| {
+            panic!("eine falsche alte PIN schreibt nichts")
+        }) {
+            Pinwechselausgang::Gescheitert(grund) => {
+                assert!(grund.contains("alte PIN stimmt nicht"), "{grund}");
+                assert!(grund.contains("die PIN bleibt, wie sie war"), "{grund}");
+            }
+            anderer => panic!("erwartet war eine Abweisung, gekommen ist {anderer:?}"),
+        }
         assert!(!modell.pin_wechselt());
-        assert_eq!(modell.pinwechsel_einziehen(), None);
         assert_eq!(std::fs::read(&pfad).expect("lesen"), vorher);
         assert!(matches!(
             &modell.schutz,
-            Schutz::Verschluesselt { pin: gehalten, .. } if *gehalten == pin("0417")
+            Schutz::Verschluesselt { schluessel, .. } if *schluessel == gehalten
         ));
+        assert_eq!(modell.eingegebenen_schluessel_nehmen(), None);
     }
 
     /// Eine Datei, die sich aussen geaendert hat, weist das Aendern ab wie
@@ -4713,7 +5087,7 @@ mod tests {
         let ordner = Pruefordner::neu("geheim-pin-leer");
         let (mut modell, pfad, _) = geheimnis_modell(&ordner);
         std::fs::write(&pfad, b"").expect("leere Datei");
-        assert_eq!(modell.oeffnen(&pfad, Some(pin("2468"))), None);
+        assert_eq!(modell.oeffnen(&pfad, mit_pin("2468")), None);
         assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
 
         assert!(!modell.pin_aenderbar());
@@ -4756,18 +5130,41 @@ mod tests {
     #[test]
     fn das_aendern_leitet_auf_einem_faden_ab_und_schreibt_allein_chiffrat() {
         let code = code_vor_den_proben("krk-ui/src/editormodell.rs");
-        let starten = rumpf_von(&code, concat!("fn starten(pfad: PathBuf, neue", ": Pin)"));
+        let starten = rumpf_von(
+            &code,
+            concat!("fn starten(pfad: PathBuf, gehalten", ": Schluessel"),
+        );
         assert!(starten.contains(concat!(".name(\"krk-", "pin\"")));
-        assert!(starten.contains(concat!("tresor::neuer_", "schluessel(&neue)")));
+        assert!(starten.contains(concat!("pinwechsel_", "ableiten(&gehalten, &alte, &neue)")));
+
+        // Seit dem 261016 vergleicht der Faden: die alte PIN mit Salz und
+        // Parametern des gehaltenen Schluessels abgeleitet, dann verglichen,
+        // erst danach die neue (Schritt 5c des Plans der sechs Felder).
+        let ableiten = code
+            .split_once(concat!("fn pinwechsel_", "ableiten("))
+            .and_then(|(_, rest)| rest.split_once("\n}\n"))
+            .map(|(rumpf, _)| rumpf)
+            .expect("pinwechsel_ableiten steht im Code");
+        let alte = ableiten
+            .find(concat!(
+                "tresor::schluessel_",
+                "ableiten(alte, gehalten.salz(), gehalten.parameter())"
+            ))
+            .expect("die alte PIN wird mit dem Salz des gehaltenen abgeleitet");
+        let vergleich = ableiten
+            .find("geprueft != *gehalten")
+            .expect("und verglichen");
+        let neue = ableiten
+            .find(concat!("tresor::neuer_", "schluessel(neue)"))
+            .expect("die neue wird abgeleitet");
+        assert!(alte < vergleich && vergleich < neue);
 
         let aendern = rumpf_von(&code, concat!("pub fn pin_", "aendern(&mut self"));
-        let vergleich = aendern
-            .find("*pin != alte")
-            .expect("die alte PIN wird verglichen");
-        let start = aendern
-            .find(concat!("Pinwechsel::", "starten("))
-            .expect("der Faden startet");
-        assert!(vergleich < start);
+        assert!(aendern.contains(concat!("Pinwechsel::", "starten(")));
+        assert!(
+            !aendern.contains("ableiten("),
+            "auf dem rufenden Faden wird nicht abgeleitet"
+        );
 
         let umschluesseln = rumpf_von(&code, concat!("fn umschluesseln", "("));
         assert!(umschluesseln.contains(concat!("tresor::oeffnen_", "mit(&bytes, gehalten)")));

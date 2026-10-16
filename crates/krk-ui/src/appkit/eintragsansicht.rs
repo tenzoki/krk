@@ -32,7 +32,11 @@
 //! Feldeditor ueber [`Eintragsansicht::feldeditor_fuer`], das Fokusziel und der
 //! Flaechentausch des Editors. Eine zweite Tabelle muesste jede dieser Fragen
 //! ein zweites Mal beantworten, und der Fensterdelegierte fragte sonst die
-//! falsche. Die Geheimnisse aus Stufe 5 zeigen sich als Notizen.
+//! falsche. [`Zeilen::Geheimnisse`] traegt seit dem 261016 sechs Spalten,
+//! Name, Protokoll, Adresse, Konto, Passwort und Notizen, in der Folge der
+//! Datei ([`geheimniszeilen`]); fuenf sind einzeilig wie das Thema, die
+//! Notizen mehrzeilig wie die Notiz ([`mehrzeilige_spalte`]). Bis dahin
+//! zeigten sich die Geheimnisse als Notizen.
 //!
 //! # Die mehrzeilige Notizzelle
 //!
@@ -317,6 +321,7 @@ use objc2_foundation::{
     NSRect, NSSize, NSString, NSUndoManager, ns_string,
 };
 
+use krk_core::heimordner::eintraege::geheimnisse::{Feld, Geheimnisse};
 use krk_core::heimordner::eintraege::{Aufgaben, Notizen, Tag, aufgabenzeile, termine};
 use krk_core::sprache::{Text, text};
 use krk_core::verzeichnis::Richtung;
@@ -359,6 +364,51 @@ pub const DATUMSSPALTE: usize = THEMENSPALTE;
 /// [`NOTIZSPALTE`].
 pub const TERMINSPALTE: usize = NOTIZSPALTE;
 
+/// Die Spalte der Geheimnistabelle, die ein Feld zeigt: seine Stelle in
+/// `Feld::ALLE`, denn die Spalten stehen in der Folge der Felder
+/// (Entscheidung 18 des Plans
+/// `261016-0306_*_plan-secrets-mit-sechs-feldern-schluesselmerker-und-verbindungen.md`).
+#[must_use]
+pub fn spalte_des_feldes(feld: Feld) -> usize {
+    Feld::ALLE
+        .iter()
+        .position(|bekannt| *bekannt == feld)
+        .unwrap_or(THEMENSPALTE)
+}
+
+/// Das Feld, das die Spalte `spalte` der Geheimnistabelle zeigt; `None`
+/// jenseits der sechsten.
+#[must_use]
+pub fn feld_der_spalte(spalte: usize) -> Option<Feld> {
+    Feld::ALLE.get(spalte).copied()
+}
+
+/// Die eine mehrzeilige Spalte einer Art, in der `return` einen Umbruch
+/// schreibt und das Feld mit seinem Inhalt waechst; `None` fuer die
+/// Aufgabentabelle, die keine hat.
+///
+/// **Die eine Stelle dieser Frage**: [`zellenbefehl`], die Zellen und die
+/// Umbruchbreite fragen hier und nicht nach [`NOTIZSPALTE`], denn in der
+/// Geheimnistabelle sind die Notizen die sechste Spalte.
+#[must_use]
+pub fn mehrzeilige_spalte(art: Eintragsart) -> Option<usize> {
+    match art {
+        Eintragsart::Aufgaben => None,
+        Eintragsart::Notizen | Eintragsart::Termine => Some(NOTIZSPALTE),
+        Eintragsart::Geheimnisse => Some(spalte_des_feldes(Feld::Notizen)),
+    }
+}
+
+/// Wie viele Spalten die Tabelle dieser Art traegt.
+#[must_use]
+pub fn spaltenzahl(art: Eintragsart) -> usize {
+    match art {
+        Eintragsart::Aufgaben => 1,
+        Eintragsart::Notizen | Eintragsart::Termine => 2,
+        Eintragsart::Geheimnisse => Feld::ALLE.len(),
+    }
+}
+
 /// Die Breite, mit der die Datumsspalte entsteht: schmaler als die
 /// Themenspalte, weil `YYMMDD HH:MM` zwoelf Zeichen hat.
 const DATUMSBREITE: f64 = 110.0;
@@ -374,8 +424,6 @@ const RAND: f64 = 4.0;
 const RAND_OBEN: f64 = 2.0;
 
 /// Welche Art von Eintraegen die Tabelle zeigt.
-///
-/// Die Geheimnisse aus Stufe 5 sind der Darstellung nach Notizen.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Eintragsart {
     /// Eine Spalte mit Kaestchen und Text, `tasks.txt`.
@@ -385,6 +433,11 @@ pub enum Eintragsart {
     /// Zwei Spalten, Datum und Termin, `appointments.md`, nach dem Datum
     /// geordnet.
     Termine,
+    /// Sechs Spalten, Name, Protokoll, Adresse, Konto, Passwort und Notizen,
+    /// `secrets.txt` (Entscheidungen 17 und 18 des Plans
+    /// `261016-0306_*_plan-secrets-mit-sechs-feldern-schluesselmerker-und-verbindungen.md`).
+    /// Bis dahin zeigten sich die Geheimnisse als Notizen.
+    Geheimnisse,
 }
 
 /// Die abgeleiteten Zeilen, je Art in ihrer eigenen Gestalt.
@@ -401,6 +454,8 @@ pub enum Zeilen {
     Notizen(Vec<Notizzeile>),
     /// Die Zeilen der Termintabelle, in der Folge des Schirms.
     Termine(Vec<Terminzeile>),
+    /// Die Zeilen der Geheimnistabelle, in der Folge der Datei.
+    Geheimnisse(Vec<Geheimniszeile>),
 }
 
 impl Zeilen {
@@ -411,6 +466,7 @@ impl Zeilen {
             Self::Aufgaben(_) => Eintragsart::Aufgaben,
             Self::Notizen(_) => Eintragsart::Notizen,
             Self::Termine(_) => Eintragsart::Termine,
+            Self::Geheimnisse(_) => Eintragsart::Geheimnisse,
         }
     }
 
@@ -421,6 +477,7 @@ impl Zeilen {
             Self::Aufgaben(zeilen) => zeilen.len(),
             Self::Notizen(zeilen) => zeilen.len(),
             Self::Termine(zeilen) => zeilen.len(),
+            Self::Geheimnisse(zeilen) => zeilen.len(),
         }
     }
 
@@ -428,12 +485,17 @@ impl Zeilen {
     /// der letzten Zeile.
     ///
     /// **Eine der zwei Stellen der Umrechnung** (Modulkopf, „Stelle und
-    /// Zeile"). Aufgaben und Notizen stehen in der Reihenfolge der Datei, und
-    /// dort ist es die Gleichheit; eine Terminzeile nennt ihre Stelle selbst.
+    /// Zeile"). Aufgaben, Notizen und Geheimnisse stehen in der Reihenfolge
+    /// der Datei, und dort ist es die Gleichheit; eine Terminzeile nennt ihre
+    /// Stelle selbst. Die Geheimnisse gehen trotzdem durch diese Naht und
+    /// nicht an ihr vorbei, damit eine spaetere Ordnung der Tabelle allein
+    /// diese zwei Funktionen beruehrt.
     #[must_use]
     pub fn stelle_der_zeile(&self, zeile: usize) -> Option<usize> {
         match self {
-            Self::Aufgaben(_) | Self::Notizen(_) => (zeile < self.len()).then_some(zeile),
+            Self::Aufgaben(_) | Self::Notizen(_) | Self::Geheimnisse(_) => {
+                (zeile < self.len()).then_some(zeile)
+            }
             Self::Termine(zeilen) => zeilen.get(zeile).map(|termin| termin.stelle),
         }
     }
@@ -441,16 +503,83 @@ impl Zeilen {
     /// Die Zeile, in der AppKit die Stelle `stelle` zeigt; `None`, wenn es sie
     /// nicht gibt.
     ///
-    /// Die Umkehrung von [`Self::stelle_der_zeile`], und fuer Aufgaben und
-    /// Notizen ebenso die Gleichheit; fuer Termine die Zeile, deren Stelle es
-    /// ist.
+    /// Die Umkehrung von [`Self::stelle_der_zeile`], und fuer Aufgaben,
+    /// Notizen und Geheimnisse ebenso die Gleichheit; fuer Termine die Zeile,
+    /// deren Stelle es ist.
     #[must_use]
     pub fn zeile_der_stelle(&self, stelle: usize) -> Option<usize> {
         match self {
-            Self::Aufgaben(_) | Self::Notizen(_) => (stelle < self.len()).then_some(stelle),
+            Self::Aufgaben(_) | Self::Notizen(_) | Self::Geheimnisse(_) => {
+                (stelle < self.len()).then_some(stelle)
+            }
             Self::Termine(zeilen) => zeilen.iter().position(|termin| termin.stelle == stelle),
         }
     }
+}
+
+impl From<Vec<Geheimniszeile>> for Zeilen {
+    fn from(zeilen: Vec<Geheimniszeile>) -> Self {
+        Self::Geheimnisse(zeilen)
+    }
+}
+
+/// Eine Zeile der Geheimnistabelle, abgeleitet aus einem Eintrag des
+/// Klartexts von `secrets.txt`.
+///
+/// **Die Passwortspalte zeigt den Klartext** (Entscheidung 17 des Plans):
+/// die Rohansicht derselben Datei zeigt ihn ohnehin, und eine Verdeckung
+/// allein hier verspraeche einen Schutz, den die zweite Ansicht nicht haelt.
+/// `Debug` zeigt das Passwort trotzdem nicht, damit kein Protokoll einer
+/// Probe es traegt.
+#[derive(Clone, PartialEq, Eq)]
+pub struct Geheimniszeile {
+    /// Die sechs Werte in der Folge der Spalten, wie `Feld::ALLE` sie nennt.
+    werte: [String; 6],
+}
+
+impl Geheimniszeile {
+    /// Der Wert der Spalte `spalte`; leer jenseits der sechsten.
+    #[must_use]
+    pub fn wert(&self, spalte: usize) -> &str {
+        self.werte.get(spalte).map_or("", String::as_str)
+    }
+
+    /// Der Wert des Feldes `feld`.
+    #[must_use]
+    pub fn feld(&self, feld: Feld) -> &str {
+        self.wert(spalte_des_feldes(feld))
+    }
+}
+
+impl std::fmt::Debug for Geheimniszeile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Geheimniszeile")
+            .field("name", &self.feld(Feld::Name))
+            .field("protokoll", &self.feld(Feld::Protokoll))
+            .field("adresse", &self.feld(Feld::Adresse))
+            .field("konto", &self.feld(Feld::Konto))
+            .field("passwort", &"****")
+            .field("notizen", &self.feld(Feld::Notizen))
+            .finish()
+    }
+}
+
+/// Die Zeilen der Geheimnistabelle zu einem Klartext von `secrets.txt`.
+///
+/// **Die eine Stelle der Ableitung fuer Geheimnisse**, ueber
+/// `geheimnisse::Geheimnisse` und damit ueber dieselbe Leseregel, gegen die
+/// `geheimnisse::aendern` eine unveraenderte Zelle erkennt. Ein Eintrag des
+/// frueheren Formats erscheint mit leeren Feldern und vollstaendigen Notizen
+/// (Entscheidung 2 des Plans). Eine Zeile je Eintrag, in der Folge der Datei.
+#[must_use = "die Zeilen sind die ganze Auskunft"]
+pub fn geheimniszeilen(stand: &str) -> Vec<Geheimniszeile> {
+    let geheimnisse = Geheimnisse::lesen(stand);
+    (0..geheimnisse.anzahl())
+        .filter_map(|stelle| geheimnisse.geheimnis(stelle))
+        .map(|geheimnis| Geheimniszeile {
+            werte: Feld::ALLE.map(|feld| geheimnis.wert(feld).to_owned()),
+        })
+        .collect()
 }
 
 impl From<Vec<Eintragszeile>> for Zeilen {
@@ -602,13 +731,15 @@ pub enum Zellenbefehl {
 /// `shift+tab` wechseln in der Notiztabelle von Zelle zu Zelle; in der
 /// Aufgabentabelle gibt es keine zweite Zelle der Zeile, und `tab` beendet wie
 /// bisher. Die Termintabelle folgt der Notiztabelle: die Datumsspalte ist die
-/// Themenspalte, die Terminspalte die Notizspalte.
+/// Themenspalte, die Terminspalte die Notizspalte. Die Geheimnistabelle ebenso,
+/// mit fuenf einzeiligen Spalten und den Notizen als der einen mehrzeiligen
+/// ([`mehrzeilige_spalte`]).
 #[must_use]
 pub fn zellenbefehl(art: Eintragsart, spalte: usize, befehl: Sel) -> Zellenbefehl {
     match art {
         Eintragsart::Aufgaben => Zellenbefehl::Appkit,
-        Eintragsart::Notizen | Eintragsart::Termine => {
-            if befehl == sel!(insertNewline:) && spalte == NOTIZSPALTE {
+        Eintragsart::Notizen | Eintragsart::Termine | Eintragsart::Geheimnisse => {
+            if befehl == sel!(insertNewline:) && mehrzeilige_spalte(art) == Some(spalte) {
                 Zellenbefehl::Umbruch
             } else if befehl == sel!(insertTab:) {
                 Zellenbefehl::Weiter(true)
@@ -625,23 +756,25 @@ pub fn zellenbefehl(art: Eintragsart, spalte: usize, befehl: Sel) -> Zellenbefeh
 /// in der Notiztabelle mit diesen `zeilen`; `None` am Rand.
 ///
 /// Zeilenweise, wie gelesen wird: Thema, Notiz, dann das Thema der
-/// **naechsten Zeile auf dem Schirm**. Die Zelle kommt und geht als Stelle;
+/// **naechsten Zeile auf dem Schirm**; in der Geheimnistabelle ebenso durch
+/// alle sechs Spalten ([`spaltenzahl`]). Die Zelle kommt und geht als Stelle;
 /// gezaehlt wird dazwischen in Zeilen, ueber die zwei Umrechnungen an
 /// [`Zeilen`] (Modulkopf, „Stelle und Zeile").
 #[must_use]
 pub fn naechste_zelle(zelle: Zelle, vorwaerts: bool, zeilen: &Zeilen) -> Option<Zelle> {
     let Zelle { stelle, spalte } = zelle;
     let zeile = zeilen.zeile_der_stelle(stelle)?;
+    let letzte = spaltenzahl(zeilen.art()).saturating_sub(1);
     let (ziel, spalte) = if vorwaerts {
-        if spalte == THEMENSPALTE {
-            (zeile, NOTIZSPALTE)
+        if spalte < letzte {
+            (zeile, spalte + 1)
         } else {
             (zeile + 1, THEMENSPALTE)
         }
-    } else if spalte == NOTIZSPALTE {
-        (zeile, THEMENSPALTE)
+    } else if spalte > THEMENSPALTE {
+        (zeile, spalte - 1)
     } else {
-        (zeile.checked_sub(1)?, NOTIZSPALTE)
+        (zeile.checked_sub(1)?, letzte)
     };
     zeilen
         .stelle_der_zeile(ziel)
@@ -689,7 +822,8 @@ pub struct Zelle {
     /// Zeile").
     pub stelle: usize,
     /// Die Spalte: [`THEMENSPALTE`] oder [`NOTIZSPALTE`]; die Aufgabentabelle
-    /// hat allein die erste.
+    /// hat allein die erste, die Geheimnistabelle sechs
+    /// ([`spalte_des_feldes`]).
     pub spalte: usize,
 }
 
@@ -1531,7 +1665,7 @@ impl Eintragsansicht {
     fn zeigt_heute(&self, zeile: usize) -> bool {
         match &*self.ivars().zeilen.borrow() {
             Zeilen::Termine(zeilen) => zeilen.get(zeile).is_some_and(|termin| termin.heute),
-            Zeilen::Aufgaben(_) | Zeilen::Notizen(_) => false,
+            Zeilen::Aufgaben(_) | Zeilen::Notizen(_) | Zeilen::Geheimnisse(_) => false,
         }
     }
 
@@ -1653,7 +1787,9 @@ impl Eintragsansicht {
     /// traegt: kopiert wird, was der Nutzer woanders einsetzen will, und bei
     /// einer Notiz ist das der Inhalt und nicht die Ueberschrift.
     ///
-    /// Von einem Termin ebenso sein Text, und das Datum nur ohne Text.
+    /// Von einem Termin ebenso sein Text, und das Datum nur ohne Text. Von
+    /// einem Geheimnis seine Notizen, und der Name nur ohne Notizen: dieselbe
+    /// Regel wie bei der Notiz, deren Form es traegt.
     #[must_use]
     fn gewaehlter_text(&self) -> Option<String> {
         let zeile = self.zeile_von(self.gewaehlte_stelle()?)?;
@@ -1672,6 +1808,9 @@ impl Eintragsansicht {
             Zeilen::Termine(zeilen) => zeilen
                 .get(zeile)
                 .map(|termin| text_oder(&termin.text, &termin.datum)),
+            Zeilen::Geheimnisse(zeilen) => zeilen.get(zeile).map(|geheimnis| {
+                text_oder(geheimnis.feld(Feld::Notizen), geheimnis.feld(Feld::Name))
+            }),
         }
     }
 
@@ -1886,6 +2025,9 @@ impl Eintragsansicht {
                     termin.datum.clone()
                 }
             }),
+            Zeilen::Geheimnisse(zeilen) => zeilen
+                .get(zeile)
+                .map(|geheimnis| geheimnis.wert(zelle.spalte).to_owned()),
         }
     }
 
@@ -1950,14 +2092,14 @@ impl Eintragsansicht {
     /// [`Self::notizzelle`]. **Kein `reloadData`**: eine offene Zelle fiele
     /// damit, und eine geaenderte Breite ist kein geaenderter Stand.
     fn umbruchbreite_nachziehen(&self) {
-        if !matches!(self.art(), Eintragsart::Notizen | Eintragsart::Termine) {
-            return;
-        }
-        let tabelle = &self.ivars().tabelle;
-        let Ok(spalte) = NSInteger::try_from(NOTIZSPALTE) else {
+        let Some(mehrzeilig) = mehrzeilige_spalte(self.art()) else {
             return;
         };
-        let breite = self.umbruchbreite(NOTIZSPALTE);
+        let tabelle = &self.ivars().tabelle;
+        let Ok(spalte) = NSInteger::try_from(mehrzeilig) else {
+            return;
+        };
+        let breite = self.umbruchbreite(mehrzeilig);
         for zeile in 0..tabelle.numberOfRows() {
             let feld = tabelle
                 .viewAtColumn_row_makeIfNecessary(spalte, zeile, false)
@@ -1983,12 +2125,28 @@ impl Eintragsansicht {
             Zeilen::Aufgaben(zeilen) => Some(self.aufgabenzelle(zeilen.get(zeile)?)),
             Zeilen::Notizen(zeilen) => {
                 let notiz = zeilen.get(zeile)?;
-                Some(self.notizzelle(&notiz.thema, &notiz.text, spalte))
+                let inhalt = if spalte == NOTIZSPALTE {
+                    &notiz.text
+                } else {
+                    &notiz.thema
+                };
+                Some(self.notizzelle(inhalt, spalte, Eintragsart::Notizen))
             }
             // Datum und Termin in denselben zwei Zellen wie Thema und Notiz.
             Zeilen::Termine(zeilen) => {
                 let termin = zeilen.get(zeile)?;
-                Some(self.notizzelle(&termin.datum, &termin.text, spalte))
+                let inhalt = if spalte == TERMINSPALTE {
+                    &termin.text
+                } else {
+                    &termin.datum
+                };
+                Some(self.notizzelle(inhalt, spalte, Eintragsart::Termine))
+            }
+            // Sechs Zellen derselben Bauart: fuenf einzeilige wie das Thema,
+            // die Notizen mehrzeilig wie die Notiz.
+            Zeilen::Geheimnisse(zeilen) => {
+                let geheimnis = zeilen.get(zeile)?;
+                Some(self.notizzelle(geheimnis.wert(spalte), spalte, Eintragsart::Geheimnisse))
             }
         }
     }
@@ -2004,11 +2162,13 @@ impl Eintragsansicht {
     /// strecken darf, ohne dass die zwei Bindungen einander widersprechen.
     ///
     /// Die Termintabelle baut ihre Zellen hier ebenso, mit dem Datum als
-    /// Thema und dem Termintext als Notiz.
-    fn notizzelle(&self, thema: &str, text: &str, spalte: usize) -> Retained<NSView> {
+    /// Thema und dem Termintext als Notiz, und die Geheimnistabelle alle sechs.
+    /// Mehrzeilig ist allein die Spalte, die [`mehrzeilige_spalte`] der Art
+    /// nennt; `inhalt` ist der Text der Zelle.
+    fn notizzelle(&self, inhalt: &str, spalte: usize, art: Eintragsart) -> Retained<NSView> {
         let mtm = self.ivars().mtm;
-        let ist_notiz = spalte == NOTIZSPALTE;
-        let feld = Notizfeld::neu(mtm, if ist_notiz { text } else { thema });
+        let ist_notiz = mehrzeilige_spalte(art) == Some(spalte);
+        let feld = Notizfeld::neu(mtm, inhalt);
         feld.setFont(Some(&NSFont::systemFontOfSize(NSFont::systemFontSize())));
         feld.setBezeled(false);
         feld.setBordered(false);
@@ -2023,7 +2183,7 @@ impl Eintragsansicht {
                 zelle.setWraps(true);
                 zelle.setScrollable(false);
             }
-            feld.setPreferredMaxLayoutWidth(self.umbruchbreite(NOTIZSPALTE));
+            feld.setPreferredMaxLayoutWidth(self.umbruchbreite(spalte));
         } else {
             feld.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
             if let Some(zelle) = feld.cell() {
@@ -2128,6 +2288,40 @@ impl Eintragsansicht {
     }
 }
 
+/// Die Breite, mit der eine einzeilige Spalte der Geheimnistabelle entsteht,
+/// ausser Protokoll und Adresse; der Nutzer kann jede ziehen.
+const GEHEIMNISBREITE: f64 = 110.0;
+
+/// Kennung, Titel und Anfangsbreite der Spalte eines Feldes der
+/// Geheimnistabelle; vollstaendig ueber `Feld` und ohne Auffangzweig. Die
+/// Kennung ist ein Bezeichner und bleibt ein Literal.
+fn geheimnisspalte(feld: Feld) -> (&'static NSString, Text, f64) {
+    match feld {
+        Feld::Name => (
+            ns_string!("name"),
+            Text::EintragsspalteName,
+            GEHEIMNISBREITE,
+        ),
+        Feld::Protokoll => (ns_string!("protokoll"), Text::EintragsspalteProtokoll, 70.0),
+        Feld::Adresse => (ns_string!("adresse"), Text::EintragsspalteAdresse, 140.0),
+        Feld::Konto => (
+            ns_string!("konto"),
+            Text::EintragsspalteKonto,
+            GEHEIMNISBREITE,
+        ),
+        Feld::Passwort => (
+            ns_string!("passwort"),
+            Text::EintragsspaltePasswort,
+            GEHEIMNISBREITE,
+        ),
+        Feld::Notizen => (
+            ns_string!("notizen"),
+            Text::EintragsspalteNotizen,
+            GEHEIMNISBREITE,
+        ),
+    }
+}
+
 /// Richtet die Spalten, die Zeilenhoehe und die Kopfzeile fuer eine Art ein.
 ///
 /// **Gerufen beim Bau und bei einem Wechsel der Art in
@@ -2193,6 +2387,28 @@ fn spalten_einrichten(
             );
             termin.setMinWidth(THEMENBREITE / 2.0);
             tabelle.addTableColumn(&termin);
+            tabelle.setUsesAutomaticRowHeights(true);
+            tabelle.setHeaderView(Some(kopfzeile));
+        }
+        // Sechs Spalten in der Folge von `Feld::ALLE` (Entscheidung 18 des
+        // Plans); die Notizen nehmen den Rest der Breite wie die Notizspalte.
+        Eintragsart::Geheimnisse => {
+            for feld in Feld::ALLE {
+                let (kennung, titel, breite) = geheimnisspalte(feld);
+                let spalte = spalte_bauen(kennung, titel);
+                if feld == Feld::Notizen {
+                    spalte.setResizingMask(
+                        NSTableColumnResizingOptions::AutoresizingMask
+                            | NSTableColumnResizingOptions::UserResizingMask,
+                    );
+                    spalte.setMinWidth(GEHEIMNISBREITE / 2.0);
+                } else {
+                    spalte.setResizingMask(NSTableColumnResizingOptions::UserResizingMask);
+                    spalte.setWidth(breite);
+                    spalte.setMinWidth(breite / 2.0);
+                }
+                tabelle.addTableColumn(&spalte);
+            }
             tabelle.setUsesAutomaticRowHeights(true);
             tabelle.setHeaderView(Some(kopfzeile));
         }

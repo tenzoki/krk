@@ -227,8 +227,10 @@
 //! `replyToApplicationShouldTerminate:`, seit der Titelleisten-Runde
 //! `NSApplication::keyWindow` (`NSApplication.h:202`) und `isEqual:`
 //! (`objc/NSObject.h:17`, am Protokoll `NSObject`) und
-//! `timerWithTimeInterval:target:selector:userInfo:repeats:` — traegt im
-//! SDK-Kopf gar keine Verfuegbarkeitsangabe und steht damit seit 10.0.
+//! `timerWithTimeInterval:target:selector:userInfo:repeats:` und seit dem
+//! 261016 `invalidate` fuer den Ablaufwecker des gemerkten Schluessels
+//! (`NSTimer.h`) — traegt im SDK-Kopf gar keine Verfuegbarkeitsangabe und
+//! steht damit seit 10.0.
 //! `copy:` und `cut:` sind Aktionsselektoren, die diese Datei seit der Runde
 //! 22 **erklaert** und nicht ruft, `filterEinfuegen:` seit dem 260907 der
 //! dritte; sie sprechen keine Klasse an und tragen deshalb keine Untergrenze.
@@ -282,6 +284,8 @@ use krk_core::ablage::{
     leseprofile, lesezeichen, pfade, werkszustand,
 };
 use krk_core::heimordner::ort::{self, Notizort, Ortsfehler};
+use krk_core::heimordner::schluesselmerker::Schluesselmerker;
+use krk_core::heimordner::tresor::Schluessel;
 use krk_core::heimordner::{self, Heimordner};
 use krk_core::leseprofil::Profile;
 use krk_core::operation::{
@@ -326,6 +330,7 @@ use crate::messmodus::{Anweisung, Aufgabe, Handlung, Messlauf, Sitzungslage, Zus
 use crate::quicknote::{self, F10Wirkung, Kopierausgang, Rueckkehr};
 use crate::spalten::Spalte;
 use crate::tabs::{Auswahlversuch, Tabliste, Vormerkung, Wunschmeldung};
+use crate::tresorweg;
 use crate::vorschaumodell::Blaetterrichtung;
 
 use super::aufteilung::Aufteilung;
@@ -1141,6 +1146,24 @@ pub struct AnwendungsIvars {
     zeichenende: OnceCell<Zeichenende>,
     /// Der Zeitgeber, der den naechsten Messschritt anstoesst.
     ausloesetakt: OnceCell<Retained<NSTimer>>,
+    /// Der gemerkte Schluessel von `secrets.txt`, zehn Minuten ab der Eingabe
+    /// (Entscheidungen 3 und 4 des Plans
+    /// `261016-0306_*_plan-secrets-mit-sechs-feldern-schluesselmerker-und-verbindungen.md`).
+    ///
+    /// **Ein Merker je Prozess mit genau einem Schreiber**:
+    /// [`Anwendungsdelegierter::schluessel_merken`] und
+    /// [`Anwendungsdelegierter::schluessel_verwerfen`]. Der Editorbereich
+    /// bekommt denselben `Rc` und liest allein; die Probe
+    /// `der_merker_hat_genau_einen_schreiber` haelt die Rufer von
+    /// `Schluesselmerker::merken`.
+    merker: Rc<RefCell<Schluesselmerker>>,
+    /// Der einmalige Wecker, der den gemerkten Schluessel bei Ablauf tilgt;
+    /// `None` ohne gemerkten Schluessel.
+    ///
+    /// **Er sorgt allein fuer das Tilgen**: ob ein Schluessel gilt, fragt
+    /// jedes Lesen selbst an der Wachzeit. Ein neuer Schluessel und das
+    /// Verwerfen setzen ihn ausser Kraft (`invalidate`).
+    ablaufwecker: RefCell<Option<Retained<NSTimer>>>,
 }
 
 define_class!(
@@ -1162,6 +1185,13 @@ define_class!(
         #[unsafe(method(messSchritt:))]
         fn mess_schritt(&self, _zeitgeber: &NSTimer) {
             self.messen_weiter();
+        }
+
+        /// Der Rueckruf des Ablaufweckers des gemerkten Schluessels.
+        // SAFETY: Die Signatur passt zu der, die NSTimer aufruft.
+        #[unsafe(method(schluesselAblauf:))]
+        fn schluessel_ablauf(&self, _zeitgeber: &NSTimer) {
+            self.schluessel_ablauf_pruefen();
         }
 
         /// Der eine Selektor jedes Menueeintrags, der ein [`Kommando`] traegt
@@ -1413,6 +1443,10 @@ define_class!(
         // SAFETY: Die Signatur entspricht der des Protokolls.
         #[unsafe(method(applicationWillTerminate:))]
         fn wird_beendet(&self, _meldung: &NSNotification) {
+            // Der gemerkte Schluessel faellt zuerst und wird getilgt
+            // (Entscheidung 3 des Plans der sechs Felder); was danach kommt,
+            // braucht ihn nicht.
+            self.schluessel_verwerfen();
             // **Kein `sitzung_vormerken()` davor.** Bis zur Runde 7 stand hier
             // eines, und es nahm die Schreibsperre ein zweites Mal: beim
             // Beenden liefen damit zwei Durchgaenge hintereinander, und genau
@@ -1560,6 +1594,8 @@ impl Anwendungsdelegierter {
             messlauf: OnceCell::new(),
             zeichenende: OnceCell::new(),
             ausloesetakt: OnceCell::new(),
+            merker: Rc::new(RefCell::new(Schluesselmerker::neu())),
+            ablaufwecker: RefCell::new(None),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
@@ -1620,7 +1656,7 @@ impl Anwendungsdelegierter {
                 selbst.statuszeile_nachziehen();
             }
         }));
-        let editor = Editorbereich::bauen(mtm, Rc::clone(&ivars.heim));
+        let editor = Editorbereich::bauen(mtm, Rc::clone(&ivars.heim), Rc::clone(&ivars.merker));
         // **Der Rueckweg des Editors.** Seit S24 liest er auf einem
         // Arbeitsfaden, und wie ein Oeffnen ausgegangen ist, steht erst fest,
         // wenn der Befehl, der es angefordert hat, laengst zurueck ist. Der
@@ -1645,6 +1681,15 @@ impl Anwendungsdelegierter {
         editor.meldungsmelder_setzen(Box::new(move |meldung| {
             if let Some(selbst) = schwach.load() {
                 selbst.editormeldung_zeigen(&meldung);
+            }
+        }));
+        // Ein Schluessel aus einer eben geprueften Eingabe geht an den einen
+        // Schreiber des Merkers (Entscheidung 4 des Plans der sechs Felder).
+        // Schwach, aus demselben Grund.
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        editor.schluesselmelder_setzen(Box::new(move |schluessel| {
+            if let Some(selbst) = schwach.load() {
+                selbst.schluessel_merken(schluessel);
             }
         }));
         // Der dritte Rueckweg des Editors traegt ein Kommando: der Klick auf
@@ -9578,6 +9623,15 @@ impl Anwendungsdelegierter {
                     self.pin_erfragen(pfad, form);
                 }
             }
+            // Der gemerkte Schluessel oeffnet die Datei nicht (Entscheidung 6
+            // des Plans der sechs Felder): er faellt, und KRK fragt nach der
+            // PIN wie ohne ihn.
+            Ladeausgang::SchluesselAbgewiesen { pfad, form } => {
+                self.schluessel_verwerfen();
+                if !aus_sitzung {
+                    self.pin_erfragen(pfad, form);
+                }
+            }
             Ladeausgang::Abgewiesen(abweisung) if !aus_sitzung => {
                 self.editormeldung_zeigen(&Editormeldung::Abgewiesen(abweisung));
             }
@@ -9674,6 +9728,84 @@ impl Anwendungsdelegierter {
         });
         self.blatt_oeffnet(griff);
         true
+    }
+
+    // ------------------------------------------------------------------
+    // Der gemerkte Schluessel (Entscheidungen 3 bis 6 des Plans der sechs
+    // Felder)
+    // ------------------------------------------------------------------
+
+    /// Merkt einen Schluessel aus einer eben geprueften Eingabe und stellt
+    /// den Ablaufwecker auf seine Frist.
+    ///
+    /// **Einer der zwei Schreiber des Merkers**, und der einzige, der
+    /// `Schluesselmerker::merken` ruft (`der_merker_hat_genau_einen_schreiber`).
+    /// Gerufen allein ueber den Schluesselmelder des Editorbereichs, also nach
+    /// einem Oeffnen mit PIN, einem Festlegen oder einem „PIN ändern"; ein
+    /// Oeffnen mit dem gemerkten Schluessel kommt hier nie an und verlaengert
+    /// damit keine Frist. Ein vorher gemerkter Schluessel faellt und wird
+    /// getilgt.
+    fn schluessel_merken(&self, schluessel: Schluessel) {
+        let jetzt = tresorweg::wachzeit();
+        let rest = {
+            let mut merker = self.ivars().merker.borrow_mut();
+            merker.merken(schluessel, jetzt);
+            merker.restdauer(jetzt)
+        };
+        self.ablaufwecker_stellen(rest);
+    }
+
+    /// Laesst den gemerkten Schluessel fallen, tilgt ihn und setzt den
+    /// Wecker ausser Kraft.
+    ///
+    /// **Der zweite Schreiber des Merkers.** Gerufen, wenn der gemerkte
+    /// Schluessel eine Datei nicht oeffnet (Entscheidung 6), und in
+    /// `applicationWillTerminate:`.
+    fn schluessel_verwerfen(&self) {
+        self.ivars().merker.borrow_mut().verwerfen();
+        self.ablaufwecker_stellen(None);
+    }
+
+    /// Der Wecker hat gefeuert: ist die Frist um, faellt der Schluessel, und
+    /// sonst stellt sich der Wecker auf den Rest, etwa nach einem Ruhezustand,
+    /// in dem `NSTimer` stillstand, die Wachzeit aber nicht.
+    fn schluessel_ablauf_pruefen(&self) {
+        let jetzt = tresorweg::wachzeit();
+        let rest = {
+            let mut merker = self.ivars().merker.borrow_mut();
+            // `gueltiger` tilgt bei Ablauf; die Antwort selbst wird nicht
+            // gebraucht.
+            let _ = merker.gueltiger(jetzt);
+            merker.restdauer(jetzt)
+        };
+        self.ablaufwecker_stellen(rest);
+    }
+
+    /// Setzt den laufenden Wecker ausser Kraft und stellt, wenn `rest` eine
+    /// Dauer nennt, einen neuen einmaligen auf sie.
+    fn ablaufwecker_stellen(&self, rest: Option<std::time::Duration>) {
+        if let Some(alt) = self.ivars().ablaufwecker.borrow_mut().take() {
+            alt.invalidate();
+        }
+        let Some(rest) = rest else {
+            return;
+        };
+        // SAFETY: `self` ist das Ziel und beantwortet `schluesselAblauf:` mit
+        // der erwarteten Signatur. Der Zeitgeber wird in die Laufschleife
+        // gehaengt und haelt sein Ziel stark, bis er feuert oder `invalidate`
+        // ihn loest; `NSRunLoopCommonModes` ist ein Fremdsymbol von Foundation.
+        let wecker = unsafe {
+            let wecker = NSTimer::timerWithTimeInterval_target_selector_userInfo_repeats(
+                rest.as_secs_f64(),
+                self,
+                sel!(schluesselAblauf:),
+                None,
+                false,
+            );
+            NSRunLoop::currentRunLoop().addTimer_forMode(&wecker, NSRunLoopCommonModes);
+            wecker
+        };
+        *self.ivars().ablaufwecker.borrow_mut() = Some(wecker);
     }
 
     /// Setzt die Schreibmarke auf die vorgemerkte Stelle und meldet, falls es
@@ -14293,5 +14425,167 @@ mod escproben {
             genommen, 1,
             "der Griff wird an mehr als einer Stelle genommen"
         );
+    }
+}
+
+/// Der gemerkte Schluessel von `secrets.txt` am Quelltext (Akzeptanz (6) und
+/// (7) von Schritt 5 des Plans
+/// `261016-0306_*_plan-secrets-mit-sechs-feldern-schluesselmerker-und-verbindungen.md`):
+/// ein Schreiber, ein Leser, Tilgen beim Beenden und beim abgewiesenen
+/// Schluessel. Am Quelltext, weil ein Anwendungsdelegierter mit Fenster sich
+/// unter `libtest` nicht bauen laesst; die Frist selbst halten die Proben des
+/// Kerns und des Editormodells.
+#[cfg(test)]
+mod merkerproben {
+    use super::quelltextproben::{datei, diese_datei, rumpf};
+
+    /// Der Betriebscode einer Datei: ihre Zeilen bis zum ersten Pruefmodul in
+    /// Spalte 0, ohne Kommentarzeilen.
+    fn betriebscode(inhalt: &str) -> String {
+        let mut zeilen = Vec::new();
+        let mut davor_cfg = false;
+        for zeile in crate::quellbaum::codezeilen(inhalt) {
+            if davor_cfg && (zeile.starts_with("mod ") || zeile.starts_with("pub(super) mod ")) {
+                let _ = zeilen.pop();
+                break;
+            }
+            davor_cfg = zeile == concat!("#[cfg(", "test)]");
+            zeilen.push(zeile);
+        }
+        zeilen.join("\n")
+    }
+
+    /// Akzeptanz (6): `Schluesselmerker::merken` hat in dieser Kiste genau
+    /// einen Rufer, `schluessel_merken`, und den ruft allein der
+    /// Schluesselmelder des Editorbereichs. Geleert wird der Merker allein in
+    /// `schluessel_verwerfen`, und das rufen allein das Beenden und der
+    /// abgewiesene Schluessel. **Was die Probe nicht sieht:** einen Aufruf von
+    /// `merken` ueber einen anderen Namen, etwa ein `use … as`, und einen
+    /// Rufer in einem Pruefmodul; gezaehlt wird `.merken(` im Betriebscode
+    /// jeder Datei der Kiste.
+    #[test]
+    fn der_merker_hat_genau_einen_schreiber() {
+        let merken = concat!(".mer", "ken(");
+        let rufer: Vec<(String, usize)> = crate::quellbaum::quelldateien()
+            .into_iter()
+            .filter(|(name, _)| name.starts_with("krk-ui/"))
+            .map(|(name, inhalt)| {
+                let zahl = betriebscode(&inhalt).matches(merken).count();
+                (name, zahl)
+            })
+            .filter(|(_, zahl)| *zahl > 0)
+            .collect();
+        assert_eq!(rufer, [("krk-ui/src/appkit/anwendung.rs".to_owned(), 1)]);
+        let quelle = diese_datei();
+        assert!(
+            rumpf(&quelle, "schluessel_merken")
+                .contains(concat!("merker.mer", "ken(schluessel, jetzt)"))
+        );
+
+        let code = betriebscode(&quelle);
+        assert_eq!(
+            code.matches(concat!("self.schluessel_", "merken(")).count()
+                + code
+                    .matches(concat!("selbst.schluessel_", "merken("))
+                    .count(),
+            1,
+            "schluessel_merken hat einen Rufer"
+        );
+        assert!(
+            rumpf(&quelle, "oberflaeche_aufbauen")
+                .contains(concat!("selbst.schluessel_", "merken(schluessel)")),
+            "der eine Rufer ist der Schluesselmelder des Editorbereichs"
+        );
+        assert!(rumpf(&quelle, "oberflaeche_aufbauen").contains("editor.schluesselmelder_setzen("));
+
+        let verwerfen = concat!("merker.borrow_mut().", "verwerfen()");
+        assert_eq!(code.matches(verwerfen).count(), 1);
+        assert!(rumpf(&quelle, "schluessel_verwerfen").contains(verwerfen));
+        assert_eq!(
+            code.matches(concat!("self.schluessel_", "verwerfen()"))
+                .count(),
+            2,
+            "geleert wird beim Beenden und beim abgewiesenen Schluessel"
+        );
+
+        // Der Editorbereich liest allein: kein `merken`, kein `verwerfen`.
+        let editor = betriebscode(&datei("krk-ui/src/appkit/editor.rs"));
+        assert!(!editor.contains(concat!("merker.", "borrow")));
+        assert_eq!(
+            editor
+                .matches(concat!("tresorweg::gemerkter_", "schluessel("))
+                .count(),
+            1
+        );
+    }
+
+    /// Akzeptanz (7): `applicationWillTerminate:` verwirft den gemerkten
+    /// Schluessel, als erstes.
+    #[test]
+    fn das_beenden_verwirft_den_gemerkten_schluessel() {
+        let quelle = diese_datei();
+        let beendet = quelle
+            .split_once(concat!("fn wird_", "beendet("))
+            .and_then(|(_, rest)| rest.split_once("\n        }\n"))
+            .map(|(rumpf, _)| rumpf)
+            .expect("applicationWillTerminate: steht im Code");
+        let code: Vec<&str> = crate::quellbaum::codezeilen(beendet).collect();
+        let erste = code
+            .iter()
+            .map(|zeile| zeile.trim())
+            .find(|zeile| !zeile.is_empty() && !zeile.ends_with('{'))
+            .expect("der Rumpf hat Code");
+        assert_eq!(erste, concat!("self.schluessel_", "verwerfen();"));
+    }
+
+    /// Entscheidung 6: ein gemerkter Schluessel, der die Datei nicht oeffnet,
+    /// faellt, bevor das PIN-Blatt aufgeht.
+    #[test]
+    fn der_abgewiesene_schluessel_faellt_vor_dem_blatt() {
+        let quelle = diese_datei();
+        let behandeln = rumpf(&quelle, "editorausgang_behandeln");
+        let zweig = behandeln
+            .split_once("Ladeausgang::SchluesselAbgewiesen { pfad, form } =>")
+            .map(|(_, rest)| rest)
+            .expect("der Zweig des abgewiesenen Schluessels fehlt");
+        let verwerfen = zweig
+            .find(concat!("self.schluessel_", "verwerfen()"))
+            .expect("der Schluessel faellt");
+        let blatt = zweig
+            .find(concat!("self.pin_", "erfragen(pfad, form)"))
+            .expect("das Blatt geht auf");
+        assert!(verwerfen < blatt);
+    }
+
+    /// Entscheidung 4: der Wecker ist einmalig, auf die Restdauer gestellt,
+    /// und ein neuer setzt den alten ausser Kraft; feuert er, fragt er den
+    /// Merker an der Wachzeit und stellt sich auf den Rest.
+    #[test]
+    fn der_ablaufwecker_ist_einmalig_und_stellt_sich_auf_den_rest() {
+        let quelle = diese_datei();
+        let stellen = rumpf(&quelle, "ablaufwecker_stellen");
+        let alt = stellen
+            .find(".invalidate()")
+            .expect("der alte Wecker faellt");
+        let neu = stellen
+            .find(concat!("sel!(schluessel", "Ablauf:)"))
+            .expect("der neue zielt auf den Ablauf");
+        assert!(alt < neu);
+        assert!(stellen.contains("rest.as_secs_f64()"));
+        assert!(
+            stellen.contains("false,"),
+            "der Wecker wiederholt sich nicht"
+        );
+        let merken = rumpf(&quelle, "schluessel_merken");
+        assert!(merken.contains("self.ablaufwecker_stellen(rest)"));
+        let pruefen = rumpf(&quelle, "schluessel_ablauf_pruefen");
+        let frage = pruefen
+            .find(".gueltiger(jetzt)")
+            .expect("die Frist wird gefragt");
+        let stellt = pruefen
+            .find("self.ablaufwecker_stellen(rest)")
+            .expect("und der Wecker neu gestellt");
+        assert!(frage < stellt);
+        assert!(pruefen.contains(concat!("tresorweg::", "wachzeit()")));
     }
 }

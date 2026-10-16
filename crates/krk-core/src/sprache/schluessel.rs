@@ -651,6 +651,18 @@ pub enum Text {
     EintragsspalteDatum,
     /// Die zweite Spalte der Termintabelle.
     EintragsspalteTermin,
+    /// Die erste Spalte der Geheimnistabelle, der Name des Eintrags.
+    EintragsspalteName,
+    /// Die zweite Spalte der Geheimnistabelle, `protocol:`.
+    EintragsspalteProtokoll,
+    /// Die dritte Spalte der Geheimnistabelle, `address:`.
+    EintragsspalteAdresse,
+    /// Die vierte Spalte der Geheimnistabelle, `account:`.
+    EintragsspalteKonto,
+    /// Die fuenfte Spalte der Geheimnistabelle, `password:`.
+    EintragsspaltePasswort,
+    /// Die sechste Spalte der Geheimnistabelle, die Notizen.
+    EintragsspalteNotizen,
     /// `Belegungsmodell::funktionstext`: wofuer `reserviert_fuer = "editor"`
     /// steht, als `{wofuer}` in `BelegungZusatzReserviert`.
     BelegungReserviertEditor,
@@ -1461,7 +1473,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 611] = [
+    pub const ALLE: [Text; 617] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1732,6 +1744,12 @@ impl Text {
         Text::EintragsspalteNotiz,
         Text::EintragsspalteDatum,
         Text::EintragsspalteTermin,
+        Text::EintragsspalteName,
+        Text::EintragsspalteProtokoll,
+        Text::EintragsspalteAdresse,
+        Text::EintragsspalteKonto,
+        Text::EintragsspaltePasswort,
+        Text::EintragsspalteNotizen,
         Text::BelegungReserviertEditor,
         Text::BelegungZusatzReserviert,
         Text::BelegungZustellerMenue,
