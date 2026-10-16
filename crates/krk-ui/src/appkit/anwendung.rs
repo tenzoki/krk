@@ -7488,8 +7488,10 @@ impl Anwendungsdelegierter {
     ///  └─> Auswahl leer?         ──ja──> Statuszeile, kein Blatt
     ///       │ nein
     ///       └─> fuehrt das Ziel einen Papierkorb?
-    ///            │        └──nein oder unentschieden──> Blatt in der endgueltigen Gestalt
-    ///            │ ja                                    (ein ferner Ort: am Wert nein)
+    ///            │        ├──nein──────────> Blatt in der endgueltigen Gestalt
+    ///            │        │                  (ein ferner Ort: am Wert nein)
+    ///            │        └──unentschieden──> Statuszeile, kein Blatt
+    ///            │ ja
     ///            └─> Blatt zeigen ──> Cmd+Return? ──nein──> nichts geschieht
     ///                                     │ ja
     ///                                     └──> Auftrag mit der gezeigten Auswahl
@@ -7531,8 +7533,9 @@ impl Anwendungsdelegierter {
     /// welches Blatt erscheint; danach gefragt, haette der Nutzer einem Raeumen
     /// zugestimmt, das nicht raeumen kann. Der angezeigte Ordner wird dafuer
     /// **einmal** aufgeloest, und ein Pfad, der sich nicht aufloesen laesst,
-    /// zaehlt als [`Erlaubnisbefund::Unentschieden`] und fuehrt damit zur
-    /// endgueltigen Rueckfrage, nie zum Raeumen.
+    /// zaehlt als [`Erlaubnisbefund::Unentschieden`] und haelt damit mit einer
+    /// Meldung an: weder Raeumen noch endgueltiges Loeschen, weil KRK nicht
+    /// weiss, welches von beiden der Ort traegt.
     ///
     /// **Die teuren Tatsachen fallen erst an, wenn die billigen Stufen durch
     /// sind.** Aufloesen und Papierkorbfrage kosten Zugriffe auf das
@@ -7650,6 +7653,13 @@ impl Anwendungsdelegierter {
             }
             Vorstufe::NichtsAusgewaehlt => {
                 self.antwort_zeigen(aktiv, text(Text::NichtsAusgewaehlt));
+                true
+            }
+            // Ob das Ziel einen Papierkorb fuehrt, liess sich nicht
+            // feststellen: kein Blatt, kein Auftrag, und die Statuszeile sagt
+            // es. Ein ferner Gegenstand kommt nie hierher, er bekam nein.
+            Vorstufe::PapierkorbUnbekannt => {
+                self.antwort_zeigen(aktiv, loeschwarnung::papierkorb_unbekannt());
                 true
             }
             // Ein ferner Gegenstand erreicht diesen Zweig nicht, weil die
@@ -16756,14 +16766,6 @@ mod fernvorgangsproben {
         }
     }
 
-    /// Ein Vorgang mit einer fernen Seite frischt nach dem Ende jeden seiner
-    /// Orte auf, auch den fernen: der Abschluss liest jeden Ort aus
-    /// `Vorgang::ordner` ueber `auffrischung::ort_neu_lesen`, das am Wert
-    /// vergleicht, und nicht ueber den lokalen Weg, der einen fernen Ort nie
-    /// traefe.
-    ///
-    /// **Was sie nicht sieht:** ob der gefundene Tab danach wirklich liest;
-    /// das haelt `ort_neu_lesen` mit seinen eigenen Proben.
     /// Umbenennen und Anlegen an einem fernen Ort stellen auf dem Hauptfaden
     /// keinen Systemaufruf (Schritt 6 des Plans der sftp-Ordner).
     ///
@@ -16875,6 +16877,14 @@ mod fernvorgangsproben {
         );
     }
 
+    /// Ein Vorgang mit einer fernen Seite frischt nach dem Ende jeden seiner
+    /// Orte auf, auch den fernen: der Abschluss liest jeden Ort aus
+    /// `Vorgang::ordner` ueber `auffrischung::ort_neu_lesen`, das am Wert
+    /// vergleicht, und nicht ueber den lokalen Weg, der einen fernen Ort nie
+    /// traefe.
+    ///
+    /// **Was sie nicht sieht:** ob der gefundene Tab danach wirklich liest;
+    /// das haelt `ort_neu_lesen` mit seinen eigenen Proben.
     #[test]
     fn der_abschluss_frischt_jeden_ort_des_vorgangs_auf() {
         let datei = diese_datei();

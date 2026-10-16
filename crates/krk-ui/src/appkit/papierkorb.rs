@@ -50,9 +50,10 @@
 //!
 //! Der Rueckgabetyp ist der [`Erlaubnisbefund`], und damit steht die Richtung im
 //! Typ: [`Erlaubnisbefund::Ja`] ist die **Erlaubnis** und nicht der Warngrund,
-//! und [`Erlaubnisbefund::Unentschieden`] gehoert deshalb zu
-//! [`Erlaubnisbefund::Nein`]. Gefragt wird an ihm [`Erlaubnisbefund::erlaubt`],
-//! und das trifft allein das `Ja`.
+//! und allein sie fuehrt in den Papierkorb. [`Erlaubnisbefund::Nein`] fuehrt
+//! seit dem 261016 zur endgueltigen Rueckfrage, [`Erlaubnisbefund::Unentschieden`]
+//! zu einer Meldung ohne Loeschen; die Tafel dazu steht in
+//! `crate::kommandos::loeschwarnung::vor_der_rueckfrage`.
 //!
 //! **`ist_warnwuerdig` gibt es an diesem Typ nicht**, und das ist der Ertrag des
 //! Schnitts vom 260907. Die Frage zieht `Ja` und `Unentschieden` zusammen, und
@@ -69,9 +70,9 @@
 //! **fuehrt**, und eine Pruefung, die ihn im Zweifel anlegt, beantwortet eine
 //! andere: sie veraendert das Ziel, ueber das sie gleich urteilt, und meldete
 //! danach ein `Ja` ueber einen Datentraeger, der einen Augenblick vorher keinen
-//! Papierkorb hatte. Der Nutzer bekaeme dann eine Rueckfrage statt der Meldung,
-//! dass hier nicht geloescht wird, und sein Eintrag laege in einem Papierkorb,
-//! den KRK ihm ungefragt eingerichtet hat.
+//! Papierkorb hatte. Der Nutzer bekaeme dann die Rueckfrage des Papierkorbs
+//! statt der endgueltigen, und sein Eintrag laege in einem Papierkorb, den KRK
+//! ihm ungefragt eingerichtet hat.
 //!
 //! # Warum der Papierkorb keinen eigenen Faden braucht
 //!
@@ -170,11 +171,12 @@ impl Papierkorb for Systempapierkorb {
 /// - [`Erlaubnisbefund::Ja`] — das System nennt einen Papierkorb. **Das ist die
 ///   Erlaubnis**, nicht ein Warngrund; die Richtung steht im Rueckgabetyp.
 /// - [`Erlaubnisbefund::Nein`] — das System nennt einen Fehler. Es gibt dort keinen
-///   Papierkorb, und es wird nicht geloescht.
+///   Papierkorb; der Aufrufer zeigt die Rueckfrage, die „endgueltig“
+///   ausspricht, und loescht allein auf ihre Bestaetigung hin endgueltig.
 /// - [`Erlaubnisbefund::Unentschieden`] — der Pfad ist kein gueltiges UTF-8 und laesst
 ///   sich nicht in ein `NSString` uebersetzen. Das ist keine Aussage ueber das
 ///   Ziel, sondern eine ueber KRKs Kenntnis von ihm, und der Aufrufer loescht
-///   auch dann nicht.
+///   dann nicht, weder in einen Papierkorb noch endgueltig, sondern meldet es.
 ///
 /// Der Ordner kommt **aufgeloest** herein. Diese Funktion ruft weder
 /// `canonicalize` noch sonst etwas am Dateisystem: eine Verknuepfung wuerde

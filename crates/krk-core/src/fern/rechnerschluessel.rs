@@ -48,6 +48,19 @@
 //! Schluessel: ein Rechner, der zwischen Scan und Verbindung einen anderen
 //! vorzeigt, scheitert.
 //!
+//! **Der Name an der ersten Stelle nennt genau einen Rechner.** `known_hosts`
+//! liest das erste Feld als Liste von Mustern: `,` trennt, `*` und `?` sind
+//! Platzhalter, `!` verneint. Ein Suchname mit einem dieser Zeichen schriebe
+//! eine Zeile, die den angenommenen Schluessel fuer fremde Rechner gelten
+//! liesse, und zwar fuer jeden spaeteren `ssh`-Aufruf des Nutzers, nicht nur
+//! in KRK. [`gescannt_aus`] weist deshalb jeden Suchnamen ab, der nicht
+//! `rechner` oder `[rechner]:port` mit einem Rechner nach
+//! [`super::adresse::rechnername_gueltig`] ist, und [`anhaengen`] haelt jede
+//! Zeile vor dem Schreiben noch einmal dagegen. Die Adresse des Eintrags hat
+//! dieselbe Regel schon beim Zerlegen bestanden; geprueft wird hier trotzdem,
+//! weil der Suchname aus `ssh -G` kommt und damit auch aus einem `Hostname`
+//! oder `HostKeyAlias` der Konfiguration.
+//!
 //! **[`anhaengen`] ist der eine Schreiber an `known_hosts`**, gehalten von der
 //! Probe `known_hosts_hat_genau_einen_schreiber` (`tests/baum.rs`). Er
 //! haengt an und schreibt die Datei nie neu; fehlen Ordner oder Datei, legt er
@@ -78,7 +91,7 @@ use std::os::unix::fs::{DirBuilderExt, OpenOptionsExt};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
-use super::adresse::Fernziel;
+use super::adresse::{Fernziel, rechnername_gueltig};
 use super::faden::Fernfaden;
 use super::kanal::SSH;
 
@@ -239,6 +252,22 @@ pub fn suchname(konfiguration: &Sshkonfiguration) -> String {
     }
 }
 
+/// Ob `suchname` als erstes Feld einer Zeile in `known_hosts` genau einen
+/// Rechner nennt: `rechner` oder `[rechner]:port`, der Rechner nach
+/// [`rechnername_gueltig`], der Port eine Zahl von 1 bis 65535 (Modulkopf).
+#[must_use]
+pub fn suchname_gueltig(suchname: &str) -> bool {
+    let Some(rest) = suchname.strip_prefix('[') else {
+        return rechnername_gueltig(suchname);
+    };
+    let Some((rechner, port)) = rest.split_once("]:") else {
+        return false;
+    };
+    rechnername_gueltig(rechner)
+        && port.chars().all(|zeichen| zeichen.is_ascii_digit())
+        && port.parse::<u16>().is_ok_and(|port| port > 0)
+}
+
 /// Ob `ssh-keygen -F <suchname> -f <datei>` einen Eintrag findet: Ausgang 0
 /// heisst ja, 1 nein, jeder andere ist ein Fehler.
 pub fn in_datei_bekannt(suchname: &str, datei: &Path) -> io::Result<bool> {
@@ -380,13 +409,19 @@ pub fn scannen(
 /// den Zeichen bestehen, die `known_hosts` dort traegt, sonst faellt die
 /// Zeile weg; der Name wird durch `suchname` ersetzt. Eine Zeile, deren
 /// Fingerabdruck `ssh-keygen` nicht rechnen kann, faellt ebenso weg. Ohne
-/// eine gueltige Zeile ist das ein Fehler.
+/// eine gueltige Zeile ist das ein Fehler, und ebenso ein `suchname`, der nach
+/// [`suchname_gueltig`] mehr als einen Rechner nennen koennte (Modulkopf).
 pub fn gescannt_aus(
     _pfand: &Fernfaden,
     konfiguration: &Sshkonfiguration,
     suchname: &str,
     keyscan_ausgabe: &str,
 ) -> Result<Gescannt, String> {
+    if !suchname_gueltig(suchname) {
+        return Err(format!(
+            "{SSH_KEYSCAN}: {suchname:?} is not a single host name for known_hosts"
+        ));
+    }
     let mut zeilen = Vec::new();
     let mut abdruecke = Vec::new();
     for zeile in keyscan_ausgabe.lines() {
@@ -495,7 +530,25 @@ fn fingerabdruck(zeile: &str) -> Result<Option<Fingerabdruck>, String> {
 /// Zeilenwechsel, geht einer voraus, damit die erste neue Zeile nicht an die
 /// letzte alte geraet. Ohne Datei (`userknownhostsfile none`) ist das ein
 /// Fehler der Art `NotFound`.
+///
+/// **Vor dem ersten Byte wird jede Zeile geprueft**: ihr erstes Feld ist
+/// genau der Suchname, und der besteht [`suchname_gueltig`]; sonst ist das ein
+/// Fehler der Art `InvalidData`, und geschrieben wird nichts. [`gescannt_aus`]
+/// laesst keine andere Zeile entstehen, und die Felder von [`Gescannt`] sind
+/// privat; die Pruefung steht trotzdem hier, an dem einen Schreiber, damit sie
+/// nicht an einem Bau haengt, der einmal anders entsteht.
 pub fn anhaengen(_pfand: &Fernfaden, gescannt: &Gescannt) -> io::Result<()> {
+    let erwartet = gescannt.suchname.as_str();
+    let fremde_zeile = gescannt
+        .zeilen
+        .iter()
+        .any(|zeile| zeile.contains('\n') || zeile.split(' ').next() != Some(erwartet));
+    if !suchname_gueltig(erwartet) || fremde_zeile {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("{erwartet:?} is not a single host name for known_hosts"),
+        ));
+    }
     let Some(datei) = gescannt.datei.as_deref() else {
         return Err(io::Error::new(
             io::ErrorKind::NotFound,

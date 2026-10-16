@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "82a0e2e2-810f-45c6-9994-2bc92ca01925",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261016-1945-sftp-ordner-im-dateifenster-wie-lokal/issues/261017-0004-das-gespraech-meldet-getrennt-erst-nach-dem-join-des-fehlerfadens-und-kann-an-einem-enkelprozess-haengen.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

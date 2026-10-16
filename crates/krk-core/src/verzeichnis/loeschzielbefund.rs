@@ -226,12 +226,13 @@ pub enum Erlaubnisbefund {
     /// Die Pruefung hat die Frage beantwortet, und die Antwort ist ja. **Das
     /// ist die Erlaubnis**, und sie ist die einzige.
     Ja,
-    /// Die Pruefung hat die Frage beantwortet, und die Antwort ist nein: es
-    /// wird nicht geloescht.
+    /// Die Pruefung hat die Frage beantwortet, und die Antwort ist nein: in
+    /// keinen Papierkorb; seit dem 261016 folgt die Rueckfrage, die
+    /// „endgueltig“ ausspricht.
     Nein,
     /// Die Pruefung ist nicht dazu gekommen, die Frage zu beantworten. Das ist
     /// keine Aussage ueber das Ziel, sondern eine ueber KRKs Kenntnis von ihm,
-    /// und es wird ebenfalls nicht geloescht.
+    /// und es wird nicht geloescht, weder in einen Papierkorb noch endgueltig.
     Unentschieden,
 }
 
@@ -354,19 +355,20 @@ impl Warnbefund {
 }
 
 impl Erlaubnisbefund {
-    /// Ob dieser Befund das Loeschen erlaubt: allein [`Erlaubnisbefund::Ja`].
+    /// Ob dieser Befund das Raeumen in den Papierkorb erlaubt: allein
+    /// [`Erlaubnisbefund::Ja`].
     ///
-    /// Die eine Frage an einen Wert dieser Richtung, und sie faellt bewusst
-    /// **anders** aus als [`Warnbefund::ist_warnwuerdig`]: dort gehoert
-    /// `Unentschieden` zum `Ja`, hier zum `Nein`. Wer nichts ueber den
-    /// Papierkorb eines Ziels weiss, loescht dort nicht, und genau das ist die
-    /// Zusage von C4.
+    /// Sie faellt bewusst **anders** aus als [`Warnbefund::ist_warnwuerdig`]:
+    /// dort gehoert `Unentschieden` zum `Ja`, hier zum `Nein`. Wer nichts ueber
+    /// den Papierkorb eines Ziels weiss, raeumt dort nicht, und genau das ist
+    /// die Zusage von C4.
     ///
-    /// **Die Fallunterscheidung steht hier und nicht bei ihrem Aufrufer.** Bis
-    /// zum 260907 schrieb `loeschwarnung::vor_der_rueckfrage` die drei Antworten
-    /// selbst aus, weil der Typ die Richtung nicht kannte; die Vollstaendigkeit
-    /// ist damit nicht verlorengegangen, sondern hierhergezogen — ein vierter
-    /// Wert haelt diesen `match` an.
+    /// **`loeschwarnung::vor_der_rueckfrage` fragt sie seit dem 261017 nicht
+    /// mehr**, sondern schreibt die drei Antworten selbst aus: dort fuehrt
+    /// `Nein` zur endgueltigen Rueckfrage und `Unentschieden` zu einer Meldung,
+    /// und diese Frage zieht genau die beiden zusammen. Wer „erlaubt“ fuer die
+    /// Frage nach dem endgueltigen Loeschen haelt, machte aus „wir wissen
+    /// nichts“ ein endgueltiges Loeschen.
     ///
     /// `#[must_use]`, weil das stille Fallenlassen unbemerkt bliebe: der Wert
     /// ist die Erlaubnis selbst, und ohne ihn loeschte der Aufrufer auf einem

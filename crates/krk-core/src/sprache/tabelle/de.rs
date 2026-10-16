@@ -108,6 +108,15 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VorgangKopiertAberInQuelleGeblieben => {
             "kopiert, aber in der Quelle geblieben: {grund}"
         }
+        Text::VorgangErsatzUnvollstaendig => {
+            "nicht vollständig kopiert, das Ziel bleibt unverändert"
+        }
+        Text::VorgangErsatzUnterZwischennamen => {
+            "das Ziel ist entfernt, der Ersatz liegt unter „{name}“: {grund}"
+        }
+        Text::VorgangQuelleUnterZwischennamen => {
+            "das Ziel ließ sich nicht ersetzen, und der Eintrag liegt jetzt unter „{name}“: {grund}"
+        }
         Text::VorgangKeinPapierkorb => "kein Papierkorb eingehängt; es wurde nichts gelöscht",
         Text::VorgangKeineGewoehnlicheDatei => "keine gewöhnliche Datei",
         Text::VorgangDateiangabenNichtKopiert => {
@@ -655,6 +664,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::Markierungsstand => "{n} markiert, davon {ordner}, {groesse}",
         Text::LoeschenEndgueltigAus => {
             "Dieser Ort hat keinen Papierkorb: gelöschte Einträge lassen sich nicht zurückholen. Gelöscht wird aus {ordner}."
+        }
+        Text::LoeschenPapierkorbUnbekannt => {
+            "ob das Ziel einen Papierkorb führt, ließ sich nicht feststellen; es wurde nichts gelöscht; im Finder löschen"
         }
         Text::WarngrundUnentscheidbar => "von einem Ziel unbekannter Einordnung",
         Text::WarngrundNetzlaufwerk => "von einem Netzlaufwerk",

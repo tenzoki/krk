@@ -15,10 +15,16 @@
 //! | `ssh.strato.de/htdocs` | `/htdocs`, absolut, wie in einer `sftp://`-URL |
 //!
 //! **Abgewiesen wird, was `ssh` anders laese, als der Nutzer es meint:** ein
-//! leerer Rechner, ein Rechner mit Leerraum, mit einem Steuerzeichen, mit
-//! fuehrendem `-` (das `ssh` als Option laese, stuende der Rechner nicht hinter
-//! `--`) oder mit `@` (das `ssh` als Konto vor dem Rechner laese, an dem Konto
-//! des Eintrags vorbei), und ein Port ausserhalb von 1 bis 65535.
+//! leerer Rechner, ein Rechner mit fuehrendem `-` (das `ssh` als Option laese,
+//! stuende der Rechner nicht hinter `--`), ein Port ausserhalb von 1 bis 65535
+//! und **jeder Rechner mit einem Zeichen, das in keinem Rechnernamen und keiner
+//! IP-Adresse steht** ([`rechnername_gueltig`]): `@` (das `ssh` als Konto vor
+//! dem Rechner laese, an dem Konto des Eintrags vorbei), Leerraum,
+//! Steuerzeichen, und die Zeichen, die `known_hosts` als Muster liest (`,`,
+//! `*`, `?`, `!`). Ein Rechner wie `files.example,*` schriebe sonst beim
+//! Annehmen seines Schluessels eine Zeile, die den Schluessel fuer jeden
+//! Rechner gelten liesse (`super::rechnerschluessel`). Eckige Klammern stehen
+//! allein um eine IPv6-Adresse.
 //!
 //! Aufgeloest wird der Startordner hier nicht: das tut der Zugang auf dem
 //! Server mit `REALPATH` und `STAT` (`super::zugang`).
@@ -129,8 +135,10 @@ impl Fernziel {
 pub enum Adressfehler {
     /// Vor dem Port oder dem Pfad steht kein Rechner.
     RechnerLeer,
-    /// Der Rechner traegt Leerraum, ein Steuerzeichen oder `@`, beginnt mit
-    /// `-` oder steht in einer unvollstaendigen eckigen Klammer.
+    /// Der Rechner traegt ein Zeichen, das in keinem Rechnernamen und keiner
+    /// IP-Adresse steht ([`rechnername_gueltig`]), beginnt mit `-`, steht in
+    /// einer unvollstaendigen eckigen Klammer, oder die Klammer umschliesst
+    /// keine IPv6-Adresse.
     RechnerUngueltig(String),
     /// Der Port ist keine Zahl von 1 bis 65535.
     PortUngueltig(String),
@@ -151,12 +159,10 @@ pub fn fernziel(adresse: &str, konto: &str) -> Result<Fernziel, Adressfehler> {
     if rechner.is_empty() {
         return Err(Adressfehler::RechnerLeer);
     }
-    if rechner.starts_with('-')
-        || rechner.contains('@')
-        || rechner
-            .chars()
-            .any(|zeichen| zeichen.is_whitespace() || zeichen.is_control())
-    {
+    // Eine eckige Klammer steht allein um eine IPv6-Adresse, und die traegt
+    // immer einen Doppelpunkt.
+    let ohne_ipv6_in_klammern = vorn.starts_with('[') && !rechner.contains(':');
+    if !rechnername_gueltig(rechner) || ohne_ipv6_in_klammern {
         return Err(Adressfehler::RechnerUngueltig(rechner.to_owned()));
     }
     let port = match port {
@@ -175,6 +181,39 @@ pub fn fernziel(adresse: &str, konto: &str) -> Result<Fernziel, Adressfehler> {
         konto: (!konto.is_empty()).then(|| konto.to_owned()),
         startpfad: startpfad(pfad),
     })
+}
+
+/// Ob `rechner` ein Rechnername oder eine IP-Adresse sein kann, ohne eckige
+/// Klammern.
+///
+/// Ein Rechnername besteht aus ASCII-Buchstaben, Ziffern, `.`, `-` und `_`;
+/// eine IPv6-Adresse (erkannt am `:`) aus Hexziffern, `:` und `.`, dazu
+/// hinter `%` eine Zone aus Buchstaben, Ziffern, `.`, `-` und `_`. Ein
+/// fuehrendes `-` ist in keiner der zwei Formen erlaubt.
+///
+/// **Die Regel ist eng, damit ein Name nie als Muster gelesen wird**: als
+/// erstes Feld einer Zeile in `known_hosts` ist er eine Liste von Mustern, in
+/// der `,` trennt, `*` und `?` Platzhalter sind und `!` verneint. Keines
+/// dieser Zeichen, kein Leerraum und keine Klammer kommt durch. Dieselbe Regel
+/// haelt `super::rechnerschluessel` an jeden Namen, bevor er dort hineingeht.
+#[must_use]
+pub fn rechnername_gueltig(rechner: &str) -> bool {
+    let teil_eines_namens =
+        |zeichen: char| zeichen.is_ascii_alphanumeric() || matches!(zeichen, '.' | '-' | '_');
+    if rechner.is_empty() || rechner.starts_with('-') {
+        return false;
+    }
+    if !rechner.contains(':') {
+        return rechner.chars().all(teil_eines_namens);
+    }
+    let (adresse, zone) = match rechner.split_once('%') {
+        Some((adresse, zone)) => (adresse, Some(zone)),
+        None => (rechner, None),
+    };
+    adresse
+        .chars()
+        .all(|zeichen| zeichen.is_ascii_hexdigit() || matches!(zeichen, ':' | '.'))
+        && zone.is_none_or(|zone| !zone.is_empty() && zone.chars().all(teil_eines_namens))
 }
 
 /// Rechner und Port aus dem Teil vor dem ersten `/`.

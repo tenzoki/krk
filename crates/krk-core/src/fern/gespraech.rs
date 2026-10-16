@@ -62,9 +62,9 @@
 
 use std::collections::{HashMap, VecDeque};
 use std::fmt;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{self, BufRead, BufReader, Read, Write};
 use std::ops::ControlFlow;
-use std::process::{Child, ChildStderr, ChildStdin, ChildStdout};
+use std::process::{Child, ChildStdin, ChildStdout};
 use std::sync::mpsc::{self, Receiver, Sender};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::thread::{self, JoinHandle};
@@ -87,6 +87,11 @@ pub const OFFENE_SCHREIBUNGEN: usize = 16;
 
 /// Wie viele Zeilen der Fehlerausgabe eine [`Trennung`] mitnimmt.
 const FEHLERZEILEN: usize = 8;
+
+/// Wie viele Bytes einer Zeile der Fehlerausgabe gehalten werden. Der Rest
+/// der Zeile bis zu ihrem Ende wird gelesen und verworfen; die Statuszeile
+/// zeigt ohnehin nur eine Zeile.
+const FEHLERZEILENLAENGE: usize = 4096;
 
 /// Die Erweiterung, an der sich ein Server als OpenSSH zu erkennen gibt.
 const OPENSSH_KENNUNG: &[u8] = b"posix-rename@openssh.com";
@@ -839,22 +844,54 @@ impl Gespraech {
 }
 
 /// Die Fehlerausgabe zeilenweise lesen und die letzten [`FEHLERZEILEN`]
-/// halten. Ohne diesen Leser fuellte `ssh` die Pipe und hielte an.
-fn fehlerausgabe_lesen(fehler: ChildStderr, zeilen: &Fehlerzeilen) {
-    for zeile in BufReader::new(fehler).split(b'\n') {
-        let Ok(zeile) = zeile else {
-            return;
+/// halten, jede hoechstens [`FEHLERZEILENLAENGE`] Bytes lang. Ohne diesen
+/// Leser fuellte `ssh` die Pipe und hielte an.
+///
+/// **Gehalten wird nie mehr als die zwei Grenzen zusammen**, auch an einem
+/// Strom ohne Zeilenende: `ssh` reicht die Fehlerausgabe des Servers weiter,
+/// und ein feindlicher oder fehlerhafter Server liesse eine Zeile ohne Grenze
+/// den Speicher von KRK unbegrenzt wachsen. Was ueber die Laenge hinausgeht,
+/// wird bis zum naechsten Zeilenende weiter gelesen und verworfen, damit
+/// `ssh` nicht an einer vollen Pipe anhaelt. Eine letzte Zeile ohne
+/// Zeilenende zaehlt wie eine mit.
+fn fehlerausgabe_lesen(fehler: impl Read, zeilen: &Fehlerzeilen) {
+    let mut leser = BufReader::new(fehler);
+    let mut zeile: Vec<u8> = Vec::new();
+    loop {
+        let puffer = match leser.fill_buf() {
+            Ok([]) => break,
+            Ok(puffer) => puffer,
+            Err(fehler) if fehler.kind() == io::ErrorKind::Interrupted => continue,
+            Err(_) => break,
         };
-        let text = String::from_utf8_lossy(&zeile).trim_end().to_owned();
-        if text.is_empty() {
-            continue;
+        let (stueck, zeilenende) = match puffer.iter().position(|&byte| byte == b'\n') {
+            Some(stelle) => (&puffer[..stelle], Some(stelle)),
+            None => (puffer, None),
+        };
+        let platz = FEHLERZEILENLAENGE.saturating_sub(zeile.len());
+        zeile.extend_from_slice(&stueck[..stueck.len().min(platz)]);
+        let verbraucht = zeilenende.map_or(puffer.len(), |stelle| stelle + 1);
+        leser.consume(verbraucht);
+        if zeilenende.is_some() {
+            zeile_halten(&mut zeile, zeilen);
         }
-        let mut gehalten = sperren(zeilen);
-        if gehalten.len() == FEHLERZEILEN {
-            gehalten.pop_front();
-        }
-        gehalten.push_back(text);
     }
+    zeile_halten(&mut zeile, zeilen);
+}
+
+/// Nimmt eine gelesene Zeile in die gehaltenen auf, ohne Leerraum am Ende,
+/// und leert sie fuer die naechste; eine leere Zeile zaehlt nicht.
+fn zeile_halten(zeile: &mut Vec<u8>, zeilen: &Fehlerzeilen) {
+    let text = String::from_utf8_lossy(zeile).trim_end().to_owned();
+    zeile.clear();
+    if text.is_empty() {
+        return;
+    }
+    let mut gehalten = sperren(zeilen);
+    if gehalten.len() == FEHLERZEILEN {
+        gehalten.pop_front();
+    }
+    gehalten.push_back(text);
 }
 
 /// Der Rumpf des Gespraechsfadens: Antworten zustellen, bis das Gespraech
@@ -1002,5 +1039,46 @@ fn daten(antwort: Antwort, verlangt: u32) -> Result<Option<Vec<u8>>, Fernfehler>
             code: status::EOF, ..
         } => Ok(None),
         andere => Err(fehlschlag(andere)),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Ein Strom von 10 MiB ohne Zeilenende haelt hoechstens die Grenze einer
+    /// Zeile, und die Zeile danach kommt als letzte an (Befund
+    /// `261017-0004-die-fehlerausgabe-von-ssh-wird-ohne-laengengrenze-je-zeile-gelesen`).
+    ///
+    /// Ohne die Grenze hielt der Leser die ganze erste Zeile, 10 MiB.
+    #[test]
+    fn eine_endlose_fehlerzeile_wird_gekuerzt_und_die_naechste_kommt_an() {
+        let mut strom = vec![b'x'; 10 * 1024 * 1024];
+        strom.extend_from_slice(b"\nende\n");
+        let zeilen: Fehlerzeilen = Arc::new(Mutex::new(VecDeque::new()));
+        fehlerausgabe_lesen(strom.as_slice(), &zeilen);
+        let gehalten = sperren(&zeilen);
+        assert_eq!(
+            gehalten.len(),
+            2,
+            "{:?}",
+            gehalten.iter().map(String::len).collect::<Vec<_>>()
+        );
+        assert_eq!(gehalten.front().map(String::len), Some(FEHLERZEILENLAENGE));
+        assert_eq!(gehalten.back().map(String::as_str), Some("ende"));
+    }
+
+    /// Gehalten werden die letzten [`FEHLERZEILEN`] Zeilen, und eine letzte
+    /// ohne Zeilenende zaehlt mit.
+    #[test]
+    fn die_letzten_zeilen_bleiben_auch_ohne_zeilenende_am_schluss() {
+        let strom: String = (1..=12).map(|zahl| format!("zeile {zahl}\n\n")).collect();
+        let strom = format!("{strom}rest");
+        let zeilen: Fehlerzeilen = Arc::new(Mutex::new(VecDeque::new()));
+        fehlerausgabe_lesen(strom.as_bytes(), &zeilen);
+        let gehalten: Vec<String> = sperren(&zeilen).iter().cloned().collect();
+        let mut erwartet: Vec<String> = (6..=12).map(|zahl| format!("zeile {zahl}")).collect();
+        erwartet.push("rest".to_owned());
+        assert_eq!(gehalten, erwartet);
     }
 }

@@ -1332,6 +1332,82 @@ fn das_anhaengen_legt_verzeichnis_und_datei_mit_den_engen_rechten_an_und_schreib
     assert_eq!(fehler.kind(), std::io::ErrorKind::NotFound);
 }
 
+/// Ein Rechnername mit einem Zeichen, das `known_hosts` als Muster liest,
+/// kommt weder durch das Zerlegen der Adresse noch in eine Zeile zum
+/// Anhaengen (Befund `261017-0004-ein-rechnername-mit-komma-oder-stern-…`).
+///
+/// Ohne die Regel nahm `fernziel` `a.example,*` an, und `gescannt_aus` baute
+/// daraus die Zeile `a.example,* <typ> <schluessel>`, die fuer jeden Rechner
+/// gilt. Der Suchname wird an `gescannt_aus` eigens geprueft, weil er aus
+/// `ssh -G` kommt und damit auch aus `Hostname` oder `HostKeyAlias` der
+/// Konfiguration; die Datei im [`Pruefordner`] bleibt dabei unberuehrt.
+#[test]
+fn ein_rechnername_mit_musterzeichen_kommt_nicht_nach_known_hosts() {
+    for falsch in [
+        "a.example,*",
+        "a*",
+        "a?.example",
+        "!a.example",
+        "a b",
+        "-a",
+        "[a.example]",
+        "[a.example]:22",
+        "a]b",
+        "a[b",
+        "a\u{e4}.example",
+    ] {
+        assert!(
+            matches!(fernziel(falsch, ""), Err(Adressfehler::RechnerUngueltig(_))),
+            "{falsch}"
+        );
+    }
+    for gut in [
+        "ssh.strato.de",
+        "[::1]:2222",
+        "10.0.0.1",
+        "fe80::1%en0",
+        "a_b-c",
+    ] {
+        assert!(fernziel(gut, "").is_ok(), "{gut}");
+    }
+
+    let ordner = Pruefordner::neu("fern-musterzeichen");
+    let datei = ordner.unter("known_hosts");
+    let [(ed, _, _), _] = FESTE_SCHLUESSEL;
+    for falsch in [
+        "a.example,*",
+        "*",
+        "a?.example",
+        "!a.example",
+        "[a.example,*]:2222",
+        "[a.example]:0",
+        "[a.example]:x",
+        "a.example kurz",
+    ] {
+        let konfiguration = scankonfiguration(22, Some(falsch), &datei);
+        let zeile = format!("a.example {ed}\n");
+        let suchname = falsch.to_owned();
+        let ergebnis =
+            im_fernfaden(move |pfand| gescannt_aus(pfand, &konfiguration, &suchname, &zeile));
+        assert!(ergebnis.is_err(), "{falsch}: {ergebnis:?}");
+    }
+    for gut in [
+        "ssh.strato.de",
+        "[::1]:2222",
+        "10.0.0.1",
+        "[example.test]:2222",
+    ] {
+        let konfiguration = scankonfiguration(22, None, &datei);
+        let zeile = format!("example.test {ed}\n");
+        let suchname = gut.to_owned();
+        let gescannt =
+            im_fernfaden(move |pfand| gescannt_aus(pfand, &konfiguration, &suchname, &zeile))
+                .unwrap_or_else(|fehler| panic!("{gut}: {fehler}"));
+        assert_eq!(gescannt.zeilen(), [format!("{gut} {ed}")]);
+    }
+    assert!(!datei.exists(), "die Probe hat etwas angehaengt");
+}
+
 /// Ein Zugang auf dem Server des Systems, ohne `ssh` davor.
 fn serverplan() -> Kanalplan {
     Kanalplan::nur(SFTP_SERVER)

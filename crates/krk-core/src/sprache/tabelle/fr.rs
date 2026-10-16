@@ -120,6 +120,13 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VorgangKopiertAberInQuelleGeblieben => {
             "copié, mais resté dans la source\u{a0}: {grund}"
         }
+        Text::VorgangErsatzUnvollstaendig => "copie incomplète, la destination reste inchangée",
+        Text::VorgangErsatzUnterZwischennamen => {
+            "la destination a été supprimée, le remplacement se trouve sous «\u{a0}{name}\u{a0}»\u{a0}: {grund}"
+        }
+        Text::VorgangQuelleUnterZwischennamen => {
+            "la destination n’a pas pu être remplacée, et l’entrée se trouve maintenant sous «\u{a0}{name}\u{a0}»\u{a0}: {grund}"
+        }
         Text::VorgangKeinPapierkorb => {
             "aucune Corbeille n’est disponible\u{202f}; rien n’a été supprimé"
         }
@@ -710,6 +717,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::Markierungsstand => "{n} marqués, dont {ordner}, {groesse}",
         Text::LoeschenEndgueltigAus => {
             "Cet emplacement n’a pas de Corbeille\u{a0}: les entrées supprimées ne peuvent pas être récupérées. Suppression depuis {ordner}."
+        }
+        Text::LoeschenPapierkorbUnbekannt => {
+            "impossible de déterminer si la destination a une Corbeille, rien n’a été supprimé\u{202f}; supprimer dans le Finder"
         }
         Text::WarngrundUnentscheidbar => "depuis une destination de nature inconnue",
         Text::WarngrundNetzlaufwerk => "depuis un volume réseau",

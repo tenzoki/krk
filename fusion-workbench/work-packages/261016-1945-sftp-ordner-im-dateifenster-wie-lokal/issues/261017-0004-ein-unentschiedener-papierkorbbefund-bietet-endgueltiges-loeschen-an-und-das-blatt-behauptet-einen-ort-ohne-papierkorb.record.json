@@ -1,0 +1,26 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "4f2022df-8a7e-42dc-b6e7-c773ead3475e",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261016-1945-sftp-ordner-im-dateifenster-wie-lokal/issues/261017-0004-ein-unentschiedener-papierkorbbefund-bietet-endgueltiges-loeschen-an-und-das-blatt-behauptet-einen-ort-ohne-papierkorb.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "closed",
+    "disposition": {
+      "kind": "fixed",
+      "reason_ref": null
+    }
+  }
+}

@@ -296,6 +296,183 @@ fn ein_vorhandenes_ziel_stellt_die_konfliktfrage_und_ueberschreiben_ersetzt_es()
     );
 }
 
+/// Ob im Ordner ein Zwischenname des Ueberschreibens liegen geblieben ist.
+fn zwischennamen_in(ordner: &Path) -> Vec<String> {
+    fs::read_dir(ordner)
+        .expect("der Ordner laesst sich nicht lesen")
+        .filter_map(|eintrag| eintrag.ok())
+        .map(|eintrag| eintrag.file_name().to_string_lossy().into_owned())
+        .filter(|name| name.starts_with(".krk-ersatz-"))
+        .collect()
+}
+
+/// Benennen Quelle und Ziel auf dem Server ueber eine Verknuepfung denselben
+/// Eintrag, ueberschreibt weder das Kopieren noch das Verschieben die Quelle
+/// (Befund `261017-0004-ueberschreiben-zerstoert-die-quelle-wenn-ziel-und-quelle-…`).
+///
+/// Im [`Pruefordner`] stehen `echt/x` und `alias -> echt`; kopiert und
+/// verschoben wird `echt/x` nach `alias/`, und jede Konfliktfrage bekommt
+/// „Ueberschreiben“. Bis zur Behebung entschied der Fernzweig am Pfadtext,
+/// stellte die Konfliktfrage, und „Ueberschreiben“ entfernte die eine
+/// gemeinsame Datei: das Kopieren hinterliess eine leere, das Verschieben
+/// keine. Daneben ein Zielordner, der ueber eine Verknuepfung in der Quelle
+/// liegt: kein Kopieren in sich selbst.
+#[test]
+fn ueberschreiben_ueber_eine_verknuepfung_laesst_die_quelle_stehen() {
+    let ordner = Pruefordner::neu("fern-verknuepfte-quelle");
+    let _ = ordner.ordner("echt");
+    let quelle = ordner.datei("echt/x", b"inhalt");
+    let alias = ordner.pfad().join("alias");
+    std::os::unix::fs::symlink("echt", &alias).expect("die Verknuepfung laesst sich nicht anlegen");
+    let server = zugang("server.test");
+
+    for (art, auftrag) in [
+        (
+            "kopieren",
+            Fernauftrag::kopieren(vec![fern(&server, &quelle)], fern(&server, &alias)),
+        ),
+        (
+            "verschieben",
+            Fernauftrag::verschieben(vec![fern(&server, &quelle)], fern(&server, &alias)),
+        ),
+    ] {
+        let ausgang = fahren(auftrag, Konfliktantwort::Ueberschreiben);
+        assert_eq!(
+            fs::read(&quelle).ok().as_deref(),
+            Some(&b"inhalt"[..]),
+            "{art}: die Quelle ist zerstoert"
+        );
+        assert!(
+            ausgang.konflikte.is_empty(),
+            "{art}: {:?}",
+            ausgang.konflikte
+        );
+        assert_eq!(
+            ausgang.bericht.uebersprungen.len(),
+            1,
+            "{art}: {:?}",
+            ausgang.bericht
+        );
+        assert!(
+            zwischennamen_in(&ordner.pfad().join("echt")).is_empty(),
+            "{art}"
+        );
+    }
+
+    // Ein Ordner in einen Ordner, der ueber eine Verknuepfung in ihm liegt;
+    // am Pfadtext liegt `aussen` nicht in `baum`.
+    let baum = ordner.ordner("baum");
+    fs::write(baum.join("a.txt"), b"a").expect("a.txt");
+    let _ = ordner.ordner("baum/unten");
+    let aussen = ordner.pfad().join("aussen");
+    std::os::unix::fs::symlink("baum/unten", &aussen).expect("Verknuepfung");
+    let ausgang = fahren(
+        Fernauftrag::kopieren(vec![fern(&server, &baum)], fern(&server, &aussen)),
+        Konfliktantwort::Abbrechen,
+    );
+    assert_eq!(
+        ausgang.bericht.uebersprungen.len(),
+        1,
+        "{:?}",
+        ausgang.bericht
+    );
+    assert!(
+        !baum.join("unten/baum").exists(),
+        "der Ordner wurde in sich selbst kopiert"
+    );
+}
+
+/// „Ueberschreiben“ entfernt ein Ziel nie, ohne dass sein Ersatz vollstaendig
+/// dasteht (Befund `261017-0004-jedes-scheitern-beim-fernen-anlegen-gilt-als-konflikt-…`).
+///
+/// Die Quelle laesst sich nicht lesen, eine Datei mit den Rechten `000` und
+/// ein Ordner mit einer solchen Datei darin, und am Ziel auf dem Server steht
+/// je eine Datei gleichen Namens. Bis zur Behebung entfernte „Ueberschreiben“
+/// das Ziel zuerst; danach scheiterte das Lesen, und am Ende war das Ziel fort
+/// und nichts an seiner Stelle. Jetzt entsteht der Ersatz unter einem
+/// Zwischennamen, faellt weg, und das Ziel steht unveraendert. Daneben gelingt
+/// dasselbe Ueberschreiben mit lesbarer Quelle, auch als Verschieben auf
+/// demselben Server, und kein Zwischenname bleibt liegen.
+#[test]
+fn ueberschreiben_entfernt_das_ziel_erst_wenn_der_ersatz_vollstaendig_dasteht() {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let ordner = Pruefordner::neu("fern-ersatz");
+    let fernordner = ordner.ordner("server");
+    let _ = ordner.ordner("quelle");
+    let verschlossen = ordner.datei("quelle/a.txt", b"neu");
+    let teilbaum = ordner.ordner("quelle/d");
+    fs::write(teilbaum.join("gut.txt"), b"gut").expect("gut.txt");
+    let zu = ordner.datei("quelle/d/zu.txt", b"zu");
+    for datei in [&verschlossen, &zu] {
+        fs::set_permissions(datei, fs::Permissions::from_mode(0o000)).expect("Rechte");
+    }
+    fs::write(fernordner.join("a.txt"), b"alt").expect("a.txt");
+    fs::write(fernordner.join("d"), b"alte datei").expect("d");
+    let server = zugang("server.test");
+
+    let ausgang = fahren(
+        Fernauftrag::kopieren(
+            vec![lokal(&verschlossen), lokal(&teilbaum)],
+            fern(&server, &fernordner),
+        ),
+        Konfliktantwort::Ueberschreiben,
+    );
+    for datei in [&verschlossen, &zu] {
+        fs::set_permissions(datei, fs::Permissions::from_mode(0o644)).expect("Rechte");
+    }
+    assert_eq!(ausgang.konflikte.len(), 2, "{:?}", ausgang.konflikte);
+    assert_eq!(
+        fs::read(fernordner.join("a.txt")).ok().as_deref(),
+        Some(&b"alt"[..]),
+        "die Datei am Ziel ist ohne Ersatz verschwunden"
+    );
+    assert_eq!(
+        fs::read(fernordner.join("d")).ok().as_deref(),
+        Some(&b"alte datei"[..]),
+        "die Datei am Ziel ist einem halben Ordner gewichen"
+    );
+    assert!(!ausgang.bericht.uebersprungen.is_empty());
+    assert!(
+        zwischennamen_in(&fernordner).is_empty(),
+        "{:?}",
+        zwischennamen_in(&fernordner)
+    );
+
+    // Mit lesbarer Quelle wird ersetzt: Datei und Ordner ueber eine Datei.
+    let ausgang = fahren(
+        Fernauftrag::kopieren(
+            vec![lokal(&verschlossen), lokal(&teilbaum)],
+            fern(&server, &fernordner),
+        ),
+        Konfliktantwort::Ueberschreiben,
+    );
+    ohne_uebersprungene(&ausgang.bericht);
+    assert_eq!(fs::read(fernordner.join("a.txt")).expect("a.txt"), b"neu");
+    assert_eq!(
+        fs::read(fernordner.join("d/zu.txt")).expect("d/zu.txt"),
+        b"zu"
+    );
+    assert!(zwischennamen_in(&fernordner).is_empty());
+
+    // Verschieben auf demselben Server ueber ein vorhandenes Ziel.
+    let hier = ordner.ordner("server/hier");
+    let wandernd = ordner.datei("server/hier/a.txt", b"wandernd");
+    let ausgang = fahren(
+        Fernauftrag::verschieben(vec![fern(&server, &wandernd)], fern(&server, &fernordner)),
+        Konfliktantwort::Ueberschreiben,
+    );
+    ohne_uebersprungene(&ausgang.bericht);
+    assert_eq!(ausgang.konflikte.len(), 1);
+    assert!(!wandernd.exists(), "die Quelle steht noch");
+    assert_eq!(
+        fs::read(fernordner.join("a.txt")).expect("a.txt"),
+        b"wandernd"
+    );
+    assert!(zwischennamen_in(&fernordner).is_empty());
+    assert!(zwischennamen_in(&hier).is_empty());
+}
+
 /// Ein Ordner auf einen gleichnamigen Ordner ist kein Konflikt: der Inhalt
 /// kommt hinzu, und gefragt wird nichts.
 #[test]

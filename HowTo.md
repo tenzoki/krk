@@ -259,7 +259,10 @@ löschen“ und dass sich nichts zurückholen lässt, die Schaltfläche heißt
 „Endgültig löschen“, und vorbelegt ist „Abbrechen“: Return und Esc brechen ab,
 `cmd+return` löscht. Bis zur Fassung vom 261016 meldete KRK an solchen Orten
 nur, dass nichts gelöscht wurde. Ein Ort mit Papierkorb geht unverändert den
-Weg in den Papierkorb.
+Weg in den Papierkorb. **Kann KRK nicht feststellen, ob ein Ort einen
+Papierkorb führt**, etwa weil sich der angezeigte Ordner nicht auflösen lässt,
+bietet es kein endgültiges Löschen an: es löscht nichts und sagt das in der
+Statuszeile.
 
 **Die zwei Ankreuzfelder der Bereichsleiste am Fensterfuß gelten dem sichtbaren
 Tab, nicht dem Fenster.** „Deep" dehnt die Suche auf den Unterbaum aus und
@@ -1886,8 +1889,13 @@ schreibt man `[adresse]:port`.
 | `ssh.example.org/htdocs` | `/htdocs`, vom obersten Ordner des Servers aus |
 
 Das Blatt „Verbinden…“ weist schon beim Anlegen ab, was `ssh` anders läse als
-gemeint: einen leeren Rechner, einen Rechner mit Leerzeichen, mit `@` oder mit
-`-` am Anfang, und einen Port außerhalb von 1 bis 65535. Steht am angegebenen
+gemeint: einen leeren Rechner, einen Rechner mit `-` am Anfang, einen Port
+außerhalb von 1 bis 65535 und jeden Rechner mit einem Zeichen, das in keinem
+Rechnernamen und keiner IP-Adresse steht, etwa ein Leerzeichen, `@`, `,`, `*`,
+`?` oder `!`. Erlaubt sind Buchstaben ohne Umlaut, Ziffern, `.`, `-` und `_`,
+eine IPv6-Adresse in eckigen Klammern. Ein Name mit `,` oder `*` würde beim
+Annehmen seines Schlüssels sonst in `~/.ssh/known_hosts` für fremde Rechner
+gelten. Steht am angegebenen
 Pfad kein Ordner, zeigt das Fenster das Anmeldeverzeichnis, und die
 Statuszeile sagt, welcher Pfad gefehlt hat.
 
@@ -1947,9 +1955,15 @@ verbunden wird nicht.
   `konto@rechner:port:/pfad`.
 - **Kopieren und Verschieben** in jede Richtung: vom Mac auf den Server, vom
   Server auf den Mac, zwischen zwei Ordnern desselben Servers und zwischen
-  zwei Servern, auch durch Ziehen aus dem Finder oder aus dem anderen Fenster.
-  Fortschritt, Abbruch und das Blatt bei einem vorhandenen Namen sind dieselben
-  wie lokal; eine abgebrochene Datei wird am Ziel entfernt. **Mit gehen Rechte
+  zwei Servern, über „Kopieren“ (`f5`) und „Verschieben“ (`f6`) ins andere
+  Dateifenster oder durch Ziehen aus dem Finder auf das Fenster. Aus einem
+  Dateifenster heraus lässt sich nichts ziehen. Fortschritt, Abbruch und das
+  Blatt bei einem vorhandenen Namen sind dieselben wie lokal; eine
+  abgebrochene Datei wird am Ziel entfernt. **„Überschreiben“ legt den Ersatz
+  erst vollständig neben das Ziel und entfernt das Ziel danach**: kommt der
+  Ersatz nicht vollständig an, bleibt das Ziel, wie es war, und die
+  Abschlussliste sagt es. Benennen Quelle und Ziel auf dem Server über eine
+  Verknüpfung denselben Eintrag, wird nichts überschrieben. **Mit gehen Rechte
   und Änderungszeit, nicht aber erweiterte Attribute**: Finder-Etiketten,
   Kommentare und andere Zusatzdaten einer Datei gehen auf dem Weg zum Server
   verloren. Verknüpfungen bleiben Verknüpfungen; auf einen Server, der sich
@@ -1969,12 +1983,13 @@ verbunden wird nicht.
 
 - **Ausgegraut** sind dort „Terminal öffnen“, „Mit dem Standardprogramm
   öffnen“, beide Pfadkopien, „Bearbeiten“ und das Stapelumbenennen, dazu mit
-  dem Fokus im Dateifenster „Teilen“ und „Lesezeichen anlegen“. Die
-  Ankreuzfelder „Deep“ und „Content“ lassen sich nicht bedienen.
+  dem Fokus im Dateifenster „Teilen“, „Lesezeichen anlegen“ und der Rundweg
+  (`cmd+e`). Die Ankreuzfelder „Deep“ und „Content“ lassen sich nicht
+  bedienen.
 - **Das Kontextmenü graut nichts aus**, sondern meldet: „Öffnen mit“, Zippen,
   Entpacken, Duplizieren, „Im Finder öffnen“, „Im Finder anzeigen“ und
   „Auswerfen“ sagen in der Statuszeile „Das geht an einem Ort auf einem Server
-  nicht.“ Dasselbe sagen `cmd+c` und `cmd+x`, die von dort keine
+  nicht.“ „Teilen“ steht dort gar nicht im Kontextmenü. Dasselbe sagen `cmd+c` und `cmd+x`, die von dort keine
   Dateiverweise ablegen, und ein Doppelklick auf eine Datei. Ein Doppelklick
   auf eine Verknüpfung tritt ein, wenn sie auf einen Ordner zeigt.
 - **Die Vorschau** zeigt Name, Größe, Änderungszeit und Typ aus der Liste und

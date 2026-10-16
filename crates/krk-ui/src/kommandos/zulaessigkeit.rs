@@ -2664,7 +2664,7 @@ mod tests {
         }
 
         // Kopieren, Verschieben, Loeschen, Umbenennen und Anlegen bleiben
-        // zulaessig: die naechsten Schritte bauen sie, bis dahin melden sie.
+        // zulaessig: sie wirken am fernen Ort ueber `operation::fern`.
         let (blatt, appkit, krk) = OHNE_HINDERNIS;
         let fern_in_der_liste = Lage {
             aktiv_fern: true,

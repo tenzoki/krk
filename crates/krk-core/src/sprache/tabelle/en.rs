@@ -100,6 +100,13 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VorgangOrdnerSelbstBlieb => "contents moved, but the folder itself remained: {grund}",
         Text::VorgangNichtVollstaendigKopiert => "not completely copied, left in the source",
         Text::VorgangKopiertAberInQuelleGeblieben => "copied, but left in the source: {grund}",
+        Text::VorgangErsatzUnvollstaendig => "not completely copied, the destination is unchanged",
+        Text::VorgangErsatzUnterZwischennamen => {
+            "the destination was removed, the replacement is at “{name}”: {grund}"
+        }
+        Text::VorgangQuelleUnterZwischennamen => {
+            "the destination could not be replaced, and the entry is now at “{name}”: {grund}"
+        }
         Text::VorgangKeinPapierkorb => "no Trash attached; nothing was deleted",
         Text::VorgangKeineGewoehnlicheDatei => "not a regular file",
         Text::VorgangDateiangabenNichtKopiert => {
@@ -625,6 +632,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::Markierungsstand => "{n} marked, including {ordner}, {groesse}",
         Text::LoeschenEndgueltigAus => {
             "This location has no Trash: deleted entries cannot be recovered. Deleting from {ordner}."
+        }
+        Text::LoeschenPapierkorbUnbekannt => {
+            "could not determine whether the destination has a Trash, nothing was deleted; delete in the Finder"
         }
         Text::WarngrundUnentscheidbar => "from a destination of unknown kind",
         Text::WarngrundNetzlaufwerk => "from a network volume",

@@ -49,12 +49,29 @@
 //!
 //! **Das Anlegen ist die eine Pruefung, ob ein Name frei ist.** Eine Datei
 //! entsteht ausschliessend (lokal `create_new`, fern `CREAT|EXCL`), ein Ordner
-//! ueber `mkdir`, eine Verknuepfung ueber `symlink`. Scheitert das, fragt
-//! `LSTAT` am Ziel, ob dort ein Eintrag steht, denn SFTP v3 kennt keinen
-//! eigenen Code fuer „vorhanden“. Steht einer da, geht die Konfliktfrage ueber
-//! [`Steuerung::konflikt_loesen_mit`] an dasselbe Blatt wie lokal;
-//! „Ueberschreiben“ entfernt das Ziel endgueltig, wie `ziel_klaeren` es lokal
-//! tut. Ordner auf Ordner ist kein Konflikt.
+//! ueber `mkdir`, eine Verknuepfung ueber `symlink`. **Ob ein Scheitern ein
+//! vergebener Name ist, beantwortet eine Regel** ([`vorhandenes_ziel`]): lokal
+//! allein `AlreadyExists`, fern jeder Statuscode ausser „gibt es nicht“ und
+//! „keine Rechte“, und in beiden Faellen nur, wenn `LSTAT` am Ziel danach
+//! einen Eintrag findet; SFTP v3 kennt keinen eigenen Code fuer „vorhanden“,
+//! und `FAILURE` bleibt mehrdeutig. Jedes andere Scheitern ist ein Fehler des
+//! Eintrags und steht mit seinem Grund im Bericht. Ist der Name vergeben, geht
+//! die Konfliktfrage ueber [`Steuerung::konflikt_loesen_mit`] an dasselbe
+//! Blatt wie lokal. Ordner auf Ordner ist kein Konflikt.
+//!
+//! **„Ueberschreiben“ entfernt das Ziel erst, wenn sein Ersatz vollstaendig
+//! daneben steht.** Der Ersatz entsteht unter einem Zwischennamen im Ordner
+//! des Ziels (`.krk-ersatz-<prozess>-<n>`): beim Kopieren als vollstaendige
+//! Kopie, beim Verschieben auf demselben Server als `RENAME` der Quelle
+//! dorthin. Erst dann wird das Ziel endgueltig entfernt und der Ersatz auf
+//! seinen Namen umbenannt. Kommt der Ersatz nicht vollstaendig an, faellt er
+//! weg, und das Ziel bleibt, wie es war; scheitert das Entfernen, ebenso. Ein
+//! `RENAME` ueber ein vorhandenes Ziel hinweg kennt SFTP v3 nicht, und
+//! `posix-rename@openssh.com` bleibt nach Entscheidung 10 ungenutzt; zwischen
+//! dem Entfernen und dem Umbenennen fehlt das Ziel deshalb einen Augenblick
+//! lang, waehrend der Ersatz vollstaendig daneben liegt. Scheitert gerade
+//! dieses Umbenennen, nennt der Bericht den Zwischennamen, unter dem der
+//! Ersatz liegt.
 //!
 //! **Was der Bericht nennt, ist eine Bezeichnung und fuer einen fernen Eintrag
 //! kein Pfad auf dieser Platte.** [`Uebersprungen::pfad`], der Fortschritt und
@@ -68,9 +85,17 @@
 //! # Was dieses Modul nicht haelt
 //!
 //! - Ob Quelle und Ziel auf einem Server derselbe Eintrag sind, entscheidet es
-//!   am Pfad und nicht an der Naemlichkeit: ueber SFTP v3 gibt es weder Geraet
-//!   noch Inode. Ein Ziel, das ueber eine Verknuepfung auf dem Server in der
-//!   Quelle liegt, sieht es nicht.
+//!   nicht an der Naemlichkeit, denn ueber SFTP v3 gibt es weder Geraet noch
+//!   Inode, sondern am Pfad: gleicher Pfad, oder gleicher Name unter zwei
+//!   Elternordnern, die `REALPATH` auf dem Server zum selben Ordner aufloest
+//!   ([`Stelle::derselbe_eintrag`]). Damit sieht es eine Verknuepfung oberhalb
+//!   des Eintrags, etwa `~/htdocs` auf `/var/www`, nicht aber zwei harte
+//!   Verweise auf dieselbe Datei. Laesst sich `REALPATH` nicht fragen, wird
+//!   nicht ueberschrieben. Ob ein Zielordner in der Quelle liegt, fragt
+//!   [`Stelle::liegt_in`] ebenso ueber `REALPATH`, und ohne Antwort am Pfad.
+//! - Zwei Kennungen, die denselben Server meinen (`rechner` und
+//!   `rechner:22`), gelten als zwei Server; zwischen ihnen wird kopiert und
+//!   nicht umbenannt, und `REALPATH` wird nicht gefragt.
 //! - Erweiterte Attribute und Ressourcengabeln gehen auf dem Weg zum Server
 //!   verloren; mit gehen allein Rechte und Aenderungszeit.
 //! - Eine Verknuepfung legt es auf einem Server allein an, wenn er sich als
@@ -384,14 +409,20 @@ fn einen_uebertragen(
         steuerung.ueberspringen(&bezeichnung, text(Text::VorgangFernNameOhneUtf8));
         return Ablauf::Weiter;
     };
-    if quelle.derselbe_eintrag(&ziel) {
-        steuerung.ueberspringen(
-            &bezeichnung,
-            text(Text::VorgangQuelleUndZielDerselbeEintrag),
-        );
-        return Ablauf::Weiter;
+    // Ein unklarer Befund laesst den Vorgang weiterlaufen: er endet am Ziel
+    // allein dann in einem Entfernen, wenn „Ueberschreiben“ kommt, und dort
+    // haelt ihn [`ersetzen_erlaubt`] an.
+    match quelle.derselbe_eintrag(pfand, &ziel) {
+        Gleichheit::Ja => {
+            steuerung.ueberspringen(
+                &bezeichnung,
+                text(Text::VorgangQuelleUndZielDerselbeEintrag),
+            );
+            return Ablauf::Weiter;
+        }
+        Gleichheit::Nein | Gleichheit::Unklar(_) => {}
     }
-    if angaben.typ == Typ::Ordner && zielordner.liegt_in(quelle) {
+    if angaben.typ == Typ::Ordner && zielordner.liegt_in(pfand, quelle) {
         steuerung.ueberspringen(&bezeichnung, text(Text::VorgangZielLiegtInDerQuelle));
         return Ablauf::Weiter;
     }
@@ -510,26 +541,14 @@ fn eintrag_loeschen(pfand: &Fernfaden, quelle: &Stelle, steuerung: &mut Steuerun
 /// Der Grund, wenn Umbenennen oder Anlegen scheitert.
 ///
 /// **SFTP v3 kennt keinen Code fuer „vorhanden“**: der Server des Systems
-/// antwortet auf ein vergebenes Ziel mit dem allgemeinen `FAILURE`. Gefragt
-/// wird deshalb danach `LSTAT` am Ziel, wie beim Kopieren; steht dort ein
-/// Eintrag, ist der Grund der von [`super::grund`] fuer `AlreadyExists`, also
-/// genau der, den ein lokales Scheitern an einem vergebenen Namen traegt. Die
-/// zwei Codes, die etwas anderes sagen, „gibt es nicht“ und „keine Rechte“,
-/// behalten ihren eigenen Grund. Lokal sagt das System es selbst.
+/// antwortet auf ein vergebenes Ziel mit dem allgemeinen `FAILURE`. Ob der
+/// Name vergeben ist, sagt deshalb dieselbe Regel wie beim Kopieren,
+/// [`vorhandenes_ziel`]; ist er es, ist der Grund der von [`super::grund`] fuer
+/// `AlreadyExists`, also genau der, den ein lokales Scheitern an einem
+/// vergebenen Namen traegt. Jedes andere Scheitern behaelt seinen eigenen
+/// Grund.
 fn namensgrund(pfand: &Fernfaden, ziel: Option<&Stelle>, fehler: &Fehlschlag) -> String {
-    let vergeben = match fehler {
-        Fehlschlag::Fern(fern) => {
-            !fern.ist_status(status::NO_SUCH_FILE)
-                && !fern.ist_status(status::PERMISSION_DENIED)
-                && ziel.is_some_and(|ziel| ziel.angaben(pfand).is_ok())
-        }
-        Fehlschlag::Lokal(_)
-        | Fehlschlag::NameOhneUtf8
-        | Fehlschlag::KeineGewoehnlicheDatei
-        | Fehlschlag::KeineVerknuepfung
-        | Fehlschlag::KeinEintrag
-        | Fehlschlag::Abgebrochen => false,
-    };
+    let vergeben = ziel.is_some_and(|ziel| vorhandenes_ziel(pfand, fehler, ziel).is_some());
     if vergeben {
         super::grund(&io::Error::from(io::ErrorKind::AlreadyExists))
     } else {
@@ -558,8 +577,9 @@ enum Angelegt {
 
 /// Wie ein Konflikt am Ziel ausging.
 enum Klaerung {
-    /// Das Ziel ist entfernt; derselbe Name wird noch einmal angelegt.
-    Ersetzt,
+    /// Das Ziel soll ersetzt werden; entfernt ist es noch nicht (Modulkopf,
+    /// „Ueberschreiben“).
+    Ersetzen,
     /// Unter einem anderen Namen weiter.
     Nach(Stelle),
     /// Diese Quelle auslassen; sie steht schon im Bericht.
@@ -570,9 +590,9 @@ enum Klaerung {
 
 /// Kopiert einen Eintrag an sein Ziel, samt Konfliktbehandlung.
 ///
-/// **Die Schleife endet**: nach „Ueberschreiben“ wird genau einmal neu
-/// angelegt, und ein zweiter Konflikt danach laesst die Quelle aus; nach
-/// „Umbenennen“ geht es nur unter einem anderen Namen weiter.
+/// **Die Schleife endet**: „Ueberschreiben“ geht an [`kopie_ersetzt_ziel`]
+/// und kehrt nicht zurueck; nach „Umbenennen“ geht es nur unter einem anderen
+/// Namen weiter.
 fn eintrag_kopieren(
     pfand: &Fernfaden,
     quelle: &Stelle,
@@ -598,7 +618,6 @@ fn eintrag_kopieren(
     };
 
     let mut ziel = ziel;
-    let mut ersetzt = false;
     loop {
         let fehler = match anlegen(pfand, &ziel, &anlage) {
             Ok(Angelegt::Datei(schreibziel)) => {
@@ -613,36 +632,211 @@ fn eintrag_kopieren(
             }
             Err(fehler) => fehler,
         };
-        // Zwei Gruende, die kein vorhandenes Ziel meinen: der Server kann die
-        // Verknuepfung nicht anlegen, oder ihr Verweis ist kein UTF-8.
-        if fehler.ist_kein_konflikt() {
-            steuerung.ueberspringen(&bezeichnung, grund(&fehler));
-            return Ablauf::Weiter;
-        }
-        let Ok(vorhanden) = ziel.angaben(pfand) else {
+        // Allein ein vergebener Name ist ein Konflikt; jedes andere
+        // Scheitern ist ein Fehler dieses Eintrags.
+        let Some(vorhanden) = vorhandenes_ziel(pfand, &fehler, &ziel) else {
             steuerung.ueberspringen(&bezeichnung, grund(&fehler));
             return Ablauf::Weiter;
         };
         if angaben.typ == Typ::Ordner && vorhanden.typ == Typ::Ordner {
             return ordner_fuellen(pfand, quelle, angaben, &ziel, steuerung);
         }
-        if ersetzt {
-            steuerung.ueberspringen(&bezeichnung, text(Text::VorgangAmZielStehtEintrag));
-            return Ablauf::Weiter;
-        }
         match konflikt_klaeren(pfand, &bezeichnung, &ziel, steuerung) {
-            Klaerung::Ersetzt => ersetzt = true,
+            Klaerung::Ersetzen => {
+                return kopie_ersetzt_ziel(pfand, quelle, angaben, &anlage, &ziel, steuerung);
+            }
             Klaerung::Nach(neues) => {
                 if neues.bezeichnung() == ziel.bezeichnung() {
                     steuerung.ueberspringen(&bezeichnung, text(Text::VorgangAmZielStehtEintrag));
                     return Ablauf::Weiter;
                 }
                 ziel = neues;
-                ersetzt = false;
             }
             Klaerung::Ueberspringen => return Ablauf::Weiter,
             Klaerung::Abbrechen => return Ablauf::Abgebrochen,
         }
+    }
+}
+
+/// Wie viele Zwischennamen das Ueberschreiben versucht, bevor es aufgibt.
+const ZWISCHENVERSUCHE: u32 = 16;
+
+/// Der Zwischenname des Ersatzes beim `versuch`-ten Anlauf, im Ordner des
+/// Ziels (Modulkopf, „Ueberschreiben“). Er traegt die Prozesskennung und
+/// keinen Teil des Zielnamens, damit er nie laenger wird als ein Name, den
+/// der Server annimmt.
+fn zwischenname(versuch: u32) -> String {
+    format!(".krk-ersatz-{}-{versuch}", std::process::id())
+}
+
+/// Ob „Ueberschreiben“ das Ziel entfernen darf.
+///
+/// **Nicht, wenn Quelle und Ziel derselbe Eintrag sind, und nicht, wenn es
+/// sich nicht feststellen laesst**: das Entfernen traefe dann die Quelle.
+/// Beides steht im Bericht, und das Ziel bleibt. Gefragt wird auf dem
+/// Arbeitsfaden, fern ueber `REALPATH` ([`Stelle::derselbe_eintrag`]).
+fn ersetzen_erlaubt(
+    pfand: &Fernfaden,
+    quelle: &Stelle,
+    ziel: &Stelle,
+    steuerung: &mut Steuerung,
+) -> bool {
+    match quelle.derselbe_eintrag(pfand, ziel) {
+        Gleichheit::Nein => true,
+        Gleichheit::Ja => {
+            steuerung.ueberspringen(
+                &quelle.bezeichnung(),
+                text(Text::VorgangQuelleUndZielDerselbeEintrag),
+            );
+            false
+        }
+        Gleichheit::Unklar(fehler) => {
+            steuerung.ueberspringen(
+                &quelle.bezeichnung(),
+                satz(Text::VorgangZielNichtErsetzt, &[("grund", &grund(&fehler))]),
+            );
+            false
+        }
+    }
+}
+
+/// Legt den Ersatz fuer `ziel` unter einem freien Zwischennamen daneben an,
+/// ausschliessend; ein vergebener Zwischenname fuehrt zum naechsten.
+fn zwischen_anlegen(
+    pfand: &Fernfaden,
+    ziel: &Stelle,
+    anlage: &Anlage,
+) -> Result<(Stelle, Angelegt), Fehlschlag> {
+    let mut letzter = Fehlschlag::KeinEintrag;
+    for versuch in 0..ZWISCHENVERSUCHE {
+        let zwischen = ziel
+            .geschwister(&zwischenname(versuch))
+            .ok_or(Fehlschlag::KeinEintrag)?;
+        match anlegen(pfand, &zwischen, anlage) {
+            Ok(angelegt) => return Ok((zwischen, angelegt)),
+            Err(fehler) if vorhandenes_ziel(pfand, &fehler, &zwischen).is_some() => {
+                letzter = fehler;
+            }
+            Err(fehler) => return Err(fehler),
+        }
+    }
+    Err(letzter)
+}
+
+/// Ersetzt das vorhandene `ziel` durch eine Kopie der Quelle, ohne dass das
+/// Ziel je verschwindet, ohne ersetzt zu werden (Modulkopf, „Ueberschreiben“).
+///
+/// Die Kopie entsteht vollstaendig unter einem Zwischennamen; dass sie
+/// vollstaendig ist, bezeugt wie in [`ueber_die_grenze`], dass seit ihrem
+/// Beginn nichts uebersprungen wurde. Fehlt etwas, faellt die Kopie weg, und
+/// das Ziel bleibt. Erst dann tauscht [`tauschen`].
+fn kopie_ersetzt_ziel(
+    pfand: &Fernfaden,
+    quelle: &Stelle,
+    angaben: &Angaben,
+    anlage: &Anlage,
+    ziel: &Stelle,
+    steuerung: &mut Steuerung,
+) -> Ablauf {
+    let bezeichnung = quelle.bezeichnung();
+    if !ersetzen_erlaubt(pfand, quelle, ziel, steuerung) {
+        return Ablauf::Weiter;
+    }
+    let (zwischen, angelegt) = match zwischen_anlegen(pfand, ziel, anlage) {
+        Ok(paar) => paar,
+        Err(fehler) => {
+            steuerung.ueberspringen(
+                &bezeichnung,
+                satz(Text::VorgangZielNichtErsetzt, &[("grund", &grund(&fehler))]),
+            );
+            return Ablauf::Weiter;
+        }
+    };
+    let stand = steuerung.uebersprungen_stand();
+    let ablauf = match angelegt {
+        Angelegt::Datei(schreibziel) => {
+            datei_fuellen(pfand, quelle, angaben, &zwischen, schreibziel, steuerung)
+        }
+        Angelegt::Ordner => ordner_fuellen(pfand, quelle, angaben, &zwischen, steuerung),
+        Angelegt::Verknuepfung => Ablauf::Weiter,
+    };
+    if ablauf == Ablauf::Abgebrochen {
+        rest_wegraeumen(pfand, &zwischen, steuerung);
+        return Ablauf::Abgebrochen;
+    }
+    if !steuerung.uebersprungen_seit(stand).is_empty() {
+        rest_wegraeumen(pfand, &zwischen, steuerung);
+        steuerung.ueberspringen(&bezeichnung, text(Text::VorgangErsatzUnvollstaendig));
+        return Ablauf::Weiter;
+    }
+    match tauschen(pfand, &zwischen, ziel) {
+        Tausch::Getauscht => {
+            if matches!(anlage, Anlage::Verknuepfung(_)) {
+                steuerung.eintrag_fertig(&bezeichnung, 0);
+            }
+        }
+        Tausch::ZielBlieb(fehler) => {
+            rest_wegraeumen(pfand, &zwischen, steuerung);
+            steuerung.ueberspringen(
+                &bezeichnung,
+                satz(Text::VorgangZielNichtErsetzt, &[("grund", &grund(&fehler))]),
+            );
+        }
+        Tausch::ZielFort(fehler) => steuerung.ueberspringen(
+            &bezeichnung,
+            satz(
+                Text::VorgangErsatzUnterZwischennamen,
+                &[
+                    ("name", &zwischen.bezeichnung().display()),
+                    ("grund", &grund(&fehler)),
+                ],
+            ),
+        ),
+    }
+    Ablauf::Weiter
+}
+
+/// Wie der Tausch von Ersatz und Ziel ausging.
+enum Tausch {
+    /// Der Ersatz traegt den Namen des Ziels.
+    Getauscht,
+    /// Das Ziel liess sich nicht entfernen und steht unveraendert; der Ersatz
+    /// liegt weiter unter seinem Zwischennamen.
+    ZielBlieb(Fehlschlag),
+    /// Das Ziel ist entfernt, und der Ersatz liess sich nicht umbenennen; er
+    /// liegt unter seinem Zwischennamen.
+    ZielFort(Fehlschlag),
+}
+
+/// Entfernt `ziel` endgueltig und benennt den vollstaendigen Ersatz
+/// `zwischen` auf seinen Namen um.
+fn tauschen(pfand: &Fernfaden, zwischen: &Stelle, ziel: &Stelle) -> Tausch {
+    let name = match ziel.name() {
+        Ok(name) => name,
+        Err(_) => return Tausch::ZielBlieb(Fehlschlag::KeinEintrag),
+    };
+    if let Err(fehler) = ziel.baum_entfernen(pfand) {
+        return Tausch::ZielBlieb(fehler);
+    }
+    match zwischen.umbenennen_in(pfand, &name) {
+        Ok(()) => Tausch::Getauscht,
+        Err(fehler) => Tausch::ZielFort(fehler),
+    }
+}
+
+/// Entfernt einen Ersatz, der nicht an die Stelle des Ziels kommt; scheitert
+/// das, steht es im Bericht.
+fn rest_wegraeumen(pfand: &Fernfaden, zwischen: &Stelle, steuerung: &mut Steuerung) {
+    if let Err(fehler) = zwischen.baum_entfernen(pfand)
+        && !fehler.ist_nicht_da()
+    {
+        steuerung.ueberspringen(
+            &zwischen.bezeichnung(),
+            satz(
+                Text::VorgangNachAbbruchNichtWeggeraeumt,
+                &[("grund", &grund(&fehler))],
+            ),
+        );
     }
 }
 
@@ -657,12 +851,13 @@ fn anlegen(pfand: &Fernfaden, ziel: &Stelle, anlage: &Anlage) -> Result<Angelegt
     }
 }
 
-/// Fragt, was mit einem vorhandenen Ziel geschieht, und fuehrt die Antwort
-/// aus, soweit sie am Ziel wirkt.
+/// Fragt, was mit einem vorhandenen Ziel geschieht.
 ///
-/// Dieselben vier Antworten wie lokal in `super::ziel_klaeren`, und
-/// „Ueberschreiben“ entfernt endgueltig, bei einem Ordner samt Inhalt; das
-/// Konfliktblatt sagt das schon heute (`operationen::ersetzungsweg` in der
+/// Dieselben vier Antworten wie lokal in `super::ziel_klaeren`.
+/// „Ueberschreiben“ entfernt hier noch nichts: der Rufer legt erst den
+/// Ersatz unter einem Zwischennamen an und entfernt das Ziel, bei einem
+/// Ordner samt Inhalt, erst danach endgueltig (Modulkopf); das Konfliktblatt
+/// sagt das Endgueltige schon heute (`operationen::ersetzungsweg` in der
 /// Oberflaeche).
 fn konflikt_klaeren(
     pfand: &Fernfaden,
@@ -674,16 +869,7 @@ fn konflikt_klaeren(
     let antwort =
         steuerung.konflikt_loesen_mit(quelle, &ziel_bezeichnung, || ziel.freier_name(pfand));
     match antwort {
-        super::Konfliktantwort::Ueberschreiben => match ziel.baum_entfernen(pfand) {
-            Ok(()) => Klaerung::Ersetzt,
-            Err(fehler) => {
-                steuerung.ueberspringen(
-                    quelle,
-                    satz(Text::VorgangZielNichtErsetzt, &[("grund", &grund(&fehler))]),
-                );
-                Klaerung::Ueberspringen
-            }
-        },
+        super::Konfliktantwort::Ueberschreiben => Klaerung::Ersetzen,
         super::Konfliktantwort::Ueberspringen => {
             steuerung.ueberspringen(quelle, text(Text::VorgangAmZielStehtEintrag));
             Klaerung::Ueberspringen
@@ -896,7 +1082,9 @@ fn unterangaben_holen(
 ///
 /// **Auf demselben Server ist es ein `RENAME`** und nicht
 /// `posix-rename@openssh.com` (Entscheidung 10); `RENAME` scheitert an einem
-/// vorhandenen Ziel, und dann geht dieselbe Konfliktfrage wie beim Kopieren.
+/// vorhandenen Ziel, und dann geht dieselbe Konfliktfrage wie beim Kopieren,
+/// gestellt nach derselben Regel ([`vorhandenes_ziel`]). „Ueberschreiben“ geht
+/// an [`umbenennen_ersetzt_ziel`].
 /// Ordner auf Ordner wird Kind fuer Kind zusammengefuehrt. **Ueber eine
 /// Grenze**, zwischen Geraet und Server oder zwischen zwei Servern, wird
 /// kopiert und danach die Quelle entfernt, allein wenn nichts uebersprungen
@@ -910,7 +1098,6 @@ fn eintrag_verschieben(
 ) -> Ablauf {
     let bezeichnung = quelle.bezeichnung();
     let mut ziel = ziel;
-    let mut ersetzt = false;
     loop {
         let fehler = match quelle.umbenennen(pfand, &ziel) {
             None => return ueber_die_grenze(pfand, quelle, angaben, ziel, steuerung),
@@ -920,31 +1107,121 @@ fn eintrag_verschieben(
             }
             Some(Err(fehler)) => fehler,
         };
-        let Ok(vorhanden) = ziel.angaben(pfand) else {
+        let Some(vorhanden) = vorhandenes_ziel(pfand, &fehler, &ziel) else {
             steuerung.ueberspringen(&bezeichnung, grund(&fehler));
             return Ablauf::Weiter;
         };
         if angaben.typ == Typ::Ordner && vorhanden.typ == Typ::Ordner {
             return verschmelzen(pfand, quelle, &ziel, steuerung);
         }
-        if ersetzt {
-            steuerung.ueberspringen(&bezeichnung, text(Text::VorgangAmZielStehtEintrag));
-            return Ablauf::Weiter;
-        }
         match konflikt_klaeren(pfand, &bezeichnung, &ziel, steuerung) {
-            Klaerung::Ersetzt => ersetzt = true,
+            Klaerung::Ersetzen => {
+                return umbenennen_ersetzt_ziel(pfand, quelle, angaben, &ziel, steuerung);
+            }
             Klaerung::Nach(neues) => {
                 if neues.bezeichnung() == ziel.bezeichnung() {
                     steuerung.ueberspringen(&bezeichnung, text(Text::VorgangAmZielStehtEintrag));
                     return Ablauf::Weiter;
                 }
                 ziel = neues;
-                ersetzt = false;
             }
             Klaerung::Ueberspringen => return Ablauf::Weiter,
             Klaerung::Abbrechen => return Ablauf::Abgebrochen,
         }
     }
+}
+
+/// Ersetzt das vorhandene `ziel` auf demselben Server durch die Quelle, ohne
+/// dass das Ziel je verschwindet, ohne ersetzt zu werden (Modulkopf,
+/// „Ueberschreiben“).
+///
+/// Die Quelle geht zuerst per `RENAME` unter einen Zwischennamen neben das
+/// Ziel; scheitert das, ist nichts geschehen. Laesst sich danach das Ziel
+/// nicht entfernen, kehrt die Quelle an ihren Platz zurueck.
+fn umbenennen_ersetzt_ziel(
+    pfand: &Fernfaden,
+    quelle: &Stelle,
+    angaben: &Angaben,
+    ziel: &Stelle,
+    steuerung: &mut Steuerung,
+) -> Ablauf {
+    let bezeichnung = quelle.bezeichnung();
+    if !ersetzen_erlaubt(pfand, quelle, ziel, steuerung) {
+        return Ablauf::Weiter;
+    }
+    let mut zwischen = None;
+    let mut letzter = Fehlschlag::KeinEintrag;
+    for versuch in 0..ZWISCHENVERSUCHE {
+        let Some(kandidat) = ziel.geschwister(&zwischenname(versuch)) else {
+            break;
+        };
+        match quelle.umbenennen(pfand, &kandidat) {
+            Some(Ok(())) => {
+                zwischen = Some(kandidat);
+                break;
+            }
+            Some(Err(fehler)) if vorhandenes_ziel(pfand, &fehler, &kandidat).is_some() => {
+                letzter = fehler;
+            }
+            Some(Err(fehler)) => {
+                letzter = fehler;
+                break;
+            }
+            // Zwei Stellen auf verschiedenen Servern kommen nie hierher; der
+            // Fall ist behandelt, weil die Unterscheidung vollstaendig ist.
+            None => break,
+        }
+    }
+    let Some(zwischen) = zwischen else {
+        steuerung.ueberspringen(
+            &bezeichnung,
+            satz(
+                Text::VorgangZielNichtErsetzt,
+                &[("grund", &grund(&letzter))],
+            ),
+        );
+        return Ablauf::Weiter;
+    };
+    match tauschen(pfand, &zwischen, ziel) {
+        Tausch::Getauscht => steuerung.eintrag_fertig(&bezeichnung, angaben.groesse),
+        Tausch::ZielBlieb(fehler) => match zwischen.umbenennen(pfand, quelle) {
+            Some(Ok(())) => steuerung.ueberspringen(
+                &bezeichnung,
+                satz(Text::VorgangZielNichtErsetzt, &[("grund", &grund(&fehler))]),
+            ),
+            Some(Err(zurueck)) => steuerung.ueberspringen(
+                &bezeichnung,
+                satz(
+                    Text::VorgangQuelleUnterZwischennamen,
+                    &[
+                        ("name", &zwischen.bezeichnung().display()),
+                        ("grund", &grund(&zurueck)),
+                    ],
+                ),
+            ),
+            None => steuerung.ueberspringen(
+                &bezeichnung,
+                satz(
+                    Text::VorgangQuelleUnterZwischennamen,
+                    &[
+                        ("name", &zwischen.bezeichnung().display()),
+                        ("grund", &grund(&fehler)),
+                    ],
+                ),
+            ),
+        },
+        Tausch::ZielFort(fehler) => steuerung.ueberspringen(
+            &bezeichnung,
+            satz(
+                Text::VorgangErsatzUnterZwischennamen,
+                &[
+                    ("name", &zwischen.bezeichnung().display()),
+                    ("grund", &grund(&fehler)),
+                ],
+            ),
+        ),
+    }
+    Ablauf::Weiter
 }
 
 /// Verschiebt den Inhalt eines Ordners in einen gleichnamigen am Ziel auf
@@ -1070,17 +1347,54 @@ impl Fehlschlag {
         }
     }
 
-    /// Ob das Scheitern beim Anlegen sicher kein vorhandenes Ziel meint.
-    fn ist_kein_konflikt(&self) -> bool {
+    /// Ob das Scheitern beim Anlegen oder Umbenennen ein vergebener Name sein
+    /// kann: lokal allein `AlreadyExists`, fern jeder Statuscode ausser „gibt
+    /// es nicht“ und „keine Rechte“. SFTP v3 kennt keinen Code fuer
+    /// „vorhanden“; die Regel schliesst aus, was sicher etwas anderes heisst,
+    /// und `FAILURE` bleibt mehrdeutig. Eine Trennung, ein Protokollfehler und
+    /// jeder Grund ohne Systemaufruf sind nie ein vergebener Name.
+    fn kann_vergeben_heissen(&self) -> bool {
         match self {
-            Fehlschlag::NameOhneUtf8
+            Fehlschlag::Lokal(fehler) => fehler.kind() == io::ErrorKind::AlreadyExists,
+            Fehlschlag::Fern(Fernfehler::Status { code, .. }) => {
+                *code != status::NO_SUCH_FILE && *code != status::PERMISSION_DENIED
+            }
+            Fehlschlag::Fern(
+                Fernfehler::Getrennt(_)
+                | Fernfehler::Protokoll(_)
+                | Fernfehler::NichtAngeboten(_)
+                | Fernfehler::Abgebrochen,
+            )
+            | Fehlschlag::NameOhneUtf8
             | Fehlschlag::KeineGewoehnlicheDatei
             | Fehlschlag::KeineVerknuepfung
             | Fehlschlag::KeinEintrag
-            | Fehlschlag::Abgebrochen => true,
-            Fehlschlag::Lokal(_) | Fehlschlag::Fern(_) => false,
+            | Fehlschlag::Abgebrochen => false,
         }
     }
+}
+
+/// Die eine Regel, ob ein Scheitern an `ziel` ein vergebener Name ist: das
+/// Scheitern kann es heissen ([`Fehlschlag::kann_vergeben_heissen`]), und
+/// `LSTAT` findet am Ziel danach einen Eintrag. Dann die Angaben dieses
+/// Eintrags, sonst `None`, und der Fehler gehoert dem Eintrag selbst.
+///
+/// Gefragt wird sie beim Kopieren, beim Verschieben, beim Umbenennen und
+/// Anlegen ([`namensgrund`]) und fuer die Zwischennamen des Ueberschreibens;
+/// eine zweite Antwort auf dieselbe Frage gibt es in diesem Modul nicht.
+fn vorhandenes_ziel(pfand: &Fernfaden, fehler: &Fehlschlag, ziel: &Stelle) -> Option<Angaben> {
+    if !fehler.kann_vergeben_heissen() {
+        return None;
+    }
+    ziel.angaben(pfand).ok()
+}
+
+/// Ob zwei Stellen denselben Eintrag benennen.
+enum Gleichheit {
+    Ja,
+    Nein,
+    /// Es liess sich nicht feststellen, aus diesem Grund.
+    Unklar(Fehlschlag),
 }
 
 /// Der Grund, den die Abschlussliste zeigt.
@@ -1283,45 +1597,108 @@ impl Stelle {
     }
 
     /// Ob zwei Stellen denselben Eintrag benennen: lokal an der
-    /// Naemlichkeit wie `super::zielpfad`, fern am Pfad auf demselben Server.
-    fn derselbe_eintrag(&self, andere: &Stelle) -> bool {
+    /// Naemlichkeit wie `super::zielpfad`, fern auf demselben Server am Pfad
+    /// und, wo die Pfade verschieden sind, am Namen unter den zwei
+    /// Elternordnern, die `REALPATH` auf dem Server aufloest (Modulkopf, „Was
+    /// dieses Modul nicht haelt“).
+    ///
+    /// Aufgeloest werden die Elternordner und nicht die Eintraege selbst: der
+    /// Eintrag ist, was `LSTAT` sieht, und eine Verknuepfung an seiner Stelle
+    /// ist ein eigener Eintrag, kein Weg zu ihrem Ziel. Laesst sich einer der
+    /// beiden Ordner nicht aufloesen, ist die Antwort [`Gleichheit::Unklar`].
+    fn derselbe_eintrag(&self, pfand: &Fernfaden, andere: &Stelle) -> Gleichheit {
         match (self, andere) {
             (Stelle::Lokal(eine), Stelle::Lokal(andere)) => {
-                benennen_denselben_eintrag(eine, andere)
+                if benennen_denselben_eintrag(eine, andere) {
+                    Gleichheit::Ja
+                } else {
+                    Gleichheit::Nein
+                }
             }
             (
-                Stelle::Fern { kennung, pfad, .. },
+                Stelle::Fern {
+                    gespraech,
+                    kennung,
+                    pfad,
+                },
                 Stelle::Fern {
                     kennung: andere_kennung,
                     pfad: anderer_pfad,
                     ..
                 },
-            ) => kennung == andere_kennung && pfad == anderer_pfad,
+            ) => {
+                if kennung != andere_kennung {
+                    return Gleichheit::Nein;
+                }
+                if pfad == anderer_pfad {
+                    return Gleichheit::Ja;
+                }
+                let (Some(oben), Some(anderes_oben)) = (pfad.aufwaerts(), anderer_pfad.aufwaerts())
+                else {
+                    return Gleichheit::Nein;
+                };
+                if pfad.name() != anderer_pfad.name() {
+                    return Gleichheit::Nein;
+                }
+                match (
+                    gespraech.realpath(pfand, oben.als_text()),
+                    gespraech.realpath(pfand, anderes_oben.als_text()),
+                ) {
+                    (Ok(eins), Ok(zwei)) if eins == zwei => Gleichheit::Ja,
+                    (Ok(_), Ok(_)) => Gleichheit::Nein,
+                    (Err(fehler), _) | (_, Err(fehler)) => {
+                        Gleichheit::Unklar(Fehlschlag::Fern(fehler))
+                    }
+                }
+            }
             (Stelle::Lokal(_), Stelle::Fern { .. }) | (Stelle::Fern { .. }, Stelle::Lokal(_)) => {
-                false
+                Gleichheit::Nein
             }
         }
     }
 
     /// Ob dieser Ordner der Ordner `quelle` ist oder unter ihm liegt.
-    fn liegt_in(&self, quelle: &Stelle) -> bool {
+    ///
+    /// Fern erst am Pfad und dann, wenn der Pfad nein sagt, an den zwei
+    /// Pfaden, die `REALPATH` auf dem Server aufloest; so faellt auch ein
+    /// Zielordner auf, der ueber eine Verknuepfung in der Quelle liegt, und
+    /// das Kopieren rekursiert nicht in sich selbst. Ohne Antwort von
+    /// `REALPATH` gilt die Antwort am Pfad.
+    fn liegt_in(&self, pfand: &Fernfaden, quelle: &Stelle) -> bool {
         match (self, quelle) {
             (Stelle::Lokal(ordner), Stelle::Lokal(quelle)) => liegt_im_ordner(ordner, quelle),
             (
-                Stelle::Fern { kennung, pfad, .. },
+                Stelle::Fern {
+                    gespraech,
+                    kennung,
+                    pfad,
+                },
                 Stelle::Fern {
                     kennung: quellkennung,
                     pfad: quellpfad,
                     ..
                 },
             ) => {
-                kennung == quellkennung
-                    && (quellpfad.ist_wurzel()
-                        || pfad == quellpfad
-                        || pfad
-                            .als_text()
-                            .strip_prefix(quellpfad.als_text())
-                            .is_some_and(|rest| rest.starts_with('/')))
+                if kennung != quellkennung {
+                    return false;
+                }
+                let darunter = |ordner: &[u8], quelle: &[u8]| {
+                    quelle == b"/"
+                        || ordner == quelle
+                        || ordner
+                            .strip_prefix(quelle)
+                            .is_some_and(|rest| rest.first() == Some(&b'/'))
+                };
+                if darunter(pfad.als_text().as_bytes(), quellpfad.als_text().as_bytes()) {
+                    return true;
+                }
+                match (
+                    gespraech.realpath(pfand, pfad.als_text()),
+                    gespraech.realpath(pfand, quellpfad.als_text()),
+                ) {
+                    (Ok(ordner), Ok(quelle)) => darunter(&ordner, &quelle),
+                    (Err(_), _) | (_, Err(_)) => false,
+                }
             }
             (Stelle::Lokal(_), Stelle::Fern { .. }) | (Stelle::Fern { .. }, Stelle::Lokal(_)) => {
                 false
@@ -1765,4 +2142,65 @@ fn fern_baum_entfernen(
         fern_baum_entfernen(pfand, gespraech, &kind)?;
     }
     gespraech.rmdir(pfand, pfad.als_text())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Die Regel, welches Scheitern ein vergebener Name sein kann, Fall fuer
+    /// Fall (Befund
+    /// `261017-0004-jedes-scheitern-beim-fernen-anlegen-gilt-als-konflikt-…`).
+    ///
+    /// Bis zur Behebung galt jedes lokale und jedes ferne Scheitern als
+    /// moeglicher Konflikt, also auch „keine Rechte“ und eine Trennung; mit
+    /// einem Ziel, das `LSTAT` fand, kam dann die Konfliktfrage mit falschem
+    /// Grund. Gegen den Server des Systems laesst sich das nicht stellen: der
+    /// meldet an einem vorhandenen Namen immer `FAILURE`, auch in einem Ordner
+    /// ohne Schreibrecht, weil `open(2)`, `mkdir(2)` und `link(2)` dort
+    /// `EEXIST` vor `EACCES` setzen. Die Tafel steht deshalb hier.
+    #[test]
+    fn allein_ein_moeglicher_vergebener_name_ist_ein_konflikt() {
+        let fern = |code: u32| {
+            Fehlschlag::Fern(Fernfehler::Status {
+                code,
+                meldung: String::new(),
+            })
+        };
+        let tafel = [
+            (Fehlschlag::Lokal(io::ErrorKind::AlreadyExists.into()), true),
+            (
+                Fehlschlag::Lokal(io::ErrorKind::PermissionDenied.into()),
+                false,
+            ),
+            (Fehlschlag::Lokal(io::ErrorKind::NotFound.into()), false),
+            (Fehlschlag::Lokal(io::ErrorKind::StorageFull.into()), false),
+            (fern(status::FAILURE), true),
+            (fern(status::OP_UNSUPPORTED), true),
+            (fern(status::NO_SUCH_FILE), false),
+            (fern(status::PERMISSION_DENIED), false),
+            (
+                Fehlschlag::Fern(Fernfehler::Protokoll(String::new())),
+                false,
+            ),
+            (
+                Fehlschlag::Fern(Fernfehler::NichtAngeboten("symlink")),
+                false,
+            ),
+            (Fehlschlag::Fern(Fernfehler::Abgebrochen), false),
+            (Fehlschlag::NameOhneUtf8, false),
+            (Fehlschlag::KeineGewoehnlicheDatei, false),
+            (Fehlschlag::KeineVerknuepfung, false),
+            (Fehlschlag::KeinEintrag, false),
+            (Fehlschlag::Abgebrochen, false),
+        ];
+        for (fehler, erwartet) in tafel {
+            assert_eq!(
+                fehler.kann_vergeben_heissen(),
+                erwartet,
+                "{}",
+                grund(&fehler)
+            );
+        }
+    }
 }

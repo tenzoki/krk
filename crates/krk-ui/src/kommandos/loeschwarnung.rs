@@ -21,6 +21,17 @@
 //! zerstoerend gekennzeichnet. Ein Ort mit Papierkorb geht unveraendert den Weg
 //! in den Papierkorb.
 //!
+//! **Allein ein sicheres Nein fuehrt dorthin.** Ein unentschiedener Befund,
+//! etwa weil der angezeigte Ordner sich nicht aufloesen laesst oder sein Pfad
+//! kein UTF-8 ist, haelt wie vor dem 261016 mit einer Meldung an
+//! ([`Vorstufe::PapierkorbUnbekannt`], [`papierkorb_unbekannt`]): die
+//! endgueltige Rueckfrage behauptet, der Ort habe keinen Papierkorb, und fuer
+//! diese Behauptung gibt es dann keine Messung. Der Entscheid vom 261016
+//! spricht von einem Ort ohne Papierkorb und nicht von einem, ueber den KRK
+//! nichts weiss
+//! (`issues/261017-0004-ein-unentschiedener-papierkorbbefund-bietet-endgueltiges-loeschen-an-…`
+//! im selben Paket, die vorsichtige der zwei Moeglichkeiten).
+//!
 //! **Ein ferner Ort hat keinen Papierkorb, und das steht am Wert**: der
 //! Rumpf, der die Tatsachen beschafft, beantwortet die dritte Frage fuer ihn
 //! ohne Systemaufruf mit [`Erlaubnisbefund::Nein`]. Die Regel hier kennt den
@@ -110,13 +121,17 @@
 //! beschaffte, koennte die Zusage nicht mehr brechen, ohne dass sein eigener
 //! Rumpf es zeigt.
 //!
-//! # Warum die Frage nach dem Papierkorb hier [`Erlaubnisbefund::erlaubt`] fragt
+//! # Warum die Frage nach dem Papierkorb alle drei Befunde ausschreibt
 //!
 //! Weil sie in die andere Richtung zeigt als die Ausloeser der lauten Form: bei
-//! ihr ist `Ja` die **Erlaubnis** und nicht der Warngrund, und
-//! `Unentschieden` gehoert deshalb zu `Nein`. Seit dem 260907 traegt sie dafuer
-//! einen eigenen Typ, [`Erlaubnisbefund`], und die Zusammenfassung steht an ihm
-//! statt in dieser Datei; [`Warnbefund::ist_warnwuerdig`] ist an einem Wert
+//! ihr ist `Ja` die **Erlaubnis** und nicht der Warngrund. Bis zum 261016
+//! gehoerte `Unentschieden` deshalb zu `Nein`, und die Regel fragte allein
+//! [`Erlaubnisbefund::erlaubt`]: beide hielten mit derselben Meldung an. Seit
+//! `Nein` zur endgueltigen Rueckfrage fuehrt, fuehren die zwei zu
+//! **verschiedenen** Ausgaengen, und die Tafel schreibt alle drei Werte aus;
+//! eine Zusammenfassung wuerde aus „wir wissen nichts" ein endgueltiges
+//! Loeschen machen. Seit dem 260907 traegt die Frage einen eigenen Typ,
+//! [`Erlaubnisbefund`]; [`Warnbefund::ist_warnwuerdig`] ist an einem Wert
 //! dieses Typs gar nicht zu rufen. **Diese Datei fuehrt damit beide Richtungen
 //! und kann sie nicht mehr verwechseln** — `Loeschziel::netzlaufwerk` und
 //! `Loeschziel::arbeitsbaum` nehmen keinen [`Erlaubnisbefund`] an, und der
@@ -308,9 +323,9 @@ use super::operationen::{Auswahl, ordner_text, pfadtext};
 /// Welche Stufe ein Loeschbefehl erreicht, bevor die Rueckfrage erscheint (C2,
 /// C4).
 ///
-/// Vier Ausgaenge und kein Wahrheitswert mit Beipackzettel: zwei von ihnen
+/// Fuenf Ausgaenge und kein Wahrheitswert mit Beipackzettel: drei von ihnen
 /// halten den Befehl an und nennen dem Nutzer den Grund, zwei zeigen das Blatt,
-/// jeder in seiner Gestalt. Sie stehen als Aufzaehlung da, weil die zwei
+/// jeder in seiner Gestalt. Sie stehen als Aufzaehlung da, weil die drei
 /// Meldungen **nicht dieselbe** sind und die zwei Blaetter nicht dasselbe
 /// fragen: „in den Papierkorb raeumen?" hat einen Rueckweg, „endgueltig
 /// loeschen?" keinen.
@@ -327,12 +342,17 @@ pub enum Vorstufe {
     /// Es ist nichts ausgewaehlt. Kein Blatt, kein Auftrag; die Rueckfrage
     /// haette keinen Gegenstand.
     NichtsAusgewaehlt,
-    /// Das Ziel fuehrt keinen Papierkorb, oder es liess sich nicht feststellen,
-    /// ob es einen fuehrt: das Blatt erscheint in seiner zweiten Gestalt, die
-    /// „endgueltig“ ausspricht, mit „Abbrechen" vorbelegt. Erst seine
-    /// Bestaetigung stellt einen Auftrag, und der loescht endgueltig. Bis zum
-    /// 261016 endete diese Stufe in einer Meldung ohne Blatt.
+    /// Das Ziel fuehrt sicher keinen Papierkorb: das Blatt erscheint in seiner
+    /// zweiten Gestalt, die „endgueltig“ ausspricht, mit „Abbrechen"
+    /// vorbelegt. Erst seine Bestaetigung stellt einen Auftrag, und der
+    /// loescht endgueltig. Bis zum 261016 endete diese Stufe in einer Meldung
+    /// ohne Blatt.
     EndgueltigeRueckfrage,
+    /// Ob das Ziel einen Papierkorb fuehrt, liess sich nicht feststellen. Kein
+    /// Blatt, kein Auftrag, und die Meldung steht in [`papierkorb_unbekannt`]:
+    /// die endgueltige Rueckfrage behauptete einen Ort ohne Papierkorb, ohne
+    /// es zu wissen (Modulkopf).
+    PapierkorbUnbekannt,
     /// Alle drei Pruefungen sind bestanden: das Blatt erscheint, mit
     /// „Abbrechen" vorbelegt. Erst seine Bestaetigung stellt einen Auftrag.
     Rueckfrage,
@@ -348,7 +368,7 @@ pub enum Vorstufe {
 /// | nein | ja | **ungefragt** | [`Vorstufe::NichtsAusgewaehlt`] |
 /// | nein | nein | [`Erlaubnisbefund::Ja`] | [`Vorstufe::Rueckfrage`] |
 /// | nein | nein | [`Erlaubnisbefund::Nein`] | [`Vorstufe::EndgueltigeRueckfrage`] |
-/// | nein | nein | [`Erlaubnisbefund::Unentschieden`] | [`Vorstufe::EndgueltigeRueckfrage`] |
+/// | nein | nein | [`Erlaubnisbefund::Unentschieden`] | [`Vorstufe::PapierkorbUnbekannt`] |
 ///
 /// **Die fuenf Zeilen decken alle zwoelf Kombinationen ab** — zwei mal zwei mal
 /// drei —, und die Fallunterscheidung ist damit ueberschneidungsfrei und
@@ -384,12 +404,13 @@ pub enum Vorstufe {
 ///   gefragt, haette der Nutzer einem Raeumen zugestimmt, das nicht raeumen
 ///   kann, und der Vorgang haette endgueltig geloescht.
 ///
-/// Ein `papierkorb`, der [`Erlaubnisbefund::Unentschieden`] liefert, faellt mit
-/// [`Erlaubnisbefund::Nein`] zusammen: der Modulkopf sagt, warum, und `Ja` ist
-/// hier die Erlaubnis. Der Aufrufer, der den Ordnerpfad nicht aufloesen kann,
-/// liefert deshalb `Unentschieden`, und der Nutzer wird gefragt, ob er
-/// endgueltig loeschen will, statt in den Papierkorb zu raeumen, den es
-/// vielleicht nicht gibt.
+/// Ein `papierkorb`, der [`Erlaubnisbefund::Unentschieden`] liefert, faellt
+/// **nicht** mit [`Erlaubnisbefund::Nein`] zusammen: das Nein fuehrt zur
+/// endgueltigen Rueckfrage, das Unentschieden haelt mit einer Meldung an. Der
+/// Aufrufer, der den Ordnerpfad nicht aufloesen kann, liefert
+/// `Unentschieden`, und dem Nutzer wird weder ein Raeumen in einen Papierkorb
+/// angeboten, den es vielleicht nicht gibt, noch ein endgueltiges Loeschen an
+/// einem Ort, der vielleicht einen hat.
 ///
 /// `#[must_use]`, weil das stille Fallenlassen des Rueckgabewerts unbemerkt
 /// bliebe: die Funktion ist rein, aendert also nichts, und wer ihre Antwort
@@ -414,23 +435,34 @@ pub fn vor_der_rueckfrage(
         // das Dateisystem. Die **Reihenfolge** der Stufen steht unveraendert in
         // dieser Tafel; verschoben ist allein, wann die Tatsache anfaellt.
         //
-        // **Gefragt wird `erlaubt` und nicht die drei Werte einzeln.** Bis zum
-        // 260907 standen sie hier ausgeschrieben, weil der Typ die Richtung
-        // nicht kannte und ein Aufrufer sie selbst treffen musste; seither
-        // wohnt die Fallunterscheidung an [`Erlaubnisbefund::erlaubt`], und ein
-        // vierter Wert haelt dort den Bau an. Zwei Stellen mit einer Meinung
-        // darueber, was „erlaubt" heisst, waeren eine zu viel.
-        (false, false) => {
-            if papierkorb().erlaubt() {
-                // Erst jetzt steht fest, dass es einen Rueckweg gibt (C4).
-                Vorstufe::Rueckfrage
-            } else {
-                // Kein Papierkorb, oder keine Auskunft darueber: beides fuehrt
-                // zur Rueckfrage, die „endgueltig“ ausspricht (261016).
-                Vorstufe::EndgueltigeRueckfrage
-            }
-        }
+        //
+        // **Die drei Werte stehen ausgeschrieben und ohne Auffangzweig**, weil
+        // `Nein` und `Unentschieden` seit dem 261016 verschieden ausgehen
+        // (Modulkopf); ein vierter Wert haelt hier den Bau an.
+        (false, false) => match papierkorb() {
+            // Erst jetzt steht fest, dass es einen Rueckweg gibt (C4).
+            Erlaubnisbefund::Ja => Vorstufe::Rueckfrage,
+            // Sicher kein Papierkorb: die Rueckfrage, die „endgueltig“
+            // ausspricht (261016).
+            Erlaubnisbefund::Nein => Vorstufe::EndgueltigeRueckfrage,
+            // Keine Auskunft: anhalten wie vor dem 261016.
+            Erlaubnisbefund::Unentschieden => Vorstufe::PapierkorbUnbekannt,
+        },
     }
+}
+
+/// Die Zeile der Statuszeile, wenn sich nicht feststellen liess, ob das Ziel
+/// einen Papierkorb fuehrt ([`Vorstufe::PapierkorbUnbekannt`]).
+///
+/// Sie sagt, dass KRK es nicht weiss, und nicht, dass es keinen gibt: die
+/// zweite Aussage traegt allein ein sicheres Nein, und das fuehrt zur
+/// endgueltigen Rueckfrage.
+///
+/// `#[must_use]`, weil das stille Fallenlassen unbemerkt bliebe: verloren
+/// ginge die einzige Auskunft ueber einen Befehl, der nichts getan hat.
+#[must_use = "der Text ist die einzige Auskunft ueber einen Loeschbefehl, der nichts getan hat"]
+pub fn papierkorb_unbekannt() -> &'static str {
+    text(Text::LoeschenPapierkorbUnbekannt)
 }
 
 // ---------------------------------------------------------------------------
@@ -1199,7 +1231,7 @@ mod tests {
             (false, true, Unentschieden, Vorstufe::NichtsAusgewaehlt),
             (false, false, Ja, Vorstufe::Rueckfrage),
             (false, false, Nein, Vorstufe::EndgueltigeRueckfrage),
-            (false, false, Unentschieden, Vorstufe::EndgueltigeRueckfrage),
+            (false, false, Unentschieden, Vorstufe::PapierkorbUnbekannt),
         ];
 
         for (vorgang_laeuft, auswahl_leer, papierkorb, ausgang) in TAFEL {
@@ -1253,19 +1285,18 @@ mod tests {
         }
     }
 
-    /// Ohne Papierkorb folgt die endgueltige Rueckfrage und nicht mehr die
-    /// Meldung, und der unentschiedene Befund zaehlt dabei wie das Nein
-    /// (Entscheidung 12 des Plans der sftp-Ordner).
+    /// Allein ein sicheres Nein fuehrt zur endgueltigen Rueckfrage; der
+    /// unentschiedene Befund haelt mit einer Meldung an (Entscheidung 12 des
+    /// Plans der sftp-Ordner, eingeengt durch den Befund
+    /// `261017-0004-ein-unentschiedener-papierkorbbefund-…`).
     ///
-    /// **Die zweite Zusicherung ist die eigentliche.** Hier ist `Ja` die
-    /// Erlaubnis zum Raeumen in den Papierkorb; wer aus Gewohnheit die
-    /// Warnwuerdigkeit faengt, macht aus „wir wissen nichts" einen Papierkorb,
-    /// und der Nutzer bestaetigte ein Raeumen, das endgueltig loescht oder
-    /// scheitert. Bis zum 261016 hiess diese Probe
-    /// `ohne_papierkorb_erscheint_kein_blatt`; ihre Tafel ist dieselbe
-    /// geblieben, geaendert hat sich allein der Ausgang.
+    /// **Die zweite Zusicherung ist die eigentliche.** Bis zum 261017 fuehrte
+    /// auch das Unentschieden zur endgueltigen Rueckfrage, und das Blatt sagte
+    /// dabei „Dieser Ort hat keinen Papierkorb“, ohne es zu wissen. Wer
+    /// `Nein` und `Unentschieden` wieder zusammenfasst, macht diese Zeile rot.
+    /// Bis zum 261016 hiess diese Probe `ohne_papierkorb_erscheint_kein_blatt`.
     #[test]
-    fn ohne_papierkorb_folgt_die_endgueltige_rueckfrage_statt_der_meldung() {
+    fn allein_ein_sicheres_nein_fuehrt_zur_endgueltigen_rueckfrage() {
         assert_eq!(
             vor_der_rueckfrage(false, false, || Erlaubnisbefund::Nein),
             Vorstufe::EndgueltigeRueckfrage,
@@ -1273,9 +1304,33 @@ mod tests {
         );
         assert_eq!(
             vor_der_rueckfrage(false, false, || Erlaubnisbefund::Unentschieden),
-            Vorstufe::EndgueltigeRueckfrage,
-            "ein unentschiedener Befund fuehrt nicht zur endgueltigen \
-             Rueckfrage, obwohl er wie das Nein zaehlt"
+            Vorstufe::PapierkorbUnbekannt,
+            "ein unentschiedener Befund bietet endgueltiges Loeschen an"
+        );
+    }
+
+    /// Die Meldung zum unentschiedenen Befund sagt in jeder der drei Sprachen,
+    /// dass nichts geloescht wurde, und behauptet keinen Ort ohne Papierkorb:
+    /// sie ist nicht der erste Satz der endgueltigen Rueckfrage.
+    #[test]
+    fn die_meldung_zum_unbekannten_papierkorb_behauptet_keinen_ort_ohne_papierkorb() {
+        for (sprache, nichts) in [
+            (Sprache::De, "nichts gelöscht"),
+            (Sprache::Fr, "rien n’a été supprimé"),
+            (Sprache::En, "nothing was deleted"),
+        ] {
+            let meldung = sprache.text(Text::LoeschenPapierkorbUnbekannt);
+            assert!(meldung.contains(nichts), "{sprache:?}: {meldung}");
+            let endgueltig = sprache.text(Text::LoeschenEndgueltigAus);
+            let erster_satz = endgueltig.split(':').next().unwrap_or(endgueltig);
+            assert!(
+                !meldung.contains(erster_satz.trim()),
+                "{sprache:?}: die Meldung behauptet einen Ort ohne Papierkorb: {meldung}"
+            );
+        }
+        assert_eq!(
+            papierkorb_unbekannt(),
+            text(Text::LoeschenPapierkorbUnbekannt)
         );
     }
 

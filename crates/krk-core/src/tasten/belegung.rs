@@ -1940,11 +1940,11 @@ impl Kommando {
     /// heissen, steht bei [`Ortsbedarf`].
     ///
     /// **Was `Ueberall` traegt, wirkt am fernen Ort oder meldet dort selbst.**
-    /// Kopieren, Verschieben, In den Papierkorb, Anlegen und Umbenennen stehen
-    /// darunter, weil die naechsten Schritte des Plans sie an einem fernen Ort
-    /// bauen; bis dahin meldet ihr Ausfuehrungszweig, dass es dort nicht geht.
-    /// Navigation, Markierung, Sortierung, Pfadeingabe und Angleichen wirken
-    /// dort schon.
+    /// Kopieren, Verschieben, Anlegen und Umbenennen wirken dort ueber die
+    /// Maschine fuer ferne Vorgaenge (`operation::fern`), „In den Papierkorb
+    /// raeumen“ fuehrt dort zur endgueltigen Rueckfrage, und Navigation,
+    /// Markierung, Sortierung, Pfadeingabe und Angleichen wirken wie lokal.
+    /// Was dort nicht wirken kann, meldet sein Ausfuehrungszweig.
     #[must_use]
     pub const fn ortsbedarf(self) -> Ortsbedarf {
         match self {

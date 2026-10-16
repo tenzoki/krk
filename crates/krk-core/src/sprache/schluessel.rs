@@ -177,6 +177,16 @@ pub enum Text {
     /// `verschieben::ueber_datentraeger`: die Quelle liess sich nach der Kopie
     /// nicht entfernen; `{grund}`.
     VorgangKopiertAberInQuelleGeblieben,
+    /// `operation::fern`, Ueberschreiben: der Ersatz ist nicht vollstaendig
+    /// angekommen, und das Ziel bleibt, wie es war.
+    VorgangErsatzUnvollstaendig,
+    /// `operation::fern`, Ueberschreiben: das Ziel ist entfernt, und der
+    /// Ersatz liess sich nicht auf seinen Namen umbenennen; `{name}`, `{grund}`.
+    VorgangErsatzUnterZwischennamen,
+    /// `operation::fern`, Ueberschreiben beim Verschieben: das Ziel blieb, und
+    /// die Quelle liess sich nicht von ihrem Zwischennamen zurueckholen;
+    /// `{name}`, `{grund}`.
+    VorgangQuelleUnterZwischennamen,
     /// `OhnePapierkorb`: der Papierkorb, den es nicht gibt.
     VorgangKeinPapierkorb,
     /// Duplizieren und Packen: die Quelle ist Ordner, Verknuepfung, Roehre,
@@ -969,6 +979,9 @@ pub enum Text {
     /// der Erlaeuterung, der sagt, dass der Ort keinen Papierkorb hat und das
     /// Loeschen nicht zurueckzunehmen ist; `{ordner}`.
     LoeschenEndgueltigAus,
+    /// `loeschwarnung::papierkorb_unbekannt`: ob das Ziel einen Papierkorb
+    /// fuehrt, liess sich nicht feststellen, und es wurde nichts geloescht.
+    LoeschenPapierkorbUnbekannt,
     /// `Warngrund::Unentscheidbar`: die Fuegung in der Loeschfrage und in der
     /// Erlaeuterung.
     WarngrundUnentscheidbar,
@@ -1608,7 +1621,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 674] = [
+    pub const ALLE: [Text; 678] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1679,6 +1692,9 @@ impl Text {
         Text::VorgangOrdnerSelbstBlieb,
         Text::VorgangNichtVollstaendigKopiert,
         Text::VorgangKopiertAberInQuelleGeblieben,
+        Text::VorgangErsatzUnvollstaendig,
+        Text::VorgangErsatzUnterZwischennamen,
+        Text::VorgangQuelleUnterZwischennamen,
         Text::VorgangKeinPapierkorb,
         Text::VorgangKeineGewoehnlicheDatei,
         Text::VorgangDateiangabenNichtKopiert,
@@ -2017,6 +2033,7 @@ impl Text {
         Text::BelegungsdateiOhneAblageordner,
         Text::Markierungsstand,
         Text::LoeschenEndgueltigAus,
+        Text::LoeschenPapierkorbUnbekannt,
         Text::WarngrundUnentscheidbar,
         Text::WarngrundNetzlaufwerk,
         Text::WarngrundCloudort,
