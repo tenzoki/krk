@@ -1,0 +1,26 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "d45d6126-2d02-43dd-8f30-0c3ed853d3bd",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261016-0229-secrets-mit-sechs-feldern-schluesselcache-und-verbindungen/issues/261016-0614-howto-nennt-die-pruefregel-des-blattes-verbinden-ohne-die-url-pruefung.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "closed",
+    "disposition": {
+      "kind": "fixed",
+      "reason_ref": null
+    }
+  }
+}

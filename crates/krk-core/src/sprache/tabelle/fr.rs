@@ -1074,6 +1074,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VerbindenPinNochNichtGesichert => {
             "secrets.txt est ouvert dans l’éditeur avec un nouveau code PIN et n’a jamais été enregistré\u{202f}; enregistrez avant de vous connecter."
         }
+        Text::VerbindenEditorLaedt => {
+            "secrets.txt est encore en cours d’ouverture dans l’éditeur\u{202f}; attendez qu’il soit ouvert avant de vous connecter."
+        }
         Text::VerbindenAngelegt => {
             "«\u{a0}{name}\u{a0}» figure dans secrets.txt et parmi les connexions."
         }

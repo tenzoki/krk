@@ -1,0 +1,26 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "6d56810d-81c0-482d-bb33-50a0bca1387b",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261016-0229-secrets-mit-sechs-feldern-schluesselcache-und-verbindungen/issues/261016-0614-die-verbindungs-url-kuerzt-den-pfad-an-raute-und-fragezeichen-und-der-vergleich-mit-der-eingehaengten-freigabe-liest-roh-gegen-kodiert.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "closed",
+    "disposition": {
+      "kind": "fixed",
+      "reason_ref": null
+    }
+  }
+}

@@ -1507,6 +1507,9 @@ pub enum Text {
     /// „Verbinden…“, waehrend der Editor `secrets.txt` mit einer eben
     /// festgelegten und nie gesicherten PIN haelt.
     VerbindenPinNochNichtGesichert,
+    /// „Verbinden…“, waehrend der Editor `secrets.txt` noch liest oder
+    /// gelesen fuer die Nachfrage zurueckhaelt.
+    VerbindenEditorLaedt,
     /// „Verbinden…“ hat Eintrag und Lesezeichen angelegt; `{name}`.
     VerbindenAngelegt,
     /// Der Eintrag steht, das Lesezeichen fehlt; `{name}`.
@@ -1540,7 +1543,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 649] = [
+    pub const ALLE: [Text; 650] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -2176,6 +2179,7 @@ impl Text {
         Text::VerbindungKeineAuswahl,
         Text::VerbindenErstSichern,
         Text::VerbindenPinNochNichtGesichert,
+        Text::VerbindenEditorLaedt,
         Text::VerbindenAngelegt,
         Text::VerbindenOhneLesezeichen,
         Text::VerbindenNameVergeben,

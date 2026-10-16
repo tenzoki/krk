@@ -995,6 +995,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VerbindenPinNochNichtGesichert => {
             "secrets.txt ist im Editor mit einer neuen PIN offen und noch nie gesichert; erst sichern, dann verbinden."
         }
+        Text::VerbindenEditorLaedt => {
+            "secrets.txt wird im Editor noch geöffnet; erst warten, bis sie offen ist, dann verbinden."
+        }
         Text::VerbindenAngelegt => "„{name}“ steht in secrets.txt und unter den Verbindungen.",
         Text::VerbindenOhneLesezeichen => "„{name}“ steht in secrets.txt; das Lesezeichen fehlt.",
         Text::VerbindenNameVergeben => "In secrets.txt steht schon ein Eintrag „{name}“.",

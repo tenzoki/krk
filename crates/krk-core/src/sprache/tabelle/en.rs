@@ -953,6 +953,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VerbindenPinNochNichtGesichert => {
             "secrets.txt is open in the editor with a new PIN and has never been saved; save first, then connect."
         }
+        Text::VerbindenEditorLaedt => {
+            "secrets.txt is still opening in the editor; wait until it is open, then connect."
+        }
         Text::VerbindenAngelegt => "“{name}” is in secrets.txt and among the connections.",
         Text::VerbindenOhneLesezeichen => "“{name}” is in secrets.txt; the bookmark is missing.",
         Text::VerbindenNameVergeben => "secrets.txt already has an entry “{name}”.",

@@ -9069,8 +9069,10 @@ impl Anwendungsdelegierter {
     /// einer eben festgelegten, nie gesicherten PIN, geht kein Blatt auf**
     /// (Entscheidung 15): im ersten Fall schriebe der Schreibgang die Datei
     /// unter dem Editor weg, im zweiten legte er eine zweite PIN mit frischem
-    /// Salz fest. Die Antwort steht bei
-    /// [`crate::editormodell::Editormodell::schreibgang_gesperrt`]. Laeuft
+    /// Salz fest; liest er `secrets.txt` gerade, steht noch nicht fest, was er
+    /// danach haelt. Die Antwort steht bei
+    /// [`crate::editormodell::Editormodell::schreibgang_gesperrt`], und
+    /// [`Self::verbindung_anhaengen`] fragt sie nach dem Blatt noch einmal. Laeuft
     /// schon ein Gang an `secrets.txt`, ebenso nicht.
     fn verbindung_erfragen(&self, seite: Fensterseite) {
         if self.ivars().tresorgang.get() {
@@ -9160,6 +9162,15 @@ impl Anwendungsdelegierter {
 
     /// Startet den Schreibgang auf dem Faden `krk-tresor`; der Ausgang kommt
     /// in [`Self::anhaengen_einziehen`] an.
+    ///
+    /// **Die Schreibgangsperre wird hier ein zweites Mal gefragt**, unmittelbar
+    /// vor dem Gang: zwischen [`Self::verbindung_erfragen`] und hier stehen das
+    /// Blatt „Verbinden“ und gegebenenfalls das PIN-Blatt, und ein Ladevorgang
+    /// des Editors, der dort noch lief, kann inzwischen eine leere
+    /// `secrets.txt` mit eben festgelegter PIN uebernommen haben
+    /// (`issues/261016-0614_*_verbinden-prueft-die-schreibgangsperre-nur-vor-dem-blatt-und-sieht-einen-laufenden-ladevorgang-des-editors-nicht.md`).
+    /// Die Probe `der_verbindungsweg_reisst_nirgends_ab` haelt die Frage vor
+    /// `verbinden::anhaengen`.
     fn verbindung_anhaengen(
         &self,
         seite: Fensterseite,
@@ -9169,6 +9180,15 @@ impl Anwendungsdelegierter {
     ) {
         if self.ivars().tresorgang.get() {
             self.antwort_zeigen(seite, text(Text::VerbindungLaeuftSchon));
+            return;
+        }
+        if let Some(sperre) = self
+            .ivars()
+            .editor
+            .get()
+            .and_then(|editor| editor.schreibgang_gesperrt())
+        {
+            self.antwort_zeigen(seite, sperre.meldung());
             return;
         }
         let mit_schluessel = matches!(mittel, Oeffnungsmittel::Schluessel(_));
@@ -14533,6 +14553,7 @@ mod kontextproben {
             (
                 "verbindung_anhaengen",
                 &[
+                    concat!(".schreibgang_", "gesperrt()"),
                     concat!("verbinden::", "anhaengen("),
                     concat!("anhaengen_", "einziehen("),
                 ],
@@ -14561,6 +14582,20 @@ mod kontextproben {
             rumpf(&datei, "leiste_einrichten")
                 .contains(concat!("selbst.verbindung_", "herstellen(name)")),
             "die Senke des Klicks erreicht verbindung_herstellen nicht"
+        );
+
+        // Die Schreibgangsperre steht vor dem Start des Schreibgangs und nicht
+        // allein vor dem Blatt (issues/261016-0614).
+        let anhaengen = rumpf(&datei, "verbindung_anhaengen");
+        let sperre = anhaengen
+            .find(concat!(".schreibgang_", "gesperrt()"))
+            .expect("verbindung_anhaengen fragt die Sperre");
+        let gang = anhaengen
+            .find(concat!("verbinden::", "anhaengen("))
+            .expect("verbindung_anhaengen startet den Gang");
+        assert!(
+            sperre < gang,
+            "verbindung_anhaengen fragt die Sperre erst nach dem Start des Schreibgangs"
         );
 
         // Eine Auswahl, die ueber eine Verbindung laeuft, tut nichts.

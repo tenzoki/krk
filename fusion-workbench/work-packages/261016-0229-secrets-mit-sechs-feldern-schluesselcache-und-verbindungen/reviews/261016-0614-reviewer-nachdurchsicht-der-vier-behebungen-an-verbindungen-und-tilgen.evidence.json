@@ -1,0 +1,28 @@
+{
+  "schema": "fusion.evidence/v1",
+  "id": "552ee1a6-b436-4785-ae8e-736626f94054",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "subject": {
+    "git_tree": "e9bf619ef118bcdfc18d9830f83122652ebd7308",
+    "git_range": null
+  },
+  "brief_revision": "sha256:551a856055fa404e2dcff8f49cce40a23101f59faa364cc50b49079b01c63e5b",
+  "plan_revision": "sha256:c5dceb18e8e9d70d0581fbfc2b13a82c3001dd07a81c4a3a218785eb77582a91",
+  "role": {
+    "profile": "reviewer",
+    "version": "13.0.0"
+  },
+  "host": "claude-code",
+  "execution_policy": "claude-guided",
+  "verdict": "revise",
+  "uncertainties": [],
+  "checks": [],
+  "report": {
+    "path": "work-packages/261016-0229-secrets-mit-sechs-feldern-schluesselcache-und-verbindungen/reviews/261016-0614-reviewer-nachdurchsicht-der-vier-behebungen-an-verbindungen-und-tilgen.md",
+    "sha256": "sha256:d740c32be45a8b2cdc9c3ff94ae9e43354197236aa370ef20396082cb224a0c1",
+    "kind": "review"
+  },
+  "predecessor": null,
+  "accepted_at": "2026-10-16T04:16:47Z",
+  "extensions": {}
+}

@@ -651,6 +651,10 @@ pub enum Schreibgangsperre {
     /// Der Editor haelt `secrets.txt` mit einem Schluessel, dessen Kopf auf
     /// keiner Platte steht: leer, festgelegt, nie gesichert.
     OhneKopf,
+    /// Der Editor liest `secrets.txt` gerade, samt Ableitung einer eben
+    /// eingegebenen oder festgelegten PIN, oder haelt sie gelesen fuer die
+    /// Nachfrage aus C4 zurueck; was er danach haelt, steht noch nicht fest.
+    Laedt,
 }
 
 impl Schreibgangsperre {
@@ -660,6 +664,7 @@ impl Schreibgangsperre {
         match self {
             Self::Ungesichert => text(Text::VerbindenErstSichern),
             Self::OhneKopf => text(Text::VerbindenPinNochNichtGesichert),
+            Self::Laedt => text(Text::VerbindenEditorLaedt),
         }
     }
 }
@@ -845,6 +850,9 @@ fn geheimnisse_laden(
 pub struct Ladevorgang {
     empfaenger: Receiver<Geladen>,
     pfad: PathBuf,
+    /// Ob der Faden `secrets.txt` liest ([`Leseauftrag::Geheimnisse`]);
+    /// gefragt von [`Editormodell::schreibgang_gesperrt`], solange er laeuft.
+    geheimnisse: bool,
     /// Wie die Lieferung zum Stand wird; siehe [`Uebernahme`].
     uebernahme: Uebernahme,
 }
@@ -898,6 +906,7 @@ impl Ladevorgang {
         // Tiefe 1 genuegt: der Faden schickt genau eine Meldung.
         let (sender, empfaenger) = sync_channel(1);
         let fuer_faden = pfad.clone();
+        let geheimnisse = matches!(auftrag, Leseauftrag::Geheimnisse(_));
         let ergebnis = thread::Builder::new()
             .name("krk-editor".to_owned())
             .spawn(move || {
@@ -926,6 +935,7 @@ impl Ladevorgang {
         Self {
             empfaenger,
             pfad,
+            geheimnisse,
             uebernahme,
         }
     }
@@ -1327,8 +1337,33 @@ impl Editormodell {
     /// Neuladen des Editors scheiterte
     /// (`issues/261016-0532_*_verbinden-an-einer-leeren-im-editor-offenen-secrets-txt-legt-eine-zweite-pin-fest.md`).
     /// Gefragt wird die Buchfuehrung im [`Schutz`] und nicht die Platte.
+    ///
+    /// **Eine dritte Lage sperrt, bevor der Editor `secrets.txt` haelt**:
+    /// liest er sie gerade oder haelt er sie gelesen fuer die Nachfrage aus C4
+    /// zurueck, antworten `abweichung` und `schutz` noch ueber die vorige
+    /// Datei, und eine leere `secrets.txt` mit eben festgelegter PIN kaeme
+    /// erst nach dem Gang als `OhneKopf` an
+    /// (`issues/261016-0614_*_verbinden-prueft-die-schreibgangsperre-nur-vor-dem-blatt-und-sieht-einen-laufenden-ladevorgang-des-editors-nicht.md`).
+    /// Gefragt wird sie vor dem Blatt und noch einmal unmittelbar vor dem
+    /// Schreibgang (`Anwendungsdelegierter::verbindung_anhaengen`).
     #[must_use]
     pub fn schreibgang_gesperrt(&self) -> Option<Schreibgangsperre> {
+        let liest_geheimnisse = self
+            .ladevorgang
+            .as_ref()
+            .is_some_and(|vorgang| vorgang.geheimnisse);
+        let haelt_geheimnisse_zurueck = self.zurueckgehalten.as_ref().is_some_and(|wartend| {
+            matches!(
+                wartend.geladen.ergebnis,
+                Ok(Gelesen {
+                    schutz: Schutz::Verschluesselt { .. },
+                    ..
+                })
+            )
+        });
+        if liest_geheimnisse || haelt_geheimnisse_zurueck {
+            return Some(Schreibgangsperre::Laedt);
+        }
         if !self.haelt_geheimnisse() {
             return None;
         }
@@ -5224,6 +5259,43 @@ mod tests {
         let _ = gewoehnlich.bearbeiten("y\n".to_owned());
         assert!(gewoehnlich.hat_ungesicherten_stand());
         assert_eq!(gewoehnlich.schreibgang_gesperrt(), None);
+    }
+
+    /// Waehrend der Editor eine leere `secrets.txt` mit eben festgelegter PIN
+    /// noch liest (die Ableitung laeuft auf dem Faden), antwortet die Sperre
+    /// schon, obwohl der Editor bis dahin eine gewoehnliche Datei haelt; nach
+    /// dem Einziehen gilt `OhneKopf`
+    /// (`issues/261016-0614_*_verbinden-prueft-die-schreibgangsperre-nur-vor-dem-blatt-und-sieht-einen-laufenden-ladevorgang-des-editors-nicht.md`).
+    /// Ein Lesen einer gewoehnlichen Datei sperrt nicht.
+    #[test]
+    fn ein_laufendes_lesen_von_secrets_txt_sperrt_den_schreibgang() {
+        let ordner = Pruefordner::neu("geheim-schreibgang-laedt");
+        let (mut modell, pfad, _) = geheimnis_modell(&ordner);
+        let andere = pfad.with_file_name("frei.txt");
+        std::fs::write(&andere, b"x\n").expect("schreiben");
+        assert_eq!(modell.oeffnen(&andere, None), None);
+        assert_eq!(
+            modell.schreibgang_gesperrt(),
+            None,
+            "das Lesen einer gewoehnlichen Datei sperrt nicht"
+        );
+        assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
+        assert_eq!(modell.schreibgang_gesperrt(), None);
+
+        std::fs::write(&pfad, b"").expect("leere Datei");
+        assert_eq!(modell.oeffnen(&pfad, mit_pin("2468")), None);
+        assert!(modell.laedt_noch());
+        assert_eq!(
+            modell.schreibgang_gesperrt(),
+            Some(Schreibgangsperre::Laedt),
+            "zwischen Oeffnen und Einziehen antwortet die Sperre"
+        );
+        assert!(!Schreibgangsperre::Laedt.meldung().is_empty());
+        assert_eq!(abwarten_mit_ableitung(&mut modell), Ladeausgang::Geoeffnet);
+        assert_eq!(
+            modell.schreibgang_gesperrt(),
+            Some(Schreibgangsperre::OhneKopf)
+        );
     }
 
     /// Wird die Datei waehrend der Ableitung geschlossen, meldet der Wechsel

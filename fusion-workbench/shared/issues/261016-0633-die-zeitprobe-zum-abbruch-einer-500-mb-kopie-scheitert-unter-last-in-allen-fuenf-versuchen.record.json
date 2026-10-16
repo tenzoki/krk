@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "0b476f23-9355-4bd0-9e1b-9e65a2785f2f",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/261016-0633-die-zeitprobe-zum-abbruch-einer-500-mb-kopie-scheitert-unter-last-in-allen-fuenf-versuchen.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

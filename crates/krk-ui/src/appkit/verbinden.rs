@@ -391,6 +391,16 @@ fn eingehaengte_freigabe(url: &str) -> Option<PathBuf> {
 ///
 /// **Das erste Pfadstueck ist die Freigabe**: `smb://nas/daten/projekte`
 /// haengt die Freigabe `daten` ein. Rein und ohne System pruefbar.
+///
+/// **Verglichen wird dekodiert, auf beiden Seiten.** Die eingehaengte Seite
+/// kommt als `absoluteString` des Systems und ist prozentkodiert
+/// (`Daten%20Ordner`), die gesuchte ist die URL aus dem Plan, roh bis auf `#`
+/// und `?` (`Daten Ordner`, `Daten%231`); Rechner und Freigabe werden deshalb
+/// nach dem Zerlegen beide ueber [`prozent_dekodiert`] gelesen
+/// (`issues/261016-0614_*_die-verbindungs-url-kuerzt-den-pfad-an-raute-und-fragezeichen-und-der-vergleich-mit-der-eingehaengten-freigabe-liest-roh-gegen-kodiert.md`).
+/// **Was das nicht angleicht:** eine Freigabe, deren Umlaut das System in
+/// einer anderen Unicode-Normalform meldet als der Nutzer ihn getippt hat;
+/// an einer eingehaengten Freigabe nicht nachgesehen.
 #[must_use]
 fn gleiche_freigabe(eingehaengt: &str, gesucht: &str) -> bool {
     fn teile(url: &str) -> Option<(String, String, String)> {
@@ -400,14 +410,45 @@ fn gleiche_freigabe(eingehaengt: &str, gesucht: &str) -> bool {
         let freigabe = pfad.split('/').next().unwrap_or("");
         Some((
             schema.to_ascii_lowercase(),
-            rechner.to_ascii_lowercase(),
-            freigabe.to_lowercase(),
+            prozent_dekodiert(rechner).to_lowercase(),
+            prozent_dekodiert(freigabe).to_lowercase(),
         ))
     }
     match (teile(eingehaengt), teile(gesucht)) {
         (Some(links), Some(rechts)) => links == rechts,
         _ => false,
     }
+}
+
+/// Ein URL-Stueck mit jedem `%XX` aus zwei Hexziffern als sein Byte; ein `%`
+/// ohne zwei Hexziffern dahinter bleibt stehen, und Bytefolgen, die kein UTF-8
+/// ergeben, werden ersetzt statt abgewiesen. Rein und ohne System pruefbar.
+#[must_use]
+fn prozent_dekodiert(stueck: &str) -> String {
+    fn hexwert(byte: u8) -> Option<u8> {
+        char::from(byte)
+            .to_digit(16)
+            .and_then(|wert| u8::try_from(wert).ok())
+    }
+    let roh = stueck.as_bytes();
+    let mut bytes = Vec::with_capacity(roh.len());
+    let mut stelle = 0;
+    while let Some(&byte) = roh.get(stelle) {
+        let kodiert = (byte == b'%')
+            .then(|| Some(hexwert(*roh.get(stelle + 1)?)? * 16 + hexwert(*roh.get(stelle + 2)?)?))
+            .flatten();
+        match kodiert {
+            Some(wert) => {
+                bytes.push(wert);
+                stelle += 3;
+            }
+            None => {
+                bytes.push(byte);
+                stelle += 1;
+            }
+        }
+    }
+    String::from_utf8_lossy(&bytes).into_owned()
 }
 
 /// Gibt eine URL an das System, das das zustaendige Programm oeffnet; auf
@@ -435,6 +476,13 @@ pub fn uebergeben(url: &str) -> bool {
 /// gebunden sind, und hinge damit an der Bauumgebung. Was auch kodiert keine
 /// URL ergibt, etwa ein Leerzeichen im Rechnernamen oder ein Port aus
 /// Buchstaben, weist schon das Blatt „Verbinden“ ab, ueber dieselbe Funktion.
+///
+/// **`#` und `?` kodiert diese Funktion nicht**, denn sie sind gueltige
+/// URL-Zeichen und beenden hier den Pfad. Auf dem Einhaengeweg kommen sie
+/// deshalb schon kodiert an (`%23`, `%3F`, Modulkopf von
+/// `krk_core::heimordner::verbindung`), und `nas.local/Daten#1` haengt
+/// `/Daten#1` ein und nicht `/Daten`; auf dem Uebergabeweg bleiben sie Anfrage
+/// und Fragment.
 #[must_use]
 pub fn url_aus(url: &str) -> Option<Retained<NSURL>> {
     NSURL::URLWithString_encodingInvalidCharacters(&NSString::from_str(url), true)
@@ -580,5 +628,58 @@ mod tests {
             "smb://nas.local/fotos"
         ));
         assert!(!gleiche_freigabe("kein url", "smb://nas.local/daten"));
+    }
+
+    /// Die kodierte Form des Systems und die rohe aus dem Plan nennen
+    /// dieselbe Freigabe (issues/261016-0614): Leerzeichen, Umlaut und die
+    /// auf dem Einhaengeweg kodierte Raute.
+    #[test]
+    fn eine_freigabe_wird_kodiert_und_roh_als_dieselbe_erkannt() {
+        assert!(gleiche_freigabe(
+            "smb://nas.local/Daten%20Ordner",
+            "smb://nas.local/Daten Ordner"
+        ));
+        assert!(gleiche_freigabe(
+            "smb://kai@nas.local/B%C3%BC%20ro/",
+            "smb://nas.local/Bü ro/projekte"
+        ));
+        assert!(gleiche_freigabe(
+            "smb://nas.local/Daten%231",
+            "smb://nas.local/Daten%231/x"
+        ));
+        assert!(!gleiche_freigabe(
+            "smb://nas.local/Daten%20Ordner",
+            "smb://nas.local/Daten"
+        ));
+        assert_eq!(prozent_dekodiert("a%20b%C3%BC"), "a bü");
+        assert_eq!(prozent_dekodiert("100%"), "100%");
+        assert_eq!(prozent_dekodiert("%zz%2"), "%zz%2");
+    }
+
+    /// Eine Adresse mit `#` oder `?` haengt den ganzen Pfad ein: aus dem Ziel
+    /// des Kerns entsteht eine URL, deren Pfad beide Zeichen traegt, und eine
+    /// Webadresse behaelt Anfrage und Fragment (issues/261016-0614).
+    #[test]
+    fn raute_und_fragezeichen_bleiben_im_pfad_der_freigabe() {
+        use krk_core::heimordner::verbindung::{Verbindungsziel, verbindungsziel};
+        let url = |protokoll: &str, adresse: &str| match verbindungsziel(protokoll, adresse, "")
+            .expect("ein Ziel")
+        {
+            Verbindungsziel::Einhaengen { url, .. } | Verbindungsziel::Uebergeben { url } => {
+                url_aus(&url).expect("eine URL")
+            }
+        };
+        let pfad = |adresse: Retained<NSURL>| adresse.path().map(|pfad| pfad.to_string());
+        assert_eq!(
+            pfad(url("smb", "nas.local/Daten#1/x")).as_deref(),
+            Some("/Daten#1/x")
+        );
+        assert_eq!(pfad(url("smb", "nas.local/a?b")).as_deref(), Some("/a?b"));
+        let netz = url("https", "example.org/suche?q=1#oben");
+        assert_eq!(
+            netz.path().map(|p| p.to_string()).as_deref(),
+            Some("/suche")
+        );
+        assert_eq!(netz.query().map(|q| q.to_string()).as_deref(), Some("q=1"));
     }
 }

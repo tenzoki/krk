@@ -1746,8 +1746,14 @@ ist. Es öffnet ein Blatt mit sechs Feldern, denselben wie in der Tabelle; das
 Passwortfeld zeigt Punkte statt Zeichen, und die Notizen sind hier eine Zeile
 (Absätze schreibt man danach in der Tabelle). „Anlegen“ bleibt abgeschaltet,
 bis der Name nicht leer ist, das Protokoll eines aus der Tabelle unten ist, die
-Adresse nicht leer ist und kein `://` enthält und kein Feld einen
-Zeilenumbruch trägt; die Zeile unter den Feldern nennt den Grund.
+Adresse nicht leer ist und kein `://` enthält, Protokoll und Adresse zusammen
+eine gültige Adresse ergeben (kein Leerzeichen im Rechnernamen, ein Port nur
+aus Ziffern) und kein Feld einen Zeilenumbruch trägt. Leerzeichen und Umlaute
+im Pfad sind erlaubt, ebenso `#` und `?`: beim Einhängen gehören sie zum
+Ordnernamen. Die Zeile unter den Feldern nennt den Grund für einen
+Zeilenumbruch und für eine ungültige Adresse schon beim Tippen, denn
+Weitertippen heilt beide nicht; für einen leeren Namen, eine leere Adresse und
+ein unbekanntes Protokoll erst, wenn man die Eingabetaste drückt.
 
 Nach „Anlegen“ fragt KRK nach der PIN, außer der Schlüssel ist noch gemerkt.
 Dann hängt es den Eintrag in der vollen Form ans Ende von `secrets.txt` und legt
@@ -1760,6 +1766,12 @@ das Lesezeichen in der Gruppe „Verbindungen“ an. Was dabei schiefgehen kann:
 | `secrets.txt` fehlt | KRK legt sie an wie `f2`, ohne sie zu öffnen, und fragt nach einer neuen PIN, zweimal. |
 | `secrets.txt` hat im Editor ungesicherte Änderungen | „Verbinden…“ weist ab, bevor das Blatt aufgeht: erst sichern. |
 | `secrets.txt` ist im Editor mit einer eben festgelegten PIN offen und noch nie gesichert | „Verbinden…“ weist ab, bevor das Blatt aufgeht: erst sichern. Sonst legte es eine zweite PIN fest, und der Editor öffnete die Datei danach nicht mehr. |
+| `secrets.txt` wird im Editor gerade geöffnet | „Verbinden…“ weist ab: erst warten, bis sie offen ist. |
+
+Diese drei Lagen prüft KRK zweimal: bevor das Blatt aufgeht und noch einmal
+nach „Anlegen“ und der PIN, unmittelbar vor dem Schreiben. Ist der Editor in
+der Zwischenzeit in eine davon geraten, schreibt KRK nichts und nennt den
+Grund in der Statuszeile; die Felder des Blattes sind dann verloren.
 | Der Eintrag steht, das Lesezeichen ließ sich nicht anlegen | Die Statuszeile sagt genau das. |
 
 Hält der Editor `secrets.txt` ohne ungesicherte Änderungen, lädt er sie nach
@@ -1793,7 +1805,10 @@ Protokolls zählen nicht.
 **Das Passwort verlässt KRK allein beim Einhängen**, als eigener Wert an das
 System und nie in einer Adresse. Die Programme, an die KRK übergibt, fragen
 selbst danach, wenn sie es brauchen. Die Adresse trägt kein Schema: `nas.local/daten`
-und nicht `smb://nas.local/daten`.
+und nicht `smb://nas.local/daten`. **Beim Einhängen gehören `#` und `?` zum
+Pfad**: `nas.local/Daten#1` hängt den Ordner `Daten#1` ein und nicht `Daten`.
+An das System übergeben bleiben sie, was sie in einer Webadresse sind, also
+beginnt mit `?` die Anfrage und mit `#` die Sprungmarke.
 
 Nach einem gelungenen Einhängen zeigt das aktive Dateifenster den
 Einhängepunkt. Ist die Freigabe schon eingehängt, zeigt KRK den vorhandenen

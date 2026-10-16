@@ -4050,6 +4050,34 @@ fn das_konto_wird_in_der_url_kodiert() {
     );
 }
 
+/// `#` und `?` in der Adresse sind auf dem Einhaengeweg Teil des Pfades und
+/// werden kodiert, damit sie ihn nicht beenden; auf dem Uebergabeweg bleiben
+/// sie Anfrage und Fragment
+/// (`issues/261016-0614_*_die-verbindungs-url-kuerzt-den-pfad-an-raute-und-fragezeichen-und-der-vergleich-mit-der-eingehaengten-freigabe-liest-roh-gegen-kodiert.md`).
+#[test]
+fn raute_und_fragezeichen_beenden_den_pfad_einer_freigabe_nicht() {
+    assert_eq!(
+        verbindungsziel("smb", "nas.local/Daten#1/x", ""),
+        Ok(Verbindungsziel::Einhaengen {
+            url: "smb://nas.local/Daten%231/x".into(),
+            konto: None
+        })
+    );
+    assert_eq!(
+        verbindungsziel("webdavs", "dav.example.org/a?b", ""),
+        Ok(Verbindungsziel::Einhaengen {
+            url: "https://dav.example.org/a%3Fb".into(),
+            konto: None
+        })
+    );
+    assert_eq!(
+        verbindungsziel("https", "example.org/suche?q=1#oben", ""),
+        Ok(Verbindungsziel::Uebergeben {
+            url: "https://example.org/suche?q=1#oben".into()
+        })
+    );
+}
+
 /// Unbekanntes Protokoll, leere Adresse und ein Schema in der Adresse sind
 /// Fehler, in dieser Reihenfolge geprueft; die Meldung nennt das Protokoll.
 #[test]

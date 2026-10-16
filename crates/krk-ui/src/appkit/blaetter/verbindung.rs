@@ -273,11 +273,16 @@ pub fn zeigen(
         blatt.textaenderung_melden(Box::new(move || {
             let geprueft = pruefen(&lesen());
             knopf.setEnabled(geprueft.is_ok());
-            // Der Grund erst, wenn ein Feld etwas traegt, das nie gilt: ein
-            // Zeilenumbruch oder ein unbekanntes Protokoll. Ein leerer Name
-            // oder eine noch leere Adresse sind beim Tippen kein Fehler.
+            // Der Grund beim Tippen allein fuer das, was Weitertippen nicht
+            // heilt: ein Zeilenumbruch und eine Adresse, aus der keine URL
+            // entsteht (ein Leerzeichen im Rechnernamen). Ein leerer Name,
+            // eine noch leere Adresse und ein halb getipptes Protokoll sind
+            // beim Tippen kein Fehler; ihren Grund zeigt erst die
+            // Eingabetaste ueber `bestaetigung_pruefen` (HowTo.md, „Verbinden“).
             let satz = match geprueft {
-                Err(fehler @ Entwurfsfehler::Umbruch) => fehler.meldung(),
+                Err(fehler @ (Entwurfsfehler::Umbruch | Entwurfsfehler::KeineUrl)) => {
+                    fehler.meldung()
+                }
                 Err(_) | Ok(()) => String::new(),
             };
             grundzeile.setStringValue(&NSString::from_str(&satz));

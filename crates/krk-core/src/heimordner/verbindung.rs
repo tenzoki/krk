@@ -12,9 +12,9 @@
 //!
 //! | Protokoll | Weg | URL |
 //! |---|---|---|
-//! | `smb`, `afp`, `nfs`, `ftp` | einhaengen | `<protokoll>://<adresse>` |
-//! | `webdav` | einhaengen | `http://<adresse>` |
-//! | `webdavs` | einhaengen | `https://<adresse>` |
+//! | `smb`, `afp`, `nfs`, `ftp` | einhaengen | `<protokoll>://<adresse>`, `#` und `?` kodiert |
+//! | `webdav` | einhaengen | `http://<adresse>`, `#` und `?` kodiert |
+//! | `webdavs` | einhaengen | `https://<adresse>`, `#` und `?` kodiert |
 //! | `http`, `https` | uebergeben | `<protokoll>://<adresse>` |
 //! | `ssh`, `sftp`, `vnc` | uebergeben | `<protokoll>://[<konto>@]<adresse>` |
 //!
@@ -33,12 +33,21 @@
 //! (`tests/heimordner.rs`) haelt am Code dieser Datei, dass er den Typ nicht
 //! nennt. Kommentarzeilen liest sie nicht.
 //!
-//! Die Adresse wird hier nicht kodiert: sie steht so in der URL, wie der
-//! Nutzer sie eingetragen hat, ohne Leerraum an den Enden. Kodiert wird sie
-//! erst in `krk-ui`, wo aus der URL ein `NSURL` wird (`appkit::verbinden::url_aus`):
-//! ein Leerzeichen oder ein Zeichen jenseits von ASCII im Pfad wird dort
-//! prozentkodiert, und was auch kodiert keine URL ergibt, etwa ein Leerzeichen
-//! im Rechnernamen, weist schon das Blatt „Verbinden“ ab.
+//! Die Adresse steht so in der URL, wie der Nutzer sie eingetragen hat, ohne
+//! Leerraum an den Enden, **bis auf `#` und `?` auf dem Einhaengeweg**. Eine
+//! Freigabe kennt weder Anfrage noch Fragment, also sind beide Zeichen dort
+//! Teil eines Ordnernamens (`nas.local/Daten#1`); als URL-Zeichen stehen
+//! gelassen, beendeten sie den Pfad, und NetFS hinge still `/Daten` ein
+//! (`issues/261016-0614_*_die-verbindungs-url-kuerzt-den-pfad-an-raute-und-fragezeichen-und-der-vergleich-mit-der-eingehaengten-freigabe-liest-roh-gegen-kodiert.md`).
+//! Hier werden sie deshalb zu `%23` und `%3F`. **Auf dem Uebergabeweg bleiben
+//! sie stehen**, weil sie in einer Webadresse (`http`, `https`) Anfrage und
+//! Fragment sind, die der Nutzer meint, und das Programm des Systems bei
+//! `ssh`, `sftp` und `vnc` die URL so bekommt, wie sie eingetragen ist. Alles
+//! Uebrige wird erst in `krk-ui` kodiert, wo aus der URL ein `NSURL` wird
+//! (`appkit::verbinden::url_aus`): ein Leerzeichen oder ein Zeichen jenseits
+//! von ASCII im Pfad wird dort prozentkodiert, und was auch kodiert keine URL
+//! ergibt, etwa ein Leerzeichen im Rechnernamen, weist schon das Blatt
+//! „Verbinden“ ab.
 
 use crate::sprache::{Text, satz, text};
 
@@ -190,7 +199,8 @@ pub enum Verbindungsziel {
     /// Einhaengen ueber NetFS: die URL ohne Konto, das Konto daneben, wenn der
     /// Eintrag eines nennt.
     Einhaengen {
-        /// `<schema>://<adresse>`.
+        /// `<schema>://<adresse>`, `#` und `?` der Adresse als `%23` und
+        /// `%3F` (Modulkopf).
         url: String,
         /// Das Konto ohne Leerraum an den Enden, oder `None`, wenn es leer ist.
         konto: Option<String>,
@@ -271,7 +281,7 @@ pub fn verbindungsziel(
     let schema = protokoll.url_schema();
     Ok(match protokoll.weg() {
         Weg::Einhaengen => Verbindungsziel::Einhaengen {
-            url: format!("{schema}://{adresse}"),
+            url: format!("{schema}://{}", ohne_anfrage_und_fragment(adresse)),
             konto: (!konto.is_empty()).then(|| konto.to_owned()),
         },
         Weg::Uebergeben if protokoll.konto_in_der_url() && !konto.is_empty() => {
@@ -283,6 +293,13 @@ pub fn verbindungsziel(
             url: format!("{schema}://{adresse}"),
         },
     })
+}
+
+/// Die Adresse mit `#` als `%23` und `?` als `%3F`, sonst unveraendert: auf
+/// dem Einhaengeweg sind beide Zeichen Teil eines Namens und beginnen kein
+/// Fragment und keine Anfrage (Modulkopf).
+fn ohne_anfrage_und_fragment(adresse: &str) -> String {
+    adresse.replace('#', "%23").replace('?', "%3F")
 }
 
 /// Kodiert jedes Byte ausser den unreservierten Zeichen aus RFC 3986
