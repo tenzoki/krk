@@ -1767,15 +1767,18 @@ das Lesezeichen in der Gruppe „Verbindungen“ an. Was dabei schiefgehen kann:
 | `secrets.txt` hat im Editor ungesicherte Änderungen | „Verbinden…“ weist ab, bevor das Blatt aufgeht: erst sichern. |
 | `secrets.txt` ist im Editor mit einer eben festgelegten PIN offen und noch nie gesichert | „Verbinden…“ weist ab, bevor das Blatt aufgeht: erst sichern. Sonst legte es eine zweite PIN fest, und der Editor öffnete die Datei danach nicht mehr. |
 | `secrets.txt` wird im Editor gerade geöffnet | „Verbinden…“ weist ab: erst warten, bis sie offen ist. |
-
-Diese drei Lagen prüft KRK zweimal: bevor das Blatt aufgeht und noch einmal
-nach „Anlegen“ und der PIN, unmittelbar vor dem Schreiben. Ist der Editor in
-der Zwischenzeit in eine davon geraten, schreibt KRK nichts und nennt den
-Grund in der Statuszeile; die Felder des Blattes sind dann verloren.
 | Der Eintrag steht, das Lesezeichen ließ sich nicht anlegen | Die Statuszeile sagt genau das. |
 
+Die drei Lagen des Editors aus der Tabelle prüft KRK zweimal: bevor das Blatt
+aufgeht und noch einmal nach „Anlegen“ und der PIN, unmittelbar vor dem
+Schreiben. Ist der Editor in der Zwischenzeit in eine davon geraten, schreibt
+KRK nichts und nennt den Grund in der Statuszeile; die Felder des Blattes sind
+dann verloren.
+
 Hält der Editor `secrets.txt` ohne ungesicherte Änderungen, lädt er sie nach
-dem Anlegen neu und zeigt den neuen Eintrag.
+dem Anlegen neu und zeigt den neuen Eintrag. Umgekehrt fragt der Editor nicht
+nach der PIN, solange „Verbinden…“ schreibt oder eine Verbindung `secrets.txt`
+liest: die Statuszeile sagt, dass man erst warten soll.
 
 **In `bookmarks.toml` steht von der Verbindung allein ihr Name.** Protokoll,
 Adresse, Konto, Passwort und Notizen stehen nur verschlüsselt in

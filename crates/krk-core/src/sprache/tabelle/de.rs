@@ -979,6 +979,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "In secrets.txt heißen {zahl} Einträge „{name}“; verbunden wird erst, wenn der Name eindeutig ist."
         }
         Text::VerbindungLaeuftSchon => "Eine Verbindung wird schon hergestellt.",
+        Text::EditorWartetAufTresorgang => {
+            "An secrets.txt läuft gerade „Verbinden…“ oder eine Verbindung; erst warten, dann öffnen."
+        }
         Text::VerbindungLaeuft => "Verbinde mit „{name}“ …",
         Text::VerbindungEingehaengt => "„{name}“ ist verbunden: {pfad}",
         Text::VerbindungSchonVerbunden => "„{name}“ ist schon verbunden.",

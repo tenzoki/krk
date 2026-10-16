@@ -1482,6 +1482,9 @@ pub enum Text {
     VerbindungMehrdeutig,
     /// Ein zweiter Klick, waehrend eine Verbindung hergestellt wird.
     VerbindungLaeuftSchon,
+    /// Der Editor soll `secrets.txt` oeffnen, waehrend ein Gang von
+    /// „Verbinden…“ oder einer Verbindung an ihr laeuft.
+    EditorWartetAufTresorgang,
     /// Die Statuszeile, waehrend eine Verbindung hergestellt wird; `{name}`.
     VerbindungLaeuft,
     /// Eine Freigabe ist eingehaengt; `{name}`, `{pfad}`.
@@ -1543,7 +1546,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 650] = [
+    pub const ALLE: [Text; 651] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -2167,6 +2170,7 @@ impl Text {
         Text::VerbindungKeinEintrag,
         Text::VerbindungMehrdeutig,
         Text::VerbindungLaeuftSchon,
+        Text::EditorWartetAufTresorgang,
         Text::VerbindungLaeuft,
         Text::VerbindungEingehaengt,
         Text::VerbindungSchonVerbunden,

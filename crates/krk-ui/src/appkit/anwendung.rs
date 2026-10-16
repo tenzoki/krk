@@ -10214,7 +10214,22 @@ impl Anwendungsdelegierter {
     /// Schlitz, damit `esc` ueber den Abbruchbefehl dasselbe tut wie bei jedem
     /// anderen Blatt; abgebrochen wird ohne Meldung, wie bei jedem
     /// Eingabeblatt.
+    ///
+    /// **Laeuft ein Gang an `secrets.txt`, geht kein Blatt auf.** Die
+    /// Gegenrichtung der Schreibgangsperre: an einer leeren Datei verlangte
+    /// das Blatt ein Festlegen, waehrend der Schreibgang von „Verbinden…“
+    /// schon mit eigenem Salz das erste Chiffrat schreibt, und liest der
+    /// Editor die Datei noch leer, hielten Editor und Merker danach zwei
+    /// Schluessel fuer dieselbe Datei. Gefragt wird hier, weil jedes Oeffnen
+    /// von `secrets.txt` ohne gemerkten Schluessel hierher kommt; mit einem
+    /// gemerkten oeffnet allein eine nicht leere Datei, und der Gang legt
+    /// dort keine PIN fest.
     fn pin_erfragen(&self, pfad: PathBuf, form: Pinform) {
+        if self.ivars().tresorgang.get() {
+            let aktiv = self.ivars().modell.borrow().aktiv();
+            self.antwort_zeigen(aktiv, text(Text::EditorWartetAufTresorgang));
+            return;
+        }
         let Some(fenster) = self.ivars().fenster.get() else {
             return;
         };
@@ -14596,6 +14611,25 @@ mod kontextproben {
         assert!(
             sperre < gang,
             "verbindung_anhaengen fragt die Sperre erst nach dem Start des Schreibgangs"
+        );
+
+        // Die Gegenrichtung: das PIN-Blatt des Editors geht nicht auf,
+        // solange ein Gang an `secrets.txt` laeuft (Restfrage der
+        // Schlussdurchsicht 261016-0638).
+        let blatt = rumpf(&datei, "pin_erfragen");
+        let gangfrage = blatt
+            .find(concat!("tresorgang.", "get()"))
+            .expect("pin_erfragen fragt den laufenden Gang");
+        let zeigen = blatt
+            .find(concat!("blaetter::pin::", "zeigen("))
+            .expect("pin_erfragen zeigt das PIN-Blatt");
+        assert!(
+            gangfrage < zeigen,
+            "pin_erfragen fragt den laufenden Gang erst nach dem Blatt"
+        );
+        assert!(
+            blatt.contains(concat!("Text::", "EditorWartetAufTresorgang")),
+            "pin_erfragen weist ohne den Satz der Statuszeile ab"
         );
 
         // Eine Auswahl, die ueber eine Verbindung laeuft, tut nichts.

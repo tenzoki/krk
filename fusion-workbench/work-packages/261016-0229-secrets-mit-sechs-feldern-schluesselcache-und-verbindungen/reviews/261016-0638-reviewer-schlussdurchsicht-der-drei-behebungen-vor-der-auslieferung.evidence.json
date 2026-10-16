@@ -1,0 +1,28 @@
+{
+  "schema": "fusion.evidence/v1",
+  "id": "c27a4fe2-9ae5-4e61-9864-90dab9654998",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "subject": {
+    "git_tree": "ae7557f517219de6109cdaf3cde870da78a38f28",
+    "git_range": null
+  },
+  "brief_revision": "sha256:551a856055fa404e2dcff8f49cce40a23101f59faa364cc50b49079b01c63e5b",
+  "plan_revision": "sha256:c5dceb18e8e9d70d0581fbfc2b13a82c3001dd07a81c4a3a218785eb77582a91",
+  "role": {
+    "profile": "reviewer",
+    "version": "13.0.0"
+  },
+  "host": "claude-code",
+  "execution_policy": "claude-guided",
+  "verdict": "revise",
+  "uncertainties": [],
+  "checks": [],
+  "report": {
+    "path": "work-packages/261016-0229-secrets-mit-sechs-feldern-schluesselcache-und-verbindungen/reviews/261016-0638-reviewer-schlussdurchsicht-der-drei-behebungen-vor-der-auslieferung.md",
+    "sha256": "sha256:d4c6445fe217375a871c04a501a1559d27d3330c7b2aa0c19e6ff687fa8beae7",
+    "kind": "review"
+  },
+  "predecessor": null,
+  "accepted_at": "2026-10-16T04:39:26Z",
+  "extensions": {}
+}

@@ -937,6 +937,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "{zahl} entries in secrets.txt are named “{name}”; connecting waits for a unique name."
         }
         Text::VerbindungLaeuftSchon => "A connection is already being made.",
+        Text::EditorWartetAufTresorgang => {
+            "“Connect…” or a connection is using secrets.txt right now; wait, then open it."
+        }
         Text::VerbindungLaeuft => "Connecting to “{name}” …",
         Text::VerbindungEingehaengt => "“{name}” is connected: {pfad}",
         Text::VerbindungSchonVerbunden => "“{name}” is already connected.",

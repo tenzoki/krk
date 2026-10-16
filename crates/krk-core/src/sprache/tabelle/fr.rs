@@ -1050,6 +1050,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "{zahl} entrées de secrets.txt s’appellent «\u{a0}{name}\u{a0}»\u{202f}; la connexion attend un nom unique."
         }
         Text::VerbindungLaeuftSchon => "Une connexion est déjà en cours.",
+        Text::EditorWartetAufTresorgang => {
+            "«\u{a0}Se connecter…\u{a0}» ou une connexion utilise secrets.txt en ce moment\u{202f}; patientez, puis ouvrez-le."
+        }
         Text::VerbindungLaeuft => "Connexion à «\u{a0}{name}\u{a0}» …",
         Text::VerbindungEingehaengt => "«\u{a0}{name}\u{a0}» est connecté\u{a0}: {pfad}",
         Text::VerbindungSchonVerbunden => "«\u{a0}{name}\u{a0}» est déjà connecté.",
