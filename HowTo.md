@@ -348,6 +348,19 @@ ihn auswerfen will, geht in den übergeordneten Ordner und klickt auf den
 Datenträger selbst. Als Datenträger gilt, was auch die Leiste links unter
 „Geräte und Orte“ zeigt; den Startdatenträger wirft KRK nie aus.
 
+**Dasselbe geht in der Leiste links unter „Geräte und Orte“.** Rechts in der
+Zeile jedes auswerfbaren Datenträgers steht, wie im Finder, das
+Auswerfzeichen ⏏; ein Klick darauf wirft ihn aus. Ein Rechtsklick auf die
+Zeile öffnet ein Menü mit dem einen Eintrag „Auswerfen“, der dasselbe tut. Die
+Auswahl in der Leiste bewegt sich dabei nicht, der Ordner im Dateifenster
+bleibt also, wo er war. Das Benutzerverzeichnis, der Startdatenträger und die
+Lesezeichen tragen weder das Zeichen noch das Menü. Nach dem Auswurf
+verschwindet die Zeile aus der Leiste; die Meldungen stehen in der Statuszeile
+des aktiven Dateifensters und lauten wie beim Weg über die Dateiliste. Ein
+zweiter Klick, solange der Auswurf noch läuft, gleich ob in der Leiste oder in
+der Dateiliste, schickt keinen zweiten Auftrag, sondern meldet „<name> wird
+schon ausgeworfen …“.
+
 **Die Statuszeile begleitet den Auswurf.** Zuerst steht dort „<name> wird
 ausgeworfen …“, danach „<name> wurde ausgeworfen“, und die Liste in `/Volumes`
 verliert den Eintrag. Stand ein Tab auf dem Datenträger, wechselt er wie bei

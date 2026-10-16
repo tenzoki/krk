@@ -54,6 +54,38 @@
 //! [`Leistenmodell::verbindung_der_zeile`], und die Senke dafuer haelt der
 //! Anwendungsdelegierte.
 //!
+//! # Ein Datentraeger laesst sich aus der Leiste auswerfen (261016)
+//!
+//! **Zwei Anstoesse, ein Weg.** Ein Rechtsklick auf eine Geraetezeile oeffnet
+//! ein Kontextmenue mit dem einen Eintrag „Auswerfen“, und rechts in derselben
+//! Zeile steht, wie im Finder, ein Auswerfsinnbild (`eject`), dessen Klick
+//! dasselbe tut. Beide melden den Einhaengepunkt ueber dieselbe Senke
+//! ([`Auswurfsenke`]) an den Anwendungsdelegierten, und der wirft ueber
+//! denselben Rumpf aus wie das Kontextmenue der Dateiliste
+//! (`Anwendungsdelegierter::auswurf_beginnen`): dieselbe Regel, dieselbe
+//! Sperre gegen den zweiten Auftrag, dieselbe Antwort in der Statuszeile.
+//! **Diese Datei wirft nichts aus**; sie kennt `super::auswurf` nicht.
+//!
+//! **Welche Zeile auswerfbar ist, entscheidet
+//! [`Leistenmodell::auswurfziel`]** ueber `kontextmenue::auswurfbezug`, also
+//! dieselbe Regel wie in der Dateiliste: ein Ort, dessen Pfad ein
+//! Einhaengepunkt ist, und nie die Wurzel. Das Benutzerverzeichnis, der
+//! Startdatentraeger, die Lesezeichen und die Verbindungen bekommen weder
+//! Menue noch Sinnbild; ein Rechtsklick auf sie oeffnet nichts.
+//!
+//! **Das Menue entsteht in `menuForEvent:` einer Unterklasse
+//! ([`Leistenliste`])** und nicht in `menuNeedsUpdate:` an einem stehenden
+//! Menue, aus dem Grund, den der Kopf von [`super::tabelle`] fuer die
+//! Dateiliste ausschreibt: die Zeile kommt aus dem Ereignis und nicht aus
+//! `clickedRow`, ueber dessen Stand der Kopf des Systems zu diesem Zeitpunkt
+//! nichts sagt. Die Unterklasse setzt das gebaute Menue (oder keines) als
+//! `menu` der Tabelle und reicht die Frage an die Oberklasse weiter, damit
+//! AppKit die angeklickte Zeile wie gewohnt umrandet. **Die Auswahl rueckt
+//! dabei nicht nach**: in der Leiste ist die Auswahl der Befehl, und ein
+//! Rechtsklick, der den Ordner des Dateifensters wechselte, taete mehr, als
+//! der Nutzer verlangt hat. Der Einhaengepunkt reist deshalb nicht ueber die
+//! Auswahl, sondern wird beim Menuebau gemerkt und beim Klick gelesen.
+//!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
 //! `NSView`, `NSScrollView`, `NSTableView`, `NSTableColumn`, `NSTextField`,
@@ -67,6 +99,24 @@
 //! das Sinnbild der Verbindung, der Systemname `network`, geht durch dieselbe
 //! `imageWithSystemSymbolName:accessibilityDescription:` wie die zwei
 //! anderen, seit 11.0.
+//!
+//! **Fuer das Auswerfen (261016) kommen hinzu**, jede am SDK nachgelesen:
+//! `menuForEvent:` (`NSView.h:291`), das [`Leistenliste`] ueberschreibt,
+//! `convertPoint:fromView:` (`NSView.h:149`), `initWithFrame:` (`NSView.h:83`)
+//! und `rowAtPoint:` (`NSTableView.h:411`), `NSEvent` (`NSEvent.h:317`) mit
+//! `locationInWindow` (`NSEvent.h:337`), `NSMenu` (`NSMenu.h:56`) mit `new`
+//! und `addItem:` (`NSMenu.h:92`), die Eigenschaft `menu` von `NSResponder`
+//! (`NSResponder.h:111`), `NSMenuItem` (`NSMenuItem.h:23`) mit dem schwach
+//! gehaltenen `target` (`NSMenuItem.h:93`), `NSButton` mit `setBordered:` (`NSButton.h:109`), die
+//! Eigenschaft `tag` von `NSView` und `NSControl` und `toolTip` von `NSView`
+//! (`NSView.h:310`) — alle ohne `API_AVAILABLE` und damit seit 10.0. Juenger
+//! sind zwei: `buttonWithImage:target:action:` seit 10.12
+//! (`NSButton.h:50`) und `contentTintColor` an `NSButton` seit 10.14
+//! (`NSButton.h:121`). Das `NSMenuItem` legt diese Datei nicht selbst an,
+//! sondern ueber [`super::menue::ohne_kuerzel`]; das Sinnbild `eject` geht
+//! durch dieselbe `imageWithSystemSymbolName:accessibilityDescription:` wie
+//! die anderen, seit 11.0, und das Schwachverweisen ueber `Weak` ist ein
+//! Rust-Typ der Kiste ohne macOS-Alter.
 //!
 //! **Etliche Beruehrungen sind juenger als ihre Klasse, und alle liegen unter
 //! dem Zielsystem:**
@@ -108,13 +158,14 @@
 //! Verfuegbarkeitsangabe und stehen damit seit 10.0.
 
 use std::cell::RefCell;
+use std::path::PathBuf;
 
-use objc2::rc::Retained;
+use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, ProtocolObject};
-use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send, sel};
+use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
 use objc2_app_kit::{
-    NSAutoresizingMaskOptions, NSColor, NSControlTextEditingDelegate, NSFont, NSFontWeightRegular,
-    NSImage, NSImageScaling, NSImageView, NSScrollView, NSTableColumn,
+    NSAutoresizingMaskOptions, NSButton, NSColor, NSControlTextEditingDelegate, NSEvent, NSFont,
+    NSFontWeightRegular, NSImage, NSImageScaling, NSImageView, NSMenu, NSScrollView, NSTableColumn,
     NSTableColumnResizingOptions, NSTableView, NSTableViewDataSource, NSTableViewDelegate,
     NSTableViewStyle, NSTextField, NSView,
 };
@@ -127,6 +178,8 @@ use krk_core::sprache::{Text, text};
 use krk_core::tasten::Kommando;
 
 use crate::leistenmodell::{Auswahl, Leistenmodell, Ort, Sinnbild, Zeile};
+
+use super::menue;
 
 /// Die Hoehe einer Zeile in Punkten.
 ///
@@ -160,6 +213,17 @@ const SINNBILD_TEXTSTELLE: &str = "doc.text";
 /// Der Systemname des Sinnbilds fuer eine Verbindung (261016).
 const SINNBILD_VERBINDUNG: &str = "network";
 
+/// Der Systemname des Auswerfsinnbilds rechts in einer auswerfbaren Zeile
+/// (261016), dasselbe Zeichen wie im Finder.
+const SINNBILD_AUSWERFEN: &str = "eject";
+
+/// Die Breite der Schaltflaeche mit dem Auswerfsinnbild, gemessen vom
+/// rechten Rand der Zelle (261016).
+const AUSWERFKNOPFBREITE: f64 = 18.0;
+
+/// Der Abstand der Schaltflaeche zum rechten Rand der Zelle.
+const AUSWERFKNOPFABSTAND: f64 = 4.0;
+
 /// Die Breite, mit der eine Zelle entsteht, bevor die Tabelle sie auslegt.
 ///
 /// Der Wert selbst ist gleichgueltig; das Verhaeltnis in ihm ist es nicht. Eine
@@ -182,6 +246,11 @@ pub type Auswahlsenke = Box<dyn Fn(Auswahl)>;
 /// `secrets.txt` (261016).
 pub type Verbindungssenke = Box<dyn Fn(String)>;
 
+/// Was ein Auswurf aus der Leiste meldet: den Einhaengepunkt der Zeile
+/// (261016). Ausgeworfen wird beim Halter, ueber denselben Weg wie aus der
+/// Dateiliste.
+pub type Auswurfsenke = Box<dyn Fn(PathBuf)>;
+
 /// Was die Datenquelle der Leiste haelt.
 pub struct LeistenIvars {
     /// Die Tabelle, der die Quelle Aenderungen meldet.
@@ -199,6 +268,16 @@ pub struct LeistenIvars {
     /// Was bei einem Klick auf eine Verbindung zu tun ist (261016); wahlfrei
     /// aus demselben Grund wie [`Self::gewaehlt`].
     verbinden: RefCell<Option<Verbindungssenke>>,
+    /// Was bei „Auswerfen“ zu tun ist (261016); wahlfrei aus demselben Grund
+    /// wie [`Self::gewaehlt`].
+    auswerfen: RefCell<Option<Auswurfsenke>>,
+    /// Der Einhaengepunkt, fuer den das zuletzt gebaute Kontextmenue steht
+    /// (261016).
+    ///
+    /// Gemerkt beim Bau und nicht beim Klick aus der Zeile nachgerechnet:
+    /// zwischen beiden kann ein Aushaengen die Zeilen neu ordnen, und dann
+    /// stuende unter derselben Nummer ein anderer Datentraeger.
+    menueziel: RefCell<Option<PathBuf>>,
     /// Wahr, solange die Quelle die Auswahl der Tabelle selbst setzt.
     ///
     /// Ohne dieses Kennzeichen liefe jede Bewegung doppelt: die Quelle setzt
@@ -312,6 +391,42 @@ define_class!(
                 self.verbindung_melden(name);
             }
         }
+
+        /// Der Eintrag „Auswerfen“ des Kontextmenues (261016).
+        ///
+        /// Er liest den Einhaengepunkt, den [`Leistenquelle::kontextmenue`]
+        /// beim Bau gemerkt hat, und nimmt ihn dabei heraus; ein zweiter
+        /// Klick auf dasselbe Menue gibt es nicht, denn es schliesst mit dem
+        /// ersten.
+        // SAFETY: Die Signatur ist die einer Handlung von AppKit, ein Absender
+        // und kein Rueckgabewert.
+        #[unsafe(method(auswerfenAusDemMenue:))]
+        fn auswerfen_aus_dem_menue(&self, _absender: Option<&AnyObject>) {
+            let ziel = self.ivars().menueziel.borrow_mut().take();
+            if let Some(ziel) = ziel {
+                self.auswurf_melden(ziel);
+            }
+        }
+
+        /// Die Schaltflaeche mit dem Auswerfsinnbild rechts in der Zeile
+        /// (261016).
+        ///
+        /// Ihre Marke ist die Zeile, und die Zeile wird hier gegen das Modell
+        /// von jetzt gelesen: die Schaltflaeche entsteht mit der Zellenansicht
+        /// und faellt mit jedem Neuzeichnen, also traegt sie die Nummer des
+        /// Standes, den der Nutzer sieht.
+        // SAFETY: Die Signatur ist die einer Handlung von AppKit; der Absender
+        // ist die Schaltflaeche, die diese Datei mit diesem Selektor baut.
+        #[unsafe(method(auswerfknopfGeklickt:))]
+        fn auswerfknopf_geklickt(&self, absender: &NSButton) {
+            let Ok(zeile) = usize::try_from(absender.tag()) else {
+                return;
+            };
+            let ziel = self.ivars().modell.borrow().auswurfziel(zeile);
+            if let Some(ziel) = ziel {
+                self.auswurf_melden(ziel);
+            }
+        }
     }
 );
 
@@ -323,6 +438,8 @@ impl Leistenquelle {
             modell: RefCell::new(Leistenmodell::neu()),
             gewaehlt: RefCell::new(None),
             verbinden: RefCell::new(None),
+            auswerfen: RefCell::new(None),
+            menueziel: RefCell::new(None),
             setzt_selbst: RefCell::new(false),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
@@ -338,6 +455,55 @@ impl Leistenquelle {
     /// (261016).
     pub fn verbinden_setzen(&self, verbinden: Verbindungssenke) {
         *self.ivars().verbinden.borrow_mut() = Some(verbinden);
+    }
+
+    /// Hinterlegt, was bei „Auswerfen“ zu tun ist (261016).
+    pub fn auswerfen_setzen(&self, auswerfen: Auswurfsenke) {
+        *self.ivars().auswerfen.borrow_mut() = Some(auswerfen);
+    }
+
+    /// Meldet einen Auswurf an den Halter (261016).
+    ///
+    /// Die eine Stelle, an der Menueeintrag und Sinnbild zusammenlaufen. Die
+    /// Ausleihe der Senke haelt, solange der Rueckruf laeuft, wie in
+    /// [`Self::auswahl_melden`]; die des Modells ist beim Aufruf zu Ende.
+    fn auswurf_melden(&self, einhaengepunkt: PathBuf) {
+        let auswerfen = self.ivars().auswerfen.borrow();
+        if let Some(auswerfen) = auswerfen.as_ref() {
+            auswerfen(einhaengepunkt);
+        }
+    }
+
+    /// Das Kontextmenue fuer die angeklickte Zeile, oder keines (261016).
+    ///
+    /// **Allein eine auswerfbare Zeile bekommt eines**, mit dem einen Eintrag
+    /// „Auswerfen“; jede andere Zeile und der Raum neben den Zeilen bekommen
+    /// keines, und der Rechtsklick tut dort nichts. Der Einhaengepunkt wird in
+    /// [`LeistenIvars::menueziel`] gemerkt, und zwar auch dann geraeumt, wenn
+    /// kein Menue entsteht: ein Eintrag von vorhin faende sonst ein Ziel, das
+    /// er nicht meint.
+    ///
+    /// `angeklickt` ist, was `rowAtPoint:` geliefert hat, `-1` eingeschlossen.
+    fn kontextmenue(&self, angeklickt: NSInteger) -> Option<Retained<NSMenu>> {
+        let ziel = usize::try_from(angeklickt)
+            .ok()
+            .and_then(|zeile| self.ivars().modell.borrow().auswurfziel(zeile));
+        *self.ivars().menueziel.borrow_mut() = ziel.clone();
+        ziel?;
+        let mtm = self.mtm();
+        let menue = NSMenu::new(mtm);
+        let eintrag = menue::ohne_kuerzel(
+            mtm,
+            &NSString::from_str(text(Text::KontextAuswerfen)),
+            Some(sel!(auswerfenAusDemMenue:)),
+        );
+        // SAFETY: `setTarget:` verlangt ein Ziel vom richtigen Typ
+        // (`NSMenuItem.h:93`); diese Quelle traegt `auswerfenAusDemMenue:`
+        // selbst. Gehalten wird es schwach, und ein gestorbenes Ziel liefert
+        // `nil` und keinen Absturz.
+        unsafe { eintrag.setTarget(Some(self)) };
+        menue.addItem(&eintrag);
+        Some(menue)
     }
 
     /// Der Name des Eintrags in `secrets.txt`, wenn die gewaehlte Zeile eine
@@ -374,8 +540,15 @@ impl Leistenquelle {
     /// [`Leistenmodell::orte_setzen`] und nicht mehr hier; hier stand sie als
     /// zweiter Weg zu derselben Marke neben
     /// [`Leistenquelle::gueltigkeit_nachziehen`].
-    pub fn orte_setzen(&self, orte: Vec<Ort>) {
-        self.ivars().modell.borrow_mut().orte_setzen(orte);
+    ///
+    /// `einhaengepunkte` stammen aus derselben Aufzaehlung wie `orte` und
+    /// entscheiden, welche Zeile Auswerfsinnbild und Kontextmenue traegt
+    /// (261016).
+    pub fn orte_setzen(&self, orte: Vec<Ort>, einhaengepunkte: Vec<PathBuf>) {
+        self.ivars()
+            .modell
+            .borrow_mut()
+            .orte_setzen(orte, einhaengepunkte);
         self.nachziehen();
     }
 
@@ -535,13 +708,14 @@ impl Leistenquelle {
     fn zellenansicht(&self, zeile: NSInteger) -> Option<Retained<NSView>> {
         let mtm = self.mtm();
         let stelle = usize::try_from(zeile).ok()?;
-        let (text, ungueltig, ueberschrift, sinnbild) = {
+        let (text, ungueltig, ueberschrift, sinnbild, auswerfbar) = {
             let modell = self.ivars().modell.borrow();
             (
                 modell.beschriftung(stelle)?,
                 modell.ungueltig(stelle),
                 matches!(modell.zeile(stelle), Some(Zeile::Ueberschrift(_))),
                 modell.sinnbild(stelle),
+                modell.auswurfziel(stelle).is_some(),
             )
         };
 
@@ -579,9 +753,15 @@ impl Leistenquelle {
             true => EINZUG + SINNBILDBREITE + SINNBILDABSTAND,
             false => 0.0,
         };
+        // Eine auswerfbare Zeile laesst rechts Platz fuer ihr Sinnbild, damit
+        // ein langer Name vor ihm gekuerzt wird und nicht darunter.
+        let rechts = match auswerfbar {
+            true => AUSWERFKNOPFBREITE + 2.0 * AUSWERFKNOPFABSTAND,
+            false => 0.0,
+        };
         beschriftung.setFrame(NSRect::new(
             NSPoint::new(einzug, 0.0),
-            NSSize::new(AUFBAUBREITE - einzug, ZEILENHOEHE),
+            NSSize::new(AUFBAUBREITE - einzug - rechts, ZEILENHOEHE),
         ));
         beschriftung.setAutoresizingMask(NSAutoresizingMaskOptions::ViewWidthSizable);
 
@@ -596,7 +776,56 @@ impl Leistenquelle {
             zelle.addSubview(&bildsicht);
         }
         zelle.addSubview(&beschriftung);
+        if auswerfbar && let Some(knopf) = self.auswerfknopf(zeile) {
+            zelle.addSubview(&knopf);
+        }
         Some(zelle)
+    }
+
+    /// Die Schaltflaeche mit dem Auswerfsinnbild am rechten Rand einer
+    /// auswerfbaren Zeile (261016).
+    ///
+    /// **Ohne Rahmen, mit derselben gedaempften Farbe wie das Sinnbild links**,
+    /// wie im Finder; ihre Marke ist die Zeile, gelesen in
+    /// [`Leistenquelle::auswerfknopf_geklickt`]. `None`, wenn das laufende
+    /// System das Sinnbild nicht kennt; dann bleibt das Kontextmenue der Weg.
+    /// Der Tooltip und die Beschreibung fuer VoiceOver sind der Titel des
+    /// Menueeintrags, denn beide nennen dieselbe Handlung.
+    fn auswerfknopf(&self, zeile: NSInteger) -> Option<Retained<NSButton>> {
+        let mtm = self.mtm();
+        let titel = NSString::from_str(text(Text::KontextAuswerfen));
+        let bild = NSImage::imageWithSystemSymbolName_accessibilityDescription(
+            &NSString::from_str(SINNBILD_AUSWERFEN),
+            Some(&titel),
+        )?;
+        // SAFETY: Das Ziel ist diese Quelle, die `auswerfknopfGeklickt:` mit
+        // der Signatur einer Handlung beantwortet, und `sel!` liefert einen
+        // gueltigen Selektor. `NSControl` haelt sein Ziel schwach; die Quelle
+        // haelt `Leiste`.
+        let knopf = unsafe {
+            NSButton::buttonWithImage_target_action(
+                &bild,
+                Some(self),
+                Some(sel!(auswerfknopfGeklickt:)),
+                mtm,
+            )
+        };
+        knopf.setBordered(false);
+        knopf.setContentTintColor(Some(&NSColor::secondaryLabelColor()));
+        knopf.setTag(zeile);
+        knopf.setToolTip(Some(&titel));
+        knopf.setFrame(NSRect::new(
+            NSPoint::new(
+                AUFBAUBREITE - AUSWERFKNOPFBREITE - AUSWERFKNOPFABSTAND,
+                (ZEILENHOEHE - SINNBILDHOEHE) / 2.0,
+            ),
+            NSSize::new(AUSWERFKNOPFBREITE, SINNBILDHOEHE),
+        ));
+        // Am rechten Rand festgehalten: die Zelle waechst mit der Spalte, und
+        // die Schaltflaeche soll mit ihr nach rechts gehen statt stehen zu
+        // bleiben.
+        knopf.setAutoresizingMask(NSAutoresizingMaskOptions::ViewMinXMargin);
+        Some(knopf)
     }
 }
 
@@ -645,6 +874,75 @@ fn sinnbildansicht(
     Some(sicht)
 }
 
+define_class!(
+    /// Die Tabelle der Leiste, als Unterklasse allein fuer `menuForEvent:`
+    /// (261016).
+    ///
+    /// **Sie baut kein Menue und kennt keinen Eintrag**: sie rechnet die
+    /// angeklickte Zeile aus dem Ereignis aus, laesst die Quelle das Menue
+    /// bauen (oder keines), setzt es als `menu` der Tabelle und reicht die
+    /// Frage an die Oberklasse weiter. Dieselbe Form wie `Dateiliste` in
+    /// [`super::tabelle`], und aus demselben Grund: die Zeile kommt aus dem
+    /// Ereignis und nicht aus `clickedRow`.
+    ///
+    /// **Der Rueckverweis ist schwach.** Die Quelle haelt die Tabelle stark,
+    /// also bricht der Ring an dieser Kante. Fehlt der Verweis, kommt kein
+    /// Menue.
+    // SAFETY:
+    // - Die Oberklasse `NSTableView` stellt an eine Unterklasse keine
+    //   Bedingung, die diese Klasse verletzt: sie ruft den bezeichneten
+    //   Erzeuger `initWithFrame:` der Oberklasse, sie ist weder ihre eigene
+    //   Datenquelle noch ihr eigener Delegierter, und ihre eine
+    //   Ueberschreibung ruft die Fassung der Oberklasse.
+    // - Die Klasse implementiert `Drop` nicht.
+    #[unsafe(super = NSTableView)]
+    #[thread_kind = MainThreadOnly]
+    #[ivars = RefCell<Option<Weak<Leistenquelle>>>]
+    pub struct Leistenliste;
+
+    // SAFETY: `NSObjectProtocol` stellt keine Bedingungen.
+    unsafe impl NSObjectProtocol for Leistenliste {}
+
+    impl Leistenliste {
+        /// Der Rechtsklick: das Menue der angeklickten Zeile, oder keines.
+        // SAFETY: Die Signatur entspricht der von NSView (`NSView.h:291`): ein
+        // Ereignis, ein optionales Menue zurueck.
+        #[unsafe(method_id(menuForEvent:))]
+        fn kontextmenue(&self, ereignis: &NSEvent) -> Option<Retained<NSMenu>> {
+            let quelle = self.ivars().borrow().as_ref().and_then(Weak::load);
+            let menue = quelle.and_then(|quelle| {
+                let ort = self.convertPoint_fromView(ereignis.locationInWindow(), None);
+                quelle.kontextmenue(self.rowAtPoint(ort))
+            });
+            // SAFETY: `setMenu:` ist unsicher gebunden und verlangt nichts
+            // weiter, als dass das Menue eines ist oder `None`; dieselbe
+            // Antwort wie beim Kontextmenue der Dateiliste. Die Tabelle haelt
+            // es danach stark, bis zum naechsten Rechtsklick.
+            unsafe { self.setMenu(menue.as_deref()) };
+            // SAFETY: Die Oberklasse beantwortet dieselbe Nachricht mit
+            // demselben Argument und liefert ein optionales Menue: das eben
+            // gesetzte, oder keines.
+            unsafe { msg_send![super(self), menuForEvent: ereignis] }
+        }
+    }
+);
+
+impl Leistenliste {
+    /// Eine Tabelle mit dem genannten Rahmen, noch ohne Rueckverweis.
+    fn neu(mtm: MainThreadMarker, rahmen: NSRect) -> Retained<Self> {
+        let this = Self::alloc(mtm).set_ivars(RefCell::new(None));
+        // SAFETY: `initWithFrame:` von NSView hat die hier angenommene
+        // Signatur.
+        unsafe { msg_send![super(this), initWithFrame: rahmen] }
+    }
+
+    /// Traegt den Rueckverweis nach, sobald es die Quelle gibt; die eine
+    /// Stelle, die ihn setzt, ist [`Leiste::bauen`].
+    fn ziel_setzen(&self, quelle: &Leistenquelle) {
+        *self.ivars().borrow_mut() = Some(Weak::from_retained(&quelle.retain()));
+    }
+}
+
 /// Die aufgebaute Leiste: ihre Ansicht und die Quelle, die AppKit nur schwach
 /// haelt.
 pub struct Leiste {
@@ -659,7 +957,8 @@ impl Leiste {
     /// in die Aufteilung, wie das Dateifenster auch.
     pub fn bauen(mtm: MainThreadMarker) -> Self {
         let rahmen = NSRect::new(NSPoint::ZERO, NSSize::ZERO);
-        let tabelle = NSTableView::initWithFrame(NSTableView::alloc(mtm), rahmen);
+        let liste = Leistenliste::neu(mtm, rahmen);
+        let tabelle: Retained<NSTableView> = Retained::into_super(liste.clone());
         tabelle.setRowHeight(ZEILENHOEHE);
         tabelle.setUsesAutomaticRowHeights(false);
         // Der Stil einer Seitenleiste: durchscheinender Grund, gerundete
@@ -703,6 +1002,8 @@ impl Leiste {
             tabelle.setTarget(Some(&quelle));
             tabelle.setAction(Some(sel!(zeileGeklickt:)));
         }
+
+        liste.ziel_setzen(&quelle);
 
         Self { sicht, quelle }
     }

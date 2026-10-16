@@ -728,6 +728,12 @@ pub fn duplikatbezug(modell: &Ordnermodell, betroffen: &[PathBuf]) -> Duplikatbe
 /// Worauf „Auswerfen" wirkt: jeder betroffene Eintrag, der ein bekannter
 /// Einhaengepunkt ist (261016).
 ///
+/// **Die eine Regel fuer beide Anstoesse**: das Kontextmenue der Dateiliste
+/// fragt sie mit den betroffenen Eintraegen, die Geraeteleiste mit dem Pfad
+/// ihrer Zeile (`crate::leistenmodell::Leistenmodell::auswurfziel` fuer
+/// Sinnbild und Menue, `Anwendungsdelegierter::auswurf_beginnen` fuer den
+/// Auswurf selbst).
+///
 /// **Ohne Dateizugriff**, wie alles in diesem Modul. Ob ein Ordner ein
 /// eingehaengter Datentraeger ist, sagt hier keine Frage an das Dateisystem,
 /// sondern die Liste `einhaengepunkte`: die Einhaengepunkte, die

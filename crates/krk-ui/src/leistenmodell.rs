@@ -260,6 +260,15 @@ impl Gemerkt {
 pub struct Leistenmodell {
     lesezeichen: Vec<Gemerkt>,
     orte: Vec<Ort>,
+    /// Die Einhaengepunkte, an denen die Leiste „Auswerfen“ anbietet
+    /// (261016), aus derselben Aufzaehlung wie [`Self::orte`].
+    ///
+    /// **Gesetzt im selben Zug wie die Orte** ([`Self::orte_setzen`]), damit
+    /// zwischen der Zeile und ihrer Auswerfbarkeit kein Ein- oder Aushaengen
+    /// liegen kann. Ausgeworfen wird trotzdem gegen die Liste des
+    /// Anwendungsdelegierten, die aus derselben Aufzaehlung stammt; die hier
+    /// entscheidet allein, ob die Zeile Sinnbild und Menueeintrag traegt.
+    einhaengepunkte: Vec<PathBuf>,
     zeilen: Vec<Zeile>,
     /// Die ausgewaehlte Zeile, oder `None`, solange keine gewaehlt ist.
     ///
@@ -300,8 +309,13 @@ impl Leistenmodell {
     /// Der Rueckgabewert der Pruefung wird hier nicht gebraucht: die Ortsliste
     /// hat sich ohnehin geaendert, die Ansicht zeichnet danach in jedem Fall
     /// neu. Er zaehlt allein am vierten Anlass, wo nichts weiter passiert ist.
-    pub fn orte_setzen(&mut self, orte: Vec<Ort>) {
+    ///
+    /// **`einhaengepunkte` sind die blossen Einhaengepunkte derselben
+    /// Aufzaehlung** (261016); an ihnen entscheidet
+    /// [`Self::auswurfziel`], welche Zeile auswerfbar ist.
+    pub fn orte_setzen(&mut self, orte: Vec<Ort>, einhaengepunkte: Vec<PathBuf>) {
         self.orte = orte;
+        self.einhaengepunkte = einhaengepunkte;
         // `let _ =`: der Grund steht im Absatz darueber — die Ortsliste hat sich
         // ohnehin geaendert, die Ansicht zeichnet danach in jedem Fall neu.
         let _ = self.gueltigkeit_pruefen();
@@ -543,6 +557,32 @@ impl Leistenmodell {
         }
     }
 
+    /// Der Einhaengepunkt, den die Zeile an dieser Stelle auswerfen laesst,
+    /// oder `None` (261016).
+    ///
+    /// **Dieselbe Regel wie im Kontextmenue der Dateiliste**, und nicht eine
+    /// zweite: gefragt wird [`crate::kommandos::kontextmenue::auswurfbezug`]
+    /// mit dem Pfad der Zeile als einzigem Betroffenen. Auswerfbar ist damit
+    /// genau ein Ort, dessen Pfad ein Einhaengepunkt ist und nicht die Wurzel
+    /// `/`; das Benutzerverzeichnis, die Lesezeichen, die Verbindungen und die
+    /// Ueberschriften sind es nie, und der Startdatentraeger auch nicht.
+    ///
+    /// **Sie stellt keine Frage an das Dateisystem**, wie `auswurfbezug`
+    /// selbst; sie wird je gezeichneter Zeile gefragt.
+    #[must_use]
+    pub fn auswurfziel(&self, stelle: usize) -> Option<PathBuf> {
+        let Zeile::Ort(stelle) = self.zeile(stelle)? else {
+            return None;
+        };
+        let ort = self.orte.get(stelle)?;
+        crate::kommandos::kontextmenue::auswurfbezug(
+            std::slice::from_ref(&ort.pfad),
+            &self.einhaengepunkte,
+        )
+        .into_iter()
+        .next()
+    }
+
     /// Der Name des Eintrags in `secrets.txt`, wenn die gewaehlte Zeile eine
     /// Verbindung ist (261016).
     #[must_use]
@@ -672,10 +712,13 @@ mod tests {
             Lesezeichen::neu("Eins", "/eins"),
             Lesezeichen::neu("Zwei", "/zwei"),
         ]));
-        modell.orte_setzen(vec![
-            Ort::neu("Benutzer", "/Users/pruefung"),
-            Ort::neu("Macintosh HD", "/"),
-        ]);
+        modell.orte_setzen(
+            vec![
+                Ort::neu("Benutzer", "/Users/pruefung"),
+                Ort::neu("Macintosh HD", "/"),
+            ],
+            Vec::new(),
+        );
         modell
     }
 
@@ -763,7 +806,7 @@ mod tests {
             Lesezeichen::neu("Temp", &ordner),
             Lesezeichen::verbindung("Server"),
         ]));
-        modell.orte_setzen(vec![Ort::neu("Macintosh HD", "/")]);
+        modell.orte_setzen(vec![Ort::neu("Macintosh HD", "/")], Vec::new());
         assert_eq!(
             beschriftungen(&modell),
             [
@@ -1065,7 +1108,7 @@ mod tests {
             Lesezeichen::textstelle("Die Lesestelle", "/p/leser.rs", 118, "let x = 1;"),
             Lesezeichen::neu("Sicherung", "/s"),
         ]));
-        modell.orte_setzen(vec![Ort::neu("Macintosh HD", "/")]);
+        modell.orte_setzen(vec![Ort::neu("Macintosh HD", "/")], Vec::new());
 
         assert_eq!(
             beschriftungen(&modell),
@@ -1276,7 +1319,7 @@ mod tests {
         modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![Lesezeichen::neu(
             "Eins", "/eins",
         )]));
-        modell.orte_setzen(vec![Ort::neu("Benutzer", "/Users/pruefung")]);
+        modell.orte_setzen(vec![Ort::neu("Benutzer", "/Users/pruefung")], Vec::new());
         let _ = modell.waehlen(1);
 
         assert_eq!(
@@ -1296,11 +1339,14 @@ mod tests {
     fn ein_geraet_mehr_laesst_die_auswahl_stehen() {
         let mut modell = modell();
         let _ = modell.waehlen(2);
-        modell.orte_setzen(vec![
-            Ort::neu("Benutzer", "/Users/pruefung"),
-            Ort::neu("Macintosh HD", "/"),
-            Ort::neu("Sicherung", "/Volumes/Sicherung"),
-        ]);
+        modell.orte_setzen(
+            vec![
+                Ort::neu("Benutzer", "/Users/pruefung"),
+                Ort::neu("Macintosh HD", "/"),
+                Ort::neu("Sicherung", "/Volumes/Sicherung"),
+            ],
+            Vec::new(),
+        );
         assert_eq!(
             modell.gewaehlt().map(|auswahl| auswahl.name),
             Some("Zwei".to_owned()),
@@ -1406,9 +1452,91 @@ mod tests {
         // Was ein Auswurf hinterlaesst: der Ordner ist fort, und das System
         // meldet die kuerzere Ortsliste.
         ordner.loeschen();
-        modell.orte_setzen(vec![Ort::neu("Macintosh HD", "/")]);
+        modell.orte_setzen(vec![Ort::neu("Macintosh HD", "/")], Vec::new());
 
         assert!(modell.ungueltig(1));
         assert_eq!(modell.beschriftung(1).as_deref(), Some("Sicherung (fehlt)"));
+    }
+
+    /// Eine Leiste mit einem Lesezeichen auf einen Datentraeger, dem
+    /// Benutzerverzeichnis, dem Startdatentraeger und zwei eingehaengten
+    /// Datentraegern, so wie `geraete_uebernehmen` sie setzt: die Orte samt
+    /// Benutzerverzeichnis, die Einhaengepunkte ohne es.
+    fn leiste_mit_datentraegern() -> Leistenmodell {
+        let mut modell = Leistenmodell::neu();
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![Lesezeichen::neu(
+            "Stick",
+            "/Volumes/Stick",
+        )]));
+        modell.orte_setzen(
+            vec![
+                Ort::neu("pruefung", "/Users/pruefung"),
+                Ort::neu("Macintosh HD", "/"),
+                Ort::neu("Stick", "/Volumes/Stick"),
+                Ort::neu("Freigabe", "/Volumes/Freigabe"),
+            ],
+            vec![
+                PathBuf::from("/"),
+                PathBuf::from("/Volumes/Stick"),
+                PathBuf::from("/Volumes/Freigabe"),
+            ],
+        );
+        modell
+    }
+
+    /// Auswerfbar ist genau ein Ort, dessen Pfad ein Einhaengepunkt ist und
+    /// nicht die Wurzel (261016).
+    ///
+    /// Die Zeilen: 0 Ueberschrift, 1 Lesezeichen, 2 Ueberschrift, 3
+    /// Benutzerverzeichnis, 4 Startdatentraeger, 5 und 6 die Datentraeger. Das
+    /// Lesezeichen zeigt auf denselben Pfad wie Zeile 5 und ist trotzdem
+    /// nicht auswerfbar: es ist eine Marke des Nutzers und kein Geraet.
+    #[test]
+    fn auswerfbar_ist_allein_ein_eingehaengter_datentraeger_ausser_der_wurzel() {
+        let modell = leiste_mit_datentraegern();
+        let ziele: Vec<Option<PathBuf>> = (0..modell.zeilen().len())
+            .map(|stelle| modell.auswurfziel(stelle))
+            .collect();
+        assert_eq!(
+            ziele,
+            [
+                None,
+                None,
+                None,
+                None,
+                None,
+                Some(PathBuf::from("/Volumes/Stick")),
+                Some(PathBuf::from("/Volumes/Freigabe")),
+            ]
+        );
+        assert_eq!(modell.auswurfziel(99), None);
+    }
+
+    /// Ohne bekannte Einhaengepunkte ist keine Zeile auswerfbar, auch eine
+    /// unter `/Volumes` nicht: die Regel fragt die Liste und nicht den Pfad.
+    #[test]
+    fn ohne_einhaengepunkte_ist_keine_zeile_auswerfbar() {
+        let mut modell = leiste_mit_datentraegern();
+        modell.orte_setzen(vec![Ort::neu("Stick", "/Volumes/Stick")], Vec::new());
+        assert!((0..modell.zeilen().len()).all(|stelle| modell.auswurfziel(stelle).is_none()));
+    }
+
+    /// Ein Datentraeger, der ausgehaengt ist, verliert mit der neuen
+    /// Ortsliste Zeile und Auswerfbarkeit zugleich (261016).
+    #[test]
+    fn nach_dem_aushaengen_ist_der_datentraeger_nicht_mehr_auswerfbar() {
+        let mut modell = leiste_mit_datentraegern();
+        modell.orte_setzen(
+            vec![
+                Ort::neu("pruefung", "/Users/pruefung"),
+                Ort::neu("Macintosh HD", "/"),
+                Ort::neu("Freigabe", "/Volumes/Freigabe"),
+            ],
+            vec![PathBuf::from("/"), PathBuf::from("/Volumes/Freigabe")],
+        );
+        let ziele: Vec<PathBuf> = (0..modell.zeilen().len())
+            .filter_map(|stelle| modell.auswurfziel(stelle))
+            .collect();
+        assert_eq!(ziele, [PathBuf::from("/Volumes/Freigabe")]);
     }
 }

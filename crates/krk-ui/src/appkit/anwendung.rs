@@ -2618,6 +2618,15 @@ impl Anwendungsdelegierter {
                 selbst.verbindung_herstellen(name);
             }
         }));
+        // Das Auswerfen aus der Leiste (261016), schwach aus demselben Grund.
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        leiste
+            .quelle()
+            .auswerfen_setzen(Box::new(move |einhaengepunkt| {
+                if let Some(selbst) = schwach.load() {
+                    selbst.leistenauswurf(einhaengepunkt);
+                }
+            }));
     }
 
     /// Der Nutzer hat in der Leiste einen Eintrag ausgewaehlt (C5, C6).
@@ -3355,11 +3364,20 @@ impl Anwendungsdelegierter {
     /// zwischen sich ein Ein- oder Aushaengen haben, und dann boete das
     /// Kontextmenue einen Datentraeger zum Auswerfen an, den die Leiste nicht
     /// zeigt, oder umgekehrt.
+    ///
+    /// **Die Leiste bekommt die Einhaengepunkte seit dem 261016 ebenfalls**,
+    /// aus derselben Aufzaehlung im selben Zug: an ihnen entscheidet sie,
+    /// welche Geraetezeile Auswerfsinnbild und Kontextmenue traegt.
+    /// Ausgeworfen wird trotzdem gegen die Liste hier, in
+    /// [`Self::auswurf_beginnen`].
     fn geraete_uebernehmen(&self) {
         let datentraeger = volumes::eingehaengte();
-        *self.ivars().einhaengepunkte.borrow_mut() =
+        let einhaengepunkte: Vec<PathBuf> =
             datentraeger.iter().map(|ort| ort.pfad.clone()).collect();
-        self.leiste().quelle().orte_setzen(orte(datentraeger));
+        *self.ivars().einhaengepunkte.borrow_mut() = einhaengepunkte.clone();
+        self.leiste()
+            .quelle()
+            .orte_setzen(orte(datentraeger), einhaengepunkte);
     }
 
     /// Richtet den einen Eintrittspunkt fuer Tastendruecke ein.
@@ -8303,7 +8321,7 @@ impl Anwendungsdelegierter {
             Kontextbefehl::Zippen => self.zipauftrag_stellen(seite),
             Kontextbefehl::Entpacken => self.entpackauftrag_stellen(seite),
             Kontextbefehl::Duplizieren => self.duplikat_erfragen(seite),
-            Kontextbefehl::Auswerfen => self.auswurf_beginnen(seite),
+            Kontextbefehl::Auswerfen => self.auswurf_beginnen(seite, Auswurfherkunft::Dateiliste),
             Kontextbefehl::Verbinden => self.verbindung_erfragen(seite),
             Kontextbefehl::ImFinderOeffnen => self.im_finder_oeffnen(seite),
             Kontextbefehl::ImFinderAnzeigen => self.im_finder_anzeigen(seite),
@@ -8803,10 +8821,25 @@ impl Anwendungsdelegierter {
     /// Statuszeile sagt [`operationen::auswurf_laeuft_schon`]. Die Probe
     /// `ein_laufender_auswurf_wird_nicht_ein_zweites_mal_beauftragt` haelt die
     /// Reihenfolge am Rumpf.
-    fn auswurf_beginnen(&self, seite: Fensterseite) {
-        let betroffen = self.dateifenster(seite).quelle().betroffene_eintraege();
+    ///
+    /// **Seit dem 261016 ist er auch der Weg der Leiste** (`herkunft`):
+    /// [`Self::leistenauswurf`] reicht den Einhaengepunkt der Geraetezeile als
+    /// einzigen Betroffenen herein, und von da an laeuft alles wie aus der
+    /// Dateiliste, Regel, Sperre gegen den zweiten Auftrag und Antwort
+    /// eingeschlossen. Die Probe `die_leiste_wirft_ueber_denselben_weg_aus`
+    /// haelt, dass es keinen zweiten gibt.
+    fn auswurf_beginnen(&self, seite: Fensterseite, herkunft: Auswurfherkunft) {
+        let betroffen = match herkunft {
+            Auswurfherkunft::Dateiliste => {
+                self.dateifenster(seite)
+                    .quelle()
+                    .betroffene_eintraege()
+                    .pfade
+            }
+            Auswurfherkunft::Leiste(einhaengepunkt) => vec![einhaengepunkt],
+        };
         let datentraeger =
-            kontextmenue::auswurfbezug(&betroffen.pfade, &self.ivars().einhaengepunkte.borrow());
+            kontextmenue::auswurfbezug(&betroffen, &self.ivars().einhaengepunkte.borrow());
         if datentraeger.is_empty() {
             self.antwort_zeigen(seite, &operationen::nichts_auszuwerfen());
             return;
@@ -8835,6 +8868,18 @@ impl Anwendungsdelegierter {
                 Anwendungsdelegierter::auswurf_einziehen(mtm, seite, &pfad, &name, ergebnis);
             });
         }
+    }
+
+    /// Wirft den Datentraeger einer Geraetezeile der Leiste aus (261016).
+    ///
+    /// **Kein eigener Weg**, sondern [`Self::auswurf_beginnen`] mit dem
+    /// Einhaengepunkt der Zeile; die Statuszeile ist die des aktiven
+    /// Dateifensters, wie bei jeder Antwort auf eine Handlung in der Leiste.
+    /// Gerufen aus der Senke, die [`Self::leiste_einrichten`] setzt, fuer den
+    /// Menueeintrag wie fuer das Auswerfsinnbild.
+    fn leistenauswurf(&self, einhaengepunkt: PathBuf) {
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        self.auswurf_beginnen(aktiv, Auswurfherkunft::Leiste(einhaengepunkt));
     }
 
     /// Nimmt die Antwort des Systems auf einen Auswurf entgegen (261016).
@@ -11981,6 +12026,21 @@ fn benutzerverzeichnis() -> PathBuf {
     pfade::benutzerverzeichnis().unwrap_or_else(|| PathBuf::from("/"))
 }
 
+/// Woher ein Auswurf kommt, und damit, welche Pfade er betrifft (261016).
+///
+/// **Die eine Stelle, an der die zwei Anstoesse auseinandergehen**, und sie
+/// gehen allein in der ersten Zeile von
+/// [`Anwendungsdelegierter::auswurf_beginnen`] auseinander: danach entscheidet
+/// fuer beide dieselbe Regel `kontextmenue::auswurfbezug`.
+enum Auswurfherkunft {
+    /// Das Kontextmenue der Dateiliste: betroffen ist, worauf auch `f5` und
+    /// `f6` wirken.
+    Dateiliste,
+    /// Eine Geraetezeile der Leiste: betroffen ist allein ihr
+    /// Einhaengepunkt.
+    Leiste(PathBuf),
+}
+
 /// Der untere Teil der Leiste: das Benutzerverzeichnis und die eingehaengten
 /// Datentraeger (C5).
 ///
@@ -14591,6 +14651,83 @@ mod kontextproben {
                 "auswurf_beginnen enthaelt {nadel}: ein Systemaufruf auf dem Hauptfaden"
             );
         }
+    }
+
+    /// Die Leiste wirft ueber denselben Weg aus wie die Dateiliste (261016).
+    ///
+    /// **Vier Glieder.** Die Leiste meldet Menueeintrag und Sinnbild ueber
+    /// dieselbe Senke und spricht `auswurf` selbst nicht an; die Senke, die
+    /// `leiste_einrichten` setzt, ruft `leistenauswurf`; `leistenauswurf`
+    /// geht in `auswurf_beginnen` und nicht selbst an das System; und dort
+    /// laeuft der Einhaengepunkt der Leiste durch dieselbe Regel
+    /// `auswurfbezug` wie die Betroffenen der Dateiliste, vor der Sperre
+    /// gegen den zweiten Auftrag. **Den Aufruf an das System gibt es im Baum
+    /// genau einmal**, sonst gaebe es den zweiten Weg, den diese Probe
+    /// ausschliesst.
+    ///
+    /// **Was sie nicht sieht:** ob AppKit den Klick auf das Sinnbild oder den
+    /// Menueeintrag wirklich zustellt. Das zeigt allein das laufende Buendel
+    /// mit einem eingehaengten Datentraeger.
+    #[test]
+    fn die_leiste_wirft_ueber_denselben_weg_aus() {
+        let leiste = super::quelltextproben::datei("krk-ui/src/appkit/leiste.rs");
+        assert!(
+            !leiste.contains(concat!("auswurf", "::")),
+            "die Leiste spricht das Auswurfmodul selbst an: ein zweiter Weg"
+        );
+        for griff in [
+            concat!("fn auswerfen_aus_dem_", "menue("),
+            concat!("fn auswerfknopf_", "geklickt("),
+        ] {
+            let ab = leiste
+                .find(griff)
+                .unwrap_or_else(|| panic!("{griff} steht nicht in leiste.rs"));
+            let rest = &leiste[ab..];
+            let ende = rest.find("\n        }\n").expect("der Rumpf endet nicht");
+            assert!(
+                rest[..ende].contains(concat!("auswurf_", "melden(")),
+                "{griff} meldet den Auswurf nicht ueber die eine Senke"
+            );
+        }
+
+        let datei = diese_datei();
+        assert!(
+            rumpf(&datei, "leiste_einrichten").contains(concat!("leisten", "auswurf(")),
+            "die Senke der Leiste erreicht leistenauswurf nicht"
+        );
+        let leistenauswurf = rumpf(&datei, "leistenauswurf");
+        assert!(
+            leistenauswurf.contains(concat!("auswurf_", "beginnen(")),
+            "leistenauswurf geht nicht in auswurf_beginnen"
+        );
+        assert!(
+            !leistenauswurf.contains(concat!("auswurf::", "auswerfen(")),
+            "leistenauswurf ruft das System selbst: ein zweiter Weg"
+        );
+
+        let beginnen = rumpf(&datei, "auswurf_beginnen");
+        let herkunft = beginnen
+            .find(concat!("Auswurfherkunft::", "Leiste("))
+            .expect("auswurf_beginnen kennt die Leiste nicht");
+        let regel = beginnen
+            .find(concat!("kontextmenue::", "auswurfbezug("))
+            .expect("auswurf_beginnen fragt die Regel nicht");
+        let sperre = beginnen
+            .find("laufende_auswuerfe")
+            .expect("auswurf_beginnen fragt die Sperre nicht");
+        assert!(
+            herkunft < regel && regel < sperre,
+            "der Einhaengepunkt der Leiste umgeht Regel oder Sperre"
+        );
+
+        let aufrufe: usize = quelldateien()
+            .iter()
+            .map(|(_, inhalt)| inhalt.matches(concat!("auswurf::", "auswerfen(")).count())
+            .sum();
+        assert_eq!(
+            aufrufe, 1,
+            "das System wird an mehr als einer Stelle zum Auswurf gerufen"
+        );
     }
 
     /// Die zwei Verbindungswege reissen nirgends ab (261016, Schritte 6 bis 8
