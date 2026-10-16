@@ -630,6 +630,51 @@ fn ohne_papierkorb_wird_nichts_geloescht_sondern_gemeldet() {
     assert!(datei.exists(), "ohne Papierkorb darf nichts verschwinden");
 }
 
+/// Ein lokaler Baum an einem Ort ohne Papierkorb wird endgueltig entfernt,
+/// Ordner samt Inhalt, und ohne dass der Papierkorb gefragt wird
+/// (Entscheidung 12 des Plans der sftp-Ordner).
+///
+/// Eine Quelle, die es nicht mehr gibt, steht mit ihrem Grund im Bericht,
+/// und die naechste kommt dran. Der Papierkorb ist die Attrappe, die
+/// mitschreibt: dass sie leer bleibt, belegt, dass dieser Weg nicht raeumt,
+/// sondern loescht.
+#[test]
+fn ein_lokaler_baum_ohne_papierkorb_wird_endgueltig_entfernt() {
+    let ordner = Pruefordner::neu("endgueltig-loeschen");
+    let baum = ordner.ordner("baum/unter/tiefer");
+    fs::write(baum.join("a.txt"), "a").expect("a.txt");
+    let baum = ordner.pfad().join("baum");
+    let datei = ordner.datei("einzeln.txt", "b");
+    let fehlt = ordner.pfad().join("fehlt.txt");
+    let bleibt = ordner.datei("bleibt.txt", "c");
+    let attrappe = Arc::new(Papierkorbattrappe::default());
+
+    let bericht = durchlaufen(
+        Auftrag::endgueltig_loeschen(vec![baum.clone(), fehlt.clone(), datei.clone()]),
+        attrappe.clone(),
+    );
+
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(bericht.eintraege, 2);
+    assert!(!baum.exists(), "der Baum steht noch");
+    assert!(!datei.exists(), "die Datei steht noch");
+    assert!(bleibt.exists(), "ein nicht gewaehlter Eintrag ist fort");
+    let pfade: Vec<&Path> = bericht
+        .uebersprungen
+        .iter()
+        .map(|eintrag| eintrag.pfad.as_path())
+        .collect();
+    assert_eq!(pfade, vec![fehlt.as_path()]);
+    assert!(
+        attrappe
+            .geraeumt
+            .lock()
+            .expect("Attrappe vergiftet")
+            .is_empty(),
+        "der endgueltige Weg hat den Papierkorb gefragt"
+    );
+}
+
 #[test]
 fn anlegen_legt_an_und_ueberschreibt_nichts() {
     let ordner = Pruefordner::neu("anlegen");

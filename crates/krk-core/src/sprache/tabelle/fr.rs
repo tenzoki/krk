@@ -592,6 +592,8 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VorgangsartPacken => "Compression",
         Text::VorgangsartEntpacken => "Décompression",
         Text::VorgangsartDuplizieren => "Duplication",
+        Text::VorgangsartEndgueltigLoeschen => "Suppression définitive",
+        Text::VorgangsartAnlegen => "Création",
         Text::VorgangAbbruchhinweis => "Esc annule",
         Text::VorgangWirdVorbereitet => "{was} en préparation\u{a0}: {positionen} · {abbruch}",
         Text::VorgangZeile => {
@@ -706,8 +708,8 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "{datei} ne peut pas être affiché\u{a0}: KRK fonctionne sans dossier de données"
         }
         Text::Markierungsstand => "{n} marqués, dont {ordner}, {groesse}",
-        Text::LoeschenOhnePapierkorb => {
-            "la destination n’a pas de Corbeille, rien n’a été supprimé\u{202f}; supprimer dans le Finder"
+        Text::LoeschenEndgueltigAus => {
+            "Cet emplacement n’a pas de Corbeille\u{a0}: les entrées supprimées ne peuvent pas être récupérées. Suppression depuis {ordner}."
         }
         Text::WarngrundUnentscheidbar => "depuis une destination de nature inconnue",
         Text::WarngrundNetzlaufwerk => "depuis un volume réseau",
@@ -1028,6 +1030,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "L’emplacement ne peut pas être écrit dans settings.toml\u{a0}: le verrou d’écriture du dossier de données ne peut pas être pris ({fehler})\u{202f}; le dossier de notes reste où il est"
         }
         Text::LoeschblattSchaltflaeche => "Mettre à la Corbeille",
+        Text::LoeschblattSchaltflaecheEndgueltig => "Supprimer définitivement",
         Text::NichtsAusgewaehlt => "rien n’est sélectionné",
         Text::StapelKeineRegel => {
             "rien à renommer\u{a0}: aucune règle n’a pu être construite à partir des champs"
@@ -1185,6 +1188,10 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::LoeschfrageEintraege => (
             "Mettre cette entrée {grund}à la Corbeille\u{202f}?",
             "Mettre ces {n} entrées {grund}à la Corbeille\u{202f}?",
+        ),
+        Zahlwort::LoeschfrageEndgueltig => (
+            "Supprimer cette entrée {grund}définitivement\u{202f}?",
+            "Supprimer ces {n} entrées {grund}définitivement\u{202f}?",
         ),
         Zahlwort::StartMeldungen => (
             "Il y a eu un message au démarrage",

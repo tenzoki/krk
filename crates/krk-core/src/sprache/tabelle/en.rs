@@ -532,6 +532,8 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VorgangsartPacken => "Zipping",
         Text::VorgangsartEntpacken => "Unzipping",
         Text::VorgangsartDuplizieren => "Duplicating",
+        Text::VorgangsartEndgueltigLoeschen => "Deleting permanently",
+        Text::VorgangsartAnlegen => "Creating",
         Text::VorgangAbbruchhinweis => "Esc cancels",
         Text::VorgangWirdVorbereitet => "{was} is being prepared: {positionen} · {abbruch}",
         Text::VorgangZeile => "{was}: {eintraege}, {menge}, {positionen} · {name} · {abbruch}",
@@ -621,8 +623,8 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "{datei} cannot be shown: KRK is running without a data folder"
         }
         Text::Markierungsstand => "{n} marked, including {ordner}, {groesse}",
-        Text::LoeschenOhnePapierkorb => {
-            "the destination has no Trash, nothing was deleted; delete in the Finder"
+        Text::LoeschenEndgueltigAus => {
+            "This location has no Trash: deleted entries cannot be recovered. Deleting from {ordner}."
         }
         Text::WarngrundUnentscheidbar => "from a destination of unknown kind",
         Text::WarngrundNetzlaufwerk => "from a network volume",
@@ -917,6 +919,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "The location cannot be written to settings.toml: the write lock of the data folder cannot be taken ({fehler}); the notes folder stays where it is"
         }
         Text::LoeschblattSchaltflaeche => "Move to Trash",
+        Text::LoeschblattSchaltflaecheEndgueltig => "Delete Permanently",
         Text::NichtsAusgewaehlt => "nothing is selected",
         Text::StapelKeineRegel => "nothing to rename: no rule could be built from the fields",
         Text::StapelJedeZeileMitHinweis => "nothing to rename: every line carries a note",
@@ -1045,6 +1048,10 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::LoeschfrageEintraege => (
             "Move this entry {grund}to the Trash?",
             "Move these {n} entries {grund}to the Trash?",
+        ),
+        Zahlwort::LoeschfrageEndgueltig => (
+            "Delete this entry {grund}permanently?",
+            "Delete these {n} entries {grund}permanently?",
         ),
         Zahlwort::StartMeldungen => (
             "There was one message at start-up",

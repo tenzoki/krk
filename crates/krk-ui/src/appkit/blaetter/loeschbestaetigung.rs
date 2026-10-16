@@ -9,6 +9,15 @@
 //! Hinweissatz sind fuer beide Anlaesse dieselben; alles, was unten ueber das
 //! Raeumen steht, gilt dem ersten.
 //!
+//! **Seit dem 261016 gibt es eine zweite Gestalt, die endgueltige**
+//! ([`Form::Endgueltig`]): an einem Ort ohne Papierkorb fragt dasselbe Blatt,
+//! ob endgueltig geloescht werden soll. Sie traegt das Warnzeichen wie die
+//! laute Form und kennzeichnet die ausfuehrende Schaltflaeche dazu als
+//! zerstoerend (`NSButton.hasDestructiveAction`); Reihenfolge, Tasten und
+//! Vorbelegung bleiben dieselben, „Abbrechen“ liegt weiter auf der
+//! Eingabetaste. Den Wortlaut rechnet
+//! [`crate::kommandos::loeschwarnung::endgueltig_frage_und_erlaeuterung`].
+//!
 //! Genau einmal je Vorgang, unabhaengig von der Zahl der betroffenen Eintraege
 //! und unabhaengig davon, welche der drei Tasten oder ob der Menueeintrag ihn
 //! ausgeloest hat. Die
@@ -90,7 +99,9 @@
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
 //! Eine einzige AppKit-Klasse, `NSWindow`, und die Datei reicht sie nur weiter;
-//! sie steht seit macOS 10.0 zur Verfuegung. `MainThreadMarker` gehoert `objc2`
+//! sie steht seit macOS 10.0 zur Verfuegung. Die zerstoerende Kennzeichnung der
+//! endgueltigen Gestalt geht ueber [`Blatt::ausfuehrende_als_zerstoerend`] und
+//! `NSButton.hasDestructiveAction`, das seit macOS 11.0 steht. `MainThreadMarker` gehoert `objc2`
 //! und nicht AppKit. Das Buendel zielt auf 15.0 (`.cargo/config.toml`), und
 //! nichts hier ist nach macOS 15 hinzugekommen; `objc2` fuehrt keine
 //! Verfuegbarkeitsangaben mit sich, und die Nennung ist die Gegenmassnahme.
@@ -134,12 +145,38 @@ pub(super) fn schaltflaechen(vorgang: &str) -> [Schaltflaeche<'_>; 2] {
     ]
 }
 
+/// In welcher Form das Blatt erscheint.
+///
+/// Drei Werte und nicht zwei Wahrheitswerte: eine endgueltige Rueckfrage ohne
+/// Warnzeichen gibt es nicht, und zwei Schalter liessen sie zu.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Form {
+    /// Ohne Warnzeichen: die Rueckfrage vor dem alltaeglichen Raeumen.
+    Ruhig,
+    /// Mit dem Warnzeichen des Systems.
+    Laut,
+    /// Mit dem Warnzeichen, und die ausfuehrende Schaltflaeche ist als
+    /// zerstoerend gekennzeichnet: endgueltiges Loeschen an einem Ort ohne
+    /// Papierkorb.
+    Endgueltig,
+}
+
+impl Form {
+    /// Die ruhige oder die laute Form, nach einem Wahrheitswert.
+    #[must_use]
+    pub fn laut_wenn(laut: bool) -> Self {
+        if laut { Form::Laut } else { Form::Ruhig }
+    }
+}
+
 /// Zeigt die Rueckfrage und meldet, ob der Nutzer den Vorgang bestaetigt hat.
 ///
 /// `schaltflaeche` ist die Beschriftung der **zweiten** Schaltflaeche, also
 /// derjenigen, die den Vorgang ausloest; die erste bleibt "Abbrechen" und
-/// traegt die Eingabetaste. Angelegt wird beides in [`schaltflaechen`]. `laut` setzt das Warnzeichen des Systems und sonst
-/// nichts: Text, Reihenfolge und Tasten sind in beiden Formen dieselben.
+/// traegt die Eingabetaste. Angelegt wird beides in [`schaltflaechen`]. `form`
+/// setzt das Warnzeichen des Systems und in der endgueltigen Form die
+/// zerstoerende Kennzeichnung, und sonst nichts: Reihenfolge und Tasten sind
+/// in allen drei Formen dieselben.
 ///
 /// `fertig` laeuft auf dem Hauptfaden und genau einmal. `false` heisst
 /// abgebrochen, und dann geschieht nichts.
@@ -149,7 +186,7 @@ pub fn zeigen(
     frage: &str,
     erlaeuterung: &str,
     schaltflaeche: &str,
-    laut: bool,
+    form: Form,
     fertig: impl Fn(bool) + 'static,
 ) -> Blattgriff {
     let blatt = Blatt::mit_schaltflaechen(mtm, frage, &schaltflaechen(schaltflaeche));
@@ -157,8 +194,13 @@ pub fn zeigen(
         Text::LoeschblattErlaeuterung,
         &[("erlaeuterung", &erlaeuterung)],
     ));
-    if laut {
-        blatt.als_warnung();
+    match form {
+        Form::Ruhig => {}
+        Form::Laut => blatt.als_warnung(),
+        Form::Endgueltig => {
+            blatt.als_warnung();
+            blatt.ausfuehrende_als_zerstoerend(AUSFUEHRENDE_STELLE);
+        }
     }
     blatt.zeigen_mit_wahl(fenster, move |stelle, _fuer_alle| {
         fertig(stelle == AUSFUEHRENDE_STELLE)

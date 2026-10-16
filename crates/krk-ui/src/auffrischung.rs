@@ -392,6 +392,7 @@ pub fn schiebt_auffrischung_auf(art: &Art) -> bool {
         Art::Kopieren { .. }
         | Art::Verschieben { .. }
         | Art::InDenPapierkorb
+        | Art::EndgueltigLoeschen
         | Art::Zippen { .. }
         | Art::Entpacken { .. }
         | Art::Duplizieren { .. } => false,
@@ -403,10 +404,16 @@ pub fn schiebt_auffrischung_auf(art: &Art) -> bool {
 /// Das Gegenstueck zu [`schiebt_auffrischung_auf`], vollstaendig ueber
 /// [`Fernart`] und ohne Auffangzweig. Kopieren und Verschieben mit einer
 /// fernen Seite melden in gemaechlichem Takt wie die lokalen, und ein ferner
-/// Ordner wird von FSEvents ohnehin nicht beobachtet.
+/// Ordner wird von FSEvents ohnehin nicht beobachtet; dasselbe gilt fuer
+/// Umbenennen, Anlegen und Loeschen am fernen Ort, die je Eintrag eine
+/// Anfrage an den Server stellen.
 pub fn fern_schiebt_auffrischung_auf(art: &Fernart) -> bool {
     match art {
-        Fernart::Kopieren { .. } | Fernart::Verschieben { .. } => false,
+        Fernart::Kopieren { .. }
+        | Fernart::Verschieben { .. }
+        | Fernart::Umbenennen { .. }
+        | Fernart::Anlegen { .. }
+        | Fernart::Loeschen => false,
     }
 }
 
@@ -957,6 +964,7 @@ mod tests {
                 ziel: PathBuf::from("/ziel"),
             },
             Art::InDenPapierkorb,
+            Art::EndgueltigLoeschen,
             Art::Zippen {
                 ziel: PathBuf::from("/ziel.zip"),
             },
@@ -1094,6 +1102,14 @@ mod tests {
         for art in [
             Fernart::Kopieren { ziel: ziel.clone() },
             Fernart::Verschieben { ziel },
+            Fernart::Umbenennen {
+                neuer_name: "neu".to_owned(),
+            },
+            Fernart::Anlegen {
+                name: "neu".to_owned(),
+                typ: krk_core::operation::Anlegetyp::Ordner,
+            },
+            Fernart::Loeschen,
         ] {
             assert!(!fern_schiebt_auffrischung_auf(&art), "{art:?}");
         }

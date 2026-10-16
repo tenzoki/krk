@@ -220,12 +220,14 @@
 //! `objectAtIndex:` und `NSControl.enabled` fuer die bestaetigende
 //! Schaltflaeche des PIN-Blattes.
 //!
-//! **Fuenf Beruehrungen sind juenger als 10.0**, und alle fuenf liegen unter
+//! **Sechs Beruehrungen sind juenger als 10.0**, und alle sechs liegen unter
 //! dem Zielsystem: `setAccessoryView:`, `setShowsSuppressionButton:` und
-//! `suppressionButton` seit 10.5 (`NSAlert.h`), und die beiden, ueber die jedes
+//! `suppressionButton` seit 10.5 (`NSAlert.h`), die beiden, ueber die jedes
 //! Blatt dieser Datei aufgeht und wieder zugeht, seit 10.9 —
 //! `beginSheetModalForWindow:completionHandler:` (`NSAlert.h`) und
-//! `endSheet:returnCode:` (`NSWindow.h`). Der Abschlussblock aus `block2` ist
+//! `endSheet:returnCode:` (`NSWindow.h`) —, und seit dem 261016
+//! `NSButton.hasDestructiveAction` seit 11.0 (`NSButton.h`), fuer die
+//! endgueltige Loeschrueckfrage. Der Abschlussblock aus `block2` ist
 //! kein eigener Gegenstand der Frage: er ist das Argument der ersten von
 //! beiden, und seine Untergrenze ist deren.
 //!
@@ -955,6 +957,20 @@ impl Blatt {
     /// ruft diese Funktion nicht.
     pub fn als_warnung(&self) {
         self.warnung.setAlertStyle(NSAlertStyle::Critical);
+    }
+
+    /// Kennzeichnet die Schaltflaeche an dieser Stelle als zerstoerend
+    /// (`NSButton.hasDestructiveAction`, seit macOS 11.0).
+    ///
+    /// Fuer die endgueltige Gestalt der Loeschrueckfrage. Die Kennzeichnung
+    /// aendert weder die Taste noch die Vorbelegung, allein die Darstellung;
+    /// eine Stelle ausserhalb der angelegten Schaltflaechen bleibt ohne
+    /// Wirkung, wie bei [`Self::bestaetigende_schaltflaeche`].
+    pub fn ausfuehrende_als_zerstoerend(&self, stelle: usize) {
+        let knoepfe = self.warnung.buttons();
+        if stelle < knoepfe.count() {
+            knoepfe.objectAtIndex(stelle).setHasDestructiveAction(true);
+        }
     }
 
     /// Haengt eine beliebige Ansicht unter die Frage.

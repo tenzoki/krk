@@ -1,11 +1,18 @@
-//! Loeschen: in den Papierkorb des Systems, und sonst nirgendwohin.
+//! Loeschen: in den Papierkorb des Systems, und endgueltig allein dort, wo es
+//! keinen gibt.
 //!
-//! **Ein Weg.** Der Nutzer hatte am 260802-1105 zwei entschieden, Delete in den
-//! Papierkorb und F8 endgueltig; am 260817 ist der zweite weggefallen, und der
-//! Datensatz von damals ist damit ueberholt (`shared/decisions/
-//! 260817-0536_*_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md`).
-//! Die Rueckfrage vor dem Raeumen stellt die Oberflaeche, genau einmal je
-//! Vorgang; der Kern bekommt den Auftrag erst danach.
+//! **Ein Weg je Ort, und welcher es ist, entscheidet der Ort und nicht die
+//! Taste.** Der Nutzer hatte am 260802-1105 zwei Wege entschieden, Delete in
+//! den Papierkorb und F8 endgueltig; am 260817 ist der zweite weggefallen
+//! (`shared/decisions/260817-0536_*_wie-wird-jeder-loeschweg-abgesichert-und-faellt-das-endgueltige-loeschen-weg.md`).
+//! Seit dem 261016 loescht KRK an einem Ort **ohne** Papierkorb wieder
+//! endgueltig, nach einer eigenen Rueckfrage, die das ausspricht
+//! (`decisions/261016-1948-darf-krk-an-einem-ort-ohne-papierkorb-nach-rueckfrage-endgueltig-loeschen.md`
+//! im Paket `261016-1945-sftp-ordner-im-dateifenster-wie-lokal`). Das ist kein
+//! zweiter Weg neben dem Papierkorb: dieselben Tasten fuehren an einem Ort mit
+//! Papierkorb dorthin und an einem ohne zu [`endgueltig_loeschen`]. Die
+//! Rueckfrage stellt die Oberflaeche, genau einmal je Vorgang; der Kern bekommt
+//! den Auftrag erst danach.
 //!
 //! # Die eine Abhaengigkeitsumkehr des Entwurfs
 //!
@@ -87,11 +94,28 @@ pub(crate) fn in_den_papierkorb(
     }
 }
 
+/// Loescht einen Eintrag endgueltig, einen Ordner samt Inhalt
+/// ([`super::Art::EndgueltigLoeschen`]).
+///
+/// Ueber [`baum_entfernen`] und damit mit derselben Regel wie das Ersetzen
+/// eines Ziels: am ersten Fehler haelt der Eintrag an, sein Grund steht in der
+/// Abschlussliste, und die naechste Quelle kommt dran. Ein Ordner, in dem ein
+/// Kind stehen blieb, bleibt mit ihm stehen.
+pub(crate) fn endgueltig_loeschen(quelle: &Quelle<'_>, steuerung: &mut Steuerung) -> Ablauf {
+    match baum_entfernen(quelle.pfad) {
+        Ok(()) => steuerung.eintrag_fertig(quelle.pfad, quelle.groesse),
+        Err(fehler) => steuerung.ueberspringen(quelle.pfad, grund(&fehler)),
+    }
+    Ablauf::Weiter
+}
+
 /// Raeumt einen Baum weg, ohne Bericht und ohne Abbruch.
 ///
 /// Fuer die beiden Stellen, an denen ein Loeschen kein Auftrag des Nutzers ist,
 /// sondern ein Schritt in einem anderen: das Ersetzen eines vorhandenen Ziels
-/// und das Verschieben ueber Datentraegergrenzen hinweg. Beide Aufrufer wollen
+/// und das Verschieben ueber Datentraegergrenzen hinweg. Die dritte Stelle,
+/// [`endgueltig_loeschen`], ist der Auftrag des Nutzers selbst und meldet je
+/// Quelle. Beide Aufrufer wollen
 /// nicht zaehlen, sondern wissen, ob es geklappt hat, und melden einen Fehler
 /// als Grund an ihrem eigenen Eintrag.
 ///

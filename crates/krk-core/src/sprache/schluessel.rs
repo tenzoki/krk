@@ -807,6 +807,10 @@ pub enum Text {
     VorgangsartEntpacken,
     /// `Art::Duplizieren`.
     VorgangsartDuplizieren,
+    /// `Art::EndgueltigLoeschen` und `Fernart::Loeschen`.
+    VorgangsartEndgueltigLoeschen,
+    /// `Fernart::Anlegen`.
+    VorgangsartAnlegen,
     /// `operationen::vorgangszeile`: der Hinweis auf `esc` am Ende der
     /// Zeile, als `{abbruch}`; der Tastenname bleibt in jeder Sprache.
     VorgangAbbruchhinweis,
@@ -961,8 +965,10 @@ pub enum Text {
     /// `auswahl::markierungsstand_text`; `{n}`, `{ordner}` (ein
     /// `Zahlwort::Ordner`), `{groesse}`.
     Markierungsstand,
-    /// `loeschwarnung::ohne_papierkorb`.
-    LoeschenOhnePapierkorb,
+    /// `loeschwarnung::endgueltig_frage_und_erlaeuterung`: der erste Absatz
+    /// der Erlaeuterung, der sagt, dass der Ort keinen Papierkorb hat und das
+    /// Loeschen nicht zurueckzunehmen ist; `{ordner}`.
+    LoeschenEndgueltigAus,
     /// `Warngrund::Unentscheidbar`: die Fuegung in der Loeschfrage und in der
     /// Erlaeuterung.
     WarngrundUnentscheidbar,
@@ -1449,6 +1455,9 @@ pub enum Text {
     /// `in_den_papierkorb`: die bestaetigende Schaltflaeche der
     /// Loeschrueckfrage.
     LoeschblattSchaltflaeche,
+    /// `loeschen_nach_rueckfrage`: die bestaetigende Schaltflaeche der
+    /// endgueltigen Rueckfrage an einem Ort ohne Papierkorb.
+    LoeschblattSchaltflaecheEndgueltig,
     /// Die Antwort auf einen Befehl im Dateifenster ohne Auswahl: der
     /// Loeschweg, das Stapel-Umbenennen, jeder Auftrag und F4.
     NichtsAusgewaehlt,
@@ -1583,7 +1592,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 665] = [
+    pub const ALLE: [Text; 668] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1922,6 +1931,8 @@ impl Text {
         Text::VorgangsartPacken,
         Text::VorgangsartEntpacken,
         Text::VorgangsartDuplizieren,
+        Text::VorgangsartEndgueltigLoeschen,
+        Text::VorgangsartAnlegen,
         Text::VorgangAbbruchhinweis,
         Text::VorgangWirdVorbereitet,
         Text::VorgangZeile,
@@ -1989,7 +2000,7 @@ impl Text {
         Text::BelegungsdateiFehltNoch,
         Text::BelegungsdateiOhneAblageordner,
         Text::Markierungsstand,
-        Text::LoeschenOhnePapierkorb,
+        Text::LoeschenEndgueltigAus,
         Text::WarngrundUnentscheidbar,
         Text::WarngrundNetzlaufwerk,
         Text::WarngrundCloudort,
@@ -2195,6 +2206,7 @@ impl Text {
         Text::OrtOhneAblageordner,
         Text::OrtGesperrt,
         Text::LoeschblattSchaltflaeche,
+        Text::LoeschblattSchaltflaecheEndgueltig,
         Text::NichtsAusgewaehlt,
         Text::StapelKeineRegel,
         Text::StapelJedeZeileMitHinweis,
@@ -2316,6 +2328,10 @@ pub enum Zahlwort {
     /// ist der genannte Warngrund mit seinem Abstand oder leer, und die
     /// Einzahl laesst `{n}` aus.
     LoeschfrageEintraege,
+    /// `loeschwarnung::endgueltig_frage_und_erlaeuterung`: die endgueltige
+    /// Loeschfrage an einem Ort ohne Papierkorb; `{grund}` wie bei
+    /// `LoeschfrageEintraege`, und die Einzahl laesst `{n}` aus.
+    LoeschfrageEndgueltig,
     /// `startmeldungen::auskunft`: die Kopfzeile des Blattes; gerufen wird
     /// sie erst ab zwei Meldungen, die Einzahl steht der Vollstaendigkeit
     /// halber.
@@ -2360,7 +2376,7 @@ pub enum Zahlwort {
 
 impl Zahlwort {
     /// Alle Zahlwoerter, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Zahlwort; 34] = [
+    pub const ALLE: [Zahlwort; 35] = [
         Zahlwort::Byte,
         Zahlwort::NeuerungenEintraegeIn,
         Zahlwort::HeimZettelUebernommen,
@@ -2382,6 +2398,7 @@ impl Zahlwort {
         Zahlwort::UebersprungenFrage,
         Zahlwort::EinfuegenDateiverweise,
         Zahlwort::LoeschfrageEintraege,
+        Zahlwort::LoeschfrageEndgueltig,
         Zahlwort::StartMeldungen,
         Zahlwort::StapelFrage,
         Zahlwort::StapelEintraege,

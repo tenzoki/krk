@@ -101,7 +101,7 @@ use crate::verzeichnis::Typ;
 
 pub use anlegen::{datei_anlegen, ordner_anlegen};
 pub use auftrag::{Art, Auftrag, Konfliktregel};
-pub use fern::{Fernart, Fernauftrag};
+pub use fern::{Anlegetyp, Fernart, Fernauftrag};
 // `MELDEABSTAND` stand bis zum 260908 in dieser Zeile und hatte im ganzen
 // Arbeitsbereich keinen Rufer ausserhalb von `fortschritt.rs` selbst; ein
 // weitergereichter Name behauptet, dass draussen jemand ihn braucht, und wer
@@ -320,6 +320,7 @@ fn ausfuehren(
         Art::Kopieren { .. }
         | Art::Verschieben { .. }
         | Art::InDenPapierkorb
+        | Art::EndgueltigLoeschen
         | Art::UmbenennenImStapel { .. }
         | Art::Entpacken { .. }
         | Art::Duplizieren { .. } => quelle_fuer_quelle(auftrag, papierkorb, steuerung),
@@ -382,6 +383,7 @@ fn einen_abarbeiten(
             None => Ablauf::Weiter,
         },
         Art::InDenPapierkorb => loeschen::in_den_papierkorb(&quelle, papierkorb, steuerung),
+        Art::EndgueltigLoeschen => loeschen::endgueltig_loeschen(&quelle, steuerung),
         Art::UmbenennenImStapel { .. } => match auftrag.neuer_name(stelle) {
             Some(neuer_name) => umbenennen::eintrag_umbenennen(&quelle, neuer_name, steuerung),
             // Die beiden Listen entstehen aus denselben Paaren und sind damit
@@ -658,9 +660,49 @@ pub(crate) fn grund(fehler: &io::Error) -> String {
     }
 }
 
+/// Die Art des Systemfehlers, die [`grund`] zu diesem Grund gemacht hat, oder
+/// `None` fuer einen Grund, der den Wortlaut des Systems oder des Servers
+/// traegt.
+///
+/// **Die Umkehrung von [`grund`] ueber seine vier Schluessel und sonst
+/// nichts.** Gebraucht wird sie von der Oberflaeche, die das Scheitern eines
+/// fernen Umbenennens oder Anlegens mit demselben Satz meldet wie das lokale
+/// (Entscheidungen 10 und 11 des Plans der sftp-Ordner): lokal hat sie den
+/// `io::Error`, fern allein den Bericht. Beide Seiten fragen dieselbe
+/// Sprachtabelle in derselben geltenden Sprache, und ein Grund aus einem
+/// anderen Weg traegt keinen der vier Wortlaute, es sei denn, ein Server
+/// schickte ihn woertlich; dann ist die Antwort dieselbe, die er meint.
+/// `grund_und_fehlerart_gehen_ineinander_auf` haelt beide Richtungen aneinander.
+#[must_use]
+pub fn fehlerart(grund: &str) -> Option<io::ErrorKind> {
+    [
+        io::ErrorKind::PermissionDenied,
+        io::ErrorKind::NotFound,
+        io::ErrorKind::AlreadyExists,
+        io::ErrorKind::StorageFull,
+    ]
+    .into_iter()
+    .find(|art| self::grund(&io::Error::from(*art)) == grund)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// [`fehlerart`] kehrt [`grund`] fuer jede seiner vier Arten um, und ein
+    /// Grund mit dem Wortlaut des Systems bekommt keine.
+    #[test]
+    fn grund_und_fehlerart_gehen_ineinander_auf() {
+        for art in [
+            io::ErrorKind::PermissionDenied,
+            io::ErrorKind::NotFound,
+            io::ErrorKind::AlreadyExists,
+            io::ErrorKind::StorageFull,
+        ] {
+            assert_eq!(fehlerart(&grund(&io::Error::from(art))), Some(art));
+        }
+        assert_eq!(fehlerart("Operation timed out"), None);
+    }
 
     /// Die beiden Pruefungen von [`zielpfad`] stehen **nicht** hier, sondern in
     /// `tests/operation.rs`.

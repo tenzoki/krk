@@ -126,8 +126,8 @@ use krk_core::ablage::neuerungen::gekuerzt;
 #[cfg(test)]
 use krk_core::ablage::neuerungen::HOECHSTENS_EINZELN;
 use krk_core::operation::{
-    Abbruchgriff, Abschluss, Art, Bericht, Fernart, Fortschritt, Konfliktentscheid, Namensfehler,
-    Uebersprungen, name_pruefen,
+    Abbruchgriff, Abschluss, Anlegetyp, Art, Bericht, Fernart, Fortschritt, Konfliktentscheid,
+    Namensfehler, Uebersprungen, fehlerart, name_pruefen,
 };
 use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
 use krk_core::tasten::Kommando;
@@ -206,6 +206,27 @@ pub fn betroffene_namen(modell: &Ordnermodell) -> Vec<String> {
         .into_iter()
         .map(|eintrag| eintrag.name.clone())
         .collect()
+}
+
+/// Die Namen der betroffenen Eintraege und wie viele davon Ordner sind, an
+/// jedem Ort, nach derselben Regel wie [`betroffene`].
+///
+/// Fuer die Loeschrueckfrage an einem fernen Ort, die wie die lokale die Zahl
+/// der Ordner gesondert nennt (Entscheidung 12 des Plans der sftp-Ordner).
+#[must_use]
+pub fn betroffene_namen_und_ordnerzahl(modell: &Ordnermodell) -> (Vec<String>, usize) {
+    let eintraege = betroffene_im_modell(modell);
+    let ordnerzahl = eintraege
+        .iter()
+        .filter(|eintrag| eintrag.ist_ordner())
+        .count();
+    (
+        eintraege
+            .into_iter()
+            .map(|eintrag| eintrag.name.clone())
+            .collect(),
+        ordnerzahl,
+    )
 }
 
 /// Die betroffenen Eintraege in Sichtreihenfolge: die markierten, sonst der
@@ -515,7 +536,12 @@ fn ueberschrift(art: &Vorgangsart) -> &'static str {
         Vorgangsart::Lokal(Art::Verschieben { .. })
         | Vorgangsart::Fern(Fernart::Verschieben { .. }) => text(Text::VorgangsartVerschieben),
         Vorgangsart::Lokal(Art::InDenPapierkorb) => text(Text::VorgangsartInDenPapierkorb),
-        Vorgangsart::Lokal(Art::UmbenennenImStapel { .. }) => text(Text::VorgangsartUmbenennen),
+        Vorgangsart::Lokal(Art::EndgueltigLoeschen) | Vorgangsart::Fern(Fernart::Loeschen) => {
+            text(Text::VorgangsartEndgueltigLoeschen)
+        }
+        Vorgangsart::Lokal(Art::UmbenennenImStapel { .. })
+        | Vorgangsart::Fern(Fernart::Umbenennen { .. }) => text(Text::VorgangsartUmbenennen),
+        Vorgangsart::Fern(Fernart::Anlegen { .. }) => text(Text::VorgangsartAnlegen),
         Vorgangsart::Lokal(Art::Zippen { .. }) => text(Text::VorgangsartPacken),
         Vorgangsart::Lokal(Art::Entpacken { .. }) => text(Text::VorgangsartEntpacken),
         Vorgangsart::Lokal(Art::Duplizieren { .. }) => text(Text::VorgangsartDuplizieren),
@@ -545,6 +571,7 @@ fn ueberschrift(art: &Vorgangsart) -> &'static str {
 /// | Kopieren | nein | je Quelle ein Ziel |
 /// | Verschieben | nein | ebenso |
 /// | InDenPapierkorb | nein | kein Ziel, und kein Konflikt |
+/// | EndgueltigLoeschen | nein | ebenso |
 /// | UmbenennenImStapel | nein | je Quelle ein neuer Name |
 /// | Zippen | **ja** | ein Archiv fuer den ganzen Lauf |
 /// | Entpacken | wenn genau ein Archiv | je Archiv ein Zielordner |
@@ -577,6 +604,7 @@ pub fn erzeugt_genau_ein_ziel(art: &Art) -> bool {
         Art::Kopieren { .. }
         | Art::Verschieben { .. }
         | Art::InDenPapierkorb
+        | Art::EndgueltigLoeschen
         | Art::UmbenennenImStapel { .. } => false,
         Art::Zippen { .. } | Art::Duplizieren { .. } => true,
         Art::Entpacken { ziele } => ziele.len() == 1,
@@ -620,6 +648,7 @@ pub enum Ersetzungsweg {
 /// | Kopieren | endgueltig | `ziel_klaeren` ueber `loeschen::baum_entfernen` |
 /// | Verschieben | endgueltig | dieselbe Stelle |
 /// | InDenPapierkorb | endgueltig | **niemand**, siehe unten |
+/// | EndgueltigLoeschen | endgueltig | **niemand**, siehe unten |
 /// | UmbenennenImStapel | endgueltig | **niemand**, siehe unten |
 /// | Zippen | Papierkorb | `zielarchiv_klaeren` ueber die `Papierkorb`-Schnittstelle |
 /// | Entpacken | Papierkorb | `zielordner_klaeren` ueber dieselbe Schnittstelle |
@@ -649,9 +678,10 @@ pub fn ersetzungsweg(art: &Art) -> Ersetzungsweg {
         Art::Kopieren { .. } | Art::Verschieben { .. } => Ersetzungsweg::Endgueltig,
         // Die Arten, die nie nach dem Ersetzen fragen; die Begruendung steht im
         // Doc-Kommentar.
-        Art::InDenPapierkorb | Art::UmbenennenImStapel { .. } | Art::Duplizieren { .. } => {
-            Ersetzungsweg::Endgueltig
-        }
+        Art::InDenPapierkorb
+        | Art::EndgueltigLoeschen
+        | Art::UmbenennenImStapel { .. }
+        | Art::Duplizieren { .. } => Ersetzungsweg::Endgueltig,
         Art::Zippen { .. } | Art::Entpacken { .. } => Ersetzungsweg::Papierkorb,
     }
 }
@@ -714,11 +744,23 @@ pub enum Konfliktform {
 /// ohne Auffangzweig. Kopieren und Verschieben mit einer fernen Seite haben je
 /// Quelle ein Ziel, und „Ueberschreiben“ entfernt dort endgueltig wie lokal
 /// (`krk_core::operation::fern`), also dieselbe Gestalt wie die lokalen zwei.
+///
+/// **Umbenennen, Anlegen und Loeschen fragen nie**: ein vergebener Name laesst
+/// die ersten beiden scheitern, wie lokal, und das Loeschen hat kein Ziel. Sie
+/// bekommen trotzdem einen Wert, aus dem Grund, den [`ersetzungsweg`] fuer die
+/// lokalen Arten ohne Frage ausschreibt; Umbenennen und Anlegen haetten genau
+/// ein Ziel.
 #[must_use]
 pub fn fern_konfliktgestalt(art: &Fernart) -> Konfliktgestalt {
     match art {
-        Fernart::Kopieren { .. } | Fernart::Verschieben { .. } => Konfliktgestalt {
-            genau_ein_ziel: false,
+        Fernart::Kopieren { .. } | Fernart::Verschieben { .. } | Fernart::Loeschen => {
+            Konfliktgestalt {
+                genau_ein_ziel: false,
+                ersetzung: Ersetzungsweg::Endgueltig,
+            }
+        }
+        Fernart::Umbenennen { .. } | Fernart::Anlegen { .. } => Konfliktgestalt {
+            genau_ein_ziel: true,
             ersetzung: Ersetzungsweg::Endgueltig,
         },
     }
@@ -751,6 +793,7 @@ pub fn konfliktform(art: &Vorgangsart) -> Konfliktform {
             Art::Kopieren { .. }
             | Art::Verschieben { .. }
             | Art::InDenPapierkorb
+            | Art::EndgueltigLoeschen
             | Art::UmbenennenImStapel { .. }
             | Art::Zippen { .. }
             | Art::Entpacken { .. } => Konfliktform::Blatt(konfliktgestalt(art)),
@@ -952,6 +995,16 @@ pub enum Anlegeart {
 }
 
 impl Anlegeart {
+    /// Was der Kern an einem fernen Ort anlegt (Entscheidung 11 des Plans der
+    /// sftp-Ordner).
+    #[must_use]
+    pub fn anlegetyp(self) -> Anlegetyp {
+        match self {
+            Anlegeart::Ordner => Anlegetyp::Ordner,
+            Anlegeart::Datei => Anlegetyp::Datei,
+        }
+    }
+
     /// Die Frage in der Kopfzeile des Eingabeblattes.
     #[must_use]
     pub fn frage(self) -> &'static str {
@@ -1006,6 +1059,68 @@ pub fn anlegefehler(art: Anlegeart, name: &str, fehler: &io::Error) -> String {
             &[("name", &name), ("fehler", &fehler)],
         ),
     }
+}
+
+/// Was nach einem fernen Umbenennen oder Anlegen geschieht: welche Meldung in
+/// der Statuszeile steht und welcher Name gewaehlt wird (Entscheidungen 10 und
+/// 11 des Plans der sftp-Ordner).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Namensabschluss {
+    /// Die Meldung, oder `None`, wenn wie nach einem lokalen Umbenennen
+    /// nichts gemeldet wird.
+    pub meldung: Option<String>,
+    /// Der Name, auf den die Auswahl springt, oder `None` nach einem
+    /// Scheitern.
+    pub waehlen: Option<String>,
+}
+
+/// Der Abschluss eines fernen Umbenennens oder Anlegens, **mit denselben
+/// Saetzen wie lokal**; `None` fuer jede andere Art und fuer einen Abbruch, der
+/// nichts uebersprungen hat, und dann gilt der gewoehnliche Abschlusstext.
+///
+/// Lokal laufen beide Befehle synchron und melden ueber [`angelegt_text`],
+/// [`anlegefehler`] und [`umbenennungsfehler`]; fern laufen sie ueber die
+/// Maschine, und ihr Ergebnis steht im [`Bericht`]. Gelungen ist der Vorgang,
+/// wenn er fertig ist und genau einen Eintrag nennt. Gescheitert traegt der
+/// erste uebersprungene Eintrag den Grund, und
+/// [`krk_core::operation::fehlerart`] liest daraus die Art zurueck, die lokal
+/// das System nennt: ein vergebener Name ergibt damit [`schon_vergeben`] wie
+/// lokal.
+///
+/// Gerufen von `Anwendungsdelegierter::vorgang_beenden`; vollstaendig ueber
+/// [`Fernart`] und ohne Auffangzweig.
+#[must_use]
+pub fn namensabschluss(art: &Fernart, bericht: &Bericht) -> Option<Namensabschluss> {
+    let (name, anlegeart) = match art {
+        Fernart::Umbenennen { neuer_name } => (neuer_name, None),
+        Fernart::Anlegen { name, typ } => (
+            name,
+            Some(match typ {
+                Anlegetyp::Ordner => Anlegeart::Ordner,
+                Anlegetyp::Datei => Anlegeart::Datei,
+            }),
+        ),
+        Fernart::Kopieren { .. } | Fernart::Verschieben { .. } | Fernart::Loeschen => return None,
+    };
+    if bericht.abschluss == Abschluss::Fertig && bericht.eintraege == 1 {
+        return Some(Namensabschluss {
+            meldung: anlegeart.map(|anlegeart| angelegt_text(anlegeart, name)),
+            waehlen: Some(name.clone()),
+        });
+    }
+    let eintrag = bericht.uebersprungen.first()?;
+    let fehler = io::Error::new(
+        fehlerart(&eintrag.grund).unwrap_or(io::ErrorKind::Other),
+        eintrag.grund.clone(),
+    );
+    let meldung = match anlegeart {
+        Some(anlegeart) => anlegefehler(anlegeart, name, &fehler),
+        None => umbenennungsfehler(name, &fehler),
+    };
+    Some(Namensabschluss {
+        meldung: Some(meldung),
+        waehlen: None,
+    })
 }
 
 /// Der Satz zum bereits vergebenen Namen, fuer das Anlegen und das Umbenennen.
@@ -2551,6 +2666,92 @@ mod tests {
         assert_eq!(
             umbenennungsfehler("neu.txt", &vergeben),
             "es gibt schon einen Eintrag namens „neu.txt“"
+        );
+    }
+
+    /// Ein fernes Umbenennen oder Anlegen meldet sich mit denselben Saetzen
+    /// wie das lokale (Entscheidungen 10 und 11 des Plans der sftp-Ordner):
+    /// gelungen waehlt es den Namen und meldet beim Anlegen den neuen Eintrag,
+    /// an einem vergebenen Namen gescheitert sagt es den Satz, den lokal
+    /// `AlreadyExists` bekommt, und ein Grund im Wortlaut des Servers bleibt
+    /// stehen. Kopieren, Verschieben und Loeschen bekommen keinen
+    /// Namensabschluss.
+    #[test]
+    fn ein_fernes_umbenennen_und_anlegen_melden_sich_wie_die_lokalen() {
+        let gelungen = Bericht {
+            abschluss: Abschluss::Fertig,
+            eintraege: 1,
+            bytes: 0,
+            uebersprungen: Vec::new(),
+        };
+        let gescheitert = |grund: String| Bericht {
+            abschluss: Abschluss::Fertig,
+            eintraege: 0,
+            bytes: 0,
+            uebersprungen: vec![Uebersprungen {
+                pfad: PathBuf::from("kai@rechner:/srv/neu.txt"),
+                grund,
+            }],
+        };
+        let umbenennen = Fernart::Umbenennen {
+            neuer_name: "neu.txt".to_owned(),
+        };
+        let anlegen = Fernart::Anlegen {
+            name: "neu.txt".to_owned(),
+            typ: Anlegetyp::Datei,
+        };
+        let vergeben = io::Error::from(io::ErrorKind::AlreadyExists);
+        let grund_vergeben = text(Text::VorgangAmZielStehtEintrag).to_owned();
+
+        assert_eq!(
+            namensabschluss(&umbenennen, &gelungen),
+            Some(Namensabschluss {
+                meldung: None,
+                waehlen: Some("neu.txt".to_owned()),
+            })
+        );
+        assert_eq!(
+            namensabschluss(&anlegen, &gelungen),
+            Some(Namensabschluss {
+                meldung: Some(angelegt_text(Anlegeart::Datei, "neu.txt")),
+                waehlen: Some("neu.txt".to_owned()),
+            })
+        );
+        assert_eq!(
+            namensabschluss(&umbenennen, &gescheitert(grund_vergeben.clone())),
+            Some(Namensabschluss {
+                meldung: Some(umbenennungsfehler("neu.txt", &vergeben)),
+                waehlen: None,
+            })
+        );
+        assert_eq!(
+            namensabschluss(&anlegen, &gescheitert(grund_vergeben)),
+            Some(Namensabschluss {
+                meldung: Some(anlegefehler(Anlegeart::Datei, "neu.txt", &vergeben)),
+                waehlen: None,
+            })
+        );
+        let fremd = namensabschluss(&umbenennen, &gescheitert("Operation timed out".to_owned()))
+            .and_then(|abschluss| abschluss.meldung)
+            .unwrap_or_default();
+        assert!(fremd.ends_with("Operation timed out"), "{fremd}");
+
+        for art in [
+            Fernart::Loeschen,
+            Fernart::Kopieren {
+                ziel: krk_core::ort::Ort::Lokal(PathBuf::from("/ziel")),
+            },
+        ] {
+            assert_eq!(namensabschluss(&art, &gelungen), None, "{art:?}");
+        }
+        let abgebrochen = Bericht {
+            abschluss: Abschluss::Abgebrochen,
+            ..gelungen
+        };
+        assert_eq!(
+            namensabschluss(&umbenennen, &abgebrochen),
+            None,
+            "ein Abbruch ohne Grund nimmt den Abschlusstext"
         );
     }
 

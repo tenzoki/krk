@@ -320,8 +320,8 @@ use crate::kommandos::kontextmenue::{
 };
 use crate::kommandos::loeschwarnung::{self, Loeschziel, Nachstufe, Vorstufe};
 use crate::kommandos::operationen::{
-    self, Anlegeart, Auswahl, Dateiablage, Konfliktform, Konfliktfrage, Vorgangsart,
-    Vorgangszustand,
+    self, Anlegeart, Auswahl, Dateiablage, Konfliktform, Konfliktfrage, Namensabschluss,
+    Vorgangsart, Vorgangszustand,
 };
 use crate::kommandos::rueckschritt::{Rueckschritt, rueckschritt};
 use crate::kommandos::rundweg::{Rundweg, rundweg};
@@ -715,6 +715,61 @@ enum Anlass {
     Beenden,
 }
 
+/// Welchen Weg ein bestaetigter Loeschbefehl nimmt (Entscheidung 12 des
+/// Plans der sftp-Ordner).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Loeschweg {
+    /// In den Papierkorb des Systems; allein an einem lokalen Ort, dessen
+    /// Datentraeger einen fuehrt.
+    Papierkorb,
+    /// Endgueltig, nach der Rueckfrage, die das ausspricht.
+    Endgueltig,
+}
+
+/// Was ein Loeschbefehl trifft, gelesen am Wert des Tabs und mit dem
+/// bestaetigten Auftrag durch das Blatt getragen.
+///
+/// Zwei Faelle, weil ein ferner Eintrag keinen lokalen Pfad hat: lokal die
+/// Auswahl mit ihren Pfaden, fern die Namen unter dem fernen Ordner.
+enum Loeschgegenstand {
+    /// Ein Ordner auf diesem Geraet.
+    Lokal {
+        /// Der angezeigte Ordner.
+        ordner: PathBuf,
+        /// Die betroffenen Eintraege mit ihren Pfaden.
+        auswahl: Auswahl,
+    },
+    /// Ein Ordner auf einem Server.
+    Fern {
+        /// Der angezeigte ferne Ordner.
+        ordner: krk_core::ort::FernerOrt,
+        /// Die Namen der betroffenen Eintraege.
+        namen: Vec<String>,
+        /// Wie viele davon Ordner sind.
+        ordnerzahl: usize,
+    },
+}
+
+impl Loeschgegenstand {
+    /// Ob nichts betroffen ist.
+    fn ist_leer(&self) -> bool {
+        match self {
+            Loeschgegenstand::Lokal { auswahl, .. } => auswahl.ist_leer(),
+            Loeschgegenstand::Fern { namen, .. } => namen.is_empty(),
+        }
+    }
+
+    /// Der Weg, den dieser Gegenstand nehmen kann, wenn die Stufenregel
+    /// `gewuenscht` sagt: lokal eben den, fern immer den endgueltigen, weil ein
+    /// Server keinen Papierkorb hat.
+    fn weg(&self, gewuenscht: Loeschweg) -> Loeschweg {
+        match self {
+            Loeschgegenstand::Lokal { .. } => gewuenscht,
+            Loeschgegenstand::Fern { .. } => Loeschweg::Endgueltig,
+        }
+    }
+}
+
 /// Ein laufender Dateivorgang, aus der Sicht des Hauptfadens (C4).
 ///
 /// **Es gibt hoechstens einen.** Bis S16 hielt die Tastensperre einen zweiten
@@ -824,6 +879,11 @@ impl Vorgang {
                 }
                 return ordner;
             }
+            // Umbenennen, Anlegen und Loeschen am fernen Ort bleiben im
+            // angezeigten Ordner, und der steht als `quellordner` da.
+            Vorgangsart::Fern(
+                Fernart::Umbenennen { .. } | Fernart::Anlegen { .. } | Fernart::Loeschen,
+            ) => return ordner,
         };
         match art {
             Art::Kopieren { ziel } | Art::Verschieben { ziel } => {
@@ -842,6 +902,7 @@ impl Vorgang {
             // Quelle, das folgt aus der Bauform von `Art::Duplizieren`, die
             // einen Namen traegt und keinen Pfad.
             Art::InDenPapierkorb
+            | Art::EndgueltigLoeschen
             | Art::UmbenennenImStapel { .. }
             | Art::Zippen { .. }
             | Art::Entpacken { .. }
@@ -5521,7 +5582,7 @@ impl Anwendungsdelegierter {
             &frage,
             &erlaeuterung,
             werkseinstellungen::schaltflaeche(),
-            true,
+            loeschbestaetigung::Form::Laut,
             move |bestaetigt| {
                 let Some(selbst) = schwach.load() else {
                     return;
@@ -7426,12 +7487,26 @@ impl Anwendungsdelegierter {
     ///  └─> Auswahl leer?         ──ja──> Statuszeile, kein Blatt
     ///       │ nein
     ///       └─> fuehrt das Ziel einen Papierkorb?
-    ///            │        └──nein oder unentschieden──> Statuszeile, kein Blatt
-    ///            │ ja
+    ///            │        └──nein oder unentschieden──> Blatt in der endgueltigen Gestalt
+    ///            │ ja                                    (ein ferner Ort: am Wert nein)
     ///            └─> Blatt zeigen ──> Cmd+Return? ──nein──> nichts geschieht
     ///                                     │ ja
     ///                                     └──> Auftrag mit der gezeigten Auswahl
     /// ```
+    ///
+    /// **Seit dem 261016 endet die dritte Stufe ohne Papierkorb nicht mehr in
+    /// einer Meldung, sondern in der endgueltigen Rueckfrage** (Entscheidung 12
+    /// des Plans der sftp-Ordner, Entscheid
+    /// `261016-1948-darf-krk-an-einem-ort-ohne-papierkorb-nach-rueckfrage-endgueltig-loeschen.md`).
+    /// Ein ferner Ort beantwortet die Papierkorbfrage am Wert und ohne
+    /// Systemaufruf mit nein; seine Rueckfrage nennt allein die Zahl der
+    /// gewaehlten Eintraege und ihrer Ordner, weil Arbeitsbaum und Umfang
+    /// lokale Systemaufrufe braucheten. Ein lokaler Ort stellt seine Fragen an
+    /// die Platte weiter auf dem Hauptfaden, ausgelagert in
+    /// [`Self::lokaler_papierkorbbefund`] und [`Self::loeschtexte`]; das haelt
+    /// der offene Defekt
+    /// `shared/issues/261016-1956-der-loeschweg-fragt-canonicalize-und-den-papierkorb-auf-dem-hauptfaden-und-ein-haengendes-netzlaufwerk-haelt-die-ereignisschleife-an.md`
+    /// fest.
     ///
     /// **Die Reihenfolge steht seit dem 260817 nicht mehr hier, sondern in
     /// [`loeschwarnung::vor_der_rueckfrage`].** Sie ist eine Regel ueber drei
@@ -7451,11 +7526,12 @@ impl Anwendungsdelegierter {
     /// wegzudruecken, und genau diese Gewoehnung ist der Gegner dieser Runde.
     ///
     /// **Der Papierkorbtest steht aus demselben Grund vor dem Blatt** (C4). Er
-    /// entscheidet, ob es fuer diesen Vorgang einen Rueckweg gibt; danach
-    /// gefragt, haette der Nutzer einem Raeumen zugestimmt, das nicht raeumen
-    /// kann. Der angezeigte Ordner wird dafuer **einmal** aufgeloest, und ein
-    /// Pfad, der sich nicht aufloesen laesst, zaehlt als
-    /// [`Erlaubnisbefund::Unentschieden`] und loescht damit ebenfalls nicht.
+    /// entscheidet, ob es fuer diesen Vorgang einen Rueckweg gibt und damit,
+    /// welches Blatt erscheint; danach gefragt, haette der Nutzer einem Raeumen
+    /// zugestimmt, das nicht raeumen kann. Der angezeigte Ordner wird dafuer
+    /// **einmal** aufgeloest, und ein Pfad, der sich nicht aufloesen laesst,
+    /// zaehlt als [`Erlaubnisbefund::Unentschieden`] und fuehrt damit zur
+    /// endgueltigen Rueckfrage, nie zum Raeumen.
     ///
     /// **Die teuren Tatsachen fallen erst an, wenn die billigen Stufen durch
     /// sind.** Aufloesen und Papierkorbfrage kosten Zugriffe auf das
@@ -7470,11 +7546,13 @@ impl Anwendungsdelegierter {
     /// [`loeschwarnung::vor_der_rueckfrage`] und ist eine Zusage des Specs;
     /// verschoben hat sich allein, wann eine Tatsache anfaellt.
     ///
-    /// **Die Pruefung kennt keine Ausnahme.** Die Directive dieser Runde sagt
+    /// **Die Pruefung kennt keine Ausnahme.** Die Directive der Runde 12 sagte
     /// ohne Einschraenkung „ein Ziel ohne Papierkorb wird nicht geloescht,
-    /// sondern gemeldet"; ein Zweig, der sie fuer irgendeinen Befehl
-    /// ueberspringt, waere ein zweiter Loeschweg an der Stelle, an der diese
-    /// Runde den zweiten abschafft.
+    /// sondern gemeldet"; seit dem 261016 wird es nach der endgueltigen
+    /// Rueckfrage geloescht, und die Pruefung bleibt die eine Stelle, die
+    /// zwischen den beiden Blaettern entscheidet. Ein Zweig, der sie fuer
+    /// irgendeinen Befehl ueberspringt, waere ein zweiter Loeschweg neben dem
+    /// einen.
     ///
     /// **Die beiden Texte entstehen hier und kommen nicht mehr fertig herein.**
     /// Welcher Wortlaut in welcher Form dasteht, gehoert weiter
@@ -7526,12 +7604,9 @@ impl Anwendungsdelegierter {
     /// kein Fenster gibt, an dem das Blatt haengen koennte.
     fn loeschen_nach_rueckfrage(&self, schaltflaeche: &str) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
-        // Ein ferner Ort hat keinen Papierkorb, und sein endgueltiges Loeschen
-        // steht noch aus (Entscheidung 12 des Plans der sftp-Ordner). Gefragt
-        // wird am Wert und vor jedem Systemaufruf darunter.
-        let Some(quellordner) = self.lokaler_ordner_oder_melden(aktiv) else {
-            return true;
-        };
+        // Was geloescht wuerde, am Wert des Tabs und ohne Systemaufruf: lokal
+        // die Auswahl mit ihren Pfaden, fern die Namen unter dem fernen Ort.
+        let gegenstand = self.loeschgegenstand(aktiv);
 
         // Die beiden billigen Tatsachen der Regel, jede aus genau einer Quelle.
         // Sie stehen im Speicher, und die Reihenfolge, in der sie hier
@@ -7542,29 +7617,25 @@ impl Anwendungsdelegierter {
         // mehr an `ivars().vorgang` heran: sie hat eine Antwortstelle, und
         // dieser Zweig braucht von ihrer Antwort allein, ob es sie gibt.
         let vorgang_laeuft = self.vorgang_laeuft().is_some();
-        let Some(auswahl) = self.betroffene_oder_melden(aktiv) else {
-            return true;
-        };
 
-        // Der aufgeloeste Ordner, gemerkt fuer den vierten Zweig: die Tafel
-        // ruft den Abschluss darunter allein im Feld `(false, false)`, und dann
-        // brauchen ihn beide Fragen an den Datentraeger. Aufgeloest wird deshalb
-        // genau einmal und nur dort, wo die Antwort gebraucht wird.
+        // Der aufgeloeste Ordner, gemerkt fuer die zwei Zweige mit Blatt: die
+        // Tafel ruft den Abschluss darunter allein im Feld `(false, false)`,
+        // und dann brauchen ihn beide Fragen an den Datentraeger. Aufgeloest
+        // wird deshalb genau einmal und nur dort, wo die Antwort gebraucht
+        // wird.
         let mut aufgeloester_ordner: Option<PathBuf> = None;
 
-        match loeschwarnung::vor_der_rueckfrage(vorgang_laeuft, auswahl.ist_leer(), || {
-            // `fuehrt_einen_papierkorb` fasst das Dateisystem nicht an und
-            // bekommt den Ordner deshalb aufgeloest herein, sonst meldete eine
-            // Verknuepfung den Papierkorb ihres eigenen Ortes statt den ihres
-            // Ziels. Ein Pfad, der sich nicht aufloesen laesst, ist keine
-            // Aussage ueber das Ziel, sondern eine ueber KRKs Kenntnis von ihm,
-            // und zaehlt darum als unentschieden.
-            aufgeloester_ordner = std::fs::canonicalize(&quellordner).ok();
-            aufgeloester_ordner
-                .as_deref()
-                .map_or(Erlaubnisbefund::Unentschieden, |aufgeloest| {
-                    papierkorb::fuehrt_einen_papierkorb(aufgeloest)
-                })
+        match loeschwarnung::vor_der_rueckfrage(vorgang_laeuft, gegenstand.ist_leer(), || {
+            match &gegenstand {
+                // Ein Server hat keinen Papierkorb; entschieden am Wert und
+                // ohne Systemaufruf (Entscheidung 12).
+                Loeschgegenstand::Fern { .. } => Erlaubnisbefund::Nein,
+                Loeschgegenstand::Lokal { ordner, .. } => {
+                    let (aufgeloest, befund) = Self::lokaler_papierkorbbefund(ordner);
+                    aufgeloester_ordner = aufgeloest;
+                    befund
+                }
+            }
         }) {
             // Die Meldung baut `vorgang_laeuft_schon`, die eine Stelle,
             // die sie fuer jeden ihrer Frager baut; sie nennt die Art des
@@ -7580,64 +7651,169 @@ impl Anwendungsdelegierter {
                 self.antwort_zeigen(aktiv, text(Text::NichtsAusgewaehlt));
                 true
             }
-            // Kein Blatt, kein Auftrag, und die Statuszeile nennt Befund, Folge
-            // und Ausweg (C4).
-            Vorstufe::OhnePapierkorb => {
-                self.antwort_zeigen(aktiv, loeschwarnung::ohne_papierkorb());
-                true
-            }
-            Vorstufe::Rueckfrage => {
-                let Some(fenster) = self.ivars().fenster.get() else {
-                    return false;
-                };
+            // Ein ferner Gegenstand erreicht diesen Zweig nicht, weil die
+            // Tafel fuer ihn nein bekam; kaeme er doch, ginge er den
+            // endgueltigen Weg, denn einen anderen hat er nicht
+            // (`Loeschgegenstand::weg`).
+            Vorstufe::Rueckfrage => self.loeschblatt_zeigen(
+                Loeschweg::Papierkorb,
+                gegenstand,
+                aufgeloester_ordner,
+                schaltflaeche,
+            ),
+            Vorstufe::EndgueltigeRueckfrage => self.loeschblatt_zeigen(
+                Loeschweg::Endgueltig,
+                gegenstand,
+                aufgeloester_ordner,
+                schaltflaeche,
+            ),
+        }
+    }
 
-                let (frage, erlaeuterung, laut) =
-                    Self::loeschtexte(&auswahl, &quellordner, aufgeloester_ordner);
-
-                // Der Auftrag reist durch den Rueckruf und nicht neben ihm her.
-                // Der Rueckruf ist ein `Fn` und laeuft genau einmal, also traegt
-                // eine `Cell` den Inhalt und gibt ihn beim ersten Zugriff heraus.
-                let bestaetigter = Cell::new(Some((Art::InDenPapierkorb, auswahl, quellordner)));
-                let schwach = objc2::rc::Weak::from_retained(&self.retain());
-                let griff = loeschbestaetigung::zeigen(
-                    self.mtm(),
-                    fenster,
-                    &frage,
-                    &erlaeuterung,
-                    schaltflaeche,
-                    laut,
-                    move |bestaetigt| {
-                        let Some(selbst) = schwach.load() else {
-                            return;
-                        };
-                        selbst.blatt_geschlossen();
-                        // Die fuenfte Stufe, und sie steht als Tafel in
-                        // `loeschwarnung::nach_der_rueckfrage`: was KRK aus der
-                        // Antwort des Blattes macht, ist eine Rechnung ueber
-                        // zwei Wahrheitswerte und ohne Fenster pruefbar. Den
-                        // Vordergrund verlangt allein, dass `bestaetigt` richtig
-                        // ankommt.
-                        let auftrag = bestaetigter.take();
-                        match (
-                            loeschwarnung::nach_der_rueckfrage(bestaetigt, auftrag.is_some()),
-                            auftrag,
-                        ) {
-                            (Nachstufe::Auftrag, Some((art, auswahl, quellordner))) => {
-                                selbst.loeschauftrag_stellen(art, auswahl, quellordner);
-                            }
-                            // `(Auftrag, None)` kann die Tafel nicht liefern —
-                            // sie hat `Auftrag` gerade fuer `is_some()` gesagt —,
-                            // und der Zweig steht trotzdem ausgeschrieben da,
-                            // damit die Fallunterscheidung ohne Auffangzweig
-                            // vollstaendig ist.
-                            (Nachstufe::Auftrag, None) | (Nachstufe::KeinAuftrag, _) => {}
-                        }
-                    },
-                );
-                self.blatt_oeffnet(griff);
-                true
+    /// Was ein Loeschbefehl in diesem Dateifenster trifft, am Wert des Tabs
+    /// und ohne Systemaufruf.
+    ///
+    /// Lokal die Auswahl aus [`crate::kommandos::operationen::betroffene`] mit
+    /// ihren Pfaden; fern die Namen derselben Regel und die Zahl der Ordner
+    /// darunter, aus dem Ordnermodell, das der ferne Leser gefuellt hat.
+    fn loeschgegenstand(&self, seite: Fensterseite) -> Loeschgegenstand {
+        let quelle = self.dateifenster(seite).quelle();
+        match quelle.angezeigter_ort() {
+            Dateiort::Lokal(ordner) => Loeschgegenstand::Lokal {
+                auswahl: quelle.betroffene_eintraege().unwrap_or_default(),
+                ordner,
+            },
+            Dateiort::Fern(ordner) => {
+                let (namen, ordnerzahl) = quelle.betroffene_namen_und_ordnerzahl();
+                Loeschgegenstand::Fern {
+                    ordner,
+                    namen,
+                    ordnerzahl,
+                }
             }
         }
+    }
+
+    /// Die dritte Tatsache der Stufenregel fuer einen lokalen Ordner: der
+    /// aufgeloeste Ordner und ob sein Datentraeger einen Papierkorb fuehrt.
+    ///
+    /// `fuehrt_einen_papierkorb` fasst das Dateisystem nicht an und bekommt den
+    /// Ordner deshalb aufgeloest herein, sonst meldete eine Verknuepfung den
+    /// Papierkorb ihres eigenen Ortes statt den ihres Ziels. Ein Pfad, der sich
+    /// nicht aufloesen laesst, ist keine Aussage ueber das Ziel, sondern eine
+    /// ueber KRKs Kenntnis von ihm, und zaehlt darum als unentschieden.
+    ///
+    /// **Beide Fragen stellt der Hauptfaden**, und eine haengende Freigabe
+    /// haelt ihn dabei an; das haelt der offene Defekt
+    /// `261016-1956-der-loeschweg-fragt-canonicalize-und-den-papierkorb-auf-dem-hauptfaden-…`
+    /// fest. Ein ferner Ort kommt hier nie an.
+    fn lokaler_papierkorbbefund(ordner: &Path) -> (Option<PathBuf>, Erlaubnisbefund) {
+        let aufgeloest = std::fs::canonicalize(ordner).ok();
+        let befund = aufgeloest.as_deref().map_or(
+            Erlaubnisbefund::Unentschieden,
+            papierkorb::fuehrt_einen_papierkorb,
+        );
+        (aufgeloest, befund)
+    }
+
+    /// Zeigt die Rueckfrage in der Gestalt des Loeschwegs und stellt auf ein
+    /// Ja den Auftrag mit dem gezeigten Gegenstand.
+    ///
+    /// `papierkorbschaltflaeche` ist die Beschriftung, die der Befehl fuer den
+    /// Weg in den Papierkorb mitbringt; die endgueltige Gestalt traegt
+    /// ihre eigene. **Der Weg wird hier noch einmal am Gegenstand gefasst**
+    /// ([`Loeschgegenstand::weg`]): Blatt, Beschriftung und Auftrag entstehen
+    /// alle aus diesem einen Wert und koennen nicht auseinanderlaufen.
+    ///
+    /// Liefert `false` allein dann, wenn es kein Fenster gibt, an dem das
+    /// Blatt haengen koennte.
+    fn loeschblatt_zeigen(
+        &self,
+        weg: Loeschweg,
+        gegenstand: Loeschgegenstand,
+        aufgeloester_ordner: Option<PathBuf>,
+        papierkorbschaltflaeche: &str,
+    ) -> bool {
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return false;
+        };
+        let weg = gegenstand.weg(weg);
+        let schaltflaeche = match weg {
+            Loeschweg::Papierkorb => papierkorbschaltflaeche,
+            Loeschweg::Endgueltig => text(Text::LoeschblattSchaltflaecheEndgueltig),
+        };
+
+        let (frage, erlaeuterung, form) = match (&gegenstand, weg) {
+            (Loeschgegenstand::Lokal { auswahl, ordner }, Loeschweg::Papierkorb) => {
+                let (frage, erlaeuterung, laut) =
+                    Self::loeschtexte(auswahl, ordner, aufgeloester_ordner);
+                (
+                    frage,
+                    erlaeuterung,
+                    loeschbestaetigung::Form::laut_wenn(laut),
+                )
+            }
+            (Loeschgegenstand::Lokal { auswahl, ordner }, Loeschweg::Endgueltig) => {
+                let (frage, erlaeuterung) =
+                    Self::endgueltige_loeschtexte(auswahl, ordner, aufgeloester_ordner);
+                (frage, erlaeuterung, loeschbestaetigung::Form::Endgueltig)
+            }
+            (
+                Loeschgegenstand::Fern {
+                    ordner,
+                    namen,
+                    ordnerzahl,
+                },
+                Loeschweg::Papierkorb | Loeschweg::Endgueltig,
+            ) => {
+                let (frage, erlaeuterung) =
+                    Self::fern_loeschtexte(ordner, namen.len(), *ordnerzahl);
+                (frage, erlaeuterung, loeschbestaetigung::Form::Endgueltig)
+            }
+        };
+
+        // Der Auftrag reist durch den Rueckruf und nicht neben ihm her.
+        // Der Rueckruf ist ein `Fn` und laeuft genau einmal, also traegt
+        // eine `Cell` den Inhalt und gibt ihn beim ersten Zugriff heraus.
+        let bestaetigter = Cell::new(Some((weg, gegenstand)));
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        let griff = loeschbestaetigung::zeigen(
+            self.mtm(),
+            fenster,
+            &frage,
+            &erlaeuterung,
+            schaltflaeche,
+            form,
+            move |bestaetigt| {
+                let Some(selbst) = schwach.load() else {
+                    return;
+                };
+                selbst.blatt_geschlossen();
+                // Die fuenfte Stufe, und sie steht als Tafel in
+                // `loeschwarnung::nach_der_rueckfrage`: was KRK aus der
+                // Antwort des Blattes macht, ist eine Rechnung ueber
+                // zwei Wahrheitswerte und ohne Fenster pruefbar. Den
+                // Vordergrund verlangt allein, dass `bestaetigt` richtig
+                // ankommt.
+                let auftrag = bestaetigter.take();
+                match (
+                    loeschwarnung::nach_der_rueckfrage(bestaetigt, auftrag.is_some()),
+                    auftrag,
+                ) {
+                    (Nachstufe::Auftrag, Some((weg, gegenstand))) => {
+                        selbst.loeschauftrag_stellen(weg, gegenstand);
+                    }
+                    // `(Auftrag, None)` kann die Tafel nicht liefern —
+                    // sie hat `Auftrag` gerade fuer `is_some()` gesagt —,
+                    // und der Zweig steht trotzdem ausgeschrieben da,
+                    // damit die Fallunterscheidung ohne Auffangzweig
+                    // vollstaendig ist.
+                    (Nachstufe::Auftrag, None) | (Nachstufe::KeinAuftrag, _) => {}
+                }
+            },
+        );
+        self.blatt_oeffnet(griff);
+        true
     }
 
     /// Die beiden Zeilen der Rueckfrage und ihre Form, aus den fuenf Tatsachen
@@ -7695,6 +7871,18 @@ impl Anwendungsdelegierter {
         quellordner: &Path,
         aufgeloester_ordner: Option<PathBuf>,
     ) -> (String, String, bool) {
+        let gruende = Self::loeschgruende(auswahl, aufgeloester_ordner);
+        let (frage, erlaeuterung) =
+            loeschwarnung::frage_und_erlaeuterung(auswahl, quellordner, &gruende);
+        (frage, erlaeuterung, !gruende.is_empty())
+    }
+
+    /// Die Warngruende eines lokalen Loeschziels, aus den fuenf Tatsachen;
+    /// welche Quelle welche liefert, sagt [`Self::loeschtexte`].
+    fn loeschgruende(
+        auswahl: &Auswahl,
+        aufgeloester_ordner: Option<PathBuf>,
+    ) -> Vec<loeschwarnung::Warngrund> {
         let zuhause =
             pfade::benutzerverzeichnis().and_then(|pfad| std::fs::canonicalize(pfad).ok());
         let netzlaufwerk = aufgeloester_ordner
@@ -7717,10 +7905,46 @@ impl Anwendungsdelegierter {
             arbeitsbaum: beruehrt_arbeitsbaum,
             umfang: umfang::zaehlen(&auswahl.pfade),
         };
-        let gruende = loeschwarnung::warngruende(&ziel);
-        let (frage, erlaeuterung) =
-            loeschwarnung::frage_und_erlaeuterung(auswahl, quellordner, &gruende);
-        (frage, erlaeuterung, !gruende.is_empty())
+        loeschwarnung::warngruende(&ziel)
+    }
+
+    /// Die zwei Zeilen der endgueltigen Rueckfrage an einem lokalen Ort ohne
+    /// Papierkorb (Entscheidung 12).
+    ///
+    /// Dieselben fuenf Tatsachen und dieselben Warngruende wie
+    /// [`Self::loeschtexte`], die lauten Warnungen der Runde 12 bleiben also
+    /// fuer einen lokalen Ort; der Wortlaut kommt aus
+    /// [`loeschwarnung::endgueltig_frage_und_erlaeuterung`]. Laut ist diese
+    /// Rueckfrage immer, deshalb gibt es keinen dritten Wert.
+    #[must_use = "die zwei Werte sind der ganze Inhalt der Rueckfrage; fallengelassen erscheint sie leer"]
+    fn endgueltige_loeschtexte(
+        auswahl: &Auswahl,
+        quellordner: &Path,
+        aufgeloester_ordner: Option<PathBuf>,
+    ) -> (String, String) {
+        let gruende = Self::loeschgruende(auswahl, aufgeloester_ordner);
+        loeschwarnung::endgueltig_frage_und_erlaeuterung(
+            auswahl.zahl(),
+            auswahl.ordner,
+            &operationen::pfadtext(quellordner),
+            &gruende,
+        )
+    }
+
+    /// Die zwei Zeilen der endgueltigen Rueckfrage an einem fernen Ort.
+    ///
+    /// **Ohne Systemaufruf und ohne Anfrage an den Server**: der Ort ist ein
+    /// Wert, die Zahlen kommen aus dem Ordnermodell. Arbeitsbaum, Umfang und
+    /// die Lage zum Benutzerordner fallen deshalb weg (Entscheidung 12); das
+    /// Blatt nennt die Zahl der gewaehlten Eintraege, ihrer Ordner und den Ort
+    /// in der Schreibweise des Fenstertitels.
+    #[must_use = "die zwei Werte sind der ganze Inhalt der Rueckfrage; fallengelassen erscheint sie leer"]
+    fn fern_loeschtexte(
+        ordner: &krk_core::ort::FernerOrt,
+        zahl: usize,
+        ordnerzahl: usize,
+    ) -> (String, String) {
+        loeschwarnung::endgueltig_frage_und_erlaeuterung(zahl, ordnerzahl, &ordner.to_string(), &[])
     }
 
     /// Stellt den bestaetigten Loeschauftrag, und zwar mit **der Auswahl, die
@@ -7762,20 +7986,49 @@ impl Anwendungsdelegierter {
     ///
     /// Die Kopf-an-Kopf-Pruefung von Quelle und Ziel aus `auftrag_stellen`
     /// entfaellt: ein Loeschauftrag hat kein Ziel.
-    fn loeschauftrag_stellen(&self, art: Art, auswahl: Auswahl, quellordner: PathBuf) {
+    ///
+    /// **Seit dem 261016 entscheidet der Loeschweg die Art**: ein lokaler
+    /// Gegenstand raeumt in den Papierkorb oder loescht endgueltig, ein ferner
+    /// loescht endgueltig ueber [`Fernauftrag::loeschen`], auf dem Faden der
+    /// Maschine; der Hauptfaden stellt dafuer keine Anfrage.
+    fn loeschauftrag_stellen(&self, weg: Loeschweg, gegenstand: Loeschgegenstand) {
         let aktiv = self.ivars().modell.borrow().aktiv();
-        let positionen = auswahl.zahl();
-        let auftrag = Auftrag {
-            quellen: auswahl.pfade,
-            art,
-            konfliktregel: Default::default(),
-            uebertragung: Default::default(),
-        };
-        // `auftrag_starten` liefert immer `true`; hier gibt es niemanden mehr,
-        // der die Antwort brauchte, denn der Tastendruck ist laengst verbraucht.
-        // Der Loeschweg schneidet nichts aus der Markierung; siehe
-        // `Vorgang::ausgelassen`.
-        let _ = self.auftrag_starten(aktiv, auftrag, quellordner, positionen, 0);
+        match gegenstand {
+            Loeschgegenstand::Lokal { auswahl, ordner } => {
+                let positionen = auswahl.zahl();
+                let art = match weg {
+                    Loeschweg::Papierkorb => Art::InDenPapierkorb,
+                    Loeschweg::Endgueltig => Art::EndgueltigLoeschen,
+                };
+                let auftrag = Auftrag {
+                    quellen: auswahl.pfade,
+                    art,
+                    konfliktregel: Default::default(),
+                    uebertragung: Default::default(),
+                };
+                // `auftrag_starten` liefert immer `true`; hier gibt es niemanden
+                // mehr, der die Antwort brauchte, denn der Tastendruck ist
+                // laengst verbraucht. Der Loeschweg schneidet nichts aus der
+                // Markierung; siehe `Vorgang::ausgelassen`.
+                let _ = self.auftrag_starten(aktiv, auftrag, ordner, positionen, 0);
+            }
+            Loeschgegenstand::Fern { ordner, namen, .. } => {
+                let ort = Dateiort::Fern(ordner);
+                let quellen: Vec<Dateiort> = namen
+                    .iter()
+                    .filter_map(|name| ort_darunter(&ort, name))
+                    .collect();
+                let positionen = quellen.len();
+                // Dieselbe Antwort wie darueber, aus demselben Grund.
+                let _ = self.vorhaben_starten(
+                    aktiv,
+                    Vorhaben::Fern(Fernauftrag::loeschen(quellen)),
+                    ort,
+                    positionen,
+                    0,
+                );
+            }
+        }
     }
 
     /// Der Abbruchbefehl (C4, C1.7).
@@ -7932,14 +8185,16 @@ impl Anwendungsdelegierter {
     ///
     /// Liefert `true`, sobald das Blatt steht: der Tastendruck ist dann
     /// verbraucht.
+    ///
+    /// **An einem fernen Ort derselbe Weg bis nach dem Blatt** (Entscheidung
+    /// 11 des Plans der sftp-Ordner); erst [`Self::anlegen_ausfuehren`]
+    /// verzweigt am Ort, gelesen am Wert des Tabs.
     fn anlegen(&self, art: Anlegeart) -> bool {
         let Some(fenster) = self.ivars().fenster.get() else {
             return false;
         };
         let seite = self.ivars().modell.borrow().aktiv();
-        let Some(ordner) = self.lokaler_ordner_oder_melden(seite) else {
-            return true;
-        };
+        let ordner = self.dateifenster(seite).quelle().angezeigter_ort();
 
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
         let griff = namenseingabe::zeigen(
@@ -7987,11 +8242,14 @@ impl Anwendungsdelegierter {
     /// `vorgang_beenden` fuer sich beschreibt, nur ausgeloest von der
     /// Datentraegerwache statt von einem Befehl — und er wird auch gleich
     /// behandelt: gemeldet wird nichts.
+    ///
+    /// **Ein ferner Ort geht an [`Self::fern_anlegen`]**, nach derselben
+    /// Namenspruefung; der lokale Zweig darunter ist der von vorher.
     fn anlegen_ausfuehren(
         &self,
         seite: Fensterseite,
         art: Anlegeart,
-        ordner: &Path,
+        ort: &Dateiort,
         ergebnis: Result<String, Namensfehler>,
     ) {
         let name = match ergebnis {
@@ -8000,6 +8258,10 @@ impl Anwendungsdelegierter {
                 self.antwort_zeigen(seite, fehler.grund());
                 return;
             }
+        };
+        let ordner = match ort {
+            Dateiort::Lokal(ordner) => ordner,
+            Dateiort::Fern(ordner) => return self.fern_anlegen(seite, art, ordner, name),
         };
         let angelegt = match art {
             Anlegeart::Ordner => operation::ordner_anlegen(ordner, &name),
@@ -8032,9 +8294,13 @@ impl Anwendungsdelegierter {
     /// `umbenennen` scheitert dann mit [`io::ErrorKind::AlreadyExists`](std::io::ErrorKind::AlreadyExists), und
     /// der Grund geht in die Statuszeile. Eine Vorabprueferei gegen die
     /// gelesene Liste waere eine zweite Wahrheit ueber denselben Ordner.
+    ///
+    /// **Ein ferner Ort geht an [`Self::fern_umbenennen`]**, gelesen am Wert
+    /// des Tabs; der lokale Zweig darunter ist der von vorher.
     fn umbenennen_ausfuehren(&self, seite: Fensterseite, alt: &str, neu: &str) {
-        let Some(ordner) = self.lokaler_ordner_oder_melden(seite) else {
-            return;
+        let ordner = match self.dateifenster(seite).quelle().angezeigter_ort() {
+            Dateiort::Lokal(ordner) => ordner,
+            Dateiort::Fern(ordner) => return self.fern_umbenennen(seite, &ordner, alt, neu),
         };
         if let Err(fehler) = operation::umbenennen(&ordner.join(alt), neu) {
             self.antwort_zeigen(seite, &operationen::umbenennungsfehler(neu, &fehler));
@@ -8045,6 +8311,68 @@ impl Anwendungsdelegierter {
         // darueber steht noch aus, die Antwort ist also `Vorgemerkt` und nie
         // `Unbekannt`; die Begruendung steht im Doc-Kommentar dieser Funktion.
         let _ = self.dateifenster(seite).quelle().eintrag_waehlen(neu);
+    }
+
+    /// Legt an einem fernen Ort einen Eintrag an, ueber die Maschine
+    /// (Entscheidung 11 des Plans der sftp-Ordner).
+    ///
+    /// **Der Hauptfaden stellt keine Anfrage und keinen Systemaufruf**: jede
+    /// Anfrage an den Server braucht das Pfand eines Arbeitsfadens, und den
+    /// startet [`Self::vorhaben_starten`]. Damit gilt die Regel „ein Vorgang
+    /// zur Zeit“, und die Meldung, die Auswahl auf dem neuen Eintrag und das
+    /// Scheitern an einem vergebenen Namen kommen mit dem Bericht in
+    /// [`Self::vorgang_beenden`] an, in denselben Saetzen wie lokal.
+    fn fern_anlegen(
+        &self,
+        seite: Fensterseite,
+        art: Anlegeart,
+        ordner: &krk_core::ort::FernerOrt,
+        name: String,
+    ) {
+        if self.vorgang_laeuft_schon(seite) {
+            return;
+        }
+        let ort = Dateiort::Fern(ordner.clone());
+        let auftrag = Fernauftrag::anlegen(ort.clone(), name, art.anlegetyp());
+        // Die Antwort sagt, ob ein Tastendruck verbraucht ist; dieser ist es
+        // seit dem Blatt.
+        let _ = self.vorhaben_starten(seite, Vorhaben::Fern(auftrag), ort, 1, 0);
+    }
+
+    /// Benennt an einem fernen Ort einen Eintrag um, ueber die Maschine und
+    /// `RENAME` (Entscheidung 10 des Plans der sftp-Ordner).
+    ///
+    /// Dieselbe Bauform wie [`Self::fern_anlegen`] und aus demselben Grund:
+    /// der Hauptfaden stellt keine Anfrage, und das Ergebnis kommt mit dem
+    /// Bericht an. Ob der neue Name frei ist, beantwortet das `RENAME` selbst,
+    /// wie lokal das Dateisystem.
+    fn fern_umbenennen(
+        &self,
+        seite: Fensterseite,
+        ordner: &krk_core::ort::FernerOrt,
+        alt: &str,
+        neu: &str,
+    ) {
+        if self.vorgang_laeuft_schon(seite) {
+            return;
+        }
+        let ort = Dateiort::Fern(ordner.clone());
+        // Ein Name aus dem Ordnermodell ist immer eine einzelne Komponente;
+        // der Fall ist trotzdem behandelt, statt still nichts zu tun.
+        let Some(quelle) = ort_darunter(&ort, alt) else {
+            self.antwort_zeigen(
+                seite,
+                &operationen::umbenennungsfehler(
+                    neu,
+                    &std::io::Error::other(text(Text::VorgangPfadBenenntKeinenEintrag)),
+                ),
+            );
+            return;
+        };
+        let auftrag = Fernauftrag::umbenennen(quelle, neu);
+        // Die Antwort sagt, ob ein Tastendruck verbraucht ist; hier gibt es
+        // keinen, die Zelle hat ihren Namen schon abgegeben.
+        let _ = self.vorhaben_starten(seite, Vorhaben::Fern(auftrag), ort, 1, 0);
     }
 
     /// Oeffnet das Blatt fuer das Umbenennen im Stapel (C4).
@@ -10052,15 +10380,31 @@ impl Anwendungsdelegierter {
         // Vorgangsanzeige waere aber nach dem naechsten Tastendruck wieder da,
         // obwohl die Operation vorbei ist.
         self.dateifenster(vorgang.seite).quelle().vorgang_beenden();
-        self.antwort_zeigen(
-            vorgang.seite,
-            &operationen::abschlusstext(
-                &vorgang.art,
-                bericht,
-                vorgang.positionen,
-                vorgang.ausgelassen,
+        // Ein fernes Umbenennen oder Anlegen meldet sich mit denselben Saetzen
+        // wie das lokale, das ohne Maschine laeuft (Entscheidungen 10 und 11
+        // des Plans der sftp-Ordner): angelegt, gescheitert, oder nach dem
+        // Umbenennen gar nicht. Jeder andere Vorgang und ein Abbruch ohne
+        // uebersprungenen Eintrag nehmen den Abschlusstext.
+        let namensabschluss = match &vorgang.art {
+            Vorgangsart::Fern(art) => operationen::namensabschluss(art, bericht),
+            Vorgangsart::Lokal(_) => None,
+        };
+        match &namensabschluss {
+            Some(abschluss) => {
+                if let Some(meldung) = &abschluss.meldung {
+                    self.antwort_zeigen(vorgang.seite, meldung);
+                }
+            }
+            None => self.antwort_zeigen(
+                vorgang.seite,
+                &operationen::abschlusstext(
+                    &vorgang.art,
+                    bericht,
+                    vorgang.positionen,
+                    vorgang.ausgelassen,
+                ),
             ),
-        );
+        }
 
         // **Der eine Auffrischungspfad.** Der gemeldete Abschluss einer
         // Dateioperation ist der zweite Ausloeser von `ordner_neu_lesen`, den
@@ -10073,8 +10417,23 @@ impl Anwendungsdelegierter {
         for ordner in vorgang.ordner() {
             auffrischung::ort_neu_lesen(self, &ordner);
         }
-        // Ein ferner Vorgang kopiert oder verschiebt, und danach bleibt die
-        // Auswahl, wo sie war, wie nach dem lokalen Kopieren und Verschieben.
+        // Nach einem fernen Umbenennen oder Anlegen steht die Auswahl auf dem
+        // neuen Namen, wie lokal in `umbenennen_ausfuehren` und
+        // `anlegen_ausfuehren`; die Auffrischung darueber laeuft noch, also
+        // merkt `eintrag_waehlen` den Namen vor. **Bewusst verworfen** aus
+        // dem Grund, den `anlegen_ausfuehren` ausschreibt.
+        if let Some(Namensabschluss {
+            waehlen: Some(name),
+            ..
+        }) = &namensabschluss
+        {
+            let _ = self
+                .dateifenster(vorgang.seite)
+                .quelle()
+                .eintrag_waehlen(name);
+        }
+        // Ein ferner Vorgang, der kopiert, verschiebt oder loescht, laesst die
+        // Auswahl, wo sie war, wie der lokale derselben Art.
         if let Vorgangsart::Lokal(art) = &vorgang.art {
             match art {
                 // Nach einem Stapel-Umbenennen steht die Auswahl auf dem ersten
@@ -10141,6 +10500,7 @@ impl Anwendungsdelegierter {
                 Art::Kopieren { .. }
                 | Art::Verschieben { .. }
                 | Art::InDenPapierkorb
+                | Art::EndgueltigLoeschen
                 | Art::Zippen { .. }
                 | Art::Entpacken { .. } => {}
                 // Der Name ist der zuletzt beauftragte, weil jede Antwort auf die
@@ -10195,6 +10555,11 @@ impl Anwendungsdelegierter {
         // beides will die Marke wissen.
         self.leiste().quelle().gueltigkeit_nachziehen();
 
+        // Das Scheitern eines fernen Umbenennens oder Anlegens steht schon in
+        // der Statuszeile, wie lokal, und bekommt keine Abschlussliste.
+        if namensabschluss.is_some() {
+            return;
+        }
         let Some((frage, liste)) = operationen::uebersprungenliste(&bericht.uebersprungen) else {
             return;
         };
@@ -12515,12 +12880,18 @@ fn ort_darunter(ordner: &Dateiort, name: &str) -> Option<Dateiort> {
 /// Ob die Konfliktfrage dieses Vorgangs ein Ziel auf einem Server nennt.
 ///
 /// Vollstaendig ueber [`Vorgangsart`] und [`Fernart`] und ohne Auffangzweig.
+/// Umbenennen, Anlegen und Loeschen am fernen Ort stellen keine Konfliktfrage
+/// (`operationen::fern_konfliktgestalt`); stellten sie eine, naennte sie einen
+/// Eintrag auf dem Server, also ja, und der Hauptfaden fragte keinen Pfad.
 fn zielt_auf_einen_server(art: &Vorgangsart) -> bool {
     match art {
         Vorgangsart::Lokal(_) => false,
         Vorgangsart::Fern(Fernart::Kopieren { ziel } | Fernart::Verschieben { ziel }) => {
             ziel.fern().is_some()
         }
+        Vorgangsart::Fern(
+            Fernart::Umbenennen { .. } | Fernart::Anlegen { .. } | Fernart::Loeschen,
+        ) => true,
     }
 }
 
@@ -16257,6 +16628,117 @@ mod fernvorgangsproben {
     ///
     /// **Was sie nicht sieht:** ob der gefundene Tab danach wirklich liest;
     /// das haelt `ort_neu_lesen` mit seinen eigenen Proben.
+    /// Umbenennen und Anlegen an einem fernen Ort stellen auf dem Hauptfaden
+    /// keinen Systemaufruf (Schritt 6 des Plans der sftp-Ordner).
+    ///
+    /// Gehalten wird zweierlei: die Ruempfe der zwei fernen Wege tragen weder
+    /// `fs::` noch `metadata(` noch `exists(` noch `canonicalize(` noch den
+    /// lokalen Kernaufruf; und in den zwei Ruempfen, die verzweigen, steht der
+    /// Abzweig an den fernen Weg **vor** dem lokalen Kernaufruf, sodass ein
+    /// ferner Ort ihn nie erreicht. Der Rumpf von `anlegen`, der vor dem Blatt
+    /// fuer beide Orte laeuft, traegt ebenso keine Nadel.
+    ///
+    /// **Was sie nicht sieht:** einen Systemaufruf in einer tiefer gerufenen
+    /// Funktion, und ob der Abzweig auf jedem Weg genommen wird; dass
+    /// `angezeigter_ort` den Wert des Tabs liest und `vorhaben_starten` nichts
+    /// fragt, halten deren eigene Zusagen und
+    /// `der_fernweg_stellt_auf_dem_hauptfaden_keinen_systemaufruf`.
+    #[test]
+    fn das_ferne_umbenennen_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
+        let datei = diese_datei();
+        for name in ["fern_umbenennen", "fern_anlegen", "anlegen"] {
+            let rumpf = rumpf(&datei, name);
+            for nadel in [
+                "fs::",
+                "metadata(",
+                "exists(",
+                "canonicalize(",
+                concat!("operation::", "umbenennen("),
+                concat!("operation::", "ordner_anlegen("),
+                concat!("operation::", "datei_anlegen("),
+            ] {
+                assert!(
+                    !rumpf.contains(nadel),
+                    "{name} enthaelt {nadel}: ein Systemaufruf auf dem Hauptfaden"
+                );
+            }
+        }
+        for (name, abzweig, lokal) in [
+            (
+                "umbenennen_ausfuehren",
+                concat!("self.fern_", "umbenennen("),
+                concat!("operation::", "umbenennen("),
+            ),
+            (
+                "anlegen_ausfuehren",
+                concat!("self.fern_", "anlegen("),
+                concat!("operation::", "ordner_anlegen("),
+            ),
+        ] {
+            let rumpf = rumpf(&datei, name);
+            let abzweig = rumpf
+                .find(abzweig)
+                .unwrap_or_else(|| panic!("{name} zweigt nicht an den fernen Weg ab"));
+            let lokal = rumpf
+                .find(lokal)
+                .unwrap_or_else(|| panic!("{name} ruft den lokalen Weg nicht"));
+            assert!(
+                abzweig < lokal,
+                "{name} ruft den lokalen Weg vor dem Abzweig an den fernen"
+            );
+        }
+    }
+
+    /// Der Loeschweg an einem fernen Ort stellt auf dem Hauptfaden keinen
+    /// Systemaufruf (Schritt 7 des Plans der sftp-Ordner).
+    ///
+    /// Gehalten wird an den Ruempfen des gemeinsamen Loeschwegs und seiner
+    /// fernen Stuecke, dass weder `canonicalize(` noch
+    /// `fuehrt_einen_papierkorb(` noch `umfang::zaehlen(` noch `fs::` darin
+    /// steht: die lokalen Fragen an die Platte stehen in
+    /// `lokaler_papierkorbbefund`, `loeschtexte`, `loeschgruende` und
+    /// `endgueltige_loeschtexte`, und jede davon erreicht allein ein lokaler
+    /// Gegenstand. Dazu steht im Rumpf des Loeschwegs, dass ein ferner
+    /// Gegenstand die Papierkorbfrage am Wert mit nein beantwortet.
+    ///
+    /// **Was sie nicht sieht:** ob `loeschblatt_zeigen` einen fernen
+    /// Gegenstand wirklich an `fern_loeschtexte` gibt und nicht an einen der
+    /// lokalen Rufer; das sagt seine vollstaendige Verzweigung, die der
+    /// Uebersetzer haelt, und keine Nadel. Und einen Systemaufruf in einer
+    /// tiefer gerufenen Funktion. **Der lokale Weg stellt seine Fragen weiter
+    /// auf dem Hauptfaden**; das haelt der offene Defekt
+    /// `261016-1956-der-loeschweg-fragt-canonicalize-…` fest, und diese Probe
+    /// sagt darueber nichts.
+    #[test]
+    fn der_ferne_loeschweg_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
+        let datei = diese_datei();
+        for name in [
+            "loeschen_nach_rueckfrage",
+            "loeschgegenstand",
+            "loeschblatt_zeigen",
+            "fern_loeschtexte",
+            "loeschauftrag_stellen",
+        ] {
+            let rumpf = rumpf(&datei, name);
+            for nadel in [
+                "canonicalize(",
+                concat!("fuehrt_einen_", "papierkorb("),
+                concat!("umfang::", "zaehlen("),
+                "fs::",
+            ] {
+                assert!(
+                    !rumpf.contains(nadel),
+                    "{name} enthaelt {nadel}: ein Systemaufruf auf dem Hauptfaden"
+                );
+            }
+        }
+        assert!(
+            rumpf(&datei, "loeschen_nach_rueckfrage")
+                .contains("Loeschgegenstand::Fern { .. } => Erlaubnisbefund::Nein"),
+            "ein ferner Ort beantwortet die Papierkorbfrage nicht am Wert"
+        );
+    }
+
     #[test]
     fn der_abschluss_frischt_jeden_ort_des_vorgangs_auf() {
         let datei = diese_datei();

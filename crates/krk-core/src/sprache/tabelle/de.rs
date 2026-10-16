@@ -556,6 +556,8 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VorgangsartPacken => "Packen",
         Text::VorgangsartEntpacken => "Entpacken",
         Text::VorgangsartDuplizieren => "Duplizieren",
+        Text::VorgangsartEndgueltigLoeschen => "Endgültig löschen",
+        Text::VorgangsartAnlegen => "Anlegen",
         Text::VorgangAbbruchhinweis => "Esc bricht ab",
         Text::VorgangWirdVorbereitet => "{was} wird vorbereitet: {positionen} · {abbruch}",
         Text::VorgangZeile => "{was}: {eintraege}, {menge}, {positionen} · {name} · {abbruch}",
@@ -651,8 +653,8 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "{datei} ist nicht zu zeigen: KRK läuft ohne Ablageordner"
         }
         Text::Markierungsstand => "{n} markiert, davon {ordner}, {groesse}",
-        Text::LoeschenOhnePapierkorb => {
-            "das Ziel führt keinen Papierkorb, es wurde nichts gelöscht; im Finder löschen"
+        Text::LoeschenEndgueltigAus => {
+            "Dieser Ort hat keinen Papierkorb: gelöschte Einträge lassen sich nicht zurückholen. Gelöscht wird aus {ordner}."
         }
         Text::WarngrundUnentscheidbar => "von einem Ziel unbekannter Einordnung",
         Text::WarngrundNetzlaufwerk => "von einem Netzlaufwerk",
@@ -955,6 +957,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "Der Ort lässt sich nicht in settings.toml schreiben: die Schreibsperre der Ablage lässt sich nicht nehmen ({fehler}); der Notizordner bleibt, wo er ist"
         }
         Text::LoeschblattSchaltflaeche => "In den Papierkorb räumen",
+        Text::LoeschblattSchaltflaecheEndgueltig => "Endgültig löschen",
         Text::NichtsAusgewaehlt => "es ist nichts ausgewählt",
         Text::StapelKeineRegel => {
             "nichts umzubenennen: aus den Feldern ließ sich keine Regel bauen"
@@ -1098,6 +1101,10 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::LoeschfrageEintraege => (
             "Diesen Eintrag {grund}in den Papierkorb räumen?",
             "Diese {n} Einträge {grund}in den Papierkorb räumen?",
+        ),
+        Zahlwort::LoeschfrageEndgueltig => (
+            "Diesen Eintrag {grund}endgültig löschen?",
+            "Diese {n} Einträge {grund}endgültig löschen?",
         ),
         Zahlwort::StartMeldungen => (
             "Beim Start gab es eine Meldung",

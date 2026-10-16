@@ -1,6 +1,8 @@
 //! Kopieren und Verschieben, wenn eine Seite auf einem Server liegt
 //! (Entscheidung 9 des Plans
-//! `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`).
+//! `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`), dazu
+//! Umbenennen, Anlegen und endgueltiges Loeschen an einem fernen Ort
+//! (Entscheidungen 10 bis 12).
 //!
 //! ```text
 //!  Fernauftrag ──> starten ──> fern::faden("krk-operation") ──> ausfuehren
@@ -14,8 +16,20 @@
 //!                                                                  └─> eintrag_verschieben
 //!                                                                        derselbe Server: RENAME
 //!                                                                        sonst: kopieren, dann Quelle entfernen
+//!                                                     je Quelle: eintrag_umbenennen  (RENAME)
+//!                                                                eintrag_anlegen     (MKDIR, OPEN CREAT|EXCL)
+//!                                                                eintrag_loeschen    (REMOVE, RMDIR, READDIR)
 //!  Hauptfaden <── Lauf, Meldung (unveraendert) <── Steuerung <──────────┘
 //! ```
+//!
+//! **Umbenennen und Anlegen laufen ueber diese Maschine und nicht synchron
+//! auf dem Hauptfaden wie lokal** (Entscheidungen 10 und 11): jede Anfrage an
+//! einen Server braucht das Pfand eines Arbeitsfadens. Damit gilt fuer sie
+//! auch die Regel „ein Vorgang zur Zeit“. Ob ein Name frei ist, beantwortet
+//! das Anlegen oder das `RENAME` selbst; scheitert es und steht am Ziel ein
+//! Eintrag, ist der Grund derselbe wie lokal bei `AlreadyExists`
+//! ([`super::grund`]), und die Oberflaeche liest ihn dort zurueck
+//! ([`super::fehlerart`]).
 //!
 //! **Lokal bleibt, wie es ist.** Ein Vorgang, dessen Quelle und Ziel lokal
 //! sind, ist ein [`super::Auftrag`] und geht nie hierher; dieses Modul steht
@@ -88,7 +102,7 @@ use crate::verzeichnis::{Typ, lesen};
 
 use super::auftrag::Konfliktregel;
 use super::fortschritt::{Abschluss, Bericht, Lauf, Meldung, Steuerung, Uebersprungen};
-use super::umbenennen::{freier_name, freier_name_unter, name_pruefen};
+use super::umbenennen::{freier_name, freier_name_unter, name_pruefen, umbenennen};
 use super::{Ablauf, benennen_denselben_eintrag, liegt_im_ordner, loeschen};
 
 /// Was mit den Quellen eines [`Fernauftrag`] geschehen soll.
@@ -108,6 +122,34 @@ pub enum Fernart {
         /// Der Zielordner.
         ziel: Ort,
     },
+    /// Die eine Quelle in ihrem Ordner umbenennen, ueber `RENAME` und nie
+    /// ueber `posix-rename@openssh.com` (Entscheidung 10): ein vorhandener
+    /// Name laesst es scheitern, statt still ersetzt zu werden.
+    Umbenennen {
+        /// Der neue Name, **kein** Pfad.
+        neuer_name: String,
+    },
+    /// In der einen Quelle, einem Ordner, einen Eintrag anlegen (Entscheidung
+    /// 11). Ein vorhandener Name laesst es scheitern.
+    Anlegen {
+        /// Der Name des neuen Eintrags, **kein** Pfad.
+        name: String,
+        /// Ordner oder leere Datei.
+        typ: Anlegetyp,
+    },
+    /// Jede Quelle endgueltig entfernen, einen Ordner samt Inhalt
+    /// (Entscheidung 12). Ein Server hat keinen Papierkorb; gestellt wird der
+    /// Auftrag allein nach der Rueckfrage, die „endgueltig“ ausspricht.
+    Loeschen,
+}
+
+/// Was [`Fernart::Anlegen`] anlegt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Anlegetyp {
+    /// Ein leerer Ordner, ueber `MKDIR`.
+    Ordner,
+    /// Eine leere Datei, ueber `OPEN` mit `CREAT|EXCL` und `CLOSE`.
+    Datei,
 }
 
 /// Ein Auftrag an die Maschine, bei dem Quelle oder Ziel auf einem Server
@@ -142,6 +184,35 @@ impl Fernauftrag {
         Self::neu(quellen, Fernart::Verschieben { ziel })
     }
 
+    /// Die eine Quelle in ihrem Ordner umbenennen.
+    #[must_use]
+    pub fn umbenennen(quelle: Ort, neuer_name: impl Into<String>) -> Self {
+        Self::neu(
+            vec![quelle],
+            Fernart::Umbenennen {
+                neuer_name: neuer_name.into(),
+            },
+        )
+    }
+
+    /// Im genannten Ordner einen Eintrag anlegen.
+    #[must_use]
+    pub fn anlegen(ordner: Ort, name: impl Into<String>, typ: Anlegetyp) -> Self {
+        Self::neu(
+            vec![ordner],
+            Fernart::Anlegen {
+                name: name.into(),
+                typ,
+            },
+        )
+    }
+
+    /// Die genannten Eintraege endgueltig entfernen.
+    #[must_use]
+    pub fn loeschen(quellen: Vec<Ort>) -> Self {
+        Self::neu(quellen, Fernart::Loeschen)
+    }
+
     fn neu(quellen: Vec<Ort>, art: Fernart) -> Self {
         Self {
             quellen,
@@ -157,11 +228,18 @@ impl Fernauftrag {
         self
     }
 
-    /// Der Zielordner. Vollstaendig ueber [`Fernart`] und ohne Auffangzweig.
+    /// Der Zielordner, sofern die Art einen hat. Vollstaendig ueber
+    /// [`Fernart`] und ohne Auffangzweig.
+    ///
+    /// Allein Kopieren und Verschieben haben einen. Das Umbenennen bleibt im
+    /// Ordner seiner Quelle, das Anlegen entsteht in der Quelle selbst, und
+    /// das Loeschen hat kein Ziel; `None` ist bei keiner der drei ein
+    /// vergessener Fall, wie bei `Auftrag::zielordner`.
     #[must_use]
-    pub fn zielordner(&self) -> &Ort {
+    pub fn zielordner(&self) -> Option<&Ort> {
         match &self.art {
-            Fernart::Kopieren { ziel } | Fernart::Verschieben { ziel } => ziel,
+            Fernart::Kopieren { ziel } | Fernart::Verschieben { ziel } => Some(ziel),
+            Fernart::Umbenennen { .. } | Fernart::Anlegen { .. } | Fernart::Loeschen => None,
         }
     }
 }
@@ -225,14 +303,17 @@ pub(crate) fn starten(auftrag: Fernauftrag) -> Lauf {
 }
 
 /// Arbeitet einen Fernauftrag Quelle fuer Quelle ab.
+///
+/// Der Zielordner wird einmal vor der Schleife zur [`Stelle`], damit jede
+/// Quelle dasselbe Gespraech an ihm nimmt.
 fn ausfuehren(pfand: &Fernfaden, auftrag: &Fernauftrag, steuerung: &mut Steuerung) -> Abschluss {
-    let zielordner = Stelle::von(auftrag.zielordner());
+    let zielordner = auftrag.zielordner().map(Stelle::von);
     for quelle in &auftrag.quellen {
         if steuerung.abgebrochen() {
             return Abschluss::Abgebrochen;
         }
         let quelle = Stelle::von(quelle);
-        if einen_abarbeiten(pfand, &auftrag.art, &quelle, &zielordner, steuerung)
+        if einen_abarbeiten(pfand, &auftrag.art, &quelle, zielordner.as_ref(), steuerung)
             == Ablauf::Abgebrochen
         {
             return Abschluss::Abgebrochen;
@@ -245,11 +326,41 @@ fn ausfuehren(pfand: &Fernfaden, auftrag: &Fernauftrag, steuerung: &mut Steuerun
     }
 }
 
-/// Eine Quelle: Angaben holen, Ziel rechnen, die zwei Faelle abweisen, in
-/// denen es keines gibt, und dann nach der Art verzweigen.
+/// Eine Quelle, nach der Art verzweigt. Vollstaendig ueber [`Fernart`] und
+/// ohne Auffangzweig.
 fn einen_abarbeiten(
     pfand: &Fernfaden,
     art: &Fernart,
+    quelle: &Stelle,
+    zielordner: Option<&Stelle>,
+    steuerung: &mut Steuerung,
+) -> Ablauf {
+    let verschieben = match art {
+        Fernart::Kopieren { .. } => false,
+        Fernart::Verschieben { .. } => true,
+        Fernart::Umbenennen { neuer_name } => {
+            return eintrag_umbenennen(pfand, quelle, neuer_name, steuerung);
+        }
+        Fernart::Anlegen { name, typ } => {
+            return eintrag_anlegen(pfand, quelle, name, *typ, steuerung);
+        }
+        Fernart::Loeschen => return eintrag_loeschen(pfand, quelle, steuerung),
+    };
+    // `zielordner` steht genau dann, wenn die Art einen hat
+    // ([`Fernauftrag::zielordner`]); der Fall ist trotzdem behandelt, wie die
+    // fehlenden Angaben je Stelle in `super::einen_abarbeiten`.
+    let Some(zielordner) = zielordner else {
+        steuerung.ueberspringen(&quelle.bezeichnung(), text(Text::VorgangZielordnerFehlt));
+        return Ablauf::Weiter;
+    };
+    einen_uebertragen(pfand, verschieben, quelle, zielordner, steuerung)
+}
+
+/// Eine Quelle kopieren oder verschieben: Angaben holen, Ziel rechnen, die
+/// zwei Faelle abweisen, in denen es keines gibt, und dann verzweigen.
+fn einen_uebertragen(
+    pfand: &Fernfaden,
+    verschieben: bool,
     quelle: &Stelle,
     zielordner: &Stelle,
     steuerung: &mut Steuerung,
@@ -284,11 +395,145 @@ fn einen_abarbeiten(
         steuerung.ueberspringen(&bezeichnung, text(Text::VorgangZielLiegtInDerQuelle));
         return Ablauf::Weiter;
     }
-    match art {
-        Fernart::Kopieren { .. } => eintrag_kopieren(pfand, quelle, &angaben, ziel, steuerung),
-        Fernart::Verschieben { .. } => {
-            eintrag_verschieben(pfand, quelle, &angaben, ziel, steuerung)
+    if verschieben {
+        eintrag_verschieben(pfand, quelle, &angaben, ziel, steuerung)
+    } else {
+        eintrag_kopieren(pfand, quelle, &angaben, ziel, steuerung)
+    }
+}
+
+// ----------------------------------------------------------------------
+// Umbenennen, Anlegen, Loeschen (Entscheidungen 10 bis 12)
+// ----------------------------------------------------------------------
+
+/// Benennt die Quelle in ihrem Ordner um.
+///
+/// **Ob der neue Name frei ist, beantwortet das `RENAME` selbst**: der Entwurf
+/// von SFTP v3 laesst es an einem vorhandenen Ziel scheitern, und der Server
+/// des Systems haelt das (`rename_weist_ein_vorhandenes_ziel_ab` in
+/// `tests/fern.rs`). Eine Vorabfrage gibt es nicht, wie lokal in
+/// [`super::umbenennen()`]. Eine lokale Quelle geht ueber genau diesen lokalen
+/// Weg; die Oberflaeche stellt einen solchen Auftrag nicht, er ist aber
+/// baubar und tut dann dasselbe wie lokal.
+fn eintrag_umbenennen(
+    pfand: &Fernfaden,
+    quelle: &Stelle,
+    neuer_name: &str,
+    steuerung: &mut Steuerung,
+) -> Ablauf {
+    let bezeichnung = quelle.bezeichnung();
+    if let Err(fehler) = name_pruefen(neuer_name) {
+        steuerung.ueberspringen(&bezeichnung, fehler.grund());
+        return Ablauf::Weiter;
+    }
+    match quelle.umbenennen_in(pfand, neuer_name) {
+        Ok(()) => steuerung.eintrag_fertig(&bezeichnung, 0),
+        Err(fehler) => {
+            let ziel = quelle.geschwister(neuer_name);
+            steuerung.ueberspringen(&bezeichnung, namensgrund(pfand, ziel.as_ref(), &fehler));
         }
+    }
+    Ablauf::Weiter
+}
+
+/// Legt im Ordner `ordner` einen Eintrag namens `name` an, ausschliessend.
+///
+/// Ein vorhandener Name laesst das Anlegen selbst scheitern, wie lokal in
+/// [`super::ordner_anlegen`] und [`super::datei_anlegen`]; der Bericht nennt
+/// den neuen Eintrag, gelungen wie gescheitert.
+fn eintrag_anlegen(
+    pfand: &Fernfaden,
+    ordner: &Stelle,
+    name: &str,
+    typ: Anlegetyp,
+    steuerung: &mut Steuerung,
+) -> Ablauf {
+    let Some(ziel) = ordner.kind(name) else {
+        steuerung.ueberspringen(
+            &ordner.bezeichnung().join(name),
+            namensgrund_ohne_ziel(name),
+        );
+        return Ablauf::Weiter;
+    };
+    let bezeichnung = ziel.bezeichnung();
+    if let Err(fehler) = name_pruefen(name) {
+        steuerung.ueberspringen(&bezeichnung, fehler.grund());
+        return Ablauf::Weiter;
+    }
+    let angelegt = match typ {
+        Anlegetyp::Ordner => ziel.ordner_anlegen(pfand),
+        Anlegetyp::Datei => ziel
+            .datei_anlegen(pfand)
+            .and_then(|schreibziel| schreibziel.schliessen(pfand)),
+    };
+    match angelegt {
+        Ok(()) => steuerung.eintrag_fertig(&bezeichnung, 0),
+        Err(fehler) => {
+            steuerung.ueberspringen(&bezeichnung, namensgrund(pfand, Some(&ziel), &fehler));
+        }
+    }
+    Ablauf::Weiter
+}
+
+/// Der Grund, wenn ein Name keine einzelne Komponente ist und sich deshalb
+/// kein Pfad zu ihm bauen laesst: der der Namenspruefung, sonst der
+/// allgemeine.
+fn namensgrund_ohne_ziel(name: &str) -> String {
+    match name_pruefen(name) {
+        Err(fehler) => fehler.grund().to_owned(),
+        Ok(()) => text(Text::VorgangPfadBenenntKeinenEintrag).to_owned(),
+    }
+}
+
+/// Entfernt die Quelle endgueltig, einen Ordner samt Inhalt.
+///
+/// Haelt am ersten Fehler an, wie [`super::loeschen::baum_entfernen`]: was
+/// stehen blieb, steht mit seinem Grund im Bericht, und die naechste Quelle
+/// kommt dran. Die Angaben vorweg liefern die Groesse fuer den Bericht und
+/// melden eine Quelle, die es nicht mehr gibt, mit ihrem Grund.
+fn eintrag_loeschen(pfand: &Fernfaden, quelle: &Stelle, steuerung: &mut Steuerung) -> Ablauf {
+    let bezeichnung = quelle.bezeichnung();
+    let angaben = match quelle.angaben(pfand) {
+        Ok(angaben) => angaben,
+        Err(fehler) => {
+            steuerung.ueberspringen(&bezeichnung, grund(&fehler));
+            return Ablauf::Weiter;
+        }
+    };
+    match quelle.baum_entfernen(pfand) {
+        Ok(()) => steuerung.eintrag_fertig(&bezeichnung, angaben.groesse),
+        Err(fehler) => steuerung.ueberspringen(&bezeichnung, grund(&fehler)),
+    }
+    Ablauf::Weiter
+}
+
+/// Der Grund, wenn Umbenennen oder Anlegen scheitert.
+///
+/// **SFTP v3 kennt keinen Code fuer „vorhanden“**: der Server des Systems
+/// antwortet auf ein vergebenes Ziel mit dem allgemeinen `FAILURE`. Gefragt
+/// wird deshalb danach `LSTAT` am Ziel, wie beim Kopieren; steht dort ein
+/// Eintrag, ist der Grund der von [`super::grund`] fuer `AlreadyExists`, also
+/// genau der, den ein lokales Scheitern an einem vergebenen Namen traegt. Die
+/// zwei Codes, die etwas anderes sagen, „gibt es nicht“ und „keine Rechte“,
+/// behalten ihren eigenen Grund. Lokal sagt das System es selbst.
+fn namensgrund(pfand: &Fernfaden, ziel: Option<&Stelle>, fehler: &Fehlschlag) -> String {
+    let vergeben = match fehler {
+        Fehlschlag::Fern(fern) => {
+            !fern.ist_status(status::NO_SUCH_FILE)
+                && !fern.ist_status(status::PERMISSION_DENIED)
+                && ziel.is_some_and(|ziel| ziel.angaben(pfand).is_ok())
+        }
+        Fehlschlag::Lokal(_)
+        | Fehlschlag::NameOhneUtf8
+        | Fehlschlag::KeineGewoehnlicheDatei
+        | Fehlschlag::KeineVerknuepfung
+        | Fehlschlag::KeinEintrag
+        | Fehlschlag::Abgebrochen => false,
+    };
+    if vergeben {
+        super::grund(&io::Error::from(io::ErrorKind::AlreadyExists))
+    } else {
+        grund(fehler)
     }
 }
 
@@ -805,6 +1050,8 @@ enum Fehlschlag {
     KeineGewoehnlicheDatei,
     /// Der Server legt keine Verknuepfung an.
     KeineVerknuepfung,
+    /// Der Pfad benennt keinen Eintrag, etwa die Wurzel des Servers.
+    KeinEintrag,
     /// Der Nutzer hat abgebrochen.
     Abgebrochen,
 }
@@ -818,6 +1065,7 @@ impl Fehlschlag {
             Fehlschlag::NameOhneUtf8
             | Fehlschlag::KeineGewoehnlicheDatei
             | Fehlschlag::KeineVerknuepfung
+            | Fehlschlag::KeinEintrag
             | Fehlschlag::Abgebrochen => false,
         }
     }
@@ -828,6 +1076,7 @@ impl Fehlschlag {
             Fehlschlag::NameOhneUtf8
             | Fehlschlag::KeineGewoehnlicheDatei
             | Fehlschlag::KeineVerknuepfung
+            | Fehlschlag::KeinEintrag
             | Fehlschlag::Abgebrochen => true,
             Fehlschlag::Lokal(_) | Fehlschlag::Fern(_) => false,
         }
@@ -846,6 +1095,7 @@ fn grund(fehler: &Fehlschlag) -> String {
         Fehlschlag::NameOhneUtf8 => text(Text::VorgangFernNameOhneUtf8).to_owned(),
         Fehlschlag::KeineGewoehnlicheDatei => text(Text::VorgangKeineGewoehnlicheDatei).to_owned(),
         Fehlschlag::KeineVerknuepfung => text(Text::VorgangFernKeineVerknuepfung).to_owned(),
+        Fehlschlag::KeinEintrag => text(Text::VorgangPfadBenenntKeinenEintrag).to_owned(),
         // Ein Abbruch endet den Vorgang und kommt nicht in die Abschlussliste;
         // der Zweig steht, weil die Unterscheidung vollstaendig ist.
         Fehlschlag::Abgebrochen => Fernfehler::Abgebrochen.to_string(),
@@ -1261,6 +1511,28 @@ impl Stelle {
             (Stelle::Fern { .. }, Stelle::Fern { .. })
             | (Stelle::Lokal(_), _)
             | (Stelle::Fern { .. }, Stelle::Lokal(_)) => None,
+        }
+    }
+
+    /// Benennt diesen Eintrag in seinem Ordner um: lokal ueber
+    /// [`super::umbenennen()`], das ein vorhandenes Ziel abweist, fern ueber
+    /// `RENAME`, das es ebenso abweist (Entscheidung 10).
+    fn umbenennen_in(&self, pfand: &Fernfaden, neuer_name: &str) -> Result<(), Fehlschlag> {
+        match self {
+            Stelle::Lokal(pfad) => umbenennen(pfad, neuer_name)
+                .map(|_neuer_pfad| ())
+                .map_err(Fehlschlag::Lokal),
+            Stelle::Fern {
+                gespraech, pfad, ..
+            } => {
+                let zielpfad = pfad
+                    .aufwaerts()
+                    .and_then(|oben| oben.verbinden(neuer_name))
+                    .ok_or(Fehlschlag::KeinEintrag)?;
+                gespraech
+                    .rename(pfand, pfad.als_text(), zielpfad.als_text())
+                    .map_err(Fehlschlag::Fern)
+            }
         }
     }
 

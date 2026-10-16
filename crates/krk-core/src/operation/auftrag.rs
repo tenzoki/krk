@@ -30,6 +30,20 @@ pub enum Art {
     },
     /// In den Papierkorb des Systems raeumen (C4, Taste Delete).
     InDenPapierkorb,
+    /// Endgueltig loeschen, Ordner samt Inhalt, an einem Ort ohne Papierkorb
+    /// (Entscheidung 12 des Plans der sftp-Ordner).
+    ///
+    /// **Die Oberflaeche stellt diesen Auftrag allein nach ihrer eigenen
+    /// Rueckfrage, die „endgueltig“ ausspricht**, und allein fuer einen
+    /// angezeigten Ordner, dessen Datentraeger keinen Papierkorb fuehrt
+    /// (`decisions/261016-1948-darf-krk-an-einem-ort-ohne-papierkorb-nach-rueckfrage-endgueltig-loeschen.md`
+    /// im Paket `261016-1945-sftp-ordner-im-dateifenster-wie-lokal`). Ein Ort
+    /// mit Papierkorb raeumt weiter ueber [`Art::InDenPapierkorb`].
+    ///
+    /// Jede Quelle geht ueber `loeschen::baum_entfernen` und haelt an ihrem
+    /// ersten Fehler an; der Grund steht in der Abschlussliste, und die naechste
+    /// Quelle kommt dran.
+    EndgueltigLoeschen,
     /// Im Stapel umbenennen, jeder Eintrag in seinem eigenen Ordner (C4).
     ///
     /// Die Regel, aus der die neuen Namen entstehen, rechnet die Oberflaeche;
@@ -177,6 +191,12 @@ impl Auftrag {
         Self::neu(quellen, Art::InDenPapierkorb)
     }
 
+    /// Endgueltig loeschen, an einem Ort ohne Papierkorb.
+    #[must_use]
+    pub fn endgueltig_loeschen(quellen: Vec<PathBuf>) -> Self {
+        Self::neu(quellen, Art::EndgueltigLoeschen)
+    }
+
     /// Im Stapel umbenennen (C4).
     ///
     /// Genommen werden Paare aus altem Pfad und neuem Namen, damit die beiden
@@ -254,6 +274,7 @@ impl Auftrag {
             Art::Kopieren { .. }
             | Art::Verschieben { .. }
             | Art::InDenPapierkorb
+            | Art::EndgueltigLoeschen
             | Art::Zippen { .. }
             | Art::Entpacken { .. } => None,
         }
@@ -269,6 +290,7 @@ impl Auftrag {
             Art::Kopieren { .. }
             | Art::Verschieben { .. }
             | Art::InDenPapierkorb
+            | Art::EndgueltigLoeschen
             | Art::UmbenennenImStapel { .. }
             | Art::Zippen { .. }
             | Art::Duplizieren { .. } => None,
@@ -316,6 +338,7 @@ impl Auftrag {
         match &self.art {
             Art::Kopieren { ziel } | Art::Verschieben { ziel } => Some(ziel),
             Art::InDenPapierkorb
+            | Art::EndgueltigLoeschen
             | Art::UmbenennenImStapel { .. }
             | Art::Zippen { .. }
             | Art::Entpacken { .. }

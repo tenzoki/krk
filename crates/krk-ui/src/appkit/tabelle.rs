@@ -2400,6 +2400,13 @@ impl DateifensterQuelle {
         operationen::betroffene_namen(tabs.aktiver().modell())
     }
 
+    /// Die Namen wie [`Self::betroffene_namen`] und dazu, wie viele davon
+    /// Ordner sind ([`operationen::betroffene_namen_und_ordnerzahl`]).
+    pub fn betroffene_namen_und_ordnerzahl(&self) -> (Vec<String>, usize) {
+        let tabs = self.ivars().tabs.borrow();
+        operationen::betroffene_namen_und_ordnerzahl(tabs.aktiver().modell())
+    }
+
     /// Worauf der Unzip-Eintrag des Kontextmenues in diesem Dateifenster wirkt
     /// (Runde 17).
     ///

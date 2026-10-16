@@ -23,8 +23,8 @@ use std::time::{Duration, UNIX_EPOCH};
 use gemeinsam::{Pruefordner, betriebscode, quelldateien};
 use krk_core::fern::{Fernpfad, Fernzugang, Kanalplan, Serverkennung, faden};
 use krk_core::operation::{
-    Abschluss, Bericht, Fernauftrag, Konfliktantwort, Konfliktentscheid, Konfliktregel, Meldung,
-    OhnePapierkorb, starten,
+    Abschluss, Anlegetyp, Bericht, Fernauftrag, Konfliktantwort, Konfliktentscheid, Konfliktregel,
+    Meldung, OhnePapierkorb, fehlerart, starten,
 };
 use krk_core::ort::{FernerOrt, Ort};
 
@@ -419,6 +419,164 @@ fn eine_verknuepfung_kommt_mit_ihrem_ziel_an() {
             "{ziel:?}"
         );
     }
+}
+
+/// Ein ferner Eintrag wird ueber `RENAME` umbenannt und behaelt dabei seinen
+/// Inode; ein vergebener Name scheitert, laesst beide Eintraege stehen und
+/// traegt den Grund, den lokal `AlreadyExists` traegt (Entscheidung 10).
+#[test]
+fn ein_ferner_name_wird_umbenannt_und_ein_vergebener_nicht_ueberschrieben() {
+    let ordner = Pruefordner::neu("fern-umbenennen");
+    let alt = ordner.datei("alt.txt", b"alt");
+    let inode = fs::metadata(&alt).expect("alt.txt").ino();
+    let server = zugang("server.test");
+
+    let ausgang = fahren(
+        Fernauftrag::umbenennen(fern(&server, &alt), "neu.txt"),
+        Konfliktantwort::Abbrechen,
+    );
+    ohne_uebersprungene(&ausgang.bericht);
+    assert_eq!(ausgang.bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(ausgang.bericht.eintraege, 1);
+    assert!(ausgang.konflikte.is_empty(), "das Umbenennen fragt nicht");
+    assert!(!alt.exists(), "der alte Name steht noch");
+    assert_eq!(
+        fs::metadata(ordner.pfad().join("neu.txt"))
+            .expect("neu.txt")
+            .ino(),
+        inode,
+        "umbenannt und nicht kopiert"
+    );
+
+    let anderer = ordner.datei("anderer.txt", b"anderer");
+    let ausgang = fahren(
+        Fernauftrag::umbenennen(fern(&server, &anderer), "neu.txt"),
+        Konfliktantwort::Ueberschreiben,
+    );
+    assert!(ausgang.konflikte.is_empty(), "das Umbenennen fragt nicht");
+    assert_eq!(ausgang.bericht.eintraege, 0);
+    let [eintrag] = ausgang.bericht.uebersprungen.as_slice() else {
+        panic!(
+            "nicht genau ein Eintrag im Bericht: {:?}",
+            ausgang.bericht.uebersprungen
+        );
+    };
+    assert_eq!(
+        fehlerart(&eintrag.grund),
+        Some(std::io::ErrorKind::AlreadyExists),
+        "der Grund ist nicht der des vergebenen Namens: {}",
+        eintrag.grund
+    );
+    assert_eq!(fs::read(&anderer).expect("anderer.txt"), b"anderer");
+    assert_eq!(
+        fs::read(ordner.pfad().join("neu.txt")).expect("neu.txt"),
+        b"alt",
+        "der vergebene Name wurde ueberschrieben"
+    );
+}
+
+/// Ein ferner Ordner und eine ferne leere Datei entstehen; ein vergebener
+/// Name laesst das Anlegen scheitern, ohne den vorhandenen Eintrag
+/// anzufassen, mit dem Grund des vergebenen Namens (Entscheidung 11).
+#[test]
+fn ein_ferner_ordner_und_eine_ferne_datei_entstehen_und_ein_vergebener_name_scheitert() {
+    let ordner = Pruefordner::neu("fern-anlegen");
+    let server = zugang("server.test");
+    let ort = fern(&server, ordner.pfad());
+
+    for (name, typ) in [
+        ("Neuer Ordner", Anlegetyp::Ordner),
+        ("neu.txt", Anlegetyp::Datei),
+    ] {
+        let ausgang = fahren(
+            Fernauftrag::anlegen(ort.clone(), name, typ),
+            Konfliktantwort::Abbrechen,
+        );
+        ohne_uebersprungene(&ausgang.bericht);
+        assert_eq!(ausgang.bericht.eintraege, 1, "{name}");
+        let angaben = fs::symlink_metadata(ordner.pfad().join(name)).expect(name);
+        match typ {
+            Anlegetyp::Ordner => assert!(angaben.is_dir(), "{name} ist kein Ordner"),
+            Anlegetyp::Datei => {
+                assert!(angaben.is_file(), "{name} ist keine Datei");
+                assert_eq!(angaben.len(), 0, "{name} ist nicht leer");
+            }
+        }
+    }
+
+    let vorhanden = ordner.datei("vorhanden.txt", b"inhalt");
+    for typ in [Anlegetyp::Ordner, Anlegetyp::Datei] {
+        let ausgang = fahren(
+            Fernauftrag::anlegen(ort.clone(), "vorhanden.txt", typ),
+            Konfliktantwort::Ueberschreiben,
+        );
+        assert!(ausgang.konflikte.is_empty(), "das Anlegen fragt nicht");
+        assert_eq!(ausgang.bericht.eintraege, 0, "{typ:?}");
+        let [eintrag] = ausgang.bericht.uebersprungen.as_slice() else {
+            panic!(
+                "{typ:?}: nicht genau ein Eintrag im Bericht: {:?}",
+                ausgang.bericht.uebersprungen
+            );
+        };
+        assert_eq!(
+            fehlerart(&eintrag.grund),
+            Some(std::io::ErrorKind::AlreadyExists),
+            "{typ:?}: der Grund ist nicht der des vergebenen Namens: {}",
+            eintrag.grund
+        );
+        assert_eq!(
+            fs::read(&vorhanden).expect("vorhanden.txt"),
+            b"inhalt",
+            "{typ:?}"
+        );
+    }
+}
+
+/// Ein ferner Baum wird endgueltig entfernt, Ordner samt Inhalt, und eine
+/// Quelle, die es nicht mehr gibt, steht mit ihrem Grund im Bericht, ohne die
+/// naechste aufzuhalten (Entscheidung 12).
+#[test]
+fn ein_ferner_baum_wird_endgueltig_entfernt() {
+    let ordner = Pruefordner::neu("fern-loeschen");
+    let tief = ordner.ordner("baum/unter/leer");
+    fs::write(ordner.pfad().join("baum/unter/a.bin"), muster(70_000)).expect("a.bin");
+    let baum = ordner.pfad().join("baum");
+    let datei = ordner.datei("einzeln.txt", b"x");
+    let zeiger = ordner.verknuepfung("zeiger", &datei);
+    let bleibt = ordner.datei("bleibt.txt", b"bleibt");
+    let fehlt = ordner.pfad().join("fehlt.txt");
+    let server = zugang("server.test");
+
+    let ausgang = fahren(
+        Fernauftrag::loeschen(vec![
+            fern(&server, &baum),
+            fern(&server, &fehlt),
+            fern(&server, &zeiger),
+            fern(&server, &datei),
+        ]),
+        Konfliktantwort::Abbrechen,
+    );
+
+    assert_eq!(ausgang.bericht.abschluss, Abschluss::Fertig);
+    assert_eq!(ausgang.bericht.eintraege, 3);
+    assert!(ausgang.konflikte.is_empty(), "das Loeschen fragt nicht");
+    assert!(!tief.exists() && !baum.exists(), "der Baum steht noch");
+    assert!(
+        fs::symlink_metadata(&zeiger).is_err(),
+        "die Verknuepfung steht noch"
+    );
+    assert!(!datei.exists(), "die Datei steht noch");
+    assert!(bleibt.exists(), "ein nicht gewaehlter Eintrag ist fort");
+    let [eintrag] = ausgang.bericht.uebersprungen.as_slice() else {
+        panic!(
+            "nicht genau ein Eintrag im Bericht: {:?}",
+            ausgang.bericht.uebersprungen
+        );
+    };
+    assert_eq!(
+        eintrag.pfad,
+        PathBuf::from(format!("kai@server.test:{}", fehlt.display()))
+    );
 }
 
 /// Der lokale Auftrag ist unveraendert: `Auftrag`, `Art`, der Rumpf von

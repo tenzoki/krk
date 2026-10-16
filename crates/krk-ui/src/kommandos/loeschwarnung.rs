@@ -1,5 +1,30 @@
 //! Die eine Rueckfrage vor dem Raeumen in den Papierkorb: **ob sie erscheint**,
-//! und **was in ihr steht** (C2, C3, C4).
+//! und **was in ihr steht** (C2, C3, C4); seit dem 261016 in zweiter Gestalt
+//! auch die Rueckfrage vor dem endgueltigen Loeschen an einem Ort ohne
+//! Papierkorb.
+//!
+//! # Ein Ort ohne Papierkorb fuehrt zur endgueltigen Rueckfrage
+//!
+//! Bis zum 261016 endete die dritte Stufe ohne Papierkorb in einer Meldung,
+//! „es wurde nichts geloescht; im Finder loeschen“. Seit der Nutzer
+//! entschieden hat, dass KRK dort nach einer Rueckfrage, die das Endgueltige
+//! ausspricht, loeschen darf
+//! (`decisions/261016-1948-darf-krk-an-einem-ort-ohne-papierkorb-nach-rueckfrage-endgueltig-loeschen.md`
+//! im Paket `261016-1945-sftp-ordner-im-dateifenster-wie-lokal`), fuehrt sie
+//! zu [`Vorstufe::EndgueltigeRueckfrage`]. **Die Reihenfolge der Stufen bleibt,
+//! und auch, wann die teure Tatsache anfaellt**; geaendert hat sich allein der
+//! Ausgang der dritten Stufe ohne Papierkorb. Die Rueckfrage dort ist dasselbe
+//! Blatt in der zweiten Gestalt: die Frage sagt „endgueltig loeschen“, die
+//! Erlaeuterung sagt, dass der Ort keinen Papierkorb hat und nichts
+//! zurueckzuholen ist ([`endgueltig_frage_und_erlaeuterung`]), und die
+//! ausfuehrende Schaltflaeche heisst „Endgueltig loeschen“ und ist als
+//! zerstoerend gekennzeichnet. Ein Ort mit Papierkorb geht unveraendert den Weg
+//! in den Papierkorb.
+//!
+//! **Ein ferner Ort hat keinen Papierkorb, und das steht am Wert**: der
+//! Rumpf, der die Tatsachen beschafft, beantwortet die dritte Frage fuer ihn
+//! ohne Systemaufruf mit [`Erlaubnisbefund::Nein`]. Die Regel hier kennt den
+//! Unterschied nicht und braucht ihn nicht.
 //!
 //! **Keine Zeile AppKit.** Wie im ganzen Verzeichnis [`crate::kommandos`] steht
 //! hier keine `use objc2`-Zeile. Das Blatt selbst baut
@@ -9,16 +34,15 @@
 //! ```text
 //!  vorgang_laeuft ─┐
 //!  auswahl_leer ───┼──> vor_der_rueckfrage() ──> Vorstufe
-//!  || papierkorb ──┘                              ├─ Rueckfrage ──> das Blatt
-//!     (faul)                                      └─ sonst ──> eine Meldung
+//!  || papierkorb ──┘                              ├─ Rueckfrage ──────────> das Blatt
+//!     (faul)                                      ├─ EndgueltigeRueckfrage ─> das Blatt, zweite Gestalt
+//!                                                 └─ sonst ──> eine Meldung
 //!
 //!  Loeschziel ──> warngruende() ──> [Warngrund], gerangt
 //!
 //!  auswahl ──┐
-//!  ordner ───┼──> frage_und_erlaeuterung() ──> (Frage, Erlaeuterung)
-//!  gruende ──┘
-//!
-//!            ohne_papierkorb() ──> die Meldung der dritten Stufe
+//!  ordner ───┼──> frage_und_erlaeuterung() ─────────────> (Frage, Erlaeuterung)
+//!  gruende ──┘    endgueltig_frage_und_erlaeuterung() ──> (Frage, Erlaeuterung)
 //!
 //!  bestaetigt ───┐
 //!  traegt_auswahl┼──> nach_der_rueckfrage() ──> Nachstufe
@@ -41,11 +65,11 @@
 //! Tatsachen und fuehrt aus, was hier entschieden ist.
 //!
 //! **Sie steht in diesem Modul und nicht in einem neunten daneben**, weil „ob
-//! die Rueckfrage erscheint" und „was in ihr steht" dieselbe Sache sind: drei der
-//! vier Ausgaenge sind Meldungen, und eine davon entsteht zwei Funktionen
-//! weiter unten in [`ohne_papierkorb`]. Ein eigenes Modul trennte die
-//! Entscheidung von ihrem Wortlaut, und wer den einen Loeschweg lesen will,
-//! muesste beide Dateien nebeneinanderlegen.
+//! die Rueckfrage erscheint" und „was in ihr steht" dieselbe Sache sind: zwei
+//! der vier Ausgaenge sind Rueckfragen, und ihr Wortlaut entsteht weiter unten
+//! in [`frage_und_erlaeuterung`] und [`endgueltig_frage_und_erlaeuterung`]. Ein
+//! eigenes Modul trennte die Entscheidung von ihrem Wortlaut, und wer den einen
+//! Loeschweg lesen will, muesste beide Dateien nebeneinanderlegen.
 //!
 //! # Drei Tatsachen, fuenf Stufen
 //!
@@ -217,10 +241,10 @@
 //!
 //! Jedes Stueck dieses Moduls hat genau einen Aufrufer, und alle sitzen im
 //! Kommandoweg von `crate::appkit::anwendung`: der gemeinsame Rumpf
-//! `loeschen_nach_rueckfrage` ruft [`vor_der_rueckfrage`] und im dritten ihrer
-//! vier Zweige [`ohne_papierkorb`]; im vierten ruft er
-//! `Anwendungsdelegierter::loeschtexte`, und **dort** stehen [`warngruende`]
-//! und [`frage_und_erlaeuterung`]; der Abschluss des Blattes ruft
+//! `loeschen_nach_rueckfrage` ruft [`vor_der_rueckfrage`]; in ihren beiden
+//! Zweigen mit Blatt ruft er `Anwendungsdelegierter::loeschtexte`, und **dort**
+//! stehen [`warngruende`], [`frage_und_erlaeuterung`] und
+//! [`endgueltig_frage_und_erlaeuterung`]; der Abschluss des Blattes ruft
 //! [`nach_der_rueckfrage`]. Die Aufruferzaehlung
 //! `die_stufenregel_hat_genau_einen_aufrufer` haelt die Zahl fuer die Regel
 //! fest; sie steht in der Form von `die_regel_hat_genau_einen_aufrufer` in
@@ -284,12 +308,12 @@ use super::operationen::{Auswahl, ordner_text, pfadtext};
 /// Welche Stufe ein Loeschbefehl erreicht, bevor die Rueckfrage erscheint (C2,
 /// C4).
 ///
-/// Vier Ausgaenge und kein Wahrheitswert mit Beipackzettel: drei von ihnen
-/// halten den Befehl an und nennen dem Nutzer den Grund, der vierte zeigt das
-/// Blatt. Sie stehen als Aufzaehlung da, weil die drei Meldungen **nicht
-/// dieselbe** sind: „es laeuft schon etwas", „es ist nichts ausgewaehlt" und
-/// „hier gibt es keinen Papierkorb" sagen dem Nutzer drei verschiedene Dinge,
-/// und ein gemeinsames „nichts geschehen" verschwiege zwei davon.
+/// Vier Ausgaenge und kein Wahrheitswert mit Beipackzettel: zwei von ihnen
+/// halten den Befehl an und nennen dem Nutzer den Grund, zwei zeigen das Blatt,
+/// jeder in seiner Gestalt. Sie stehen als Aufzaehlung da, weil die zwei
+/// Meldungen **nicht dieselbe** sind und die zwei Blaetter nicht dasselbe
+/// fragen: „in den Papierkorb raeumen?" hat einen Rueckweg, „endgueltig
+/// loeschen?" keinen.
 ///
 /// Die Fallunterscheidungen darueber tragen keinen Auffangzweig. Eine fuenfte
 /// Stufe haelt damit den Bau an und erzwingt eine bewusste Einordnung in die
@@ -304,9 +328,11 @@ pub enum Vorstufe {
     /// haette keinen Gegenstand.
     NichtsAusgewaehlt,
     /// Das Ziel fuehrt keinen Papierkorb, oder es liess sich nicht feststellen,
-    /// ob es einen fuehrt. Kein Blatt, kein Auftrag, und die Meldung steht in
-    /// [`ohne_papierkorb`] (C4).
-    OhnePapierkorb,
+    /// ob es einen fuehrt: das Blatt erscheint in seiner zweiten Gestalt, die
+    /// „endgueltig“ ausspricht, mit „Abbrechen" vorbelegt. Erst seine
+    /// Bestaetigung stellt einen Auftrag, und der loescht endgueltig. Bis zum
+    /// 261016 endete diese Stufe in einer Meldung ohne Blatt.
+    EndgueltigeRueckfrage,
     /// Alle drei Pruefungen sind bestanden: das Blatt erscheint, mit
     /// „Abbrechen" vorbelegt. Erst seine Bestaetigung stellt einen Auftrag.
     Rueckfrage,
@@ -321,8 +347,8 @@ pub enum Vorstufe {
 /// | ja | gleichgueltig | **ungefragt** | [`Vorstufe::VorgangLaeuft`] |
 /// | nein | ja | **ungefragt** | [`Vorstufe::NichtsAusgewaehlt`] |
 /// | nein | nein | [`Erlaubnisbefund::Ja`] | [`Vorstufe::Rueckfrage`] |
-/// | nein | nein | [`Erlaubnisbefund::Nein`] | [`Vorstufe::OhnePapierkorb`] |
-/// | nein | nein | [`Erlaubnisbefund::Unentschieden`] | [`Vorstufe::OhnePapierkorb`] |
+/// | nein | nein | [`Erlaubnisbefund::Nein`] | [`Vorstufe::EndgueltigeRueckfrage`] |
+/// | nein | nein | [`Erlaubnisbefund::Unentschieden`] | [`Vorstufe::EndgueltigeRueckfrage`] |
 ///
 /// **Die fuenf Zeilen decken alle zwoelf Kombinationen ab** — zwei mal zwei mal
 /// drei —, und die Fallunterscheidung ist damit ueberschneidungsfrei und
@@ -353,14 +379,17 @@ pub enum Vorstufe {
 ///   deren Ja folgenlos bleibt, gewoehnt den Nutzer daran, sie wegzudruecken,
 ///   und genau diese Gewoehnung ist der Gegner dieser Runde.
 /// - **Der Papierkorbtest steht ebenfalls vor dem Blatt** (C4). Er entscheidet,
-///   ob es einen Rueckweg gibt; erst danach ist die Rueckfrage die Frage, die
-///   sie zu sein behauptet. Danach gefragt, haette der Nutzer einem Raeumen
-///   zugestimmt, das nicht raeumen kann.
+///   ob es einen Rueckweg gibt und damit, **welches** Blatt erscheint; erst
+///   danach ist die Rueckfrage die Frage, die sie zu sein behauptet. Danach
+///   gefragt, haette der Nutzer einem Raeumen zugestimmt, das nicht raeumen
+///   kann, und der Vorgang haette endgueltig geloescht.
 ///
 /// Ein `papierkorb`, der [`Erlaubnisbefund::Unentschieden`] liefert, faellt mit
 /// [`Erlaubnisbefund::Nein`] zusammen: der Modulkopf sagt, warum, und `Ja` ist
 /// hier die Erlaubnis. Der Aufrufer, der den Ordnerpfad nicht aufloesen kann,
-/// liefert deshalb `Unentschieden` und loescht damit ebenfalls nicht.
+/// liefert deshalb `Unentschieden`, und der Nutzer wird gefragt, ob er
+/// endgueltig loeschen will, statt in den Papierkorb zu raeumen, den es
+/// vielleicht nicht gibt.
 ///
 /// `#[must_use]`, weil das stille Fallenlassen des Rueckgabewerts unbemerkt
 /// bliebe: die Funktion ist rein, aendert also nichts, und wer ihre Antwort
@@ -396,40 +425,12 @@ pub fn vor_der_rueckfrage(
                 // Erst jetzt steht fest, dass es einen Rueckweg gibt (C4).
                 Vorstufe::Rueckfrage
             } else {
-                // Kein Papierkorb, oder keine Auskunft darueber — beides haelt
-                // an.
-                Vorstufe::OhnePapierkorb
+                // Kein Papierkorb, oder keine Auskunft darueber: beides fuehrt
+                // zur Rueckfrage, die „endgueltig“ ausspricht (261016).
+                Vorstufe::EndgueltigeRueckfrage
             }
         }
     }
-}
-
-/// Die Meldung, wenn das Ziel keinen Papierkorb fuehrt (C4).
-///
-/// Drei Auskuenfte in einer Zeile, und jede ist noetig: **der Befund** (das Ziel
-/// fuehrt keinen Papierkorb), **die Folge** (es wurde nichts geloescht) und
-/// **der Ausweg** (im Finder). Ohne den Befund raetselt der Nutzer, warum der
-/// Befehl nichts tat; ohne die Folge muss er nachsehen, ob doch etwas weg ist;
-/// ohne den Ausweg bleibt er mit einem Eintrag stehen, den KRK nicht loeschen
-/// wird, und einen zweiten Weg dorthin fuehrt KRK seit dieser Runde nicht.
-///
-/// Die Zeile nennt „das Ziel" und nicht den Datentraeger: gefragt wurde der
-/// angezeigte Ordner, und ein Datentraeger ist ein Begriff, den der Nutzer erst
-/// auf den Ordner vor sich zurueckrechnen muesste.
-///
-/// **Der Wortlaut sagt nicht, dass es zwei Wege hierher gibt**, und das ist
-/// Absicht. [`Vorstufe::OhnePapierkorb`] entsteht aus [`Erlaubnisbefund::Nein`]
-/// wie aus [`Erlaubnisbefund::Unentschieden`], und die beiden unterscheiden sich darin, ob KRK
-/// das Ziel gefragt hat oder nicht fragen konnte. Fuer den Nutzer ist die Folge
-/// dieselbe, und die Statuszeile traegt eine Zeile; die Unterscheidung bleibt
-/// dort, wo sie etwas entscheidet, naemlich am Befund.
-///
-/// `#[must_use]`, weil das stille Fallenlassen unbemerkt bliebe: verloren ginge
-/// die einzige Auskunft ueber einen Befehl, der nichts getan hat, und die
-/// Statuszeile behielte den Text davor.
-#[must_use = "der Text ist die einzige Auskunft ueber einen Loeschbefehl, der nichts getan hat"]
-pub fn ohne_papierkorb() -> &'static str {
-    text(Text::LoeschenOhnePapierkorb)
 }
 
 // ---------------------------------------------------------------------------
@@ -907,6 +908,61 @@ pub fn frage_und_erlaeuterung(
     ordner: &Path,
     gruende: &[Warngrund],
 ) -> (String, String) {
+    texte_bauen(
+        Gestalt::Papierkorb,
+        auswahl.zahl(),
+        auswahl.ordner,
+        &pfadtext(ordner),
+        gruende,
+    )
+}
+
+/// Die beiden Zeilen der endgueltigen Rueckfrage an einem Ort ohne Papierkorb
+/// (Entscheidung 12 des Plans der sftp-Ordner).
+///
+/// **Dieselbe Bauform wie [`frage_und_erlaeuterung`] und keine zweite**: die
+/// Frage nennt die Zahl und den ersten Warngrund, die Erlaeuterung den Ort und
+/// die uebrigen Gruende und die Zahl der Ordner. Anders sind allein die zwei
+/// Wortlaute: die Frage sagt „endgueltig loeschen“ statt „in den Papierkorb
+/// raeumen“, und der erste Satz der Erlaeuterung sagt, dass der Ort keinen
+/// Papierkorb hat und das Geloeschte nicht zurueckzuholen ist.
+///
+/// **Der Ort kommt als Text herein und nicht als Pfad**, weil ein ferner Ort
+/// keinen Pfad auf dieser Platte hat; der Rufer baut ihn lokal ueber
+/// [`pfadtext`] und fern als `konto@rechner:/pfad`, die Schreibweise des
+/// Fenstertitels. Aus demselben Grund kommen Zahl und Ordnerzahl einzeln.
+#[must_use]
+pub fn endgueltig_frage_und_erlaeuterung(
+    zahl: usize,
+    ordnerzahl: usize,
+    ort: &str,
+    gruende: &[Warngrund],
+) -> (String, String) {
+    texte_bauen(Gestalt::Endgueltig, zahl, ordnerzahl, ort, gruende)
+}
+
+/// Welche der zwei Rueckfragen gebaut wird.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Gestalt {
+    /// In den Papierkorb raeumen.
+    Papierkorb,
+    /// Endgueltig loeschen, an einem Ort ohne Papierkorb.
+    Endgueltig,
+}
+
+/// Der eine Bau beider Rueckfragen; die zwei oeffentlichen Funktionen
+/// darueber waehlen allein die Gestalt.
+fn texte_bauen(
+    gestalt: Gestalt,
+    zahl: usize,
+    ordnerzahl: usize,
+    ort: &str,
+    gruende: &[Warngrund],
+) -> (String, String) {
+    let (frageform, erster_satz) = match gestalt {
+        Gestalt::Papierkorb => (Zahlwort::LoeschfrageEintraege, Text::LoeschenGeraeumtAus),
+        Gestalt::Endgueltig => (Zahlwort::LoeschfrageEndgueltig, Text::LoeschenEndgueltigAus),
+    };
     // Der genannte Grund, mit dem Abstand dahinter, den er in der Frage
     // braucht. Ohne Grund bleibt die Fuegung leer, und die ruhige Frage steht
     // damit unveraendert da, statt einen doppelten Abstand zu tragen.
@@ -914,12 +970,8 @@ pub fn frage_und_erlaeuterung(
         Some(grund) => format!("{} ", grund.wortlaut()),
         None => String::new(),
     };
-    let frage = anzahl(
-        Zahlwort::LoeschfrageEintraege,
-        auswahl.zahl() as u64,
-        &[("grund", &genannt)],
-    );
-    let mut erlaeuterung = satz(Text::LoeschenGeraeumtAus, &[("ordner", &pfadtext(ordner))]);
+    let frage = anzahl(frageform, zahl as u64, &[("grund", &genannt)]);
+    let mut erlaeuterung = satz(erster_satz, &[("ordner", &ort)]);
     // Die uebrigen Gruende, in der Rangfolge, in der sie hereinkamen. Der
     // erste fehlt hier, weil er in der Frage steht. Der Absatzwechsel steht
     // hier und nicht in der Tabelle: er ist Satzbau des Blattes und kein
@@ -932,11 +984,11 @@ pub fn frage_und_erlaeuterung(
             &[("gruende", &aufzaehlung.join(", "))],
         ));
     }
-    if auswahl.ordner > 0 {
+    if ordnerzahl > 0 {
         erlaeuterung.push_str("\n\n");
         erlaeuterung.push_str(&satz(
             Text::LoeschenDarunterOrdner,
-            &[("ordner", &ordner_text(auswahl.ordner))],
+            &[("ordner", &ordner_text(ordnerzahl))],
         ));
     }
     (frage, erlaeuterung)
@@ -1146,8 +1198,8 @@ mod tests {
             (false, true, Nein, Vorstufe::NichtsAusgewaehlt),
             (false, true, Unentschieden, Vorstufe::NichtsAusgewaehlt),
             (false, false, Ja, Vorstufe::Rueckfrage),
-            (false, false, Nein, Vorstufe::OhnePapierkorb),
-            (false, false, Unentschieden, Vorstufe::OhnePapierkorb),
+            (false, false, Nein, Vorstufe::EndgueltigeRueckfrage),
+            (false, false, Unentschieden, Vorstufe::EndgueltigeRueckfrage),
         ];
 
         for (vorgang_laeuft, auswahl_leer, papierkorb, ausgang) in TAFEL {
@@ -1201,27 +1253,29 @@ mod tests {
         }
     }
 
-    /// Ohne Papierkorb erscheint kein Blatt, und der unentschiedene Befund
-    /// zaehlt dabei wie das Nein (C4).
+    /// Ohne Papierkorb folgt die endgueltige Rueckfrage und nicht mehr die
+    /// Meldung, und der unentschiedene Befund zaehlt dabei wie das Nein
+    /// (Entscheidung 12 des Plans der sftp-Ordner).
     ///
     /// **Die zweite Zusicherung ist die eigentliche.** Hier ist `Ja` die
-    /// Erlaubnis; wer aus Gewohnheit die Warnwuerdigkeit faengt, macht aus „wir
-    /// wissen nichts" die Erlaubnis zu loeschen, und dann waere die zweite Zeile
-    /// dieser Probe rot und die Runde um ihre Zusage aus C4 herum. Seit dem
-    /// 260907 uebersetzt diese Gewohnheit nicht mehr — die Probe misst seither,
-    /// dass [`Erlaubnisbefund::erlaubt`] die richtige Seite waehlt.
+    /// Erlaubnis zum Raeumen in den Papierkorb; wer aus Gewohnheit die
+    /// Warnwuerdigkeit faengt, macht aus „wir wissen nichts" einen Papierkorb,
+    /// und der Nutzer bestaetigte ein Raeumen, das endgueltig loescht oder
+    /// scheitert. Bis zum 261016 hiess diese Probe
+    /// `ohne_papierkorb_erscheint_kein_blatt`; ihre Tafel ist dieselbe
+    /// geblieben, geaendert hat sich allein der Ausgang.
     #[test]
-    fn ohne_papierkorb_erscheint_kein_blatt() {
+    fn ohne_papierkorb_folgt_die_endgueltige_rueckfrage_statt_der_meldung() {
         assert_eq!(
             vor_der_rueckfrage(false, false, || Erlaubnisbefund::Nein),
-            Vorstufe::OhnePapierkorb,
-            "ein Ziel ohne Papierkorb fuehrt trotzdem zur Rueckfrage"
+            Vorstufe::EndgueltigeRueckfrage,
+            "ein Ziel ohne Papierkorb fuehrt nicht zur endgueltigen Rueckfrage"
         );
         assert_eq!(
             vor_der_rueckfrage(false, false, || Erlaubnisbefund::Unentschieden),
-            Vorstufe::OhnePapierkorb,
-            "ein unentschiedener Befund fuehrt zur Rueckfrage, obwohl C4 ihn \
-             wie das Nein behandelt"
+            Vorstufe::EndgueltigeRueckfrage,
+            "ein unentschiedener Befund fuehrt nicht zur endgueltigen \
+             Rueckfrage, obwohl er wie das Nein zaehlt"
         );
     }
 
@@ -1270,12 +1324,12 @@ mod tests {
         );
     }
 
-    /// Genau einer der zwoelf Faelle erreicht das Blatt.
+    /// Genau einer der zwoelf Faelle erreicht das Blatt des Papierkorbs.
     ///
     /// Die Zaehlung zur Tafel, und sie sagt etwas, das keine einzelne Zeile
-    /// sagt: die Rueckfrage ist der **eine** Ausgang mit drei bestandenen
-    /// Pruefungen. Faende sich ein zweiter, waere eine der drei Stufen
-    /// durchlaessig geworden.
+    /// sagt: die Rueckfrage in den Papierkorb ist der **eine** Ausgang mit drei
+    /// bestandenen Pruefungen. Faende sich ein zweiter, waere eine der drei
+    /// Stufen durchlaessig geworden.
     #[test]
     fn genau_ein_fall_erreicht_das_blatt() {
         let bis_zum_blatt: Vec<(bool, bool, Erlaubnisbefund)> = [false, true]
@@ -1299,28 +1353,73 @@ mod tests {
         );
     }
 
-    /// Die Meldung ohne Papierkorb nennt Befund, Folge und Ausweg (C4).
+    /// Die endgueltige Rueckfrage sagt „endgueltig“, in jeder der drei
+    /// Sprachen: in der Frage, in jeder ihrer zwei Zahlformen, und auf der
+    /// ausfuehrenden Schaltflaeche; die Erlaeuterung nennt den fehlenden
+    /// Papierkorb (Entscheidung 12 des Plans der sftp-Ordner).
     ///
-    /// Drei Zusicherungen fuer drei Auskuenfte, und keine Gleichheitsprobe auf
-    /// den ganzen Satz: geprueft ist, was die Zeile leisten muss, nicht ihre
-    /// Zeichensetzung. Rot wird sie, wenn eine der drei Auskuenfte beim
-    /// Umformulieren verlorengeht — und die Folge „nichts geloescht" ist die,
-    /// die am ehesten als selbstverstaendlich gestrichen wuerde.
+    /// Gelesen wird mit ausdruecklicher Sprache, weil kein Prozess die
+    /// geltende umschalten kann. **Was die Probe nicht sieht:** ob das Blatt
+    /// die Schaltflaeche wirklich zerstoerend zeigt; das ist eine Aussage ueber
+    /// AppKit und im Vordergrund zu pruefen.
     #[test]
-    fn die_meldung_ohne_papierkorb_nennt_befund_folge_und_ausweg() {
-        let meldung = ohne_papierkorb();
-        assert!(
-            meldung.contains("keinen Papierkorb"),
-            "die Meldung nennt den Befund nicht: {meldung}"
+    fn die_endgueltige_rueckfrage_sagt_endgueltig_in_jeder_sprache() {
+        for (sprache, wort, papierkorb) in [
+            (Sprache::De, "endgültig", "Papierkorb"),
+            (Sprache::Fr, "définitivement", "Corbeille"),
+            (Sprache::En, "ermanent", "Trash"),
+        ] {
+            let (einzahl, mehrzahl) = sprache.zahlwort(Zahlwort::LoeschfrageEndgueltig);
+            for frage in [einzahl, mehrzahl] {
+                assert!(
+                    frage.to_lowercase().contains(wort),
+                    "{sprache:?}: die Frage sagt nicht {wort}: {frage}"
+                );
+            }
+            let knopf = sprache.text(Text::LoeschblattSchaltflaecheEndgueltig);
+            assert!(
+                knopf.to_lowercase().contains(wort),
+                "{sprache:?}: die Schaltflaeche sagt nicht {wort}: {knopf}"
+            );
+            let erlaeuterung = sprache.text(Text::LoeschenEndgueltigAus);
+            assert!(
+                erlaeuterung.contains(papierkorb) && erlaeuterung.contains("{ordner}"),
+                "{sprache:?}: die Erlaeuterung nennt den fehlenden Papierkorb oder den Ort nicht: \
+                 {erlaeuterung}"
+            );
+        }
+    }
+
+    /// Die endgueltige Rueckfrage nennt Zahl, ersten Grund, Ort, uebrige
+    /// Gruende und Ordner wie die des Papierkorbs, mit ihrem eigenen Wortlaut.
+    #[test]
+    fn die_endgueltige_rueckfrage_baut_sich_wie_die_des_papierkorbs() {
+        let (frage, erlaeuterung) = endgueltig_frage_und_erlaeuterung(
+            3,
+            1,
+            "kai@rechner:/srv/daten",
+            &[Warngrund::Netzlaufwerk, Warngrund::Arbeitsbaum],
+        );
+        assert_eq!(
+            frage,
+            "Diese 3 Einträge von einem Netzlaufwerk endgültig löschen?"
         );
         assert!(
-            meldung.contains("nichts gelöscht"),
-            "die Meldung sagt nicht, dass nichts geloescht wurde: {meldung}"
+            erlaeuterung.starts_with("Dieser Ort hat keinen Papierkorb"),
+            "{erlaeuterung}"
         );
         assert!(
-            meldung.contains("Finder"),
-            "die Meldung nennt den Ausweg nicht: {meldung}"
+            erlaeuterung.contains("Gelöscht wird aus kai@rechner:/srv/daten."),
+            "{erlaeuterung}"
         );
+        assert!(
+            erlaeuterung.contains("Außerdem: aus einem Git-Arbeitsbaum."),
+            "{erlaeuterung}"
+        );
+        assert!(erlaeuterung.contains("Darunter"), "{erlaeuterung}");
+
+        let (ruhig, _) = endgueltig_frage_und_erlaeuterung(1, 0, "/Volumes/freigabe", &[]);
+        assert_eq!(ruhig, "Diesen Eintrag endgültig löschen?");
     }
 
     /// Eine Auswahl aus `anzahl` Eintraegen, davon `ordner` Ordner.
