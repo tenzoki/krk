@@ -110,6 +110,14 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::VorgangKeinPapierkorb => "kein Papierkorb eingehängt; es wurde nichts gelöscht",
         Text::VorgangKeineGewoehnlicheDatei => "keine gewöhnliche Datei",
+        Text::VorgangDateiangabenNichtKopiert => {
+            "Inhalt kopiert, Rechte und Datum der Datei nicht: {grund}"
+        }
+        Text::VorgangFernGetrennt => "die Verbindung zum Server ist getrennt",
+        Text::VorgangFernKeineVerknuepfung => "der Server legt keine Verknüpfung an",
+        Text::VorgangFernNameOhneUtf8 => {
+            "der Name ist kein UTF-8 und lässt sich auf dem Server nicht anlegen"
+        }
         Text::VorgangZielNichtInPapierkorb => {
             "das Ziel ließ sich nicht in den Papierkorb räumen: {grund}"
         }

@@ -291,8 +291,8 @@ use krk_core::heimordner::tresor::{Oeffnungsmittel, Pin, Schluessel};
 use krk_core::heimordner::{self, Heimordner, Sonderdatei};
 use krk_core::leseprofil::Profile;
 use krk_core::operation::{
-    self, Abschluss, Art, Auftrag, Bericht, Konfliktantwort, Konfliktentscheid, Lauf, Meldung,
-    Namensfehler, freier_name,
+    self, Abschluss, Art, Auftrag, Bericht, Fernart, Fernauftrag, Konfliktantwort,
+    Konfliktentscheid, Lauf, Meldung, Namensfehler, Vorhaben, freier_name, freier_name_unter,
 };
 use krk_core::sprache::{self, Text, satz, text};
 use krk_core::stapelumbenennen::Vorschau;
@@ -320,7 +320,8 @@ use crate::kommandos::kontextmenue::{
 };
 use crate::kommandos::loeschwarnung::{self, Loeschziel, Nachstufe, Vorstufe};
 use crate::kommandos::operationen::{
-    self, Anlegeart, Auswahl, Dateiablage, Konfliktform, Konfliktfrage, Vorgangszustand,
+    self, Anlegeart, Auswahl, Dateiablage, Konfliktform, Konfliktfrage, Vorgangsart,
+    Vorgangszustand,
 };
 use crate::kommandos::rueckschritt::{Rueckschritt, rueckschritt};
 use crate::kommandos::rundweg::{Rundweg, rundweg};
@@ -732,7 +733,11 @@ struct Vorgang {
     /// `Art::Duplizieren { neuer_name }` hinein, damit der Abschluss die
     /// Auswahl auf den Namen setzt, unter dem das Duplikat wirklich entstanden
     /// ist, und nicht auf den ersten Wunsch.
-    art: Art,
+    ///
+    /// **Ein Vorgang mit einer fernen Seite traegt eine [`Fernart`]**
+    /// (Schritt 5 des Plans der sftp-Ordner); jede Anzeige, die nach der Art
+    /// fragt, verzweigt ueber [`Vorgangsart`].
+    art: Vorgangsart,
     /// Das Dateifenster, das den Vorgang begonnen hat.
     ///
     /// **Nicht das gerade aktive.** Seit dem 260804-1832 darf der Nutzer
@@ -748,7 +753,10 @@ struct Vorgang {
     /// dieses Feld tragen soll, ist ein Ordner, den [`Vorgang::ordner`]
     /// auffrischen kann. Dass die Liste ihn dann nicht zweimal fuehrt, haelt
     /// jene Funktion.
-    quellordner: PathBuf,
+    ///
+    /// Ein [`Dateiort`] und kein Pfad, weil der Quellordner eines fernen
+    /// Vorgangs auf einem Server liegen kann; aufgefrischt wird er am Wert.
+    quellordner: Dateiort,
     /// Wie viele Positionen der Nutzer ausgewaehlt hatte.
     positionen: usize,
     /// Wie viele markierte Eintraege gar nicht erst in den Auftrag kamen
@@ -803,12 +811,25 @@ impl Vorgang {
     /// Moeglichkeit 1). Die Bedeutung des Feldes bleibt damit unangetastet, und
     /// jeder kuenftige Rufer, der denselben Ordner zweimal reicht, ist
     /// mitgedeckt.
-    fn ordner(&self) -> Vec<PathBuf> {
+    fn ordner(&self) -> Vec<Dateiort> {
         let mut ordner = vec![self.quellordner.clone()];
-        match &self.art {
-            Art::Kopieren { ziel } | Art::Verschieben { ziel } => {
+        let art = match &self.art {
+            Vorgangsart::Lokal(art) => art,
+            // Ein ferner Vorgang hat Quelle und Ziel; liegt eines davon auf
+            // einem Server, wird es am Wert verglichen und gelesen, ohne
+            // Anfrage auf diesem Faden.
+            Vorgangsart::Fern(Fernart::Kopieren { ziel } | Fernart::Verschieben { ziel }) => {
                 if *ziel != self.quellordner {
                     ordner.push(ziel.clone());
+                }
+                return ordner;
+            }
+        };
+        match art {
+            Art::Kopieren { ziel } | Art::Verschieben { ziel } => {
+                let ziel = Dateiort::Lokal(ziel.clone());
+                if ziel != self.quellordner {
+                    ordner.push(ziel);
                 }
             }
             // Loeschen, Papierkorb und das Stapel-Umbenennen bleiben im
@@ -3839,7 +3860,25 @@ impl Anwendungsdelegierter {
             .vorgang
             .borrow()
             .as_ref()
-            .map(|vorgang| auffrischung::aufgeschobene_ordner(&vorgang.art, vorgang.ordner()))
+            .map(|vorgang| {
+                // FSEvents meldet allein lokale Pfade; ein ferner Ordner steht
+                // nie in der Aufschubliste.
+                let lokale: Vec<PathBuf> = vorgang
+                    .ordner()
+                    .into_iter()
+                    .filter_map(|ort| ort.lokal().map(Path::to_path_buf))
+                    .collect();
+                match &vorgang.art {
+                    Vorgangsart::Lokal(art) => auffrischung::aufgeschobene_ordner(art, lokale),
+                    Vorgangsart::Fern(art) => {
+                        if auffrischung::fern_schiebt_auffrischung_auf(art) {
+                            lokale
+                        } else {
+                            Vec::new()
+                        }
+                    }
+                }
+            })
             .unwrap_or_default()
     }
 
@@ -7182,27 +7221,77 @@ impl Anwendungsdelegierter {
     // ------------------------------------------------------------------
 
     /// Kopieren oder Verschieben in den Ordner des anderen Dateifensters (C4).
+    ///
+    /// **Lokal nach lokal geht der Weg von vorher**, ueber
+    /// [`Self::auftrag_stellen`] und die lokale Maschine. Liegt eine der zwei
+    /// Seiten auf einem Server, wird es ein [`Fernauftrag`]
+    /// ([`Self::fernauftrag_stellen`], Entscheidung 9 des Plans der
+    /// sftp-Ordner). Entschieden wird am Wert der zwei Tabs, ohne Systemaufruf
+    /// und ohne Anfrage.
     fn uebertragen(&self, kommando: Kommando) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
-        // Die Uebertragung zu einem fernen Ort ist der Fernauftrag und steht
-        // noch aus; bis dahin meldet sie sich (Entscheidung 9 des Plans der
-        // sftp-Ordner). Gemeldet wird im aktiven Dateifenster, in dem der
-        // Nutzer den Befehl gab.
-        let Some(ziel) = self
-            .dateifenster(aktiv.andere())
-            .quelle()
-            .angezeigter_lokaler_ordner()
-        else {
-            self.am_fernen_ort_melden(aktiv);
+        let verschieben = kommando == Kommando::Verschieben;
+        let quelle = self.dateifenster(aktiv).quelle().angezeigter_ort();
+        let ziel = self.dateifenster(aktiv.andere()).quelle().angezeigter_ort();
+        match (quelle, ziel) {
+            (Dateiort::Lokal(_), Dateiort::Lokal(ziel)) => {
+                let art = if verschieben {
+                    Art::Verschieben { ziel }
+                } else {
+                    // Der Aufrufer schickt nur diese beiden; ein drittes
+                    // Kommando hier waere ein Fehler im Zweig darueber und
+                    // nicht in dieser Zeile.
+                    Art::Kopieren { ziel }
+                };
+                self.auftrag_stellen(art)
+            }
+            (quelle @ Dateiort::Fern(_), ziel)
+            | (quelle @ Dateiort::Lokal(_), ziel @ Dateiort::Fern(_)) => {
+                self.fernauftrag_stellen(aktiv, quelle, ziel, verschieben)
+            }
+        }
+    }
+
+    /// Kopieren oder Verschieben, wenn Quelle oder Ziel auf einem Server liegt
+    /// (Entscheidung 9 des Plans der sftp-Ordner).
+    ///
+    /// Dieselben Vorstufen wie [`Self::auftrag_stellen`], in derselben
+    /// Reihenfolge: ein laufender Vorgang, eine leere Auswahl, Quelle und Ziel
+    /// im selben Ordner. Die Auswahl geht als Namen hinaus, weil ein ferner Ort
+    /// keinen lokalen Pfad hat, und dieselbe Regel waehlt sie
+    /// ([`operationen::betroffene_namen`]). **Der Hauptfaden stellt dabei keine
+    /// Anfrage**: jeder Ort ist ein Wert, und die erste Anfrage stellt der
+    /// Arbeitsfaden der Maschine.
+    fn fernauftrag_stellen(
+        &self,
+        seite: Fensterseite,
+        quelle: Dateiort,
+        ziel: Dateiort,
+        verschieben: bool,
+    ) -> bool {
+        if self.vorgang_laeuft_schon(seite) {
             return true;
+        }
+        let namen = self.dateifenster(seite).quelle().betroffene_namen();
+        if namen.is_empty() {
+            self.antwort_zeigen(seite, text(Text::NichtsAusgewaehlt));
+            return true;
+        }
+        if quelle == ziel {
+            self.antwort_zeigen(seite, text(Text::QuelleUndZielDerselbeOrdner));
+            return true;
+        }
+        let quellen: Vec<Dateiort> = namen
+            .iter()
+            .filter_map(|name| ort_darunter(&quelle, name))
+            .collect();
+        let positionen = quellen.len();
+        let auftrag = if verschieben {
+            Fernauftrag::verschieben(quellen, ziel)
+        } else {
+            Fernauftrag::kopieren(quellen, ziel)
         };
-        let art = match kommando {
-            Kommando::Verschieben => Art::Verschieben { ziel },
-            // Der Aufrufer schickt nur diese beiden; ein drittes Kommando hier
-            // waere ein Fehler im Zweig darueber und nicht in dieser Zeile.
-            _ => Art::Kopieren { ziel },
-        };
-        self.auftrag_stellen(art)
+        self.vorhaben_starten(seite, Vorhaben::Fern(auftrag), quelle, positionen, 0)
     }
 
     /// Die Auswahl in den Papierkorb des Systems raeumen (C4, Taste Delete).
@@ -8272,7 +8361,7 @@ impl Anwendungsdelegierter {
     /// waehrend einer laeuft, und nichts wuerde rot. `unused_results` ist
     /// erlaubt, dieses Attribut ist deshalb die einzige Sperre.
     #[must_use = "die Antwort ist die Lage 1 aus C6; fallengelassen faengt ein zweiter Vorgang an, waehrend einer laeuft"]
-    fn vorgang_laeuft(&self) -> Option<Art> {
+    fn vorgang_laeuft(&self) -> Option<Vorgangsart> {
         self.ivars()
             .vorgang
             .borrow()
@@ -8351,21 +8440,38 @@ impl Anwendungsdelegierter {
     /// Abwurf; er ist als
     /// `issues/260818-2221_*_the-drop-passes-its-target-as-the-source-folder-and-the-completion-reads-it-twice.md`
     /// gefilt.
+    ///
+    /// **Ein Abwurf auf ein fernes Fenster ist ein Kopieren oder Verschieben
+    /// von hier auf den Server** (Entscheidung 9 des Plans der sftp-Ordner),
+    /// ueber einen [`Fernauftrag`] mit denselben Quellen; als Quellordner geht
+    /// dort ebenso das Ziel mit.
     fn abwurf_ausfuehren(
         &self,
         seite: Fensterseite,
-        ziel: PathBuf,
+        ziel: Dateiort,
         quellen: Vec<PathBuf>,
         art: Abwurfvorgang,
     ) {
         let positionen = quellen.len();
-        let auftrag = match art {
-            Abwurfvorgang::Kopieren => Auftrag::kopieren(quellen, &ziel),
-            Abwurfvorgang::Verschieben => Auftrag::verschieben(quellen, &ziel),
-        };
         // Der Rueckgabewert sagt "der Tastendruck ist verbraucht", und hier gab
         // es keinen: ein Abwurf ist eine Mausbewegung.
-        let _ = self.auftrag_starten(seite, auftrag, ziel, positionen, 0);
+        match ziel {
+            Dateiort::Lokal(ziel) => {
+                let auftrag = match art {
+                    Abwurfvorgang::Kopieren => Auftrag::kopieren(quellen, &ziel),
+                    Abwurfvorgang::Verschieben => Auftrag::verschieben(quellen, &ziel),
+                };
+                let _ = self.auftrag_starten(seite, auftrag, ziel, positionen, 0);
+            }
+            ziel @ Dateiort::Fern(_) => {
+                let quellen = quellen.into_iter().map(Dateiort::Lokal).collect();
+                let auftrag = match art {
+                    Abwurfvorgang::Kopieren => Fernauftrag::kopieren(quellen, ziel.clone()),
+                    Abwurfvorgang::Verschieben => Fernauftrag::verschieben(quellen, ziel.clone()),
+                };
+                let _ = self.vorhaben_starten(seite, Vorhaben::Fern(auftrag), ziel, positionen, 0);
+            }
+        }
     }
 
     /// Fuehrt den angeklickten Eintrag des Kontextmenues aus (Runde 17).
@@ -8856,7 +8962,7 @@ impl Anwendungsdelegierter {
     /// vor dem Senden der Antwort.
     fn duplikatnamen_merken(&self, name: &str) {
         if let Some(Vorgang {
-            art: Art::Duplizieren { neuer_name },
+            art: Vorgangsart::Lokal(Art::Duplizieren { neuer_name }),
             ..
         }) = self.ivars().vorgang.borrow_mut().as_mut()
         {
@@ -9679,11 +9785,38 @@ impl Anwendungsdelegierter {
         positionen: usize,
         ausgelassen: usize,
     ) -> bool {
-        let art = auftrag.art.clone();
+        self.vorhaben_starten(
+            seite,
+            Vorhaben::Lokal(auftrag),
+            Dateiort::Lokal(quellordner),
+            positionen,
+            ausgelassen,
+        )
+    }
+
+    /// Der Rumpf von [`Self::auftrag_starten`], fuer ein lokales wie fuer ein
+    /// fernes [`Vorhaben`] (Schritt 5 des Plans der sftp-Ordner).
+    ///
+    /// Die lokalen Rufer gehen durch [`Self::auftrag_starten`], die fernen,
+    /// [`Self::fernauftrag_stellen`] und der Abwurf auf ein fernes Fenster,
+    /// kommen unmittelbar. Beide teilen Vermittler, [`Vorgang`] und Abschluss.
+    #[must_use = "die Antwort sagt, ob der Tastendruck verbraucht ist; wer sie nicht braucht, schreibt `let _ =` und sagt warum"]
+    fn vorhaben_starten(
+        &self,
+        seite: Fensterseite,
+        vorhaben: Vorhaben,
+        quellordner: Dateiort,
+        positionen: usize,
+        ausgelassen: usize,
+    ) -> bool {
+        let art = match &vorhaben {
+            Vorhaben::Lokal(auftrag) => Vorgangsart::Lokal(auftrag.art.clone()),
+            Vorhaben::Fern(auftrag) => Vorgangsart::Fern(auftrag.art.clone()),
+        };
         // Hier bekommt die Schnittstelle aus `operation/loeschen.rs` ihre
         // Implementierung: bis zu diesem Aufruf hatte sie im laufenden Programm
         // keine.
-        let lauf = operation::starten(auftrag, Arc::new(Systempapierkorb));
+        let lauf = operation::starten(vorhaben, Arc::new(Systempapierkorb));
 
         // Der Griff an das Abbruchkennzeichen bleibt beim Hauptfaden, der Lauf
         // geht an den Vermittlerfaden. Beide zeigen auf dasselbe Kennzeichen;
@@ -9845,7 +9978,7 @@ impl Anwendungsdelegierter {
     /// Konfliktblatt, sondern das Namensblatt erneut
     /// ([`Self::duplikatname_nachfragen`]). Jede andere Art nimmt den Zweig
     /// darunter, der bis dahin der ganze Rumpf war.
-    fn konflikt_fragen(&self, frage: Konfliktfrage, art: &Art) {
+    fn konflikt_fragen(&self, frage: Konfliktfrage, art: &Vorgangsart) {
         let gestalt = match operationen::konfliktform(art) {
             Konfliktform::Blatt(gestalt) => gestalt,
             Konfliktform::Namensnachfrage => return self.duplikatname_nachfragen(frage),
@@ -9854,7 +9987,15 @@ impl Anwendungsdelegierter {
             return;
         };
 
-        let vorschlag = freier_name(&frage.ziel);
+        // Liegt das Ziel auf einem Server, ist `frage.ziel` eine Bezeichnung
+        // und kein Pfad dieser Platte; der Vorschlag ist dann der erste freie
+        // Name ohne Frage, denn der Hauptfaden erreicht den Server nicht. Ob
+        // er frei ist, beantwortet der Arbeitsfaden beim Anlegen.
+        let vorschlag = if zielt_auf_einen_server(art) {
+            freier_name_unter(&frage.ziel, |_| true)
+        } else {
+            freier_name(&frage.ziel)
+        };
         let antwortweg = frage.antwort.clone();
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
         let griff = konflikt::zeigen(
@@ -9930,92 +10071,96 @@ impl Anwendungsdelegierter {
         // waehrend des Vorgangs ausgesetzt hat; `Vorgang::ordner` ist fuer
         // beide dieselbe Aufzaehlung.
         for ordner in vorgang.ordner() {
-            auffrischung::ordner_neu_lesen(self, &ordner);
+            auffrischung::ort_neu_lesen(self, &ordner);
         }
-        match &vorgang.art {
-            // Nach einem Stapel-Umbenennen steht die Auswahl auf dem ersten
-            // neuen Namen, so wie sie nach dem Anlegen auf dem angelegten
-            // Eintrag steht. Der Name kommt aus dem Auftrag selbst und braucht
-            // kein eigenes Feld.
-            //
-            // Die Auffrischung eine Zeile darueber laeuft im selben synchronen
-            // Aufruf, ihr Lesevorgang steht also noch aus. `eintrag_waehlen`
-            // merkt den Namen deshalb vor, statt eine Zeile des alten Bestands
-            // zu waehlen — bei einer Umnummerierung nach oben stuende
-            // `neue_namen[0]` dort naemlich schon, und der erste Stapel raeumte
-            // die Auswahl gleich darauf ersatzlos weg
-            // (`issues/260807-0800_*_eintrag-waehlen-trifft-den-noch-nicht-abgeloesten-bestand-…`).
-            // Scheiterte gerade die Umbenennung auf diesen Namen, findet ihn
-            // der Abschluss des Lesevorgangs nicht, und die Auswahl bleibt
-            // leer, wie C9 es zulaesst.
-            Art::UmbenennenImStapel { neue_namen } => {
-                if let Some(erster) = neue_namen.first() {
-                    // **Der Rueckgabewert wird hier bewusst verworfen.**
-                    // `eintrag_waehlen` hat mehrere Aufrufer, und zwei von ihnen
-                    // werten `Auswahlversuch::Unbekannt` aus: `eintrag_anspringen`
-                    // (C10) meldet den fehlenden Namen, und die Messhandlung
-                    // `Auswaehlen` macht daraus einen Abbruchgrund des
-                    // Messlaufs. Die uebrigen verwerfen ihn, und
-                    // erreichbar ist er von ihnen hier, im Zweig
-                    // `Art::Duplizieren` darunter und in
-                    // `anlegen_ausfuehren`; in `umbenennen_ausfuehren` nicht,
-                    // weil dort der Ordner unmittelbar vor der Auffrischung aus
-                    // derselben Seite kommt. Der Vorgang laeuft im
-                    // Hintergrund, und wechselt der Nutzer waehrenddessen den
-                    // Ordner dieser Seite, frischt die Schleife darueber sie
-                    // nicht auf; dann laeuft kein Lesevorgang, und
-                    // `eintrag_waehlen` befragt das Modell des anderen
-                    // Ordners. Gemeldet wird trotzdem nichts, anders als in
-                    // `eintrag_anspringen`, wo der Nutzer eben nach diesem
-                    // Namen gefragt hat: "«datei-1» steht nicht in der Liste"
-                    // traefe ihn hier in einem Ordner, ueber den er gerade
-                    // nichts wissen wollte, und waere eher Rauschen als
-                    // Auskunft. So entschieden vom Nutzer am 260810
-                    // (`issues/260807-0219_*_drei-aufrufer-von-eintrag-waehlen-…`).
-                    let _ = self
-                        .dateifenster(vorgang.seite)
-                        .quelle()
-                        .eintrag_waehlen(erster);
+        // Ein ferner Vorgang kopiert oder verschiebt, und danach bleibt die
+        // Auswahl, wo sie war, wie nach dem lokalen Kopieren und Verschieben.
+        if let Vorgangsart::Lokal(art) = &vorgang.art {
+            match art {
+                // Nach einem Stapel-Umbenennen steht die Auswahl auf dem ersten
+                // neuen Namen, so wie sie nach dem Anlegen auf dem angelegten
+                // Eintrag steht. Der Name kommt aus dem Auftrag selbst und braucht
+                // kein eigenes Feld.
+                //
+                // Die Auffrischung eine Zeile darueber laeuft im selben synchronen
+                // Aufruf, ihr Lesevorgang steht also noch aus. `eintrag_waehlen`
+                // merkt den Namen deshalb vor, statt eine Zeile des alten Bestands
+                // zu waehlen — bei einer Umnummerierung nach oben stuende
+                // `neue_namen[0]` dort naemlich schon, und der erste Stapel raeumte
+                // die Auswahl gleich darauf ersatzlos weg
+                // (`issues/260807-0800_*_eintrag-waehlen-trifft-den-noch-nicht-abgeloesten-bestand-…`).
+                // Scheiterte gerade die Umbenennung auf diesen Namen, findet ihn
+                // der Abschluss des Lesevorgangs nicht, und die Auswahl bleibt
+                // leer, wie C9 es zulaesst.
+                Art::UmbenennenImStapel { neue_namen } => {
+                    if let Some(erster) = neue_namen.first() {
+                        // **Der Rueckgabewert wird hier bewusst verworfen.**
+                        // `eintrag_waehlen` hat mehrere Aufrufer, und zwei von ihnen
+                        // werten `Auswahlversuch::Unbekannt` aus: `eintrag_anspringen`
+                        // (C10) meldet den fehlenden Namen, und die Messhandlung
+                        // `Auswaehlen` macht daraus einen Abbruchgrund des
+                        // Messlaufs. Die uebrigen verwerfen ihn, und
+                        // erreichbar ist er von ihnen hier, im Zweig
+                        // `Art::Duplizieren` darunter und in
+                        // `anlegen_ausfuehren`; in `umbenennen_ausfuehren` nicht,
+                        // weil dort der Ordner unmittelbar vor der Auffrischung aus
+                        // derselben Seite kommt. Der Vorgang laeuft im
+                        // Hintergrund, und wechselt der Nutzer waehrenddessen den
+                        // Ordner dieser Seite, frischt die Schleife darueber sie
+                        // nicht auf; dann laeuft kein Lesevorgang, und
+                        // `eintrag_waehlen` befragt das Modell des anderen
+                        // Ordners. Gemeldet wird trotzdem nichts, anders als in
+                        // `eintrag_anspringen`, wo der Nutzer eben nach diesem
+                        // Namen gefragt hat: "«datei-1» steht nicht in der Liste"
+                        // traefe ihn hier in einem Ordner, ueber den er gerade
+                        // nichts wissen wollte, und waere eher Rauschen als
+                        // Auskunft. So entschieden vom Nutzer am 260810
+                        // (`issues/260807-0219_*_drei-aufrufer-von-eintrag-waehlen-…`).
+                        let _ = self
+                            .dateifenster(vorgang.seite)
+                            .quelle()
+                            .eintrag_waehlen(erster);
+                    }
                 }
-            }
-            // Nach dem Packen bleibt die Auswahl, wo sie war. Das neue Archiv
-            // anzuspringen, riss den Nutzer von den Eintraegen fort, die er
-            // gerade gepackt hat und moeglicherweise als naechstes wegraeumen
-            // will; die Auffrischung eine Zeile darueber zeigt es ihm ohnehin.
-            //
-            // **Nach dem Entpacken ebenso, und dort kommt ein zweiter Grund
-            // dazu.** Ein Vorgang entpackt jedes betroffene Archiv und legt
-            // damit moeglicherweise mehrere Ordner an; welcher von ihnen die
-            // Auswahl bekaeme, waere eine willkuerliche Wahl.
-            //
-            // **Beim Duplizieren greift keiner der zwei Gruende** (Entscheidung
-            // 9 des Plans
-            // `260930-1928_*_plan-kontextmenue-traegt-duplizieren-mit-namensblatt.md`):
-            // es entsteht genau ein Eintrag, der Nutzer hat ihn eben benannt,
-            // und als Naechstes weggeraeumt wird nichts. Die Auswahl steht
-            // deshalb danach auf dem Duplikat, wie nach dem Anlegen.
-            Art::Kopieren { .. }
-            | Art::Verschieben { .. }
-            | Art::InDenPapierkorb
-            | Art::Zippen { .. }
-            | Art::Entpacken { .. } => {}
-            // Der Name ist der zuletzt beauftragte, weil jede Antwort auf die
-            // Namensnachfrage ihn in die Art geschrieben hat (`Vorgang::art`).
-            // Gewaehlt wird nur, wenn der Bericht das Duplikat als entstanden
-            // ausweist; ein abgebrochener Lauf und eine uebersprungene Quelle
-            // lassen die Auswahl stehen. Blendet ein Filtertext das Duplikat
-            // aus, bleibt es still, wie beim Anlegen.
-            Art::Duplizieren { neuer_name } => {
-                if operationen::duplikat_entstanden(bericht) {
-                    // **Bewusst verworfen.** `Unbekannt` ist ueber die
-                    // Datentraegerwache erreichbar, und gemeldet wird dann
-                    // nichts; die Begruendung steht im Doc-Kommentar von
-                    // `anlegen_ausfuehren`. So entschieden vom Nutzer am 260810
-                    // (`issues/260807-0219_*_drei-aufrufer-von-eintrag-waehlen-…`).
-                    let _ = self
-                        .dateifenster(vorgang.seite)
-                        .quelle()
-                        .eintrag_waehlen(neuer_name);
+                // Nach dem Packen bleibt die Auswahl, wo sie war. Das neue Archiv
+                // anzuspringen, riss den Nutzer von den Eintraegen fort, die er
+                // gerade gepackt hat und moeglicherweise als naechstes wegraeumen
+                // will; die Auffrischung eine Zeile darueber zeigt es ihm ohnehin.
+                //
+                // **Nach dem Entpacken ebenso, und dort kommt ein zweiter Grund
+                // dazu.** Ein Vorgang entpackt jedes betroffene Archiv und legt
+                // damit moeglicherweise mehrere Ordner an; welcher von ihnen die
+                // Auswahl bekaeme, waere eine willkuerliche Wahl.
+                //
+                // **Beim Duplizieren greift keiner der zwei Gruende** (Entscheidung
+                // 9 des Plans
+                // `260930-1928_*_plan-kontextmenue-traegt-duplizieren-mit-namensblatt.md`):
+                // es entsteht genau ein Eintrag, der Nutzer hat ihn eben benannt,
+                // und als Naechstes weggeraeumt wird nichts. Die Auswahl steht
+                // deshalb danach auf dem Duplikat, wie nach dem Anlegen.
+                Art::Kopieren { .. }
+                | Art::Verschieben { .. }
+                | Art::InDenPapierkorb
+                | Art::Zippen { .. }
+                | Art::Entpacken { .. } => {}
+                // Der Name ist der zuletzt beauftragte, weil jede Antwort auf die
+                // Namensnachfrage ihn in die Art geschrieben hat (`Vorgang::art`).
+                // Gewaehlt wird nur, wenn der Bericht das Duplikat als entstanden
+                // ausweist; ein abgebrochener Lauf und eine uebersprungene Quelle
+                // lassen die Auswahl stehen. Blendet ein Filtertext das Duplikat
+                // aus, bleibt es still, wie beim Anlegen.
+                Art::Duplizieren { neuer_name } => {
+                    if operationen::duplikat_entstanden(bericht) {
+                        // **Bewusst verworfen.** `Unbekannt` ist ueber die
+                        // Datentraegerwache erreichbar, und gemeldet wird dann
+                        // nichts; die Begruendung steht im Doc-Kommentar von
+                        // `anlegen_ausfuehren`. So entschieden vom Nutzer am 260810
+                        // (`issues/260807-0219_*_drei-aufrufer-von-eintrag-waehlen-…`).
+                        let _ = self
+                            .dateifenster(vorgang.seite)
+                            .quelle()
+                            .eintrag_waehlen(neuer_name);
+                    }
                 }
             }
         }
@@ -12349,6 +12494,34 @@ pub fn starten(tasten_protokoll: bool, menue_protokoll: bool, messaufgabe: Optio
     anwendung.setDelegate(Some(ProtocolObject::from_ref(&*delegierter)));
 
     anwendung.run();
+}
+
+/// Der Ort des Eintrags `name` in diesem Ordner, rein lexikalisch.
+///
+/// `None` fuer einen fernen Ort, wenn `name` keine einzelne Komponente ist;
+/// ein Name aus dem Ordnermodell ist es immer.
+fn ort_darunter(ordner: &Dateiort, name: &str) -> Option<Dateiort> {
+    match ordner {
+        Dateiort::Lokal(pfad) => Some(Dateiort::Lokal(pfad.join(name))),
+        Dateiort::Fern(fern) => fern.pfad.verbinden(name).map(|pfad| {
+            Dateiort::Fern(krk_core::ort::FernerOrt {
+                zugang: Arc::clone(&fern.zugang),
+                pfad,
+            })
+        }),
+    }
+}
+
+/// Ob die Konfliktfrage dieses Vorgangs ein Ziel auf einem Server nennt.
+///
+/// Vollstaendig ueber [`Vorgangsart`] und [`Fernart`] und ohne Auffangzweig.
+fn zielt_auf_einen_server(art: &Vorgangsart) -> bool {
+    match art {
+        Vorgangsart::Lokal(_) => false,
+        Vorgangsart::Fern(Fernart::Kopieren { ziel } | Fernart::Verschieben { ziel }) => {
+            ziel.fern().is_some()
+        }
+    }
 }
 
 #[cfg(test)]
@@ -16034,5 +16207,67 @@ mod merkerproben {
             .expect("und der Wecker neu gestellt");
         assert!(frage < stellt);
         assert!(pruefen.contains(concat!("tresorweg::", "wachzeit()")));
+    }
+}
+
+#[cfg(test)]
+mod fernvorgangsproben {
+    use super::quelltextproben::{diese_datei, rumpf};
+
+    /// Der Weg eines Vorgangs mit einer fernen Seite stellt auf dem
+    /// Hauptfaden keinen Systemaufruf (Schritt 5 des Plans der sftp-Ordner).
+    ///
+    /// **Eine Anfrage an den Server haelt schon der Uebersetzer fern**: jede
+    /// verlangt ein `Fernfaden`, das nur auf einem Arbeitsfaden entsteht. Was
+    /// er nicht haelt, ist ein Griff an die lokale Platte, etwa ein
+    /// `canonicalize` oder ein Schreibrecht, mit dem der ferne Zweig den Weg
+    /// von `auftrag_stellen` nachbaute. Gehalten wird an den Codezeilen der
+    /// vier Ruempfe, dass weder `fs::` noch `metadata(` noch `exists(` noch
+    /// `canonicalize(` darin steht.
+    ///
+    /// **Was sie nicht sieht:** einen Systemaufruf in einer tiefer gerufenen
+    /// Funktion. `betroffene_namen` liest das Ordnermodell, `angezeigter_ort`
+    /// den Wert des Tabs, und `operation::starten` startet den Faden, auf dem
+    /// jede Anfrage steht; der lokale Zweig von `abwurf_ausfuehren` geht in den
+    /// Weg von vorher und haelt dessen Zusagen.
+    #[test]
+    fn der_fernweg_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
+        let datei = diese_datei();
+        for name in [
+            "uebertragen",
+            "fernauftrag_stellen",
+            "abwurf_ausfuehren",
+            "vorhaben_starten",
+        ] {
+            let rumpf = rumpf(&datei, name);
+            for nadel in ["fs::", "metadata(", "exists(", "canonicalize("] {
+                assert!(
+                    !rumpf.contains(nadel),
+                    "{name} enthaelt {nadel}: ein Systemaufruf auf dem Hauptfaden"
+                );
+            }
+        }
+    }
+
+    /// Ein Vorgang mit einer fernen Seite frischt nach dem Ende jeden seiner
+    /// Orte auf, auch den fernen: der Abschluss liest jeden Ort aus
+    /// `Vorgang::ordner` ueber `auffrischung::ort_neu_lesen`, das am Wert
+    /// vergleicht, und nicht ueber den lokalen Weg, der einen fernen Ort nie
+    /// traefe.
+    ///
+    /// **Was sie nicht sieht:** ob der gefundene Tab danach wirklich liest;
+    /// das haelt `ort_neu_lesen` mit seinen eigenen Proben.
+    #[test]
+    fn der_abschluss_frischt_jeden_ort_des_vorgangs_auf() {
+        let datei = diese_datei();
+        let beenden = rumpf(&datei, "vorgang_beenden");
+        assert!(
+            beenden.contains(concat!("auffrischung::", "ort_neu_lesen(")),
+            "vorgang_beenden frischt die Orte des Vorgangs nicht am Wert auf"
+        );
+        assert!(
+            !beenden.contains(concat!("auffrischung::", "ordner_neu_lesen(")),
+            "vorgang_beenden nimmt den lokalen Weg, der einen fernen Ort nie trifft"
+        );
     }
 }

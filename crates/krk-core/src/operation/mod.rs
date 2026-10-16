@@ -20,7 +20,20 @@
 //!                                            Entpacken wie beim Packen
 //!
 //!            anlegen, umbenennen: ohne Faden, sofort fertig
+//!
+//!   Fernauftrag ──> starten ──> fern::starten ──> Faden mit Fernfaden
+//!                                                 (Kopieren, Verschieben,
+//!                                                  eine Seite auf einem Server)
 //! ```
+//!
+//! **Ein [`Vorhaben`] ist lokal oder fern, und der lokale Zweig ist der Code,
+//! der ohne ferne Orte lief.** Ein Vorgang, dessen Quelle und Ziel lokal sind,
+//! bleibt ein [`Auftrag`] und geht den Weg darueber; einer, bei dem eine Seite
+//! auf einem Server liegt, ist ein [`Fernauftrag`] und laeuft in [`fern`]
+//! (Entscheidung 2 und 9 des Plans
+//! `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`). Beide teilen
+//! Steuerung, Bericht und Meldungen; [`Auftrag`], [`Art`] und die Ruempfe der
+//! lokalen Arten kennen keinen fernen Ort.
 //!
 //! Das Duplizieren uebertraegt ueber den Dateirumpf des Kopierens
 //! (`kopieren::datei_uebertragen`) und stellt seine Konfliktfrage anders: nicht
@@ -66,6 +79,7 @@ pub mod anlegen;
 pub mod auftrag;
 mod duplizieren;
 mod entpacken;
+pub mod fern;
 pub mod fortschritt;
 mod kopieren;
 pub mod loeschen;
@@ -87,6 +101,7 @@ use crate::verzeichnis::Typ;
 
 pub use anlegen::{datei_anlegen, ordner_anlegen};
 pub use auftrag::{Art, Auftrag, Konfliktregel};
+pub use fern::{Fernart, Fernauftrag};
 // `MELDEABSTAND` stand bis zum 260908 in dieser Zeile und hatte im ganzen
 // Arbeitsbereich keinen Rufer ausserhalb von `fortschritt.rs` selbst; ein
 // weitergereichter Name behauptet, dass draussen jemand ihn braucht, und wer
@@ -99,7 +114,7 @@ pub use fortschritt::{
     Meldung, Uebersprungen,
 };
 pub use loeschen::{OhnePapierkorb, Papierkorb};
-pub use umbenennen::{Namensfehler, freier_name, name_pruefen, umbenennen};
+pub use umbenennen::{Namensfehler, freier_name, freier_name_unter, name_pruefen, umbenennen};
 
 use fortschritt::Steuerung;
 use umbenennen::name_pruefen as namen_pruefen;
@@ -162,6 +177,47 @@ pub(crate) enum Zielentscheid {
     Abbrechen,
 }
 
+/// Was die Maschine ausfuehrt: ein lokaler Auftrag oder einer, bei dem eine
+/// Seite auf einem Server liegt.
+///
+/// Vollstaendig verzweigt in [`starten`] und ohne Auffangzweig. Zippen,
+/// Entpacken, Duplizieren, Stapelumbenennen und der Papierkorb stehen allein
+/// in [`Art`] und sind fuer einen fernen Ort damit nicht baubar.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Vorhaben {
+    /// Quelle und Ziel liegen auf diesem Geraet.
+    Lokal(Auftrag),
+    /// Quelle oder Ziel liegt auf einem Server.
+    Fern(Fernauftrag),
+}
+
+impl From<Auftrag> for Vorhaben {
+    fn from(auftrag: Auftrag) -> Self {
+        Vorhaben::Lokal(auftrag)
+    }
+}
+
+impl From<Fernauftrag> for Vorhaben {
+    fn from(auftrag: Fernauftrag) -> Self {
+        Vorhaben::Fern(auftrag)
+    }
+}
+
+/// Startet ein Vorhaben auf einem eigenen Arbeitsfaden und kehrt sofort
+/// zurueck.
+///
+/// **Ein [`Auftrag`] geht ohne Umweg hinein**, ueber `From`: jeder lokale
+/// Rufer, der vor den fernen Orten `starten(auftrag, …)` schrieb, schreibt es
+/// weiter, und sein Weg ist [`lokal_starten`], der Rumpf von davor. Ein
+/// [`Fernauftrag`] geht an [`fern::starten`], dessen Faden das Pfand fuer
+/// Anfragen an einen Server bekommt; den Papierkorb braucht er nicht.
+pub fn starten(vorhaben: impl Into<Vorhaben>, papierkorb: Arc<dyn Papierkorb>) -> Lauf {
+    match vorhaben.into() {
+        Vorhaben::Lokal(auftrag) => lokal_starten(auftrag, papierkorb),
+        Vorhaben::Fern(auftrag) => fern::starten(auftrag),
+    }
+}
+
 /// Startet einen Auftrag auf einem eigenen Arbeitsfaden und kehrt sofort
 /// zurueck.
 ///
@@ -190,7 +246,7 @@ pub(crate) enum Zielentscheid {
 /// falsche Aussage ueber den Nutzer. Der Stapel ist an sein Ende gekommen, und
 /// jede Position traegt ihren Grund; genau das ist der Fall, den
 /// [`Abschluss::Fertig`] beschreibt.
-pub fn starten(auftrag: Auftrag, papierkorb: Arc<dyn Papierkorb>) -> Lauf {
+fn lokal_starten(auftrag: Auftrag, papierkorb: Arc<dyn Papierkorb>) -> Lauf {
     let abbruch = Arc::new(AtomicBool::new(false));
     let faden_abbruch = Arc::clone(&abbruch);
     let (sender, empfaenger) = channel();

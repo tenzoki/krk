@@ -182,6 +182,16 @@ pub enum Text {
     /// Duplizieren und Packen: die Quelle ist Ordner, Verknuepfung, Roehre,
     /// Socket oder Geraetedatei.
     VorgangKeineGewoehnlicheDatei,
+    /// `operation::fern`: der Inhalt einer Datei ist angekommen, Rechte und
+    /// Datum nicht; `{grund}`.
+    VorgangDateiangabenNichtKopiert,
+    /// `operation::fern`: das Gespraech mit dem Server ist getrennt.
+    VorgangFernGetrennt,
+    /// `operation::fern`: der Server legt keine Verknuepfung an.
+    VorgangFernKeineVerknuepfung,
+    /// `operation::fern`: ein Name oder Verweis ist kein UTF-8 und laesst sich
+    /// auf dem Server nicht anlegen.
+    VorgangFernNameOhneUtf8,
     /// Packen und Entpacken: das Ziel liess sich vor dem Ueberschreiben nicht
     /// in den Papierkorb raeumen; `{grund}`.
     VorgangZielNichtInPapierkorb,
@@ -1573,7 +1583,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 661] = [
+    pub const ALLE: [Text; 665] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1646,6 +1656,10 @@ impl Text {
         Text::VorgangKopiertAberInQuelleGeblieben,
         Text::VorgangKeinPapierkorb,
         Text::VorgangKeineGewoehnlicheDatei,
+        Text::VorgangDateiangabenNichtKopiert,
+        Text::VorgangFernGetrennt,
+        Text::VorgangFernKeineVerknuepfung,
+        Text::VorgangFernNameOhneUtf8,
         Text::VorgangZielNichtInPapierkorb,
         Text::EntpackenEintragFuehrtHeraus,
         Text::EntpackenEintragMitGrund,

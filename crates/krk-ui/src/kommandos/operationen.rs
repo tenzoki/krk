@@ -126,7 +126,7 @@ use krk_core::ablage::neuerungen::gekuerzt;
 #[cfg(test)]
 use krk_core::ablage::neuerungen::HOECHSTENS_EINZELN;
 use krk_core::operation::{
-    Abbruchgriff, Abschluss, Art, Bericht, Fortschritt, Konfliktentscheid, Namensfehler,
+    Abbruchgriff, Abschluss, Art, Bericht, Fernart, Fortschritt, Konfliktentscheid, Namensfehler,
     Uebersprungen, name_pruefen,
 };
 use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
@@ -188,6 +188,30 @@ impl Auswahl {
 #[must_use]
 pub fn betroffene(modell: &Ordnermodell, ordner: &Path) -> Auswahl {
     let mut auswahl = Auswahl::default();
+    for eintrag in betroffene_im_modell(modell) {
+        auswahl.pfade.push(ordner.join(&eintrag.name));
+        auswahl.ordner += usize::from(eintrag.ist_ordner());
+    }
+    auswahl
+}
+
+/// Die Namen der Eintraege, auf die ein Tastenbefehl wirkt, an jedem Ort.
+///
+/// Dieselbe Regel wie [`betroffene`] und nicht eine zweite: ein ferner Ort hat
+/// keinen lokalen Pfad, also gehen die Namen hinaus, und der Rufer setzt sie
+/// an den Ort (Entscheidung 9 des Plans der sftp-Ordner).
+#[must_use]
+pub fn betroffene_namen(modell: &Ordnermodell) -> Vec<String> {
+    betroffene_im_modell(modell)
+        .into_iter()
+        .map(|eintrag| eintrag.name.clone())
+        .collect()
+}
+
+/// Die betroffenen Eintraege in Sichtreihenfolge: die markierten, sonst der
+/// unter der Auswahl. Die eine Stelle der Regel aus [`betroffene`].
+fn betroffene_im_modell(modell: &Ordnermodell) -> Vec<&krk_core::verzeichnis::Eintrag> {
+    let mut markiert = Vec::new();
     for zeile in 0..modell.zeilenzahl() {
         let Some(index) = modell.eintragsindex(zeile) else {
             continue;
@@ -196,22 +220,17 @@ pub fn betroffene(modell: &Ordnermodell, ordner: &Path) -> Auswahl {
             continue;
         }
         if let Some(eintrag) = modell.zeile(zeile) {
-            auswahl.pfade.push(ordner.join(&eintrag.name));
-            auswahl.ordner += usize::from(eintrag.ist_ordner());
+            markiert.push(eintrag);
         }
     }
-    if !auswahl.ist_leer() {
-        return auswahl;
+    if !markiert.is_empty() {
+        return markiert;
     }
-
-    let Some(zeile) = modell.auswahl_zeile() else {
-        return auswahl;
-    };
-    if let Some(eintrag) = modell.zeile(zeile) {
-        auswahl.pfade.push(ordner.join(&eintrag.name));
-        auswahl.ordner += usize::from(eintrag.ist_ordner());
-    }
-    auswahl
+    modell
+        .auswahl_zeile()
+        .and_then(|zeile| modell.zeile(zeile))
+        .into_iter()
+        .collect()
 }
 
 /// Auf welche Zeile ein Rechtsklick die Auswahl setzt und dabei die Markierung
@@ -464,21 +483,42 @@ fn abbruchhinweis() -> &'static str {
     text(Text::VorgangAbbruchhinweis)
 }
 
+/// Was ein laufender Vorgang ist, aus der Sicht der Anzeige: ein lokaler
+/// Auftrag oder einer, bei dem eine Seite auf einem Server liegt
+/// (Entscheidung 2 und 9 des Plans der sftp-Ordner).
+///
+/// **Die Anzeige verzweigt hier und nicht an jedem Rufer.** Zeile,
+/// Abbruchzeile, Abschlusstext und die Wahl des Konfliktblattes nehmen diesen
+/// Wert; die Rechnungen ueber [`Art`] darunter bleiben, was sie waren, und die
+/// ferne Haelfte steht je daneben, vollstaendig ueber [`Fernart`] und ohne
+/// Auffangzweig.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Vorgangsart {
+    /// Ein Auftrag der lokalen Maschine.
+    Lokal(Art),
+    /// Ein Auftrag mit einer Seite auf einem Server.
+    Fern(Fernart),
+}
+
 /// Womit eine Operation in der Zeile benannt wird.
 ///
-/// Eine vollstaendige Fallunterscheidung ueber [`Art`], die ihre Variante auf
-/// einen Schluessel der Sprachtabelle abbildet; ein weiterer Wert haelt den
-/// Bau an.
+/// Eine vollstaendige Fallunterscheidung ueber [`Art`] und [`Fernart`], die
+/// ihre Variante auf einen Schluessel der Sprachtabelle abbildet; ein weiterer
+/// Wert haelt den Bau an. Ein ferner Vorgang heisst wie der lokale derselben
+/// Art.
 #[must_use]
-fn ueberschrift(art: &Art) -> &'static str {
+fn ueberschrift(art: &Vorgangsart) -> &'static str {
     match art {
-        Art::Kopieren { .. } => text(Text::VorgangsartKopieren),
-        Art::Verschieben { .. } => text(Text::VorgangsartVerschieben),
-        Art::InDenPapierkorb => text(Text::VorgangsartInDenPapierkorb),
-        Art::UmbenennenImStapel { .. } => text(Text::VorgangsartUmbenennen),
-        Art::Zippen { .. } => text(Text::VorgangsartPacken),
-        Art::Entpacken { .. } => text(Text::VorgangsartEntpacken),
-        Art::Duplizieren { .. } => text(Text::VorgangsartDuplizieren),
+        Vorgangsart::Lokal(Art::Kopieren { .. }) | Vorgangsart::Fern(Fernart::Kopieren { .. }) => {
+            text(Text::VorgangsartKopieren)
+        }
+        Vorgangsart::Lokal(Art::Verschieben { .. })
+        | Vorgangsart::Fern(Fernart::Verschieben { .. }) => text(Text::VorgangsartVerschieben),
+        Vorgangsart::Lokal(Art::InDenPapierkorb) => text(Text::VorgangsartInDenPapierkorb),
+        Vorgangsart::Lokal(Art::UmbenennenImStapel { .. }) => text(Text::VorgangsartUmbenennen),
+        Vorgangsart::Lokal(Art::Zippen { .. }) => text(Text::VorgangsartPacken),
+        Vorgangsart::Lokal(Art::Entpacken { .. }) => text(Text::VorgangsartEntpacken),
+        Vorgangsart::Lokal(Art::Duplizieren { .. }) => text(Text::VorgangsartDuplizieren),
     }
 }
 
@@ -668,6 +708,22 @@ pub enum Konfliktform {
     Namensnachfrage,
 }
 
+/// Die Vorgabe des Konfliktblattes fuer einen fernen Vorgang.
+///
+/// Das Gegenstueck zu [`konfliktgestalt`], vollstaendig ueber [`Fernart`] und
+/// ohne Auffangzweig. Kopieren und Verschieben mit einer fernen Seite haben je
+/// Quelle ein Ziel, und „Ueberschreiben“ entfernt dort endgueltig wie lokal
+/// (`krk_core::operation::fern`), also dieselbe Gestalt wie die lokalen zwei.
+#[must_use]
+pub fn fern_konfliktgestalt(art: &Fernart) -> Konfliktgestalt {
+    match art {
+        Fernart::Kopieren { .. } | Fernart::Verschieben { .. } => Konfliktgestalt {
+            genau_ein_ziel: false,
+            ersetzung: Ersetzungsweg::Endgueltig,
+        },
+    }
+}
+
 /// Welches Blatt die Konfliktfrage dieser [`Art`] bekommt.
 ///
 /// Die vierte vollstaendige Rechnung ueber [`Art`] in dieser Datei, und wie
@@ -684,16 +740,22 @@ pub enum Konfliktform {
 /// `#[must_use]`: der Wert entscheidet, welches Blatt aufgeht; fiele er still
 /// weg, stuende das Konfliktblatt vor einer Frage, die es nicht beantworten
 /// kann.
+///
+/// **Ein ferner Vorgang bekommt das Konfliktblatt wie lokal**, mit der
+/// Vorgabe aus [`fern_konfliktgestalt`].
 #[must_use]
-pub fn konfliktform(art: &Art) -> Konfliktform {
+pub fn konfliktform(art: &Vorgangsart) -> Konfliktform {
     match art {
-        Art::Duplizieren { .. } => Konfliktform::Namensnachfrage,
-        Art::Kopieren { .. }
-        | Art::Verschieben { .. }
-        | Art::InDenPapierkorb
-        | Art::UmbenennenImStapel { .. }
-        | Art::Zippen { .. }
-        | Art::Entpacken { .. } => Konfliktform::Blatt(konfliktgestalt(art)),
+        Vorgangsart::Lokal(art) => match art {
+            Art::Duplizieren { .. } => Konfliktform::Namensnachfrage,
+            Art::Kopieren { .. }
+            | Art::Verschieben { .. }
+            | Art::InDenPapierkorb
+            | Art::UmbenennenImStapel { .. }
+            | Art::Zippen { .. }
+            | Art::Entpacken { .. } => Konfliktform::Blatt(konfliktgestalt(art)),
+        },
+        Vorgangsart::Fern(art) => Konfliktform::Blatt(fern_konfliktgestalt(art)),
     }
 }
 
@@ -713,7 +775,11 @@ pub fn konfliktform(art: &Art) -> Konfliktform {
 /// festgehalten; dieser Schritt entscheidet ihn nicht, er zeigt beide Zahlen
 /// nebeneinander und benennt sie.
 #[must_use]
-pub fn vorgangszeile(art: &Art, fortschritt: Option<&Fortschritt>, positionen: usize) -> String {
+pub fn vorgangszeile(
+    art: &Vorgangsart,
+    fortschritt: Option<&Fortschritt>,
+    positionen: usize,
+) -> String {
     let was = ueberschrift(art);
     let Some(fortschritt) = fortschritt else {
         return satz(
@@ -748,7 +814,7 @@ pub fn vorgangszeile(art: &Art, fortschritt: Option<&Fortschritt>, positionen: u
 /// stehen zu bleiben, als waere nichts geschehen. Der Abbruchhinweis faellt
 /// weg, weil er beantwortet ist.
 #[must_use]
-pub fn abbruchzeile(art: &Art) -> String {
+pub fn abbruchzeile(art: &Vorgangsart) -> String {
     satz(Text::VorgangWirdAbgebrochen, &[("was", &ueberschrift(art))])
 }
 
@@ -758,7 +824,7 @@ pub fn abbruchzeile(art: &Art) -> String {
 /// KRK haelt genau einen Vorgang. Eine Warteschlange waere die andere Antwort;
 /// sie baut einen Zustand mehr, den keine Zusage verlangt.
 #[must_use]
-pub fn schon_ein_vorgang(art: &Art) -> String {
+pub fn schon_ein_vorgang(art: &Vorgangsart) -> String {
     satz(Text::VorgangSchonEiner, &[("was", &ueberschrift(art))])
 }
 
@@ -779,7 +845,7 @@ pub fn schon_ein_vorgang(art: &Art) -> String {
 /// `Vorgang::ausgelassen`.
 #[must_use]
 pub fn abschlusstext(
-    art: &Art,
+    art: &Vorgangsart,
     bericht: &Bericht,
     positionen: usize,
     ausgelassen: usize,
@@ -2200,9 +2266,9 @@ mod tests {
     /// Die Zeile nennt den Abbruch, weil er seine Schaltflaeche verloren hat.
     #[test]
     fn die_vorgangszeile_nennt_den_abbruch_und_bleibt_einzeilig() {
-        let art = Art::Kopieren {
+        let art = Vorgangsart::Lokal(Art::Kopieren {
             ziel: "/tmp".into(),
-        };
+        });
         let vorbereitung = vorgangszeile(&art, None, 3);
         assert!(vorbereitung.contains("Esc bricht ab"), "{vorbereitung}");
         assert!(vorbereitung.starts_with("Kopieren"), "{vorbereitung}");
@@ -2231,7 +2297,7 @@ mod tests {
 
     #[test]
     fn ein_zweiter_befehl_meldet_den_laufenden_vorgang() {
-        let text = schon_ein_vorgang(&Art::InDenPapierkorb);
+        let text = schon_ein_vorgang(&Vorgangsart::Lokal(Art::InDenPapierkorb));
         assert!(text.contains("bereits"), "{text}");
         assert!(text.contains("In den Papierkorb räumen"), "{text}");
     }
@@ -2303,9 +2369,9 @@ mod tests {
             uebersprungen: Vec::new(),
         };
         let text = abschlusstext(
-            &Art::Kopieren {
+            &Vorgangsart::Lokal(Art::Kopieren {
                 ziel: "/tmp".into(),
-            },
+            }),
             &bericht,
             5,
             0,
@@ -2375,9 +2441,9 @@ mod tests {
             uebersprungen: Vec::new(),
         };
         let text = abschlusstext(
-            &Art::UmbenennenImStapel {
+            &Vorgangsart::Lokal(Art::UmbenennenImStapel {
                 neue_namen: Vec::new(),
-            },
+            }),
             &bericht,
             50,
             0,
@@ -2401,9 +2467,9 @@ mod tests {
             bytes: 4_812,
             uebersprungen: Vec::new(),
         };
-        let art = Art::Zippen {
+        let art = Vorgangsart::Lokal(Art::Zippen {
             ziel: "/tmp/Projekte/Projekte.zip".into(),
-        };
+        });
 
         let ohne = abschlusstext(&art, &bericht, 2, 0);
         assert!(
@@ -2886,8 +2952,86 @@ mod tests {
             ),
         ];
         for (art, erwartet) in tafel {
-            assert_eq!(konfliktform(&art), erwartet, "{art:?}");
+            assert_eq!(
+                konfliktform(&Vorgangsart::Lokal(art.clone())),
+                erwartet,
+                "{art:?}"
+            );
         }
+    }
+
+    /// Ein Vorgang mit einer fernen Seite bekommt das Konfliktblatt wie der
+    /// lokale derselben Art, und seine Zeile heisst wie dessen (Schritt 5 des
+    /// Plans der sftp-Ordner). „Ueberschreiben“ entfernt dort endgueltig, und
+    /// die Schaltflaeche sagt es.
+    #[test]
+    fn ein_ferner_vorgang_bekommt_das_konfliktblatt_und_die_zeile_wie_lokal() {
+        let ort = krk_core::ort::Ort::Lokal(PathBuf::from("/tmp/ziel"));
+        let paare = [
+            (
+                Vorgangsart::Fern(Fernart::Kopieren { ziel: ort.clone() }),
+                Vorgangsart::Lokal(Art::Kopieren {
+                    ziel: "/tmp/ziel".into(),
+                }),
+            ),
+            (
+                Vorgangsart::Fern(Fernart::Verschieben { ziel: ort }),
+                Vorgangsart::Lokal(Art::Verschieben {
+                    ziel: "/tmp/ziel".into(),
+                }),
+            ),
+        ];
+        for (fern, lokal) in paare {
+            assert_eq!(konfliktform(&fern), konfliktform(&lokal), "{fern:?}");
+            assert_eq!(
+                konfliktform(&fern),
+                Konfliktform::Blatt(Konfliktgestalt {
+                    genau_ein_ziel: false,
+                    ersetzung: Ersetzungsweg::Endgueltig,
+                })
+            );
+            assert_eq!(
+                vorgangszeile(&fern, None, 2),
+                vorgangszeile(&lokal, None, 2)
+            );
+            assert_eq!(schon_ein_vorgang(&fern), schon_ein_vorgang(&lokal));
+        }
+    }
+
+    /// Die Namen der betroffenen Eintraege folgen derselben Regel wie die
+    /// Pfade: die markierten haben den Vorrang, sonst gilt die Auswahl.
+    #[test]
+    fn die_betroffenen_namen_folgen_der_regel_der_pfade() {
+        let mut modell = modell_mit(&[
+            ("a.txt", Typ::Datei),
+            ("unten", Typ::Ordner),
+            ("c.txt", Typ::Datei),
+        ]);
+        let namen_der_pfade = |modell: &Ordnermodell| -> Vec<String> {
+            betroffene(modell, Path::new("/tmp/x"))
+                .pfade
+                .iter()
+                .map(|pfad| {
+                    pfad.strip_prefix("/tmp/x")
+                        .expect("im Ordner")
+                        .display()
+                        .to_string()
+                })
+                .collect()
+        };
+        assert!(betroffene_namen(&modell).is_empty());
+
+        let auswahl = modell.index_von_namen("c.txt").expect("c.txt steht da");
+        modell.auswahl_setzen(Some(auswahl));
+        assert_eq!(betroffene_namen(&modell), ["c.txt"]);
+        assert_eq!(betroffene_namen(&modell), namen_der_pfade(&modell));
+
+        for name in ["a.txt", "unten"] {
+            let index = modell.index_von_namen(name).expect("steht da");
+            modell.markierung_umschalten(index);
+        }
+        assert_eq!(betroffene_namen(&modell), ["unten", "a.txt"]);
+        assert_eq!(betroffene_namen(&modell), namen_der_pfade(&modell));
     }
 
     /// Ein Duplikat ist entstanden, wenn der Lauf fertig ist und genau einen

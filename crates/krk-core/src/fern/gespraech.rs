@@ -80,6 +80,11 @@ pub const BLOCK: u32 = 32 * 1024;
 /// Wie viele Lesungen [`Gespraech::lesen_in_bloecken`] zugleich offen haelt.
 pub const OFFENE_LESUNGEN: usize = 16;
 
+/// Wie viele Schreibungen ein Schreiber in Bloecken zugleich offen haelt
+/// (`operation::fern`); dieselbe Zahl wie beim Lesen, Entscheidung 9 des
+/// Plans.
+pub const OFFENE_SCHREIBUNGEN: usize = 16;
+
 /// Wie viele Zeilen der Fehlerausgabe eine [`Trennung`] mitnimmt.
 const FEHLERZEILEN: usize = 8;
 
@@ -213,6 +218,12 @@ impl Ausstehend {
                 ausgang: None,
             })),
         }
+    }
+
+    /// Wartet auf die Antwort einer Anfrage, die mit `STATUS OK` quittiert
+    /// wird, etwa `WRITE`, und liefert jede andere Antwort als Fehler.
+    pub fn bestaetigen(self, faden: &Fernfaden) -> Result<(), Fernfehler> {
+        erfolg(self.warten(faden)?)
     }
 }
 
@@ -599,6 +610,27 @@ impl Gespraech {
             },
         )?;
         erfolg(antwort)
+    }
+
+    /// `WRITE` senden, ohne auf die Antwort zu warten.
+    ///
+    /// Fuer einen Schreiber, der mehrere Bloecke zugleich offen haelt; ob der
+    /// Block angekommen ist, sagt [`Ausstehend::bestaetigen`].
+    pub fn write_senden(
+        &self,
+        faden: &Fernfaden,
+        handle: &Handle,
+        versatz: u64,
+        daten: &[u8],
+    ) -> Result<Ausstehend, Fernfehler> {
+        self.senden(
+            faden,
+            Anfrage::Write {
+                handle: handle.0.clone(),
+                versatz,
+                daten: daten.to_vec(),
+            },
+        )
     }
 
     /// `CLOSE`: das Handle schliessen.

@@ -52,8 +52,8 @@ pub use adresse::{Adressfehler, Fernziel, Serverkennung, Startpfad, fernziel};
 
 pub use faden::{Fernfaden, faden};
 pub use gespraech::{
-    Ausstehend, BLOCK, Fernfehler, Gespraech, Handle, OFFENE_LESUNGEN, Trennung, Trennungsgrund,
-    Zustand,
+    Ausstehend, BLOCK, Fernfehler, Gespraech, Handle, OFFENE_LESUNGEN, OFFENE_SCHREIBUNGEN,
+    Trennung, Trennungsgrund, Zustand,
 };
 pub use kanal::{Anmeldung, Kanalplan, ssh_plan};
 pub use pfad::Fernpfad;

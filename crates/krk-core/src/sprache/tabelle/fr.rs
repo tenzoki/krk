@@ -124,6 +124,14 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "aucune Corbeille n’est disponible\u{202f}; rien n’a été supprimé"
         }
         Text::VorgangKeineGewoehnlicheDatei => "pas un fichier ordinaire",
+        Text::VorgangDateiangabenNichtKopiert => {
+            "contenu copié, mais pas les droits ni la date du fichier\u{a0}: {grund}"
+        }
+        Text::VorgangFernGetrennt => "la connexion au serveur est coupée",
+        Text::VorgangFernKeineVerknuepfung => "le serveur ne crée pas de lien symbolique",
+        Text::VorgangFernNameOhneUtf8 => {
+            "le nom n’est pas en UTF-8 et ne peut pas être créé sur le serveur"
+        }
         Text::VorgangZielNichtInPapierkorb => {
             "la destination n’a pas pu être mise à la Corbeille\u{a0}: {grund}"
         }

@@ -85,7 +85,7 @@ use std::fmt;
 use std::path::{Component, Path, PathBuf};
 
 use krk_core::ablage::Fensterseite;
-use krk_core::operation::Art;
+use krk_core::operation::{Art, Fernart};
 use krk_core::ort::Ort;
 use krk_core::sprache::{Text, Zahlwort, anzahl, satz};
 
@@ -297,10 +297,20 @@ fn editorordner(editordatei: Option<&Path>) -> Option<PathBuf> {
 /// **Ein gemeldeter Pfad ist lokal**, und ein Dateifenster auf einem fernen Ort
 /// zeigt ihn nie; der Vergleich faellt dort am Wert aus ([`gleicher_ort`]).
 pub fn ordner_neu_lesen(sicht: &impl Dateifenstersicht, pfad: &Path) -> usize {
-    let gemeldet = Ort::Lokal(pfad.to_path_buf());
+    ort_neu_lesen(sicht, &Ort::Lokal(pfad.to_path_buf()))
+}
+
+/// Liest jedes Dateifenster neu, das diesen Ort zeigt, lokal oder fern.
+///
+/// Der Rumpf von [`ordner_neu_lesen`], fuer den Abschluss eines Vorgangs, dessen
+/// Ziel oder Quelle auf einem Server liegt (Schritt 5 des Plans der
+/// sftp-Ordner). Ein ferner Ort wird am Wert verglichen ([`gleicher_ort`]),
+/// also ohne Systemaufruf und ohne Anfrage; gelesen wird danach ueber den
+/// Lesevorgang des Tabs, und der stellt seine Anfragen auf seinem Faden.
+pub fn ort_neu_lesen(sicht: &impl Dateifenstersicht, gemeldet: &Ort) -> usize {
     let mut aufgefrischt = 0;
     for seite in Fensterseite::ALLE {
-        if !gleicher_ort(&sicht.ordner(seite), &gemeldet) {
+        if !gleicher_ort(&sicht.ordner(seite), gemeldet) {
             continue;
         }
         if sicht.namenszelle_in_bearbeitung(seite) {
@@ -385,6 +395,18 @@ pub fn schiebt_auffrischung_auf(art: &Art) -> bool {
         | Art::Zippen { .. }
         | Art::Entpacken { .. }
         | Art::Duplizieren { .. } => false,
+    }
+}
+
+/// Ob ein ferner Vorgang dieser Art die Auffrischung seiner Ordner aufschiebt.
+///
+/// Das Gegenstueck zu [`schiebt_auffrischung_auf`], vollstaendig ueber
+/// [`Fernart`] und ohne Auffangzweig. Kopieren und Verschieben mit einer
+/// fernen Seite melden in gemaechlichem Takt wie die lokalen, und ein ferner
+/// Ordner wird von FSEvents ohnehin nicht beobachtet.
+pub fn fern_schiebt_auffrischung_auf(art: &Fernart) -> bool {
+    match art {
+        Fernart::Kopieren { .. } | Fernart::Verschieben { .. } => false,
     }
 }
 
@@ -1060,6 +1082,20 @@ mod tests {
                 !schiebt_auffrischung_auf(&art),
                 "{art:?} fuellt seinen angezeigten Ordner waehrend des Laufs"
             );
+        }
+    }
+
+    /// Ein Vorgang mit einer fernen Seite schiebt nicht auf: er meldet in
+    /// gemaechlichem Takt wie das lokale Kopieren und Verschieben, und ein
+    /// ferner Ordner steht nie unter FSEvents.
+    #[test]
+    fn ein_ferner_vorgang_schiebt_die_auffrischung_nicht_auf() {
+        let ziel = Ort::Lokal(PathBuf::from("/ziel"));
+        for art in [
+            Fernart::Kopieren { ziel: ziel.clone() },
+            Fernart::Verschieben { ziel },
+        ] {
+            assert!(!fern_schiebt_auffrischung_auf(&art), "{art:?}");
         }
     }
 

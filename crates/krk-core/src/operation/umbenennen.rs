@@ -153,6 +153,20 @@ const HOECHSTE_KOPIE: u32 = 1_000;
 /// Endung bleibt hinten, damit die Kopie einer Textdatei eine Textdatei bleibt.
 #[must_use]
 pub fn freier_name(ziel: &Path) -> String {
+    freier_name_unter(ziel, |vorschlag| !ziel.with_file_name(vorschlag).exists())
+}
+
+/// Findet einen freien Namen neben einem belegten Ziel und fragt `ist_frei`,
+/// ob ein Vorschlag frei ist.
+///
+/// **Die Namensbildung von [`freier_name`], ohne dessen Frage an die Platte.**
+/// Ein Ziel auf einem Server beantwortet die Frage ueber `LSTAT` und nicht
+/// ueber `Path::exists` (`super::fern`), und die Oberflaeche nimmt fuer ein
+/// fernes Ziel den ersten Vorschlag, ohne zu fragen, weil der Hauptfaden den
+/// Server nicht erreichen darf. Eine zweite Namensbildung daneben entsteht so
+/// nicht.
+#[must_use]
+pub fn freier_name_unter(ziel: &Path, mut ist_frei: impl FnMut(&str) -> bool) -> String {
     let Some(name) = ziel.file_name().and_then(|teil| teil.to_str()) else {
         return "Kopie".to_owned();
     };
@@ -164,7 +178,7 @@ pub fn freier_name(ziel: &Path) -> String {
         } else {
             format!("{stamm} Kopie {nummer}{endung}")
         };
-        if !ziel.with_file_name(&vorschlag).exists() {
+        if ist_frei(&vorschlag) {
             return vorschlag;
         }
     }

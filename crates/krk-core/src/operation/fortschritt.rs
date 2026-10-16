@@ -400,12 +400,26 @@ impl Steuerung {
     /// Abbruch. Ein Kanal ohne Gegenueber ist kein Grund, ungefragt zu
     /// ueberschreiben.
     pub(crate) fn konflikt_loesen(&mut self, quelle: &Path, ziel: &Path) -> Konfliktantwort {
+        self.konflikt_loesen_mit(quelle, ziel, || freier_name(ziel))
+    }
+
+    /// Wie [`Steuerung::konflikt_loesen`], und `freier_name` sucht unter
+    /// [`Konfliktregel::AutomatischUmbenennen`] den freien Namen.
+    ///
+    /// Fuer ein Ziel, dessen Ordner nicht auf dieser Platte liegt: `ziel` ist
+    /// dann eine Bezeichnung fuer die Meldung und kein Pfad, an dem
+    /// `Path::exists` etwas wuesste (`super::fern`). Die Regel und die Frage
+    /// bleiben dieselben.
+    pub(crate) fn konflikt_loesen_mit(
+        &mut self,
+        quelle: &Path,
+        ziel: &Path,
+        freier_name: impl FnOnce() -> String,
+    ) -> Konfliktantwort {
         match self.regel {
             Konfliktregel::Ueberschreiben => Konfliktantwort::Ueberschreiben,
             Konfliktregel::Ueberspringen => Konfliktantwort::Ueberspringen,
-            Konfliktregel::AutomatischUmbenennen => {
-                Konfliktantwort::UmbenennenIn(freier_name(ziel))
-            }
+            Konfliktregel::AutomatischUmbenennen => Konfliktantwort::UmbenennenIn(freier_name()),
             Konfliktregel::Abbrechen => Konfliktantwort::Abbrechen,
             Konfliktregel::Fragen => self.nachfragen(quelle, ziel),
         }

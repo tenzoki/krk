@@ -102,6 +102,14 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VorgangKopiertAberInQuelleGeblieben => "copied, but left in the source: {grund}",
         Text::VorgangKeinPapierkorb => "no Trash attached; nothing was deleted",
         Text::VorgangKeineGewoehnlicheDatei => "not a regular file",
+        Text::VorgangDateiangabenNichtKopiert => {
+            "contents copied, but not the file’s permissions and date: {grund}"
+        }
+        Text::VorgangFernGetrennt => "the connection to the server is closed",
+        Text::VorgangFernKeineVerknuepfung => "the server does not create symbolic links",
+        Text::VorgangFernNameOhneUtf8 => {
+            "the name is not UTF-8 and cannot be created on the server"
+        }
         Text::VorgangZielNichtInPapierkorb => {
             "the destination could not be moved to the Trash: {grund}"
         }

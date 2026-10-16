@@ -358,7 +358,7 @@ use krk_core::zwischenablage::{self, Ziel};
 
 use crate::gitmodell::Gitmodell;
 use crate::kommandos::abwurfregel::{
-    self, Abwurfgrund, Abwurflage, Abwurfmarke, Abwurfurteil, Abwurfvorgang,
+    self, Abwurfgrund, Abwurflage, Abwurfmarke, Abwurfurteil, Abwurfvorgang, Schreibrecht,
 };
 use crate::kommandos::auswahl::{self, markieren_und_weiter};
 use crate::kommandos::kontextmenue::{
@@ -684,7 +684,11 @@ pub type Vorgangsfrage = Box<dyn Fn() -> bool>;
 /// darueber. Ausgefuehrt wird der Abwurf beim Anwendungsdelegierten, weil die
 /// Operationsmaschine dort haengt und die Quellen einer fremden Anwendung
 /// gehoeren, also nicht aus der Auswahl dieses Dateifensters kommen.
-pub type Abwurfmelder = Box<dyn Fn(PathBuf, Vec<PathBuf>, Abwurfvorgang)>;
+///
+/// Der Zielordner ist ein [`Ort`], weil auch ein fernes Fenster einen Abwurf
+/// annimmt (Entscheidung 9 des Plans der sftp-Ordner); die Quellen bleiben
+/// lokale Pfade, denn sie kommen aus der Ablage des Systems.
+pub type Abwurfmelder = Box<dyn Fn(Ort, Vec<PathBuf>, Abwurfvorgang)>;
 
 /// Was mit einem angeklickten Eintrag des Kontextmenues zu geschehen ist
 /// (Runde 17).
@@ -2387,6 +2391,15 @@ impl DateifensterQuelle {
         Some(operationen::betroffene(tab.modell(), ordner))
     }
 
+    /// Die Namen der Eintraege, auf die ein Tastenbefehl hier wirkt, an jedem
+    /// Ort, nach derselben Regel wie [`Self::betroffene_eintraege`]
+    /// ([`operationen::betroffene_namen`]). Der Rufer setzt sie an den Ort des
+    /// sichtbaren Tabs.
+    pub fn betroffene_namen(&self) -> Vec<String> {
+        let tabs = self.ivars().tabs.borrow();
+        operationen::betroffene_namen(tabs.aktiver().modell())
+    }
+
     /// Worauf der Unzip-Eintrag des Kontextmenues in diesem Dateifenster wirkt
     /// (Runde 17).
     ///
@@ -3118,6 +3131,19 @@ impl DateifensterQuelle {
         tab.modell()
             .zeile(zeile)
             .map(|eintrag| (ordner.join(&eintrag.name), eintrag.typ))
+    }
+
+    /// Der Ort des Eintrags in dieser Zeile und seine Art, lokal oder fern;
+    /// `None`, wenn die Zeile nicht steht. Rein lexikalisch und ohne
+    /// Systemaufruf: das Ziel eines Abwurfs an jedem Ort (Entscheidung 9 des
+    /// Plans der sftp-Ordner).
+    fn ort_in_zeile(&self, zeile: usize) -> Option<(Ort, Typ)> {
+        match self.eintrag_in_zeile(zeile) {
+            Some((pfad, typ)) => Some((Ort::Lokal(pfad), typ)),
+            None => self
+                .fern_eintrag_in_zeile(zeile)
+                .map(|(fern, typ)| (Ort::Fern(fern), typ)),
+        }
     }
 
     /// Der ferne Ort des Eintrags in dieser Zeile und seine Art; `None`, wenn
@@ -4661,33 +4687,38 @@ impl DateifensterQuelle {
     ) -> NSDragOperation {
         let eintrag = usize::try_from(zeile)
             .ok()
-            .and_then(|zeile| self.eintrag_in_zeile(zeile));
+            .and_then(|zeile| self.ort_in_zeile(zeile));
         let marke = abwurfregel::marke(
             vorgeschlagen == NSTableViewDropOperation::On,
             eintrag.as_ref().map(|(_, typ)| *typ),
         );
         let ziel = match (marke, eintrag) {
-            (Abwurfmarke::Zeile, Some((pfad, _))) => pfad,
+            (Abwurfmarke::Zeile, Some((ort, _))) => ort,
             // `Zeile` ohne Eintrag kann nicht entstehen — die Marke folgt
             // allein aus `Some(Typ::Ordner)`. Der Zweig steht, weil der Typ ihn
             // verlangt, und faellt auf dasselbe Ziel wie `Liste`.
-            (Abwurfmarke::Zeile, None) | (Abwurfmarke::Liste, _) => {
-                // Ein ferner Ort nimmt bis zur Uebertragung dorthin keinen
-                // Abwurf an; ohne lokalen Ordner gibt es kein Ziel.
-                match self.angezeigter_lokaler_ordner() {
-                    Some(ordner) => ordner,
-                    None => return NSDragOperation::None,
-                }
-            }
+            (Abwurfmarke::Zeile, None) | (Abwurfmarke::Liste, _) => self.angezeigter_ort(),
         };
 
         let quellen = self.abwurfquellen(zug);
         let (bietet_kopieren, bietet_verschieben) = abwurf::angebot(zug);
+        // An einem fernen Ort fragt der Hauptfaden den Server nicht: das
+        // Schreibrecht bleibt unbekannt, und `Unbekannt` laesst durch; was
+        // der Server verweigert, steht danach in der Abschlussliste. Die
+        // Quellen kommen aus der Ablage des Systems und liegen damit nie im
+        // fernen Ziel.
+        let (schreibrecht, ziel_ist_quellordner) = match &ziel {
+            Ort::Lokal(ordner) => (
+                abwurf::beschreibbarkeit(ordner),
+                quellen.gemeinsamer_ordner.as_deref() == Some(ordner.as_path()),
+            ),
+            Ort::Fern(_) => (Schreibrecht::Unbekannt, false),
+        };
         let gefaellt = abwurfregel::urteil(&Abwurflage {
             traegt_dateien: quellen.traegt_dateien,
             vorgang_laeuft: self.vorgang_laeuft_fragen(),
-            schreibrecht: abwurf::beschreibbarkeit(&ziel),
-            ziel_ist_quellordner: quellen.gemeinsamer_ordner.as_deref() == Some(ziel.as_path()),
+            schreibrecht,
+            ziel_ist_quellordner,
             bietet_kopieren,
             bietet_verschieben,
         });
@@ -4790,16 +4821,13 @@ impl DateifensterQuelle {
         };
         let eintrag = usize::try_from(zeile)
             .ok()
-            .and_then(|zeile| self.eintrag_in_zeile(zeile));
+            .and_then(|zeile| self.ort_in_zeile(zeile));
         let ziel = match (
             abwurfziel(zeile >= 0, eintrag.as_ref().map(|(_, typ)| *typ)),
             eintrag,
         ) {
-            (Abwurfziel::Zeile, Some((pfad, _))) => pfad,
-            (Abwurfziel::AngezeigterOrdner, _) => match self.angezeigter_lokaler_ordner() {
-                Some(ordner) => ordner,
-                None => return false,
-            },
+            (Abwurfziel::Zeile, Some((ort, _))) => ort,
+            (Abwurfziel::AngezeigterOrdner, _) => self.angezeigter_ort(),
             // `Zeile` ohne Eintrag kann nicht entstehen — die Marke folgt
             // allein aus `Some(Typ::Ordner)`. Der Zweig steht, weil der Typ ihn
             // verlangt, und faellt auf denselben Ausgang wie `Keines`.
