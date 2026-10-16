@@ -1896,3 +1896,123 @@ fn keine_senke_der_oberflaeche_bekommt_ein_literal() {
         fundstellen.join("\n")
     );
 }
+
+/// `known_hosts` hat genau einen Schreiber: `rechnerschluessel::anhaengen`,
+/// gerufen an genau einer Stelle, nach „Annehmen“ im Blatt fuer einen
+/// unbekannten Rechnerschluessel (Akzeptanz von Schritt 8 des Plans
+/// `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`).
+///
+/// Drei Fragen, je an den Code-Zeilen des Betriebscodes, also ohne
+/// Kommentare und ohne Pruefmodule:
+///
+/// - **Wer den Namen der Datei kennt.** Eine Zeile, die `known_hosts` oder
+///   `userknownhostsfile` nennt (Gross- und Kleinschreibung und `_` egal),
+///   steht allein in `fern/rechnerschluessel.rs`, dort kommt der Pfad aus
+///   `ssh -G`, und in den drei Sprachtabellen, die ihn als Wort fuehren.
+/// - **Womit in `rechnerschluessel.rs` geschrieben wird.** Jede Zeile mit
+///   `OpenOptions`, `DirBuilder`, `File::create`, `fs::write`, `fs::rename`
+///   oder `fs::copy` steht im Rumpf von `anhaengen`.
+/// - **Wer `anhaengen` ruft.** Genau eine Zeile im Baum ruft
+///   `rechnerschluessel::anhaengen(`, und sie steht in
+///   `krk-ui/src/appkit/verbinden.rs`.
+///
+/// **Was sie nicht sieht:** einen Schreiber, der den Pfad aus Stuecken baut,
+/// die den Namen nicht zusammenhaengend tragen, oder der ihn unter einem
+/// anderen Namen von aussen bekommt; einen Ruf von `anhaengen` ueber
+/// `use … as anders;` oder einen Funktionsverweis ohne Klammer; und ob der
+/// Rumpf von `anhaengen` wirklich allein die gescannten Zeilen schreibt.
+/// Das Letzte haelt die Probe
+/// `das_anhaengen_legt_verzeichnis_und_datei_mit_den_engen_rechten_an_und_schreibt_nur_die_gescannten_zeilen`
+/// in `tests/fern.rs` am Ergebnis, und die privaten Felder von `Gescannt`
+/// halten es am Typ.
+#[test]
+fn known_hosts_hat_genau_einen_schreiber() {
+    let modul = "krk-core/src/fern/rechnerschluessel.rs";
+    let code = |inhalt: &str| -> Vec<String> {
+        betriebscode(inhalt)
+            .into_iter()
+            .filter(|zeile| !zeile.trim_start().starts_with("//"))
+            .map(str::to_owned)
+            .collect()
+    };
+    let kennt_den_namen = |zeile: &str| {
+        let flach = zeile.to_lowercase().replace('_', "");
+        flach.contains(concat!("known", "hosts"))
+    };
+    let mut kenner: Vec<String> = quelldateien()
+        .into_iter()
+        .filter(|(name, _)| name.contains("/src/"))
+        .filter(|(_, inhalt)| code(inhalt).iter().any(|zeile| kennt_den_namen(zeile)))
+        .map(|(name, _)| name)
+        .collect();
+    kenner.sort();
+    assert_eq!(
+        kenner,
+        [
+            modul,
+            "krk-core/src/sprache/tabelle/de.rs",
+            "krk-core/src/sprache/tabelle/en.rs",
+            "krk-core/src/sprache/tabelle/fr.rs",
+        ],
+        "eine weitere Datei des Betriebscodes kennt den Namen von known_hosts"
+    );
+
+    let inhalt = quelldateien()
+        .into_iter()
+        .find(|(name, _)| name == modul)
+        .map(|(_, inhalt)| inhalt)
+        .expect("rechnerschluessel.rs steht im Baum");
+    let kopf = concat!("pub fn ", "anhaengen(");
+    let (vor, ab) = inhalt
+        .split_once(kopf)
+        .expect("anhaengen steht in rechnerschluessel.rs");
+    let (rumpf, nach) = ab
+        .split_once("\n}\n")
+        .expect("der Rumpf von anhaengen endet");
+    let schreibwege = [
+        concat!("Open", "Options"),
+        concat!("Dir", "Builder"),
+        concat!("File::", "create"),
+        concat!("fs::", "write"),
+        concat!("fs::", "rename"),
+        concat!("fs::", "copy"),
+    ];
+    for (teil, wo) in [(vor, "vor anhaengen"), (nach, "nach anhaengen")] {
+        for zeile in code(teil) {
+            // Die `use`-Zeilen holen die Typen nur herein.
+            if zeile.trim_start().starts_with("use ") {
+                continue;
+            }
+            for weg in schreibwege {
+                assert!(
+                    !zeile.contains(weg),
+                    "rechnerschluessel.rs schreibt {wo} ueber {weg}: {zeile}"
+                );
+            }
+        }
+    }
+    assert!(
+        code(rumpf)
+            .iter()
+            .any(|zeile| zeile.contains(schreibwege[0])),
+        "anhaengen oeffnet seine Datei nicht ueber OpenOptions"
+    );
+
+    let ruf = concat!("rechnerschluessel::", "anhaengen(");
+    let rufer: Vec<(String, usize)> = quelldateien()
+        .into_iter()
+        .map(|(name, inhalt)| {
+            let zahl = code(&inhalt)
+                .iter()
+                .filter(|zeile| zeile.contains(ruf))
+                .count();
+            (name, zahl)
+        })
+        .filter(|(_, zahl)| *zahl > 0)
+        .collect();
+    assert_eq!(
+        rufer,
+        [("krk-ui/src/appkit/verbinden.rs".to_owned(), 1)],
+        "rechnerschluessel::anhaengen hat nicht genau einen Rufer"
+    );
+}

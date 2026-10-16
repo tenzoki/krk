@@ -261,6 +261,7 @@ pub mod neuerungen;
 pub mod ortwahl;
 pub mod pfadeingabe;
 pub mod pin;
+pub mod rechnerschluessel;
 pub mod stapelumbenennen;
 pub mod startmeldungen;
 pub mod suche;
@@ -1359,6 +1360,7 @@ mod tests {
             super::loeschbestaetigung::schaltflaechen("In den Papierkorb räumen");
         let blatt_neu = standardschaltflaechen("Sichern");
         let suchblatt = super::suche::schaltflaechen();
+        let rechnerschluessel = super::rechnerschluessel::schaltflaechen();
 
         for schaltflaechen in [
             &ein_ziel[..],
@@ -1366,6 +1368,7 @@ mod tests {
             &loeschrueckfrage[..],
             &blatt_neu[..],
             &suchblatt[..],
+            &rechnerschluessel[..],
         ] {
             let stelle = bestaetigungsstelle(schaltflaechen);
             assert_eq!(

@@ -1097,6 +1097,18 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::FernRechnerschluesselUnbekannt => {
             "La clé de l’hôte {rechner} est inconnue\u{202f}; «\u{a0}{name}\u{a0}» ne se connectera que lorsqu’elle figurera dans known_hosts."
         }
+        Text::FernRechnerschluesselNichtGeholt => {
+            "La clé de l’hôte {rechner} est inconnue et n’a pas pu être récupérée\u{202f}; «\u{a0}{name}\u{a0}» ne se connecte pas\u{a0}: {grund}"
+        }
+        Text::FernRechnerschluesselNichtEingetragen => {
+            "Impossible d’ajouter les clés de «\u{a0}{name}\u{a0}» à {datei}\u{a0}: {grund}"
+        }
+        Text::RechnerschluesselFrage => "Hôte inconnu {rechner}, port {port}",
+        Text::RechnerschluesselErlaeuterung => {
+            "«\u{a0}{name}\u{a0}» se connecte à un hôte dont ssh ne connaît pas encore la clé. Comparez les empreintes avec celles que publie l’exploitant de l’hôte\u{a0}:\n\n{abdruecke}\n\n«\u{a0}Accepter\u{a0}» ajoute les clés à {datei} et établit la connexion. Retour et Esc annulent, Cmd+Retour accepte."
+        }
+        Text::RechnerschluesselAbdruck => "{typ}  {abdruck}",
+        Text::RechnerschluesselAnnehmen => "Accepter",
         Text::FernStartordnerFehlt => {
             "«\u{a0}{name}\u{a0}» est connecté, mais {pfad} n’est pas un dossier\u{202f}; {heim} est affiché."
         }

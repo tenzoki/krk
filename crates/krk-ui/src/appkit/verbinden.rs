@@ -12,12 +12,17 @@
 //!                                       │  Sftp: register.zugang(kennung, …)
 //!                                       │          lebend: nehmen
 //!                                       │          sonst: rechnerschluessel::vorpruefen,
+//!                                       │                 unbekannt: rechnerschluessel::scannen
 //!                                       │                 anmeldehilfe::passwort_reichen,
 //!                                       │                 ssh_plan, Gespraech
 //!                                       │        zugang.startordner(startpfad)
 //!                                       v
 //!  fertig(mtm, Verbindungsergebnis) <── DispatchQueue::main()
 //!  uebergeben(url) ──> NSWorkspace.openURL:
+//!
+//!  Blatt Rechnerschluessel, „Annehmen“:
+//!  herstellen(…, Some(gescannt), …) ──> rechnerschluessel::anhaengen,
+//!                                       dann derselbe Weg wie oben
 //!
 //!  Hauptfaden                      Faden krk-tresor
 //!  anhaengen(pfad, entwurf, mittel) ──> tresorweg::anhaengen
@@ -62,6 +67,16 @@
 //! Server uebersetzt; das gilt fuer jedes Protokoll, die anderen Zweige
 //! uebergehen das Pfand. Das Register der Zugaenge reist als Abschrift seines
 //! Griffs mit; gelesen und geschrieben wird es allein auf diesem Faden.
+//!
+//! **Ein unbekannter Rechnerschluessel endet nicht mehr mit einer Meldung,
+//! sondern mit seinen Schluesseln** (Schritt 8 des Plans): der Faden holt sie
+//! mit `rechnerschluessel::scannen` und reicht sie als
+//! [`Verbindungsausgang::RechnerschluesselUnbekannt`] an den Hauptfaden, der
+//! das Blatt zeigt. Nach „Annehmen“ startet [`herstellen`] denselben Faden ein
+//! zweites Mal mit den gescannten Schluesseln; er haengt sie als erste
+//! Handlung an `known_hosts` an und verbindet dann wie beim ersten Mal, mit
+//! `StrictHostKeyChecking=yes`. Hier steht damit der eine Rufer von
+//! `rechnerschluessel::anhaengen` (Probe `known_hosts_hat_genau_einen_schreiber`).
 //!
 //! **Woran `ssh` scheiterte, liest [`trennungsart`] aus den Zeilen seiner
 //! Fehlerausgabe**, und nur bei Ausgang 255, mit dem `ssh` eigene Fehler
@@ -163,7 +178,7 @@ use objc2_foundation::{
     NSURLVolumeURLForRemountingKey, NSVolumeEnumerationOptions, ns_string,
 };
 
-use krk_core::fern::rechnerschluessel::{self, Schluesselstand};
+use krk_core::fern::rechnerschluessel::{self, Gescannt, Schluesselstand, Sshkonfiguration};
 use krk_core::fern::{
     Anmeldung, Fernfaden, Fernfehler, Fernziel, Herkunft, Kanalplan, Trennung, Zugangsfehler,
     Zugangsregister, ssh_plan,
@@ -262,9 +277,31 @@ pub enum Verbindungsausgang {
         /// liest jeder Tab auf diesem Server neu (Entscheidung 3 des Plans).
         neu_verbunden: bool,
     },
-    /// `ssh` kennt den Rechnerschluessel nicht; der Name, unter dem
-    /// gesucht wurde.
-    RechnerschluesselUnbekannt(String),
+    /// `ssh` kennt den Rechnerschluessel nicht; die Schluessel, die
+    /// `ssh-keyscan` geholt hat, mit ihren Fingerabdruecken, fuer das Blatt.
+    RechnerschluesselUnbekannt(Box<Gescannt>),
+    /// `ssh` kennt den Rechnerschluessel nicht, und `ssh-keyscan` hat keinen
+    /// geholt; der Name, unter dem gesucht wurde, und die Zeile von
+    /// `ssh-keyscan`.
+    RechnerschluesselNichtGeholt {
+        /// Der Name, unter dem `ssh` sucht.
+        suchname: String,
+        /// Warum kein Schluessel kam.
+        grund: String,
+    },
+    /// `ssh` kennt den Rechnerschluessel nicht, und `ssh -G` nennt keine
+    /// Datei, an die er sich anhaengen liesse (`UserKnownHostsFile none`);
+    /// der Name, unter dem gesucht wurde. Ein Blatt mit „Annehmen“ waere hier
+    /// eine Zusage ohne Weg.
+    RechnerschluesselOhneDatei(String),
+    /// Nach „Annehmen“ liessen sich die Schluessel nicht an `known_hosts`
+    /// anhaengen; die Datei und der Grund.
+    RechnerschluesselNichtEingetragen {
+        /// Die Datei, an die angehaengt werden sollte.
+        datei: PathBuf,
+        /// Der Grund des Systems.
+        grund: String,
+    },
     /// Eine sftp-Verbindung scheiterte aus einem anderen Grund als Anmeldung
     /// oder Erreichbarkeit; die letzte Zeile von `ssh` oder der Grund des
     /// Gespraechs.
@@ -289,14 +326,41 @@ pub struct Verbindungsergebnis {
 /// Einhaengen laufen dort, und Klartext, Eintrag und Passwort fallen dort
 /// (Entscheidung 11). Laesst sich der Faden nicht starten, kommt der Fehler
 /// zurueck und `fertig` laeuft nie.
+///
+/// **`annahme` traegt die Schluessel, die der Nutzer im Blatt angenommen
+/// hat**, und ist sonst `None`. Der Faden haengt sie als erste Handlung an
+/// `known_hosts` an, bevor er `secrets.txt` liest; scheitert das, endet er
+/// mit [`Verbindungsausgang::RechnerschluesselNichtEingetragen`] und liest
+/// nichts.
 pub fn herstellen(
     pfad: PathBuf,
     name: String,
     mittel: Oeffnungsmittel,
     register: Zugangsregister,
+    annahme: Option<Box<Gescannt>>,
     fertig: impl FnOnce(MainThreadMarker, Verbindungsergebnis) + Send + 'static,
 ) -> io::Result<()> {
     let _faden = krk_core::fern::faden("krk-verbinden".to_owned(), move |pfand| {
+        if let Some(gescannt) = annahme
+            && let Err(fehler) = rechnerschluessel::anhaengen(pfand, &gescannt)
+        {
+            drop(mittel);
+            let ergebnis = Verbindungsergebnis {
+                zu_merken: None,
+                ausgang: Verbindungsausgang::RechnerschluesselNichtEingetragen {
+                    datei: gescannt.datei().map(PathBuf::from).unwrap_or_default(),
+                    grund: fehler.to_string(),
+                },
+            };
+            DispatchQueue::main().exec_async(move || {
+                let Some(mtm) = MainThreadMarker::new() else {
+                    // Kann nicht eintreten, wie unten.
+                    return;
+                };
+                fertig(mtm, ergebnis);
+            });
+            return;
+        }
         let vorbereitung = tresorweg::verbindung_vorbereiten(&pfad, &name, &mittel);
         drop(mittel);
         let ausgang = match vorbereitung.plan {
@@ -329,8 +393,12 @@ pub fn herstellen(
 
 /// Warum die Vorbereitung eines sftp-Aufbaus abbrach, bevor `ssh` startete.
 enum Fernhindernis {
-    /// Der Rechnerschluessel ist unbekannt; der Suchname.
-    Unbekannt(String),
+    /// Der Rechnerschluessel ist unbekannt; der Suchname und was `ssh -G`
+    /// ausgerechnet hat.
+    Unbekannt {
+        suchname: String,
+        konfiguration: Box<Sshkonfiguration>,
+    },
     /// Eine Frage der Vorpruefung oder der Start der Anmeldehilfe scheiterte.
     Gescheitert(String),
 }
@@ -354,8 +422,14 @@ fn fern_verbinden(
     let vorbereiten = move || -> Result<(Kanalplan, Option<Anmeldehilfe>), Fernhindernis> {
         match rechnerschluessel::vorpruefen(ziel) {
             Ok(Schluesselstand::Bekannt) => {}
-            Ok(Schluesselstand::Unbekannt { suchname }) => {
-                return Err(Fernhindernis::Unbekannt(suchname));
+            Ok(Schluesselstand::Unbekannt {
+                suchname,
+                konfiguration,
+            }) => {
+                return Err(Fernhindernis::Unbekannt {
+                    suchname,
+                    konfiguration: Box::new(konfiguration),
+                });
             }
             Err(grund) => return Err(Fernhindernis::Gescheitert(grund)),
         }
@@ -377,8 +451,20 @@ fn fern_verbinden(
     };
     let (zugang, herkunft) = match register.zugang(pfand, &ziel.kennung(), name, vorbereiten) {
         Ok(gefunden) => gefunden,
-        Err(Zugangsfehler::Vorbereitung(Fernhindernis::Unbekannt(suchname))) => {
-            return Verbindungsausgang::RechnerschluesselUnbekannt(suchname);
+        // Der Scan laeuft erst hier, nach der Frage an das Register und nicht
+        // in der Vorbereitung: er geht ins Netz und wartet bis zu zehn
+        // Sekunden, die Vorbereitung fragt allein Programme dieses Geraets.
+        Err(Zugangsfehler::Vorbereitung(Fernhindernis::Unbekannt {
+            suchname,
+            konfiguration,
+        })) => {
+            return match rechnerschluessel::scannen(pfand, &konfiguration, &suchname) {
+                Ok(gescannt) if gescannt.datei().is_none() => {
+                    Verbindungsausgang::RechnerschluesselOhneDatei(suchname)
+                }
+                Ok(gescannt) => Verbindungsausgang::RechnerschluesselUnbekannt(Box::new(gescannt)),
+                Err(grund) => Verbindungsausgang::RechnerschluesselNichtGeholt { suchname, grund },
+            };
         }
         Err(Zugangsfehler::Vorbereitung(Fernhindernis::Gescheitert(grund))) => {
             return Verbindungsausgang::FernAbgewiesen(grund);

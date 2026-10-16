@@ -49,11 +49,11 @@
       },
       {
         "id": "8",
-        "state": "in_progress"
+        "state": "done"
       },
       {
         "id": "9",
-        "state": "open"
+        "state": "in_progress"
       }
     ],
     "criteria": [],

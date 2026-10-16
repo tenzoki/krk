@@ -1542,6 +1542,22 @@ pub enum Text {
     FernVerbindungAbgewiesen,
     /// `ssh` kennt den Schluessel des Rechners nicht; `{name}`, `{rechner}`.
     FernRechnerschluesselUnbekannt,
+    /// `ssh` kennt den Schluessel des Rechners nicht, und `ssh-keyscan` holt
+    /// keinen; `{name}`, `{rechner}`, `{grund}` (die Zeile von `ssh-keyscan`).
+    FernRechnerschluesselNichtGeholt,
+    /// Nach „Annehmen“ liessen sich die Schluessel nicht anhaengen; `{name}`,
+    /// `{datei}`, `{grund}`.
+    FernRechnerschluesselNichtEingetragen,
+    /// Die Frage oben im Blatt fuer einen unbekannten Rechnerschluessel;
+    /// `{rechner}`, `{port}`.
+    RechnerschluesselFrage,
+    /// Der Text darunter; `{name}`, `{abdruecke}` (je Schluessel eine Zeile
+    /// aus [`Text::RechnerschluesselAbdruck`]), `{datei}`.
+    RechnerschluesselErlaeuterung,
+    /// Eine Zeile je Schluessel im Blatt; `{typ}`, `{abdruck}`.
+    RechnerschluesselAbdruck,
+    /// Die Schaltflaeche, die die Schluessel annimmt.
+    RechnerschluesselAnnehmen,
     /// Der Startordner einer sftp-Verbindung fehlt, gezeigt wird das
     /// Anmeldeverzeichnis; `{name}`, `{pfad}` (verlangt), `{heim}`.
     FernStartordnerFehlt,
@@ -1592,7 +1608,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 668] = [
+    pub const ALLE: [Text; 674] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -2241,6 +2257,12 @@ impl Text {
         Text::VerbindungKeineAuswahl,
         Text::FernVerbindungAbgewiesen,
         Text::FernRechnerschluesselUnbekannt,
+        Text::FernRechnerschluesselNichtGeholt,
+        Text::FernRechnerschluesselNichtEingetragen,
+        Text::RechnerschluesselFrage,
+        Text::RechnerschluesselErlaeuterung,
+        Text::RechnerschluesselAbdruck,
+        Text::RechnerschluesselAnnehmen,
         Text::FernStartordnerFehlt,
         Text::AmFernenOrtNichtVerfuegbar,
         Text::FernVerbindungGetrennt,

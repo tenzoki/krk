@@ -31,7 +31,8 @@ use krk_core::fern::paket::{
     status,
 };
 use krk_core::fern::rechnerschluessel::{
-    Sshkonfiguration, in_datei_bekannt, konfiguration_lesen, suchname,
+    Fingerabdruck, Sshkonfiguration, anhaengen, gescannt_aus, in_datei_bekannt,
+    konfiguration_lesen, suchname,
 };
 use krk_core::fern::{
     Adressfehler, Anmeldung, BLOCK, Fernfaden, Fernfehler, Fernpfad, Fernziel, Fernzugang,
@@ -1064,6 +1065,7 @@ fn ein_bekannter_rechner_wird_in_known_hosts_gefunden() {
         port,
         hostkeyalias: alias.map(str::to_owned),
         dateien: vec![datei.clone()],
+        eigene_datei: Some(datei.clone()),
     };
     assert_eq!(suchname(&konfiguration(22, None)), "example.test");
     assert_eq!(suchname(&konfiguration(2222, None)), "[example.test]:2222");
@@ -1116,9 +1118,18 @@ fn ein_bekannter_rechner_wird_in_known_hosts_gefunden() {
             ]
             .map(PathBuf::from)
             .to_vec(),
+            eigene_datei: Some(PathBuf::from("/Users/kai/.ssh/known_hosts")),
         }
     );
     assert_eq!(konfiguration_lesen("port 22\n", None), None);
+
+    // `none` als Datei des Nutzers ist kein Ort zum Anhaengen.
+    let ohne = konfiguration_lesen(
+        "hostname example.test\nport 22\nuserknownhostsfile none\n",
+        None,
+    )
+    .expect("hostname und port stehen da");
+    assert_eq!(ohne.eigene_datei, None);
 }
 
 /// Ein Rechner, der nicht in `known_hosts` steht, auch nicht unter einem
@@ -1131,6 +1142,194 @@ fn ein_unbekannter_nicht() {
     for name in ["anders.test", "[example.test]:2222"] {
         assert_eq!(in_datei_bekannt(name, &datei).ok(), Some(false), "{name}");
     }
+}
+
+/// Zwei feste Schluessel mit den Fingerabdruecken, die `ssh-keygen` 9.9
+/// fuer sie nennt; gerechnet am 261016 mit `ssh-keygen -l -E sha256`.
+const FESTE_SCHLUESSEL: [(&str, &str, &str); 2] = [
+    (
+        "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINCchDA8qQ402glvs5GmSdmMtjRAi1vwvNLCJKg3j3dn",
+        "ED25519",
+        "SHA256:9LQx2fmiP9B1NG/QxKfQPvLAD5VQ4wpNq3wCleSOvg4",
+    ),
+    (
+        "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBDPb3CYV5rHrHmBjSqMLy14FUquLLMyNWMuKymQSXQDD601n7OMXEpv90bXiPmHDLy9fNScMUCMUSIWZm8aY9UI=",
+        "ECDSA",
+        "SHA256:DVC3r3J1DFyUKkJRcndaG7bLbOdUSnZo9fjZWuJlZyc",
+    ),
+];
+
+/// Eine Konfiguration, wie `ssh -G` sie fuer einen Rechner im Pruefordner
+/// liefern koennte, mit `datei` als erster `userknownhostsfile`.
+fn scankonfiguration(port: u16, alias: Option<&str>, datei: &Path) -> Sshkonfiguration {
+    Sshkonfiguration {
+        hostname: "example.test".into(),
+        port,
+        hostkeyalias: alias.map(str::to_owned),
+        dateien: vec![datei.to_owned()],
+        eigene_datei: Some(datei.to_owned()),
+    }
+}
+
+/// Die Fingerabdruecke kommen von `ssh-keygen`, je Zeile in ihrer
+/// Reihenfolge, und die Zeilen tragen den Namen, unter dem `ssh` sucht
+/// (Akzeptanz von Schritt 8).
+///
+/// Ohne Netz: die Ausgabe von `ssh-keyscan` steht als Text da, mit einem
+/// Kommentar, einer doppelten Zeile, einer Zeile mit vier Feldern, einer mit
+/// einem fremden Zeichen im Schluessel und einer, die `ssh-keygen` nicht
+/// liest; alle fuenf fallen weg. Daneben haelt ein frisch erzeugter Schluessel
+/// die Zuordnung an der Ausgabe von `ssh-keygen -l` fuer seine Datei fest.
+#[test]
+fn die_fingerabdruecke_kommen_von_ssh_keygen() {
+    let ordner = Pruefordner::neu("fern-fingerabdruck");
+    let frisch = probeschluessel(&ordner);
+    let erwartet_frisch = Command::new("/usr/bin/ssh-keygen")
+        .args(["-l", "-E", "sha256", "-f"])
+        .arg(ordner.unter("schluessel.pub"))
+        .stdin(Stdio::null())
+        .output()
+        .expect("ssh-keygen -l");
+    let erwartet_frisch = String::from_utf8_lossy(&erwartet_frisch.stdout)
+        .split_whitespace()
+        .nth(1)
+        .expect("ein Fingerabdruck")
+        .to_owned();
+    let datei = ordner.unter("known_hosts");
+    let [(ed, _, _), (ec, _, _)] = FESTE_SCHLUESSEL;
+    let ausgabe = format!(
+        "# example.test:2222 SSH-2.0-OpenSSH_9.9\n\
+         [example.test]:2222 {ed}\n\
+         [example.test]:2222 {ec}\n\
+         [example.test]:2222 {ed}\n\
+         [example.test]:2222 {ed} zuviel\n\
+         [example.test]:2222 ssh-ed25519 AAAA;rm\n\
+         [example.test]:2222 ssh-ed25519 AAAAkeinschluessel\n\
+         [example.test]:2222 {frisch}\n"
+    );
+    let konfiguration = scankonfiguration(2222, None, &datei);
+    let gescannt = im_fernfaden(move |pfand| {
+        gescannt_aus(pfand, &konfiguration, "[example.test]:2222", &ausgabe)
+    })
+    .expect("drei Schluessel");
+    assert_eq!(gescannt.rechner(), "example.test");
+    assert_eq!(gescannt.port(), 2222);
+    assert_eq!(gescannt.suchname(), "[example.test]:2222");
+    assert_eq!(gescannt.datei(), Some(datei.as_path()));
+    let fest = |(_, typ, abdruck): (&str, &str, &str)| Fingerabdruck {
+        typ: typ.to_owned(),
+        abdruck: abdruck.to_owned(),
+    };
+    assert_eq!(
+        gescannt.fingerabdruecke(),
+        [
+            fest(FESTE_SCHLUESSEL[0]),
+            fest(FESTE_SCHLUESSEL[1]),
+            Fingerabdruck {
+                typ: "ED25519".to_owned(),
+                abdruck: erwartet_frisch,
+            },
+        ]
+    );
+    assert_eq!(
+        gescannt.zeilen(),
+        [
+            format!("[example.test]:2222 {ed}"),
+            format!("[example.test]:2222 {ec}"),
+            format!("[example.test]:2222 {frisch}"),
+        ]
+    );
+
+    // Mit `HostKeyAlias` steht der Alias vorn, denn unter ihm sucht `ssh`.
+    let konfiguration = scankonfiguration(22, Some("kurz"), &datei);
+    let zeile = format!("example.test {ed}\n");
+    let mit_alias = im_fernfaden(move |pfand| gescannt_aus(pfand, &konfiguration, "kurz", &zeile))
+        .expect("ein Schluessel");
+    assert_eq!(mit_alias.zeilen(), [format!("kurz {ed}")]);
+
+    // Ohne gueltige Zeile gibt es nichts anzunehmen.
+    let konfiguration = scankonfiguration(22, None, &datei);
+    let leer = im_fernfaden(move |pfand| {
+        gescannt_aus(
+            pfand,
+            &konfiguration,
+            "example.test",
+            "# nur ein Kommentar\n",
+        )
+    });
+    assert!(leer.is_err(), "{leer:?}");
+}
+
+/// „Annehmen“ legt den fehlenden Ordner mit `0700` und die fehlende Datei
+/// mit `0600` an, haengt an eine vorhandene allein die gescannten Zeilen an
+/// und laesst deren Rechte und Inhalt stehen (Akzeptanz von Schritt 8).
+///
+/// Geschrieben wird allein im [`Pruefordner`]; die `known_hosts` des Nutzers
+/// erreicht die Probe nie, denn die Datei kommt aus der Konfiguration und
+/// nicht aus `ssh -G`.
+#[test]
+fn das_anhaengen_legt_verzeichnis_und_datei_mit_den_engen_rechten_an_und_schreibt_nur_die_gescannten_zeilen()
+ {
+    use std::os::unix::fs::PermissionsExt;
+
+    let ordner = Pruefordner::neu("fern-anhaengen");
+    let [(ed, _, _), (ec, _, _)] = FESTE_SCHLUESSEL;
+    let ausgabe = format!("example.test {ed}\nexample.test {ec}\n");
+    let rechte = |pfad: &Path| fs::metadata(pfad).expect("steht da").permissions().mode() & 0o777;
+
+    // Ordner und Datei fehlen.
+    let neu = ordner.unter("punktssh").join("known_hosts");
+    let konfiguration = scankonfiguration(22, None, &neu);
+    let ausgabe_neu = ausgabe.clone();
+    im_fernfaden(move |pfand| {
+        let gescannt = gescannt_aus(pfand, &konfiguration, "example.test", &ausgabe_neu)
+            .expect("zwei Schluessel");
+        anhaengen(pfand, &gescannt)
+    })
+    .expect("angehaengt");
+    assert_eq!(rechte(&ordner.unter("punktssh")), 0o700);
+    assert_eq!(rechte(&neu), 0o600);
+    assert_eq!(
+        fs::read_to_string(&neu).expect("lesen"),
+        format!("example.test {ed}\nexample.test {ec}\n")
+    );
+    assert_eq!(
+        in_datei_bekannt("example.test", &neu).ok(),
+        Some(true),
+        "ssh-keygen -F findet den angehaengten Rechner"
+    );
+
+    // Eine vorhandene Datei ohne Zeilenende am Schluss, mit weiten Rechten.
+    let alt = format!("alt.test {ed}");
+    let vorhanden = ordner.datei("known_hosts", &alt);
+    fs::set_permissions(&vorhanden, fs::Permissions::from_mode(0o644)).expect("Rechte");
+    let konfiguration = scankonfiguration(22, None, &vorhanden);
+    im_fernfaden(move |pfand| {
+        let gescannt =
+            gescannt_aus(pfand, &konfiguration, "example.test", &ausgabe).expect("zwei Schluessel");
+        anhaengen(pfand, &gescannt)
+    })
+    .expect("angehaengt");
+    assert_eq!(
+        rechte(&vorhanden),
+        0o644,
+        "eine vorhandene Datei behaelt ihre Rechte"
+    );
+    assert_eq!(
+        fs::read_to_string(&vorhanden).expect("lesen"),
+        format!("{alt}\nexample.test {ed}\nexample.test {ec}\n")
+    );
+
+    // Ohne Datei des Nutzers wird nichts geschrieben.
+    let mut ohne = scankonfiguration(22, None, &neu);
+    ohne.eigene_datei = None;
+    let zeile = format!("example.test {ed}\n");
+    let fehler = im_fernfaden(move |pfand| {
+        let gescannt = gescannt_aus(pfand, &ohne, "example.test", &zeile).expect("ein Schluessel");
+        anhaengen(pfand, &gescannt)
+    })
+    .expect_err("keine Datei");
+    assert_eq!(fehler.kind(), std::io::ErrorKind::NotFound);
 }
 
 /// Ein Zugang auf dem Server des Systems, ohne `ssh` davor.

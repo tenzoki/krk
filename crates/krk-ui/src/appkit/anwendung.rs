@@ -284,6 +284,7 @@ use krk_core::ablage::{
     leseprofile, lesezeichen, pfade, werkszustand,
 };
 use krk_core::fern::Zugangsregister;
+use krk_core::fern::rechnerschluessel::Gescannt;
 use krk_core::heimordner::eintraege::geheimnisse::Suchfehler;
 use krk_core::heimordner::ort::{self, Notizort, Ortsfehler};
 use krk_core::heimordner::schluesselmerker::Schluesselmerker;
@@ -2723,7 +2724,7 @@ impl Anwendungsdelegierter {
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
         leiste.quelle().verbinden_setzen(Box::new(move |name| {
             if let Some(selbst) = schwach.load() {
-                selbst.verbindung_herstellen(name);
+                selbst.verbindung_herstellen(name, None);
             }
         }));
         // Das Auswerfen aus der Leiste (261016), schwach aus demselben Grund.
@@ -9511,7 +9512,7 @@ impl Anwendungsdelegierter {
     /// erreicht diese Stelle nur mit dem Fokus in der Leiste.
     fn gewaehlte_verbindung_herstellen(&self) -> bool {
         match self.leiste().quelle().gewaehlte_verbindung() {
-            Some(name) => self.verbindung_herstellen(name),
+            Some(name) => self.verbindung_herstellen(name, None),
             None => {
                 let aktiv = self.ivars().modell.borrow().aktiv();
                 self.antwort_zeigen(aktiv, text(Text::VerbindungKeineAuswahl));
@@ -9535,7 +9536,14 @@ impl Anwendungsdelegierter {
     ///
     /// **Ein zweiter Anstoss, waehrend ein Gang laeuft, meldet es**
     /// (Entscheidung 20) und startet keinen zweiten.
-    fn verbindung_herstellen(&self, name: String) {
+    ///
+    /// `annahme` traegt die Schluessel, die der Nutzer im Blatt fuer einen
+    /// unbekannten Rechnerschluessel angenommen hat
+    /// ([`Self::rechnerschluessel_beantwortet`]); der Faden haengt sie vor dem
+    /// Verbinden an `known_hosts` an. Der Weg ist sonst derselbe, also fragt
+    /// auch er nach der PIN allein, wenn kein Schluessel gemerkt ist; nach dem
+    /// ersten Gang mit PIN ist einer gemerkt.
+    fn verbindung_herstellen(&self, name: String, annahme: Option<Box<Gescannt>>) {
         let aktiv = self.ivars().modell.borrow().aktiv();
         if self.ivars().tresorgang.get() {
             self.antwort_zeigen(aktiv, text(Text::VerbindungLaeuftSchon));
@@ -9560,13 +9568,14 @@ impl Anwendungsdelegierter {
             groesse,
             tresorweg::gemerkter_schluessel(&self.ivars().merker),
         ) {
-            Geheimnisweg::Mittel(mittel) => self.verbindung_starten(pfad, name, mittel),
+            Geheimnisweg::Mittel(mittel) => self.verbindung_starten(pfad, name, mittel, annahme),
             Geheimnisweg::PinErfragen(form) => {
                 self.tresor_pin_erfragen(form, move |selbst, pin| {
                     selbst.verbindung_starten(
                         pfad.clone(),
                         name.clone(),
                         Oeffnungsmittel::Pin(pin),
+                        annahme.clone(),
                     );
                 });
             }
@@ -9575,7 +9584,13 @@ impl Anwendungsdelegierter {
 
     /// Startet den Faden `krk-verbinden` mit dem Mittel; der Ausgang kommt in
     /// [`Self::verbindung_einziehen`] an.
-    fn verbindung_starten(&self, pfad: PathBuf, name: String, mittel: Oeffnungsmittel) {
+    fn verbindung_starten(
+        &self,
+        pfad: PathBuf,
+        name: String,
+        mittel: Oeffnungsmittel,
+        annahme: Option<Box<Gescannt>>,
+    ) {
         let aktiv = self.ivars().modell.borrow().aktiv();
         if self.ivars().tresorgang.get() {
             self.antwort_zeigen(aktiv, text(Text::VerbindungLaeuftSchon));
@@ -9591,6 +9606,7 @@ impl Anwendungsdelegierter {
             name.clone(),
             mittel,
             register,
+            annahme,
             move |mtm, ergebnis| {
                 Anwendungsdelegierter::verbindung_einziehen(
                     mtm,
@@ -9666,11 +9682,14 @@ impl Anwendungsdelegierter {
             {
                 selbst.schluessel_verwerfen();
                 let form = Pinform::nach_groesse(gesperrt.datei_leer.then_some(0));
+                // Ohne Annahme: hing eine daran, steht sie schon in
+                // `known_hosts`, denn der Faden haengt vor dem Lesen an.
                 selbst.tresor_pin_erfragen(form, move |selbst, pin| {
                     selbst.verbindung_starten(
                         pfad.clone(),
                         name.clone(),
                         Oeffnungsmittel::Pin(pin),
+                        None,
                     );
                 });
                 return;
@@ -9730,16 +9749,89 @@ impl Anwendungsdelegierter {
                     ),
                 }
             }
-            Verbindungsausgang::RechnerschluesselUnbekannt(suchname) => satz(
+            // Das Blatt legt die Schluessel vor (Schritt 8); die Statuszeile
+            // behaelt bis zur Antwort den Satz des laufenden Gangs.
+            Verbindungsausgang::RechnerschluesselUnbekannt(gescannt) => {
+                selbst.rechnerschluessel_erfragen(name, gescannt);
+                return;
+            }
+            Verbindungsausgang::RechnerschluesselOhneDatei(suchname) => satz(
                 Text::FernRechnerschluesselUnbekannt,
                 &[("name", &name), ("rechner", &suchname)],
             ),
+            Verbindungsausgang::RechnerschluesselNichtGeholt { suchname, grund } => satz(
+                Text::FernRechnerschluesselNichtGeholt,
+                &[("name", &name), ("rechner", &suchname), ("grund", &grund)],
+            ),
+            Verbindungsausgang::RechnerschluesselNichtEingetragen { datei, grund } => {
+                let datei = datei.display().to_string();
+                satz(
+                    Text::FernRechnerschluesselNichtEingetragen,
+                    &[("name", &name), ("datei", &datei), ("grund", &grund)],
+                )
+            }
             Verbindungsausgang::FernAbgewiesen(grund) => satz(
                 Text::FernVerbindungAbgewiesen,
                 &[("name", &name), ("grund", &grund)],
             ),
         };
         selbst.antwort_zeigen(aktiv, &antwort);
+    }
+
+    /// Zeigt das Blatt fuer einen unbekannten Rechnerschluessel (Schritt 8 des
+    /// Plans `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`,
+    /// Entscheidung 6).
+    ///
+    /// Der Rueckruf geht ueber die Hauptschlange weiter ([`spaeter`]), weil
+    /// darauf ein weiteres Blatt aufgehen kann, das PIN-Blatt. Kein
+    /// Systemaufruf steht hier: die Schluessel hat der Faden `krk-verbinden`
+    /// geholt, und die Texte rechnet `blaetter::rechnerschluessel::texte` aus
+    /// dem Wert.
+    fn rechnerschluessel_erfragen(&self, name: String, gescannt: Box<Gescannt>) {
+        let Some(fenster) = self.ivars().fenster.get() else {
+            return;
+        };
+        let Some(datei) = gescannt.datei() else {
+            // Kann nicht eintreten: ohne Datei endet der Faden mit
+            // `RechnerschluesselOhneDatei`.
+            return;
+        };
+        let (frage, erlaeuterung) = blaetter::rechnerschluessel::texte(&name, &gescannt, datei);
+        let griff = blaetter::rechnerschluessel::zeigen(
+            self.mtm(),
+            fenster,
+            &frage,
+            &erlaeuterung,
+            move |angenommen| {
+                let (name, gescannt) = (name.clone(), gescannt.clone());
+                spaeter(move |selbst| {
+                    selbst.rechnerschluessel_beantwortet(name, gescannt, angenommen);
+                });
+            },
+        );
+        self.blatt_oeffnet(griff);
+    }
+
+    /// Die Antwort auf das Blatt fuer einen unbekannten Rechnerschluessel:
+    /// „Annehmen“ verbindet ein zweites Mal, mit den gescannten Schluesseln,
+    /// die der Faden zuerst an `known_hosts` anhaengt; „Abbrechen“ meldet,
+    /// dass der Schluessel unbekannt bleibt.
+    fn rechnerschluessel_beantwortet(
+        &self,
+        name: String,
+        gescannt: Box<Gescannt>,
+        angenommen: bool,
+    ) {
+        if angenommen {
+            self.verbindung_herstellen(name, Some(gescannt));
+            return;
+        }
+        let aktiv = self.ivars().modell.borrow().aktiv();
+        let antwort = satz(
+            Text::FernRechnerschluesselUnbekannt,
+            &[("name", &name), ("rechner", &gescannt.suchname())],
+        );
+        self.antwort_zeigen(aktiv, &antwort);
     }
 
     /// „Verbinden…“ im Kontextmenue der Dateiliste (Schritt 7, Entscheidungen
@@ -15543,12 +15635,12 @@ mod kontextproben {
     #[test]
     fn der_verbindungsweg_reisst_nirgends_ab() {
         let datei = diese_datei();
-        let glieder: [(&str, &[&str]); 9] = [
+        let glieder: [(&str, &[&str]); 11] = [
             (
                 "gewaehlte_verbindung_herstellen",
                 &[
                     concat!(".gewaehlte_", "verbindung()"),
-                    concat!("self.verbindung_", "herstellen(name)"),
+                    concat!("self.verbindung_", "herstellen(name, None)"),
                 ],
             ),
             (
@@ -15573,6 +15665,23 @@ mod kontextproben {
                     concat!("tresorgang.", "set(false)"),
                     concat!("verbinden::", "uebergeben("),
                     concat!(".ordner_", "lesen("),
+                    concat!("selbst.rechnerschluessel_", "erfragen("),
+                ],
+            ),
+            (
+                "rechnerschluessel_erfragen",
+                &[
+                    concat!("blaetter::rechnerschluessel::", "texte("),
+                    concat!("blaetter::rechnerschluessel::", "zeigen("),
+                    concat!("selbst.rechnerschluessel_", "beantwortet("),
+                    concat!("self.blatt_", "oeffnet(griff)"),
+                ],
+            ),
+            (
+                "rechnerschluessel_beantwortet",
+                &[
+                    concat!("self.verbindung_", "herstellen(name, Some(gescannt))"),
+                    concat!("Text::", "FernRechnerschluesselUnbekannt"),
                 ],
             ),
             (
@@ -15626,7 +15735,7 @@ mod kontextproben {
         }
         assert!(
             rumpf(&datei, "leiste_einrichten")
-                .contains(concat!("selbst.verbindung_", "herstellen(name)")),
+                .contains(concat!("selbst.verbindung_", "herstellen(name, None)")),
             "die Senke des Klicks erreicht verbindung_herstellen nicht"
         );
 
@@ -15710,25 +15819,52 @@ mod kontextproben {
     ///   Handlung des Nutzers
     ///   (`issues/261016-0532_*_der-anhaengeweg-schreibt-bookmarks-toml-auf-dem-hauptfaden-und-die-zusage-nennt-nur-den-einen-stat.md`).
     ///
+    /// **Seit dem Blatt fuer einen unbekannten Rechnerschluessel (Schritt 8)
+    /// liest sie dessen Ruempfe mit**: die zwei beim Anwendungsdelegierten und
+    /// die zwei Funktionen des Blattes, `texte` und `zeigen` in
+    /// `blaetter/rechnerschluessel.rs`. Scan, Fingerabdruecke und Anhaengen
+    /// stehen auf dem Faden `krk-verbinden`; der Pfad des Blattmoduls,
+    /// `blaetter::rechnerschluessel::`, ist dabei kein Treffer der Nadel fuer
+    /// das Kernmodul gleichen Namens.
+    ///
     /// **Was sie nicht sieht:** einen Systemaufruf in einer anderen tiefer
     /// gerufenen Funktion; die zwei Ausnahmen sind genau die, die sie mit
     /// Namen kennt.
     #[test]
     fn der_verbindungsweg_stellt_auf_dem_hauptfaden_nur_den_einen_stat() {
         let datei = diese_datei();
-        for name in [
+        let blattdatei =
+            super::quelltextproben::datei("krk-ui/src/appkit/blaetter/rechnerschluessel.rs");
+        let blattrumpf = |kopf: &str| -> String {
+            blattdatei
+                .split_once(kopf)
+                .and_then(|(_, rest)| rest.split_once("\n}\n"))
+                .map(|(rumpf, _)| rumpf.to_owned())
+                .unwrap_or_else(|| panic!("{kopf} steht nicht im Blatt"))
+        };
+        let ruempfe = [
             "gewaehlte_verbindung_herstellen",
             "verbindung_herstellen",
             "verbindung_starten",
             "verbindung_einziehen",
+            "rechnerschluessel_erfragen",
+            "rechnerschluessel_beantwortet",
             "verbindung_erfragen",
             "verbindungsblatt_zeigen",
             "verbindungsschluessel_holen",
             "verbindung_anhaengen",
             "anhaengen_einziehen",
             "tresor_pin_erfragen",
-        ] {
-            let rumpf = rumpf(&datei, name);
+        ]
+        .map(|name| (name.to_owned(), rumpf(&datei, name)))
+        .into_iter()
+        .chain([
+            ("texte".to_owned(), blattrumpf("pub fn texte(")),
+            ("zeigen".to_owned(), blattrumpf("pub fn zeigen(")),
+        ]);
+        for (name, rumpf) in ruempfe {
+            let name = name.as_str();
+            let rumpf = rumpf.replace(concat!("blaetter::", "rechnerschluessel::"), "");
             for nadel in [
                 "fs::",
                 "metadata(",

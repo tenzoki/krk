@@ -972,6 +972,18 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::FernRechnerschluesselUnbekannt => {
             "The key of host {rechner} is unknown; “{name}” connects only once it is in known_hosts."
         }
+        Text::FernRechnerschluesselNichtGeholt => {
+            "The key of host {rechner} is unknown and could not be fetched; “{name}” does not connect: {grund}"
+        }
+        Text::FernRechnerschluesselNichtEingetragen => {
+            "Could not add the keys for “{name}” to {datei}: {grund}"
+        }
+        Text::RechnerschluesselFrage => "Unknown host {rechner}, port {port}",
+        Text::RechnerschluesselErlaeuterung => {
+            "“{name}” connects to a host whose key ssh does not know yet. Compare the fingerprints with those the host’s operator publishes:\n\n{abdruecke}\n\n“Accept” adds the keys to {datei} and connects. Return and Esc cancel, Cmd+Return accepts."
+        }
+        Text::RechnerschluesselAbdruck => "{typ}  {abdruck}",
+        Text::RechnerschluesselAnnehmen => "Accept",
         Text::FernStartordnerFehlt => {
             "“{name}” is connected, but {pfad} is not a folder; showing {heim}."
         }

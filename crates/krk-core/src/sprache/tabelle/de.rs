@@ -1014,6 +1014,18 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::FernRechnerschluesselUnbekannt => {
             "Der Schlüssel des Rechners {rechner} ist unbekannt; „{name}“ verbindet erst, wenn er in known_hosts steht."
         }
+        Text::FernRechnerschluesselNichtGeholt => {
+            "Der Schlüssel des Rechners {rechner} ist unbekannt und ließ sich nicht abrufen; „{name}“ verbindet nicht: {grund}"
+        }
+        Text::FernRechnerschluesselNichtEingetragen => {
+            "Die Schlüssel für „{name}“ ließen sich nicht in {datei} eintragen: {grund}"
+        }
+        Text::RechnerschluesselFrage => "Unbekannter Rechner {rechner}, Port {port}",
+        Text::RechnerschluesselErlaeuterung => {
+            "„{name}“ verbindet mit einem Rechner, dessen Schlüssel ssh noch nicht kennt. Die Fingerabdrücke mit denen vergleichen, die der Betreiber des Rechners nennt:\n\n{abdruecke}\n\n„Annehmen“ trägt die Schlüssel in {datei} ein und verbindet. Return und Esc brechen ab, Cmd+Return nimmt an."
+        }
+        Text::RechnerschluesselAbdruck => "{typ}  {abdruck}",
+        Text::RechnerschluesselAnnehmen => "Annehmen",
         Text::FernStartordnerFehlt => {
             "„{name}“ ist verbunden, aber {pfad} ist kein Ordner; gezeigt wird {heim}."
         }
