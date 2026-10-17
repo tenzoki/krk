@@ -19,3 +19,6 @@ Ein eigener Schlüssel für die Statuszeile, in allen drei Tabellen, als ganzer 
 **Abnahme**
 
 `grep -n 'antwort_zeigen(.*ArchivNurLesbar' crates/krk-ui/src` findet nichts mehr. Der neue Schlüssel steht in `de.rs`, `fr.rs` und `en.rs`.
+
+---
+Resolved: Neuer Schluessel `Text::ArchivAlleinLesbar` („Dieses Archiv ist allein lesbar.“) in `de.rs`, `fr.rs` und `en.rs` (`crates/krk-core/src/sprache/tabelle/`), an den drei Stellen in `crates/krk-ui/src/appkit/anwendung.rs` statt `ArchivNurLesbar`, das der Grund in der Abschlussliste bleibt. Probe: `die_statuszeile_sagt_allein_lesbar_als_ganzen_satz` (`crates/krk-core/tests/sprache.rs`); `HowTo.md` `## Archive im Dateifenster`.

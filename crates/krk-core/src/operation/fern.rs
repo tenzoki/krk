@@ -537,21 +537,21 @@ fn ausfuehren(pfand: &Fernfaden, auftrag: &Fernauftrag, steuerung: &mut Steuerun
     // Die Leser der Quellarchive fallen, bevor ein Umbau ihre Dateien
     // ersetzt.
     drop(leser);
-    archiv::aus_archiven_entfernen(pfand, nachher, steuerung);
+    let mut ersetzte = archiv::aus_archiven_entfernen(pfand, nachher, steuerung);
     if abgebrochen {
         return Abschluss::Abgebrochen;
     }
-    if !im_archiv.is_empty()
-        && archiv::im_archiv_abarbeiten(pfand, &auftrag.art, im_archiv, steuerung)
-            == Ablauf::Abgebrochen
-    {
-        return Abschluss::Abgebrochen;
+    if !im_archiv.is_empty() {
+        ersetzte.extend(archiv::im_archiv_abarbeiten(
+            pfand,
+            &auftrag.art,
+            im_archiv,
+            steuerung,
+        ));
     }
-    if steuerung.abgebrochen() {
-        Abschluss::Abgebrochen
-    } else {
-        Abschluss::Fertig
-    }
+    // Ohne ersetztes Archiv wie bisher: ein gesetzter Abbruch ist ein
+    // Abbruch. Mit einem ersetzten Archiv kam er zu spaet (E13).
+    crate::archiv::umbau::abschluss_nach_ersetzen(steuerung, &ersetzte)
 }
 
 /// Ein Archiv dieses Vorgangs: der Pfad seiner Datei und sein Leser, oder

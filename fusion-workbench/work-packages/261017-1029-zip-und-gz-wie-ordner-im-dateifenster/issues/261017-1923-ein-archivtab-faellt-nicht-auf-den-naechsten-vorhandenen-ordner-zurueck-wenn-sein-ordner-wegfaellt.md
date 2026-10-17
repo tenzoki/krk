@@ -19,3 +19,6 @@ Fehlt der Innenpfad im frisch gelesenen Verzeichnis, geht der Tab auf den nächs
 **Abnahme**
 
 Eine Probe am Tabmodell: ein Archivtab auf `a/b`, das Verzeichnis ohne `a/b`. Danach steht der Tab auf `a` oder auf der Wurzel, und die Meldung nennt `a/b`.
+
+---
+Resolved: `Archivfehler::KeinOrdner` traegt den naechsten vorhandenen Vorfahren (`naechster_ordner`, `crates/krk-core/src/verzeichnis/leser.rs`); `ausweichziel` (`crates/krk-ui/src/tabs.rs`) macht daraus, und aus einer fehlenden Archivdatei den Rueckkehrordner, ein faelliges Ausweichen, das `Tabliste::einziehen` einloest wie den fernen Rueckfall, mit `Text::ArchivOrdnerFehlt` (jetzt mit `{ziel}`) oder `Text::ArchivDateiFehlt` in der Statuszeile. Ein lokaler Tab faellt nicht zurueck, er meldet den Lesefehler; das Ausweichen gilt allein im Archiv. Proben: `ein_archivtab_weicht_aus_wenn_sein_ordner_oder_sein_archiv_wegfaellt` (Pruefmodul von `tabs.rs`), `ein_ungueltiges_archiv_und_ein_fehlender_ordner_enden_mit_grund` (`crates/krk-core/tests/archiv_lesevorgang.rs`); `HowTo.md` `## Archive im Dateifenster`.

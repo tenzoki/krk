@@ -20,7 +20,11 @@
 //! **Ein Vorgang ist ein Umbau je Archiv** und nie ein Schreiben Eintrag fuer
 //! Eintrag (E13): alle Konfliktfragen stehen vor dem ersten geschriebenen
 //! Byte, und ein Abbruch oder Fehler laesst das Archiv unveraendert
-//! (`archiv::umbau`).
+//! (`archiv::umbau`). **Ist ein Archiv ersetzt, endet der Vorgang als
+//! fertig**, auch wenn danach noch ein Abbruch kam, und der Bericht nennt ihn
+//! (`umbau::abschluss_nach_ersetzen`); deshalb geben [`hinein`],
+//! [`aus_archiven_entfernen`] und [`im_archiv_abarbeiten`] die ersetzten
+//! Archive weiter, statt am Ende allein das Abbruchkennzeichen zu fragen.
 //!
 //! **Eine Quelle wird beim Verschieben allein entfernt, wenn der Umbau sie
 //! vollstaendig gemeldet hat und das Archiv ersetzt ist.** Vollstaendig heisst
@@ -311,14 +315,24 @@ pub(super) fn hinein(
                 }
             },
             Ort::Lokal(pfad) => match zielarchiv_in_quelle(pfad, ziel.datei()) {
-                Ok(false) => match Neueintrag::lokal_mit_spur(pfand, pfad) {
-                    Ok((eintrag, spur)) => Ok(Some((
-                        Umbauschritt::Hinzufuegen {
-                            ordner: ziel.innen.clone(),
-                            eintrag,
-                        },
-                        Herkunft::Lokal(spur),
-                    ))),
+                Ok(false) => match Neueintrag::lokal(pfand, pfad) {
+                    Ok(baum) => {
+                        // Eine Sonderdatei kommt mit Grund in den Bericht, wie
+                        // fern, und macht den Posten unvollstaendig: ein
+                        // Verschieben entfernt die Quelle dann nicht.
+                        for weg in &baum.ausgelassen {
+                            steuerung.ueberspringen(weg, text(Text::VorgangKeineGewoehnlicheDatei));
+                        }
+                        Ok(baum.eintrag.map(|eintrag| {
+                            (
+                                Umbauschritt::Hinzufuegen {
+                                    ordner: ziel.innen.clone(),
+                                    eintrag,
+                                },
+                                Herkunft::Lokal(baum.spur),
+                            )
+                        }))
+                    }
                     Err(fehler) => {
                         steuerung.ueberspringen(pfad, crate::operation::grund(&fehler));
                         Ok(None)
@@ -371,6 +385,10 @@ pub(super) fn hinein(
         Ok(umgebaut) => umgebaut,
         Err(fehler) => return umbaufehler_melden(&fehler, ziel.datei(), steuerung),
     };
+    let mut ersetzte = Vec::new();
+    if umgebaut.ersetzt {
+        ersetzte.push(ziel.datei().to_path_buf());
+    }
 
     let mut aus_archiven = Vec::new();
     for eintrag in posten {
@@ -411,8 +429,10 @@ pub(super) fn hinein(
             Herkunft::Archiv(posten) => aus_archiven.push(posten),
         }
     }
-    aus_archiven_entfernen(pfand, aus_archiven, steuerung);
-    abschluss(steuerung)
+    ersetzte.extend(aus_archiven_entfernen(pfand, aus_archiven, steuerung));
+    // Ist das Zielarchiv ersetzt, heisst ein spaeter Abbruch nicht mehr
+    // „unveraendert“; der Bericht sagt, was geschehen ist.
+    umbau::abschluss_nach_ersetzen(steuerung, &ersetzte)
 }
 
 /// Abgebrochen, wenn der Nutzer abgebrochen hat, sonst fertig.
@@ -759,11 +779,16 @@ fn stelleneintrag_bauen(
 /// Nennen zwei Posten desselben Archivs verschiedene Kennungen, hat sich das
 /// Archiv schon waehrend des Kopierens geaendert, und es wird ebenso nichts
 /// entfernt.
+///
+/// Zurueck kommen die Archive, die dabei ersetzt worden sind; der Rufer
+/// reicht sie an `umbau::abschluss_nach_ersetzen`.
+#[must_use = "die ersetzten Archive entscheiden, ob ein spaeter Abbruch noch einer ist"]
 pub(super) fn aus_archiven_entfernen(
     pfand: &Fernfaden,
     posten: Vec<Entfernposten>,
     steuerung: &mut Steuerung,
-) {
+) -> Vec<PathBuf> {
+    let mut ersetzte = Vec::new();
     let mut gruppen: Vec<(Arc<Archivzugang>, Vec<Entfernposten>)> = Vec::new();
     for eintrag in posten {
         match gruppen
@@ -810,10 +835,15 @@ pub(super) fn aus_archiven_entfernen(
             let _ = plan.anfuegen(Umbauschritt::Entfernen(eintrag.innen.clone()));
         }
         match umbau::umbauen_an_kennung(pfand, &zugang, kennung, plan, steuerung) {
-            Ok(_) => {}
+            Ok(umgebaut) => {
+                if umgebaut.ersetzt {
+                    ersetzte.push(zugang.datei().to_path_buf());
+                }
+            }
             Err(fehler) => geblieben(steuerung, &gruppe, &fehler.grund()),
         }
     }
+    ersetzte
 }
 
 // ----------------------------------------------------------------------
@@ -835,12 +865,19 @@ struct Handlung {
 /// dem Grund, den lokal das Scheitern an `AlreadyExists` traegt (Modulkopf).
 /// Ein Loeschen ist endgueltig, denn ein Archiv hat keinen Papierkorb; ein
 /// Abbruch oder Fehler laesst das ganze Archiv stehen (E17).
+///
+/// Zurueck kommen die Archive, die ersetzt worden sind; der Rufer reicht sie
+/// an `umbau::abschluss_nach_ersetzen`. **Ein Abbruch vor einem weiteren
+/// Archiv laesst es stehen**, und war schon eines ersetzt, nennt der Bericht
+/// jeden Ort der stehen gebliebenen; ohne ersetztes Archiv endet der Lauf dort
+/// stumm wie bisher, und der Abschluss sagt „abgebrochen“.
+#[must_use = "die ersetzten Archive entscheiden, ob ein spaeter Abbruch noch einer ist"]
 pub(super) fn im_archiv_abarbeiten(
     pfand: &Fernfaden,
     art: &Fernart,
     orte: Vec<Archivort>,
     steuerung: &mut Steuerung,
-) -> Ablauf {
+) -> Vec<PathBuf> {
     let mut gruppen: Vec<Vec<Archivort>> = Vec::new();
     for ort in orte {
         match gruppen.iter_mut().find(|gruppe| {
@@ -852,27 +889,36 @@ pub(super) fn im_archiv_abarbeiten(
             None => gruppen.push(vec![ort]),
         }
     }
+    let mut ersetzte = Vec::new();
     for gruppe in gruppen {
         if steuerung.abgebrochen() {
-            return Ablauf::Abgebrochen;
+            if ersetzte.is_empty() {
+                break;
+            }
+            for ort in &gruppe {
+                steuerung.ueberspringen(
+                    &archivbezeichnung(ort.datei(), &ort.innen),
+                    text(Text::ArchivUnveraendertNachAbbruch),
+                );
+            }
+            continue;
         }
-        if im_einen_archiv(pfand, art, &gruppe, steuerung) == Ablauf::Abgebrochen {
-            return Ablauf::Abgebrochen;
+        if let Some(archiv) = im_einen_archiv(pfand, art, &gruppe, steuerung) {
+            ersetzte.push(archiv);
         }
     }
-    Ablauf::Weiter
+    ersetzte
 }
 
-/// [`im_archiv_abarbeiten`] fuer die Orte eines Archivs.
+/// [`im_archiv_abarbeiten`] fuer die Orte eines Archivs; zurueck kommt die
+/// Archivdatei, wenn der Umbau sie ersetzt hat.
 fn im_einen_archiv(
     pfand: &Fernfaden,
     art: &Fernart,
     orte: &[Archivort],
     steuerung: &mut Steuerung,
-) -> Ablauf {
-    let Some(zugang) = orte.first().map(|ort| Arc::clone(&ort.zugang)) else {
-        return Ablauf::Weiter;
-    };
+) -> Option<PathBuf> {
+    let zugang = orte.first().map(|ort| Arc::clone(&ort.zugang))?;
     if !zugang.format().beschreibbar() {
         for ort in orte {
             steuerung.ueberspringen(
@@ -880,17 +926,17 @@ fn im_einen_archiv(
                 text(Text::ArchivNurLesbar),
             );
         }
-        return Ablauf::Weiter;
+        return None;
     }
     let verzeichnis = match zugang.verzeichnis(pfand, &steuerung.abbruchkennzeichen()) {
         Ok(verzeichnis) => verzeichnis,
-        Err(crate::archiv::Verzeichnisfehler::Abgebrochen) => return Ablauf::Abgebrochen,
+        Err(crate::archiv::Verzeichnisfehler::Abgebrochen) => return None,
         Err(fehler) => {
             let warum = Lesefehler::Verzeichnis(fehler).grund();
             for ort in orte {
                 steuerung.ueberspringen(&archivbezeichnung(ort.datei(), &ort.innen), warum.clone());
             }
-            return Ablauf::Weiter;
+            return None;
         }
     };
 
@@ -933,7 +979,7 @@ fn im_einen_archiv(
         }
     }
     if handlungen.is_empty() {
-        return Ablauf::Weiter;
+        return None;
     }
 
     match umbau::umbauen(pfand, &zugang, plan, steuerung) {
@@ -952,12 +998,12 @@ fn im_einen_archiv(
                     Some(Schrittausgang::Ausgelassen) | None => {}
                 }
             }
-            Ablauf::Weiter
+            umgebaut.ersetzt.then(|| zugang.datei().to_path_buf())
         }
-        Err(fehler) => match umbaufehler_melden(&fehler, zugang.datei(), steuerung) {
-            Abschluss::Abgebrochen => Ablauf::Abgebrochen,
-            Abschluss::Fertig => Ablauf::Weiter,
-        },
+        Err(fehler) => {
+            fehler.melden(steuerung, zugang.datei());
+            None
+        }
     }
 }
 

@@ -1662,3 +1662,179 @@ fn verschieben_ins_archiv_laesst_stehen_was_waehrend_der_konfliktfrage_hinzukam(
         );
     }
 }
+
+/// Ein Abbruch hat genau zwei Ausgaenge: der Bericht sagt `Abgebrochen`, und
+/// das Archiv ist Byte fuer Byte unveraendert und die Quelle steht; oder er
+/// sagt `Fertig`, das Archiv traegt den neuen Eintrag und die verschobene
+/// Quelle ist fort. Ein drittes Paar kommt nicht vor, auch nicht fuer einen
+/// Abbruch, der beim letzten Fortschritt kommt, also nach dem Ersetzen (Defekt
+/// `261017-1923-der-vorgangsstatus-sagt-abgebrochen-obwohl-das-archiv-ersetzt-und-die-quellen-entfernt-sind.md`).
+///
+/// Abgebrochen wird je Lauf beim `k`-ten Fortschritt, fuer jedes `k` bis eins
+/// ueber die Zahl, die ein Lauf ohne Abbruch meldet. Wann der Faden das
+/// Kennzeichen sieht, entscheidet der Wettlauf und nicht die Probe; sie haelt
+/// deshalb das Paar fest und nicht, welches der beiden kommt. Den Ausgang
+/// nach einem Abbruch, der nach dem Ersetzen ankommt, haelt
+/// `nach_dem_ersetzen_ist_ein_abbruch_zu_spaet_und_steht_im_bericht` in
+/// `archiv/umbau.rs` am Wert, den vor dem `rename`
+/// `ein_abbruch_nach_dem_letzten_byte_laesst_das_original_stehen`.
+#[test]
+fn ein_abbruch_endet_abgebrochen_und_unveraendert_oder_fertig_und_ersetzt() {
+    let ordner = Pruefordner::neu("archiv-abbruch-paar");
+    let fortschritte = |auftrag: Fernauftrag, abbrechen_bei: Option<usize>| -> (Bericht, usize) {
+        let lauf = starten(auftrag, Arc::new(OhnePapierkorb));
+        let mut gezaehlt = 0;
+        let bericht = loop {
+            match lauf
+                .meldungen()
+                .recv_timeout(Duration::from_secs(60))
+                .expect("der Lauf meldet sich nicht")
+            {
+                Meldung::Fortschritt(_) => {
+                    gezaehlt += 1;
+                    if Some(gezaehlt) == abbrechen_bei {
+                        lauf.abbrechen();
+                    }
+                }
+                Meldung::Uebersprungen(_) => {}
+                Meldung::Konflikt { .. } => panic!("unerwartete Konfliktfrage"),
+                Meldung::Fertig(bericht) => break bericht,
+            }
+        };
+        lauf.warten();
+        (bericht, gezaehlt)
+    };
+    let vorbereiten = |lauf: &str| -> (PathBuf, PathBuf, Vec<u8>) {
+        let ablage = ordner.ordner(&format!("ablage-{lauf}"));
+        let quelle = ablage.join("neu.bin");
+        fs::write(&quelle, muster(2 * 1024 * 1024)).expect("Quelle");
+        let archiv = kleines_archiv(&ordner, &format!("paar-{lauf}.zip"), zip_packen);
+        let vorher = fs::read(&archiv).expect("Archiv");
+        (quelle, archiv, vorher)
+    };
+    let auftrag = |quelle: &Path, archiv: &Path| {
+        Fernauftrag::verschieben(
+            vec![Ort::Lokal(quelle.to_path_buf())],
+            Ort::Archiv(archivort(archiv, "")),
+        )
+    };
+
+    let (quelle, archiv, _) = vorbereiten("ohne");
+    let (bericht, gesamt) = fortschritte(auftrag(&quelle, &archiv), None);
+    assert_eq!(bericht.abschluss, Abschluss::Fertig);
+    assert!(gesamt > 0, "der Lauf meldet keinen Fortschritt");
+
+    for k in 1..=gesamt + 1 {
+        let (quelle, archiv, vorher) = vorbereiten(&k.to_string());
+        let (bericht, _) = fortschritte(auftrag(&quelle, &archiv), Some(k));
+        let jetzt = fs::read(&archiv).expect("Archiv");
+        match bericht.abschluss {
+            Abschluss::Abgebrochen => {
+                assert_eq!(
+                    jetzt, vorher,
+                    "k = {k}: abgebrochen, aber das Archiv ist anders"
+                );
+                assert!(
+                    quelle.exists(),
+                    "k = {k}: abgebrochen, aber die Quelle ist fort"
+                );
+            }
+            Abschluss::Fertig => {
+                assert!(
+                    inhalt(&archiv).contains_key("neu.bin"),
+                    "k = {k}: fertig, aber das Archiv traegt den Eintrag nicht"
+                );
+                assert!(!quelle.exists(), "k = {k}: fertig, aber die Quelle steht");
+            }
+        }
+        assert!(zwischennamen(ordner.pfad()).is_empty(), "k = {k}");
+    }
+}
+
+/// Eine benannte Roehre in einem lokalen Quellordner kommt nicht ins Archiv
+/// und haelt den Vorgang nicht auf: die Datei daneben kommt an, die Roehre
+/// steht mit `VorgangKeineGewoehnlicheDatei` im Bericht, wie fern; beim
+/// Verschieben bleibt der Quellordner stehen (Defekt
+/// `261017-1923-eine-sonderdatei-in-einem-lokalen-quellbaum-laesst-das-ganze-hineinkopieren-scheitern.md`).
+#[test]
+fn eine_sonderdatei_im_lokalen_quellbaum_wird_ausgelassen_und_gemeldet() {
+    let ordner = Pruefordner::neu("archiv-hinein-roehre");
+    for verschieben in [false, true] {
+        let quelle = ordner.ordner(&format!("quelle-{verschieben}"));
+        fs::write(quelle.join("datei.txt"), b"datei").expect("datei");
+        let roehre = quelle.join("roehre");
+        let angelegt = Command::new("/usr/bin/mkfifo")
+            .arg(&roehre)
+            .status()
+            .expect("mkfifo laesst sich starten");
+        assert!(angelegt.success(), "mkfifo");
+        let archiv = kleines_archiv(&ordner, &format!("roehre-{verschieben}.zip"), zip_packen);
+        let quellen = vec![Ort::Lokal(quelle.clone())];
+        let ziel = Ort::Archiv(archivort(&archiv, ""));
+        let auftrag = if verschieben {
+            Fernauftrag::verschieben(quellen, ziel)
+        } else {
+            Fernauftrag::kopieren(quellen, ziel)
+        };
+
+        let ausgang = fahren(auftrag, Konfliktantwort::Abbrechen);
+
+        assert_eq!(ausgang.bericht.abschluss, Abschluss::Fertig);
+        assert!(
+            nennt(
+                &ausgang.bericht,
+                &roehre,
+                text(Text::VorgangKeineGewoehnlicheDatei)
+            ),
+            "{:?}",
+            ausgang.bericht.uebersprungen
+        );
+        let steht = inhalt(&archiv);
+        let name = quelle.file_name().expect("Name").to_str().expect("UTF-8");
+        assert_eq!(steht[&format!("{name}/datei.txt")].1, b"datei");
+        assert!(!steht.contains_key(&format!("{name}/roehre")));
+        assert!(
+            quelle.join("datei.txt").exists() && roehre.exists(),
+            "verschieben = {verschieben}: der Quellordner ist angefasst"
+        );
+    }
+}
+
+/// Eine Archivdatei ohne Schreibrecht wird nicht umgeschrieben, auch wenn ihr
+/// Ordner beschreibbar ist: ein neuer Ordner darin laesst sie Byte fuer Byte
+/// stehen, mit Rechten, und der Bericht nennt den Grund (Defekt
+/// `261017-1923-ein-archiv-ohne-schreibrecht-an-der-datei-wird-trotzdem-umgeschrieben.md`).
+#[test]
+fn ein_archiv_ohne_schreibrecht_an_der_datei_bleibt_unveraendert() {
+    let ordner = Pruefordner::neu("archiv-schreibgeschuetzt");
+    for (endung, packen) in BESCHREIBBAR {
+        let archiv = kleines_archiv(&ordner, &format!("gesperrt.{endung}"), packen);
+        fs::set_permissions(&archiv, fs::Permissions::from_mode(0o444)).expect("sperren");
+        let vorher = fs::read(&archiv).expect("Archiv");
+
+        let ausgang = fahren(
+            Fernauftrag::anlegen(
+                Ort::Archiv(archivort(&archiv, "")),
+                "neu",
+                krk_core::operation::Anlegetyp::Ordner,
+            ),
+            Konfliktantwort::Abbrechen,
+        );
+
+        assert_eq!(ausgang.bericht.eintraege, 0, "{endung}");
+        assert_eq!(fs::read(&archiv).expect("Archiv"), vorher, "{endung}");
+        let modus = fs::metadata(&archiv).expect("Angaben").permissions().mode();
+        assert_eq!(modus & 0o777, 0o444, "{endung}");
+        assert!(zwischennamen(ordner.pfad()).is_empty(), "{endung}");
+        let grund = satz(
+            Text::ArchivUnveraendert,
+            &[("grund", &text(Text::ArchivSchreibgeschuetzt))],
+        );
+        assert!(
+            nennt(&ausgang.bericht, &archiv, &grund),
+            "{endung}: {:?}",
+            ausgang.bericht.uebersprungen
+        );
+        fs::set_permissions(&archiv, fs::Permissions::from_mode(0o644)).expect("entsperren");
+    }
+}

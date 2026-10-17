@@ -34,9 +34,10 @@
 //! `F_FULLFSYNC` nicht kennt, und seit dem 261016 `clock_gettime_nsec_np(3)`
 //! fuer die Wachzeit, an der die zehn Minuten eines gemerkten Schluessels
 //! gemessen werden, und seit dem 261017 `statfs(2)` fuer die Frage, ob ein
-//! Pfad auf einem Netzlaufwerk liegt. Das sind neun Schnittstellen
-//! und dreizehn gebundene Funktionen, denn `copyfile(3)` braucht seine vier
-//! `copyfile_state_*`-Helfer. [`leser`] macht aus der ersten der neun
+//! Pfad auf einem Netzlaufwerk liegt, und `access(2)` fuer die Frage, ob ein
+//! Archiv schreibgeschuetzt ist. Das sind zehn Schnittstellen
+//! und vierzehn gebundene Funktionen, denn `copyfile(3)` braucht seine vier
+//! `copyfile_state_*`-Helfer. [`leser`] macht aus der ersten der zehn
 //! Schnittstellen den gestueckelten Lesevorgang auf einem Arbeitsfaden. [`eintrag`] beschreibt, was ein Eintrag traegt, und
 //! laesst sich von [`kollation`] die beiden Sortierschluessel bauen.
 //! [`modell`] haelt Eintraege und Sichtreihenfolge getrennt, und [`sortierung`]

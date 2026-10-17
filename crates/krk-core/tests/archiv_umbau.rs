@@ -102,7 +102,12 @@ fn plan_bauen(bauen: impl FnOnce(&Fernfaden) -> Umbauplan + Send + 'static) -> U
 }
 
 fn lokal(pfand: &Fernfaden, pfad: &Path) -> Neueintrag {
-    Neueintrag::lokal(pfand, pfad).expect("die lokale Quelle laesst sich lesen")
+    let baum = Neueintrag::lokal(pfand, pfad).expect("die lokale Quelle laesst sich lesen");
+    assert!(
+        baum.ausgelassen.is_empty(),
+        "die Probe legt keine Sonderdatei an"
+    );
+    baum.eintrag.expect("die Quelle ist keine Sonderdatei")
 }
 
 /// Was eine Fahrt gemeldet hat.

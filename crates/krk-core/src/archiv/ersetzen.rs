@@ -7,7 +7,8 @@
 //!  1. Zwischenname im Ordner des Archivs, create_new, Rechte des Archivs
 //!  2. schreiben(&mut datei)        <- das ganze neue Archiv
 //!     auf_die_platte_bringen
-//!  3. stat(archiv) == kennung?     nein: Zwischenname weg, VonAussenVeraendert
+//!  3. abgebrochen?                 ja: Zwischenname weg, Abgebrochen
+//!     stat(archiv) == kennung?     nein: Zwischenname weg, VonAussenVeraendert
 //!  4. rename(Zwischenname, archiv)
 //! ```
 //!
@@ -43,7 +44,19 @@
 //! `ablage::atomar::RECHTEMASKE` draussen. Ein Absturz von KRK mitten im
 //! Umbau hinterlaesst den Zwischennamen mit fuehrendem Punkt, und KRK raeumt
 //! ihn nicht auf. Geschrieben wird nur, wenn KRK im Ordner des Archivs
-//! schreiben darf; das Schreibrecht an der Datei allein genuegt nicht.
+//! schreiben darf; das Schreibrecht an der Datei allein genuegt nicht, und
+//! fehlt es, schreibt der Umbau gar nicht erst (`Umbaufehler::Schreibgeschuetzt`
+//! in `umbau`).
+//!
+//! # Der letzte Augenblick fuer einen Abbruch
+//!
+//! **Gefragt wird der Abbruch ein letztes Mal unmittelbar vor dem `rename`**,
+//! nachdem das neue Archiv auf der Platte steht. Bis dahin laesst er das
+//! Original unberuehrt; was danach kommt, haelt nichts mehr auf, und der
+//! Rufer meldet den Vorgang dann als fertig und den Abbruch als zu spaet
+//! gekommen (`umbau::abschluss_nach_ersetzen`). So gibt es zu einem Abbruch
+//! genau zwei Ausgaenge: abgebrochen und das Archiv unveraendert, oder fertig
+//! und das Archiv ersetzt.
 //!
 //! Dass hier und nirgends sonst unter `archiv/` eine Datei zum Schreiben
 //! geoeffnet, umbenannt oder entfernt wird, haelt die Probe
@@ -53,7 +66,7 @@
 use std::fs::{self, File, OpenOptions};
 use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use crate::ablage::atomar::RECHTEMASKE;
 use crate::verzeichnis::sys::auf_die_platte_bringen;
@@ -87,16 +100,22 @@ static LAUFNUMMER: AtomicU64 = AtomicU64::new(0);
 /// Jeder Fehler laesst das Original unberuehrt und den Zwischennamen
 /// entfernt: der Fehler von `schreiben`, [`Umbaufehler::Schreiben`] fuer das
 /// Anlegen, das Synchronisieren und das `rename`, und
-/// [`Umbaufehler::VonAussenVeraendert`], wenn die Kennung abweicht.
+/// [`Umbaufehler::VonAussenVeraendert`], wenn die Kennung abweicht, und
+/// [`Umbaufehler::Abgebrochen`], wenn `abbruch` vor dem `rename` steht
+/// (Modulkopf).
 pub(crate) fn ersetzen(
     archiv: &Path,
     kennung: Dateikennung,
     rechte: u32,
+    abbruch: &AtomicBool,
     schreiben: impl FnOnce(&mut File) -> Result<(), Umbaufehler>,
 ) -> Result<(), Umbaufehler> {
     let mut zwischen = Zwischendatei::anlegen(archiv, rechte)?;
     schreiben(zwischen.datei())?;
     auf_die_platte_bringen(zwischen.datei()).map_err(Umbaufehler::Schreiben)?;
+    if abbruch.load(Ordering::Relaxed) {
+        return Err(Umbaufehler::Abgebrochen);
+    }
 
     let jetzt = fs::metadata(archiv).map_err(Umbaufehler::Schreiben)?;
     if Dateikennung::aus_angaben(&jetzt) != kennung {

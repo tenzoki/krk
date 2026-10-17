@@ -88,7 +88,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread::{self, JoinHandle};
 
-use crate::archiv::{Archiveintrag, Inhaltsverzeichnis, Verzeichnisfehler};
+use crate::archiv::{Archiveintrag, Inhaltsverzeichnis, Innenpfad, Verzeichnisfehler};
 use crate::fern::paket::{Name, S_IFDIR, S_IFLNK, S_IFMT};
 use crate::fern::{self, Fernfaden, Fernfehler, Gespraech, Handle};
 use crate::ort::{Archivort, FernerOrt};
@@ -165,7 +165,11 @@ pub enum Archivfehler {
     Verzeichnis(Verzeichnisfehler),
     /// Das Inhaltsverzeichnis steht, aber der Innenpfad ist darin kein
     /// Ordner, etwa weil das Archiv seit dem Einstieg geaendert ist.
-    KeinOrdner,
+    KeinOrdner {
+        /// Der naechste Vorfahr des Innenpfads, der im Verzeichnis ein Ordner
+        /// ist, notfalls die Wurzel; dorthin weicht der Tab aus.
+        vorhanden: Innenpfad,
+    },
 }
 
 impl Abschluss {
@@ -822,7 +826,11 @@ fn archiv_lesen_und_senden(
     }
     let mut eintraege = match archiv_kinder(&verzeichnis, ort) {
         Some(eintraege) => eintraege,
-        None => return Some(Abschluss::Archiv(Archivfehler::KeinOrdner)),
+        None => {
+            return Some(Abschluss::Archiv(Archivfehler::KeinOrdner {
+                vorhanden: naechster_ordner(&verzeichnis, &ort.innen),
+            }));
+        }
     };
     while !eintraege.is_empty() {
         if abbruch.load(Ordering::Relaxed) {
@@ -841,6 +849,19 @@ fn archiv_lesen_und_senden(
         return Some(Abschluss::Abgebrochen);
     }
     Some(Abschluss::Vollstaendig)
+}
+
+/// Der naechste Vorfahr von `innen`, der im Verzeichnis ein Ordner ist; die
+/// Wurzel ist immer einer.
+fn naechster_ordner(verzeichnis: &Inhaltsverzeichnis, innen: &Innenpfad) -> Innenpfad {
+    let mut stufe = innen.aufwaerts();
+    while let Some(ordner) = stufe {
+        if verzeichnis.kinder(&ordner).is_some() {
+            return ordner;
+        }
+        stufe = ordner.aufwaerts();
+    }
+    Innenpfad::wurzel()
 }
 
 /// Die Kinder des Innenpfads als Eintraege des Dateifensters, oder `None`,

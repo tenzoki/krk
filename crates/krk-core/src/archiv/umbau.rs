@@ -70,6 +70,12 @@
 //!
 //! # Was der Umbau nicht schreibt
 //!
+//! Eine Archivdatei, die dieser Prozess nicht beschreiben darf
+//! ([`Umbaufehler::Schreibgeschuetzt`], gefragt ueber `access(2)` an der
+//! aufgeloesten Datei): ersetzt wird sie zwar ueber ein `rename` im Ordner,
+//! fuer das das Recht am Ordner genuegte, aber eine Datei mit `chmod a-w` hat
+//! der Nutzer gegen Aenderungen gesperrt, und KRK oeffnet eine solche Datei
+//! auch lokal nie zum Schreiben.
 //! Ein Archiv mit einem verschluesselten Eintrag: dass eine rohe Kopie einen
 //! solchen Eintrag unversehrt hinuebertraegt, ist nicht belegt.
 //! Ein Archiv mit einem verdeckten Eintrag (oben).
@@ -122,7 +128,7 @@ use crate::operation::fortschritt::{
 use crate::operation::{Konfliktregel, freier_name_unter, grund, name_pruefen};
 use crate::sprache::{Text, satz, text, zahl};
 use crate::verzeichnis::Typ;
-use crate::verzeichnis::sys::ohne_warten_oeffnen;
+use crate::verzeichnis::sys::{ohne_warten_oeffnen, schreiben_erlaubt};
 
 use super::HOECHSTENS_EINTRAEGE;
 use super::ersetzen::ersetzen;
@@ -238,36 +244,52 @@ pub struct Neueintrag {
     pub art: Neuart,
 }
 
+/// Ein lokaler Baum, wie er ins Archiv kaeme ([`Neueintrag::lokal`]).
+pub struct Lokalbaum {
+    /// Der Eintrag zum Pfad samt Unterbaum, oder `None`, wenn der Pfad selbst
+    /// eine Sonderdatei ist.
+    pub eintrag: Option<Neueintrag>,
+    /// Die [`Lokalspur`] jedes Eintrags des Baums, Kinder vor ihrem Ordner:
+    /// das, was ein Verschieben nach dem Umbau entfernen darf, und nichts, was
+    /// erst danach hinzukam.
+    pub spur: Vec<Lokalspur>,
+    /// Die Sonderdateien des Baums (benannte Roehre, Sockel, Geraet), die
+    /// nicht ins Archiv kommen; der Rufer nennt sie im Bericht.
+    pub ausgelassen: Vec<PathBuf>,
+}
+
 impl Neueintrag {
     /// Der Eintrag zu `pfad` auf dieser Platte samt seinem Unterbaum, wie er
-    /// ins Archiv kaeme.
+    /// ins Archiv kaeme, mit Spur und ausgelassenen Sonderdateien.
     ///
-    /// Eine Verknuepfung bleibt eine Verknuepfung; was weder Ordner noch
-    /// Verknuepfung ist, wird eine Datei, deren Quelle beim Oeffnen fragt, ob
-    /// sie eine gewoehnliche Datei ist. Das Pfand steht da, weil jede Frage
-    /// hier eine Frage an die Platte ist.
-    ///
-    /// # Errors
-    ///
-    /// Der Fehler des Systems an `pfad` oder an einem Eintrag darunter.
-    pub fn lokal(_pfand: &Fernfaden, pfad: &Path) -> io::Result<Self> {
-        Self::lokal_lesen(pfad, &mut Vec::new())
-    }
-
-    /// Wie [`Neueintrag::lokal`], und dazu die [`Lokalspur`] jedes Eintrags
-    /// des Baums, Kinder vor ihrem Ordner: das, was ein Verschieben nach dem
-    /// Umbau entfernen darf, und nichts, was erst danach hinzukam.
+    /// Eine Verknuepfung bleibt eine Verknuepfung. **Was weder Datei noch
+    /// Ordner noch Verknuepfung ist, kommt nicht hinein und haelt den Umbau
+    /// nicht auf**: gefragt wird der Typ schon hier, an `lstat(2)`, und eine
+    /// Sonderdatei steht in [`Lokalbaum::ausgelassen`], wie der ferne Weg sie
+    /// mit Grund auslaesst. Die Quelle einer Datei fragt beim Oeffnen ein
+    /// zweites Mal, am Deskriptor; was dazwischen zur Sonderdatei wird, laesst
+    /// den Umbau scheitern und das Archiv unveraendert. Das Pfand steht da,
+    /// weil jede Frage hier eine Frage an die Platte ist.
     ///
     /// # Errors
     ///
     /// Der Fehler des Systems an `pfad` oder an einem Eintrag darunter.
-    pub fn lokal_mit_spur(_pfand: &Fernfaden, pfad: &Path) -> io::Result<(Self, Vec<Lokalspur>)> {
+    pub fn lokal(_pfand: &Fernfaden, pfad: &Path) -> io::Result<Lokalbaum> {
         let mut spur = Vec::new();
-        let eintrag = Self::lokal_lesen(pfad, &mut spur)?;
-        Ok((eintrag, spur))
+        let mut ausgelassen = Vec::new();
+        let eintrag = Self::lokal_lesen(pfad, &mut spur, &mut ausgelassen)?;
+        Ok(Lokalbaum {
+            eintrag,
+            spur,
+            ausgelassen,
+        })
     }
 
-    fn lokal_lesen(pfad: &Path, spur: &mut Vec<Lokalspur>) -> io::Result<Self> {
+    fn lokal_lesen(
+        pfad: &Path,
+        spur: &mut Vec<Lokalspur>,
+        ausgelassen: &mut Vec<PathBuf>,
+    ) -> io::Result<Option<Self>> {
         let angaben = fs::symlink_metadata(pfad)?;
         let name = pfad
             .file_name()
@@ -282,29 +304,34 @@ impl Neueintrag {
                 .collect::<io::Result<_>>()?;
             namen.sort();
             for kind in namen {
-                kinder.push(Neueintrag::lokal_lesen(&kind, spur)?);
+                if let Some(neu) = Neueintrag::lokal_lesen(&kind, spur, ausgelassen)? {
+                    kinder.push(neu);
+                }
             }
             Neuart::Ordner(kinder)
-        } else {
+        } else if angaben.is_file() {
             Neuart::Datei(Box::new(LokaleDatei::neu(pfad.to_path_buf())))
+        } else {
+            ausgelassen.push(pfad.to_path_buf());
+            return Ok(None);
         };
         spur.push(Lokalspur {
             pfad: pfad.to_path_buf(),
             ordner: angaben.is_dir(),
             kennung: Dateikennung::aus_angaben(&angaben),
         });
-        Ok(Neueintrag {
+        Ok(Some(Neueintrag {
             name,
             herkunft: pfad.to_path_buf(),
             rechte: angaben.permissions().mode() & 0o7777,
             geaendert: angaben.modified().unwrap_or(UNIX_EPOCH),
             art,
-        })
+        }))
     }
 }
 
 /// Ein lokaler Eintrag, wie er beim Zusammenstellen eines Baums stand
-/// ([`Neueintrag::lokal_mit_spur`]).
+/// ([`Neueintrag::lokal`]).
 #[derive(Debug, Clone)]
 pub struct Lokalspur {
     /// Der Pfad auf der Platte.
@@ -427,6 +454,9 @@ pub enum Umbaufehler {
     Abgebrochen,
     /// Das Format ist allein lesbar (gz).
     NurLesbar,
+    /// Die Archivdatei ist schreibgeschuetzt: dieser Prozess darf sie nicht
+    /// beschreiben, auch wenn er ihren Ordner beschreiben duerfte (Modulkopf).
+    Schreibgeschuetzt,
     /// Das Archiv traegt einen verschluesselten Eintrag.
     Verschluesselt,
     /// Das Archiv traegt einen Eintrag, den ein anderer verdeckt (Modulkopf).
@@ -456,6 +486,7 @@ impl Umbaufehler {
         match self {
             Umbaufehler::Abgebrochen => text(Text::ArchivUnveraendertNachAbbruch).to_owned(),
             Umbaufehler::NurLesbar => text(Text::ArchivNurLesbar).to_owned(),
+            Umbaufehler::Schreibgeschuetzt => text(Text::ArchivSchreibgeschuetzt).to_owned(),
             Umbaufehler::Verschluesselt => text(Text::ArchivVerschluesseltNurLesbar).to_owned(),
             Umbaufehler::Verdeckt => text(Text::ArchivVerdecktNurLesbar).to_owned(),
             Umbaufehler::VonAussenVeraendert => text(Text::ArchivVonAussenVeraendert).to_owned(),
@@ -597,6 +628,13 @@ fn umbauen_mit(
     if erwartet.is_some_and(|erwartet| erwartet != kennung) {
         return Err(Umbaufehler::VonAussenVeraendert);
     }
+    // Ein Archiv, das der Nutzer gegen Aenderungen gesperrt hat, bleibt es
+    // (Modulkopf, „Was der Umbau nicht schreibt“).
+    if !schreiben_erlaubt(&ziel)
+        .map_err(|fehler| Umbaufehler::Lesen(Verzeichnisfehler::Lesen(fehler)))?
+    {
+        return Err(Umbaufehler::Schreibgeschuetzt);
+    }
     let verzeichnis = verzeichnis_zur_kennung(pfand, zugang, &abbruch, kennung)?;
     if verzeichnis.verschluesselt() {
         return Err(Umbaufehler::Verschluesselt);
@@ -632,7 +670,7 @@ fn umbauen_mit(
     let besitzer = (u64::from(angaben.uid()), u64::from(angaben.gid()));
     let archiv = zugang.datei().to_path_buf();
     let mut bytes = vec![0u64; schritte];
-    ersetzen(&ziel, kennung, rechte, |datei| {
+    ersetzen(&ziel, kennung, rechte, &abbruch, |datei| {
         let mut aus = Ausgabe {
             datei,
             steuerung,
@@ -739,6 +777,33 @@ pub fn starten(zugang: Arc<Archivzugang>, plan: Umbauplan, regel: Konfliktregel)
     Lauf::neu(abbruch, empfaenger, faden)
 }
 
+/// Der Abschluss eines Vorgangs an der Stelle, nach der nichts mehr kommt,
+/// das ein Abbruch noch anhielte; `ersetzte` sind die Archive, die dieser
+/// Vorgang ersetzt hat.
+///
+/// **Ein Abbruch heisst „das Archiv ist unveraendert“** (E13 des Plans
+/// `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`). Hat der
+/// Vorgang ein Archiv ersetzt, stimmte das nicht mehr: dann endet er als
+/// fertig, und ein Abbruch, der danach kam, steht je ersetztem Archiv als
+/// Zeile im Bericht. Ohne ersetztes Archiv bleibt ein gesetzter Abbruch ein
+/// Abbruch. Bis zum `rename` fragt [`super::ersetzen`] den Abbruch selbst;
+/// dazwischen gibt es keinen dritten Ausgang.
+pub(crate) fn abschluss_nach_ersetzen(
+    steuerung: &mut Steuerung,
+    ersetzte: &[PathBuf],
+) -> Abschluss {
+    if !steuerung.abgebrochen() {
+        return Abschluss::Fertig;
+    }
+    if ersetzte.is_empty() {
+        return Abschluss::Abgebrochen;
+    }
+    for archiv in ersetzte {
+        steuerung.ueberspringen(archiv, text(Text::ArchivAbbruchNachDemErsetzen));
+    }
+    Abschluss::Fertig
+}
+
 /// Fuehrt den Umbau aus und traegt seinen Ausgang in die Steuerung ein.
 fn berichten(
     pfand: &Fernfaden,
@@ -757,7 +822,12 @@ fn berichten(
                     Schrittausgang::Ausgelassen => {}
                 }
             }
-            Abschluss::Fertig
+            let ersetzte: &[PathBuf] = if umgebaut.ersetzt {
+                &[archiv.to_path_buf()]
+            } else {
+                &[]
+            };
+            abschluss_nach_ersetzen(steuerung, ersetzte)
         }
         Err(fehler) => {
             fehler.melden(steuerung, archiv);
@@ -2330,7 +2400,7 @@ mod tests {
         fs::write(&archiv, b"alt").expect("Original");
         let kennung = Dateikennung::aus_angaben(&fs::metadata(&archiv).expect("Angaben"));
 
-        let ausgang = ersetzen(&archiv, kennung, 0o640, |datei| {
+        let ausgang = ersetzen(&archiv, kennung, 0o640, &AtomicBool::new(false), |datei| {
             datei.write_all(b"halb").map_err(Umbaufehler::Schreiben)?;
             Err(Umbaufehler::Schreiben(io::Error::other("voll")))
         });
@@ -2350,7 +2420,7 @@ mod tests {
         let kennung = Dateikennung::aus_angaben(&fs::metadata(&archiv).expect("Angaben"));
         fs::write(&archiv, b"von aussen").expect("Aenderung von aussen");
 
-        let ausgang = ersetzen(&archiv, kennung, 0o644, |datei| {
+        let ausgang = ersetzen(&archiv, kennung, 0o644, &AtomicBool::new(false), |datei| {
             datei.write_all(b"neu").map_err(Umbaufehler::Schreiben)
         });
 
@@ -2358,6 +2428,60 @@ mod tests {
         assert_eq!(fs::read(&archiv).expect("Original"), b"von aussen");
         assert!(zwischennamen_in(&wurzel).is_empty());
         fs::remove_dir_all(&wurzel).expect("aufraeumen");
+    }
+
+    /// Ein Abbruch, der nach dem letzten geschriebenen Byte und vor dem
+    /// `rename` ankommt, laesst das Original stehen und keinen Zwischennamen
+    /// zurueck: der letzte Augenblick, an dem er noch wirkt (Modulkopf von
+    /// `ersetzen`).
+    #[test]
+    fn ein_abbruch_nach_dem_letzten_byte_laesst_das_original_stehen() {
+        let wurzel = ordner("ersetzen-spaeter-abbruch");
+        let archiv = wurzel.join("a.zip");
+        fs::write(&archiv, b"alt").expect("Original");
+        let kennung = Dateikennung::aus_angaben(&fs::metadata(&archiv).expect("Angaben"));
+        let abbruch = AtomicBool::new(false);
+
+        let ausgang = ersetzen(&archiv, kennung, 0o644, &abbruch, |datei| {
+            datei.write_all(b"neu").map_err(Umbaufehler::Schreiben)?;
+            abbruch.store(true, Ordering::Relaxed);
+            Ok(())
+        });
+
+        assert!(matches!(ausgang, Err(Umbaufehler::Abgebrochen)));
+        assert_eq!(fs::read(&archiv).expect("Original"), b"alt");
+        assert!(zwischennamen_in(&wurzel).is_empty());
+        fs::remove_dir_all(&wurzel).expect("aufraeumen");
+    }
+
+    /// Nach einem ersetzten Archiv endet der Vorgang als fertig, auch wenn der
+    /// Abbruch inzwischen steht, und der Bericht nennt ihn am Archiv; ohne
+    /// ersetztes Archiv bleibt ein Abbruch ein Abbruch.
+    #[test]
+    fn nach_dem_ersetzen_ist_ein_abbruch_zu_spaet_und_steht_im_bericht() {
+        let archiv = Path::new("/gibt/es/nicht/a.zip");
+        let mut ohne = steuerung();
+        assert_eq!(abschluss_nach_ersetzen(&mut ohne, &[]), Abschluss::Fertig);
+        assert_eq!(
+            abschluss_nach_ersetzen(&mut ohne, &[archiv.to_path_buf()]),
+            Abschluss::Fertig
+        );
+        assert!(ohne.uebersprungen_seit(0).is_empty());
+
+        let mut spaet = steuerung();
+        spaet.abbruchkennzeichen().store(true, Ordering::Relaxed);
+        assert_eq!(
+            abschluss_nach_ersetzen(&mut spaet, &[]),
+            Abschluss::Abgebrochen
+        );
+        assert_eq!(
+            abschluss_nach_ersetzen(&mut spaet, &[archiv.to_path_buf()]),
+            Abschluss::Fertig
+        );
+        let zeilen = spaet.uebersprungen_seit(0);
+        assert_eq!(zeilen.len(), 1);
+        assert_eq!(zeilen[0].pfad, archiv);
+        assert_eq!(zeilen[0].grund, text(Text::ArchivAbbruchNachDemErsetzen));
     }
 
     /// Das Gelingen ersetzt den Inhalt und uebernimmt die neun Rechtebits.
@@ -2368,7 +2492,7 @@ mod tests {
         fs::write(&archiv, b"alt").expect("Original");
         let kennung = Dateikennung::aus_angaben(&fs::metadata(&archiv).expect("Angaben"));
 
-        ersetzen(&archiv, kennung, 0o4640, |datei| {
+        ersetzen(&archiv, kennung, 0o4640, &AtomicBool::new(false), |datei| {
             datei.write_all(b"neu").map_err(Umbaufehler::Schreiben)
         })
         .expect("ersetzt");

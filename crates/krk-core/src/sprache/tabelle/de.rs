@@ -184,6 +184,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "das Archiv trägt Einträge, die die Liste verdeckt, etwa zwei gleichen Namens, und wird nicht geändert"
         }
         Text::ArchivNurLesbar => "dieses Archiv ist allein lesbar",
+        Text::ArchivSchreibgeschuetzt => "die Archivdatei ist schreibgeschützt",
+        Text::ArchivAbbruchNachDemErsetzen => {
+            "der Abbruch kam erst nach dem Ersetzen; das Archiv ist geändert"
+        }
         Text::ArchivZipUngewoehnlicheForm => {
             "das Zip hat Daten vor seinem ersten Eintrag oder ist auf mehrere Teile verteilt"
         }
@@ -1109,7 +1113,11 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::ArchivUngueltig => "{datei} ist kein lesbares Archiv im Format {format}: {grund}",
         Text::ArchivKeineDatei => "Unter {datei} steht keine gewöhnliche Datei.",
         Text::ArchivZuGross => "{datei} führt mehr als {grenze} Einträge und wird nicht gezeigt.",
-        Text::ArchivOrdnerFehlt => "Den Ordner {ort} gibt es im Archiv nicht mehr.",
+        Text::ArchivOrdnerFehlt => {
+            "Den Ordner {ort} gibt es im Archiv nicht mehr; gezeigt wird {ziel}."
+        }
+        Text::ArchivDateiFehlt => "Das Archiv {datei} gibt es nicht mehr; gezeigt wird {ordner}.",
+        Text::ArchivAlleinLesbar => "Dieses Archiv ist allein lesbar.",
         Text::FernVerbindungGetrennt => {
             "Die Verbindung „{name}“ ist getrennt; ein Klick auf die Verbindung verbindet neu."
         }

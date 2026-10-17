@@ -20,3 +20,6 @@ Liegt in einem lokalen Ordner, der in ein Archiv kopiert oder verschoben wird, e
 **Abnahme**
 
 Eine Probe kopiert einen lokalen Ordner mit einer Datei und einer benannten Röhre in ein Zip. Danach steht die Datei im Archiv, die Röhre mit `VorgangKeineGewoehnlicheDatei` im Bericht. Beim Verschieben bleibt der Quellordner stehen.
+
+---
+Resolved: `Neueintrag::lokal` (`crates/krk-core/src/archiv/umbau.rs`) fragt den Typ beim Zusammenstellen an `lstat(2)` und gibt einen `Lokalbaum` mit den ausgelassenen Sonderdateien zurueck; `hinein` (`crates/krk-core/src/operation/archiv.rs`) meldet jede mit `VorgangKeineGewoehnlicheDatei`, der Posten wird damit unvollstaendig und ein Verschieben entfernt die Quelle nicht. `Neueintrag::lokal_mit_spur` ist in `Neueintrag::lokal` aufgegangen. Probe: `eine_sonderdatei_im_lokalen_quellbaum_wird_ausgelassen_und_gemeldet` (`crates/krk-core/tests/archiv_operation.rs`); `HowTo.md` `## Archive im Dateifenster`.

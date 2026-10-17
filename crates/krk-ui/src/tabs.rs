@@ -77,6 +77,7 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::mpsc::{Receiver, TryRecvError, sync_channel};
 
 use krk_core::ablage::{Dateifenster as Fensterzustand, Tab as Tabzustand};
 use krk_core::archiv::{Archivformat, HOECHSTENS_EINTRAEGE, Verzeichnisfehler};
@@ -88,7 +89,7 @@ use krk_core::ort::{Archivort, FernerOrt, Ort, Ortsart};
 use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
 use krk_core::verzeichnis::modell::Befund;
 use krk_core::verzeichnis::{
-    Abschluss, Archivfehler, Durchlauf, Lesevorgang, Meldung, Ordnermodell, datenschutzsperre,
+    Abschluss, Archivfehler, Durchlauf, Lesevorgang, Meldung, Ordnermodell, Typ, datenschutzsperre,
 };
 
 use crate::gitmodell::Gitmodell;
@@ -187,6 +188,28 @@ struct Rueckfall {
     name: String,
 }
 
+/// Der Ort, auf den ein Archivtab ausweicht, weil sein eigener weggefallen
+/// ist, samt dem Satz fuer die Statuszeile (siehe [`ausweichziel`]).
+#[derive(Debug, Clone)]
+struct Ausweichen {
+    ort: Tabort,
+    meldung: String,
+}
+
+/// Die Frage, ob eine lokale Verknuepfung auf ein Archiv zeigt, gestellt auf
+/// einem Arbeitsfaden (E8 des Plans der Archive, siehe
+/// [`Tabliste::verknuepfung_pruefen`]).
+#[derive(Debug)]
+struct Verweispruefung {
+    /// Die Verknuepfung, wie sie im Tab steht.
+    verknuepfung: PathBuf,
+    /// Ob eine Verknuepfung, die kein Archiv nennt, an das System geht: ja
+    /// fuer den Doppelklick, nein fuer den Rechts-Pfeil.
+    oeffnen: bool,
+    /// Die Antwort des Fadens: das Format, das der Name des Ziels traegt.
+    antwort: Receiver<Option<Archivformat>>,
+}
+
 /// Ein Tab: sein Ort, sein Inhalt und sein Lesevorgang.
 pub struct Tabinhalt {
     ort: Tabort,
@@ -269,6 +292,13 @@ pub struct Tabinhalt {
     /// Der Rueckfall, den der Abschluss faellig gemacht hat; eingeloest in
     /// [`Tabliste::einziehen`], die als einzige neu lesen kann.
     rueckfall_faellig: Option<Rueckfall>,
+    /// Der Ort, auf den ein Archivtab ausweicht, weil der Abschluss sagt, dass
+    /// es seinen Ordner oder seine Archivdatei nicht mehr gibt; eingeloest
+    /// in [`Tabliste::einziehen`] wie der Rueckfall.
+    ausweichen_faellig: Option<Ausweichen>,
+    /// Die laufende Frage, ob eine Verknuepfung auf ein Archiv zeigt; sie
+    /// faellt mit dem Tab, also mit jedem Ortswechsel.
+    verweispruefung: Option<Verweispruefung>,
     /// Die Generation des Lesevorgangs, zu dem der laufende Gitlauf gehoert.
     ///
     /// **Sie reist nicht im Kanal mit, und der Grund steht bei
@@ -331,6 +361,8 @@ impl Tabinhalt {
             gitmodell: Gitmodell::neu(),
             rueckfall: None,
             rueckfall_faellig: None,
+            ausweichen_faellig: None,
+            verweispruefung: None,
             gitgeneration: GENERATION_LEER,
             wartende_marken: None,
         }
@@ -387,6 +419,39 @@ impl Tabinhalt {
     #[must_use]
     pub fn modell(&self) -> &Ordnermodell {
         &self.modell
+    }
+
+    /// Der Ort des Eintrags in dieser Zeile und seine Art, lokal, fern oder im
+    /// Archiv; `None`, wenn die Zeile nicht steht. Rein lexikalisch und ohne
+    /// Systemaufruf: das Ziel eines Abwurfs auf eine Zeile, an jedem Ort wie
+    /// in einem lokalen Ordner (Entscheidung 9 des Plans der sftp-Ordner, E10
+    /// des Plans der Archive).
+    #[must_use]
+    pub fn ort_der_zeile(&self, zeile: usize) -> Option<(Ort, Typ)> {
+        let eintrag = self.modell.zeile(zeile)?;
+        let ort = match &self.ort {
+            Tabort::Lokal(ordner) => Ort::Lokal(ordner.join(&eintrag.name)),
+            Tabort::Fern { ort, .. } => Ort::Fern(FernerOrt {
+                zugang: Arc::clone(&ort.zugang),
+                pfad: ort.pfad.verbinden(&eintrag.name)?,
+            }),
+            Tabort::Archiv { ort, .. } => Ort::Archiv(ort.kind(&eintrag.name)?),
+        };
+        Some((ort, eintrag.typ))
+    }
+
+    /// Die Antwort einer laufenden [`Verweispruefung`], sobald sie da ist:
+    /// die Verknuepfung, ob sie an das System geht, und das Format ihres
+    /// Ziels. Ein Faden, der ohne Antwort endet, zaehlt als „kein Archiv“.
+    fn verweisantwort(&mut self) -> Option<(PathBuf, bool, Option<Archivformat>)> {
+        let pruefung = self.verweispruefung.as_ref()?;
+        let format = match pruefung.antwort.try_recv() {
+            Ok(format) => format,
+            Err(TryRecvError::Empty) => return None,
+            Err(TryRecvError::Disconnected) => None,
+        };
+        let pruefung = self.verweispruefung.take()?;
+        Some((pruefung.verknuepfung, pruefung.oeffnen, format))
     }
 
     /// Der Inhalt des Ordners, veraenderlich.
@@ -767,7 +832,7 @@ pub enum Auswahlversuch {
 /// `#[must_use]` haelt das fuer den zweiten fest. Die eine Ausnahme ist
 /// [`Einzug::gitkopf_neu`]: es zeichnet in der Tabelle nichts neu, sondern
 /// reist als Meldung weiter, und die Begruendung steht an seinem Feld.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 #[must_use = "hat sich am sichtbaren Tab etwas geaendert, ist die NSTableView nachzuziehen"]
 pub struct Einzug {
     /// Der sichtbare Tab hat Zeilen dazubekommen.
@@ -817,6 +882,10 @@ pub struct Einzug {
     /// ihrer Zellen steht. Die Sichtreihenfolge bleibt, die ausgewaehlte Zeile
     /// behaelt ihre Stelle, und `auswahl_anzeigen` bleibt deshalb aus.
     pub gitmarken_neu: bool,
+    /// Eine Verknuepfung, die der Doppelklick betreten wollte, nennt kein
+    /// Archiv: die Ansicht reicht sie an das System, wie sonst sofort
+    /// ([`Tabliste::verknuepfung_pruefen`]).
+    pub an_das_system: Option<PathBuf>,
 }
 
 /// Was die Lesereihenfolge von einem Dateifenster wissen muss.
@@ -1516,10 +1585,49 @@ impl Tabliste {
     #[must_use]
     pub fn arbeitet_noch(&self) -> bool {
         self.liest_noch()
-            || self
-                .tabs
-                .iter()
-                .any(|tab| tab.durchlauf.is_some() || tab.gitlauf.is_some())
+            || self.tabs.iter().any(|tab| {
+                tab.durchlauf.is_some() || tab.gitlauf.is_some() || tab.verweispruefung.is_some()
+            })
+    }
+
+    /// Fragt auf einem Arbeitsfaden, ob die lokale Verknuepfung `verknuepfung`
+    /// im sichtbaren Tab auf ein Archiv zeigt, also ob der **Name ihres Ziels**
+    /// die Endung eines Archivs traegt (E8 des Plans der Archive); ihr eigener
+    /// Name traegt keine, sonst haette der Einstieg sie schon betreten.
+    ///
+    /// **Ohne Systemaufruf auf dem Hauptfaden** (E5): das Ziel loest
+    /// [`verweisziel_format`] auf dem Faden auf, und die Antwort holt
+    /// [`Tabliste::einziehen`] ab. Nennt das Ziel ein Archiv, betritt der Tab
+    /// es unter dem Namen der Verknuepfung, wie ein Archiv mit eigener Endung;
+    /// sonst traegt der Einzug die Verknuepfung in [`Einzug::an_das_system`],
+    /// wenn `oeffnen` gesetzt ist. Die Antwort faellt mit jedem Ortswechsel des
+    /// Tabs, denn der baut den Tab neu.
+    ///
+    /// Zurueck kommt, ob die Frage laeuft; `false` heisst, der Faden liess sich
+    /// nicht starten, und der Rufer behandelt die Verknuepfung wie vorher als
+    /// Datei. Ein Tab, der nicht lokal steht, fragt nicht.
+    #[must_use = "ohne laufende Frage behandelt der Rufer die Verknuepfung selbst"]
+    pub fn verknuepfung_pruefen(&mut self, verknuepfung: PathBuf, oeffnen: bool) -> bool {
+        if self.tabs[self.aktiv].lokaler_ordner().is_none() {
+            return false;
+        }
+        let (sender, antwort) = sync_channel(1);
+        let ziel = verknuepfung.clone();
+        let gestartet = std::thread::Builder::new()
+            .name("krk-verweisziel".to_owned())
+            .spawn(move || {
+                // Hoert niemand mehr zu, ist der Tab weitergezogen.
+                let _ = sender.send(verweisziel_format(&ziel));
+            });
+        if gestartet.is_err() {
+            return false;
+        }
+        self.tabs[self.aktiv].verweispruefung = Some(Verweispruefung {
+            verknuepfung,
+            oeffnen,
+            antwort,
+        });
+        true
     }
 
     /// Bricht den Durchlauf des sichtbaren Tabs ab und stoesst, wenn seine
@@ -1850,6 +1958,33 @@ impl Tabliste {
                 veraendert.ort_neu = true;
                 veraendert.meldung_neu = true;
             }
+            if let Some(ausweichen) = self.tabs[stelle].ausweichen_faellig.take() {
+                // Die Meldung nach dem Lesebeginn, weil `lesen_starten` die
+                // Meldung des Tabs raeumt; so auch der Rueckfall.
+                self.ort_setzen_an(stelle, ausweichen.ort, None);
+                self.tabs[stelle].meldung = Some(ausweichen.meldung);
+                veraendert.ort_neu = true;
+                veraendert.meldung_neu = true;
+            }
+            if let Some((verknuepfung, oeffnen, format)) = self.tabs[stelle].verweisantwort() {
+                match format {
+                    Some(format) => {
+                        let rueckkehr = self.tabs[stelle].ort.sitzungsordner().to_path_buf();
+                        let zugang = crate::archivregister::zugang(&verknuepfung, format);
+                        self.ort_setzen_an(
+                            stelle,
+                            Tabort::Archiv {
+                                ort: Archivort::wurzel(zugang),
+                                rueckkehr,
+                            },
+                            None,
+                        );
+                        veraendert.ort_neu = true;
+                    }
+                    None if oeffnen => veraendert.an_das_system = Some(verknuepfung),
+                    None => {}
+                }
+            }
             if veraendert.fertig {
                 // Der Wert sagt, ob der Einzugstakt anzuwerfen ist. Hier laeuft
                 // er schon: dieser Aufruf **ist** sein Rumpf.
@@ -2164,6 +2299,11 @@ fn lesemeldungen_einziehen(tab: &mut Tabinhalt) -> Einzug {
                     && matches!(abschluss, Abschluss::Fern(Fernfehler::Status { .. }))
                 {
                     tab.rueckfall_faellig = Some(rueckfall);
+                } else if let Some(ausweichen) = ausweichziel(&tab.ort, &abschluss) {
+                    // Den Ordner im Archiv oder die Archivdatei gibt es nicht
+                    // mehr: der Tab weicht im Einzug aus, statt auf einem Ort
+                    // stehen zu bleiben, den es nicht gibt.
+                    tab.ausweichen_faellig = Some(ausweichen);
                 } else if let Some(satz) = lesefehlertext(&tab.ort, &abschluss) {
                     tab.meldung = Some(satz);
                     einzug.meldung_neu = true;
@@ -2280,8 +2420,80 @@ fn archivfehlertext(ort: &Tabort, fehler: &Archivfehler) -> Option<String> {
             Text::ArchivZuGross,
             &[("datei", &datei), ("grenze", &HOECHSTENS_EINTRAEGE)],
         ),
-        Archivfehler::KeinOrdner => satz(Text::ArchivOrdnerFehlt, &[("ort", &ort.anzeige())]),
+        Archivfehler::KeinOrdner { vorhanden } => {
+            let ziel = match ort {
+                Tabort::Archiv { ort, .. } => Archivort {
+                    zugang: Arc::clone(&ort.zugang),
+                    innen: vorhanden.clone(),
+                }
+                .to_string(),
+                Tabort::Lokal(_) | Tabort::Fern { .. } => ort.anzeige(),
+            };
+            satz(
+                Text::ArchivOrdnerFehlt,
+                &[("ort", &ort.anzeige()), ("ziel", &ziel)],
+            )
+        }
     })
+}
+
+/// Wohin ein Archivtab ausweicht, wenn sein Lesevorgang sagt, dass es seinen
+/// Ort nicht mehr gibt, oder `None`, wenn er stehen bleibt und meldet.
+///
+/// Zwei Faelle, beide allein in einem Archivtab: den Ordner im Archiv gibt es
+/// nicht mehr, dann geht der Tab auf den naechsten vorhandenen Vorfahren im
+/// Archiv, notfalls auf die Wurzel (den nennt der Leser, der das Verzeichnis
+/// hat); oder die Archivdatei gibt es nicht mehr, dann geht er in ihren
+/// Ordner, den Rueckkehrordner. Jeder andere Fehlschlag bleibt eine Meldung am
+/// Ort, wie lokal. Die Meldung nennt den verlorenen Ort und den gezeigten.
+fn ausweichziel(ort: &Tabort, abschluss: &Abschluss) -> Option<Ausweichen> {
+    let Tabort::Archiv {
+        ort: archivort,
+        rueckkehr,
+    } = ort
+    else {
+        return None;
+    };
+    let Abschluss::Archiv(fehler) = abschluss else {
+        return None;
+    };
+    match fehler {
+        Archivfehler::KeinOrdner { vorhanden } => Some(Ausweichen {
+            ort: Tabort::Archiv {
+                ort: Archivort {
+                    zugang: Arc::clone(&archivort.zugang),
+                    innen: vorhanden.clone(),
+                },
+                rueckkehr: rueckkehr.clone(),
+            },
+            meldung: archivfehlertext(ort, fehler)?,
+        }),
+        Archivfehler::Verzeichnis(Verzeichnisfehler::Lesen(grund))
+            if grund.kind() == std::io::ErrorKind::NotFound =>
+        {
+            Some(Ausweichen {
+                ort: Tabort::Lokal(rueckkehr.clone()),
+                meldung: satz(
+                    Text::ArchivDateiFehlt,
+                    &[
+                        ("datei", &archivort.datei().display()),
+                        ("ordner", &rueckkehr.display()),
+                    ],
+                ),
+            })
+        }
+        Archivfehler::Verzeichnis(_) => None,
+    }
+}
+
+/// Das Format, das der Name des Ziels der Verknuepfung `verknuepfung` traegt,
+/// nach dem Aufloesen der ganzen Kette; `None`, wenn das Ziel keine Endung
+/// eines Archivs traegt oder sich nicht aufloesen laesst. **Stellt
+/// Systemaufrufe und wird allein auf dem Faden von
+/// [`Tabliste::verknuepfung_pruefen`] gerufen.**
+fn verweisziel_format(verknuepfung: &Path) -> Option<Archivformat> {
+    let ziel = std::fs::canonicalize(verknuepfung).ok()?;
+    ziel.file_name().and_then(Archivformat::aus_namen)
 }
 
 /// Wie ein Archivformat in einer Meldung heisst: die Endung, die es traegt,
@@ -4682,5 +4894,174 @@ mod tests {
             assert_eq!(tab.auswahl, None);
             assert_eq!(tab.bildlauf, 0.0);
         }
+    }
+
+    /// Zieht ein, bis die Frage nach dem Ziel einer Verknuepfung beantwortet
+    /// und jeder Lesevorgang fertig ist; zurueck kommt, was der Einzug an das
+    /// System reichen wollte.
+    fn verweisfrage_abwarten(liste: &mut Tabliste) -> Option<PathBuf> {
+        let beginn = std::time::Instant::now();
+        let mut an_das_system = None;
+        while liste.aktiver().verweispruefung.is_some() || liste.aktiver().liest() {
+            if let Some(pfad) = liste.einziehen().an_das_system {
+                an_das_system = Some(pfad);
+            }
+            assert!(
+                beginn.elapsed() < std::time::Duration::from_secs(5),
+                "die Frage nach dem Ziel ist nicht beantwortet worden"
+            );
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        an_das_system
+    }
+
+    /// Eine Verknuepfung, deren eigener Name keine Endung traegt, wird als
+    /// Archiv betreten, wenn der Name ihres Ziels eine traegt (E8); eine, deren
+    /// Ziel keines ist, reicht der Einzug an das System, wenn der Doppelklick
+    /// fragt, und sonst bleibt alles, wie es war. Die Frage stellt ein Faden
+    /// (Defekt
+    /// `261017-1923-eine-verknuepfung-auf-ein-archiv-wird-nur-an-ihrem-eigenen-namen-erkannt.md`).
+    #[test]
+    fn eine_verknuepfung_wird_am_namen_ihres_ziels_als_archiv_erkannt() {
+        let ordner = Pruefordner::neu("tab-archiv-verweis");
+        let inhalt = ordner.ordner("inhalt");
+        std::fs::write(inhalt.join("a.txt"), b"a").expect("Datei");
+        ordner.zip_packen("paket-1.2.zip", "inhalt");
+        std::fs::write(ordner.unter("notiz.txt"), b"n").expect("Datei");
+        std::os::unix::fs::symlink("paket-1.2.zip", ordner.unter("aktuell")).expect("Verweis");
+        std::os::unix::fs::symlink("notiz.txt", ordner.unter("zettel")).expect("Verweis");
+
+        let mut liste = liste(&[&ordner.pfad().display().to_string()]);
+        liste.sichtbaren_lesen();
+        fertig_lesen(&mut liste);
+        let aktuell = ordner.unter("aktuell");
+        assert!(liste.verknuepfung_pruefen(aktuell.clone(), false));
+        assert_eq!(verweisfrage_abwarten(&mut liste), None);
+        let Tabort::Archiv { ort, rueckkehr } = liste.aktiver().tabort() else {
+            panic!(
+                "die Verknuepfung ist nicht betreten: {:?}",
+                liste.aktiver().tabort()
+            );
+        };
+        assert_eq!(
+            ort.datei(),
+            aktuell,
+            "betreten unter dem Namen der Verknuepfung"
+        );
+        assert!(ort.innen.ist_wurzel());
+        assert_eq!(rueckkehr, ordner.pfad());
+        assert_eq!(
+            liste.aktiver().modell().zeilenzahl(),
+            1,
+            "die Wurzel traegt `inhalt`"
+        );
+
+        let mut liste = liste_auf(ordner.pfad());
+        let zettel = ordner.unter("zettel");
+        assert!(liste.verknuepfung_pruefen(zettel.clone(), true));
+        assert_eq!(verweisfrage_abwarten(&mut liste), Some(zettel.clone()));
+        assert_eq!(
+            liste.aktiver().ort(),
+            Ort::Lokal(ordner.pfad().to_path_buf())
+        );
+
+        assert!(liste.verknuepfung_pruefen(zettel, false));
+        assert_eq!(verweisfrage_abwarten(&mut liste), None);
+        assert_eq!(
+            liste.aktiver().ort(),
+            Ort::Lokal(ordner.pfad().to_path_buf())
+        );
+    }
+
+    /// Eine fertig gelesene Tabliste auf `ordner`.
+    fn liste_auf(ordner: &Path) -> Tabliste {
+        let mut liste = liste(&[&ordner.display().to_string()]);
+        liste.sichtbaren_lesen();
+        fertig_lesen(&mut liste);
+        liste
+    }
+
+    /// Der Ort einer Zeile ist in einem Archivtab der Archivort ihres
+    /// Eintrags samt seiner Art; auf eine Ordnerzeile gesetzt ist dieser Ordner
+    /// damit das Ziel eines Abwurfs, wie lokal, denn `abwurfregel::marke` gibt
+    /// fuer `Typ::Ordner` die Marke Zeile, und das halten deren eigene Proben
+    /// (Defekt
+    /// `261017-1923-ein-abwurf-auf-eine-ordnerzeile-im-archivfenster-landet-im-angezeigten-ordner.md`).
+    #[test]
+    fn im_archivtab_ist_eine_ordnerzeile_das_ziel_eines_abwurfs() {
+        let ordner = Pruefordner::neu("tab-archiv-abwurf");
+        ordner.ordner("inhalt/unter");
+        std::fs::write(ordner.unter("inhalt/a.txt"), b"a").expect("Datei");
+        let datei = ordner.zip_packen("paket.zip", "inhalt");
+        let mut liste = liste(&[&ordner.pfad().display().to_string()]);
+        let zugang = crate::archivregister::zugang(&datei, krk_core::archiv::Archivformat::Zip);
+        let inneres = Archivort::wurzel(zugang).kind("inhalt").expect("Name");
+        liste.archiv_setzen(inneres.clone(), ordner.pfad().to_path_buf(), None);
+        fertig_lesen(&mut liste);
+
+        let tab = liste.aktiver();
+        let zeile_von = |name: &str| {
+            (0..tab.modell().zeilenzahl())
+                .find(|&zeile| tab.modell().zeile(zeile).is_some_and(|e| e.name == name))
+                .unwrap_or_else(|| panic!("{name} steht nicht in der Liste"))
+        };
+        let (ort, typ) = tab
+            .ort_der_zeile(zeile_von("unter"))
+            .expect("die Zeile steht");
+        assert_eq!(ort, Ort::Archiv(inneres.kind("unter").expect("Name")));
+        assert_eq!(
+            typ,
+            krk_core::verzeichnis::Typ::Ordner,
+            "eine Ordnerzeile setzt die Marke Zeile"
+        );
+        let (ort, typ) = tab
+            .ort_der_zeile(zeile_von("a.txt"))
+            .expect("die Zeile steht");
+        assert_eq!(ort, Ort::Archiv(inneres.kind("a.txt").expect("Name")));
+        assert_eq!(typ, krk_core::verzeichnis::Typ::Datei);
+        assert_eq!(tab.ort_der_zeile(99), None);
+    }
+
+    /// Faellt der Ordner eines Archivtabs im Archiv weg, geht der Tab auf den
+    /// naechsten vorhandenen Vorfahren, und faellt die Archivdatei weg, in
+    /// ihren Ordner; die Meldung nennt den verlorenen Ort (Defekt
+    /// `261017-1923-ein-archivtab-faellt-nicht-auf-den-naechsten-vorhandenen-ordner-zurueck-wenn-sein-ordner-wegfaellt.md`).
+    #[test]
+    fn ein_archivtab_weicht_aus_wenn_sein_ordner_oder_sein_archiv_wegfaellt() {
+        let ordner = Pruefordner::neu("tab-archiv-ausweichen");
+        ordner.ordner("inhalt/a/b");
+        std::fs::write(ordner.unter("inhalt/a/x.txt"), b"x").expect("Datei");
+        let datei = ordner.zip_packen("paket.zip", "inhalt");
+        let mut liste = liste(&[&ordner.pfad().display().to_string()]);
+        let zugang = crate::archivregister::zugang(&datei, krk_core::archiv::Archivformat::Zip);
+        let a = Archivort::wurzel(zugang)
+            .kind("inhalt")
+            .and_then(|ort| ort.kind("a"))
+            .expect("Name");
+        let b = a.kind("b").expect("Name");
+        liste.archiv_setzen(b.clone(), ordner.pfad().to_path_buf(), None);
+        fertig_lesen(&mut liste);
+        assert_eq!(liste.aktiver().ort(), Ort::Archiv(b.clone()));
+
+        std::fs::remove_dir(ordner.unter("inhalt/a/b")).expect("b fort");
+        std::fs::remove_file(&datei).expect("Archiv fort");
+        ordner.zip_packen("paket.zip", "inhalt");
+        liste.aktiven_neu_lesen();
+        fertig_lesen(&mut liste);
+        assert_eq!(liste.aktiver().ort(), Ort::Archiv(a), "der Tab steht auf a");
+        let meldung = liste.aktiver().meldung().expect("eine Meldung").to_owned();
+        assert!(meldung.contains(&b.to_string()), "{meldung}");
+        assert_eq!(liste.aktiver().modell().zeilenzahl(), 1, "a traegt x.txt");
+
+        std::fs::remove_file(&datei).expect("Archiv fort");
+        liste.aktiven_neu_lesen();
+        fertig_lesen(&mut liste);
+        assert_eq!(
+            liste.aktiver().tabort(),
+            &Tabort::Lokal(ordner.pfad().to_path_buf()),
+            "der Tab steht im Ordner der Archivdatei"
+        );
+        let meldung = liste.aktiver().meldung().expect("eine Meldung").to_owned();
+        assert!(meldung.contains("paket.zip"), "{meldung}");
     }
 }

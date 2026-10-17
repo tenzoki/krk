@@ -174,6 +174,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "the archive contains entries hidden from the list, such as two with the same name, and is not changed"
         }
         Text::ArchivNurLesbar => "this archive is read-only",
+        Text::ArchivSchreibgeschuetzt => "the archive file is write-protected",
+        Text::ArchivAbbruchNachDemErsetzen => {
+            "the cancellation came after the archive was replaced; the archive is changed"
+        }
         Text::ArchivZipUngewoehnlicheForm => {
             "the zip has data before its first entry or is split into several parts"
         }
@@ -1063,7 +1067,11 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::ArchivKeineDatei => "{datei} is not a regular file.",
         Text::ArchivZuGross => "{datei} holds more than {grenze} entries and is not shown.",
-        Text::ArchivOrdnerFehlt => "The folder {ort} no longer exists in the archive.",
+        Text::ArchivOrdnerFehlt => {
+            "The folder {ort} no longer exists in the archive; showing {ziel}."
+        }
+        Text::ArchivDateiFehlt => "The archive {datei} no longer exists; showing {ordner}.",
+        Text::ArchivAlleinLesbar => "This archive is read-only.",
         Text::FernVerbindungGetrennt => {
             "The connection “{name}” is closed; clicking the connection reconnects."
         }

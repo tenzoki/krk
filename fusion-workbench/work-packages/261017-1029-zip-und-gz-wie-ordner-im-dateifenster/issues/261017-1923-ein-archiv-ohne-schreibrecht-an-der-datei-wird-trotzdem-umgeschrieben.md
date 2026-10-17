@@ -23,3 +23,6 @@ Eine von zwei Richtungen:
 **Abnahme**
 
 Erste Richtung: eine Probe setzt eine Archivdatei auf `0o444`, legt darin einen Ordner an, und danach ist das Archiv Byte für Byte unverändert, mit Grund im Bericht. Zweite Richtung: der Satz steht in `HowTo.md`, und der Entscheid ist verlinkt.
+
+---
+Resolved: Erste Richtung: `umbauen_mit` (`crates/krk-core/src/archiv/umbau.rs`) fragt vor der Aufstellung `sys::schreiben_erlaubt`, eine neue Bindung von `access(2)` mit `W_OK` an der aufgeloesten Archivdatei (`crates/krk-core/src/verzeichnis/sys.rs`), und endet ohne Recht mit `Umbaufehler::Schreibgeschuetzt` und dem Grund `Text::ArchivSchreibgeschuetzt`. Die Zahl der Schnittstellen in `sys.rs`, `lib.rs` und `verzeichnis/mod.rs` ist nachgezogen. Probe: `ein_archiv_ohne_schreibrecht_an_der_datei_bleibt_unveraendert` (`crates/krk-core/tests/archiv_operation.rs`); `HowTo.md` `## Archive im Dateifenster`.

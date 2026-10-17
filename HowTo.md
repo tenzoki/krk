@@ -365,7 +365,8 @@ ist, und warum.
 Pfeil links (oder `cmd+up`) geht im Archiv einen Ordner höher und an der
 obersten Ebene zurück in den Ordner, in dem das Archiv liegt; dort steht die
 Auswahl dann auf der Archivdatei. Eine Verknüpfung auf ein Archiv wird ebenso
-betreten. **`return` öffnet ein Archiv weiter mit dem Standardprogramm**, also
+betreten, wenn ihr eigener Name oder der Name ihres Ziels die Endung trägt,
+also auch `aktuell`, das auf `paket-1.2.zip` zeigt. **`return` öffnet ein Archiv weiter mit dem Standardprogramm**, also
 mit dem Archivprogramm des Systems, so wie `return` einen Ordner im Finder
 öffnet und nicht betritt. Der Fenstertitel nennt das Archiv und den Ordner
 darin als `/pfad/zum/archiv.zip:/ordner/darin`.
@@ -380,7 +381,7 @@ Datei nicht ändert, und das Betreten eines Unterordners kostet nichts mehr.
 Eintrag kann man herauskopieren, und er kommt dabei entpackt an. Mehr geht in
 einer `.gz`-Datei nicht: Hineinkopieren, Verschieben, Umbenennen, Anlegen und
 Löschen sind dort ausgegraut, ein Kopieren aus dem anderen Fenster in ein
-solches Fenster meldet „dieses Archiv ist allein lesbar“, und einen Abwurf aus
+solches Fenster meldet „Dieses Archiv ist allein lesbar.“, und einen Abwurf aus
 dem Finder nimmt es nicht an.
 
 **Was im Archiv geht:**
@@ -391,7 +392,11 @@ dem Finder nimmt es nicht an.
   vorhandenen Namen am Ziel gilt dasselbe Blatt wie bei jedem Kopieren.
 - **Hineinkopieren** (`f5`) aus dem anderen Dateifenster, lokal, von einem
   Server oder aus einem anderen Archiv, und durch Ziehen aus dem Finder auf
-  das Archivfenster. Steht der Name im Archiv schon, fragt dasselbe Blatt wie
+  das Archivfenster; auf eine Ordnerzeile gezogen, landet es in diesem Ordner
+  im Archiv, wie in einem Ordner auf dem Mac. Eine benannte Röhre, ein Socket
+  oder ein Gerät in einem Ordner auf dem Mac kommt nicht ins Archiv; die
+  Abschlussliste nennt es, der Rest kommt an, und ein Verschieben lässt den
+  Ordner dann stehen. Steht der Name im Archiv schon, fragt dasselbe Blatt wie
   lokal: „Überschreiben“ ersetzt den Eintrag, bei einem Ordner samt Inhalt,
   „Umbenennen“ nimmt einen freien Namen, „Überspringen“ lässt aus, und Ordner
   auf Ordner führt ohne Frage zusammen. **Alle diese Fragen kommen, bevor KRK
@@ -432,13 +437,20 @@ ersetzt das alte erst ganz am Ende in einem Schritt. Daraus folgt:
   auch mit den Einträgen, die bis dahin schon geschrieben waren; der
   Zwischenname verschwindet wieder. Das ist anders als beim lokalen Kopieren,
   nach dem stehen bleibt, was fertig ist. Die Abschlussliste sagt „das Archiv
-  ist unverändert geblieben“.
+  ist unverändert geblieben“. Kommt der Abbruch erst, nachdem das neue Archiv
+  an die Stelle des alten getreten ist, hält er nichts mehr auf: der Vorgang
+  endet als fertig, und die Abschlussliste sagt „der Abbruch kam erst nach
+  dem Ersetzen; das Archiv ist geändert“.
 - **Jede Änderung schreibt das ganze Archiv neu**, auch wenn sie nur einen
   Namen ändert. Bei einem großen `.tar.gz` heißt das einmal ganz entpacken und
   ganz neu packen; ein Zip kopiert die unveränderten Einträge, ohne sie neu zu
   packen. Der Ordner des Archivs braucht dafür vorübergehend so viel freien
   Platz wie das neue Archiv, und KRK braucht dort Schreibrecht; das
-  Schreibrecht an der Archivdatei allein genügt nicht.
+  Schreibrecht an der Archivdatei allein genügt nicht. **Ohne Schreibrecht an
+  der Archivdatei ändert KRK sie nicht**, auch wenn der Ordner beschreibbar
+  ist: eine Datei, die mit `chmod a-w` oder über „Informationen“ gegen
+  Änderungen gesperrt ist, bleibt, wie sie ist, und die Abschlussliste sagt
+  „die Archivdatei ist schreibgeschützt“.
 - **Beim Ersetzen geht verloren, was an der alten Datei hing**: Finder-Etiketten
   und andere erweiterte Attribute, Zugriffslisten und das Erstellungsdatum der
   Archivdatei. Die Rechte der Datei bleiben. Ein harter Verweis auf das Archiv
@@ -505,7 +517,11 @@ ersetzt das alte erst ganz am Ende in einem Schritt. Daraus folgt:
 
 **Änderungen von außen erscheinen von selbst**: ein Archivtab beobachtet den
 Ordner, in dem die Archivdatei liegt, und liest das Archiv neu, wenn sie sich
-ändert. **Nach einem Neustart steht ein Tab, der ein Archiv zeigte, im Ordner
+ändert. Gibt es den angezeigten Ordner danach im Archiv nicht mehr, geht der
+Tab auf den nächsten vorhandenen Ordner darüber, notfalls auf die oberste
+Ebene; gibt es die Archivdatei nicht mehr, in den Ordner, in dem sie lag. Die
+Statuszeile nennt beide Male, was fehlt und was jetzt gezeigt wird. **Nach
+einem Neustart steht ein Tab, der ein Archiv zeigte, im Ordner
 der Archivdatei** und nicht mehr im Archiv; hinein geht es wieder mit Pfeil
 rechts. Die Pfadeingabe (`shift+cmd+g`) in einem Archivtab nimmt einen Pfad auf
 dem Mac und verlässt damit das Archiv; vorbelegt ist der Pfad der Archivdatei.

@@ -965,6 +965,12 @@ enum Einstieg {
     /// Der Grund steht bereits in der Statuszeile; der Aufrufer tut nichts
     /// weiter.
     Gemeldet,
+    /// Eine Verknuepfung auf eine Datei, deren eigener Name keine Endung
+    /// eines Archivs traegt: ob ihr Ziel ein Archiv ist, beantwortet ein
+    /// Arbeitsfaden, und den Rest tut der Einzug
+    /// ([`crate::tabs::Tabliste::verknuepfung_pruefen`]). Der Aufrufer tut
+    /// nichts weiter.
+    Ausstehend,
 }
 
 /// Wer den Ersthelferrang mitnimmt, wenn ein Klick das aktive Dateifenster
@@ -2796,12 +2802,12 @@ impl DateifensterQuelle {
         let Ok(zeile) = usize::try_from(zeile) else {
             return;
         };
-        match self.in_zeile_einsteigen(zeile) {
+        match self.in_zeile_einsteigen(zeile, true) {
             // Gemeldet ist gemeldet: eine Verknuepfung, deren Ziel fehlt, geht
             // nicht auch noch an das System, das an ihr ebenso scheiterte und
             // die eben geschriebene Statuszeile mit seiner eigenen Antwort
-            // ueberschriebe.
-            Einstieg::Eingestiegen | Einstieg::Gemeldet => return,
+            // ueberschriebe. Ausstehend entscheidet der Einzug.
+            Einstieg::Eingestiegen | Einstieg::Gemeldet | Einstieg::Ausstehend => return,
             Einstieg::KeinOrdner => {}
         }
         let Some((pfad, _)) = self.eintrag_in_zeile(zeile) else {
@@ -3099,7 +3105,7 @@ impl DateifensterQuelle {
         // Der Rueckgabewert interessiert hier nicht: auf einer Datei loest der
         // Rechts-Pfeil unveraendert nichts aus, und eine unerreichbare
         // Verknuepfung hat ihre Meldung schon gesetzt.
-        let _ = self.in_zeile_einsteigen(zeile);
+        let _ = self.in_zeile_einsteigen(zeile, false);
     }
 
     /// Steigt in den Ordner dieser Zeile hinein und meldet, ob es einer war.
@@ -3164,14 +3170,16 @@ impl DateifensterQuelle {
     /// Seit dem Archivpaket hat `Typ::Datei` einen eigenen Zweig,
     /// [`Self::archiv_betreten`], der allein den **Namen** fragt
     /// ([`Archivformat::aus_namen`]); eine Verknuepfung, die
-    /// `verweisziel::bestimmen` als Datei aufloest, geht denselben Weg mit
-    /// ihrem eigenen Namen (E8 des Plans
+    /// `verweisziel::bestimmen` als Datei aufloest, geht durch
+    /// [`Self::verknuepfung_betreten`], das erst ihren eigenen Namen und dann
+    /// auf einem Arbeitsfaden den Namen ihres Ziels fragt (E8 des Plans
     /// `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`). Ein
     /// Ordner geht nicht durch diesen Zweig. Jede andere Datei bleibt, was sie
     /// war: der Doppelklick gibt sie an das System, der Rechts-Pfeil tut
-    /// nichts. In einem Archivtab betritt [`Self::im_archiv_einsteigen`] die
-    /// Ordner darin.
-    fn in_zeile_einsteigen(&self, zeile: usize) -> Einstieg {
+    /// nichts; `oeffnen` sagt, welcher der beiden fragt, denn bei einer
+    /// Verknuepfung faellt diese Entscheidung erst im Einzug. In einem
+    /// Archivtab betritt [`Self::im_archiv_einsteigen`] die Ordner darin.
+    fn in_zeile_einsteigen(&self, zeile: usize, oeffnen: bool) -> Einstieg {
         if let Some((ziel, typ)) = self.fern_eintrag_in_zeile(zeile) {
             return self.fern_einsteigen(ziel, typ);
         }
@@ -3189,10 +3197,10 @@ impl DateifensterQuelle {
             Typ::Verknuepfung => match verweisziel::bestimmen(&ziel) {
                 Verweisziel::Ordner => true,
                 // Zeigt sie auf eine Datei, geschieht, was bei einer Datei
-                // geschieht: ein Archiv wird betreten, sonst reicht der
-                // Aufrufer sie an das System, und das loest sie seinerseits
-                // auf.
-                Verweisziel::KeinOrdner => return self.archiv_betreten(&ziel),
+                // geschieht: ein Archiv wird betreten, unter ihrem eigenen
+                // Namen oder dem ihres Ziels, sonst geht sie an das System,
+                // und das loest sie seinerseits auf.
+                Verweisziel::KeinOrdner => return self.verknuepfung_betreten(&ziel, oeffnen),
                 // Ein Ziel, an dem `stat(2)` scheitert — ins Leere, im Ring
                 // oder ohne Recht sind Beispiele und keine Aufzaehlung: ein zu
                 // langer Name (`errno 63`) faellt unter keines der drei, und
@@ -3235,6 +3243,38 @@ impl DateifensterQuelle {
         let zugang = archivregister::zugang(datei, format);
         self.archiv_lesen(Archivort::wurzel(zugang), None);
         Einstieg::Eingestiegen
+    }
+
+    /// Betritt eine lokale Verknuepfung auf eine Datei als Archiv, wenn ihr
+    /// eigener Name oder der Name ihres Ziels die Endung eines Archivs traegt
+    /// (E8 des Plans der Archive).
+    ///
+    /// Der eigene Name geht wie eine Datei durch [`Self::archiv_betreten`].
+    /// Traegt er keine Endung, fragt ein Arbeitsfaden nach dem Ziel
+    /// ([`crate::tabs::Tabliste::verknuepfung_pruefen`]), und die Antwort
+    /// kommt im Einzug: ein Archiv wird betreten, sonst geht die Verknuepfung
+    /// an das System, wenn `oeffnen` gesetzt ist. **Auf dem Hauptfaden stellt
+    /// dieser Weg keinen Systemaufruf**; den einen, den der Verknuepfungszweig
+    /// davor stellt, `verweisziel::bestimmen` mit seinem `stat(2)`, gab es
+    /// schon vor den Archiven (Rumpfprobe
+    /// `der_archiveinstieg_stellt_auf_dem_hauptfaden_keinen_systemaufruf`).
+    /// Laesst sich der Faden nicht starten, bleibt es beim alten Verhalten:
+    /// [`Einstieg::KeinOrdner`].
+    fn verknuepfung_betreten(&self, verknuepfung: &Path, oeffnen: bool) -> Einstieg {
+        match self.archiv_betreten(verknuepfung) {
+            Einstieg::KeinOrdner => {}
+            betreten => return betreten,
+        }
+        let laeuft = self
+            .ivars()
+            .tabs
+            .borrow_mut()
+            .verknuepfung_pruefen(verknuepfung.to_path_buf(), oeffnen);
+        if !laeuft {
+            return Einstieg::KeinOrdner;
+        }
+        self.einzug_starten();
+        Einstieg::Ausstehend
     }
 
     /// Der Ort des Eintrags in dieser Zeile eines Archivtabs und seine Art;
@@ -3300,17 +3340,12 @@ impl DateifensterQuelle {
             .map(|eintrag| (ordner.join(&eintrag.name), eintrag.typ))
     }
 
-    /// Der Ort des Eintrags in dieser Zeile und seine Art, lokal oder fern;
-    /// `None`, wenn die Zeile nicht steht. Rein lexikalisch und ohne
-    /// Systemaufruf: das Ziel eines Abwurfs an jedem Ort (Entscheidung 9 des
-    /// Plans der sftp-Ordner).
+    /// Der Ort des Eintrags in dieser Zeile und seine Art, lokal, fern oder im
+    /// Archiv; `None`, wenn die Zeile nicht steht. Rein lexikalisch und ohne
+    /// Systemaufruf: das Ziel eines Abwurfs an jedem Ort, auch auf eine
+    /// Ordnerzeile im Archiv ([`crate::tabs::Tabinhalt::ort_der_zeile`]).
     fn ort_in_zeile(&self, zeile: usize) -> Option<(Ort, Typ)> {
-        match self.eintrag_in_zeile(zeile) {
-            Some((pfad, typ)) => Some((Ort::Lokal(pfad), typ)),
-            None => self
-                .fern_eintrag_in_zeile(zeile)
-                .map(|(fern, typ)| (Ort::Fern(fern), typ)),
-        }
+        self.ivars().tabs.borrow().aktiver().ort_der_zeile(zeile)
     }
 
     /// Der ferne Ort des Eintrags in dieser Zeile und seine Art; `None`, wenn
@@ -4615,10 +4650,17 @@ impl DateifensterQuelle {
         let einzug = self.ivars().tabs.borrow_mut().einziehen();
         if einzug.ort_neu {
             // Eine ferne Verknuepfung liess sich nicht als Ordner oeffnen, und
-            // der Tab ist an seinen vorigen Ort zurueckgekehrt: derselbe
-            // Nachzug wie nach einer Navigation, samt Titel und Tableiste.
+            // der Tab ist an seinen vorigen Ort zurueckgekehrt; oder ein
+            // Archivtab ist ausgewichen, oder eine Verknuepfung hat ein Archiv
+            // genannt: derselbe Nachzug wie nach einer Navigation, samt Titel
+            // und Tableiste.
             self.nach_lesebeginn();
             self.ordnerwechsel_melden();
+        }
+        if let Some(verknuepfung) = &einzug.an_das_system {
+            // Der Doppelklick auf eine Verknuepfung, die kein Archiv nennt,
+            // endet hier, wo er sonst sofort geendet haette.
+            self.mit_standardprogramm_oeffnen(std::slice::from_ref(verknuepfung));
         }
         if einzug.fertig {
             // Erst jetzt steht die Sortierung. Die bisher angezeigten Zeilen
@@ -7195,11 +7237,17 @@ mod tests {
         let quelle = gelesene_quelle(ordner.pfad());
 
         let zeile = zeile_von(&quelle, "paket.zip");
-        assert_eq!(quelle.in_zeile_einsteigen(zeile), Einstieg::Eingestiegen);
+        assert_eq!(
+            quelle.in_zeile_einsteigen(zeile, false),
+            Einstieg::Eingestiegen
+        );
         assert_eq!(innenpfad(&quelle).as_deref(), Some(""));
         fertig_lesen(&quelle);
         let zeile = zeile_von(&quelle, "inhalt");
-        assert_eq!(quelle.in_zeile_einsteigen(zeile), Einstieg::Eingestiegen);
+        assert_eq!(
+            quelle.in_zeile_einsteigen(zeile, false),
+            Einstieg::Eingestiegen
+        );
         assert_eq!(innenpfad(&quelle).as_deref(), Some("inhalt"));
         fertig_lesen(&quelle);
         assert_eq!(quelle.ivars().tabs.borrow().aktiver().titel(), "inhalt");
@@ -7234,16 +7282,25 @@ mod tests {
         let quelle = gelesene_quelle(ordner.pfad());
 
         let zeile = zeile_von(&quelle, "gross.zip");
-        assert_eq!(quelle.in_zeile_einsteigen(zeile), Einstieg::Eingestiegen);
+        assert_eq!(
+            quelle.in_zeile_einsteigen(zeile, false),
+            Einstieg::Eingestiegen
+        );
         fertig_lesen(&quelle);
         let zeile = zeile_von(&quelle, "aussen");
-        assert_eq!(quelle.in_zeile_einsteigen(zeile), Einstieg::Eingestiegen);
+        assert_eq!(
+            quelle.in_zeile_einsteigen(zeile, false),
+            Einstieg::Eingestiegen
+        );
         fertig_lesen(&quelle);
         let zeile = zeile_von(&quelle, "klein.zip");
-        assert_eq!(quelle.in_zeile_einsteigen(zeile), Einstieg::Gemeldet);
+        assert_eq!(quelle.in_zeile_einsteigen(zeile, false), Einstieg::Gemeldet);
         assert_eq!(innenpfad(&quelle).as_deref(), Some("aussen"));
         let zeile = zeile_von(&quelle, "text.txt");
-        assert_eq!(quelle.in_zeile_einsteigen(zeile), Einstieg::KeinOrdner);
+        assert_eq!(
+            quelle.in_zeile_einsteigen(zeile, false),
+            Einstieg::KeinOrdner
+        );
         assert_eq!(innenpfad(&quelle).as_deref(), Some("aussen"));
 
         // Derselbe Ordner ueber den Server des Systems.
@@ -7256,22 +7313,61 @@ mod tests {
         quelle.fern_lesen(fern.clone(), None);
         fertig_lesen(&quelle);
         let zeile = zeile_von(&quelle, "klein.zip");
-        assert_eq!(quelle.in_zeile_einsteigen(zeile), Einstieg::Gemeldet);
+        assert_eq!(quelle.in_zeile_einsteigen(zeile, false), Einstieg::Gemeldet);
         assert_eq!(quelle.angezeigter_ort(), Ort::Fern(fern));
+    }
+
+    /// Pfeil rechts auf eine Verknuepfung `aktuell -> paket.zip` betritt das
+    /// Archiv: der Einstieg antwortet `Ausstehend`, und der Einzug betritt es,
+    /// sobald der Faden den Namen des Ziels genannt hat (E8 des Plans der
+    /// Archive).
+    #[test]
+    fn eine_verknuepfung_auf_ein_archiv_wird_ueber_den_namen_ihres_ziels_betreten() {
+        let ordner = crate::pruefordner::Pruefordner::neu("archiv-verweis");
+        ordner.ordner("inhalt");
+        ordner.datei("inhalt/x.txt", "x");
+        ordner.zip_packen("paket.zip", "inhalt");
+        std::os::unix::fs::symlink("paket.zip", ordner.unter("aktuell")).expect("Verweis");
+        let quelle = gelesene_quelle(ordner.pfad());
+
+        let zeile = zeile_von(&quelle, "aktuell");
+        assert_eq!(
+            quelle.in_zeile_einsteigen(zeile, false),
+            Einstieg::Ausstehend
+        );
+        let beginn = std::time::Instant::now();
+        while innenpfad(&quelle).is_none() {
+            let _ = quelle.ivars().tabs.borrow_mut().einziehen();
+            assert!(
+                beginn.elapsed() < std::time::Duration::from_secs(5),
+                "die Verknuepfung ist nicht betreten worden"
+            );
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        fertig_lesen(&quelle);
+        assert_eq!(innenpfad(&quelle).as_deref(), Some(""));
+        assert_eq!(zeile_von(&quelle, "inhalt"), 0);
     }
 
     /// Der Einstieg in ein Archiv stellt auf dem Hauptfaden keinen
     /// Systemaufruf (E5 des Plans der Archive).
     ///
     /// Gelesen werden die Rumpfe des Dateizweigs [`DateifensterQuelle::archiv_betreten`],
-    /// von [`DateifensterQuelle::archiv_lesen`] und von
+    /// des Verknuepfungswegs [`DateifensterQuelle::verknuepfung_betreten`] und
+    /// `Tabliste::verknuepfung_pruefen`, das die Frage nach dem Ziel auf einen
+    /// Faden legt, von [`DateifensterQuelle::archiv_lesen`] und von
     /// [`archivregister::zugang`], gegen die Nadeln des Plans. **Was sie nicht
-    /// sieht:** einen Systemaufruf in einer tiefer gerufenen Funktion, etwa in
-    /// `Tabliste::archiv_setzen` und dem Lesebeginn dahinter (dort startet
-    /// allein ein Faden), in `nach_lesebeginn` oder in AppKit; und einen
-    /// Aufruf, der unter einem anderen Namen als den Nadeln an die Platte
-    /// geht. Dass `Archivzugang::neu` keinen stellt, haelt sein Modulkopf und
-    /// nicht diese Probe.
+    /// sieht:** den einen Systemaufruf, den der Verknuepfungszweig von
+    /// `in_zeile_einsteigen` vor dem Archivweg stellt, das `stat(2)` von
+    /// `verweisziel::bestimmen`, das es vor den Archiven gab und das fragt, ob
+    /// die Verknuepfung auf einen Ordner zeigt; einen Systemaufruf in einer
+    /// tiefer gerufenen Funktion, etwa in `Tabliste::archiv_setzen` und dem
+    /// Lesebeginn dahinter (dort startet allein ein Faden), in
+    /// `nach_lesebeginn` oder in AppKit; und einen Aufruf, der unter einem
+    /// anderen Namen als den Nadeln an die Platte geht. Dass `Archivzugang::neu`
+    /// keinen stellt, haelt sein Modulkopf und nicht diese Probe; dass
+    /// `verweisziel_format` in `tabs.rs` allein auf dem Faden laeuft, haelt sein
+    /// Doc-Kommentar.
     #[test]
     fn der_archiveinstieg_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
         let datei = diese_datei();
@@ -7282,8 +7378,20 @@ mod tests {
         let register_code: String = code_zeilen(vor_dem_pruefmodul(register))
             .collect::<Vec<_>>()
             .join("\n");
+        let tabs = include_str!("../tabs.rs");
+        let tabs_code: String = code_zeilen(vor_dem_pruefmodul(tabs))
+            .collect::<Vec<_>>()
+            .join("\n");
         let rumpfe = [
             ("archiv_betreten", rumpf_von(&code, "archiv_betreten")),
+            (
+                "verknuepfung_betreten",
+                rumpf_von(&code, "verknuepfung_betreten"),
+            ),
+            (
+                "Tabliste::verknuepfung_pruefen",
+                rumpf_von(&tabs_code, "verknuepfung_pruefen"),
+            ),
             ("archiv_lesen", rumpf_von(&code, "archiv_lesen")),
             ("archivordner", {
                 let beginn = code
@@ -7345,8 +7453,13 @@ mod tests {
         );
         assert_eq!(
             rumpf.matches("self.archiv_betreten(").count(),
-            2,
-            "der Dateizweig steht genau fuer eine Datei und eine Verknuepfung auf eine Datei"
+            1,
+            "der Dateizweig steht genau fuer eine Datei"
+        );
+        assert_eq!(
+            rumpf.matches("self.verknuepfung_betreten(").count(),
+            1,
+            "und fuer eine Verknuepfung auf eine Datei der Weg ueber ihr Ziel"
         );
     }
 

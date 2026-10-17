@@ -25,3 +25,6 @@ Der Doc-Kommentar der Probe nennt in beiden Fällen den `stat` des Verknüpfungs
 **Abnahme**
 
 Eine Probe am Wert: eine Verknüpfung `aktuell`, deren Ziel `paket.zip` heißt, ergibt `Einstieg::Eingestiegen`.
+
+---
+Resolved: Eine Verknuepfung, deren eigener Name keine Endung traegt, geht durch `DateifensterQuelle::verknuepfung_betreten` (`crates/krk-ui/src/appkit/tabelle.rs`) an `Tabliste::verknuepfung_pruefen` (`crates/krk-ui/src/tabs.rs`): ein Faden loest das Ziel auf (`verweisziel_format`), `Tabliste::einziehen` betritt das Archiv oder reicht die Verknuepfung ueber `Einzug::an_das_system` an das System, wenn der Doppelklick fragte (`Einstieg::Ausstehend`). Auf dem Hauptfaden kommt kein Systemaufruf hinzu; der Doc-Kommentar der Rumpfprobe `der_archiveinstieg_stellt_auf_dem_hauptfaden_keinen_systemaufruf` nennt jetzt den `stat(2)` von `verweisziel::bestimmen`, und die Probe liest die zwei neuen Rumpfe mit. Abweichung von der Abnahme: der Einstieg antwortet `Ausstehend` und nicht `Eingestiegen`, denn eingestiegen wird erst im Einzug. Proben: `eine_verknuepfung_wird_am_namen_ihres_ziels_als_archiv_erkannt` (Pruefmodul von `tabs.rs`), `eine_verknuepfung_auf_ein_archiv_wird_ueber_den_namen_ihres_ziels_betreten` (Pruefmodul von `tabelle.rs`); `HowTo.md` `## Archive im Dateifenster`.

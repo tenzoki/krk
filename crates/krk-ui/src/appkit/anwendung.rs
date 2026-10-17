@@ -7416,7 +7416,7 @@ impl Anwendungsdelegierter {
     /// auf den Server, in ein Archiv hinein baut sie das Zielarchiv in einem
     /// Umbau neu, und ein Verschieben aus einem Archiv entfernt die Eintraege
     /// dort erst nach dem Kopieren. Ein Archiv als Ziel, das KRK allein lesen
-    /// darf, meldet `Text::ArchivNurLesbar` vor dem Start (E14), am Wert und
+    /// darf, meldet `Text::ArchivAlleinLesbar` vor dem Start (E14), am Wert und
     /// ohne Systemaufruf.
     fn uebertragen(&self, kommando: Kommando) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
@@ -7425,7 +7425,7 @@ impl Anwendungsdelegierter {
         let ziel = self.dateifenster(aktiv.andere()).quelle().angezeigter_ort();
         match (quelle, ziel) {
             (_, Dateiort::Archiv(ziel)) if !ziel.format().beschreibbar() => {
-                self.antwort_zeigen(aktiv, text(Text::ArchivNurLesbar));
+                self.antwort_zeigen(aktiv, text(Text::ArchivAlleinLesbar));
                 true
             }
             (quelle @ Dateiort::Archiv(_), ziel) | (quelle, ziel @ Dateiort::Archiv(_)) => {
@@ -7748,7 +7748,7 @@ impl Anwendungsdelegierter {
         // angezeigten Ort. Ein Archiv, das KRK allein lesen darf, loescht
         // nichts (E14 des Plans der Archive).
         let Some(gegenstand) = self.loeschgegenstand(aktiv) else {
-            self.antwort_zeigen(aktiv, text(Text::ArchivNurLesbar));
+            self.antwort_zeigen(aktiv, text(Text::ArchivAlleinLesbar));
             return true;
         };
 
@@ -9008,7 +9008,7 @@ impl Anwendungsdelegierter {
             // Abwurfregel hat ihn schon abgewiesen, und die Zeile steht, damit
             // auch ein anderer Weg hierher nichts startet.
             Dateiort::Archiv(archiv) if !archiv.format().beschreibbar() => {
-                self.antwort_zeigen(seite, text(Text::ArchivNurLesbar));
+                self.antwort_zeigen(seite, text(Text::ArchivAlleinLesbar));
             }
             // Ein Abwurf auf ein fernes Fenster oder ein Archivfenster ist ein
             // Kopieren oder Verschieben dorthin, ueber dieselbe Maschine wie

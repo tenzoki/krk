@@ -1,5 +1,5 @@
-//! Die Systemschicht des Kerns: die neun Schnittstellen, die KRK braucht, und
-//! die dreizehn Funktionen, die sie binden.
+//! Die Systemschicht des Kerns: die zehn Schnittstellen, die KRK braucht, und
+//! die vierzehn Funktionen, die sie binden.
 //!
 //! Dies ist das einzige Modul in `krk-core`, das die Regel `deny(unsafe_code)`
 //! aus `lib.rs` oeffnet. Die Regel lautet dort `deny` und nicht `forbid`, damit
@@ -28,10 +28,11 @@
 //!                    ──> wachzeit             ──> krk-ui, als `jetzt` an
 //!                                                 heimordner::schluesselmerker
 //! statfs(2)          ──> auf_lokalem_...      ──> operation::fern
+//! access(2)          ──> schreiben_erlaubt    ──> archiv::umbau
 //! ```
 //!
-//! **Neun ist die Zahl der Schnittstellen und nicht die der Bindungen: es sind
-//! neun Schnittstellen und dreizehn gebundene Funktionen, denn `copyfile(3)`
+//! **Zehn ist die Zahl der Schnittstellen und nicht die der Bindungen: es sind
+//! zehn Schnittstellen und vierzehn gebundene Funktionen, denn `copyfile(3)`
 //! braucht seine vier `copyfile_state_*`-Helfer.** Ohne sie liesse sich der
 //! Fortschrittsrueckruf nicht setzen und die Zahl der kopierten Bytes nicht
 //! abfragen; eine eigene Schnittstelle sind sie deshalb nicht, aber vier weitere
@@ -44,9 +45,10 @@
 //! `clock_gettime_nsec_np(3)`, die Arbeit am gemerkten Schluessel von
 //! `secrets.txt` vom 261016 (siehe [`wachzeit`]) und die neunte, `statfs(2)`,
 //! der Befund vom 261017 zum Ueberschreiben auf einem Netzlaufwerk (siehe
-//! [`auf_lokalem_dateisystem`]). Gebunden sind alle dreizehn in
-//! den sieben `unsafe extern "C"`-Bloecken dieses Moduls; `fsync` steht im Block
-//! von `fcntl`, weil es dessen Rueckfall ist.
+//! [`auf_lokalem_dateisystem`]) und die zehnte, `access(2)`, der Befund vom
+//! 261017 zu einem schreibgeschuetzten Archiv (siehe [`schreiben_erlaubt`]).
+//! Gebunden sind alle vierzehn in den acht `unsafe extern "C"`-Bloecken dieses
+//! Moduls; `fsync` steht im Block von `fcntl`, weil es dessen Rueckfall ist.
 //!
 //! **`flock(2)` ist die fuenfte, und sie ist die erste, die keine Datei liest
 //! oder schreibt, sondern eine Absprache zwischen zwei Prozessen traegt.** An
@@ -1504,6 +1506,52 @@ pub fn auf_lokalem_dateisystem(pfad: &Path) -> io::Result<bool> {
     // geschrieben, und jedes Bitmuster ist fuer die Felder gueltig.
     let antwort = unsafe { antwort.assume_init() };
     Ok(antwort.f_flags & MNT_LOCAL != 0)
+}
+
+/// `W_OK` aus dem SDK-Kopf `usr/include/sys/unistd.h`: die Frage nach dem
+/// Schreibrecht.
+const W_OK: c_int = 1 << 1;
+
+/// `EPERM`, `EACCES` und `EROFS` aus `sys/errno.h`: die drei Antworten von
+/// `access(2)`, die „nicht erlaubt“ heissen und keinen Fehler.
+const EPERM: i32 = 1;
+const EACCES: i32 = 13;
+const EROFS: i32 = 30;
+
+unsafe extern "C" {
+    /// `int access(const char *, int)`
+    ///
+    /// Liefert 0, wenn der Prozess den Pfad in der gefragten Weise benutzen
+    /// darf, sonst -1 mit `errno`. Folgt einer Verknuepfung. Seit den ersten
+    /// Fassungen von macOS in dieser Form, weit unter dem Mindest-Zielsystem
+    /// 15.0.
+    fn access(pfad: *const c_char, art: c_int) -> c_int;
+}
+
+/// Ob dieser Prozess die Datei unter `pfad` beschreiben darf (`access(2)` mit
+/// `W_OK`), nach Rechtebits, Zugriffsliste und einem schreibgeschuetzten
+/// Dateisystem.
+///
+/// Gebraucht wird die Antwort vom Umbau eines Archivs (`archiv::umbau`): er
+/// ersetzt die Archivdatei ueber ein `rename(2)` im Ordner, und dafuer genuegte
+/// das Schreibrecht am Ordner. Eine Datei, die der Nutzer gegen Aenderungen
+/// gesperrt hat, schriebe er damit trotzdem neu; gefragt wird deshalb die
+/// Datei selbst, wie ein Programm, das sie zum Schreiben oeffnen wollte. Die
+/// Frage stellt einen Systemaufruf und wird allein auf einem Arbeitsfaden
+/// gerufen.
+///
+/// # Errors
+///
+/// Jeder Fehlschlag ausser `EACCES`, `EPERM` und `EROFS`, die „nein“ heissen.
+pub fn schreiben_erlaubt(pfad: &Path) -> io::Result<bool> {
+    let c_pfad = als_c_pfad(pfad)?;
+    // SICHERHEIT: `c_pfad` ist nullterminiert und lebt bis nach dem Aufruf;
+    // `access` liest allein ihn.
+    match ohne_unterbrechung(|| kernantwort(unsafe { access(c_pfad.as_ptr(), W_OK) })) {
+        Ok(()) => Ok(true),
+        Err(fehler) if matches!(fehler.raw_os_error(), Some(EPERM | EACCES | EROFS)) => Ok(false),
+        Err(fehler) => Err(fehler),
+    }
 }
 
 /// Macht aus einem Pfad eine nullterminierte Zeichenkette fuer die C-Aufrufe.

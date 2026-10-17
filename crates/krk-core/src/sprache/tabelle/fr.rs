@@ -202,6 +202,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "l’archive contient des entrées masquées dans la liste, par exemple deux du même nom, et n’est pas modifiée"
         }
         Text::ArchivNurLesbar => "cette archive est en lecture seule",
+        Text::ArchivSchreibgeschuetzt => "le fichier de l’archive est protégé en écriture",
+        Text::ArchivAbbruchNachDemErsetzen => {
+            "l’annulation est arrivée après le remplacement\u{202f}; l’archive est modifiée"
+        }
         Text::ArchivZipUngewoehnlicheForm => {
             "le zip contient des données avant sa première entrée ou est réparti en plusieurs parties"
         }
@@ -1194,7 +1198,11 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::ArchivKeineDatei => "{datei} n’est pas un fichier ordinaire.",
         Text::ArchivZuGross => "{datei} contient plus de {grenze} entrées et n’est pas affichée.",
-        Text::ArchivOrdnerFehlt => "Le dossier {ort} n’existe plus dans l’archive.",
+        Text::ArchivOrdnerFehlt => {
+            "Le dossier {ort} n’existe plus dans l’archive\u{202f}; affichage de {ziel}."
+        }
+        Text::ArchivDateiFehlt => "L’archive {datei} n’existe plus\u{202f}; affichage de {ordner}.",
+        Text::ArchivAlleinLesbar => "Cette archive est en lecture seule.",
         Text::FernVerbindungGetrennt => {
             "La connexion «\u{a0}{name}\u{a0}» est interrompue\u{202f}; un clic sur la connexion la rétablit."
         }

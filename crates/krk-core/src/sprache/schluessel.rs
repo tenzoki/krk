@@ -276,6 +276,11 @@ pub enum Text {
     ArchivVerdecktNurLesbar,
     /// `archiv::umbau`: ein Format, das allein lesbar ist (gz).
     ArchivNurLesbar,
+    /// `archiv::umbau`: die Archivdatei ist schreibgeschuetzt.
+    ArchivSchreibgeschuetzt,
+    /// `archiv::umbau::abschluss_nach_ersetzen`: ein Abbruch kam erst, nachdem
+    /// das Archiv ersetzt war.
+    ArchivAbbruchNachDemErsetzen,
     /// `archiv::umbau`: ein Zip mit Daten vor dem ersten Eintrag oder ueber
     /// mehrere Teile.
     ArchivZipUngewoehnlicheForm,
@@ -1672,8 +1677,16 @@ pub enum Text {
     /// Eintraege; `{datei}`, `{grenze}`.
     ArchivZuGross,
     /// Der Lesevorgang eines Archivtabs: den angezeigten Ordner gibt es im
-    /// Archiv nicht mehr; `{ort}`.
+    /// Archiv nicht mehr, und der Tab zeigt den naechsten vorhandenen;
+    /// `{ort}` (der verlorene), `{ziel}` (der gezeigte).
     ArchivOrdnerFehlt,
+    /// Der Lesevorgang eines Archivtabs: die Archivdatei gibt es nicht mehr,
+    /// und der Tab zeigt ihren Ordner; `{datei}`, `{ordner}`.
+    ArchivDateiFehlt,
+    /// Die Statuszeile, wenn ein Befehl in ein Archiv schreiben soll, das KRK
+    /// allein lesen darf (der ganze Satz; `ArchivNurLesbar` ist der Grund in
+    /// der Abschlussliste).
+    ArchivAlleinLesbar,
     /// Der Lesevorgang eines fernen Tabs scheitert, weil die Verbindung
     /// getrennt ist; `{name}` (die Verbindung in `secrets.txt`).
     FernVerbindungGetrennt,
@@ -1741,7 +1754,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 721] = [
+    pub const ALLE: [Text; 725] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1848,6 +1861,8 @@ impl Text {
         Text::ArchivVerschluesseltNurLesbar,
         Text::ArchivVerdecktNurLesbar,
         Text::ArchivNurLesbar,
+        Text::ArchivSchreibgeschuetzt,
+        Text::ArchivAbbruchNachDemErsetzen,
         Text::ArchivZipUngewoehnlicheForm,
         Text::ArchivTarMitLuecken,
         Text::ArchivTarGroesseAusPax,
@@ -2436,6 +2451,8 @@ impl Text {
         Text::ArchivKeineDatei,
         Text::ArchivZuGross,
         Text::ArchivOrdnerFehlt,
+        Text::ArchivDateiFehlt,
+        Text::ArchivAlleinLesbar,
         Text::FernVerbindungGetrennt,
         Text::VerbindenErstSichern,
         Text::VerbindenPinNochNichtGesichert,

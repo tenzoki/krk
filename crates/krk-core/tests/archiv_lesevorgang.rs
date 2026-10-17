@@ -197,6 +197,8 @@ fn ein_abgebrochener_archivlesevorgang_schickt_genau_ein_fertig() {
 
 /// Ein Archiv, das keines ist, endet mit dem Grund des Lesers, und ein
 /// Innenpfad, der kein Ordner ist, mit `KeinOrdner`; beide ohne Stapel.
+/// `KeinOrdner` nennt den naechsten Vorfahren, der im Archiv ein Ordner ist,
+/// notfalls die Wurzel: dorthin weicht der Tab aus.
 #[test]
 fn ein_ungueltiges_archiv_und_ein_fehlender_ordner_enden_mit_grund() {
     let ordner = Pruefordner::neu("archiv-fehler");
@@ -216,14 +218,22 @@ fn ein_ungueltiges_archiv_und_ein_fehlender_ordner_enden_mit_grund() {
     let wurzel = baum_anlegen(&ordner);
     let zip = ordner.unter("baum.zip");
     zip_packen(&wurzel, &zip);
-    for innen in ["eins.txt", "gibt/es/nicht"] {
+    for (innen, vorhanden) in [
+        ("eins.txt", ""),
+        ("gibt/es/nicht", ""),
+        ("a/b/fort/tiefer", "a/b"),
+        ("a/zwei.txt", "a"),
+    ] {
         let (gelesen, ende, _, _) =
             auslesen(Lesevorgang::archiv_starten(archivort(&zip, innen), 6));
         assert!(gelesen.is_empty(), "{innen}");
-        assert!(
-            matches!(ende, Abschluss::Archiv(Archivfehler::KeinOrdner)),
-            "{innen}: {ende:?}"
-        );
+        let Abschluss::Archiv(Archivfehler::KeinOrdner {
+            vorhanden: gefunden,
+        }) = ende
+        else {
+            panic!("{innen}: {ende:?}");
+        };
+        assert_eq!(gefunden.als_text(), vorhanden, "{innen}");
     }
 }
 

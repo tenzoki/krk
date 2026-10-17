@@ -18,3 +18,6 @@ Lokal und fern ist beim Abwurf auf eine Ordnerzeile dieser Ordner das Ziel. In e
 **Abnahme**
 
 Eine Probe der Abwurfregel: in einem Archivtab ist bei einem Abwurf auf eine Ordnerzeile das Ziel der Archivort dieses Ordners.
+
+---
+Resolved: `ort_in_zeile` (`crates/krk-ui/src/appkit/tabelle.rs`) fragt `Tabinhalt::ort_der_zeile` (`crates/krk-ui/src/tabs.rs`), das fuer lokal, fern und Archiv den Ort der Zeile baut; eine Ordnerzeile im Archivtab ist damit das Ziel des Abwurfs. Probe: `im_archivtab_ist_eine_ordnerzeile_das_ziel_eines_abwurfs` (Pruefmodul von `tabs.rs`); `HowTo.md` `## Archive im Dateifenster`.
