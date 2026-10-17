@@ -60,6 +60,8 @@ use super::{
     Abweisung, Block, Neustand, Notizen, Richtung, THEMENMARKE, ist_themenzeile, notizen,
     text_und_trenner,
 };
+use crate::heimordner::verbindung::Protokoll;
+use crate::sprache::{Text, satz, text};
 
 /// Die Schluessel der vier Feldzeilen in ihrer Reihenfolge in der
 /// Grundform; die Stelle eines Schluessels ist die Stelle seines Werts in
@@ -577,6 +579,118 @@ pub fn finden(stand: &str, name: &str) -> Result<Verbindungsdaten, Suchfehler> {
         konto: erster.konto.to_owned(),
         passwort: Passwort::neu(erster.passwort.to_owned()),
     })
+}
+
+/// Warum der Eintrag an einer Stelle kein Lesezeichen in der Gruppe
+/// „Verbindungen“ bekommt ([`verbindungsname`]).
+///
+/// Jeder Wert nennt allein den Namen des Eintrags und, beim unbekannten
+/// Protokoll, dessen Text: kein Wert traegt Adresse, Konto, Passwort oder
+/// Notizen.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Markenhindernis {
+    /// An der Stelle steht kein Eintrag.
+    KeinEintrag,
+    /// Der Name ist leer oder besteht nur aus Leerraum.
+    NameLeer,
+    /// Der Eintrag nennt kein Protokoll.
+    OhneProtokoll {
+        /// Der Name, ohne Leerraum an den Enden.
+        name: String,
+    },
+    /// Der Eintrag nennt ein Protokoll, das KRK nicht kennt.
+    UnbekanntesProtokoll {
+        /// Der Name, ohne Leerraum an den Enden.
+        name: String,
+        /// Das Protokoll, wie es im Eintrag steht, ohne Leerraum an den
+        /// Enden.
+        protokoll: String,
+    },
+    /// So viele Eintraege tragen den Namen, mehr als einer; ein Klick faende
+    /// keinen davon ([`finden`] antwortet dann [`Suchfehler::Mehrdeutig`]).
+    Mehrdeutig {
+        /// Der Name, ohne Leerraum an den Enden.
+        name: String,
+        /// Wie viele Eintraege ihn tragen.
+        zahl: usize,
+    },
+}
+
+impl Markenhindernis {
+    /// Der Satz fuer die Statuszeile; der Wortlaut steht in der Sprachtabelle
+    /// (`crate::sprache`), hier je Wert sein Schluessel.
+    #[must_use]
+    pub fn meldung(&self) -> String {
+        match self {
+            Markenhindernis::KeinEintrag => text(Text::VerbindungsmarkeKeineAuswahl).to_owned(),
+            Markenhindernis::NameLeer => text(Text::VerbindungsmarkeNameLeer).to_owned(),
+            Markenhindernis::OhneProtokoll { name } => {
+                satz(Text::VerbindungsmarkeOhneProtokoll, &[("name", name)])
+            }
+            Markenhindernis::UnbekanntesProtokoll { name, protokoll } => {
+                let bekannte: Vec<&str> = Protokoll::ALLE.iter().map(|p| p.name()).collect();
+                satz(
+                    Text::VerbindungsmarkeProtokollUnbekannt,
+                    &[
+                        ("name", name),
+                        ("protokoll", protokoll),
+                        ("bekannte", &bekannte.join(", ")),
+                    ],
+                )
+            }
+            Markenhindernis::Mehrdeutig { name, zahl } => satz(
+                Text::VerbindungsmarkeMehrdeutig,
+                &[("name", name), ("zahl", zahl)],
+            ),
+        }
+    }
+}
+
+/// Der Name, unter dem ein Lesezeichen der Gruppe „Verbindungen“ den Eintrag
+/// an `stelle` findet, oder warum keines entsteht (`cmd+d` in der Tabelle von
+/// `secrets.txt`, 261017).
+///
+/// **Die Antwort ist allein der Name**, ohne Leerraum an den Enden, wie
+/// [`finden`] ihn vergleicht; Protokoll, Adresse, Konto, Passwort und Notizen
+/// verlassen diese Funktion nicht, und das Protokoll wird allein daraufhin
+/// gefragt, ob KRK damit verbinden kann. Der Ausgang ist derselbe, den ein
+/// Klick auf das Lesezeichen spaeter an diesem Stand faende: ein leerer Name,
+/// ein fehlendes oder unbekanntes Protokoll und ein Name, den mehrere
+/// Eintraege tragen, verbinden nicht, also entsteht fuer sie kein Lesezeichen.
+///
+/// Gefragt wird in dieser Reihenfolge: Eintrag, Name, Protokoll, Eindeutigkeit.
+pub fn verbindungsname(stand: &str, stelle: usize) -> Result<String, Markenhindernis> {
+    let geheimnisse = Geheimnisse::lesen(stand);
+    let geheimnis = geheimnisse
+        .geheimnis(stelle)
+        .ok_or(Markenhindernis::KeinEintrag)?;
+    let name = geheimnis.name.trim();
+    if name.is_empty() {
+        return Err(Markenhindernis::NameLeer);
+    }
+    let protokoll = geheimnis.protokoll.trim();
+    if protokoll.is_empty() {
+        return Err(Markenhindernis::OhneProtokoll {
+            name: name.to_owned(),
+        });
+    }
+    if Protokoll::aus_text(protokoll).is_none() {
+        return Err(Markenhindernis::UnbekanntesProtokoll {
+            name: name.to_owned(),
+            protokoll: protokoll.to_owned(),
+        });
+    }
+    let zahl = geheimnisse
+        .alle()
+        .filter(|geheimnis| geheimnis.name.trim() == name)
+        .count();
+    if zahl > 1 {
+        return Err(Markenhindernis::Mehrdeutig {
+            name: name.to_owned(),
+            zahl,
+        });
+    }
+    Ok(name.to_owned())
 }
 
 /// Ob kein Eintrag den Namen `name` traegt, verglichen wie in [`finden`].

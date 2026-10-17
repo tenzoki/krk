@@ -3917,6 +3917,87 @@ fn finden_trifft_keinen_einen_oder_mehrdeutig() {
     assert_eq!(geheimnisse::finden("", "NAS"), Err(Suchfehler::Keiner));
 }
 
+/// `verbindungsname` liefert fuer `cmd+d` in der Tabelle von `secrets.txt`
+/// allein den getrimmten Namen, und jeder Fall, in dem ein Klick nicht
+/// verbaende, ist ein Hindernis: kein Eintrag, kein Name, kein oder ein
+/// unbekanntes Protokoll, ein mehrfach vergebener Name (261017).
+///
+/// Kein Hindernis und keine Antwort traegt Adresse, Konto, Passwort oder
+/// Notizen; die Probe sucht die Werte des Eintrags in jeder Ausgabe.
+#[test]
+fn verbindungsname_liefert_allein_den_namen_oder_ein_hindernis() {
+    use geheimnisse::Markenhindernis;
+    let stand = "Vorspann\n## NAS \nprotocol: smb\naddress: nas.local\naccount: kai\npassword: Xq7\nGeheime Notiz\n\
+                 ##   \nprotocol: smb\n\
+                 ## Ohne\nprotocol:\naddress: a.b\n\
+                 ## Fremd\nprotocol: gopher\npassword: Pw2\n\
+                 ## Doppelt\nprotocol: sftp\n\
+                 ## Doppelt \nprotocol: afp\n\
+                 ## Alt\nnur Notizen\n";
+    assert_eq!(geheimnisse::verbindungsname(stand, 0), Ok("NAS".to_owned()));
+    assert_eq!(
+        geheimnisse::verbindungsname(stand, 1),
+        Err(Markenhindernis::NameLeer)
+    );
+    assert_eq!(
+        geheimnisse::verbindungsname(stand, 2),
+        Err(Markenhindernis::OhneProtokoll {
+            name: "Ohne".to_owned()
+        })
+    );
+    assert_eq!(
+        geheimnisse::verbindungsname(stand, 3),
+        Err(Markenhindernis::UnbekanntesProtokoll {
+            name: "Fremd".to_owned(),
+            protokoll: "gopher".to_owned()
+        })
+    );
+    for stelle in [4, 5] {
+        assert_eq!(
+            geheimnisse::verbindungsname(stand, stelle),
+            Err(Markenhindernis::Mehrdeutig {
+                name: "Doppelt".to_owned(),
+                zahl: 2
+            })
+        );
+    }
+    assert_eq!(
+        geheimnisse::verbindungsname(stand, 6),
+        Err(Markenhindernis::OhneProtokoll {
+            name: "Alt".to_owned()
+        }),
+        "ein Eintrag des frueheren Formats hat kein Protokoll"
+    );
+    assert_eq!(
+        geheimnisse::verbindungsname(stand, 7),
+        Err(Markenhindernis::KeinEintrag)
+    );
+    assert_eq!(
+        geheimnisse::verbindungsname("", 0),
+        Err(Markenhindernis::KeinEintrag)
+    );
+
+    let ausgaben: Vec<String> = (0..8)
+        .map(|stelle| match geheimnisse::verbindungsname(stand, stelle) {
+            Ok(name) => name,
+            Err(hindernis) => format!("{hindernis:?} {}", hindernis.meldung()),
+        })
+        .collect();
+    for ausgabe in &ausgaben {
+        for wert in [
+            "nas.local",
+            "kai",
+            "Xq7",
+            "Geheime Notiz",
+            "a.b",
+            "Pw2",
+            "Vorspann",
+        ] {
+            assert!(!ausgabe.contains(wert), "{ausgabe} traegt {wert}");
+        }
+    }
+}
+
 /// (7) `Debug` eines `Passwort`, eines `Verbindungsdaten`, eines
 /// `Geheimnisentwurf` und eines `Geheimnis` enthaelt das Passwort nicht.
 #[test]

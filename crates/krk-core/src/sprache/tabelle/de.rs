@@ -1078,6 +1078,31 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::VerbindenAngelegt => "„{name}“ steht in secrets.txt und unter den Verbindungen.",
         Text::VerbindenOhneLesezeichen => "„{name}“ steht in secrets.txt; das Lesezeichen fehlt.",
+        Text::VerbindungsmarkeKeineAuswahl => {
+            "In der Tabelle ist kein Eintrag gewählt; das Lesezeichen entsteht für den gewählten."
+        }
+        Text::VerbindungsmarkeNameLeer => {
+            "Der gewählte Eintrag hat keinen Namen; ein Lesezeichen findet seinen Eintrag allein über den Namen."
+        }
+        Text::VerbindungsmarkeOhneProtokoll => {
+            "„{name}“ nennt kein Protokoll; ohne eines verbindet KRK nicht, und es entsteht kein Lesezeichen."
+        }
+        Text::VerbindungsmarkeProtokollUnbekannt => {
+            "„{name}“ nennt das Protokoll „{protokoll}“, das KRK nicht kennt; es entsteht kein Lesezeichen. Bekannt sind: {bekannte}."
+        }
+        Text::VerbindungsmarkeMehrdeutig => {
+            "In secrets.txt heißen {zahl} Einträge „{name}“; ein Klick fände keinen davon, und es entsteht kein Lesezeichen."
+        }
+        Text::VerbindungsmarkeSchonDa => {
+            "Unter den Verbindungen steht schon ein Lesezeichen auf „{name}“."
+        }
+        Text::VerbindungsmarkeErstSichern => {
+            "secrets.txt ist im Editor nicht gesichert; erst sichern, dann das Lesezeichen anlegen."
+        }
+        Text::VerbindungsmarkeEditorLaedt => {
+            "secrets.txt wird im Editor noch geöffnet; erst warten, bis sie offen ist, dann das Lesezeichen anlegen."
+        }
+        Text::VerbindungsmarkeAngelegt => "Lesezeichen „{name}“ unter den Verbindungen angelegt.",
         Text::VerbindenNameVergeben => "In secrets.txt steht schon ein Eintrag „{name}“.",
         Text::VerbindenNichtEingetragen => {
             "„{name}“ ließ sich nicht in secrets.txt eintragen: {grund}"

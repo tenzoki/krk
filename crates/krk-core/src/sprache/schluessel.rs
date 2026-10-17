@@ -1620,6 +1620,29 @@ pub enum Text {
     VerbindenAngelegt,
     /// Der Eintrag steht, das Lesezeichen fehlt; `{name}`.
     VerbindenOhneLesezeichen,
+    /// `cmd+d` in der Tabelle von `secrets.txt` ohne gewaehlten Eintrag.
+    VerbindungsmarkeKeineAuswahl,
+    /// `cmd+d` an einem Eintrag ohne Namen.
+    VerbindungsmarkeNameLeer,
+    /// `cmd+d` an einem Eintrag ohne Protokoll; `{name}`.
+    VerbindungsmarkeOhneProtokoll,
+    /// `cmd+d` an einem Eintrag mit unbekanntem Protokoll; `{name}`,
+    /// `{protokoll}`, `{bekannte}`.
+    VerbindungsmarkeProtokollUnbekannt,
+    /// `cmd+d` an einem Namen, den mehrere Eintraege tragen; `{name}`,
+    /// `{zahl}`.
+    VerbindungsmarkeMehrdeutig,
+    /// `cmd+d`, waehrend schon ein Lesezeichen der Gruppe „Verbindungen“
+    /// auf den Namen zeigt; `{name}`.
+    VerbindungsmarkeSchonDa,
+    /// `cmd+d`, waehrend der Editor `secrets.txt` ungesichert haelt oder
+    /// mit einer nie gesicherten PIN.
+    VerbindungsmarkeErstSichern,
+    /// `cmd+d`, waehrend der Editor `secrets.txt` noch liest.
+    VerbindungsmarkeEditorLaedt,
+    /// `cmd+d` hat das Lesezeichen der Gruppe „Verbindungen“ angelegt;
+    /// `{name}`.
+    VerbindungsmarkeAngelegt,
     /// Der Grund im Blatt „Verbinden“, wenn der Name in `secrets.txt` schon steht; `{name}`.
     VerbindenNameVergeben,
     /// Der Schreibgang nach `secrets.txt` ist gescheitert; `{name}`, `{grund}`.
@@ -1649,7 +1672,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 686] = [
+    pub const ALLE: [Text; 695] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -2324,6 +2347,15 @@ impl Text {
         Text::VerbindenEditorLaedt,
         Text::VerbindenAngelegt,
         Text::VerbindenOhneLesezeichen,
+        Text::VerbindungsmarkeKeineAuswahl,
+        Text::VerbindungsmarkeNameLeer,
+        Text::VerbindungsmarkeOhneProtokoll,
+        Text::VerbindungsmarkeProtokollUnbekannt,
+        Text::VerbindungsmarkeMehrdeutig,
+        Text::VerbindungsmarkeSchonDa,
+        Text::VerbindungsmarkeErstSichern,
+        Text::VerbindungsmarkeEditorLaedt,
+        Text::VerbindungsmarkeAngelegt,
         Text::VerbindenNameVergeben,
         Text::VerbindenNichtEingetragen,
         Text::VerbindenFrage,

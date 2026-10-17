@@ -1032,6 +1032,29 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::VerbindenAngelegt => "“{name}” is in secrets.txt and among the connections.",
         Text::VerbindenOhneLesezeichen => "“{name}” is in secrets.txt; the bookmark is missing.",
+        Text::VerbindungsmarkeKeineAuswahl => {
+            "No entry is selected in the table; the bookmark is created for the selected one."
+        }
+        Text::VerbindungsmarkeNameLeer => {
+            "The selected entry has no name; a bookmark finds its entry by name alone."
+        }
+        Text::VerbindungsmarkeOhneProtokoll => {
+            "“{name}” names no protocol; without one KRK does not connect, and no bookmark is created."
+        }
+        Text::VerbindungsmarkeProtokollUnbekannt => {
+            "“{name}” names the protocol “{protokoll}”, which KRK does not know; no bookmark is created. Known protocols: {bekannte}."
+        }
+        Text::VerbindungsmarkeMehrdeutig => {
+            "{zahl} entries in secrets.txt are named “{name}”; a click would find none of them, and no bookmark is created."
+        }
+        Text::VerbindungsmarkeSchonDa => "A bookmark on “{name}” is already among the connections.",
+        Text::VerbindungsmarkeErstSichern => {
+            "secrets.txt is not saved in the editor; save first, then create the bookmark."
+        }
+        Text::VerbindungsmarkeEditorLaedt => {
+            "secrets.txt is still opening in the editor; wait until it is open, then create the bookmark."
+        }
+        Text::VerbindungsmarkeAngelegt => "Bookmark “{name}” created among the connections.",
         Text::VerbindenNameVergeben => "secrets.txt already has an entry “{name}”.",
         Text::VerbindenNichtEingetragen => "Could not add “{name}” to secrets.txt: {grund}",
         Text::VerbindenFrage => "New Connection",

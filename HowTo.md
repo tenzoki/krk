@@ -719,9 +719,10 @@ Löschen und Umbenennen tragen eigene Kombinationen, weil `delete` und
 **`cmd+d` legt zwei verschiedene Sorten an, je nach Fokus.** Im Dateifenster
 merkt es den angezeigten Ordner. Im Editor merkt es die Zeile der Schreibmarke
 als Textmarke. Beide Sorten stehen in derselben Liste, und das Sinnbild vor der
-Beschriftung sagt, welche es ist. Eine dritte Sorte, die Verbindung, legt
-`cmd+d` nie an; sie entsteht allein über „Verbinden…“ im Kontextmenü der
-Dateiliste.
+Beschriftung sagt, welche es ist. Die dritte Sorte, die Verbindung, legt
+`cmd+d` allein in der Tabelle von `secrets.txt` an, für den gewählten Eintrag
+(unter „Verbindungen“, „Eine Verbindung anlegen“); sonst entsteht sie über
+„Verbinden…“ im Kontextmenü der Dateiliste.
 
 **Umbenennen und Verschieben wirken auf Verbindungen wie auf Lesezeichen.**
 `ctrl+u` ändert allein die Beschriftung in der Leiste, und die Verbindung findet
@@ -1729,9 +1730,12 @@ dem Klartext. Spotlight findet sie, und sie bleibt liegen, bis man sie löscht.
 Wer ein Geheimnis gezogen hat, legt den Ausschnitt danach in den Papierkorb und
 leert ihn.
 
-**Eine Textmarke gibt es in `secrets.txt` nicht.** `cmd+d` legt dort keine an,
-und die Statuszeile sagt, warum: die Textmarke schriebe eine Zeile der
-Geheimnisse im Klartext in die Lesezeichen.
+**Eine Textmarke gibt es in `secrets.txt` nicht.** `cmd+d` legt in der
+Rohansicht keine an, und die Statuszeile sagt, warum: die Textmarke schriebe
+eine Zeile der Geheimnisse im Klartext in die Lesezeichen. In der Tabelle legt
+`cmd+d` stattdessen ein Lesezeichen unter „Verbindungen“ auf den gewählten
+Eintrag an, und das trägt allein dessen Namen (unter „Verbindungen“, „Eine
+Verbindung anlegen“).
 
 #### Die PIN ändern
 
@@ -1812,9 +1816,29 @@ dem Anlegen neu und zeigt den neuen Eintrag. Umgekehrt fragt der Editor nicht
 nach der PIN, solange „Verbinden…“ schreibt oder eine Verbindung `secrets.txt`
 liest: die Statuszeile sagt, dass man erst warten soll.
 
+**Ein Eintrag, der schon in `secrets.txt` steht, bekommt sein Lesezeichen mit
+`cmd+d` in der Tabelle.** Man öffnet `secrets.txt` im Editor in der
+Formatansicht, wählt die Zeile des Eintrags und drückt `cmd+d` (im Menü
+„Lesezeichen anlegen“). Ein Blatt geht nicht auf: das Lesezeichen heißt wie der
+Eintrag und steht danach unten in der Gruppe „Verbindungen“; umbenennen lässt
+es sich wie jedes andere mit `ctrl+u`. Eine laufende Zelle übernimmt `cmd+d`
+vorher. In der Rohansicht legt `cmd+d` nichts an. Kein Lesezeichen entsteht,
+und die Statuszeile nennt den Grund, in diesen Lagen:
+
+| Lage | Was geschieht |
+|---|---|
+| Keine Zeile gewählt | Die Statuszeile bittet um eine Auswahl. |
+| `secrets.txt` hat im Editor ungesicherte Änderungen oder eine noch nie gesicherte PIN | Erst sichern: ein Klick auf das Lesezeichen liest die Datei von der Platte und fände den Eintrag dort noch nicht. |
+| `secrets.txt` wird im Editor gerade geöffnet | Erst warten, bis sie offen ist. |
+| Der Eintrag hat keinen Namen | Ein Lesezeichen findet seinen Eintrag allein über den Namen. |
+| Der Eintrag nennt kein Protokoll oder eines, das KRK nicht kennt | Ein Klick verbände nicht; die Statuszeile nennt die bekannten Protokolle. |
+| Mehrere Einträge tragen denselben Namen | Ein Klick fände keinen davon; erst einen umbenennen. |
+| Unter „Verbindungen“ zeigt schon ein Lesezeichen auf diesen Namen | Ein zweites entsteht nicht, auch wenn das erste umbenannt ist. |
+
 **In `bookmarks.toml` steht von der Verbindung allein ihr Name.** Protokoll,
 Adresse, Konto, Passwort und Notizen stehen nur verschlüsselt in
-`secrets.txt`.
+`secrets.txt`, gleich ob das Lesezeichen über „Verbinden…“ oder über `cmd+d`
+entstanden ist.
 
 #### Eine Verbindung herstellen
 

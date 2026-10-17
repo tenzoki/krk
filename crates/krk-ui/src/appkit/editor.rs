@@ -2936,7 +2936,8 @@ impl Editorbereich {
     /// [`Self::zelle_abbrechen`], das eine Notizzelle mit `esc` uebernimmt,
     /// und seit Schritt 5.5 [`Self::pin_aendern`] vor dem PIN-Blatt, seit
     /// Schritt 8 des Plans der Termine [`Self::terminrichtung_umkehren`] vor
-    /// dem Neuordnen. Die Liste haelt die Probe
+    /// dem Neuordnen, seit dem 261017 [`Self::verbindungsname`] vor `cmd+d`
+    /// in der Tabelle von `secrets.txt`. Die Liste haelt die Probe
     /// `die_zellenuebernahme_hat_genau_diese_rufer`.
     pub fn zelle_uebernehmen(&self) -> Zellenausgang {
         let Some(fenster) = self.ivars().bereich.window() else {
@@ -3687,6 +3688,54 @@ impl Editorbereich {
             return Some(text(Text::QuicknoteKeineTextmarken));
         }
         self.ivars().modell.borrow().textmarke_verweigert()
+    }
+
+    /// Der Name, unter dem `cmd+d` ein Lesezeichen der Gruppe „Verbindungen“
+    /// anlegt, oder der Satz, warum keines entsteht; `None`, wenn der Editor
+    /// nicht die Tabelle von `secrets.txt` zeigt (261017).
+    ///
+    /// **Nur die Tabelle**: in der Rohansicht derselben Datei ist die Form
+    /// [`Editorform::Text`], und dort bleibt es bei der Sperre
+    /// [`Self::textmarke_verweigert`]; in der Quicknote ebenso. **Zuerst die
+    /// laufende Zelle** ([`Self::zelle_uebernehmen`]): ihr getippter Text steht
+    /// bis dahin allein im Feldeditor, und eine abgewiesene haelt den Befehl
+    /// mit ihrem Grund an. **Dann der gesicherte Stand**: ein Klick auf das
+    /// Lesezeichen liest `secrets.txt` von der Platte, und ein Name, der dort
+    /// noch nicht steht, faende er nicht; die Antwort steht bei
+    /// [`Editormodell::schreibgang_gesperrt`], derselben Frage, die
+    /// „Verbinden…“ stellt, mit einem Satz, der das Lesezeichen nennt. **Dann
+    /// die gewaehlte Stelle**, in Stellen gezaehlt
+    /// ([`Eintragsansicht::gewaehlte_stelle`]), und die Regel ueber den
+    /// Eintrag selbst im Kern
+    /// ([`geheimnisse::verbindungsname`]), die allein den Namen herausgibt.
+    #[must_use = "ein Err traegt den Grund, aus dem kein Lesezeichen entsteht"]
+    pub fn verbindungsname(&self) -> Option<Result<String, String>> {
+        if self.form() != Editorform::Geheimnisse {
+            return None;
+        }
+        if let Zellenausgang::Abgewiesen(meldung) = self.zelle_uebernehmen() {
+            return Some(Err(meldung.text()));
+        }
+        // Die Ausleihe endet vor der Frage an die Tabelle, wie ueberall in
+        // dieser Datei vor einem Ruf in AppKit.
+        let gesperrt = self.ivars().modell.borrow().schreibgang_gesperrt();
+        if let Some(sperre) = gesperrt {
+            let grund = match sperre {
+                Schreibgangsperre::Ungesichert | Schreibgangsperre::OhneKopf => {
+                    Text::VerbindungsmarkeErstSichern
+                }
+                Schreibgangsperre::Laedt => Text::VerbindungsmarkeEditorLaedt,
+            };
+            return Some(Err(text(grund).to_owned()));
+        }
+        let Some(stelle) = self.ivars().eintraege.gewaehlte_stelle() else {
+            return Some(Err(text(Text::VerbindungsmarkeKeineAuswahl).to_owned()));
+        };
+        let modell = self.ivars().modell.borrow();
+        Some(
+            geheimnisse::verbindungsname(modell.stand(), stelle)
+                .map_err(|hindernis| hindernis.meldung()),
+        )
     }
 
     /// Ob der Editor `secrets.txt` haelt; die Regel steht bei
@@ -9141,6 +9190,7 @@ mod tests {
             (&editor, "pin_aendern"),
             (&editor, "terminrichtung_umkehren"),
             (&editor, "quicknote_zeigen"),
+            (&editor, "verbindungsname"),
             (&anwendung, "editor_stand_befragen"),
         ];
         for (quelle, name) in rufer {
@@ -9176,6 +9226,62 @@ mod tests {
         assert!(
             rumpf(&editor, "zelle_uebernehmen")
                 .contains(concat!("eintraege.bearbeitung_", "beenden("))
+        );
+    }
+
+    /// `cmd+d` antwortet allein vor der Tabelle von `secrets.txt` mit einem
+    /// Namen oder Grund (261017): `verbindungsname` fragt zuerst die Form
+    /// und sonst nichts, dann in dieser Reihenfolge die laufende Zelle, den
+    /// gesicherten Stand, die gewaehlte Stelle und die Regel im Kern.
+    ///
+    /// **Am Rumpf gelesen**, weil sich ein ganzer Editorbereich in keiner
+    /// Probe bauen laesst. Dass die Rohansicht von `secrets.txt` die Form
+    /// `Text` hat und die Frage dort `None` antwortet, die Sperre der
+    /// Textmarken also greift, haelt
+    /// `rohansicht_und_tabelle_nennen_dieselbe_eintragsart` an
+    /// [`editorform`]; die Sperre selbst die Proben von
+    /// `Editormodell::textmarke_verweigert`.
+    #[test]
+    fn verbindungsname_antwortet_allein_vor_der_tabelle_der_geheimnisse() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let koerper = rumpf(&datei("krk-ui/src/appkit/editor.rs"), "verbindungsname");
+        let erste = koerper
+            .lines()
+            .nth(1)
+            .expect("der Rumpf hat eine erste Zeile")
+            .trim();
+        assert_eq!(
+            erste,
+            concat!("if self.form() != Editorform::", "Geheimnisse {"),
+            "verbindungsname fragt zuerst etwas anderes als die Form"
+        );
+        let stellen: Vec<usize> = [
+            concat!(".zelle_", "uebernehmen()"),
+            concat!(".schreibgang_", "gesperrt()"),
+            concat!(".gewaehlte_", "stelle()"),
+            concat!("geheimnisse::verbindungs", "name("),
+        ]
+        .iter()
+        .map(|nadel| {
+            koerper
+                .find(nadel)
+                .unwrap_or_else(|| panic!("verbindungsname fragt {nadel} nicht"))
+        })
+        .collect();
+        assert!(
+            stellen.windows(2).all(|paar| paar[0] < paar[1]),
+            "die Reihenfolge der Fragen stimmt nicht: {stellen:?}"
+        );
+        assert_eq!(
+            editorform(Ansicht::Roh, Dateityp::Eintraege(Sonderdatei::Geheimnisse)),
+            Editorform::Text
+        );
+        assert_eq!(
+            editorform(
+                Ansicht::Format,
+                Dateityp::Eintraege(Sonderdatei::Geheimnisse)
+            ),
+            Editorform::Geheimnisse
         );
     }
 

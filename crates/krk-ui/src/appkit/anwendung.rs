@@ -1604,6 +1604,25 @@ enum Sperrhindernis {
     Gesperrt(std::io::Error),
 }
 
+/// Was `cmd+d` anlegt, entschieden in `Anwendungsdelegierter::anlegeziel`.
+///
+/// Zwei Wege, weil die zwei Sorten verschieden entstehen: eine Ordner- oder
+/// Textmarke ueber das Namensblatt, eine Verbindung aus der Tabelle von
+/// `secrets.txt` ohne Blatt, wie nach „Verbinden…“ (261017).
+#[derive(Debug)]
+enum Anlegeweg {
+    /// Das Namensblatt mit diesem Ziel und diesem vorbelegten Namen.
+    Blatt {
+        /// Ordner oder Textstelle.
+        ziel: Ziel,
+        /// Der vorbelegte Name im Blatt.
+        vorschlag: String,
+    },
+    /// Ein Lesezeichen der Gruppe „Verbindungen“ auf den Eintrag dieses
+    /// Namens in `secrets.txt`; der Name allein und kein Wert daraus.
+    Verbindung(String),
+}
+
 /// Welches Fenster von KRK aus gesehen gerade das Schluesselfenster ist.
 ///
 /// Eine vollstaendige Fallunterscheidung ohne Auffangzweig, erhoben aus
@@ -2982,10 +3001,15 @@ impl Anwendungsdelegierter {
             return false;
         };
         let seite = self.ivars().modell.borrow().aktiv();
-        let Some((ziel, vorschlag)) = self.anlegeziel(seite) else {
+        let (ziel, vorschlag) = match self.anlegeziel(seite) {
+            Some(Anlegeweg::Blatt { ziel, vorschlag }) => (ziel, vorschlag),
+            Some(Anlegeweg::Verbindung(name)) => {
+                self.verbindungsmarke_aus_dem_editor(seite, &name);
+                return true;
+            }
             // Der Grund steht in der Statuszeile, und der Tastendruck ist
             // verbraucht: der Befehl war zustaendig und hatte etwas zu melden.
-            return true;
+            None => return true,
         };
 
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
@@ -3039,9 +3063,26 @@ impl Anwendungsdelegierter {
     /// `bookmarks.toml`. Gefragt wird, bevor die Zeile ueberhaupt gelesen
     /// wird; die Regel steht bei
     /// [`Editormodell::textmarke_verweigert`](crate::editormodell::Editormodell::textmarke_verweigert).
-    fn anlegeziel(&self, seite: Fensterseite) -> Option<(Ziel, String)> {
+    ///
+    /// **Die Tabelle von `secrets.txt` bekommt statt einer Textmarke eine
+    /// Verbindung** (261017): steht der Fokus im Editor und zeigt er diese
+    /// Tabelle, antwortet [`Editorbereich::verbindungsname`] mit dem Namen
+    /// des gewaehlten Eintrags oder dem Grund, aus dem keine entsteht, und
+    /// gefragt wird das vor der Sperre der Textmarken, die fuer diese Datei
+    /// immer nein sagt. In jeder anderen Form, auch in der Rohansicht
+    /// derselben Datei, antwortet die Frage `None`, und die Sperre greift wie
+    /// bisher.
+    fn anlegeziel(&self, seite: Fensterseite) -> Option<Anlegeweg> {
         if self.fokus() == Fokus::Editor {
             let editor = self.ivars().editor.get()?;
+            match editor.verbindungsname() {
+                Some(Ok(name)) => return Some(Anlegeweg::Verbindung(name)),
+                Some(Err(grund)) => {
+                    self.antwort_zeigen(seite, &grund);
+                    return None;
+                }
+                None => {}
+            }
             if let Some(grund) = editor.textmarke_verweigert() {
                 self.antwort_zeigen(seite, grund);
                 return None;
@@ -3056,14 +3097,14 @@ impl Anwendungsdelegierter {
                 Some(name) => format!("{}:{zeile}", name.to_string_lossy()),
                 None => format!("{}:{zeile}", datei.display()),
             };
-            return Some((
-                Ziel::Textstelle {
+            return Some(Anlegeweg::Blatt {
+                ziel: Ziel::Textstelle {
                     datei,
                     zeile,
                     zeileninhalt,
                 },
                 vorschlag,
-            ));
+            });
         }
 
         // Ein ferner Ort bekommt kein Lesezeichen: `bookmarks.toml` nennt
@@ -3075,7 +3116,64 @@ impl Anwendungsdelegierter {
             .map(|teil| teil.to_string_lossy().into_owned())
             .unwrap_or_else(|| ordner.display().to_string());
         let auswahl = self.dateifenster(seite).quelle().auswahl_name();
-        Some((Ziel::Ordner { ordner, auswahl }, vorschlag))
+        Some(Anlegeweg::Blatt {
+            ziel: Ziel::Ordner { ordner, auswahl },
+            vorschlag,
+        })
+    }
+
+    /// `cmd+d` in der Tabelle von `secrets.txt`: ein Lesezeichen der Gruppe
+    /// „Verbindungen“ auf den gewaehlten Eintrag, ohne Namensblatt (261017).
+    ///
+    /// **Ohne Blatt wie nach „Verbinden…“**: Beschriftung und Ziel sind der
+    /// Name des Eintrags, und umbenennen laesst sich das Lesezeichen danach
+    /// in der Leiste. Zeigt schon eines auf diesen Namen, entsteht kein
+    /// zweites; gefragt wird die Liste, die die Leiste zeigt, also der Stand
+    /// von `bookmarks.toml` nach dem letzten Durchgang dieser Instanz.
+    /// Geschrieben wird ueber [`Self::verbindungsmarke_anlegen`], denselben
+    /// Weg wie nach „Verbinden…“.
+    fn verbindungsmarke_aus_dem_editor(&self, seite: Fensterseite, name: &str) {
+        if self
+            .leiste()
+            .quelle()
+            .lesezeichenliste()
+            .fuehrt_verbindung(name)
+        {
+            self.antwort_zeigen(
+                seite,
+                &satz(Text::VerbindungsmarkeSchonDa, &[("name", &name)]),
+            );
+            return;
+        }
+        if self.verbindungsmarke_anlegen(seite, name) {
+            self.antwort_zeigen(
+                seite,
+                &satz(Text::VerbindungsmarkeAngelegt, &[("name", &name)]),
+            );
+        }
+    }
+
+    /// Legt das Lesezeichen der Gruppe „Verbindungen“ auf den Eintrag `name`
+    /// in `secrets.txt` an (261016, 261017).
+    ///
+    /// **Die eine Stelle, an der ein solches Lesezeichen entsteht**, fuer
+    /// „Verbinden…“ nach dem Anhaengen ([`Self::anhaengen_einziehen`]) und
+    /// fuer `cmd+d` in der Tabelle von `secrets.txt`
+    /// ([`Self::verbindungsmarke_aus_dem_editor`]). **Sie nimmt allein den
+    /// Namen**: Beschriftung und `verbindung` sind derselbe Wert, und ein
+    /// anderes Feld des Eintrags kann diese Stelle nicht erreichen, weil sie
+    /// keines annimmt (Entscheidung 8 des Plans der sechs Felder). Geschrieben
+    /// wird ueber den einen Durchgang [`Self::lesezeichen_aendern`], und der
+    /// Rueckgabewert ist dessen: `true` heisst, die Befehlsantwort ist frei.
+    #[must_use]
+    fn verbindungsmarke_anlegen(&self, seite: Fensterseite, name: &str) -> bool {
+        let aenderung = Aenderung::Anlegen {
+            name: name.to_owned(),
+            ziel: Ziel::Verbindung {
+                verbindung: name.to_owned(),
+            },
+        };
+        self.lesezeichen_aendern(seite, &aenderung)
     }
 
     /// Oeffnet den angezeigten Ordner in der eingestellten Anwendung (C11).
@@ -10004,13 +10102,15 @@ impl Anwendungsdelegierter {
     /// Nimmt den Ausgang des Schreibgangs entgegen (Entscheidungen 13 und 15).
     ///
     /// **Angehaengt**: ein Schluessel aus einer PIN wird gemerkt, das
-    /// Lesezeichen entsteht ueber den einen Durchgang [`Self::lesezeichen_aendern`]
-    /// mit [`Ziel::Verbindung`], das allein den Namen traegt, und ein Editor,
+    /// Lesezeichen entsteht ueber [`Self::verbindungsmarke_anlegen`] und damit
+    /// ueber den einen Durchgang [`Self::lesezeichen_aendern`] mit
+    /// [`Ziel::Verbindung`], das allein den Namen traegt, und ein Editor,
     /// der `secrets.txt` ohne ungesicherten Stand haelt, laedt sie neu.
     /// **Das Lesezeichen schreibt `bookmarks.toml` auf dem Hauptfaden**, unter
     /// der Schreibsperre der Ablage, wie jedes andere Lesezeichen (`cmd+d`);
     /// die Probe `der_verbindungsweg_stellt_auf_dem_hauptfaden_nur_den_einen_stat`
-    /// fuehrt diesen Aufruf als zweite benannte Ausnahme neben
+    /// fuehrt den Aufruf von `lesezeichen_aendern` in
+    /// [`Self::verbindungsmarke_anlegen`] als zweite benannte Ausnahme neben
     /// [`Self::notizordner_bereitstellen`].
     /// **Name vergeben**: das Blatt geht mit allen Feldern und dem Grund
     /// wieder auf. **Mittel abgewiesen**: ein gemerkter Schluessel faellt, und
@@ -10032,13 +10132,7 @@ impl Anwendungsdelegierter {
         match ausgang {
             Anhaengausgang::Angehaengt { zu_merken } => {
                 selbst.gemerkt_falls(zu_merken);
-                let aenderung = Aenderung::Anlegen {
-                    name: name.clone(),
-                    ziel: Ziel::Verbindung {
-                        verbindung: name.clone(),
-                    },
-                };
-                let schluessel = if selbst.lesezeichen_aendern(seite, &aenderung) {
+                let schluessel = if selbst.verbindungsmarke_anlegen(seite, &name) {
                     Text::VerbindenAngelegt
                 } else {
                     Text::VerbindenOhneLesezeichen
@@ -15645,7 +15739,7 @@ mod kontextproben {
     #[test]
     fn der_verbindungsweg_reisst_nirgends_ab() {
         let datei = diese_datei();
-        let glieder: [(&str, &[&str]); 11] = [
+        let glieder: [(&str, &[&str]); 12] = [
             (
                 "gewaehlte_verbindung_herstellen",
                 &[
@@ -15727,10 +15821,16 @@ mod kontextproben {
                 "anhaengen_einziehen",
                 &[
                     concat!("tresorgang.", "set(false)"),
-                    concat!("selbst.lesezeichen_", "aendern(seite, &aenderung)"),
-                    concat!("Ziel::", "Verbindung {"),
+                    concat!("selbst.verbindungsmarke_", "anlegen(seite, &name)"),
                     concat!("selbst.verbindungsblatt_", "zeigen("),
                     concat!("selbst.tresor_pin_", "erfragen("),
+                ],
+            ),
+            (
+                "verbindungsmarke_anlegen",
+                &[
+                    concat!("self.lesezeichen_", "aendern(seite, &aenderung)"),
+                    concat!("Ziel::", "Verbindung {"),
                 ],
             ),
         ];
@@ -15821,7 +15921,9 @@ mod kontextproben {
     ///   `secrets.txt`, legt der Helfer sie wie F2 auf dem Hauptfaden an; das
     ///   geschieht allein, wenn die Datei fehlt, also einmal vor jeder ersten
     ///   Verbindung in einem Notizordner.
-    /// - `lesezeichen_aendern` in `anhaengen_einziehen`: das Lesezeichen der
+    /// - `lesezeichen_aendern` in `verbindungsmarke_anlegen`, gerufen aus
+    ///   `anhaengen_einziehen` (seit dem 261017 auch aus `cmd+d` in der
+    ///   Tabelle von `secrets.txt`): das Lesezeichen der
     ///   neuen Verbindung entsteht ueber den einen Schreibweg jedes
     ///   Lesezeichens, also unter der Schreibsperre der Ablage mit Lesen und
     ///   atomarem Schreiben von `bookmarks.toml` auf dem Hauptfaden, derselbe
@@ -15864,6 +15966,7 @@ mod kontextproben {
             "verbindungsschluessel_holen",
             "verbindung_anhaengen",
             "anhaengen_einziehen",
+            "verbindungsmarke_anlegen",
             "tresor_pin_erfragen",
         ]
         .map(|name| (name.to_owned(), rumpf(&datei, name)))
@@ -15910,7 +16013,7 @@ mod kontextproben {
                 "{name} ruft notizordner_bereitstellen {anlegen}-mal"
             );
             let lesezeichen = rumpf.matches(concat!(".lesezeichen_", "aendern(")).count();
-            let erwartet = usize::from(name == "anhaengen_einziehen");
+            let erwartet = usize::from(name == "verbindungsmarke_anlegen");
             assert_eq!(
                 lesezeichen, erwartet,
                 "{name} ruft lesezeichen_aendern {lesezeichen}-mal"
@@ -15928,26 +16031,25 @@ mod kontextproben {
     /// `crates/krk-core/tests/ablage.rs`. **Was sie nicht sieht:** ein Feld,
     /// das ueber eine Hilfsfunktion oder einen anderen Namen als `entwurf.`
     /// in den Rumpf kommt; sie liest Zeilen und keinen Datenfluss.
+    ///
+    /// **Seit dem 261017 steht die Aenderung in `verbindungsmarke_anlegen`**,
+    /// die allein `name: &str` annimmt, und `anhaengen_einziehen` ruft sie
+    /// mit dem getrimmten Namen; die Probe haelt beide Haelften.
     #[test]
     fn anhaengen_einziehen_baut_das_lesezeichen_allein_aus_dem_namen() {
-        let koerper = rumpf(&diese_datei(), "anhaengen_einziehen");
+        let datei = diese_datei();
+        let koerper = rumpf(&datei, "anhaengen_einziehen");
         assert!(
             koerper.contains(concat!("let name = entwurf.name.", "trim().to_owned();")),
             "der Name ist nicht der getrimmte Name des Entwurfs"
         );
-        let anlegen = koerper
-            .split_once(concat!("Aenderung::", "Anlegen {"))
-            .and_then(|(_, rest)| rest.split_once("};"))
-            .map(|(block, _)| block)
-            .expect("anhaengen_einziehen legt ein Lesezeichen an");
-        let gesucht: String = anlegen.split_whitespace().collect();
-        assert_eq!(
-            gesucht,
-            concat!(
-                "name:name.clone(),ziel:Ziel::",
-                "Verbindung{verbindung:name.clone(),},"
-            ),
-            "das Lesezeichen traegt etwas anderes als den Namen"
+        assert!(
+            koerper.contains(concat!(".verbindungsmarke_", "anlegen(seite, &name)")),
+            "anhaengen_einziehen legt das Lesezeichen nicht ueber den einen Weg an"
+        );
+        assert!(
+            !koerper.contains(concat!("Aenderung::", "Anlegen")),
+            "anhaengen_einziehen baut eine eigene Aenderung"
         );
         for feld in ["protokoll", "adresse", "konto", "passwort", "notizen"] {
             let nadel = format!("entwurf.{feld}");
@@ -15956,6 +16058,111 @@ mod kontextproben {
                 "anhaengen_einziehen liest {nadel}"
             );
         }
+        verbindungsmarke_anlegen_nimmt_allein_den_namen(&datei);
+    }
+
+    /// Die eine Stelle, an der ein Lesezeichen der Gruppe „Verbindungen“
+    /// entsteht, nimmt allein den Namen und setzt ihn als Beschriftung und als
+    /// `verbindung` ein; `Ziel::Verbindung` steht in den Codezeilen dieser
+    /// Datei sonst nirgends als gebauter Wert.
+    fn verbindungsmarke_anlegen_nimmt_allein_den_namen(datei: &str) {
+        assert!(
+            datei.contains(concat!(
+                "fn verbindungsmarke_",
+                "anlegen(&self, seite: Fensterseite, name: &str) -> bool {"
+            )),
+            "verbindungsmarke_anlegen nimmt mehr als den Namen"
+        );
+        let koerper = rumpf(datei, "verbindungsmarke_anlegen");
+        let anlegen = koerper
+            .split_once(concat!("Aenderung::", "Anlegen {"))
+            .and_then(|(_, rest)| rest.split_once("};"))
+            .map(|(block, _)| block)
+            .expect("verbindungsmarke_anlegen legt ein Lesezeichen an");
+        let gesucht: String = anlegen.split_whitespace().collect();
+        assert_eq!(
+            gesucht,
+            concat!(
+                "name:name.to_owned(),ziel:Ziel::",
+                "Verbindung{verbindung:name.to_owned(),},"
+            ),
+            "das Lesezeichen traegt etwas anderes als den Namen"
+        );
+        let (code, _) = datei
+            .split_once(concat!("#[cfg(test)]\nmod ", "tests {"))
+            .unwrap_or((datei, ""));
+        let gebaut = code
+            .lines()
+            .filter(|zeile| !zeile.trim_start().starts_with("//"))
+            .filter(|zeile| zeile.contains(concat!("Ziel::Verbindung", " {")))
+            .filter(|zeile| !zeile.contains("=>"))
+            .count();
+        assert_eq!(
+            gebaut, 1,
+            "Ziel::Verbindung wird ausserhalb von verbindungsmarke_anlegen gebaut"
+        );
+    }
+
+    /// `cmd+d` in der Tabelle von `secrets.txt` legt das Lesezeichen allein
+    /// aus dem Namen an, den `Editorbereich::verbindungsname` herausgibt, und
+    /// ueber denselben Weg wie „Verbinden…“ (261017).
+    ///
+    /// Gehalten wird die Kette am Quelltext: `anlegeziel` fragt
+    /// `verbindungsname` **vor** der Sperre der Textmarken, die Antwort reist
+    /// als `Anlegeweg::Verbindung(name)` und keinem anderen Wert, und
+    /// `verbindungsmarke_aus_dem_editor` schreibt allein ueber
+    /// `verbindungsmarke_anlegen`. **Dass die Sperre der Textmarken weiter
+    /// gilt**, haelt dieselbe Probe: `anlegeziel` fragt sie weiter vor jeder
+    /// Textstelle. Was sie nicht sieht: ob `verbindungsname` im Editor allein
+    /// die Tabelle annimmt; das haelt
+    /// `verbindungsname_antwortet_allein_vor_der_tabelle_der_geheimnisse`
+    /// im Pruefmodul von `appkit/editor.rs`.
+    #[test]
+    fn cmd_d_in_den_geheimnissen_legt_die_verbindung_allein_aus_dem_namen_an() {
+        let datei = diese_datei();
+        let ziel = rumpf(&datei, "anlegeziel");
+        let frage = ziel
+            .find(concat!("editor.verbindungs", "name()"))
+            .expect("anlegeziel fragt verbindungsname nicht");
+        let sperre = ziel
+            .find(concat!("editor.textmarke_", "verweigert()"))
+            .expect("anlegeziel fragt die Sperre der Textmarken nicht mehr");
+        let textstelle = ziel
+            .find(concat!("Ziel::", "Textstelle {"))
+            .expect("anlegeziel legt keine Textmarke mehr an");
+        assert!(
+            frage < sperre,
+            "die Verbindung wird erst nach der Sperre gefragt"
+        );
+        assert!(sperre < textstelle, "die Textmarke entsteht vor der Sperre");
+        assert!(
+            ziel.contains(concat!(
+                "Some(Ok(name)) => return Some(Anlegeweg::",
+                "Verbindung(name)),"
+            )),
+            "die Antwort reist nicht als der Name allein"
+        );
+
+        let anlegen = rumpf(&datei, "lesezeichen_anlegen");
+        assert!(
+            anlegen.contains(concat!(
+                "Some(Anlegeweg::Verbindung(name)) => {\n",
+                "                self.verbindungsmarke_aus_dem_editor(seite, &name);"
+            )),
+            "der Name erreicht den Weg ohne Blatt nicht"
+        );
+        let aus_dem_editor = rumpf(&datei, "verbindungsmarke_aus_dem_editor");
+        assert!(
+            aus_dem_editor.contains(concat!(".verbindungsmarke_", "anlegen(seite, name)")),
+            "cmd+d schreibt nicht ueber den Weg von „Verbinden…“"
+        );
+        assert!(
+            aus_dem_editor.contains(concat!(".fuehrt_", "verbindung(name)")),
+            "cmd+d fragt nicht nach einem vorhandenen Lesezeichen"
+        );
+        assert!(!aus_dem_editor.contains(concat!(".lesezeichen_", "aendern(")));
+        assert!(!aus_dem_editor.contains(concat!("Aenderung::", "Anlegen")));
+        verbindungsmarke_anlegen_nimmt_allein_den_namen(&datei);
     }
 
     /// Die zwei Arten von Klick erreichen ihre zwei Zweige (260918).

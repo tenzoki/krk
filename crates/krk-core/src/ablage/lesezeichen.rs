@@ -553,6 +553,22 @@ impl Lesezeichenliste {
         self.eintraege.iter().position(|eintrag| eintrag == welches)
     }
 
+    /// Ob schon ein Lesezeichen der Gruppe „Verbindungen“ auf den Eintrag
+    /// `verbindung` in `secrets.txt` zeigt (261017).
+    ///
+    /// **Gefragt wird das Ziel und nicht die Beschriftung**: eine umbenannte
+    /// Verbindung zeigt weiter auf denselben Eintrag (Entscheidung 9 des
+    /// Plans im Modulkopf), und ein zweites Lesezeichen darauf verbaende
+    /// dasselbe. Verglichen wird ohne Leerraum an den Enden, wie
+    /// `heimordner::eintraege::geheimnisse::finden` den Namen vergleicht.
+    #[must_use]
+    pub fn fuehrt_verbindung(&self, verbindung: &str) -> bool {
+        let gesucht = verbindung.trim();
+        self.eintraege.iter().any(|eintrag| {
+            matches!(&eintrag.ziel, Ziel::Verbindung { verbindung } if verbindung.trim() == gesucht)
+        })
+    }
+
     /// Wendet eine einzelne Aenderung auf diese Liste an (C5, C6).
     ///
     /// **Die eine Stelle, an der eine [`Aenderung`] die Liste erreicht.** Sie
@@ -789,6 +805,28 @@ mod tests {
             Ziel::Verbindung {
                 verbindung: "NAS".to_owned()
             }
+        );
+    }
+
+    /// Ob eine Verbindung schon ein Lesezeichen hat, fragt das Ziel und nicht
+    /// die Beschriftung, ohne Leerraum an den Enden; ein Ordner gleichen Namens
+    /// zaehlt nicht (261017).
+    #[test]
+    fn eine_verbindung_wird_an_ihrem_ziel_wiedererkannt() {
+        let mut liste = Lesezeichenliste::aus(vec![
+            Lesezeichen::neu("Server", "/server"),
+            Lesezeichen::verbindung("NAS"),
+        ]);
+        assert!(liste.umbenennen(1, "Büro"));
+        assert!(liste.fuehrt_verbindung("NAS"));
+        assert!(liste.fuehrt_verbindung("  NAS "));
+        assert!(
+            !liste.fuehrt_verbindung("Büro"),
+            "die Beschriftung zaehlt nicht"
+        );
+        assert!(
+            !liste.fuehrt_verbindung("Server"),
+            "ein Ordner zaehlt nicht"
         );
     }
 

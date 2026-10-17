@@ -1167,6 +1167,31 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VerbindenOhneLesezeichen => {
             "«\u{a0}{name}\u{a0}» figure dans secrets.txt\u{202f}; le signet manque."
         }
+        Text::VerbindungsmarkeKeineAuswahl => {
+            "Aucune entrée n’est sélectionnée dans le tableau\u{202f}; le signet est créé pour l’entrée sélectionnée."
+        }
+        Text::VerbindungsmarkeNameLeer => {
+            "L’entrée sélectionnée n’a pas de nom\u{202f}; un signet ne retrouve son entrée que par son nom."
+        }
+        Text::VerbindungsmarkeOhneProtokoll => {
+            "«\u{a0}{name}\u{a0}» n’indique aucun protocole\u{202f}; sans protocole, KRK ne se connecte pas, et aucun signet n’est créé."
+        }
+        Text::VerbindungsmarkeProtokollUnbekannt => {
+            "«\u{a0}{name}\u{a0}» indique le protocole «\u{a0}{protokoll}\u{a0}», que KRK ne connaît pas\u{202f}; aucun signet n’est créé. Protocoles connus\u{a0}: {bekannte}."
+        }
+        Text::VerbindungsmarkeMehrdeutig => {
+            "{zahl} entrées de secrets.txt s’appellent «\u{a0}{name}\u{a0}»\u{202f}; un clic n’en trouverait aucune, et aucun signet n’est créé."
+        }
+        Text::VerbindungsmarkeSchonDa => {
+            "Un signet sur «\u{a0}{name}\u{a0}» figure déjà parmi les connexions."
+        }
+        Text::VerbindungsmarkeErstSichern => {
+            "secrets.txt n’est pas enregistré dans l’éditeur\u{202f}; enregistrez avant de créer le signet."
+        }
+        Text::VerbindungsmarkeEditorLaedt => {
+            "secrets.txt est encore en cours d’ouverture dans l’éditeur\u{202f}; attendez qu’il soit ouvert avant de créer le signet."
+        }
+        Text::VerbindungsmarkeAngelegt => "Signet «\u{a0}{name}\u{a0}» créé parmi les connexions.",
         Text::VerbindenNameVergeben => "secrets.txt contient déjà une entrée «\u{a0}{name}\u{a0}».",
         Text::VerbindenNichtEingetragen => {
             "Impossible d’inscrire «\u{a0}{name}\u{a0}» dans secrets.txt\u{a0}: {grund}"
