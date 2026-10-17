@@ -34,8 +34,10 @@
 //!
 //! **Ein ferner Ort hat keinen Papierkorb, und das steht am Wert**: der
 //! Rumpf, der die Tatsachen beschafft, beantwortet die dritte Frage fuer ihn
-//! ohne Systemaufruf mit [`Erlaubnisbefund::Nein`]. Die Regel hier kennt den
-//! Unterschied nicht und braucht ihn nicht.
+//! ohne Systemaufruf mit [`Erlaubnisbefund::Nein`]. Ein Ordner in einem
+//! Archiv ebenso (E17 des Plans
+//! `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`). Die Regel
+//! hier kennt den Unterschied nicht und braucht ihn nicht.
 //!
 //! **Keine Zeile AppKit.** Wie im ganzen Verzeichnis [`crate::kommandos`] steht
 //! hier keine `use objc2`-Zeile. Das Blatt selbst baut
@@ -1125,6 +1127,32 @@ mod tests {
         Erlaubnisbefund::Nein,
         Erlaubnisbefund::Unentschieden,
     ];
+
+    /// Im Archiv folgt die endgueltige Rueckfrage, ohne dass vorher nach einem
+    /// Papierkorb gefragt wird: der Rumpf des Loeschwegs reicht fuer einen
+    /// Gegenstand im Archiv den Befund `Nein` am Wert herein, und die Tafel
+    /// macht daraus die endgueltige Rueckfrage; die zwei billigen Stufen davor
+    /// bleiben, was sie sind, und fragen den Befund nicht (E17 des Plans der
+    /// Archive). Dass der Rumpf fuer ein Archiv wirklich `Nein` reicht, haelt
+    /// `ein_gegenstand_im_archiv_nimmt_den_endgueltigen_weg_und_antwortet_am_wert`
+    /// in `appkit/anwendung.rs`.
+    #[test]
+    fn im_archiv_folgt_die_endgueltige_rueckfrage_ohne_papierkorbfrage() {
+        for (laeuft, leer, erwartet) in [
+            (true, false, Vorstufe::VorgangLaeuft),
+            (true, true, Vorstufe::VorgangLaeuft),
+            (false, true, Vorstufe::NichtsAusgewaehlt),
+            (false, false, Vorstufe::EndgueltigeRueckfrage),
+        ] {
+            let mut gefragt = false;
+            let stufe = vor_der_rueckfrage(laeuft, leer, || {
+                gefragt = true;
+                Erlaubnisbefund::Nein
+            });
+            assert_eq!(stufe, erwartet, "({laeuft}, {leer})");
+            assert_eq!(gefragt, !laeuft && !leer, "({laeuft}, {leer})");
+        }
+    }
 
     /// Genau eine Stelle im Baum ruft die Stufenregel.
     ///

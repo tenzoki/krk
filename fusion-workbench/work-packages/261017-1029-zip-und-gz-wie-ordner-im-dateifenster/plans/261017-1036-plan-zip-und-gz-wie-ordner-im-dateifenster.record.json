@@ -41,15 +41,15 @@
       },
       {
         "id": "6",
-        "state": "in_progress"
+        "state": "done"
       },
       {
         "id": "7",
-        "state": "in_progress"
+        "state": "done"
       },
       {
         "id": "8",
-        "state": "open"
+        "state": "in_progress"
       }
     ],
     "criteria": [],

@@ -49,9 +49,12 @@
 //! `archiv::Archivleser`, den alle Quellen eines Archivs im Vorgang teilen, in
 //! einem tar-Strom in der Folge der Fundstellen, damit ein Baum einen
 //! Durchlauf kostet. Fuer das Ziel gelten Zielklaerung, Konfliktfrage und
-//! Tausch unveraendert. Hinein, Verschieben heraus, Umbenennen, Anlegen und
-//! Loeschen im Archiv melden je Quelle `Text::ImArchivNichtVerfuegbar`, bis der
-//! Umbau in der Maschine steht.
+//! Tausch unveraendert. **Was in ein Archiv schreibt, schreibt diese Maschine
+//! nicht selbst**: Hineinkopieren, Hineinverschieben, Umbenennen, Anlegen und
+//! Loeschen im Archiv gehen an einen Umbau des ganzen Archivs (E13), und
+//! Verschieben heraus kopiert hier und entfernt danach mit einem Umbau des
+//! Quellarchivs; die Weiche steht in [`ausfuehren`], der Umbau im Kindmodul
+//! `archiv`.
 //!
 //! **Eine Schleife fuer jede Richtung.** Lokal nach fern, fern nach lokal und
 //! fern nach fern, auf demselben Server wie zwischen zweien, laufen durch
@@ -216,6 +219,12 @@ use crate::verzeichnis::{Typ, lesen};
 
 use super::auftrag::Konfliktregel;
 use super::fortschritt::{Abschluss, Bericht, Lauf, Meldung, Steuerung, Uebersprungen};
+
+// Ein Kind dieses Moduls und keines von `operation`: der Umbau eines Archivs
+// braucht die Stellen, Angaben und Gruende dieser Maschine, und die bleiben
+// privat. Die Datei steht neben dieser, wie der Plan der Archive sie nennt.
+#[path = "archiv.rs"]
+mod archiv;
 use super::umbenennen::{freier_name, freier_name_unter, name_pruefen, umbenennen};
 use super::{Ablauf, benennen_denselben_eintrag, liegt_im_ordner, loeschen};
 
@@ -428,26 +437,41 @@ pub(crate) fn starten(auftrag: Fernauftrag) -> Lauf {
 /// [`Quelle::Archiv`]. Je Archiv entsteht ein [`Archivleser`], den jede
 /// Quelle darin teilt; die Quellen eines tar oder tar.gz kommen in der Folge
 /// ihrer Fundstelle dran ([`Archivleser::lesefolge`]), damit der Strom
-/// einmal durchlaufen wird. **Bis der Umbau in der Maschine steht** (Schritt
-/// 6 und 7 des Plans) meldet jede Quelle `Text::ImArchivNichtVerfuegbar`,
-/// deren Vorgang in ein Archiv schreibt oder aus einem Archiv etwas
-/// entfernt: Kopieren und Verschieben in ein Archiv, Verschieben aus einem
-/// Archiv, Umbenennen, Anlegen und Loeschen darin. Die Oberflaeche stellt
-/// einen solchen Auftrag gar nicht erst; die Zeilen stehen, damit die
-/// Maschine es auch dann nicht tut.
+/// einmal durchlaufen wird.
+///
+/// **Was in ein Archiv schreibt, geht an einen Umbau** (E10 und E13 des
+/// Plans, Modul `archiv` neben dieser Datei), und die Weiche steht hier, am
+/// Wert von Ziel und Quelle:
+///
+/// ```text
+///  Ziel im Archiv (Kopieren, Verschieben)    ──> archiv::hinein, ein Umbau
+///  Quelle im Archiv, Umbenennen, Anlegen,
+///  Loeschen                                   ──> archiv::im_archiv_abarbeiten
+///  Quelle im Archiv, Verschieben, Ziel nicht   ──> diese Maschine kopiert, dann
+///  im Archiv                                       archiv::aus_archiven_entfernen
+///  sonst                                      ──> diese Maschine, wie bisher
+/// ```
+///
+/// Aus einem Archiv, das KRK allein lesen darf, verschiebt sie nichts: die
+/// Quelle meldet `Text::ArchivNurLesbar`, bevor am Ziel etwas entsteht.
 fn ausfuehren(pfand: &Fernfaden, auftrag: &Fernauftrag, steuerung: &mut Steuerung) -> Abschluss {
-    let ziel_im_archiv = auftrag
-        .zielordner()
-        .is_some_and(|ziel| ziel.archiv().is_some());
-    let liest_aus_archiv = match &auftrag.art {
-        Fernart::Kopieren { .. } => !ziel_im_archiv,
-        Fernart::Verschieben { .. }
-        | Fernart::Umbenennen { .. }
-        | Fernart::Anlegen { .. }
-        | Fernart::Loeschen => false,
+    let verschieben = match &auftrag.art {
+        Fernart::Kopieren { ziel } | Fernart::Verschieben { ziel } => {
+            if let Some(ziel) = ziel.archiv() {
+                let verschieben = matches!(auftrag.art, Fernart::Verschieben { .. });
+                return archiv::hinein(pfand, &auftrag.quellen, ziel, verschieben, steuerung);
+            }
+            matches!(auftrag.art, Fernart::Verschieben { .. })
+        }
+        Fernart::Umbenennen { .. } | Fernart::Anlegen { .. } | Fernart::Loeschen => false,
+    };
+    let schreibt_an_der_quelle = match &auftrag.art {
+        Fernart::Kopieren { .. } | Fernart::Verschieben { .. } => false,
+        Fernart::Umbenennen { .. } | Fernart::Anlegen { .. } | Fernart::Loeschen => true,
     };
     let zielordner = auftrag.zielordner().and_then(Stelle::von);
     let mut leser: Vec<Archivzugriff> = Vec::new();
+    let mut im_archiv: Vec<crate::ort::Archivort> = Vec::new();
     let mut quellen: Vec<(PathBuf, Result<Quelle, String>)> =
         Vec::with_capacity(auftrag.quellen.len());
     for ort in &auftrag.quellen {
@@ -455,15 +479,16 @@ fn ausfuehren(pfand: &Fernfaden, auftrag: &Fernauftrag, steuerung: &mut Steuerun
             return Abschluss::Abgebrochen;
         }
         let quelle = match ort {
-            Ort::Lokal(_) | Ort::Fern(_) if ziel_im_archiv => {
-                Err(text(Text::ImArchivNichtVerfuegbar).to_owned())
-            }
             Ort::Lokal(_) | Ort::Fern(_) => match Stelle::von(ort) {
                 Some(stelle) => Ok(Quelle::Stelle(stelle)),
                 None => Err(text(Text::VorgangPfadBenenntKeinenEintrag).to_owned()),
             },
-            Ort::Archiv(_) if !liest_aus_archiv => {
-                Err(text(Text::ImArchivNichtVerfuegbar).to_owned())
+            Ort::Archiv(archivort) if schreibt_an_der_quelle => {
+                im_archiv.push(archivort.clone());
+                continue;
+            }
+            Ort::Archiv(archivort) if verschieben && !archivort.format().beschreibbar() => {
+                Err(text(Text::ArchivNurLesbar).to_owned())
             }
             Ort::Archiv(archivort) => {
                 match archivzugriff(pfand, &mut leser, archivort, steuerung) {
@@ -479,9 +504,15 @@ fn ausfuehren(pfand: &Fernfaden, auftrag: &Fernauftrag, steuerung: &mut Steuerun
         quellen.push((bezeichnung(ort), quelle));
     }
     in_lesefolge_bringen(&mut quellen);
+    // Die Eintraege aus Archiven, die beim Verschieben vollstaendig am Ziel
+    // stehen; entfernt werden sie erst danach, ueber einen Umbau je Archiv,
+    // und auch nach einem Abbruch steht jeder davon im Bericht.
+    let mut nachher: Vec<archiv::Entfernposten> = Vec::new();
+    let mut abgebrochen = false;
     for (bezeichnung, quelle) in quellen {
         if steuerung.abgebrochen() {
-            return Abschluss::Abgebrochen;
+            abgebrochen = true;
+            break;
         }
         let quelle = match quelle {
             Ok(quelle) => quelle,
@@ -490,11 +521,31 @@ fn ausfuehren(pfand: &Fernfaden, auftrag: &Fernauftrag, steuerung: &mut Steuerun
                 continue;
             }
         };
-        if einen_abarbeiten(pfand, &auftrag.art, &quelle, zielordner.as_ref(), steuerung)
-            == Ablauf::Abgebrochen
+        if einen_abarbeiten(
+            pfand,
+            &auftrag.art,
+            &quelle,
+            zielordner.as_ref(),
+            steuerung,
+            &mut nachher,
+        ) == Ablauf::Abgebrochen
         {
-            return Abschluss::Abgebrochen;
+            abgebrochen = true;
+            break;
         }
+    }
+    // Die Leser der Quellarchive fallen, bevor ein Umbau ihre Dateien
+    // ersetzt.
+    drop(leser);
+    archiv::aus_archiven_entfernen(pfand, nachher, steuerung);
+    if abgebrochen {
+        return Abschluss::Abgebrochen;
+    }
+    if !im_archiv.is_empty()
+        && archiv::im_archiv_abarbeiten(pfand, &auftrag.art, im_archiv, steuerung)
+            == Ablauf::Abgebrochen
+    {
+        return Abschluss::Abgebrochen;
     }
     if steuerung.abgebrochen() {
         Abschluss::Abgebrochen
@@ -572,14 +623,19 @@ fn in_lesefolge_bringen(quellen: &mut [(PathBuf, Result<Quelle, String>)]) {
 /// ohne Auffangzweig.
 ///
 /// Umbenennen, Anlegen und Loeschen schreiben an der Quelle selbst und nehmen
-/// deshalb allein eine [`Stelle`]; eine Quelle im Archiv meldet dort
-/// `Text::ImArchivNichtVerfuegbar`, bis der Umbau in der Maschine steht.
+/// deshalb allein eine [`Stelle`]; eine Quelle im Archiv kommt dafuer nicht
+/// hierher, sondern an `archiv::im_archiv_abarbeiten` ([`ausfuehren`]). Kaeme
+/// sie doch, meldete sie `Text::ImArchivNichtVerfuegbar`.
+///
+/// `nachher` sammelt die Eintraege aus Archiven, die ein Verschieben
+/// vollstaendig kopiert hat und die erst danach entfernt werden.
 fn einen_abarbeiten(
     pfand: &Fernfaden,
     art: &Fernart,
     quelle: &Quelle,
     zielordner: Option<&Stelle>,
     steuerung: &mut Steuerung,
+    nachher: &mut Vec<archiv::Entfernposten>,
 ) -> Ablauf {
     let verschieben = match art {
         Fernart::Kopieren { .. } => false,
@@ -599,7 +655,7 @@ fn einen_abarbeiten(
         steuerung.ueberspringen(&quelle.bezeichnung(), text(Text::VorgangZielordnerFehlt));
         return Ablauf::Weiter;
     };
-    einen_uebertragen(pfand, verschieben, quelle, zielordner, steuerung)
+    einen_uebertragen(pfand, verschieben, quelle, zielordner, steuerung, nachher)
 }
 
 /// Umbenennen, Anlegen oder Loeschen an einer Stelle. Kopieren und
@@ -633,6 +689,7 @@ fn einen_uebertragen(
     quelle: &Quelle,
     zielordner: &Stelle,
     steuerung: &mut Steuerung,
+    nachher: &mut Vec<archiv::Entfernposten>,
 ) -> Ablauf {
     let bezeichnung = quelle.bezeichnung();
     let angaben = match quelle.angaben(pfand) {
@@ -670,16 +727,16 @@ fn einen_uebertragen(
         steuerung.ueberspringen(&bezeichnung, text(Text::VorgangZielLiegtInDerQuelle));
         return Ablauf::Weiter;
     }
-    if verschieben {
-        // Verschieben entfernt die Quelle; aus einem Archiv geht das erst mit
-        // dem Umbau (Schritt 6 des Plans der Archive).
-        let Some(stelle) = quelle.als_stelle() else {
-            steuerung.ueberspringen(&bezeichnung, text(Text::ImArchivNichtVerfuegbar));
-            return Ablauf::Weiter;
-        };
-        eintrag_verschieben(pfand, stelle, &angaben, ziel, steuerung)
-    } else {
-        eintrag_kopieren(
+    match (verschieben, quelle) {
+        (true, Quelle::Stelle(stelle)) => {
+            eintrag_verschieben(pfand, stelle, &angaben, ziel, steuerung)
+        }
+        // Aus einem Archiv wird kopiert, und entfernt wird die Quelle erst
+        // nach dem Vorgang, mit einem Umbau des Archivs ([`ausfuehren`]).
+        (true, Quelle::Archiv(stelle)) => {
+            aus_dem_archiv_verschieben(pfand, stelle, &angaben, ziel, steuerung, nachher)
+        }
+        (false, _) => eintrag_kopieren(
             pfand,
             quelle,
             &angaben,
@@ -687,8 +744,56 @@ fn einen_uebertragen(
             Zweck::Kopieren,
             steuerung,
             &mut Hinweisweg::bericht(),
-        )
+        ),
     }
+}
+
+/// Verschiebt einen Eintrag aus einem Archiv an ein lokales oder fernes Ziel:
+/// kopieren wie [`ueber_die_grenze`] und, allein wenn seit dem Beginn dieses
+/// Eintrags keine Luecke in den Bericht kam, ihn in `nachher` vormerken.
+///
+/// **Entfernt wird hier nichts.** Ein Archiv laesst sich allein ganz neu
+/// schreiben; jeder Eintrag einzeln hiesse ein Umbau je Eintrag. Das
+/// Entfernen aller vorgemerkten Eintraege eines Archivs ist deshalb ein Umbau
+/// nach dem letzten Eintrag des Vorgangs (`archiv::aus_archiven_entfernen`).
+fn aus_dem_archiv_verschieben(
+    pfand: &Fernfaden,
+    stelle: &Archivstelle,
+    angaben: &Angaben,
+    ziel: Stelle,
+    steuerung: &mut Steuerung,
+    nachher: &mut Vec<archiv::Entfernposten>,
+) -> Ablauf {
+    let bezeichnung = stelle.bezeichnung();
+    let stand = steuerung.uebersprungen_stand();
+    let mut weg = Hinweisweg::bericht();
+    if eintrag_kopieren(
+        pfand,
+        &Quelle::Archiv(stelle.clone()),
+        angaben,
+        ziel,
+        Zweck::Verschieben,
+        steuerung,
+        &mut weg,
+    ) == Ablauf::Abgebrochen
+    {
+        return Ablauf::Abgebrochen;
+    }
+    let seither = steuerung.uebersprungen_seit(stand);
+    if seither.len() != weg.gemeldet() {
+        let selbst_genannt = seither.iter().any(|eintrag| eintrag.pfad == bezeichnung);
+        if !selbst_genannt {
+            steuerung.ueberspringen(&bezeichnung, text(Text::VorgangNichtVollstaendigKopiert));
+        }
+        return Ablauf::Weiter;
+    }
+    let zugang = Arc::clone(stelle.leser.borrow().zugang());
+    nachher.push(archiv::Entfernposten::neu(
+        zugang,
+        stelle.innen.clone(),
+        bezeichnung,
+    ));
+    Ablauf::Weiter
 }
 
 // ----------------------------------------------------------------------
@@ -1116,9 +1221,9 @@ fn netzbefund(zweck: Zweck, lokale_seite: impl FnOnce() -> Option<io::Result<boo
 /// dem `LSTAT` den Namen nachschlaegt. Ein Systemaufruf je Frage, also allein
 /// auf dem Arbeitsfaden und allein bei „Ueberschreiben“.
 ///
-/// Eine Quelle im Archiv hat keine lokale Seite in diesem Sinn: verschoben
-/// wird aus ihr nicht, und nach ihrem Namen fragt der Tausch an der
-/// Archivdatei.
+/// Eine Quelle im Archiv hat keine lokale Seite in diesem Sinn: entfernt
+/// wird sie erst nach dem Vorgang mit einem Umbau ihres Archivs, und nach
+/// ihrem Namen fragt der Tausch an der Archivdatei.
 fn lokale_seite_liegt_lokal(quelle: &Quelle, ziel: &Stelle) -> Option<io::Result<bool>> {
     let mut gefragt = false;
     for stelle in [quelle.als_stelle(), Some(ziel)].into_iter().flatten() {
@@ -3878,39 +3983,43 @@ mod tests {
                 let abbruch = Arc::new(AtomicBool::new(false));
                 let mut steuerung =
                     Steuerung::neu(Arc::clone(&abbruch), None, Konfliktregel::default());
-                let kopieren = |namen: &[&str],
-                                ordnen: bool,
-                                nach: &Path,
-                                steuerung: &mut Steuerung| {
-                    let leser = Rc::new(RefCell::new(
-                        Archivleser::oeffnen(pfand, Arc::clone(&zugang), Arc::clone(&abbruch))
-                            .expect("das Verzeichnis entsteht"),
-                    ));
-                    let mut quellen: Vec<(PathBuf, Result<Quelle, String>)> = namen
-                        .iter()
-                        .map(|name| {
-                            let stelle = Archivstelle {
-                                leser: Rc::clone(&leser),
-                                innen: Innenpfad::aus_archivname(name).expect("Name"),
-                            };
-                            (stelle.bezeichnung(), Ok(Quelle::Archiv(stelle)))
-                        })
-                        .collect();
-                    if ordnen {
-                        in_lesefolge_bringen(&mut quellen);
-                    }
-                    let art = Fernart::Kopieren {
-                        ziel: Ort::Lokal(nach.to_path_buf()),
+                let kopieren =
+                    |namen: &[&str], ordnen: bool, nach: &Path, steuerung: &mut Steuerung| {
+                        let leser = Rc::new(RefCell::new(
+                            Archivleser::oeffnen(pfand, Arc::clone(&zugang), Arc::clone(&abbruch))
+                                .expect("das Verzeichnis entsteht"),
+                        ));
+                        let mut quellen: Vec<(PathBuf, Result<Quelle, String>)> = namen
+                            .iter()
+                            .map(|name| {
+                                let stelle = Archivstelle {
+                                    leser: Rc::clone(&leser),
+                                    innen: Innenpfad::aus_archivname(name).expect("Name"),
+                                };
+                                (stelle.bezeichnung(), Ok(Quelle::Archiv(stelle)))
+                            })
+                            .collect();
+                        if ordnen {
+                            in_lesefolge_bringen(&mut quellen);
+                        }
+                        let art = Fernart::Kopieren {
+                            ziel: Ort::Lokal(nach.to_path_buf()),
+                        };
+                        let zielordner = Stelle::Lokal(nach.to_path_buf());
+                        for (_, quelle) in quellen {
+                            let quelle = quelle.expect("eine Quelle");
+                            let ablauf = einen_abarbeiten(
+                                pfand,
+                                &art,
+                                &quelle,
+                                Some(&zielordner),
+                                steuerung,
+                                &mut Vec::new(),
+                            );
+                            assert!(ablauf == Ablauf::Weiter);
+                        }
+                        leser.borrow().neustarts()
                     };
-                    let zielordner = Stelle::Lokal(nach.to_path_buf());
-                    for (_, quelle) in quellen {
-                        let quelle = quelle.expect("eine Quelle");
-                        let ablauf =
-                            einen_abarbeiten(pfand, &art, &quelle, Some(&zielordner), steuerung);
-                        assert!(ablauf == Ablauf::Weiter);
-                    }
-                    leser.borrow().neustarts()
-                };
                 let geordnet = kopieren(&["d.txt", "c", "a"], true, &ziel, &mut steuerung);
                 let ungeordnet = kopieren(&["c", "a"], false, &umgekehrt, &mut steuerung);
                 (geordnet, ungeordnet, bericht(&steuerung))

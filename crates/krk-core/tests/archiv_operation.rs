@@ -1,7 +1,9 @@
-//! Abnahme von Schritt 4 des Plans
+//! Abnahme der Schritte 4, 6 und 7 des Plans
 //! `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`: das
 //! Herauskopieren aus einem Archiv in ein lokales oder fernes Ziel, ueber die
-//! Maschine fuer ferne Vorgaenge mit dem Archiveintrag als Lesequelle (E11).
+//! Maschine fuer ferne Vorgaenge mit dem Archiveintrag als Lesequelle (E11);
+//! das Kopieren und Verschieben hinein und hinaus (E10, E13); Umbenennen,
+//! Anlegen und endgueltiges Loeschen im Archiv (E17).
 //!
 //! Jede Probe baut ihre Archive selbst in einem Pruefordner
 //! (`gemeinsam::archivbau`), das verschluesselte Zip ueber `/usr/bin/zip -P`;
@@ -31,6 +33,7 @@ use krk_core::operation::{
 };
 use krk_core::ort::{Archivort, FernerOrt, Ort};
 use krk_core::sprache::{Text, satz, text};
+use krk_core::verzeichnis::Typ;
 use zip::ZipWriter;
 use zip::write::SimpleFileOptions;
 
@@ -649,4 +652,734 @@ fn der_lesezeiger_eines_tgz_beginnt_nur_fuer_einen_eintrag_hinter_ihm_neu() {
     .expect("Lesen");
     assert_eq!(vorwaerts, 0);
     assert_eq!(rueckwaerts, 1);
+}
+
+// ---------------------------------------------------------------------------
+// Schritt 6: hinein und hinaus, Kopieren und Verschieben mit einem Archiv als
+// Ziel oder als verschobener Quelle (E10, E13)
+// ---------------------------------------------------------------------------
+
+/// Was ein Archiv enthaelt, je Innenpfad die Art und bei einer Datei ihr
+/// Inhalt, gelesen ueber den Leser des Kerns auf einem Faden mit Pfand.
+fn inhalt(archiv: &Path) -> std::collections::BTreeMap<String, (Typ, Vec<u8>)> {
+    let format = Archivformat::aus_namen(archiv.file_name().expect("Name")).expect("Endung");
+    let zugang = Arc::new(Archivzugang::neu(archiv.to_path_buf(), format));
+    faden("krk-probe-inhalt".to_owned(), move |pfand| {
+        let mut leser = Archivleser::oeffnen(pfand, zugang, Arc::new(AtomicBool::new(false)))
+            .expect("das Verzeichnis entsteht");
+        let eintraege: Vec<_> = leser.verzeichnis().eintraege().to_vec();
+        let mut inhalt = std::collections::BTreeMap::new();
+        for eintrag in eintraege {
+            let mut daten = Vec::new();
+            if eintrag.typ == Typ::Datei {
+                leser
+                    .lesen(pfand, &eintrag.innen, |block| {
+                        daten.extend_from_slice(block);
+                        std::ops::ControlFlow::Continue(())
+                    })
+                    .expect("der Eintrag laesst sich lesen");
+            }
+            inhalt.insert(eintrag.innen.als_text().to_owned(), (eintrag.typ, daten));
+        }
+        inhalt
+    })
+    .expect("Faden")
+    .join()
+    .expect("Lesen")
+}
+
+/// Die Namen der Zwischendateien, die im Ordner `ordner` liegen geblieben
+/// sind.
+fn zwischennamen(ordner: &Path) -> Vec<String> {
+    fs::read_dir(ordner)
+        .expect("Ordner lesen")
+        .map(|eintrag| {
+            eintrag
+                .expect("Eintrag")
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
+        .filter(|name| name.starts_with(".krk-"))
+        .collect()
+}
+
+/// Ein Packer aus `gemeinsam::archivbau`: Baum unter dem ersten Pfad, Archiv
+/// unter dem zweiten.
+type Packer = fn(&Path, &Path);
+
+/// Die drei beschreibbaren Formate mit ihrem Packer.
+const BESCHREIBBAR: [(&str, Packer); 3] = [
+    ("zip", zip_packen),
+    ("tar", tar_packen),
+    ("tgz", tar_gz_packen),
+];
+
+/// Ein Archiv mit dem einen Eintrag `vorher.txt`, im Format der Endung.
+fn kleines_archiv(ordner: &Pruefordner, name: &str, packen: fn(&Path, &Path)) -> PathBuf {
+    let quelle = ordner.ordner(&format!("{name}-quelle"));
+    fs::write(quelle.join("vorher.txt"), b"vorher").expect("vorher.txt");
+    let archiv = ordner.unter(name);
+    packen(&quelle, &archiv);
+    archiv
+}
+
+/// Ein Ordnerbaum kommt lokal und von einem Server in ein Zip, ein tar und
+/// ein tar.gz und kommt wieder heraus, Byte fuer Byte und mit Rechten,
+/// Aenderungszeit und der Verknuepfung als Verknuepfung; das System liest das
+/// Ergebnis ohne Fehler.
+#[test]
+fn ein_ordnerbaum_kommt_lokal_und_fern_ins_archiv_und_wieder_heraus_byte_fuer_byte() {
+    let ordner = Pruefordner::neu("archiv-hinein-baum");
+    let quelle = ordner.ordner("quelle");
+    baum_anlegen(&quelle);
+    let erwartet = bild(&quelle);
+    let server = zugang("rechner");
+    for (endung, packen) in BESCHREIBBAR {
+        for fern in [false, true] {
+            let name = format!("baum-{fern}.{endung}");
+            let archiv = kleines_archiv(&ordner, &name, packen);
+            let quellen: Vec<Ort> = OBERSTE
+                .iter()
+                .map(|name| {
+                    if fern {
+                        Ort::Fern(FernerOrt {
+                            zugang: Arc::clone(&server),
+                            pfad: Fernpfad::aus_text(quelle.join(name).to_str().expect("UTF-8"))
+                                .expect("absolut"),
+                        })
+                    } else {
+                        Ort::Lokal(quelle.join(name))
+                    }
+                })
+                .collect();
+
+            let hinein = fahren(
+                Fernauftrag::kopieren(quellen, Ort::Archiv(archivort(&archiv, ""))),
+                Konfliktantwort::Abbrechen,
+            );
+            assert_eq!(hinein.bericht.abschluss, Abschluss::Fertig, "{name}");
+            ohne_uebersprungene(&hinein.bericht);
+            assert!(
+                hinein.konflikte.is_empty(),
+                "{name}: {:?}",
+                hinein.konflikte
+            );
+            assert!(zwischennamen(ordner.pfad()).is_empty(), "{name}");
+            assert!(inhalt(&archiv).contains_key("vorher.txt"), "{name}");
+
+            let ziel = ordner.ordner(&format!("ziel-{name}"));
+            let heraus = fahren(
+                Fernauftrag::kopieren(im_archiv(&archiv, &OBERSTE), Ort::Lokal(ziel.clone())),
+                Konfliktantwort::Abbrechen,
+            );
+            ohne_uebersprungene(&heraus.bericht);
+            assert_eq!(bild(&ziel), erwartet, "{name}: der Baum weicht ab");
+
+            let pruefung = if endung == "zip" {
+                Command::new("/usr/bin/unzip")
+                    .args(["-tq"])
+                    .arg(&archiv)
+                    .output()
+            } else {
+                Command::new("/usr/bin/tar")
+                    .arg("-tf")
+                    .arg(&archiv)
+                    .output()
+            }
+            .expect("das Werkzeug des Systems laesst sich starten");
+            assert!(
+                pruefung.status.success(),
+                "{name}: {}",
+                String::from_utf8_lossy(&pruefung.stderr)
+            );
+        }
+    }
+}
+
+/// Ein Name, der im Archiv schon steht, stellt die Konfliktfrage, und jede
+/// Antwort wirkt: „Ueberschreiben“ ersetzt, „Umbenennen“ legt unter dem
+/// freien Namen an, „Ueberspringen“ laesst den alten Eintrag; ein Ordner auf
+/// einen Ordner fuehrt ohne Frage zusammen.
+#[test]
+fn ein_vorhandener_name_im_archiv_stellt_die_konfliktfrage_und_jede_antwort_wirkt() {
+    let ordner = Pruefordner::neu("archiv-hinein-konflikt");
+    let alt = ordner.ordner("alt");
+    fs::write(alt.join("a.txt"), b"alt").expect("a.txt");
+    fs::create_dir(alt.join("ordner")).expect("ordner");
+    fs::write(alt.join("ordner/alt.txt"), b"alt").expect("alt.txt");
+    let neu = ordner.ordner("neu");
+    fs::write(neu.join("a.txt"), b"neu").expect("a.txt");
+    fs::create_dir(neu.join("ordner")).expect("ordner");
+    fs::write(neu.join("ordner/neu.txt"), b"neu").expect("neu.txt");
+
+    for (endung, packen) in BESCHREIBBAR {
+        for (antwort, a, b) in [
+            (Konfliktantwort::Ueberschreiben, &b"neu"[..], None),
+            (
+                Konfliktantwort::UmbenennenIn("b.txt".to_owned()),
+                &b"alt"[..],
+                Some(&b"neu"[..]),
+            ),
+            (Konfliktantwort::Ueberspringen, &b"alt"[..], None),
+        ] {
+            let archiv = ordner.unter(&format!("konflikt-{antwort:?}.{endung}"));
+            packen(&alt, &archiv);
+
+            let ausgang = fahren(
+                Fernauftrag::kopieren(
+                    vec![
+                        Ort::Lokal(neu.join("a.txt")),
+                        Ort::Lokal(neu.join("ordner")),
+                    ],
+                    Ort::Archiv(archivort(&archiv, "")),
+                ),
+                antwort.clone(),
+            );
+
+            assert_eq!(
+                ausgang.konflikte,
+                [(
+                    neu.join("a.txt"),
+                    PathBuf::from(format!("{}:/a.txt", archiv.display())),
+                )],
+                "{endung} {antwort:?}"
+            );
+            let steht = inhalt(&archiv);
+            assert_eq!(steht["a.txt"].1, a, "{endung} {antwort:?}");
+            assert_eq!(steht.get("b.txt").map(|(_, daten)| &daten[..]), b);
+            assert_eq!(steht["ordner/alt.txt"].1, b"alt");
+            assert_eq!(steht["ordner/neu.txt"].1, b"neu");
+        }
+    }
+}
+
+/// Jede Konfliktfrage eines Hineinkopierens kommt, bevor der Umbau ein Byte
+/// des neuen Archivs schreibt: die Folge der Meldungen zeigt keine Frage nach
+/// dem ersten Fortschritt mit Bytes.
+#[test]
+fn alle_konfliktfragen_kommen_vor_dem_ersten_geschriebenen_byte() {
+    let ordner = Pruefordner::neu("archiv-hinein-fragen");
+    let alt = ordner.ordner("alt");
+    fs::write(alt.join("eins.txt"), b"alt").expect("eins");
+    fs::write(alt.join("zwei.txt"), b"alt").expect("zwei");
+    fs::write(alt.join("gross.bin"), muster(4 * 1024 * 1024)).expect("gross");
+    let neu = ordner.ordner("neu");
+    fs::write(neu.join("eins.txt"), b"neu").expect("eins");
+    fs::write(neu.join("zwei.txt"), b"neu").expect("zwei");
+    fs::write(neu.join("drei.bin"), muster(4 * 1024 * 1024)).expect("drei");
+    let archiv = ordner.unter("fragen.tar");
+    tar_packen(&alt, &archiv);
+
+    let lauf = starten(
+        Fernauftrag::kopieren(
+            ["drei.bin", "eins.txt", "zwei.txt"]
+                .iter()
+                .map(|name| Ort::Lokal(neu.join(name)))
+                .collect(),
+            Ort::Archiv(archivort(&archiv, "")),
+        ),
+        Arc::new(OhnePapierkorb),
+    );
+    let mut folge = Vec::new();
+    loop {
+        match lauf
+            .meldungen()
+            .recv_timeout(Duration::from_secs(60))
+            .expect("der Lauf meldet sich nicht")
+        {
+            Meldung::Fortschritt(stand) if stand.bytes > 0 => folge.push("byte"),
+            Meldung::Fortschritt(_) | Meldung::Uebersprungen(_) => {}
+            Meldung::Konflikt { antwort, .. } => {
+                folge.push("frage");
+                antwort
+                    .send(Konfliktentscheid::einmal(Konfliktantwort::Ueberschreiben))
+                    .expect("der Lauf wartet nicht mehr");
+            }
+            Meldung::Fertig(bericht) => {
+                ohne_uebersprungene(&bericht);
+                break;
+            }
+        }
+    }
+    lauf.warten();
+    let fragen = folge.iter().filter(|meldung| **meldung == "frage").count();
+    assert_eq!(fragen, 2, "{folge:?}");
+    let erste_bytes = folge.iter().position(|meldung| *meldung == "byte");
+    let letzte_frage = folge.iter().rposition(|meldung| *meldung == "frage");
+    assert!(
+        erste_bytes.is_none_or(|bytes| letzte_frage.is_some_and(|frage| frage < bytes)),
+        "eine Frage kam nach dem ersten Byte: {folge:?}"
+    );
+    assert_eq!(inhalt(&archiv)["eins.txt"].1, b"neu");
+}
+
+/// Ein Verschieben ins Archiv entfernt allein die Quellen, die vollstaendig
+/// angekommen sind, und erst, nachdem das Archiv ersetzt ist: eine
+/// uebersprungene Datei und ein Ordner, dessen Kind uebersprungen wurde,
+/// bleiben stehen, und ein gescheiterter Umbau entfernt gar nichts.
+#[test]
+fn verschieben_ins_archiv_entfernt_allein_vollstaendig_angekommene_quellen_und_erst_nach_dem_ersetzen()
+ {
+    let ordner = Pruefordner::neu("archiv-hinein-verschieben");
+    let alt = ordner.ordner("alt");
+    fs::write(alt.join("x.txt"), b"alt").expect("x");
+    fs::create_dir(alt.join("teil")).expect("teil");
+    fs::write(alt.join("teil/z.txt"), b"alt").expect("z");
+
+    for (endung, packen) in BESCHREIBBAR {
+        let quelle = ordner.ordner(&format!("quelle-{endung}"));
+        fs::write(quelle.join("x.txt"), b"neu").expect("x");
+        fs::write(quelle.join("y.txt"), b"neu").expect("y");
+        fs::create_dir_all(quelle.join("ganz/unter")).expect("ganz");
+        fs::write(quelle.join("ganz/unter/w.txt"), b"neu").expect("w");
+        fs::create_dir(quelle.join("teil")).expect("teil");
+        fs::write(quelle.join("teil/z.txt"), b"neu").expect("z");
+        fs::write(quelle.join("teil/v.txt"), b"neu").expect("v");
+        let ablage = ordner.ordner(&format!("ablage-{endung}"));
+        let archiv = ablage.join(format!("ziel.{endung}"));
+        packen(&alt, &archiv);
+        let quellen = || -> Vec<Ort> {
+            ["x.txt", "y.txt", "ganz", "teil"]
+                .iter()
+                .map(|name| Ort::Lokal(quelle.join(name)))
+                .collect()
+        };
+
+        // Ein Umbau, der nicht ersetzen kann, entfernt nichts.
+        fs::set_permissions(&ablage, fs::Permissions::from_mode(0o555)).expect("sperren");
+        let gescheitert = fahren(
+            Fernauftrag::verschieben(quellen(), Ort::Archiv(archivort(&archiv, ""))),
+            Konfliktantwort::Ueberspringen,
+        );
+        fs::set_permissions(&ablage, fs::Permissions::from_mode(0o755)).expect("entsperren");
+        assert!(!gescheitert.bericht.uebersprungen.is_empty(), "{endung}");
+        for name in ["x.txt", "y.txt", "ganz/unter/w.txt", "teil/v.txt"] {
+            assert!(quelle.join(name).exists(), "{endung}: {name} ist fort");
+        }
+
+        let ausgang = fahren(
+            Fernauftrag::verschieben(quellen(), Ort::Archiv(archivort(&archiv, ""))),
+            Konfliktantwort::Ueberspringen,
+        );
+        assert_eq!(ausgang.bericht.abschluss, Abschluss::Fertig, "{endung}");
+        let steht = inhalt(&archiv);
+        assert_eq!(steht["x.txt"].1, b"alt", "{endung}");
+        assert_eq!(steht["y.txt"].1, b"neu", "{endung}");
+        assert_eq!(steht["ganz/unter/w.txt"].1, b"neu", "{endung}");
+        assert_eq!(steht["teil/z.txt"].1, b"alt", "{endung}");
+        assert_eq!(steht["teil/v.txt"].1, b"neu", "{endung}");
+        assert!(quelle.join("x.txt").exists(), "{endung}: x.txt ist fort");
+        assert!(!quelle.join("y.txt").exists(), "{endung}: y.txt blieb");
+        assert!(!quelle.join("ganz").exists(), "{endung}: ganz blieb");
+        assert!(
+            quelle.join("teil/v.txt").exists() && quelle.join("teil/z.txt").exists(),
+            "{endung}: teil ist angefasst"
+        );
+        assert!(
+            ausgang
+                .bericht
+                .uebersprungen
+                .iter()
+                .any(|eintrag| eintrag.pfad == quelle.join("teil")
+                    && eintrag.grund == text(Text::VorgangNichtVollstaendigKopiert)),
+            "{endung}: {:?}",
+            ausgang.bericht.uebersprungen
+        );
+    }
+}
+
+/// Ein Verschieben aus einem Archiv entfernt dort allein die Eintraege, die
+/// vollstaendig am Ziel angekommen sind, ueber einen Umbau des Archivs nach
+/// dem Kopieren.
+#[test]
+fn verschieben_aus_dem_archiv_entfernt_dort_allein_vollstaendig_angekommene_eintraege() {
+    let ordner = Pruefordner::neu("archiv-heraus-verschieben");
+    let quelle = ordner.ordner("quelle");
+    fs::write(quelle.join("a.txt"), b"a").expect("a");
+    fs::write(quelle.join("b.txt"), b"aus dem Archiv").expect("b");
+    fs::create_dir_all(quelle.join("ordner/unter")).expect("ordner");
+    fs::write(quelle.join("ordner/unter/c.txt"), b"c").expect("c");
+    fs::write(quelle.join("bleibt.txt"), b"bleibt").expect("bleibt");
+
+    for (endung, packen) in BESCHREIBBAR {
+        let archiv = ordner.unter(&format!("heraus.{endung}"));
+        packen(&quelle, &archiv);
+        let ziel = ordner.ordner(&format!("ziel-{endung}"));
+        fs::write(ziel.join("b.txt"), b"am Ziel").expect("b am Ziel");
+
+        let ausgang = fahren(
+            Fernauftrag::verschieben(
+                im_archiv(&archiv, &["a.txt", "b.txt", "ordner"]),
+                Ort::Lokal(ziel.clone()),
+            ),
+            Konfliktantwort::Ueberspringen,
+        );
+
+        assert_eq!(ausgang.bericht.abschluss, Abschluss::Fertig, "{endung}");
+        assert_eq!(fs::read(ziel.join("a.txt")).expect("a"), b"a");
+        assert_eq!(fs::read(ziel.join("b.txt")).expect("b"), b"am Ziel");
+        assert_eq!(fs::read(ziel.join("ordner/unter/c.txt")).expect("c"), b"c");
+        let steht = inhalt(&archiv);
+        let namen: Vec<&str> = steht.keys().map(String::as_str).collect();
+        assert_eq!(namen, ["b.txt", "bleibt.txt"], "{endung}");
+        assert!(zwischennamen(ordner.pfad()).is_empty(), "{endung}");
+    }
+}
+
+/// Ein Verschieben im selben Archiv haengt Namen um und kopiert keine Daten:
+/// der Bericht nennt keine geschriebenen Bytes, und der Zip-Eintrag behaelt
+/// seine gepackten Bytes und seine Pruefsumme.
+#[test]
+fn verschieben_im_selben_archiv_haengt_namen_um_ohne_datenkopie() {
+    let ordner = Pruefordner::neu("archiv-umhaengen");
+    let quelle = ordner.ordner("quelle");
+    fs::write(quelle.join("gross.bin"), muster(2 * 1024 * 1024)).expect("gross");
+    fs::create_dir_all(quelle.join("ziel/tief")).expect("ziel");
+    fs::write(quelle.join("ziel/tief/da.txt"), b"da").expect("da");
+    let archiv = ordner.unter("umhaengen.zip");
+    zip_packen(&quelle, &archiv);
+    let roh = |name: &str| {
+        let mut kiste = zip::ZipArchive::new(File::open(&archiv).expect("Zip")).expect("lesbar");
+        let stelle = kiste.index_for_name(name).expect("Eintrag");
+        let eintrag = kiste.by_index_raw(stelle).expect("Eintrag");
+        (
+            eintrag.crc32(),
+            eintrag.compressed_size(),
+            eintrag.compression(),
+        )
+    };
+    let vorher = roh("gross.bin");
+
+    let ausgang = fahren(
+        Fernauftrag::verschieben(
+            im_archiv(&archiv, &["gross.bin"]),
+            Ort::Archiv(archivort(&archiv, "ziel/tief")),
+        ),
+        Konfliktantwort::Abbrechen,
+    );
+
+    ohne_uebersprungene(&ausgang.bericht);
+    assert_eq!(ausgang.bericht.eintraege, 1);
+    assert_eq!(ausgang.bericht.bytes, 0, "es wurden Daten kopiert");
+    assert_eq!(roh("ziel/tief/gross.bin"), vorher);
+    let steht = inhalt(&archiv);
+    assert!(!steht.contains_key("gross.bin"));
+    assert_eq!(steht["ziel/tief/gross.bin"].1, muster(2 * 1024 * 1024));
+}
+
+/// Ein Verschieben zwischen zwei Archiven schreibt erst das Ziel und dann die
+/// Quelle neu; scheitert der zweite Umbau, stehen die Eintraege in beiden
+/// Archiven und der Bericht nennt sie, und gelingt er, nur im Ziel.
+#[test]
+fn verschieben_zwischen_zwei_archiven_laesst_bei_scheitern_des_zweiten_umbaus_die_eintraege_doppelt_und_nicht_nirgends()
+ {
+    let ordner = Pruefordner::neu("archiv-zwischen-zweien");
+    let quelle = ordner.ordner("quelle");
+    fs::write(quelle.join("eins.txt"), b"eins").expect("eins");
+    fs::write(quelle.join("zwei.txt"), b"zwei").expect("zwei");
+    let leer = ordner.ordner("leer");
+    fs::write(leer.join("da.txt"), b"da").expect("da");
+
+    for gelingt in [false, true] {
+        let ablage = ordner.ordner(&format!("ablage-{gelingt}"));
+        let von = ablage.join("von.zip");
+        zip_packen(&quelle, &von);
+        let nach = ordner.unter(&format!("nach-{gelingt}.tgz"));
+        tar_gz_packen(&leer, &nach);
+        let vorher = fs::read(&von).expect("von");
+
+        if !gelingt {
+            fs::set_permissions(&ablage, fs::Permissions::from_mode(0o555)).expect("sperren");
+        }
+        let ausgang = fahren(
+            Fernauftrag::verschieben(
+                im_archiv(&von, &["eins.txt"]),
+                Ort::Archiv(archivort(&nach, "")),
+            ),
+            Konfliktantwort::Abbrechen,
+        );
+        fs::set_permissions(&ablage, fs::Permissions::from_mode(0o755)).expect("entsperren");
+
+        assert_eq!(inhalt(&nach)["eins.txt"].1, b"eins", "{gelingt}");
+        let bezeichnung = PathBuf::from(format!("{}:/eins.txt", von.display()));
+        if gelingt {
+            ohne_uebersprungene(&ausgang.bericht);
+            let steht = inhalt(&von);
+            assert!(!steht.contains_key("eins.txt"));
+            assert!(steht.contains_key("zwei.txt"));
+        } else {
+            assert_eq!(
+                fs::read(&von).expect("von"),
+                vorher,
+                "die Quelle ist angefasst"
+            );
+            assert!(
+                ausgang.bericht.uebersprungen.iter().any(|eintrag| {
+                    eintrag.pfad == bezeichnung
+                        && krk_core::operation::fehlerart(&eintrag.grund).is_none()
+                }),
+                "{:?}",
+                ausgang.bericht.uebersprungen
+            );
+            assert!(zwischennamen(&ablage).is_empty());
+        }
+    }
+}
+
+/// Ein Abbruch mitten im Hineinkopieren einer grossen Datei laesst das
+/// Archiv Byte fuer Byte stehen und ohne Zwischennamen daneben, und beim
+/// Verschieben steht die Quelle noch.
+#[test]
+fn ein_abbruch_beim_hineinkopieren_laesst_das_archiv_unveraendert_und_die_quellen_stehen() {
+    let ordner = Pruefordner::neu("archiv-hinein-abbruch");
+    let quelle = ordner.ordner("quelle");
+    let gross = quelle.join("gross.bin");
+    fs::write(&gross, muster(24 * 1024 * 1024)).expect("gross");
+    for (endung, packen) in [("zip", zip_packen as fn(&Path, &Path)), ("tar", tar_packen)] {
+        let ablage = ordner.ordner(&format!("ablage-{endung}"));
+        let archiv = kleines_archiv(&ordner, &format!("abbruch.{endung}"), packen);
+        let archiv = {
+            let verschoben = ablage.join(archiv.file_name().expect("Name"));
+            fs::rename(&archiv, &verschoben).expect("umlegen");
+            verschoben
+        };
+        let vorher = fs::read(&archiv).expect("Archiv");
+
+        let bericht = mitten_abbrechen(Fernauftrag::verschieben(
+            vec![Ort::Lokal(gross.clone())],
+            Ort::Archiv(archivort(&archiv, "")),
+        ));
+
+        assert_eq!(bericht.abschluss, Abschluss::Abgebrochen, "{endung}");
+        assert_eq!(fs::read(&archiv).expect("Archiv"), vorher, "{endung}");
+        assert!(zwischennamen(&ablage).is_empty(), "{endung}");
+        assert!(gross.exists(), "{endung}: die Quelle ist fort");
+    }
+}
+
+/// Ein gz-Archiv als Ziel nimmt nichts an: jede Quelle steht mit
+/// `Text::ArchivNurLesbar` im Bericht, und die Datei bleibt, wie sie war. Die
+/// Oberflaeche weist denselben Auftrag schon vor dem Start ab
+/// (`Anwendungsdelegierter::uebertragen`).
+#[test]
+fn ein_gz_archiv_als_ziel_wird_vor_dem_start_abgewiesen() {
+    let ordner = Pruefordner::neu("archiv-hinein-gz");
+    let gepackt = gzip_glied(b"inhalt");
+    let archiv = ordner.datei("bericht.txt.gz", &gepackt);
+    let quelle = ordner.datei("neu.txt", b"neu");
+
+    let ausgang = fahren(
+        Fernauftrag::kopieren(
+            vec![Ort::Lokal(quelle.clone())],
+            Ort::Archiv(archivort(&archiv, "")),
+        ),
+        Konfliktantwort::Abbrechen,
+    );
+
+    let gemeldet: Vec<(PathBuf, String)> = ausgang
+        .bericht
+        .uebersprungen
+        .iter()
+        .map(|eintrag| (eintrag.pfad.clone(), eintrag.grund.clone()))
+        .collect();
+    assert_eq!(gemeldet, [(quelle, text(Text::ArchivNurLesbar).to_owned())]);
+    assert_eq!(fs::read(&archiv).expect("gz"), gepackt);
+}
+
+// ---------------------------------------------------------------------------
+// Schritt 7: Umbenennen, neuer Ordner, neue Datei und endgueltiges Loeschen
+// im Archiv (E10, E17)
+// ---------------------------------------------------------------------------
+
+/// Ein Name im Archiv wird umbenannt, eine Datei wie ein Ordner samt
+/// Unterbaum; ein vergebener Name wird nicht ueberschrieben, scheitert mit
+/// dem Grund, den lokal `AlreadyExists` traegt, und stellt keine Frage.
+#[test]
+fn ein_name_im_archiv_wird_umbenannt_und_ein_vergebener_nicht_ueberschrieben() {
+    let ordner = Pruefordner::neu("archiv-umbenennen");
+    let quelle = ordner.ordner("quelle");
+    fs::write(quelle.join("datei.txt"), b"datei").expect("datei");
+    fs::write(quelle.join("belegt.txt"), b"belegt").expect("belegt");
+    fs::create_dir_all(quelle.join("ordner/unter")).expect("ordner");
+    fs::write(quelle.join("ordner/unter/x.txt"), b"x").expect("x");
+
+    for (endung, packen) in BESCHREIBBAR {
+        let archiv = ordner.unter(&format!("umbenennen.{endung}"));
+        packen(&quelle, &archiv);
+        let ort = |innen: &str| Ort::Archiv(archivort(&archiv, innen));
+
+        let datei = fahren(
+            Fernauftrag::umbenennen(ort("datei.txt"), "neu.txt"),
+            Konfliktantwort::Abbrechen,
+        );
+        let ordnername = fahren(
+            Fernauftrag::umbenennen(ort("ordner"), "anders"),
+            Konfliktantwort::Abbrechen,
+        );
+        for ausgang in [&datei, &ordnername] {
+            assert_eq!(ausgang.bericht.abschluss, Abschluss::Fertig, "{endung}");
+            assert_eq!(ausgang.bericht.eintraege, 1, "{endung}");
+            ohne_uebersprungene(&ausgang.bericht);
+        }
+        let steht = inhalt(&archiv);
+        let namen: Vec<&str> = steht.keys().map(String::as_str).collect();
+        assert_eq!(
+            namen,
+            [
+                "anders",
+                "anders/unter",
+                "anders/unter/x.txt",
+                "belegt.txt",
+                "neu.txt"
+            ],
+            "{endung}"
+        );
+        assert_eq!(steht["neu.txt"].1, b"datei");
+
+        let vorher = fs::read(&archiv).expect("Archiv");
+        let vergeben = fahren(
+            Fernauftrag::umbenennen(ort("neu.txt"), "belegt.txt"),
+            Konfliktantwort::Ueberschreiben,
+        );
+        assert!(vergeben.konflikte.is_empty(), "{endung}: eine Frage kam");
+        assert_eq!(vergeben.bericht.eintraege, 0);
+        let grund = &vergeben
+            .bericht
+            .uebersprungen
+            .first()
+            .expect("ein Grund")
+            .grund;
+        assert_eq!(
+            krk_core::operation::fehlerart(grund),
+            Some(std::io::ErrorKind::AlreadyExists),
+            "{endung}: {grund}"
+        );
+        assert_eq!(fs::read(&archiv).expect("Archiv"), vorher, "{endung}");
+    }
+}
+
+/// Ein neuer Ordner und eine neue, leere Datei entstehen im Archiv, an der
+/// Wurzel wie in einem Unterordner; ein vergebener Name scheitert mit dem
+/// Grund von `AlreadyExists` und laesst das Archiv stehen.
+#[test]
+fn ein_ordner_und_eine_leere_datei_entstehen_im_archiv_und_ein_vergebener_name_scheitert() {
+    let ordner = Pruefordner::neu("archiv-anlegen");
+    let quelle = ordner.ordner("quelle");
+    fs::create_dir(quelle.join("ordner")).expect("ordner");
+    fs::write(quelle.join("ordner/da.txt"), b"da").expect("da");
+
+    for (endung, packen) in BESCHREIBBAR {
+        let archiv = ordner.unter(&format!("anlegen.{endung}"));
+        packen(&quelle, &archiv);
+        let ort = |innen: &str| Ort::Archiv(archivort(&archiv, innen));
+
+        for (wo, name, typ) in [
+            ("", "neu", krk_core::operation::Anlegetyp::Ordner),
+            ("ordner", "leer.txt", krk_core::operation::Anlegetyp::Datei),
+        ] {
+            let ausgang = fahren(
+                Fernauftrag::anlegen(ort(wo), name, typ),
+                Konfliktantwort::Abbrechen,
+            );
+            assert_eq!(ausgang.bericht.eintraege, 1, "{endung} {name}");
+            ohne_uebersprungene(&ausgang.bericht);
+        }
+        let steht = inhalt(&archiv);
+        assert_eq!(steht["neu"].0, Typ::Ordner, "{endung}");
+        assert_eq!(
+            steht["ordner/leer.txt"],
+            (Typ::Datei, Vec::new()),
+            "{endung}"
+        );
+        assert_eq!(steht["ordner/da.txt"].1, b"da");
+
+        let vorher = fs::read(&archiv).expect("Archiv");
+        for (wo, name, typ) in [
+            ("", "neu", krk_core::operation::Anlegetyp::Datei),
+            ("ordner", "da.txt", krk_core::operation::Anlegetyp::Ordner),
+        ] {
+            let vergeben = fahren(
+                Fernauftrag::anlegen(ort(wo), name, typ),
+                Konfliktantwort::Ueberschreiben,
+            );
+            assert!(vergeben.konflikte.is_empty(), "{endung} {name}");
+            let grund = &vergeben
+                .bericht
+                .uebersprungen
+                .first()
+                .expect("ein Grund")
+                .grund;
+            assert_eq!(
+                krk_core::operation::fehlerart(grund),
+                Some(std::io::ErrorKind::AlreadyExists),
+                "{endung} {name}: {grund}"
+            );
+        }
+        assert_eq!(fs::read(&archiv).expect("Archiv"), vorher, "{endung}");
+    }
+}
+
+/// Ein Baum wird im Archiv endgueltig entfernt, samt Unterbaum; ein Abbruch
+/// mitten im Umbau laesst alles stehen, Byte fuer Byte und ohne Zwischennamen.
+#[test]
+fn ein_baum_wird_im_archiv_endgueltig_entfernt_und_ein_abbruch_laesst_alles_stehen() {
+    let ordner = Pruefordner::neu("archiv-loeschen");
+    let quelle = ordner.ordner("quelle");
+    fs::create_dir_all(quelle.join("weg/unter")).expect("weg");
+    fs::write(quelle.join("weg/unter/x.txt"), b"x").expect("x");
+    fs::write(quelle.join("auch.txt"), b"auch").expect("auch");
+    fs::write(quelle.join("bleibt.txt"), b"bleibt").expect("bleibt");
+
+    for (endung, packen) in BESCHREIBBAR {
+        let archiv = ordner.unter(&format!("loeschen.{endung}"));
+        packen(&quelle, &archiv);
+        let ausgang = fahren(
+            Fernauftrag::loeschen(im_archiv(&archiv, &["weg", "auch.txt"])),
+            Konfliktantwort::Abbrechen,
+        );
+        assert_eq!(ausgang.bericht.abschluss, Abschluss::Fertig, "{endung}");
+        assert_eq!(ausgang.bericht.eintraege, 2, "{endung}");
+        ohne_uebersprungene(&ausgang.bericht);
+        let namen: Vec<String> = inhalt(&archiv).into_keys().collect();
+        assert_eq!(namen, ["bleibt.txt"], "{endung}");
+    }
+
+    // Der Abbruch braucht ein Archiv, dessen Neuschreiben dauert; ein Zip mit
+    // gespeichertem Eintrag und ein tar schreiben ihre Bytes ungepackt.
+    let gross = ordner.ordner("gross");
+    fs::write(gross.join("gross.bin"), muster(24 * 1024 * 1024)).expect("gross");
+    fs::write(gross.join("weg.txt"), b"weg").expect("weg");
+    for (endung, packen) in [
+        ("zip", gespeichert_packen as fn(&Path, &Path)),
+        ("tar", tar_packen),
+    ] {
+        let ablage = ordner.ordner(&format!("ablage-{endung}"));
+        let archiv = ablage.join(format!("gross.{endung}"));
+        packen(&gross, &archiv);
+        let vorher = fs::read(&archiv).expect("Archiv");
+        let bericht = mitten_abbrechen(Fernauftrag::loeschen(im_archiv(&archiv, &["weg.txt"])));
+        assert_eq!(bericht.abschluss, Abschluss::Abgebrochen, "{endung}");
+        assert_eq!(fs::read(&archiv).expect("Archiv"), vorher, "{endung}");
+        assert!(zwischennamen(&ablage).is_empty(), "{endung}");
+    }
+}
+
+/// Packt die Dateien unmittelbar unter `wurzel` als Zip mit gespeicherten,
+/// also ungepackten Eintraegen: ein Umbau kopiert dann so viele Bytes, wie die
+/// Dateien gross sind, und ein Abbruch trifft ihn mittendrin.
+fn gespeichert_packen(wurzel: &Path, ziel: &Path) {
+    let mut schreiber = ZipWriter::new(File::create(ziel).expect("Zip anlegen"));
+    for (name, pfad) in gemeinsam::archivbau::baum(wurzel) {
+        schreiber
+            .start_file(
+                name,
+                SimpleFileOptions::default().compression_method(zip::CompressionMethod::Stored),
+            )
+            .expect("Eintrag");
+        schreiber
+            .write_all(&fs::read(&pfad).expect("Datei lesen"))
+            .expect("Inhalt");
+    }
+    schreiber.finish().expect("Zip abschliessen");
 }

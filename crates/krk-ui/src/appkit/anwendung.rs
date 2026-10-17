@@ -749,6 +749,16 @@ enum Loeschgegenstand {
         /// Wie viele davon Ordner sind.
         ordnerzahl: usize,
     },
+    /// Ein Ordner in einem Archiv, in das KRK schreiben darf (E17 des Plans
+    /// der Archive).
+    Archiv {
+        /// Der angezeigte Ordner im Archiv.
+        ordner: krk_core::ort::Archivort,
+        /// Die Namen der betroffenen Eintraege.
+        namen: Vec<String>,
+        /// Wie viele davon Ordner sind.
+        ordnerzahl: usize,
+    },
 }
 
 impl Loeschgegenstand {
@@ -756,17 +766,22 @@ impl Loeschgegenstand {
     fn ist_leer(&self) -> bool {
         match self {
             Loeschgegenstand::Lokal { auswahl, .. } => auswahl.ist_leer(),
-            Loeschgegenstand::Fern { namen, .. } => namen.is_empty(),
+            Loeschgegenstand::Fern { namen, .. } | Loeschgegenstand::Archiv { namen, .. } => {
+                namen.is_empty()
+            }
         }
     }
 
     /// Der Weg, den dieser Gegenstand nehmen kann, wenn die Stufenregel
-    /// `gewuenscht` sagt: lokal eben den, fern immer den endgueltigen, weil ein
-    /// Server keinen Papierkorb hat.
+    /// `gewuenscht` sagt: lokal eben den, fern und im Archiv immer den
+    /// endgueltigen, weil weder ein Server noch ein Archiv einen Papierkorb
+    /// hat.
     fn weg(&self, gewuenscht: Loeschweg) -> Loeschweg {
         match self {
             Loeschgegenstand::Lokal { .. } => gewuenscht,
-            Loeschgegenstand::Fern { .. } => Loeschweg::Endgueltig,
+            Loeschgegenstand::Fern { .. } | Loeschgegenstand::Archiv { .. } => {
+                Loeschweg::Endgueltig
+            }
         }
     }
 }
@@ -7394,13 +7409,15 @@ impl Anwendungsdelegierter {
     /// sftp-Ordner). Entschieden wird am Wert der zwei Tabs, ohne Systemaufruf
     /// und ohne Anfrage.
     ///
-    /// **Aus einem Archiv heraus kopiert ebenso ein [`Fernauftrag`]** (E10 und
-    /// E11 des Plans `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`):
-    /// die Maschine liest den Eintrag aus dem Archiv und schreibt ihn lokal oder
-    /// auf den Server. Ein Archiv als Ziel, das KRK allein lesen darf, meldet
-    /// `Text::ArchivNurLesbar` vor dem Start (E14). Hineinkopieren und
-    /// Verschieben aus einem Archiv melden `Text::ImArchivNichtVerfuegbar`,
-    /// bis der Umbau in der Maschine steht (Schritt 6).
+    /// **Hat eine Seite ein Archiv, wird es ebenso ein [`Fernauftrag`]** (E10
+    /// bis E13 des Plans
+    /// `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`): aus einem
+    /// Archiv heraus liest die Maschine den Eintrag und schreibt ihn lokal oder
+    /// auf den Server, in ein Archiv hinein baut sie das Zielarchiv in einem
+    /// Umbau neu, und ein Verschieben aus einem Archiv entfernt die Eintraege
+    /// dort erst nach dem Kopieren. Ein Archiv als Ziel, das KRK allein lesen
+    /// darf, meldet `Text::ArchivNurLesbar` vor dem Start (E14), am Wert und
+    /// ohne Systemaufruf.
     fn uebertragen(&self, kommando: Kommando) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
         let verschieben = kommando == Kommando::Verschieben;
@@ -7411,15 +7428,7 @@ impl Anwendungsdelegierter {
                 self.antwort_zeigen(aktiv, text(Text::ArchivNurLesbar));
                 true
             }
-            (_, Dateiort::Archiv(_)) | (Dateiort::Archiv(_), _) if verschieben => {
-                self.antwort_zeigen(aktiv, text(Text::ImArchivNichtVerfuegbar));
-                true
-            }
-            (_, Dateiort::Archiv(_)) => {
-                self.antwort_zeigen(aktiv, text(Text::ImArchivNichtVerfuegbar));
-                true
-            }
-            (quelle @ Dateiort::Archiv(_), ziel) => {
+            (quelle @ Dateiort::Archiv(_), ziel) | (quelle, ziel @ Dateiort::Archiv(_)) => {
                 self.fernauftrag_stellen(aktiv, quelle, ziel, verschieben)
             }
             (Dateiort::Lokal(_), Dateiort::Lokal(ziel)) => {
@@ -7735,11 +7744,11 @@ impl Anwendungsdelegierter {
     fn loeschen_nach_rueckfrage(&self, schaltflaeche: &str) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
         // Was geloescht wuerde, am Wert des Tabs und ohne Systemaufruf: lokal
-        // die Auswahl mit ihren Pfaden, fern die Namen unter dem fernen Ort.
-        // In einem Archiv loescht bis zum Umbau nichts (Schritt 2 des Plans
-        // der Archive).
+        // die Auswahl mit ihren Pfaden, fern und im Archiv die Namen unter dem
+        // angezeigten Ort. Ein Archiv, das KRK allein lesen darf, loescht
+        // nichts (E14 des Plans der Archive).
         let Some(gegenstand) = self.loeschgegenstand(aktiv) else {
-            self.antwort_zeigen(aktiv, text(Text::ImArchivNichtVerfuegbar));
+            self.antwort_zeigen(aktiv, text(Text::ArchivNurLesbar));
             return true;
         };
 
@@ -7765,6 +7774,9 @@ impl Anwendungsdelegierter {
                 // Ein Server hat keinen Papierkorb; entschieden am Wert und
                 // ohne Systemaufruf (Entscheidung 12).
                 Loeschgegenstand::Fern { .. } => Erlaubnisbefund::Nein,
+                // Ein Archiv ebenso nicht, am Wert und ohne Systemaufruf (E17
+                // des Plans der Archive).
+                Loeschgegenstand::Archiv { .. } => Erlaubnisbefund::Nein,
                 Loeschgegenstand::Lokal { ordner, .. } => {
                     let (aufgeloest, befund) = Self::lokaler_papierkorbbefund(ordner);
                     aufgeloester_ordner = aufgeloest;
@@ -7817,12 +7829,21 @@ impl Anwendungsdelegierter {
     ///
     /// Lokal die Auswahl aus [`crate::kommandos::operationen::betroffene`] mit
     /// ihren Pfaden; fern die Namen derselben Regel und die Zahl der Ordner
-    /// darunter, aus dem Ordnermodell, das der ferne Leser gefuellt hat.
-    /// `None` in einem Archiv: dort gibt es bis zum Umbau keinen Loeschweg.
+    /// darunter, aus dem Ordnermodell, das der ferne Leser gefuellt hat; im
+    /// Archiv ebenso aus dem Ordnermodell. `None` in einem Archiv, das KRK
+    /// allein lesen darf: dort gibt es keinen Loeschweg.
     fn loeschgegenstand(&self, seite: Fensterseite) -> Option<Loeschgegenstand> {
         let quelle = self.dateifenster(seite).quelle();
         Some(match quelle.angezeigter_ort() {
-            Dateiort::Archiv(_) => return None,
+            Dateiort::Archiv(ordner) if !ordner.format().beschreibbar() => return None,
+            Dateiort::Archiv(ordner) => {
+                let (namen, ordnerzahl) = quelle.betroffene_namen_und_ordnerzahl();
+                Loeschgegenstand::Archiv {
+                    ordner,
+                    namen,
+                    ordnerzahl,
+                }
+            }
             Dateiort::Lokal(ordner) => Loeschgegenstand::Lokal {
                 auswahl: quelle.betroffene_eintraege().unwrap_or_default(),
                 ordner,
@@ -7912,6 +7933,18 @@ impl Anwendungsdelegierter {
             ) => {
                 let (frage, erlaeuterung) =
                     Self::fern_loeschtexte(ordner, namen.len(), *ordnerzahl);
+                (frage, erlaeuterung, loeschbestaetigung::Form::Endgueltig)
+            }
+            (
+                Loeschgegenstand::Archiv {
+                    ordner,
+                    namen,
+                    ordnerzahl,
+                },
+                Loeschweg::Papierkorb | Loeschweg::Endgueltig,
+            ) => {
+                let (frage, erlaeuterung) =
+                    Self::archiv_loeschtexte(ordner, namen.len(), *ordnerzahl);
                 (frage, erlaeuterung, loeschbestaetigung::Form::Endgueltig)
             }
         };
@@ -8091,6 +8124,23 @@ impl Anwendungsdelegierter {
         loeschwarnung::endgueltig_frage_und_erlaeuterung(zahl, ordnerzahl, &ordner.to_string(), &[])
     }
 
+    /// Die zwei Zeilen der endgueltigen Rueckfrage in einem Archiv (E17 des
+    /// Plans der Archive).
+    ///
+    /// Dieselbe Bauform wie [`Self::fern_loeschtexte`] und aus demselben
+    /// Grund **ohne Systemaufruf**: der Ort ist ein Wert, die Zahlen kommen aus
+    /// dem Ordnermodell, und der Ort steht in der Schreibweise des
+    /// Fenstertitels, `/pfad/zum/archiv.zip:/innen`. Ein Archiv hat keinen
+    /// Papierkorb, also ist die Rueckfrage die endgueltige.
+    #[must_use = "die zwei Werte sind der ganze Inhalt der Rueckfrage; fallengelassen erscheint sie leer"]
+    fn archiv_loeschtexte(
+        ordner: &krk_core::ort::Archivort,
+        zahl: usize,
+        ordnerzahl: usize,
+    ) -> (String, String) {
+        loeschwarnung::endgueltig_frage_und_erlaeuterung(zahl, ordnerzahl, &ordner.to_string(), &[])
+    }
+
     /// Stellt den bestaetigten Loeschauftrag, und zwar mit **der Auswahl, die
     /// im Blatt stand**.
     ///
@@ -8157,22 +8207,36 @@ impl Anwendungsdelegierter {
                 let _ = self.auftrag_starten(aktiv, auftrag, ordner, positionen, 0);
             }
             Loeschgegenstand::Fern { ordner, namen, .. } => {
-                let ort = Dateiort::Fern(ordner);
-                let quellen: Vec<Dateiort> = namen
-                    .iter()
-                    .filter_map(|name| ort_darunter(&ort, name))
-                    .collect();
-                let positionen = quellen.len();
-                // Dieselbe Antwort wie darueber, aus demselben Grund.
-                let _ = self.vorhaben_starten(
-                    aktiv,
-                    Vorhaben::Fern(Fernauftrag::loeschen(quellen)),
-                    ort,
-                    positionen,
-                    0,
-                );
+                self.entfernt_loeschen(aktiv, Dateiort::Fern(ordner), &namen);
+            }
+            // Im Archiv derselbe Weg: ein Fernauftrag, den die Maschine an
+            // einen Umbau des Archivs gibt (E10, E17 des Plans der Archive).
+            Loeschgegenstand::Archiv { ordner, namen, .. } => {
+                self.entfernt_loeschen(aktiv, Dateiort::Archiv(ordner), &namen);
             }
         }
+    }
+
+    /// Stellt den Loeschauftrag an einem Ort, der nicht auf dieser Platte
+    /// liegt, fern oder im Archiv, fuer die Namen darunter.
+    ///
+    /// Der Hauptfaden stellt dabei keine Anfrage und keinen Systemaufruf: jede
+    /// Quelle ist ein Wert, und die Maschine fragt erst auf ihrem Faden.
+    fn entfernt_loeschen(&self, aktiv: Fensterseite, ort: Dateiort, namen: &[String]) {
+        let quellen: Vec<Dateiort> = namen
+            .iter()
+            .filter_map(|name| ort_darunter(&ort, name))
+            .collect();
+        let positionen = quellen.len();
+        // `vorhaben_starten` liefert, ob ein Tastendruck verbraucht ist; der
+        // Tastendruck ist seit dem Blatt laengst verbraucht.
+        let _ = self.vorhaben_starten(
+            aktiv,
+            Vorhaben::Fern(Fernauftrag::loeschen(quellen)),
+            ort,
+            positionen,
+            0,
+        );
     }
 
     /// Der Abbruchbefehl (C4, C1.7).
@@ -8387,8 +8451,9 @@ impl Anwendungsdelegierter {
     /// Datentraegerwache statt von einem Befehl — und er wird auch gleich
     /// behandelt: gemeldet wird nichts.
     ///
-    /// **Ein ferner Ort geht an [`Self::fern_anlegen`]**, nach derselben
-    /// Namenspruefung; der lokale Zweig darunter ist der von vorher.
+    /// **Ein ferner Ort und ein Ort im Archiv gehen an [`Self::fern_anlegen`]**,
+    /// nach derselben Namenspruefung; der lokale Zweig darunter ist der von
+    /// vorher.
     fn anlegen_ausfuehren(
         &self,
         seite: Fensterseite,
@@ -8405,12 +8470,10 @@ impl Anwendungsdelegierter {
         };
         let ordner = match ort {
             Dateiort::Lokal(ordner) => ordner,
-            Dateiort::Fern(ordner) => return self.fern_anlegen(seite, art, ordner, name),
-            // Bis zum Umbau legt KRK in einem Archiv nichts an (Schritt 2 des
-            // Plans der Archive).
-            Dateiort::Archiv(_) => {
-                self.antwort_zeigen(seite, text(Text::ImArchivNichtVerfuegbar));
-                return;
+            // Fern und im Archiv ueber die Maschine; im Archiv gibt sie den
+            // Auftrag an einen Umbau (E10 des Plans der Archive).
+            Dateiort::Fern(_) | Dateiort::Archiv(_) => {
+                return self.fern_anlegen(seite, art, ort, name);
             }
         };
         let angelegt = match art {
@@ -8445,17 +8508,16 @@ impl Anwendungsdelegierter {
     /// der Grund geht in die Statuszeile. Eine Vorabprueferei gegen die
     /// gelesene Liste waere eine zweite Wahrheit ueber denselben Ordner.
     ///
-    /// **Ein ferner Ort geht an [`Self::fern_umbenennen`]**, gelesen am Wert
-    /// des Tabs; der lokale Zweig darunter ist der von vorher.
+    /// **Ein ferner Ort und ein Ort im Archiv gehen an
+    /// [`Self::fern_umbenennen`]**, gelesen am Wert des Tabs; der lokale Zweig
+    /// darunter ist der von vorher.
     fn umbenennen_ausfuehren(&self, seite: Fensterseite, alt: &str, neu: &str) {
         let ordner = match self.dateifenster(seite).quelle().angezeigter_ort() {
             Dateiort::Lokal(ordner) => ordner,
-            Dateiort::Fern(ordner) => return self.fern_umbenennen(seite, &ordner, alt, neu),
-            // Bis zum Umbau benennt KRK in einem Archiv nichts um (Schritt 2
-            // des Plans der Archive).
-            Dateiort::Archiv(_) => {
-                self.antwort_zeigen(seite, text(Text::ImArchivNichtVerfuegbar));
-                return;
+            // Fern und im Archiv ueber die Maschine; im Archiv gibt sie den
+            // Auftrag an einen Umbau (E10 des Plans der Archive).
+            ort @ (Dateiort::Fern(_) | Dateiort::Archiv(_)) => {
+                return self.fern_umbenennen(seite, &ort, alt, neu);
             }
         };
         if let Err(fehler) = operation::umbenennen(&ordner.join(alt), neu) {
@@ -8478,17 +8540,15 @@ impl Anwendungsdelegierter {
     /// zur Zeit“, und die Meldung, die Auswahl auf dem neuen Eintrag und das
     /// Scheitern an einem vergebenen Namen kommen mit dem Bericht in
     /// [`Self::vorgang_beenden`] an, in denselben Saetzen wie lokal.
-    fn fern_anlegen(
-        &self,
-        seite: Fensterseite,
-        art: Anlegeart,
-        ordner: &krk_core::ort::FernerOrt,
-        name: String,
-    ) {
+    ///
+    /// **Ein Ort im Archiv nimmt denselben Weg** (E10 des Plans der Archive):
+    /// die Maschine gibt den Auftrag an einen Umbau, und ob der Name vergeben
+    /// ist, fragt sie am Inhaltsverzeichnis, mit demselben Grund wie lokal.
+    fn fern_anlegen(&self, seite: Fensterseite, art: Anlegeart, ort: &Dateiort, name: String) {
         if self.vorgang_laeuft_schon(seite) {
             return;
         }
-        let ort = Dateiort::Fern(ordner.clone());
+        let ort = ort.clone();
         let auftrag = Fernauftrag::anlegen(ort.clone(), name, art.anlegetyp());
         // Die Antwort sagt, ob ein Tastendruck verbraucht ist; dieser ist es
         // seit dem Blatt.
@@ -8501,18 +8561,13 @@ impl Anwendungsdelegierter {
     /// Dieselbe Bauform wie [`Self::fern_anlegen`] und aus demselben Grund:
     /// der Hauptfaden stellt keine Anfrage, und das Ergebnis kommt mit dem
     /// Bericht an. Ob der neue Name frei ist, beantwortet das `RENAME` selbst,
-    /// wie lokal das Dateisystem.
-    fn fern_umbenennen(
-        &self,
-        seite: Fensterseite,
-        ordner: &krk_core::ort::FernerOrt,
-        alt: &str,
-        neu: &str,
-    ) {
+    /// wie lokal das Dateisystem; im Archiv das Inhaltsverzeichnis auf dem
+    /// Faden der Maschine (E10 des Plans der Archive).
+    fn fern_umbenennen(&self, seite: Fensterseite, ort: &Dateiort, alt: &str, neu: &str) {
         if self.vorgang_laeuft_schon(seite) {
             return;
         }
-        let ort = Dateiort::Fern(ordner.clone());
+        let ort = ort.clone();
         // Ein Name aus dem Ordnermodell ist immer eine einzelne Komponente;
         // der Fall ist trotzdem behandelt, statt still nichts zu tun.
         let Some(quelle) = ort_darunter(&ort, alt) else {
@@ -8928,7 +8983,9 @@ impl Anwendungsdelegierter {
     /// **Ein Abwurf auf ein fernes Fenster ist ein Kopieren oder Verschieben
     /// von hier auf den Server** (Entscheidung 9 des Plans der sftp-Ordner),
     /// ueber einen [`Fernauftrag`] mit denselben Quellen; als Quellordner geht
-    /// dort ebenso das Ziel mit.
+    /// dort ebenso das Ziel mit. **Ein Abwurf auf ein Archivfenster ebenso**
+    /// (E10 des Plans der Archive): die Maschine baut das Archiv in einem
+    /// Umbau neu, und ein Archiv, das KRK allein lesen darf, nimmt nichts an.
     fn abwurf_ausfuehren(
         &self,
         seite: Fensterseite,
@@ -8947,18 +9004,16 @@ impl Anwendungsdelegierter {
                 };
                 let _ = self.auftrag_starten(seite, auftrag, ziel, positionen, 0);
             }
-            // Ein Abwurf auf ein Archivfenster ist ein Hineinkopieren, und
-            // das kommt erst mit dem Umbau (Schritt 6 des Plans der Archive);
-            // in ein Archiv, das KRK allein lesen darf, nie (E14).
-            Dateiort::Archiv(archiv) => {
-                let schluessel = if archiv.format().beschreibbar() {
-                    Text::ImArchivNichtVerfuegbar
-                } else {
-                    Text::ArchivNurLesbar
-                };
-                self.antwort_zeigen(seite, text(schluessel));
+            // In ein Archiv, das KRK allein lesen darf, nie (E14); die
+            // Abwurfregel hat ihn schon abgewiesen, und die Zeile steht, damit
+            // auch ein anderer Weg hierher nichts startet.
+            Dateiort::Archiv(archiv) if !archiv.format().beschreibbar() => {
+                self.antwort_zeigen(seite, text(Text::ArchivNurLesbar));
             }
-            ziel @ Dateiort::Fern(_) => {
+            // Ein Abwurf auf ein fernes Fenster oder ein Archivfenster ist ein
+            // Kopieren oder Verschieben dorthin, ueber dieselbe Maschine wie
+            // F5 und F6 (E10 des Plans der Archive).
+            ziel @ (Dateiort::Fern(_) | Dateiort::Archiv(_)) => {
                 let quellen = quellen.into_iter().map(Dateiort::Lokal).collect();
                 let auftrag = match art {
                     Abwurfvorgang::Kopieren => Fernauftrag::kopieren(quellen, ziel.clone()),
@@ -10668,7 +10723,9 @@ impl Anwendungsdelegierter {
         // Diese Auffrischung ist zugleich die, die die Dateisystemwache
         // waehrend des Vorgangs ausgesetzt hat; `Vorgang::ordner` ist fuer
         // beide dieselbe Aufzaehlung.
-        for ordner in vorgang.ordner() {
+        // Ein Ort im Archiv meldet sich als Ordner seiner Archivdatei, damit
+        // jeder Tab auf dem umgebauten Archiv liest (`gemeldete_orte`).
+        for ordner in auffrischung::gemeldete_orte(vorgang.ordner()) {
             auffrischung::ort_neu_lesen(self, &ordner);
         }
         // Nach einem fernen Umbenennen oder Anlegen steht die Auswahl auf dem
@@ -13146,11 +13203,16 @@ fn ort_darunter(ordner: &Dateiort, name: &str) -> Option<Dateiort> {
 /// Umbenennen, Anlegen und Loeschen am fernen Ort stellen keine Konfliktfrage
 /// (`operationen::fern_konfliktgestalt`); stellten sie eine, naennte sie einen
 /// Eintrag auf dem Server, also ja, und der Hauptfaden fragte keinen Pfad.
+///
+/// **Ein Ziel im Archiv zaehlt wie eines auf einem Server** (E10 des Plans
+/// der Archive): die Frage nennt es als `/pfad/zum/archiv.zip:/innen`, und das
+/// ist kein Pfad auf dieser Platte, an dem der Hauptfaden einen freien Namen
+/// erfragen duerfte. Gefragt wird deshalb, ob das Ziel nicht lokal ist.
 fn zielt_auf_einen_server(art: &Vorgangsart) -> bool {
     match art {
         Vorgangsart::Lokal(_) => false,
         Vorgangsart::Fern(Fernart::Kopieren { ziel } | Fernart::Verschieben { ziel }) => {
-            ziel.fern().is_some()
+            ziel.lokal().is_none()
         }
         Vorgangsart::Fern(
             Fernart::Umbenennen { .. } | Fernart::Anlegen { .. } | Fernart::Loeschen,
@@ -17171,5 +17233,93 @@ mod fernvorgangsproben {
             !beenden.contains(concat!("auffrischung::", "ordner_neu_lesen(")),
             "vorgang_beenden nimmt den lokalen Weg, der einen fernen Ort nie trifft"
         );
+    }
+}
+
+/// Die Proben des Loeschwegs im Archiv (Schritt 7 des Plans
+/// `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`, E17).
+#[cfg(test)]
+mod archivloeschproben {
+    use std::sync::Arc;
+
+    use krk_core::archiv::{Archivformat, Archivzugang};
+    use krk_core::ort::Archivort;
+
+    use super::quelltextproben::{diese_datei, rumpf};
+    use super::{Loeschgegenstand, Loeschweg};
+
+    /// Ein Gegenstand im Archiv, ohne die Datei je zu oeffnen.
+    fn gegenstand(namen: &[&str]) -> Loeschgegenstand {
+        let zugang = Arc::new(Archivzugang::neu(
+            std::path::PathBuf::from("/gibt/es/nicht/probe.zip"),
+            Archivformat::Zip,
+        ));
+        Loeschgegenstand::Archiv {
+            ordner: Archivort::wurzel(zugang),
+            namen: namen.iter().map(|name| (*name).to_owned()).collect(),
+            ordnerzahl: 0,
+        }
+    }
+
+    /// Ein Gegenstand im Archiv nimmt immer den endgueltigen Weg, und der Rumpf
+    /// des Loeschwegs beantwortet seine Papierkorbfrage am Wert mit nein; was
+    /// die Stufenregel daraus macht, haelt
+    /// `im_archiv_folgt_die_endgueltige_rueckfrage_ohne_papierkorbfrage` an
+    /// ihrer Tafel (`kommandos/loeschwarnung.rs`).
+    ///
+    /// **Was sie nicht sieht:** ob das Blatt wirklich in der endgueltigen
+    /// Gestalt aufgeht; das entscheidet `loeschblatt_zeigen` ueber den Weg, den
+    /// diese Probe haelt, und ein Blatt laesst sich unter `libtest` nicht
+    /// bedienen.
+    #[test]
+    fn ein_gegenstand_im_archiv_nimmt_den_endgueltigen_weg_und_antwortet_am_wert() {
+        let voll = gegenstand(&["a.txt"]);
+        assert!(!voll.ist_leer());
+        assert!(gegenstand(&[]).ist_leer());
+        for gewuenscht in [Loeschweg::Papierkorb, Loeschweg::Endgueltig] {
+            assert_eq!(voll.weg(gewuenscht), Loeschweg::Endgueltig);
+        }
+        assert!(
+            rumpf(&diese_datei(), "loeschen_nach_rueckfrage")
+                .contains("Loeschgegenstand::Archiv { .. } => Erlaubnisbefund::Nein"),
+            "ein Archiv beantwortet die Papierkorbfrage nicht am Wert"
+        );
+    }
+
+    /// Der Loeschweg im Archiv stellt auf dem Hauptfaden keinen Systemaufruf:
+    /// in den Ruempfen des gemeinsamen Loeschwegs und seiner Stuecke fuer das
+    /// Archiv steht weder `canonicalize(` noch `fuehrt_einen_papierkorb(` noch
+    /// `umfang::zaehlen(` noch `fs::`, dieselben Nadeln wie fuer den fernen
+    /// Weg.
+    ///
+    /// **Was sie nicht sieht:** ob `loeschblatt_zeigen` einen Gegenstand im
+    /// Archiv wirklich an `archiv_loeschtexte` gibt; das haelt seine
+    /// vollstaendige Verzweigung, die der Uebersetzer prueft. Und einen
+    /// Systemaufruf in einer tiefer gerufenen Funktion, etwa in
+    /// `betroffene_namen_und_ordnerzahl`, die allein das Ordnermodell liest.
+    #[test]
+    fn der_archivloeschweg_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
+        let datei = diese_datei();
+        for name in [
+            "loeschen_nach_rueckfrage",
+            "loeschgegenstand",
+            "loeschblatt_zeigen",
+            "archiv_loeschtexte",
+            "loeschauftrag_stellen",
+            "entfernt_loeschen",
+        ] {
+            let rumpf = rumpf(&datei, name);
+            for nadel in [
+                "canonicalize(",
+                concat!("fuehrt_einen_", "papierkorb("),
+                concat!("umfang::", "zaehlen("),
+                "fs::",
+            ] {
+                assert!(
+                    !rumpf.contains(nadel),
+                    "{name} enthaelt {nadel}: ein Systemaufruf auf dem Hauptfaden"
+                );
+            }
+        }
     }
 }

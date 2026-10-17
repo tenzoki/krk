@@ -326,6 +326,19 @@ impl Archivleser {
         &self.verzeichnis
     }
 
+    /// Dasselbe Inhaltsverzeichnis, geteilt: fuer einen Rufer, der es haelt,
+    /// waehrend er den Leser veraendert, etwa beim Lesen einer Verknuepfung.
+    #[must_use]
+    pub fn geteiltes_verzeichnis(&self) -> Arc<Inhaltsverzeichnis> {
+        Arc::clone(&self.verzeichnis)
+    }
+
+    /// Der Zugang zur Archivdatei, aus der dieser Leser liest.
+    #[must_use]
+    pub fn zugang(&self) -> &Arc<Archivzugang> {
+        &self.zugang
+    }
+
     /// Ob das Archiv ein tar-Strom ist, gepackt oder nicht, der sich allein
     /// vorwaerts lesen laesst; dann lohnt die [`Archivleser::lesefolge`].
     #[must_use]

@@ -336,6 +336,35 @@ pub fn ort_neu_lesen(sicht: &impl Dateifenstersicht, gemeldet: &Ort) -> usize {
     aufgefrischt
 }
 
+/// Die Orte, die der Abschluss eines Vorgangs ueber [`ort_neu_lesen`] meldet,
+/// aus den Orten des Vorgangs.
+///
+/// **Ein Ort in einem Archiv wird zum Ordner seiner Archivdatei** (E16 des
+/// Plans `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`): ein
+/// Umbau ersetzt die ganze Datei, also ist jeder Tab auf dieser Archivdatei
+/// betroffen, gleich welchen Ordner darin er zeigt, und ebenso der lokale Tab,
+/// der die Archivdatei mit ihrer neuen Groesse listet. Beide erreicht die
+/// Meldung ueber den Ordner der Datei ([`zeigt_gemeldeten_ort`]). Ein Ort
+/// steht danach hoechstens einmal in der Liste, damit kein Tab zweimal liest.
+/// Rein am Wert, ohne Systemaufruf.
+#[must_use]
+pub fn gemeldete_orte(orte: Vec<Ort>) -> Vec<Ort> {
+    let mut gemeldet: Vec<Ort> = Vec::with_capacity(orte.len());
+    for ort in orte {
+        let ort = match ort {
+            Ort::Archiv(archiv) => match archiv.datei().parent() {
+                Some(ordner) => Ort::Lokal(ordner.to_path_buf()),
+                None => Ort::Archiv(archiv),
+            },
+            andere @ (Ort::Lokal(_) | Ort::Fern(_)) => andere,
+        };
+        if !gemeldet.contains(&ort) {
+            gemeldet.push(ort);
+        }
+    }
+    gemeldet
+}
+
 /// Ob ein Vorgang dieser Art die Auffrischung seiner Ordner aufschiebt.
 ///
 /// **Die eine Stelle, an der "schnell" entschieden wird.** Die
@@ -905,6 +934,40 @@ mod tests {
     /// Ein Archivtab beobachtet den Ordner seiner Archivdatei, frischt auf
     /// eine Meldung dort auf und auf keine ueber seinen Rueckkehrpfad hinaus;
     /// zwei Archivorte vergleichen sich am Wert (E16 des Plans der Archive).
+    /// Nach einem Umbau liest jeder Tab auf derselben Archivdatei neu, gleich
+    /// welchen Ordner darin er zeigt, und der lokale Tab, der die Archivdatei
+    /// listet: der Abschluss meldet einen Archivort als Ordner seiner Datei
+    /// ([`gemeldete_orte`]), und derselbe Ordner steht nur einmal da (E16 des
+    /// Plans der Archive).
+    #[test]
+    fn nach_einem_umbau_liest_jeder_tab_auf_der_archivdatei_neu() {
+        let zugang = std::sync::Arc::new(krk_core::archiv::Archivzugang::neu(
+            PathBuf::from("/c/paket.zip"),
+            krk_core::archiv::Archivformat::Zip,
+        ));
+        let wurzel = krk_core::ort::Archivort::wurzel(zugang);
+        let innen = wurzel.kind("innen").expect("Name");
+        let gemeldet = gemeldete_orte(vec![
+            Ort::Archiv(innen.clone()),
+            Ort::Lokal(PathBuf::from("/c")),
+            Ort::Lokal(PathBuf::from("/d")),
+        ]);
+        assert_eq!(
+            gemeldet,
+            [
+                Ort::Lokal(PathBuf::from("/c")),
+                Ort::Lokal(PathBuf::from("/d"))
+            ]
+        );
+
+        let probe = Probe::neu("/a", "/c").mit_archiv(Fensterseite::Links, wurzel);
+        let mut gelesen = 0;
+        for ort in gemeldete_orte(vec![Ort::Archiv(innen)]) {
+            gelesen += ort_neu_lesen(&probe, &ort);
+        }
+        assert_eq!(gelesen, 2, "{:?}", probe.protokoll());
+    }
+
     #[test]
     fn ein_archivtab_beobachtet_den_ordner_seiner_datei() {
         let ort = |innen: &str| {

@@ -4951,8 +4951,14 @@ impl DateifensterQuelle {
                 quellen.gemeinsamer_ordner.as_deref() == Some(ordner.as_path()),
             ),
             Ort::Fern(_) => (Schreibrecht::Unbekannt, false),
-            // Hineinkopieren kommt erst mit dem Umbau (Schritt 2 des Plans der
-            // Archive); bis dahin weist ein Archivfenster jeden Abwurf ab.
+            // Ein Archiv, in das KRK schreiben darf, nimmt den Abwurf an wie
+            // ein ferner Ort: ob der Ordner der Archivdatei beschreibbar ist,
+            // fragt erst der Umbau auf seinem Faden, und was er nicht schreiben
+            // kann, steht in der Abschlussliste. Ein Archiv, das KRK allein
+            // lesen darf, weist ihn am Wert ab (E14 des Plans der Archive).
+            Ort::Archiv(archiv) if archiv.format().beschreibbar() => {
+                (Schreibrecht::Unbekannt, false)
+            }
             Ort::Archiv(_) => (Schreibrecht::Nein, false),
         };
         let gefaellt = abwurfregel::urteil(&Abwurflage {

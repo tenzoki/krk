@@ -1192,10 +1192,15 @@ fn ein_ferner_baum_wird_endgueltig_entfernt() {
 
 /// Der lokale Auftrag ist unveraendert: `Auftrag`, `Art`, der Rumpf von
 /// `einen_abarbeiten` und die Dateien des lokalen Kopierens und Verschiebens
-/// nennen keinen fernen Ort.
+/// nennen keinen fernen Ort und keinen Ort in einem Archiv.
 ///
 /// Gesucht wird nach ganzen Bezeichnern im Code, Kommentare ausgenommen:
-/// `Ort`, `FernerOrt`, `fern` und jeder Bezeichner, der mit `Fern` beginnt.
+/// `Ort`, `FernerOrt`, `fern` und jeder Bezeichner, der mit `Fern` beginnt;
+/// seit dem Schreiben in Archive (Schritt 6 des Plans
+/// `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`) dazu
+/// `archiv`, `umbau` und jeder Bezeichner, der mit `Archiv` oder `Umbau`
+/// beginnt. Der Name `archiv_entpacken` des lokalen Entpackens ist ein ganzer
+/// Bezeichner und trifft keine davon.
 ///
 /// # Was diese Nadel nicht sieht
 ///
@@ -1251,6 +1256,10 @@ fn der_lokale_auftrag_ist_unveraendert() {
                     || wort == "FernerOrt"
                     || wort == "fern"
                     || wort.starts_with("Fern")
+                    || wort == "archiv"
+                    || wort == "umbau"
+                    || wort.starts_with("Archiv")
+                    || wort.starts_with("Umbau")
                 {
                     funde.push(format!("{name}: {}", zeile.trim()));
                 }
@@ -1259,6 +1268,6 @@ fn der_lokale_auftrag_ist_unveraendert() {
     }
     assert!(
         funde.is_empty(),
-        "der lokale Weg nennt einen fernen Ort: {funde:?}"
+        "der lokale Weg nennt einen fernen Ort oder ein Archiv: {funde:?}"
     );
 }
