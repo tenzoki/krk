@@ -3,7 +3,7 @@
   "id": "e968d67c-1aa5-466e-9699-8e6fdbbe5b03",
   "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
   "domain": "code",
-  "status": "claimed",
+  "status": "done",
   "claim": {
     "checkout_id": "6c11b1f2",
     "person": "Kai Stalmann <kai@stalmann.org>",
@@ -44,7 +44,11 @@
   ],
   "references": [],
   "evidence": [],
-  "outcome": null,
+  "outcome": {
+    "class": "completed",
+    "reason": "sftp-Ordner im Dateifenster mit Lesen, Kopieren, Verschieben, Umbenennen, Anlegen, endgueltigem Loeschen und Rechnerschluesselblatt (d407cd14..6415a776); Nutzertest gegen ssh.strato.de bestanden fuer Lesezeichen, Klick, Kopieren, Verschieben, Loeschen; Messung vom Nutzer verzichtet",
+    "evidence": []
+  },
   "provenance": {
     "source": "created",
     "legacy_fields": {}
