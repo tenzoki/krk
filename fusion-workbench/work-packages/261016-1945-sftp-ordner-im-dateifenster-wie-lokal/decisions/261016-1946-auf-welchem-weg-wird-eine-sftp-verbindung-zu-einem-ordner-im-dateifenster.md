@@ -27,3 +27,6 @@ C-Freiheits-Zusage (kein `cc`, kein `-sys` auf beiden Mac-Zielen); lokale Ordner
 
 ---
 Answered: 261016-1746-sftp-verbindung-als-dateisystem-machbarkeit.md — Möglichkeit 2, KRK spricht SFTP über das ssh des Systems; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: crates/krk-core/src/fern/kanal.rs (Modulkopf), crates/krk-core/src/fern/gespraech.rs — SFTP v3 ueber /usr/bin/ssh -s sftp, ohne neue Kiste

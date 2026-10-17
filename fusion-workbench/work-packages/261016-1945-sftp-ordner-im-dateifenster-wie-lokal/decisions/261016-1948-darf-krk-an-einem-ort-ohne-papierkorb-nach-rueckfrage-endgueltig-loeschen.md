@@ -18,3 +18,6 @@ Seit der Runde 12 (`260817-0833-jeder-loeschweg-mit-rueckfrage-und-nur-noch-papi
 
 ---
 Answered: 261016-1948-darf-krk-an-einem-ort-ohne-papierkorb-nach-rueckfrage-endgueltig-loeschen.md — ja („endgültig löschen? ja“), nach einer Rückfrage, die das Endgültige ausspricht, an jedem Ort ohne Papierkorb; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: crates/krk-core/src/operation/loeschen.rs (Modulkopf), crates/krk-ui/src/kommandos/loeschwarnung.rs — eigene Rueckfrage, die endgueltig ausspricht, an jedem Ort ohne Papierkorb; unentschiedener Befund loescht nicht (545c8d31)

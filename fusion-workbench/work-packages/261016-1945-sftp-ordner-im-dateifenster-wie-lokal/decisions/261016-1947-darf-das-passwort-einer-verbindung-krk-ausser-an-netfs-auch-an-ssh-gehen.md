@@ -18,3 +18,6 @@ Bisher verlässt ein Passwort aus `secrets.txt` KRK allein als Argument von `Net
 
 ---
 Answered: 261016-1947-darf-das-passwort-einer-verbindung-krk-ausser-an-netfs-auch-an-ssh-gehen.md — ja („Passwort an ssh und sshfs ? ja“); ssh ist der zweite Empfänger, auf genau einem benannten Weg; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+---
+Implemented: crates/krk-ui/src/anmeldehilfe.rs (Modulkopf) — ssh ist der zweite Empfaenger ueber SSH_ASKPASS, genau ein zweiter benannter Rufer von Passwort::preisgeben

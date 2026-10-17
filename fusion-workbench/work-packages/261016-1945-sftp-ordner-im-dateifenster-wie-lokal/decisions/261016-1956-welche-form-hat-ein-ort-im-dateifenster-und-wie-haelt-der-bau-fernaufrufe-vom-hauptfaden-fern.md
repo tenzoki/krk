@@ -35,3 +35,6 @@ Mit Möglichkeit 2 der Machbarkeitsanalyse zeigt ein Dateifenster entweder einen
 ## Recommendation
 
 Möglichkeit 1. Sie macht beide Fragen am Wert und am Typ entscheidbar: „ist dieser Ort entfernt?“ ohne Systemaufruf, und „läuft diese Anfrage auf einem Arbeitsfaden?“ beim Übersetzen. Der Preis ist die breite Naht in den Tabs, und die bezahlt jede der drei Möglichkeiten; nur Möglichkeit 1 lässt dabei den lokalen Weg unverändert.
+
+---
+Implemented: crates/krk-core/src/ort.rs, crates/krk-core/src/fern/faden.rs (Modulkopf) — Moeglichkeit 1: Ort lokal oder fern, Pfand Fernfaden haelt Netzaufrufe vom Hauptfaden fern

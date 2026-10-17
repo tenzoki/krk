@@ -17,13 +17,13 @@
   },
   "extensions": {},
   "control": {
-    "state": "answered",
+    "state": "implemented",
     "answer_ref": {
       "kind": "other",
       "path": "work-packages/261016-1945-sftp-ordner-im-dateifenster-wie-lokal/decisions/261016-1947-darf-das-passwort-einer-verbindung-krk-ausser-an-netfs-auch-an-ssh-gehen.md",
       "sha256": "sha256:f2c0e301d85eb69e83e6f701c6d8312def3f0232e8711260965dce72020fd373"
     },
-    "implementation_ref": null,
+    "implementation_ref": "da26ef8f",
     "superseded_by": null,
     "deferral": null
   }
