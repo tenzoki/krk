@@ -1,0 +1,26 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "08e5754f-4e33-4256-aaab-ff71812598bf",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261017-1029-zip-und-gz-wie-ordner-im-dateifenster/issues/261017-2202-claude-md-nennt-eine-funktion-lokal-mit-spur-die-es-nicht-gibt-und-drei-arten-archiv-wo-der-umbau-vier-abweist.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "closed",
+    "disposition": {
+      "kind": "fixed",
+      "reason_ref": null
+    }
+  }
+}

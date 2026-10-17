@@ -78,6 +78,9 @@ impl Dateikennung {
 #[derive(Debug)]
 pub struct Archivzugang {
     datei: PathBuf,
+    /// Das aufgeloeste Ziel, wenn `datei` eine Verknuepfung ist und ein
+    /// Arbeitsfaden sie vor dem Einstieg aufgeloest hat; sonst `None`.
+    ziel: Option<PathBuf>,
     format: Archivformat,
     verzeichnis: Mutex<Option<Arc<Inhaltsverzeichnis>>>,
 }
@@ -88,6 +91,25 @@ impl Archivzugang {
     pub fn neu(datei: PathBuf, format: Archivformat) -> Self {
         Archivzugang {
             datei,
+            ziel: None,
+            format,
+            verzeichnis: Mutex::new(None),
+        }
+    }
+
+    /// Ein Zugang ueber die Verknuepfung `datei`, deren Ziel `ziel` schon
+    /// aufgeloest ist. Stellt keinen Systemaufruf: aufgeloest hat der Rufer,
+    /// und zwar auf einem Arbeitsfaden.
+    ///
+    /// Gelesen und geschrieben wird weiter ueber `datei`; das Ziel braucht
+    /// allein die Beobachtung, denn FSEvents meldet eine Aenderung der
+    /// Archivdatei am Ordner des Ziels und nicht an dem der Verknuepfung
+    /// ([`Archivzugang::aufgeloeste_datei`]).
+    #[must_use]
+    pub fn ueber_verknuepfung(datei: PathBuf, ziel: PathBuf, format: Archivformat) -> Self {
+        Archivzugang {
+            datei,
+            ziel: Some(ziel),
             format,
             verzeichnis: Mutex::new(None),
         }
@@ -97,6 +119,19 @@ impl Archivzugang {
     #[must_use]
     pub fn datei(&self) -> &Path {
         &self.datei
+    }
+
+    /// Die Archivdatei hinter einer Verknuepfung, wie sie beim Einstieg
+    /// aufgeloest wurde ([`Archivzugang::ueber_verknuepfung`]); ohne
+    /// Verknuepfung oder ohne Aufloesung dasselbe wie
+    /// [`Archivzugang::datei`]. Stellt keinen Systemaufruf.
+    ///
+    /// **Ein Stand vom Einstieg**: wird die Verknuepfung danach umgehaengt,
+    /// nennt diese Antwort weiter das alte Ziel, bis der Tab das Archiv neu
+    /// betritt.
+    #[must_use]
+    pub fn aufgeloeste_datei(&self) -> &Path {
+        self.ziel.as_deref().unwrap_or(&self.datei)
     }
 
     /// Das Format aus der Endung.

@@ -3249,29 +3249,29 @@ impl DateifensterQuelle {
     /// eigener Name oder der Name ihres Ziels die Endung eines Archivs traegt
     /// (E8 des Plans der Archive).
     ///
-    /// Der eigene Name geht wie eine Datei durch [`Self::archiv_betreten`].
-    /// Traegt er keine Endung, fragt ein Arbeitsfaden nach dem Ziel
-    /// ([`crate::tabs::Tabliste::verknuepfung_pruefen`]), und die Antwort
-    /// kommt im Einzug: ein Archiv wird betreten, sonst geht die Verknuepfung
-    /// an das System, wenn `oeffnen` gesetzt ist. **Auf dem Hauptfaden stellt
+    /// Ein Arbeitsfaden fragt nach dem Ziel
+    /// ([`crate::tabs::Tabliste::verknuepfung_pruefen`]), auch wenn schon der
+    /// eigene Name die Endung traegt: er loest das Ziel auf, und erst damit
+    /// beobachtet der Tab den Ordner der Archivdatei, wenn sie in einem
+    /// anderen liegt als die Verknuepfung. Die Antwort kommt im Einzug: ein
+    /// Archiv wird betreten, sonst geht die Verknuepfung an das System, wenn
+    /// `oeffnen` gesetzt ist. Laesst sich der Faden nicht starten, geht der
+    /// eigene Name wie eine Datei durch [`Self::archiv_betreten`], ohne
+    /// aufgeloestes Ziel. **Auf dem Hauptfaden stellt
     /// dieser Weg keinen Systemaufruf**; den einen, den der Verknuepfungszweig
     /// davor stellt, `verweisziel::bestimmen` mit seinem `stat(2)`, gab es
     /// schon vor den Archiven (Rumpfprobe
     /// `der_archiveinstieg_stellt_auf_dem_hauptfaden_keinen_systemaufruf`).
-    /// Laesst sich der Faden nicht starten, bleibt es beim alten Verhalten:
-    /// [`Einstieg::KeinOrdner`].
+    /// Traegt auch der eigene Name keine Endung, bleibt es beim alten
+    /// Verhalten: [`Einstieg::KeinOrdner`].
     fn verknuepfung_betreten(&self, verknuepfung: &Path, oeffnen: bool) -> Einstieg {
-        match self.archiv_betreten(verknuepfung) {
-            Einstieg::KeinOrdner => {}
-            betreten => return betreten,
-        }
         let laeuft = self
             .ivars()
             .tabs
             .borrow_mut()
             .verknuepfung_pruefen(verknuepfung.to_path_buf(), oeffnen);
         if !laeuft {
-            return Einstieg::KeinOrdner;
+            return self.archiv_betreten(verknuepfung);
         }
         self.einzug_starten();
         Einstieg::Ausstehend
@@ -7406,6 +7406,20 @@ mod tests {
                     .expect("zugang steht da");
                 let rest = &register_code[beginn..];
                 &rest[..rest.find("\n}\n").expect("zugang endet")]
+            }),
+            ("archivregister::zugang_ueber_verknuepfung", {
+                let beginn = register_code
+                    .find("pub fn zugang_ueber_verknuepfung(")
+                    .expect("zugang_ueber_verknuepfung steht da");
+                let rest = &register_code[beginn..];
+                &rest[..rest.find("\n}\n").expect("zugang_ueber_verknuepfung endet")]
+            }),
+            ("archivregister::nachschlagen", {
+                let beginn = register_code
+                    .find("fn nachschlagen(")
+                    .expect("nachschlagen steht da");
+                let rest = &register_code[beginn..];
+                &rest[..rest.find("\n}\n").expect("nachschlagen endet")]
             }),
         ];
         for (name, rumpf) in rumpfe {

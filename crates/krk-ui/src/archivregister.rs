@@ -50,10 +50,32 @@ thread_local! {
 /// halber da.
 #[must_use]
 pub fn zugang(datei: &Path, format: Archivformat) -> Arc<Archivzugang> {
+    nachschlagen(datei, None, format)
+}
+
+/// Der Zugang ueber die Verknuepfung `verknuepfung`, deren Ziel `ziel` ein
+/// Arbeitsfaden schon aufgeloest hat ([`Archivzugang::ueber_verknuepfung`]).
+///
+/// Stellt keinen Systemaufruf. Geteilt wird ein lebender Zugang nur, wenn er
+/// dasselbe aufgeloeste Ziel traegt; sonst ersetzt ein neuer ihn im Register,
+/// damit die Beobachtung dem Ziel folgt, das zuletzt aufgeloest wurde.
+#[must_use]
+pub fn zugang_ueber_verknuepfung(
+    verknuepfung: &Path,
+    ziel: &Path,
+    format: Archivformat,
+) -> Arc<Archivzugang> {
+    nachschlagen(verknuepfung, Some(ziel), format)
+}
+
+/// Der gemeinsame Rumpf beider Fragen: nachschlagen, sonst anlegen und
+/// vermerken. Ohne Systemaufruf.
+fn nachschlagen(datei: &Path, ziel: Option<&Path>, format: Archivformat) -> Arc<Archivzugang> {
     REGISTER.with(|register| {
         let mut register = register.borrow_mut();
         if let Some(lebend) = register.get(datei).and_then(Weak::upgrade)
             && lebend.format() == format
+            && ziel.is_none_or(|ziel| lebend.aufgeloeste_datei() == ziel)
         {
             return lebend;
         }
@@ -61,7 +83,12 @@ pub fn zugang(datei: &Path, format: Archivformat) -> Arc<Archivzugang> {
         // Register waechst damit hoechstens um die Archive, die zugleich
         // gezeigt werden, und ein weiterer.
         register.retain(|_, zugang| zugang.strong_count() > 0);
-        let neu = Arc::new(Archivzugang::neu(datei.to_path_buf(), format));
+        let neu = Arc::new(match ziel {
+            Some(ziel) => {
+                Archivzugang::ueber_verknuepfung(datei.to_path_buf(), ziel.to_path_buf(), format)
+            }
+            None => Archivzugang::neu(datei.to_path_buf(), format),
+        });
         register.insert(datei.to_path_buf(), Arc::downgrade(&neu));
         neu
     })
@@ -83,5 +110,25 @@ mod tests {
         let spaeter = zugang(datei, Archivformat::Zip);
         assert_eq!(spaeter.datei(), datei);
         assert_eq!(Arc::strong_count(&spaeter), 1);
+    }
+
+    /// Ueber eine Verknuepfung geteilt wird ein Zugang nur mit demselben
+    /// aufgeloesten Ziel; ein anderes Ziel bekommt einen neuen, den das
+    /// Register danach nennt, auch der Frage ohne Ziel.
+    #[test]
+    fn ueber_eine_verknuepfung_folgt_der_zugang_dem_ziel() {
+        let verknuepfung = Path::new("/gibt/es/nicht/aktuell");
+        let erstes = Path::new("/woanders/paket-1.zip");
+        let zweites = Path::new("/woanders/paket-2.zip");
+        let erster = zugang_ueber_verknuepfung(verknuepfung, erstes, Archivformat::Zip);
+        assert_eq!(erster.datei(), verknuepfung);
+        assert_eq!(erster.aufgeloeste_datei(), erstes);
+        let derselbe = zugang_ueber_verknuepfung(verknuepfung, erstes, Archivformat::Zip);
+        assert!(Arc::ptr_eq(&erster, &derselbe));
+        let anderer = zugang_ueber_verknuepfung(verknuepfung, zweites, Archivformat::Zip);
+        assert!(!Arc::ptr_eq(&erster, &anderer));
+        assert_eq!(anderer.aufgeloeste_datei(), zweites);
+        let ohne_ziel = zugang(verknuepfung, Archivformat::Zip);
+        assert!(Arc::ptr_eq(&anderer, &ohne_ziel));
     }
 }

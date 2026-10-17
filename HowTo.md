@@ -516,8 +516,8 @@ ersetzt das alte erst ganz am Ende in einem Schritt. Daraus folgt:
   zeigt seine Einträge mit dem Datum 1. Januar 1970.
 
 **Änderungen von außen erscheinen von selbst**: ein Archivtab beobachtet den
-Ordner, in dem die Archivdatei liegt, und liest das Archiv neu, wenn sie sich
-ändert. Gibt es den angezeigten Ordner danach im Archiv nicht mehr, geht der
+Ordner, in dem die Archivdatei liegt, über eine Verknüpfung betreten auch den
+Ordner ihres Ziels, und liest das Archiv neu, wenn sie sich ändert. Gibt es den angezeigten Ordner danach im Archiv nicht mehr, geht der
 Tab auf den nächsten vorhandenen Ordner darüber, notfalls auf die oberste
 Ebene; gibt es die Archivdatei nicht mehr, in den Ordner, in dem sie lag. Die
 Statuszeile nennt beide Male, was fehlt und was jetzt gezeigt wird. **Nach

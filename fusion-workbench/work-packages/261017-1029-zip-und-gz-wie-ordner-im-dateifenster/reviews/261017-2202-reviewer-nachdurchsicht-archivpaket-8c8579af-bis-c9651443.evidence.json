@@ -1,0 +1,28 @@
+{
+  "schema": "fusion.evidence/v1",
+  "id": "9876ff0c-cc3b-46f0-94e6-f64c794dfdea",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "subject": {
+    "git_tree": "797873b558cfa724087a17d5d3b365f77524d3a1",
+    "git_range": null
+  },
+  "brief_revision": "sha256:38a8e3e6031ada857b61bc9f7a0e8760c2304792c21d83ba68951221ea89a448",
+  "plan_revision": "sha256:6ec32b6f56f8e16090485d3cef8c4017d676444b044c9a7f53bc5b48d6f9cc09",
+  "role": {
+    "profile": "reviewer",
+    "version": "13.0.0"
+  },
+  "host": "claude-code",
+  "execution_policy": "claude-guided",
+  "verdict": "revise",
+  "uncertainties": [],
+  "checks": [],
+  "report": {
+    "path": "work-packages/261017-1029-zip-und-gz-wie-ordner-im-dateifenster/reviews/261017-2202-reviewer-nachdurchsicht-archivpaket-8c8579af-bis-c9651443.md",
+    "sha256": "sha256:c25c8d3b5740939c4cadfe2c7eb7e51b489220da7138e703802f0cb307be9e70",
+    "kind": "review"
+  },
+  "predecessor": null,
+  "accepted_at": "2026-10-17T20:04:18Z",
+  "extensions": {}
+}

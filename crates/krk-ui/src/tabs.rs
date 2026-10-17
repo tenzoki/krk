@@ -206,8 +206,9 @@ struct Verweispruefung {
     /// Ob eine Verknuepfung, die kein Archiv nennt, an das System geht: ja
     /// fuer den Doppelklick, nein fuer den Rechts-Pfeil.
     oeffnen: bool,
-    /// Die Antwort des Fadens: das Format, das der Name des Ziels traegt.
-    antwort: Receiver<Option<Archivformat>>,
+    /// Die Antwort des Fadens: das Archivformat und das aufgeloeste Ziel
+    /// ([`verweisziel_format`]).
+    antwort: Receiver<Option<Verweisziel>>,
 }
 
 /// Ein Tab: sein Ort, sein Inhalt und sein Lesevorgang.
@@ -441,9 +442,10 @@ impl Tabinhalt {
     }
 
     /// Die Antwort einer laufenden [`Verweispruefung`], sobald sie da ist:
-    /// die Verknuepfung, ob sie an das System geht, und das Format ihres
-    /// Ziels. Ein Faden, der ohne Antwort endet, zaehlt als „kein Archiv“.
-    fn verweisantwort(&mut self) -> Option<(PathBuf, bool, Option<Archivformat>)> {
+    /// die Verknuepfung, ob sie an das System geht, und, nennt sie ein
+    /// Archiv, dessen Format und aufgeloestes Ziel. Ein Faden, der ohne
+    /// Antwort endet, zaehlt als „kein Archiv“.
+    fn verweisantwort(&mut self) -> Option<(PathBuf, bool, Option<Verweisziel>)> {
         let pruefung = self.verweispruefung.as_ref()?;
         let format = match pruefung.antwort.try_recv() {
             Ok(format) => format,
@@ -1591,17 +1593,20 @@ impl Tabliste {
     }
 
     /// Fragt auf einem Arbeitsfaden, ob die lokale Verknuepfung `verknuepfung`
-    /// im sichtbaren Tab auf ein Archiv zeigt, also ob der **Name ihres Ziels**
-    /// die Endung eines Archivs traegt (E8 des Plans der Archive); ihr eigener
-    /// Name traegt keine, sonst haette der Einstieg sie schon betreten.
+    /// im sichtbaren Tab auf ein Archiv zeigt, also ob ihr eigener Name oder
+    /// der **Name ihres Ziels** die Endung eines Archivs traegt (E8 des Plans
+    /// der Archive), und loest dabei ihr Ziel auf.
     ///
     /// **Ohne Systemaufruf auf dem Hauptfaden** (E5): das Ziel loest
     /// [`verweisziel_format`] auf dem Faden auf, und die Antwort holt
-    /// [`Tabliste::einziehen`] ab. Nennt das Ziel ein Archiv, betritt der Tab
-    /// es unter dem Namen der Verknuepfung, wie ein Archiv mit eigener Endung;
-    /// sonst traegt der Einzug die Verknuepfung in [`Einzug::an_das_system`],
-    /// wenn `oeffnen` gesetzt ist. Die Antwort faellt mit jedem Ortswechsel des
-    /// Tabs, denn der baut den Tab neu.
+    /// [`Tabliste::einziehen`] ab. Nennt sie ein Archiv, betritt der Tab es
+    /// unter dem Namen der Verknuepfung, und der Zugang traegt das
+    /// aufgeloeste Ziel, damit die Beobachtung auch den Ordner der
+    /// Archivdatei nimmt, wenn er ein anderer ist als der der Verknuepfung
+    /// (`auffrischung::archivordner`); sonst traegt der Einzug die
+    /// Verknuepfung in [`Einzug::an_das_system`], wenn `oeffnen` gesetzt ist.
+    /// Die Antwort faellt mit jedem Ortswechsel des Tabs, denn der baut den
+    /// Tab neu.
     ///
     /// Zurueck kommt, ob die Frage laeuft; `false` heisst, der Faden liess sich
     /// nicht starten, und der Rufer behandelt die Verknuepfung wie vorher als
@@ -1966,11 +1971,22 @@ impl Tabliste {
                 veraendert.ort_neu = true;
                 veraendert.meldung_neu = true;
             }
-            if let Some((verknuepfung, oeffnen, format)) = self.tabs[stelle].verweisantwort() {
-                match format {
-                    Some(format) => {
+            if let Some((verknuepfung, oeffnen, archiv)) = self.tabs[stelle].verweisantwort() {
+                match archiv {
+                    Some(Verweisziel { format, ziel }) => {
                         let rueckkehr = self.tabs[stelle].ort.sitzungsordner().to_path_buf();
-                        let zugang = crate::archivregister::zugang(&verknuepfung, format);
+                        // Das Ziel hat der Faden schon aufgeloest; der Zugang
+                        // traegt es, damit die Beobachtung den Ordner der
+                        // Archivdatei nimmt und nicht allein den der
+                        // Verknuepfung (`auffrischung::archivordner`).
+                        let zugang = match ziel {
+                            Some(ziel) => crate::archivregister::zugang_ueber_verknuepfung(
+                                &verknuepfung,
+                                &ziel,
+                                format,
+                            ),
+                            None => crate::archivregister::zugang(&verknuepfung, format),
+                        };
                         self.ort_setzen_an(
                             stelle,
                             Tabort::Archiv {
@@ -2486,14 +2502,35 @@ fn ausweichziel(ort: &Tabort, abschluss: &Abschluss) -> Option<Ausweichen> {
     }
 }
 
-/// Das Format, das der Name des Ziels der Verknuepfung `verknuepfung` traegt,
-/// nach dem Aufloesen der ganzen Kette; `None`, wenn das Ziel keine Endung
-/// eines Archivs traegt oder sich nicht aufloesen laesst. **Stellt
+/// Was der Faden von [`Tabliste::verknuepfung_pruefen`] ueber eine
+/// Verknuepfung auf ein Archiv herausgefunden hat.
+#[derive(Debug)]
+struct Verweisziel {
+    /// Das Format aus dem eigenen Namen der Verknuepfung, sonst aus dem Namen
+    /// ihres Ziels.
+    format: Archivformat,
+    /// Das Ziel nach dem Aufloesen der ganzen Kette; `None`, wenn es sich
+    /// nicht aufloesen liess. Dann betritt der Tab das Archiv trotzdem, wenn
+    /// der eigene Name die Endung traegt, und dessen Leser meldet den Grund.
+    ziel: Option<PathBuf>,
+}
+
+/// Das Archivformat einer Verknuepfung und ihr aufgeloestes Ziel; `None`,
+/// wenn weder ihr eigener Name noch der ihres Ziels die Endung eines Archivs
+/// traegt. Der eigene Name geht vor, wie bei einer Datei. **Stellt
 /// Systemaufrufe und wird allein auf dem Faden von
 /// [`Tabliste::verknuepfung_pruefen`] gerufen.**
-fn verweisziel_format(verknuepfung: &Path) -> Option<Archivformat> {
-    let ziel = std::fs::canonicalize(verknuepfung).ok()?;
-    ziel.file_name().and_then(Archivformat::aus_namen)
+fn verweisziel_format(verknuepfung: &Path) -> Option<Verweisziel> {
+    let ziel = std::fs::canonicalize(verknuepfung).ok();
+    let format = verknuepfung
+        .file_name()
+        .and_then(Archivformat::aus_namen)
+        .or_else(|| {
+            ziel.as_deref()?
+                .file_name()
+                .and_then(Archivformat::aus_namen)
+        })?;
+    Some(Verweisziel { format, ziel })
 }
 
 /// Wie ein Archivformat in einer Meldung heisst: die Endung, die es traegt,
@@ -4947,6 +4984,11 @@ mod tests {
             ort.datei(),
             aktuell,
             "betreten unter dem Namen der Verknuepfung"
+        );
+        assert_eq!(
+            ort.zugang.aufgeloeste_datei(),
+            std::fs::canonicalize(ordner.unter("paket-1.2.zip")).expect("canonicalize"),
+            "der Zugang traegt das auf dem Faden aufgeloeste Ziel"
         );
         assert!(ort.innen.ist_wurzel());
         assert_eq!(rueckkehr, ordner.pfad());

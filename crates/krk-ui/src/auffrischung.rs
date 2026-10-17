@@ -167,7 +167,8 @@ pub trait Dateifenstersicht {
     fn auffrischung_vormerken(&self, seite: Fensterseite);
 }
 
-/// Die Ordner, die beobachtet werden. Hoechstens drei.
+/// Die Ordner, die beobachtet werden. Hoechstens fuenf: je Dateifenster
+/// einer, ein Archivtab ueber eine Verknuepfung zwei, und der des Editors.
 ///
 /// Das ist die Liste, die der `FSEventStream` bekommt. Sie hat zwei Quellen und
 /// ist trotzdem eine Liste: **ein Strom und nicht zwei**, weil ein zweiter
@@ -193,10 +194,12 @@ pub trait Dateifenstersicht {
 /// **Ein Ordner in einem Archiv beobachtet den Ordner seiner Archivdatei**
 /// (E16 des Plans `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`):
 /// FSEvents meldet eine Aenderung der Datei an ihrem Ordner, und
-/// [`ort_neu_lesen`] liest den Archivtab daraufhin neu. Der Ordner kommt aus
-/// dem Pfad am Wert, ohne Systemaufruf.
+/// [`ort_neu_lesen`] liest den Archivtab daraufhin neu. Ist der Tab ueber
+/// eine Verknuepfung betreten, deren Ziel in einem anderen Ordner liegt, sind
+/// es zwei Ordner ([`archivordner`]). Beide kommen aus Pfaden am Wert, ohne
+/// Systemaufruf.
 pub fn sichtbare_ordner(sicht: &impl Dateifenstersicht) -> Vec<PathBuf> {
-    let mut ordner: Vec<PathBuf> = Vec::with_capacity(3);
+    let mut ordner: Vec<PathBuf> = Vec::with_capacity(5);
     let mut aufnehmen = |dieser: PathBuf| {
         if !ordner.iter().any(|schon| gleicher_ordner(schon, &dieser)) {
             ordner.push(dieser);
@@ -210,7 +213,7 @@ pub fn sichtbare_ordner(sicht: &impl Dateifenstersicht) -> Vec<PathBuf> {
             Ort::Lokal(dieser) => aufnehmen(dieser),
             Ort::Fern(_) => {}
             Ort::Archiv(archiv) => {
-                if let Some(ordner_der_datei) = archiv.datei().parent() {
+                for ordner_der_datei in archivordner(&archiv) {
                     aufnehmen(ordner_der_datei.to_path_buf());
                 }
             }
@@ -218,6 +221,30 @@ pub fn sichtbare_ordner(sicht: &impl Dateifenstersicht) -> Vec<PathBuf> {
     }
     if let Some(ordner_der_datei) = editorordner(sicht.editordatei().as_deref()) {
         aufnehmen(ordner_der_datei);
+    }
+    ordner
+}
+
+/// Die Ordner, an denen FSEvents eine Aenderung dieser Archivdatei meldet:
+/// der Ordner des Pfades im Tab und, ist das Archiv ueber eine Verknuepfung
+/// betreten, der Ordner ihres beim Einstieg aufgeloesten Ziels
+/// ([`krk_core::archiv::Archivzugang::aufgeloeste_datei`]), wenn er ein
+/// anderer ist.
+///
+/// **Ohne Systemaufruf**: aufgeloest hat der Faden der Verweisfrage beim
+/// Einstieg (`Tabliste::verknuepfung_pruefen`), und hier wird allein am Wert
+/// verglichen. Der Ordner der Verknuepfung bleibt dabei, denn eine
+/// umgehaengte Verknuepfung meldet FSEvents dort. Zwei Schreibweisen
+/// desselben Ordners stehen hier allenfalls doppelt; die Rufer nehmen jeden
+/// Ordner hoechstens einmal auf.
+fn archivordner(archiv: &krk_core::ort::Archivort) -> Vec<&Path> {
+    let mut ordner: Vec<&Path> = Vec::with_capacity(2);
+    for datei in [archiv.datei(), archiv.zugang.aufgeloeste_datei()] {
+        if let Some(dieser) = datei.parent()
+            && !ordner.contains(&dieser)
+        {
+            ordner.push(dieser);
+        }
     }
     ordner
 }
@@ -344,22 +371,33 @@ pub fn ort_neu_lesen(sicht: &impl Dateifenstersicht, gemeldet: &Ort) -> usize {
 /// Umbau ersetzt die ganze Datei, also ist jeder Tab auf dieser Archivdatei
 /// betroffen, gleich welchen Ordner darin er zeigt, und ebenso der lokale Tab,
 /// der die Archivdatei mit ihrer neuen Groesse listet. Beide erreicht die
-/// Meldung ueber den Ordner der Datei ([`zeigt_gemeldeten_ort`]). Ein Ort
+/// Meldung ueber den Ordner der Datei ([`zeigt_gemeldeten_ort`]). Ueber eine
+/// Verknuepfung betreten sind es zwei Ordner ([`archivordner`]), damit auch
+/// der lokale Tab auf dem Ordner des Ziels die neue Groesse zeigt. Ein Ort
 /// steht danach hoechstens einmal in der Liste, damit kein Tab zweimal liest.
 /// Rein am Wert, ohne Systemaufruf.
 #[must_use]
 pub fn gemeldete_orte(orte: Vec<Ort>) -> Vec<Ort> {
     let mut gemeldet: Vec<Ort> = Vec::with_capacity(orte.len());
     for ort in orte {
-        let ort = match ort {
-            Ort::Archiv(archiv) => match archiv.datei().parent() {
-                Some(ordner) => Ort::Lokal(ordner.to_path_buf()),
-                None => Ort::Archiv(archiv),
-            },
-            andere @ (Ort::Lokal(_) | Ort::Fern(_)) => andere,
+        let neue = match ort {
+            Ort::Archiv(archiv) => {
+                let ordner: Vec<Ort> = archivordner(&archiv)
+                    .into_iter()
+                    .map(|ordner| Ort::Lokal(ordner.to_path_buf()))
+                    .collect();
+                if ordner.is_empty() {
+                    vec![Ort::Archiv(archiv)]
+                } else {
+                    ordner
+                }
+            }
+            andere @ (Ort::Lokal(_) | Ort::Fern(_)) => vec![andere],
         };
-        if !gemeldet.contains(&ort) {
-            gemeldet.push(ort);
+        for ort in neue {
+            if !gemeldet.contains(&ort) {
+                gemeldet.push(ort);
+            }
         }
     }
     gemeldet
@@ -624,15 +662,16 @@ fn gleicher_ort(einer: &Ort, anderer: &Ort) -> bool {
 ///
 /// Derselbe Ort ([`gleicher_ort`]), und dazu der eine Fall, den FSEvents
 /// ueber einen anderen Ort meldet: ein Archivtab, dessen Archivdatei im
-/// gemeldeten lokalen Ordner liegt. Die Kennungspruefung des Zugangs macht
+/// gemeldeten lokalen Ordner liegt, unter dem Pfad im Tab oder unter dem
+/// aufgeloesten Ziel ihrer Verknuepfung ([`archivordner`]). Die
+/// Kennungspruefung des Zugangs macht
 /// das Neulesen billig, wenn die Meldung einer anderen Datei galt (E3, E16
 /// des Plans der Archive).
 fn zeigt_gemeldeten_ort(angezeigt: &Ort, gemeldet: &Ort) -> bool {
     match (angezeigt, gemeldet) {
-        (Ort::Archiv(archiv), Ort::Lokal(ordner)) => archiv
-            .datei()
-            .parent()
-            .is_some_and(|ordner_der_datei| gleicher_ordner(ordner_der_datei, ordner)),
+        (Ort::Archiv(archiv), Ort::Lokal(ordner)) => archivordner(archiv)
+            .into_iter()
+            .any(|ordner_der_datei| gleicher_ordner(ordner_der_datei, ordner)),
         (Ort::Archiv(_), Ort::Fern(_) | Ort::Archiv(_)) | (Ort::Lokal(_) | Ort::Fern(_), _) => {
             gleicher_ort(angezeigt, gemeldet)
         }
@@ -1000,6 +1039,57 @@ mod tests {
             &Ort::Archiv(ort("")),
             &Ort::Lokal(PathBuf::from("/c/paket.zip"))
         ));
+    }
+
+    /// Ein Archivtab, der ueber eine Verknuepfung `/a/aktuell ->
+    /// /c/paket-1.2.zip` betreten ist, beobachtet auch den Ordner des Ziels,
+    /// frischt auf eine Meldung dort auf, und der Abschluss eines Umbaus
+    /// meldet beide Ordner (Defekt
+    /// `261017-2202-ein-ueber-eine-verknuepfung-betretenes-archiv-in-einem-anderen-ordner-sieht-aenderungen-von-aussen-nicht.md`).
+    /// Ohne Systemaufruf: die Pfade gibt es nicht.
+    #[test]
+    fn ein_ueber_eine_verknuepfung_betretenes_archiv_beobachtet_den_ordner_seines_ziels() {
+        let zugang = std::sync::Arc::new(krk_core::archiv::Archivzugang::ueber_verknuepfung(
+            PathBuf::from("/a/aktuell"),
+            PathBuf::from("/c/paket-1.2.zip"),
+            krk_core::archiv::Archivformat::Zip,
+        ));
+        let wurzel = krk_core::ort::Archivort::wurzel(zugang);
+        let probe = Probe::neu("/x", "/b").mit_archiv(Fensterseite::Links, wurzel.clone());
+        assert_eq!(
+            sichtbare_ordner(&probe),
+            [
+                PathBuf::from("/a"),
+                PathBuf::from("/c"),
+                PathBuf::from("/b")
+            ]
+        );
+        assert_eq!(ordner_neu_lesen(&probe, Path::new("/c")), 1);
+        assert_eq!(ordner_neu_lesen(&probe, Path::new("/a")), 1);
+        assert_eq!(ordner_neu_lesen(&probe, Path::new("/d")), 0);
+        assert_eq!(probe.protokoll(), ["neu_lesen 0", "neu_lesen 0"]);
+        assert_eq!(
+            gemeldete_orte(vec![Ort::Archiv(wurzel), Ort::Lokal(PathBuf::from("/c"))]),
+            [
+                Ort::Lokal(PathBuf::from("/a")),
+                Ort::Lokal(PathBuf::from("/c"))
+            ]
+        );
+
+        // Liegt das Ziel neben der Verknuepfung, bleibt es bei einem Ordner.
+        let nebenan = std::sync::Arc::new(krk_core::archiv::Archivzugang::ueber_verknuepfung(
+            PathBuf::from("/a/aktuell"),
+            PathBuf::from("/a/paket-1.2.zip"),
+            krk_core::archiv::Archivformat::Zip,
+        ));
+        let probe = Probe::neu("/x", "/b").mit_archiv(
+            Fensterseite::Links,
+            krk_core::ort::Archivort::wurzel(nebenan),
+        );
+        assert_eq!(
+            sichtbare_ordner(&probe),
+            [PathBuf::from("/a"), PathBuf::from("/b")]
+        );
     }
 
     #[test]
