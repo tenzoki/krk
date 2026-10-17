@@ -140,6 +140,22 @@ impl Pruefordner {
         assert!(stand.success(), "mkfifo ist gescheitert: {stand:?}");
         pfad
     }
+
+    /// Packt den Unterordner `inhalt` mit `/usr/bin/zip` als `name` in den
+    /// Pruefordner und liefert den Pfad des Archivs.
+    ///
+    /// Ueber das Werkzeug des Systems aus dem Grund von [`Self::roehre`]:
+    /// `krk-ui` fuehrt keine Zip-Kiste, und der Plan der Archive nennt das
+    /// Werkzeug des Systems als Gegenprobe zu dem, was KRK liest.
+    pub fn zip_packen(&self, name: &str, inhalt: &str) -> PathBuf {
+        let stand = std::process::Command::new("/usr/bin/zip")
+            .args(["-qr", name, inhalt])
+            .current_dir(self.pfad())
+            .status()
+            .expect("zip laesst sich nicht starten");
+        assert!(stand.success(), "zip ist gescheitert: {stand:?}");
+        self.unter(name)
+    }
 }
 
 impl Drop for Pruefordner {

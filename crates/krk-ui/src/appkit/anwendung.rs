@@ -5435,6 +5435,7 @@ impl Anwendungsdelegierter {
         match ordner {
             Dateiort::Lokal(ordner) => self.dateifenster(ziel).quelle().ordner_lesen(&ordner, None),
             Dateiort::Fern(ort) => self.dateifenster(ziel).quelle().fern_lesen(ort, None),
+            Dateiort::Archiv(ort) => self.dateifenster(ziel).quelle().archiv_lesen(ort, None),
         }
         true
     }
@@ -7394,6 +7395,13 @@ impl Anwendungsdelegierter {
         let quelle = self.dateifenster(aktiv).quelle().angezeigter_ort();
         let ziel = self.dateifenster(aktiv.andere()).quelle().angezeigter_ort();
         match (quelle, ziel) {
+            // Bis die Archivstelle und der Umbau gebaut sind, stellt die
+            // Oberflaeche keinen Vorgang mit einer Archivseite (Schritt 2 des
+            // Plans `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`).
+            (Dateiort::Archiv(_), _) | (_, Dateiort::Archiv(_)) => {
+                self.antwort_zeigen(aktiv, text(Text::ImArchivNichtVerfuegbar));
+                true
+            }
             (Dateiort::Lokal(_), Dateiort::Lokal(ziel)) => {
                 let art = if verschieben {
                     Art::Verschieben { ziel }
@@ -7708,7 +7716,12 @@ impl Anwendungsdelegierter {
         let aktiv = self.ivars().modell.borrow().aktiv();
         // Was geloescht wuerde, am Wert des Tabs und ohne Systemaufruf: lokal
         // die Auswahl mit ihren Pfaden, fern die Namen unter dem fernen Ort.
-        let gegenstand = self.loeschgegenstand(aktiv);
+        // In einem Archiv loescht bis zum Umbau nichts (Schritt 2 des Plans
+        // der Archive).
+        let Some(gegenstand) = self.loeschgegenstand(aktiv) else {
+            self.antwort_zeigen(aktiv, text(Text::ImArchivNichtVerfuegbar));
+            return true;
+        };
 
         // Die beiden billigen Tatsachen der Regel, jede aus genau einer Quelle.
         // Sie stehen im Speicher, und die Reihenfolge, in der sie hier
@@ -7785,9 +7798,11 @@ impl Anwendungsdelegierter {
     /// Lokal die Auswahl aus [`crate::kommandos::operationen::betroffene`] mit
     /// ihren Pfaden; fern die Namen derselben Regel und die Zahl der Ordner
     /// darunter, aus dem Ordnermodell, das der ferne Leser gefuellt hat.
-    fn loeschgegenstand(&self, seite: Fensterseite) -> Loeschgegenstand {
+    /// `None` in einem Archiv: dort gibt es bis zum Umbau keinen Loeschweg.
+    fn loeschgegenstand(&self, seite: Fensterseite) -> Option<Loeschgegenstand> {
         let quelle = self.dateifenster(seite).quelle();
-        match quelle.angezeigter_ort() {
+        Some(match quelle.angezeigter_ort() {
+            Dateiort::Archiv(_) => return None,
             Dateiort::Lokal(ordner) => Loeschgegenstand::Lokal {
                 auswahl: quelle.betroffene_eintraege().unwrap_or_default(),
                 ordner,
@@ -7800,7 +7815,7 @@ impl Anwendungsdelegierter {
                     ordnerzahl,
                 }
             }
-        }
+        })
     }
 
     /// Die dritte Tatsache der Stufenregel fuer einen lokalen Ordner: der
@@ -8371,6 +8386,12 @@ impl Anwendungsdelegierter {
         let ordner = match ort {
             Dateiort::Lokal(ordner) => ordner,
             Dateiort::Fern(ordner) => return self.fern_anlegen(seite, art, ordner, name),
+            // Bis zum Umbau legt KRK in einem Archiv nichts an (Schritt 2 des
+            // Plans der Archive).
+            Dateiort::Archiv(_) => {
+                self.antwort_zeigen(seite, text(Text::ImArchivNichtVerfuegbar));
+                return;
+            }
         };
         let angelegt = match art {
             Anlegeart::Ordner => operation::ordner_anlegen(ordner, &name),
@@ -8410,6 +8431,12 @@ impl Anwendungsdelegierter {
         let ordner = match self.dateifenster(seite).quelle().angezeigter_ort() {
             Dateiort::Lokal(ordner) => ordner,
             Dateiort::Fern(ordner) => return self.fern_umbenennen(seite, &ordner, alt, neu),
+            // Bis zum Umbau benennt KRK in einem Archiv nichts um (Schritt 2
+            // des Plans der Archive).
+            Dateiort::Archiv(_) => {
+                self.antwort_zeigen(seite, text(Text::ImArchivNichtVerfuegbar));
+                return;
+            }
         };
         if let Err(fehler) = operation::umbenennen(&ordner.join(alt), neu) {
             self.antwort_zeigen(seite, &operationen::umbenennungsfehler(neu, &fehler));
@@ -8899,6 +8926,11 @@ impl Anwendungsdelegierter {
                     Abwurfvorgang::Verschieben => Auftrag::verschieben(quellen, &ziel),
                 };
                 let _ = self.auftrag_starten(seite, auftrag, ziel, positionen, 0);
+            }
+            // Ein Abwurf auf ein Archivfenster ist ein Hineinkopieren, und
+            // das kommt erst mit dem Umbau (Schritt 2 des Plans der Archive).
+            Dateiort::Archiv(_) => {
+                self.antwort_zeigen(seite, text(Text::ImArchivNichtVerfuegbar));
             }
             ziel @ Dateiort::Fern(_) => {
                 let quellen = quellen.into_iter().map(Dateiort::Lokal).collect();
@@ -10781,8 +10813,16 @@ impl Anwendungsdelegierter {
     /// schreibt die [`Rang::Fenstermeldung`](statuszeile::Rang::Fenstermeldung), die darunter steht.
     /// Meldet in der Statuszeile dieser Seite, dass ein Befehl an einem fernen
     /// Ort nicht wirkt.
+    ///
+    /// **Der Text folgt der Art des Orts** (`krk_core::ort::nicht_verfuegbar_text`):
+    /// fern wie bisher, in einem Archiv `Text::ImArchivNichtVerfuegbar` (E2
+    /// des Plans der Archive). Ein lokaler Ort kommt nicht hierher; kaeme er
+    /// doch, bliebe der Satz des fernen Orts.
     fn am_fernen_ort_melden(&self, seite: Fensterseite) {
-        self.antwort_zeigen(seite, text(Text::AmFernenOrtNichtVerfuegbar));
+        let ort = self.dateifenster(seite).quelle().angezeigter_ort();
+        let schluessel =
+            krk_core::ort::nicht_verfuegbar_text(&ort).unwrap_or(Text::AmFernenOrtNichtVerfuegbar);
+        self.antwort_zeigen(seite, text(schluessel));
     }
 
     /// Der lokale Ordner des sichtbaren Tabs dieser Seite, oder `None` nach
@@ -13059,11 +13099,12 @@ pub fn starten(tasten_protokoll: bool, menue_protokoll: bool, messaufgabe: Optio
 
 /// Der Ort des Eintrags `name` in diesem Ordner, rein lexikalisch.
 ///
-/// `None` fuer einen fernen Ort, wenn `name` keine einzelne Komponente ist;
-/// ein Name aus dem Ordnermodell ist es immer.
+/// `None` fuer einen fernen Ort oder einen im Archiv, wenn `name` keine
+/// einzelne Komponente ist; ein Name aus dem Ordnermodell ist es immer.
 fn ort_darunter(ordner: &Dateiort, name: &str) -> Option<Dateiort> {
     match ordner {
         Dateiort::Lokal(pfad) => Some(Dateiort::Lokal(pfad.join(name))),
+        Dateiort::Archiv(archiv) => archiv.kind(name).map(Dateiort::Archiv),
         Dateiort::Fern(fern) => fern.pfad.verbinden(name).map(|pfad| {
             Dateiort::Fern(krk_core::ort::FernerOrt {
                 zugang: Arc::clone(&fern.zugang),

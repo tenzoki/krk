@@ -236,6 +236,7 @@ fn ein_abbruch_mitten_in_der_datei_laesst_kein_halbes_ziel_stehen() {
         let zielordner = match &ziel {
             Ort::Lokal(pfad) => pfad.clone(),
             Ort::Fern(fern) => PathBuf::from(fern.pfad.als_text()),
+            Ort::Archiv(_) => unreachable!("die Tafel darueber nennt kein Archiv"),
         };
         let bericht = mitten_abbrechen(Fernauftrag::kopieren(vec![quelle], ziel));
         assert_eq!(bericht.abschluss, Abschluss::Abgebrochen, "{richtung}");

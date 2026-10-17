@@ -346,6 +346,7 @@ pub fn bezeichnung(ort: &Ort) -> PathBuf {
     match ort {
         Ort::Lokal(pfad) => pfad.clone(),
         Ort::Fern(fern) => PathBuf::from(fern.to_string()),
+        Ort::Archiv(archiv) => PathBuf::from(archiv.to_string()),
     }
 }
 
@@ -401,13 +402,29 @@ pub(crate) fn starten(auftrag: Fernauftrag) -> Lauf {
 ///
 /// Der Zielordner wird einmal vor der Schleife zur [`Stelle`], damit jede
 /// Quelle dasselbe Gespraech an ihm nimmt.
+///
+/// **Ein Ort in einem Archiv ist hier noch keine Stelle** (Schritt 2 des
+/// Plans `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`): bis
+/// die Archivstelle als Lesequelle und der Umbau gebaut sind, meldet jede
+/// Quelle, deren Seite in einem Archiv liegt, `Text::ImArchivNichtVerfuegbar`
+/// und wird nicht angefasst. Die Oberflaeche stellt einen solchen Auftrag gar
+/// nicht erst; die Zeilen stehen, damit die Maschine es auch dann nicht tut.
 fn ausfuehren(pfand: &Fernfaden, auftrag: &Fernauftrag, steuerung: &mut Steuerung) -> Abschluss {
-    let zielordner = auftrag.zielordner().map(Stelle::von);
+    let ziel_im_archiv = auftrag
+        .zielordner()
+        .is_some_and(|ziel| ziel.archiv().is_some());
+    let zielordner = auftrag.zielordner().and_then(Stelle::von);
     for quelle in &auftrag.quellen {
         if steuerung.abgebrochen() {
             return Abschluss::Abgebrochen;
         }
-        let quelle = Stelle::von(quelle);
+        let quelle = match Stelle::von(quelle) {
+            Some(stelle) if !ziel_im_archiv => stelle,
+            Some(_) | None => {
+                steuerung.ueberspringen(&bezeichnung(quelle), text(Text::ImArchivNichtVerfuegbar));
+                continue;
+            }
+        };
         if einen_abarbeiten(pfand, &auftrag.art, &quelle, zielordner.as_ref(), steuerung)
             == Ablauf::Abgebrochen
         {
@@ -2191,15 +2208,17 @@ enum Stelle {
 
 impl Stelle {
     /// Die Stelle eines Orts. Fern nimmt sie das Gespraech, das jetzt gilt;
-    /// ein spaeterer Wiederaufbau erreicht diesen Lauf nicht mehr.
-    fn von(ort: &Ort) -> Self {
+    /// ein spaeterer Wiederaufbau erreicht diesen Lauf nicht mehr. Ein Ort in
+    /// einem Archiv hat keine Stelle (siehe [`ausfuehren`]).
+    fn von(ort: &Ort) -> Option<Self> {
         match ort {
-            Ort::Lokal(pfad) => Stelle::Lokal(pfad.clone()),
-            Ort::Fern(fern) => Stelle::Fern {
+            Ort::Lokal(pfad) => Some(Stelle::Lokal(pfad.clone())),
+            Ort::Fern(fern) => Some(Stelle::Fern {
                 gespraech: fern.zugang.gespraech(),
                 kennung: fern.kennung().clone(),
                 pfad: fern.pfad.clone(),
-            },
+            }),
+            Ort::Archiv(_) => None,
         }
     }
 

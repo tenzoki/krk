@@ -79,6 +79,7 @@
 mod angezeigtedatei;
 mod anmeldehilfe;
 mod appkit;
+mod archivregister;
 mod auffrischung;
 mod belegungsausgabe;
 mod belegungsmodell;

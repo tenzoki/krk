@@ -343,10 +343,11 @@ use objc2_foundation::{
 };
 
 use krk_core::ablage::Dateifenster as Fensterzustand;
+use krk_core::archiv::Archivformat;
 use krk_core::fern::Fernzugang;
 use krk_core::git::Marke;
 use krk_core::heimordner::Heimordner;
-use krk_core::ort::{FernerOrt, Ort};
+use krk_core::ort::{Archivort, FernerOrt, Ort};
 use krk_core::sprache::{Text, satz, text};
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::filter::traegt_ein_dateiname;
@@ -356,6 +357,7 @@ use krk_core::verzeichnis::{
 };
 use krk_core::zwischenablage::{self, Ziel};
 
+use crate::archivregister;
 use crate::gitmodell::Gitmodell;
 use crate::kommandos::abwurfregel::{
     self, Abwurfgrund, Abwurflage, Abwurfmarke, Abwurfurteil, Abwurfvorgang, Schreibrecht,
@@ -659,6 +661,56 @@ fn fernangaben_des_ordners(ort: &FernerOrt) -> Fernangaben {
     }
 }
 
+/// Die Angaben eines Eintrags in einem Archiv fuer die Vorschau, aus dem
+/// `Eintrag` des Ordnermodells wie fern (E14 des Plans
+/// `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`); den Inhalt
+/// zeigt die Vorschau nicht, denn er liegt in keiner Datei auf der Platte.
+fn archivangaben_des_eintrags(ort: &Archivort, eintrag: &Eintrag) -> Fernangaben {
+    let pfad = match ort.kind(&eintrag.name) {
+        Some(kind) => kind.to_string(),
+        // Ein Name mit `/` oder `.`: das Inhaltsverzeichnis liefert keinen,
+        // und der Ordner ist dann die ehrlichste Ortsangabe.
+        None => ort.to_string(),
+    };
+    Fernangaben {
+        name: eintrag.name.clone(),
+        ort: pfad,
+        groesse: Some(eintrag.groesse),
+        geaendert: Some(eintrag.geaendert),
+        typ: eintrag.typ,
+    }
+}
+
+/// Die Angaben eines Ordners in einem Archiv selbst, fuer die Vorschau ohne
+/// Auswahl; an der Wurzel heisst er wie die Archivdatei.
+fn archivangaben_des_ordners(ort: &Archivort) -> Fernangaben {
+    let name = match ort.innen.name() {
+        Some(name) => name.to_owned(),
+        None => ort.datei().file_name().map_or_else(
+            || ort.datei().to_string_lossy().into_owned(),
+            |name| name.to_string_lossy().into_owned(),
+        ),
+    };
+    Fernangaben {
+        name,
+        ort: ort.to_string(),
+        groesse: None,
+        geaendert: None,
+        typ: Typ::Ordner,
+    }
+}
+
+/// Der Ordner der Archivdatei: dorthin fuehrt der Aufstieg aus der Wurzel,
+/// und ihn schreibt die Sitzung. Rein lexikalisch und ohne Systemaufruf; eine
+/// Archivdatei ohne Ordner im Pfad gibt es im Dateifenster nicht, weil sie
+/// immer als Eintrag eines gelesenen Ordners betreten wird, und der Rueckfall
+/// auf `/` steht allein, damit kein `expect` noetig ist.
+fn archivordner(ort: &Archivort) -> PathBuf {
+    ort.datei()
+        .parent()
+        .map_or_else(|| PathBuf::from("/"), Path::to_path_buf)
+}
+
 /// Was zu geschehen hat, wenn der Nutzer dieses Dateifenster angefasst hat:
 /// [`Rangmitnahme`] sagt, ob der Ersthelferrang mitkommt.
 ///
@@ -908,8 +960,10 @@ enum Einstieg {
     /// Kein Ordner, oder die Zeile gibt es nicht. Was sonst geschieht,
     /// entscheidet der Aufrufer.
     KeinOrdner,
-    /// Eine Verknuepfung, deren Ziel sich nicht aufloesen laesst. Der Grund
-    /// steht bereits in der Statuszeile; der Aufrufer tut nichts weiter.
+    /// Eine Verknuepfung, deren Ziel sich nicht aufloesen laesst, oder ein
+    /// Archiv, das nicht betreten wird (in einem Archiv, auf einem Server).
+    /// Der Grund steht bereits in der Statuszeile; der Aufrufer tut nichts
+    /// weiter.
     Gemeldet,
 }
 
@@ -1635,7 +1689,14 @@ impl DateifensterQuelle {
             .map(Path::to_path_buf)
     }
 
-    /// Ob der sichtbare Tab einen Ordner auf einem Server zeigt.
+    /// Ob der sichtbare Tab einen Ordner auf einem Server oder in einem
+    /// Archiv zeigt, also keinen lokalen Ordner.
+    ///
+    /// **Seit dem Archivpaket gilt die Antwort auch fuer ein Archiv**, und bis
+    /// Schritt 3 des Plans der Archive ist das gewollt: ein Befehl, der allein
+    /// lokal wirkt, ist dort ausgegraut wie fern, die Schalter „Deep“ und
+    /// „Content“ sind nicht bedienbar, und das Kontextmenue meldet ueber
+    /// `Anwendungsdelegierter::am_fernen_ort_melden` den Text der Art des Orts.
     ///
     /// Am Wert des Tabs und ohne Systemaufruf, ohne den Ort zu kopieren;
     /// gefragt von `Anwendungsdelegierter::lage` fuer `Lage::aktiv_fern`, von
@@ -1828,6 +1889,23 @@ impl DateifensterQuelle {
         self.ordnerwechsel_melden();
     }
 
+    /// Liest einen Ordner in einem Archiv in den sichtbaren Tab (E8 des Plans
+    /// `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`).
+    ///
+    /// Derselbe Weg wie [`Self::ordner_lesen`]; gelesen wird auf dem Faden des
+    /// Archivlesevorgangs, und der Hauptfaden oeffnet die Archivdatei nicht.
+    /// Der Rueckkehrordner ist der Ordner der Archivdatei, am Pfad gerechnet.
+    pub fn archiv_lesen(&self, ort: Archivort, auswahl: Option<Vormerkung>) {
+        self.fenstermeldung_loeschen();
+        let rueckkehr = archivordner(&ort);
+        self.ivars()
+            .tabs
+            .borrow_mut()
+            .archiv_setzen(ort, rueckkehr, auswahl);
+        self.nach_lesebeginn();
+        self.ordnerwechsel_melden();
+    }
+
     /// Liest jeden Tab neu, der einen Ort auf dem Server dieses Zugangs zeigt
     /// (Entscheidung 3 des Plans der sftp-Ordner); der Weg nach einem
     /// Wiederaufbau. Gebaut wie [`Self::heimordner_gewechselt`].
@@ -1841,10 +1919,14 @@ impl DateifensterQuelle {
         }
     }
 
-    /// Meldet in der Statuszeile, dass ein Befehl an einem fernen Ort nicht
-    /// wirkt.
+    /// Meldet in der Statuszeile, dass ein Befehl an einem fernen Ort oder in
+    /// einem Archiv nicht wirkt; der Text folgt der Art des Orts
+    /// (`krk_core::ort::nicht_verfuegbar_text`, E2 des Plans der Archive).
     fn am_fernen_ort_melden(&self) {
-        self.befehlsantwort_zeigen(text(Text::AmFernenOrtNichtVerfuegbar));
+        let ort = self.angezeigter_ort();
+        let schluessel =
+            krk_core::ort::nicht_verfuegbar_text(&ort).unwrap_or(Text::AmFernenOrtNichtVerfuegbar);
+        self.befehlsantwort_zeigen(text(schluessel));
     }
 
     /// Liest den angezeigten Ordner noch einmal (C9).
@@ -2730,8 +2812,12 @@ impl DateifensterQuelle {
         }
         let Some((pfad, _)) = self.eintrag_in_zeile(zeile) else {
             // Eine ferne Datei geht an kein Programm: sie liegt nicht auf
-            // diesem Geraet (Entscheidung 13 des Plans der sftp-Ordner).
-            if self.fern_eintrag_in_zeile(zeile).is_some() {
+            // diesem Geraet (Entscheidung 13 des Plans der sftp-Ordner). Eine
+            // Datei im Archiv ebenso wenig: sie liegt in keiner Datei auf der
+            // Platte (E14 des Plans der Archive).
+            if self.fern_eintrag_in_zeile(zeile).is_some()
+                || self.archiv_eintrag_in_zeile(zeile).is_some()
+            {
                 self.am_fernen_ort_melden();
             }
             return;
@@ -2930,6 +3016,13 @@ impl DateifensterQuelle {
                 gewaehlt.map(|eintrag| Beschreibung::Fern(fernangaben_des_eintrags(ort, eintrag))),
                 Beschreibung::Fern(fernangaben_des_ordners(ort)),
             ),
+            // Im Archiv wie fern: die Angaben aus dem Eintrag und kein Inhalt
+            // (E14 des Plans der Archive).
+            Tabort::Archiv { ort, .. } => (
+                gewaehlt
+                    .map(|eintrag| Beschreibung::Fern(archivangaben_des_eintrags(ort, eintrag))),
+                Beschreibung::Fern(archivangaben_des_ordners(ort)),
+            ),
         };
         (eintrag, zu_beschreiben(gewaehlt, ordner))
     }
@@ -3071,24 +3164,41 @@ impl DateifensterQuelle {
     /// Trennung, die `text::datei::lesen` und `pfadeingabe::pruefen` schon
     /// ziehen: als Ziel eines Sprungs gilt das Verweisziel, in der Liste die
     /// Verknuepfung.
+    ///
+    /// # Eine Datei mit der Endung eines Archivs wird betreten
+    ///
+    /// Seit dem Archivpaket hat `Typ::Datei` einen eigenen Zweig,
+    /// [`Self::archiv_betreten`], der allein den **Namen** fragt
+    /// ([`Archivformat::aus_namen`]); eine Verknuepfung, die
+    /// `verweisziel::bestimmen` als Datei aufloest, geht denselben Weg mit
+    /// ihrem eigenen Namen (E8 des Plans
+    /// `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`). Ein
+    /// Ordner geht nicht durch diesen Zweig. Jede andere Datei bleibt, was sie
+    /// war: der Doppelklick gibt sie an das System, der Rechts-Pfeil tut
+    /// nichts. In einem Archivtab betritt [`Self::im_archiv_einsteigen`] die
+    /// Ordner darin.
     fn in_zeile_einsteigen(&self, zeile: usize) -> Einstieg {
         if let Some((ziel, typ)) = self.fern_eintrag_in_zeile(zeile) {
             return self.fern_einsteigen(ziel, typ);
+        }
+        if let Some((ziel, typ)) = self.archiv_eintrag_in_zeile(zeile) {
+            return self.im_archiv_einsteigen(ziel, typ);
         }
         let Some((ziel, typ)) = self.eintrag_in_zeile(zeile) else {
             return Einstieg::KeinOrdner;
         };
         let ist_ordner = match typ {
             Typ::Ordner => true,
-            // Eine Datei bleibt eine Datei: der Doppelklick gibt sie an das
-            // System, der Rechts-Pfeil tut nichts. Kein Systemaufruf.
-            Typ::Datei => false,
+            // Eine Datei bleibt eine Datei, es sei denn, ihr Name traegt die
+            // Endung eines Archivs. Kein Systemaufruf.
+            Typ::Datei => return self.archiv_betreten(&ziel),
             Typ::Verknuepfung => match verweisziel::bestimmen(&ziel) {
                 Verweisziel::Ordner => true,
                 // Zeigt sie auf eine Datei, geschieht, was bei einer Datei
-                // geschieht: der Aufrufer reicht sie an das System, und das
-                // loest sie seinerseits auf.
-                Verweisziel::KeinOrdner => false,
+                // geschieht: ein Archiv wird betreten, sonst reicht der
+                // Aufrufer sie an das System, und das loest sie seinerseits
+                // auf.
+                Verweisziel::KeinOrdner => return self.archiv_betreten(&ziel),
                 // Ein Ziel, an dem `stat(2)` scheitert — ins Leere, im Ring
                 // oder ohne Recht sind Beispiele und keine Aufzaehlung: ein zu
                 // langer Name (`errno 63`) faellt unter keines der drei, und
@@ -3112,6 +3222,62 @@ impl DateifensterQuelle {
         }
         self.ordner_lesen(&ziel, None);
         Einstieg::Eingestiegen
+    }
+
+    /// Betritt eine lokale Datei als Archiv, wenn ihr Name die Endung eines
+    /// Archivs traegt, sonst [`Einstieg::KeinOrdner`] (E8 des Plans der
+    /// Archive).
+    ///
+    /// **Ohne Systemaufruf auf dem Hauptfaden** (E5): der Name geht an
+    /// [`Archivformat::aus_namen`], der Zugang kommt aus dem Register ohne die
+    /// Datei zu oeffnen, und den Lesevorgang startet [`Self::archiv_lesen`]
+    /// auf seinem eigenen Faden. Ob die Datei wirklich ein Archiv ist, sagt
+    /// erst dessen Leser. Gehalten von der Rumpfprobe
+    /// `der_archiveinstieg_stellt_auf_dem_hauptfaden_keinen_systemaufruf`.
+    fn archiv_betreten(&self, datei: &Path) -> Einstieg {
+        let Some(format) = datei.file_name().and_then(Archivformat::aus_namen) else {
+            return Einstieg::KeinOrdner;
+        };
+        let zugang = archivregister::zugang(datei, format);
+        self.archiv_lesen(Archivort::wurzel(zugang), None);
+        Einstieg::Eingestiegen
+    }
+
+    /// Der Ort des Eintrags in dieser Zeile eines Archivtabs und seine Art;
+    /// `None`, wenn der Tab kein Archiv zeigt oder die Zeile nicht steht.
+    /// Rein lexikalisch.
+    fn archiv_eintrag_in_zeile(&self, zeile: usize) -> Option<(Archivort, Typ)> {
+        let tabs = self.ivars().tabs.borrow();
+        let Tabort::Archiv { ort, .. } = tabs.aktiver().tabort() else {
+            return None;
+        };
+        let eintrag = tabs.aktiver().modell().zeile(zeile)?;
+        Some((ort.kind(&eintrag.name)?, eintrag.typ))
+    }
+
+    /// Steigt in einen Eintrag eines Archivtabs ein (E7, E8 des Plans der
+    /// Archive): ein Ordner wird gelesen, eine Datei mit der Endung eines
+    /// Archivs meldet `Text::ArchivImArchiv`, jede andere Datei und jede
+    /// Verknuepfung ist kein Einstieg. Am Wert und ohne Systemaufruf.
+    fn im_archiv_einsteigen(&self, ziel: Archivort, typ: Typ) -> Einstieg {
+        match typ {
+            Typ::Ordner => {
+                self.archiv_lesen(ziel, None);
+                Einstieg::Eingestiegen
+            }
+            Typ::Datei | Typ::Verknuepfung => {
+                let ist_archiv = ziel
+                    .innen
+                    .name()
+                    .is_some_and(|name| Archivformat::aus_namen(name.as_ref()).is_some());
+                if ist_archiv {
+                    self.befehlsantwort_zeigen(text(Text::ArchivImArchiv));
+                    Einstieg::Gemeldet
+                } else {
+                    Einstieg::KeinOrdner
+                }
+            }
+        }
     }
 
     /// Der volle Pfad des Eintrags in dieser Zeile und seine Art.
@@ -3190,7 +3356,19 @@ impl DateifensterQuelle {
                 self.nach_lesebeginn();
                 self.ordnerwechsel_melden();
             }
-            Typ::Datei => return Einstieg::KeinOrdner,
+            // Ein Archiv auf einem Server wird nicht betreten (E15 des Plans
+            // der Archive); entschieden am Namen, ohne Anfrage.
+            Typ::Datei => {
+                let ist_archiv = ziel
+                    .pfad
+                    .name()
+                    .is_some_and(|name| Archivformat::aus_namen(name.as_ref()).is_some());
+                if ist_archiv {
+                    self.befehlsantwort_zeigen(text(Text::ArchivAmFernenOrt));
+                    return Einstieg::Gemeldet;
+                }
+                return Einstieg::KeinOrdner;
+            }
         }
         Einstieg::Eingestiegen
     }
@@ -3232,6 +3410,21 @@ impl DateifensterQuelle {
                     );
                 }
             }
+            // Im Archiv am Innenpfad; an seiner Wurzel in den Ordner der
+            // Archivdatei, und die Auswahl steht dort auf ihr (E8 des Plans
+            // der Archive).
+            Tabort::Archiv { ort, rueckkehr } => match ort.aufwaerts() {
+                Some((eltern, verlassen)) => {
+                    self.archiv_lesen(eltern, Some(Vormerkung::still(verlassen)));
+                }
+                None => {
+                    let datei = ort
+                        .datei()
+                        .file_name()
+                        .map(|name| Vormerkung::still(name.to_string_lossy().into_owned()));
+                    self.ordner_lesen(&rueckkehr, datei);
+                }
+            },
         }
     }
 
@@ -3251,6 +3444,9 @@ impl DateifensterQuelle {
         let hier = match self.angezeigter_ort() {
             Ort::Lokal(ordner) => ordner.to_string_lossy().into_owned(),
             Ort::Fern(ort) => ort.pfad.als_text().to_owned(),
+            // Im Archiv ein lokaler Pfad, der das Archiv verlaesst: die
+            // Archivdatei selbst (E16 des Plans der Archive).
+            Ort::Archiv(ort) => ort.datei().to_string_lossy().into_owned(),
         };
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
         // **Der Griff faellt hier, und das ist eine Entscheidung.** Der Schlitz
@@ -3315,6 +3511,9 @@ impl DateifensterQuelle {
         let angezeigt = match self.angezeigter_ort() {
             Ort::Lokal(ordner) => ordner,
             Ort::Fern(ort) => return self.fern_pfad_anspringen(pfad, ort),
+            // Im Archiv ist der Text ein lokaler Pfad wie in einem lokalen Tab,
+            // gelesen gegen den Ordner der Archivdatei (E16).
+            Ort::Archiv(ort) => archivordner(&ort),
         };
         self.ergebnis_anwenden(pfadeingabe::pruefen(pfad, &angezeigt));
     }
@@ -3326,7 +3525,9 @@ impl DateifensterQuelle {
     fn lokalen_pfad_anspringen(&self, pfad: &Path) {
         match self.angezeigter_ort() {
             Ort::Lokal(_) => self.pfad_anspringen(pfad),
-            Ort::Fern(_) => {
+            // Im Archiv wie fern: der Pfad verlaesst den Ort, und eine Datei
+            // fuehrt in ihren Ordner.
+            Ort::Archiv(_) | Ort::Fern(_) => {
                 self.ergebnis_anwenden(pfadeingabe::pruefen_fuer_fernen_tab(pfad));
             }
         }
@@ -4756,6 +4957,9 @@ impl DateifensterQuelle {
                 quellen.gemeinsamer_ordner.as_deref() == Some(ordner.as_path()),
             ),
             Ort::Fern(_) => (Schreibrecht::Unbekannt, false),
+            // Hineinkopieren kommt erst mit dem Umbau (Schritt 2 des Plans der
+            // Archive); bis dahin weist ein Archivfenster jeden Abwurf ab.
+            Ort::Archiv(_) => (Schreibrecht::Nein, false),
         };
         let gefaellt = abwurfregel::urteil(&Abwurflage {
             traegt_dateien: quellen.traegt_dateien,
@@ -6898,6 +7102,251 @@ mod tests {
         assert_eq!(
             ort.pfad.als_text(),
             ordner.pfad().to_str().expect("der Probenpfad ist UTF-8"),
+        );
+    }
+
+    // ------------------------------------------------------------------
+    // Ein Ordner in einem Archiv (Schritt 2 des Plans der Archive)
+    // ------------------------------------------------------------------
+
+    /// Eine Datenquelle auf `ordner`, gebaut wie in
+    /// `der_aufstieg_haelt_die_tabliste_nicht_geliehen`, und fertig gelesen.
+    fn gelesene_quelle(ordner: &Path) -> Retained<DateifensterQuelle> {
+        let zustand = krk_core::ablage::Dateifenster {
+            aktiver_tab: 0,
+            tabs: vec![krk_core::ablage::Tab::auf(ordner)],
+        };
+        let tabs = Tabliste::aus_zustand(&zustand, crate::heimgriff::ungelesen());
+        // SAFETY: wie in `der_aufstieg_haelt_die_tabliste_nicht_geliehen`.
+        let mtm = unsafe { MainThreadMarker::new_unchecked() };
+        let rahmen = NSRect::new(NSPoint::ZERO, NSSize::ZERO);
+        let tabelle = Dateiliste::neu(mtm, rahmen);
+        let sicht = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), rahmen);
+        let quelle = DateifensterQuelle::neu(mtm, tabelle, sicht, tabs);
+        quelle.ivars().tabs.borrow_mut().sichtbaren_lesen();
+        fertig_lesen(&quelle);
+        quelle
+    }
+
+    /// Zieht die Meldungen des sichtbaren Tabs ein, bis er fertig gelesen hat.
+    fn fertig_lesen(quelle: &DateifensterQuelle) {
+        let beginn = std::time::Instant::now();
+        loop {
+            let liest = {
+                let mut tabs = quelle.ivars().tabs.borrow_mut();
+                let _ = tabs.einziehen();
+                tabs.aktiver().liest()
+            };
+            if !liest {
+                return;
+            }
+            assert!(
+                beginn.elapsed() < std::time::Duration::from_secs(10),
+                "der Lesevorgang ist nicht fertig geworden"
+            );
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+    }
+
+    /// Die Zeile des Eintrags `name` im sichtbaren Tab.
+    fn zeile_von(quelle: &DateifensterQuelle, name: &str) -> usize {
+        let tabs = quelle.ivars().tabs.borrow();
+        let modell = tabs.aktiver().modell();
+        (0..modell.zeilenzahl())
+            .find(|&zeile| {
+                modell
+                    .zeile(zeile)
+                    .is_some_and(|eintrag| eintrag.name == name)
+            })
+            .unwrap_or_else(|| panic!("{name} steht nicht in der Liste"))
+    }
+
+    /// Der Name des ausgewaehlten Eintrags im sichtbaren Tab.
+    fn gewaehlter_name(quelle: &DateifensterQuelle) -> Option<String> {
+        let tabs = quelle.ivars().tabs.borrow();
+        let modell = tabs.aktiver().modell();
+        let index = modell.auswahl()?;
+        modell
+            .eintraege()
+            .get(index as usize)
+            .map(|eintrag| eintrag.name.clone())
+    }
+
+    /// Der Innenpfad des sichtbaren Tabs, oder `None`, wenn er kein Archiv
+    /// zeigt.
+    fn innenpfad(quelle: &DateifensterQuelle) -> Option<String> {
+        quelle
+            .angezeigter_ort()
+            .archiv()
+            .map(|ort| ort.innen.als_text().to_owned())
+    }
+
+    /// Pfeil rechts betritt ein Zip und einen Ordner darin, `left` fuehrt am
+    /// Innenpfad zurueck und waehlt den verlassenen Ordner, und an der Wurzel
+    /// des Archivs in den Ordner der Archivdatei, wo die Archivdatei gewaehlt
+    /// ist (E8 des Plans der Archive). An der gebauten Datenquelle, damit auch
+    /// die Ausleihen der Tabliste zur Laufzeit gehen.
+    #[test]
+    fn aufwaerts_an_der_wurzel_des_archivs_waehlt_die_archivdatei() {
+        let ordner = crate::pruefordner::Pruefordner::neu("archiv-aufstieg");
+        ordner.ordner("inhalt/unter");
+        ordner.datei("inhalt/unter/x.txt", "x");
+        ordner.zip_packen("paket.zip", "inhalt");
+        let quelle = gelesene_quelle(ordner.pfad());
+
+        let zeile = zeile_von(&quelle, "paket.zip");
+        assert_eq!(quelle.in_zeile_einsteigen(zeile), Einstieg::Eingestiegen);
+        assert_eq!(innenpfad(&quelle).as_deref(), Some(""));
+        fertig_lesen(&quelle);
+        let zeile = zeile_von(&quelle, "inhalt");
+        assert_eq!(quelle.in_zeile_einsteigen(zeile), Einstieg::Eingestiegen);
+        assert_eq!(innenpfad(&quelle).as_deref(), Some("inhalt"));
+        fertig_lesen(&quelle);
+        assert_eq!(quelle.ivars().tabs.borrow().aktiver().titel(), "inhalt");
+
+        assert!(quelle.kommando_ausfuehren(Kommando::OrdnerAufwaerts));
+        fertig_lesen(&quelle);
+        assert_eq!(innenpfad(&quelle).as_deref(), Some(""));
+        assert_eq!(gewaehlter_name(&quelle).as_deref(), Some("inhalt"));
+
+        assert!(quelle.kommando_ausfuehren(Kommando::OrdnerAufwaerts));
+        fertig_lesen(&quelle);
+        assert_eq!(
+            quelle.ivars().tabs.borrow().aktiver().tabort(),
+            &Tabort::Lokal(ordner.pfad().to_path_buf()),
+        );
+        assert_eq!(gewaehlter_name(&quelle).as_deref(), Some("paket.zip"));
+    }
+
+    /// Ein Archiv in einem Archiv und ein Archiv auf einem Server werden
+    /// nicht betreten; der Einstieg meldet und der Tab bleibt, wo er war (E7,
+    /// E15 des Plans der Archive). Eine gewoehnliche Datei im Archiv ist kein
+    /// Einstieg, wie lokal.
+    #[test]
+    fn ein_archiv_im_archiv_und_ein_archiv_am_fernen_ort_melden_statt_einzusteigen() {
+        let ordner = crate::pruefordner::Pruefordner::neu("archiv-im-archiv");
+        ordner.ordner("innen");
+        ordner.datei("innen/x.txt", "x");
+        ordner.ordner("aussen");
+        ordner.zip_packen("aussen/klein.zip", "innen");
+        ordner.datei("aussen/text.txt", "t");
+        ordner.zip_packen("gross.zip", "aussen");
+        let quelle = gelesene_quelle(ordner.pfad());
+
+        let zeile = zeile_von(&quelle, "gross.zip");
+        assert_eq!(quelle.in_zeile_einsteigen(zeile), Einstieg::Eingestiegen);
+        fertig_lesen(&quelle);
+        let zeile = zeile_von(&quelle, "aussen");
+        assert_eq!(quelle.in_zeile_einsteigen(zeile), Einstieg::Eingestiegen);
+        fertig_lesen(&quelle);
+        let zeile = zeile_von(&quelle, "klein.zip");
+        assert_eq!(quelle.in_zeile_einsteigen(zeile), Einstieg::Gemeldet);
+        assert_eq!(innenpfad(&quelle).as_deref(), Some("aussen"));
+        let zeile = zeile_von(&quelle, "text.txt");
+        assert_eq!(quelle.in_zeile_einsteigen(zeile), Einstieg::KeinOrdner);
+        assert_eq!(innenpfad(&quelle).as_deref(), Some("aussen"));
+
+        // Derselbe Ordner ueber den Server des Systems.
+        let echt = std::fs::canonicalize(ordner.unter("aussen")).expect("canonicalize");
+        let fern = crate::fernprobe::ferner_ort(
+            "server.test",
+            None,
+            echt.to_str().expect("der Probenpfad ist UTF-8"),
+        );
+        quelle.fern_lesen(fern.clone(), None);
+        fertig_lesen(&quelle);
+        let zeile = zeile_von(&quelle, "klein.zip");
+        assert_eq!(quelle.in_zeile_einsteigen(zeile), Einstieg::Gemeldet);
+        assert_eq!(quelle.angezeigter_ort(), Ort::Fern(fern));
+    }
+
+    /// Der Einstieg in ein Archiv stellt auf dem Hauptfaden keinen
+    /// Systemaufruf (E5 des Plans der Archive).
+    ///
+    /// Gelesen werden die Rumpfe des Dateizweigs [`DateifensterQuelle::archiv_betreten`],
+    /// von [`DateifensterQuelle::archiv_lesen`] und von
+    /// [`archivregister::zugang`], gegen die Nadeln des Plans. **Was sie nicht
+    /// sieht:** einen Systemaufruf in einer tiefer gerufenen Funktion, etwa in
+    /// `Tabliste::archiv_setzen` und dem Lesebeginn dahinter (dort startet
+    /// allein ein Faden), in `nach_lesebeginn` oder in AppKit; und einen
+    /// Aufruf, der unter einem anderen Namen als den Nadeln an die Platte
+    /// geht. Dass `Archivzugang::neu` keinen stellt, haelt sein Modulkopf und
+    /// nicht diese Probe.
+    #[test]
+    fn der_archiveinstieg_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
+        let datei = diese_datei();
+        let code: String = code_zeilen(vor_dem_pruefmodul(&datei))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let register = include_str!("../archivregister.rs");
+        let register_code: String = code_zeilen(vor_dem_pruefmodul(register))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let rumpfe = [
+            ("archiv_betreten", rumpf_von(&code, "archiv_betreten")),
+            ("archiv_lesen", rumpf_von(&code, "archiv_lesen")),
+            ("archivordner", {
+                let beginn = code
+                    .find("fn archivordner(")
+                    .expect("archivordner steht da");
+                let rest = &code[beginn..];
+                &rest[..rest.find("\n}\n").expect("archivordner endet")]
+            }),
+            ("archivregister::zugang", {
+                let beginn = register_code
+                    .find("pub fn zugang(")
+                    .expect("zugang steht da");
+                let rest = &register_code[beginn..];
+                &rest[..rest.find("\n}\n").expect("zugang endet")]
+            }),
+        ];
+        for (name, rumpf) in rumpfe {
+            for nadel in [
+                "fs::",
+                "metadata(",
+                "File::",
+                "canonicalize(",
+                "read_dir(",
+                "symlink_metadata(",
+                "read_link(",
+            ] {
+                assert!(
+                    !rumpf.contains(nadel),
+                    "{name} stellt auf dem Hauptfaden einen Systemaufruf: {nadel}"
+                );
+            }
+        }
+    }
+
+    /// Ein Ordner wird weiter ohne den Dateizweig betreten: der Zweig fuer
+    /// `Typ::Ordner` in `in_zeile_einsteigen` fragt das Archivformat nicht, und
+    /// eine Verknuepfung auf einen Ordner ebenso wenig (E19 des Plans der
+    /// Archive). **Was sie nicht sieht:** einen Umweg, der vor der
+    /// Fallunterscheidung ein Archiv fragt; die zwei Zweige davor betreffen
+    /// allein ferne und Archivtabs.
+    #[test]
+    fn ein_ordner_wird_weiter_ohne_den_dateizweig_betreten() {
+        let datei = diese_datei();
+        let code: String = code_zeilen(vor_dem_pruefmodul(&datei))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let rumpf = rumpf_von(&code, "in_zeile_einsteigen");
+        let zeile = |kopf: &str| {
+            rumpf
+                .lines()
+                .map(str::trim)
+                .find(|zeile| zeile.starts_with(kopf))
+                .unwrap_or_else(|| panic!("in_zeile_einsteigen fuehrt {kopf} nicht"))
+        };
+        assert_eq!(zeile("Typ::Ordner =>"), "Typ::Ordner => true,");
+        assert_eq!(
+            zeile("Verweisziel::Ordner =>"),
+            "Verweisziel::Ordner => true,"
+        );
+        assert_eq!(
+            rumpf.matches("self.archiv_betreten(").count(),
+            2,
+            "der Dateizweig steht genau fuer eine Datei und eine Verknuepfung auf eine Datei"
         );
     }
 

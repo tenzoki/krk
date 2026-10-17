@@ -46,6 +46,16 @@ pub fn am_fernen_ort() -> &'static str {
     text(Text::GitAmFernenOrt)
 }
 
+/// Die Kopfzeile des Git-Bereichs vor einem Ordner in einem Archiv.
+///
+/// Dort laeuft kein Gitlauf: der Ordner liegt in einer Datei und nicht im
+/// Dateisystem (E14 des Plans
+/// `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`).
+#[must_use]
+pub fn im_archiv() -> &'static str {
+    text(Text::GitImArchiv)
+}
+
 /// Was an der Stelle der Zusammenfassung steht, solange kein Commit da ist
 /// (A7, A14).
 #[must_use]

@@ -259,6 +259,29 @@ pub enum Text {
     PackenHalberEintragImArchiv,
     /// `zippen::datei_packen`: `write_all` ist gescheitert; `{fehler}`.
     PackenNichtInsArchivGeschrieben,
+    /// `archiv::umbau`: die Zeile fuer das Archiv nach einem gescheiterten
+    /// Umbau; `{grund}`.
+    ArchivUnveraendert,
+    /// `archiv::umbau`: die Zeile fuer das Archiv nach einem Abbruch.
+    ArchivUnveraendertNachAbbruch,
+    /// `archiv::umbau`: das Archiv hat sich waehrend des Umbaus geaendert.
+    ArchivVonAussenVeraendert,
+    /// `archiv::umbau`: ein Archiv mit verschluesseltem Eintrag.
+    ArchivVerschluesseltNurLesbar,
+    /// `archiv::umbau`: ein Format, das allein lesbar ist (gz).
+    ArchivNurLesbar,
+    /// `archiv::umbau`: ein Zip mit Daten vor dem ersten Eintrag oder ueber
+    /// mehrere Teile.
+    ArchivZipUngewoehnlicheForm,
+    /// `archiv::umbau`: ein tar mit einer GNU-Datei mit Luecken.
+    ArchivTarMitLuecken,
+    /// `archiv::umbau`: ein tar, dessen PAX-Kopf eine andere Groesse nennt.
+    ArchivTarGroesseAusPax,
+    /// `archiv::umbau`: die Quelle eines neuen Eintrags hat beim Lesen ihre
+    /// Groesse geaendert.
+    ArchivQuelleVeraendert,
+    /// `archiv::umbau`: das Archiv fuehrt zu viele Eintraege; `{grenze}`.
+    ArchivUmbauZuGross,
     /// `Regelfehler::Startwert` in der Hinweiszeile des Stapelumbenennens;
     /// `{text}` ist die Eingabe.
     StapelKeinStartwert,
@@ -545,6 +568,9 @@ pub enum Text {
     GitKeinRepository,
     /// Der Git-Bereich vor einem fernen Ort: dort laeuft kein Gitlauf.
     GitAmFernenOrt,
+    /// Der Git-Bereich vor einem Ordner in einem Archiv: dort laeuft kein
+    /// Gitlauf.
+    GitImArchiv,
     /// `git::texte::ohne_commit`: die Zusammenfassung, solange kein Commit
     /// da ist.
     GitOhneCommit,
@@ -1605,6 +1631,27 @@ pub enum Text {
     /// Ein Befehl, der allein an einem lokalen Ordner wirkt, an einem fernen
     /// Ort.
     AmFernenOrtNichtVerfuegbar,
+    /// Ein Befehl, der allein an einem lokalen Ordner wirkt, in einem Archiv
+    /// (`ort::nicht_verfuegbar_text`).
+    ImArchivNichtVerfuegbar,
+    /// Der Einstieg in ein Archiv, das auf einem Server liegt (E15 des Plans
+    /// der Archive).
+    ArchivAmFernenOrt,
+    /// Der Einstieg in ein Archiv, das selbst in einem Archiv liegt (E7).
+    ArchivImArchiv,
+    /// Der Lesevorgang eines Archivtabs: die Datei ist kein Archiv des
+    /// Formats ihrer Endung; `{datei}`, `{format}`, `{grund}` (der Wortlaut
+    /// des Lesers).
+    ArchivUngueltig,
+    /// Der Lesevorgang eines Archivtabs: unter dem Namen steht keine
+    /// gewoehnliche Datei; `{datei}`.
+    ArchivKeineDatei,
+    /// Der Lesevorgang eines Archivtabs: das Archiv fuehrt zu viele
+    /// Eintraege; `{datei}`, `{grenze}`.
+    ArchivZuGross,
+    /// Der Lesevorgang eines Archivtabs: den angezeigten Ordner gibt es im
+    /// Archiv nicht mehr; `{ort}`.
+    ArchivOrdnerFehlt,
     /// Der Lesevorgang eines fernen Tabs scheitert, weil die Verbindung
     /// getrennt ist; `{name}` (die Verbindung in `secrets.txt`).
     FernVerbindungGetrennt,
@@ -1672,7 +1719,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 695] = [
+    pub const ALLE: [Text; 713] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1772,6 +1819,16 @@ impl Text {
         Text::PackenKeinPlatzImArchiv,
         Text::PackenHalberEintragImArchiv,
         Text::PackenNichtInsArchivGeschrieben,
+        Text::ArchivUnveraendert,
+        Text::ArchivUnveraendertNachAbbruch,
+        Text::ArchivVonAussenVeraendert,
+        Text::ArchivVerschluesseltNurLesbar,
+        Text::ArchivNurLesbar,
+        Text::ArchivZipUngewoehnlicheForm,
+        Text::ArchivTarMitLuecken,
+        Text::ArchivTarGroesseAusPax,
+        Text::ArchivQuelleVeraendert,
+        Text::ArchivUmbauZuGross,
         Text::StapelKeinStartwert,
         Text::StapelKeineStellenzahl,
         Text::EditorKeinFreierDateizugriff,
@@ -1891,6 +1948,7 @@ impl Text {
         Text::ProfilJuengsteNull,
         Text::GitKeinRepository,
         Text::GitAmFernenOrt,
+        Text::GitImArchiv,
         Text::GitOhneCommit,
         Text::GitUnveraendert,
         Text::GitImOrdner,
@@ -2341,6 +2399,13 @@ impl Text {
         Text::RechnerschluesselAnnehmen,
         Text::FernStartordnerFehlt,
         Text::AmFernenOrtNichtVerfuegbar,
+        Text::ImArchivNichtVerfuegbar,
+        Text::ArchivAmFernenOrt,
+        Text::ArchivImArchiv,
+        Text::ArchivUngueltig,
+        Text::ArchivKeineDatei,
+        Text::ArchivZuGross,
+        Text::ArchivOrdnerFehlt,
         Text::FernVerbindungGetrennt,
         Text::VerbindenErstSichern,
         Text::VerbindenPinNochNichtGesichert,
@@ -2379,6 +2444,9 @@ impl Text {
 pub enum Zahlwort {
     /// Eine Datenmenge unter 1.000 Bytes, hinter `Sprache::menge`.
     Byte,
+    /// `archiv::umbau`: verdeckte Eintraege, die beim Umbau weggefallen
+    /// sind.
+    ArchivVerdeckteWeggefallen,
     /// `neuerungen::startzeile`: die Zahl der neuen Eintraege je Datei;
     /// `{datei}` ist der Dateiname.
     NeuerungenEintraegeIn,
@@ -2479,12 +2547,16 @@ pub enum Zahlwort {
     GekuerztWeitere,
     /// Ein ferner Lesevorgang hat Namen uebersprungen, die kein UTF-8 sind.
     FernNamenUebersprungen,
+    /// Das Inhaltsverzeichnis eines Archivs hat unsichere oder doppelte
+    /// Namen ausgelassen (E3, E4 des Plans der Archive).
+    ArchivNamenAusgelassen,
 }
 
 impl Zahlwort {
     /// Alle Zahlwoerter, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Zahlwort; 35] = [
+    pub const ALLE: [Zahlwort; 37] = [
         Zahlwort::Byte,
+        Zahlwort::ArchivVerdeckteWeggefallen,
         Zahlwort::NeuerungenEintraegeIn,
         Zahlwort::HeimZettelUebernommen,
         Zahlwort::MarkeGeaendert,
@@ -2519,5 +2591,6 @@ impl Zahlwort {
         Zahlwort::AuswurfVerdeckteTabs,
         Zahlwort::GekuerztWeitere,
         Zahlwort::FernNamenUebersprungen,
+        Zahlwort::ArchivNamenAusgelassen,
     ];
 }

@@ -22,17 +22,24 @@
 //!   Eintraege zugleich und die Leser fuer tar und gz.
 //! - `zipform` haelt das Zip-Format: die Zeitfelder und Rechte, die
 //!   `operation::zippen` schreibt und `operation::entpacken` liest, und den
-//!   Leser des Zentralverzeichnisses.
+//!   Leser des Zentralverzeichnisses, dazu die rohe Form der Saetze fuer den
+//!   Umbau.
 //! - [`zugang`] haelt eine Archivdatei samt Zwischenspeicher.
+//! - [`umbau`] aendert ein Archiv: jede Konfliktfrage am Verzeichnis, dann das
+//!   ganze Archiv neu (Schritt 5 des Plans).
+//! - [`ersetzen`] ist der einzige Schreiber an einer Archivdatei: das neue
+//!   Archiv unter einem Zwischennamen, die Kennung des alten geprueft, zuletzt
+//!   ein `rename`.
 //!
-//! **Geschrieben wird hier nichts.** Das Lesen ist der erste Schritt des Plans
-//! `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`; ein Archiv
-//! wird dort spaeter allein ueber einen Umbau geaendert, der das ganze
-//! Archiv neben das alte schreibt und es zuletzt mit einem `rename`
-//! ersetzt.
+//! **Das Original wird nie zum Schreiben geoeffnet.** Ein Archiv wird allein
+//! ueber [`umbau::umbauen`] geaendert, der das ganze Archiv neben das alte
+//! schreibt und es zuletzt mit einem `rename` ersetzt (E12 und E13 des Plans
+//! `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`).
 
+pub mod ersetzen;
 pub mod format;
 pub mod innenpfad;
+pub mod umbau;
 pub mod verzeichnis;
 pub(crate) mod zipform;
 pub mod zugang;

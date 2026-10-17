@@ -54,6 +54,23 @@
 //! denn jede Anfrage verlangt das Pfand, das nur dort entsteht; ein
 //! Lesevorgang kann den Hauptfaden deshalb nicht an das Netz haengen.
 //!
+//! # Ein Ordner in einem Archiv
+//!
+//! [`Lesevorgang::archiv_starten`] liest einen Ordner in einem Archiv, wieder
+//! ueber denselben Typ und denselben Kanal (E9 des Plans
+//! `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`). Der Faden
+//! entsteht ueber [`crate::fern::faden()`], weil
+//! [`crate::archiv::Archivzugang::verzeichnis`] das Pfand verlangt: das
+//! Inhaltsverzeichnis eines grossen tar.gz entsteht erst nach einem Durchlauf
+//! durch den ganzen Strom, und der Hauptfaden wartet darauf nie. Ist es
+//! zwischengespeichert und die Datei unveraendert, kostet der Lauf ein `stat`.
+//! Die Kinder des Ordners gehen als [`Eintrag::mit_versteckt`] in Stapeln zu
+//! [`STAPELGROESSE`] hinaus, versteckt bei fuehrendem Punkt. Was das
+//! Inhaltsverzeichnis ausgelassen hat, zaehlt [`Lesevorgang::uebersprungen`],
+//! und zwar allein beim Lesen der Wurzel: die Zahl gilt dem ganzen Archiv, und
+//! sie bei jedem Unterordner erneut zu melden hiesse, dieselbe Auskunft bei
+//! jedem Schritt zu wiederholen.
+//!
 //! **Namen, die kein UTF-8 sind, und Namen, die die Namensregel
 //! [`crate::fern::ist_einzelner_name`] abweist, fallen weg und werden
 //! gezaehlt** ([`namen_aufnehmen`], [`Lesevorgang::uebersprungen`]): ein
@@ -71,9 +88,10 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, SyncSender, sync_channel};
 use std::thread::{self, JoinHandle};
 
+use crate::archiv::{Archiveintrag, Inhaltsverzeichnis, Verzeichnisfehler};
 use crate::fern::paket::{Name, S_IFDIR, S_IFLNK, S_IFMT};
 use crate::fern::{self, Fernfaden, Fernfehler, Gespraech, Handle};
-use crate::ort::FernerOrt;
+use crate::ort::{Archivort, FernerOrt};
 use crate::sprache::{Text, satz};
 
 use super::eintrag::{Eintrag, Typ};
@@ -133,6 +151,21 @@ pub enum Abschluss {
     /// am Protokoll oder an einer getrennten Verbindung. Bereits gesendete
     /// Stapel sind gueltig. Allein [`Lesevorgang::fern_starten`] meldet ihn.
     Fern(Fernfehler),
+    /// Ein Lesevorgang in einem Archiv ist gescheitert, bevor ein Stapel kam.
+    /// Allein [`Lesevorgang::archiv_starten`] meldet ihn.
+    Archiv(Archivfehler),
+}
+
+/// Warum ein Lesevorgang in einem Archiv nichts geliefert hat.
+#[derive(Debug)]
+pub enum Archivfehler {
+    /// Das Inhaltsverzeichnis ist nicht entstanden; der Grund ist der des
+    /// Lesers. Ein Abbruch kommt hier nicht an, er endet als
+    /// [`Abschluss::Abgebrochen`].
+    Verzeichnis(Verzeichnisfehler),
+    /// Das Inhaltsverzeichnis steht, aber der Innenpfad ist darin kein
+    /// Ordner, etwa weil das Archiv seit dem Einstieg geaendert ist.
+    KeinOrdner,
 }
 
 impl Abschluss {
@@ -272,6 +305,44 @@ impl Lesevorgang {
             let abbruch = Arc::clone(&abbruch);
             let zaehler = Arc::clone(&uebersprungen);
             move |pfand| fern_lesefaden(pfand, &ort, generation, &abbruch, &zaehler, &sender)
+        }) {
+            Ok(faden) => Some(faden),
+            Err(fehler) => {
+                // Wie in `starten`: der Kanal traegt dieses eine Senden.
+                let _ = sender.send(Meldung::Fertig {
+                    generation,
+                    abschluss: Abschluss::Fehler(fehler),
+                });
+                None
+            }
+        };
+        Self {
+            abbruch,
+            meldungen,
+            faden,
+            uebersprungen,
+        }
+    }
+
+    /// Startet den Lesevorgang eines Ordners in einem Archiv und kehrt sofort
+    /// zurueck.
+    ///
+    /// Derselbe Typ und derselbe Kanal wie [`Lesevorgang::starten`]; der
+    /// Modulkopf sagt, was gleich ist und was nicht. Der Faden heisst
+    /// `krk-archivleser-<generation>` und entsteht ueber
+    /// [`crate::fern::faden()`]. **Der Hauptfaden oeffnet die Archivdatei
+    /// nicht**: der Zugang im Ort ist ein Wert, und die erste Frage an die
+    /// Datei stellt der Faden. Ein gescheiterter Fadenstart meldet
+    /// [`Abschluss::Fehler`], wie lokal.
+    pub fn archiv_starten(ort: Archivort, generation: u64) -> Self {
+        let abbruch = Arc::new(AtomicBool::new(false));
+        let uebersprungen = Arc::new(AtomicU64::new(0));
+        let (sender, meldungen) = sync_channel(KANALTIEFE);
+        let faden = match fern::faden(format!("krk-archivleser-{generation}"), {
+            let sender = sender.clone();
+            let abbruch = Arc::clone(&abbruch);
+            let zaehler = Arc::clone(&uebersprungen);
+            move |pfand| archiv_lesefaden(pfand, &ort, generation, &abbruch, &zaehler, &sender)
         }) {
             Ok(faden) => Some(faden),
             Err(fehler) => {
@@ -709,4 +780,92 @@ fn fern_namen_senden(
                 .ok()?;
         }
     }
+}
+
+fn archiv_lesefaden(
+    pfand: &Fernfaden,
+    ort: &Archivort,
+    generation: u64,
+    abbruch: &AtomicBool,
+    uebersprungen: &AtomicU64,
+    sender: &SyncSender<Meldung>,
+) {
+    let abschluss = archiv_lesen_und_senden(pfand, ort, generation, abbruch, uebersprungen, sender);
+    // Vor dem Senden geschrieben; der Kanal ordnet beides (siehe das Feld).
+    if let Some(abschluss) = abschluss {
+        let _ = sender.send(Meldung::Fertig {
+            generation,
+            abschluss,
+        });
+    }
+}
+
+/// Fragt das Inhaltsverzeichnis und sendet die Kinder des Innenpfads.
+///
+/// Liefert `None` wie [`lesen_und_senden`], wenn der Empfaenger verschwunden
+/// ist. Ein Abbruch sendet nichts mehr, aus dem Grund, der dort steht.
+fn archiv_lesen_und_senden(
+    pfand: &Fernfaden,
+    ort: &Archivort,
+    generation: u64,
+    abbruch: &AtomicBool,
+    uebersprungen: &AtomicU64,
+    sender: &SyncSender<Meldung>,
+) -> Option<Abschluss> {
+    let verzeichnis = match ort.zugang.verzeichnis(pfand, abbruch) {
+        Ok(verzeichnis) => verzeichnis,
+        Err(Verzeichnisfehler::Abgebrochen) => return Some(Abschluss::Abgebrochen),
+        Err(fehler) => return Some(Abschluss::Archiv(Archivfehler::Verzeichnis(fehler))),
+    };
+    if ort.innen.ist_wurzel() {
+        uebersprungen.store(verzeichnis.ausgelassen(), Ordering::Release);
+    }
+    let mut eintraege = match archiv_kinder(&verzeichnis, ort) {
+        Some(eintraege) => eintraege,
+        None => return Some(Abschluss::Archiv(Archivfehler::KeinOrdner)),
+    };
+    while !eintraege.is_empty() {
+        if abbruch.load(Ordering::Relaxed) {
+            return Some(Abschluss::Abgebrochen);
+        }
+        let rest = eintraege.split_off(eintraege.len().min(STAPELGROESSE));
+        let stapel = std::mem::replace(&mut eintraege, rest);
+        sender
+            .send(Meldung::Stapel {
+                generation,
+                eintraege: stapel,
+            })
+            .ok()?;
+    }
+    if abbruch.load(Ordering::Relaxed) {
+        return Some(Abschluss::Abgebrochen);
+    }
+    Some(Abschluss::Vollstaendig)
+}
+
+/// Die Kinder des Innenpfads als Eintraege des Dateifensters, oder `None`,
+/// wenn der Innenpfad im Verzeichnis kein Ordner ist.
+fn archiv_kinder(verzeichnis: &Inhaltsverzeichnis, ort: &Archivort) -> Option<Vec<Eintrag>> {
+    Some(
+        verzeichnis
+            .kinder(&ort.innen)?
+            .filter_map(archiveintrag_zeigen)
+            .collect(),
+    )
+}
+
+/// Der Eintrag des Dateifensters zu einem Eintrag des Inhaltsverzeichnisses.
+///
+/// Der Name ist die letzte Komponente des Innenpfads; die Wurzel kommt als
+/// Kind nie vor, und `None` steht allein, damit kein `expect` noetig ist.
+fn archiveintrag_zeigen(eintrag: &Archiveintrag) -> Option<Eintrag> {
+    let name = eintrag.innen.name()?.to_owned();
+    let versteckt = name.starts_with('.');
+    Some(Eintrag::mit_versteckt(
+        name,
+        eintrag.groesse,
+        eintrag.geaendert,
+        eintrag.typ,
+        versteckt,
+    ))
 }

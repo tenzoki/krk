@@ -80,6 +80,10 @@ pub struct Gitmodell {
     /// Gitlauf, und die Kopfzeile sagt es (Entscheidung 13 des Plans
     /// `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`).
     am_fernen_ort: bool,
+    /// Ob der Tab einen Ordner in einem Archiv zeigt; dort laeuft ebenso
+    /// kein Gitlauf (E14 des Plans
+    /// `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`).
+    im_archiv: bool,
 }
 
 impl Gitmodell {
@@ -110,6 +114,12 @@ impl Gitmodell {
     /// Tabwechsel.
     pub fn am_fernen_ort_setzen(&mut self) {
         self.am_fernen_ort = true;
+    }
+
+    /// Haelt fest, dass der Tab einen Ordner in einem Archiv zeigt und kein
+    /// Gitlauf kommt; faellt wie [`Self::am_fernen_ort_setzen`].
+    pub fn im_archiv_setzen(&mut self) {
+        self.im_archiv = true;
     }
 
     /// Traegt ein, worauf HEAD steht.
@@ -197,6 +207,9 @@ impl Gitmodell {
     pub fn kopfzeile(&self) -> String {
         if self.am_fernen_ort {
             return texte::am_fernen_ort().to_owned();
+        }
+        if self.im_archiv {
+            return texte::im_archiv().to_owned();
         }
         self.kopf.as_ref().map(texte::kopfzeile).unwrap_or_default()
     }

@@ -63,20 +63,32 @@
 //! den Grund), keine Eigenschaft „ohne Inhaltsauftrag“. Die Sitzung nennt ihn
 //! nicht: `session.toml` bekommt seinen Rueckkehrordner, ein Neustart verbindet
 //! also nicht und fragt nach keiner PIN.
+//!
+//! # Ein Tab kann einen Ordner in einem Archiv zeigen
+//!
+//! [`Tabort::Archiv`] ist der dritte Fall, gebaut wie der ferne (E2, E16 des
+//! Plans `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`): der Ort
+//! samt dem Ordner der Archivdatei als Rueckkehrordner. Gelesen wird ueber
+//! [`Lesevorgang::archiv_starten`] auf einem Faden mit Pfand; ein Archivtab
+//! bekommt keinen Durchlauf, keinen Gitlauf und keine Eigenschaft „ohne
+//! Inhaltsauftrag“, und die Sitzung schreibt seinen Rueckkehrordner. Wer an
+//! der Wurzel des Archivs aufsteigt, kommt in den Rueckkehrordner und waehlt
+//! dort die Archivdatei.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use krk_core::ablage::{Dateifenster as Fensterzustand, Tab as Tabzustand};
+use krk_core::archiv::{Archivformat, HOECHSTENS_EINTRAEGE, Verzeichnisfehler};
 use krk_core::fern::{Fernfehler, Fernzugang};
 use krk_core::git::Marke;
 use krk_core::git::lauf::{Gitfrage, Gitlauf, Gitmeldung};
 use krk_core::heimordner::Heimordner;
-use krk_core::ort::{FernerOrt, Ort};
+use krk_core::ort::{Archivort, FernerOrt, Ort};
 use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
 use krk_core::verzeichnis::modell::Befund;
 use krk_core::verzeichnis::{
-    Abschluss, Durchlauf, Lesevorgang, Meldung, Ordnermodell, datenschutzsperre,
+    Abschluss, Archivfehler, Durchlauf, Lesevorgang, Meldung, Ordnermodell, datenschutzsperre,
 };
 
 use crate::gitmodell::Gitmodell;
@@ -101,6 +113,14 @@ pub enum Tabort {
         /// Der lokale Ordner, zu dem der Tab beim Neustart zurueckkehrt.
         rueckkehr: PathBuf,
     },
+    /// Ein Ordner in einem Archiv.
+    Archiv {
+        /// Der Ort im Archiv.
+        ort: Archivort,
+        /// Der Ordner der Archivdatei: dorthin fuehrt der Aufstieg aus der
+        /// Wurzel, und ihn schreibt die Sitzung.
+        rueckkehr: PathBuf,
+    },
 }
 
 impl Tabort {
@@ -110,35 +130,38 @@ impl Tabort {
         match self {
             Tabort::Lokal(ordner) => Ort::Lokal(ordner.clone()),
             Tabort::Fern { ort, .. } => Ort::Fern(ort.clone()),
+            Tabort::Archiv { ort, .. } => Ort::Archiv(ort.clone()),
         }
     }
 
-    /// Der lokale Ordner, oder `None` fuer einen fernen Ort.
+    /// Der lokale Ordner, oder `None` fuer einen fernen Ort oder einen im
+    /// Archiv.
     #[must_use]
     pub fn lokaler_ordner(&self) -> Option<&Path> {
         match self {
             Tabort::Lokal(ordner) => Some(ordner),
-            Tabort::Fern { .. } => None,
+            Tabort::Fern { .. } | Tabort::Archiv { .. } => None,
         }
     }
 
     /// Der lokale Ordner, den die Sitzung schreibt: der Ordner selbst, oder
-    /// der Rueckkehrordner eines fernen Orts.
+    /// der Rueckkehrordner eines fernen Orts oder eines Archivs.
     #[must_use]
     fn sitzungsordner(&self) -> &Path {
         match self {
             Tabort::Lokal(ordner) => ordner,
-            Tabort::Fern { rueckkehr, .. } => rueckkehr,
+            Tabort::Fern { rueckkehr, .. } | Tabort::Archiv { rueckkehr, .. } => rueckkehr,
         }
     }
 
-    /// Wie der Ort in einer Meldung heisst: der Pfad, oder
-    /// `konto@rechner:/pfad`.
+    /// Wie der Ort in einer Meldung heisst: der Pfad, `konto@rechner:/pfad`
+    /// oder `/pfad/zum/archiv.zip:/innen`.
     #[must_use]
     fn anzeige(&self) -> String {
         match self {
             Tabort::Lokal(ordner) => ordner.display().to_string(),
             Tabort::Fern { ort, .. } => ort.to_string(),
+            Tabort::Archiv { ort, .. } => ort.to_string(),
         }
     }
 }
@@ -301,6 +324,18 @@ impl Tabinhalt {
         }
     }
 
+    /// Ein ungelesener Tab in einem Archiv; `zustand.ordner` ist sein
+    /// Rueckkehrordner, und der Rest des Zustands gilt wie lokal. Ohne
+    /// Eigenschaft „ohne Inhaltsauftrag“, wie fern.
+    fn archiv_aus_zustand(zustand: &Tabzustand, ort: Archivort) -> Self {
+        let mut tab = Self::aus_zustand(zustand, None);
+        tab.ort = Tabort::Archiv {
+            ort,
+            rueckkehr: zustand.ordner.clone(),
+        };
+        tab
+    }
+
     /// Ein ungelesener Tab auf einem fernen Ort; `zustand.ordner` ist sein
     /// Rueckkehrordner, und der Rest des Zustands gilt wie lokal.
     ///
@@ -328,8 +363,9 @@ impl Tabinhalt {
     }
 
     /// Der lokale Ordner, den dieser Tab zeigt, oder `None` an einem fernen
-    /// Ort. Wer hier `None` bekommt und nur lokal arbeiten kann, meldet
-    /// `Text::AmFernenOrtNichtVerfuegbar` und tut sonst nichts.
+    /// Ort oder in einem Archiv. Wer hier `None` bekommt und nur lokal
+    /// arbeiten kann, meldet den Text aus `krk_core::ort::nicht_verfuegbar_text`
+    /// und tut sonst nichts.
     #[must_use]
     pub fn lokaler_ordner(&self) -> Option<&Path> {
         self.ort.lokaler_ordner()
@@ -499,6 +535,15 @@ impl Tabinhalt {
                 Some(name) => name.to_owned(),
                 None => ort.pfad.als_text().to_owned(),
             },
+            // An der Wurzel steht der Name der Archivdatei, sonst der des
+            // Ordners darin.
+            Tabort::Archiv { ort, .. } => match ort.innen.name() {
+                Some(name) => name.to_owned(),
+                None => ort.datei().file_name().map_or_else(
+                    || ort.datei().to_string_lossy().into_owned(),
+                    |name| name.to_string_lossy().into_owned(),
+                ),
+            },
         }
     }
 
@@ -518,7 +563,9 @@ impl Tabinhalt {
                 sortierung: self.modell.sortierung(),
                 bildlauf: self.bildlauf,
             },
-            Tabort::Fern { rueckkehr, .. } => Tabzustand {
+            // Ein Archivtab schreibt seinen Rueckkehrordner wie ein ferner
+            // (E16 des Plans der Archive); `session.toml` bekommt kein Feld.
+            Tabort::Fern { rueckkehr, .. } | Tabort::Archiv { rueckkehr, .. } => Tabzustand {
                 ordner: rueckkehr.clone(),
                 auswahl: None,
                 verstecke_ausgeblendet: self.modell.verstecke_ausgeblendet(),
@@ -1044,6 +1091,14 @@ impl Tabliste {
                 self.aktiv = stelle;
                 self.lesen_starten(stelle);
             }
+            // Derselbe Archivort mit derselben Rueckkehr (E16).
+            Tabort::Archiv { ort, rueckkehr } => {
+                let stelle = self.aktiv + 1;
+                let tab = Tabinhalt::archiv_aus_zustand(&Tabzustand::auf(rueckkehr), ort);
+                self.tabs.insert(stelle, tab);
+                self.aktiv = stelle;
+                self.lesen_starten(stelle);
+            }
         }
     }
 
@@ -1166,6 +1221,22 @@ impl Tabliste {
         self.ort_setzen_an(self.aktiv, Tabort::Fern { ort, rueckkehr }, auswahl);
     }
 
+    /// Laesst den sichtbaren Tab einen Ordner in einem Archiv zeigen (E8 des
+    /// Plans der Archive).
+    ///
+    /// Derselbe Weg wie [`Tabliste::ordner_setzen`], mit denselben
+    /// Uebertragungen. Der Rueckkehrordner ist der Ordner der Archivdatei;
+    /// der Rufer reicht ihn herein, weil er ihn am Wert kennt und hier keiner
+    /// aus dem Pfad gerechnet werden soll, den ein `..` taeuschen koennte.
+    pub fn archiv_setzen(
+        &mut self,
+        ort: Archivort,
+        rueckkehr: PathBuf,
+        auswahl: Option<Vormerkung>,
+    ) {
+        self.ort_setzen_an(self.aktiv, Tabort::Archiv { ort, rueckkehr }, auswahl);
+    }
+
     /// Betritt eine ferne Verknuepfung wie einen Ordner und kehrt zurueck,
     /// falls sie sich nicht als Ordner oeffnen laesst (Entscheidung 8 des
     /// Plans der sftp-Ordner).
@@ -1242,6 +1313,7 @@ impl Tabliste {
         self.tabs[stelle] = match ort {
             Tabort::Lokal(_) => self.tab_bauen(&zustand),
             Tabort::Fern { ort, .. } => Tabinhalt::fern_aus_zustand(&zustand, ort),
+            Tabort::Archiv { ort, .. } => Tabinhalt::archiv_aus_zustand(&zustand, ort),
         };
         self.tabs[stelle].wunsch_melden = melden;
         let modell = &mut self.tabs[stelle].modell;
@@ -1689,9 +1761,17 @@ impl Tabliste {
         // (Entscheidung 13 des Plans der sftp-Ordner). Gesetzt wird das vor
         // der Frage nach Sichtbarkeit und Bedarf, damit es dasteht, sobald der
         // Tab sichtbar wird.
-        let Some(ordner) = self.tabs[stelle].lokaler_ordner().map(Path::to_path_buf) else {
-            self.tabs[stelle].gitmodell.am_fernen_ort_setzen();
-            return false;
+        let ordner = match &self.tabs[stelle].ort {
+            Tabort::Lokal(ordner) => ordner.clone(),
+            Tabort::Fern { .. } => {
+                self.tabs[stelle].gitmodell.am_fernen_ort_setzen();
+                return false;
+            }
+            // Ebenso im Archiv, mit eigenem Grund (E14 des Plans der Archive).
+            Tabort::Archiv { .. } => {
+                self.tabs[stelle].gitmodell.im_archiv_setzen();
+                return false;
+            }
         };
         if stelle != self.aktiv || !self.git_gefragt {
             return false;
@@ -1791,8 +1871,9 @@ impl Tabliste {
         let generation = self.letzte_generation;
         let ohne_inhaltsauftrag = match &self.tabs[stelle].ort {
             Tabort::Lokal(ordner) => ohne_inhaltsauftrag_fuer(&self.heim, ordner),
-            // Der Heimordner liegt nie auf einem Server.
-            Tabort::Fern { .. } => None,
+            // Der Heimordner liegt nie auf einem Server und nie in einem
+            // Archiv.
+            Tabort::Fern { .. } | Tabort::Archiv { .. } => None,
         };
         let tab = &mut self.tabs[stelle];
         // Der bisherige Lesevorgang faellt hier. Sein Arbeitsfaden bemerkt den
@@ -1819,6 +1900,7 @@ impl Tabliste {
         tab.lesevorgang = Some(match &tab.ort {
             Tabort::Lokal(ordner) => Lesevorgang::starten(ordner, generation),
             Tabort::Fern { ort, .. } => Lesevorgang::fern_starten(ort.clone(), generation),
+            Tabort::Archiv { ort, .. } => Lesevorgang::archiv_starten(ort.clone(), generation),
         });
         // **Zugleich mit dem Lesevorgang und nicht nach ihm**, und danach, weil
         // der neue Lauf die eben gesetzte Generation mitbekommen muss. Der
@@ -2088,11 +2170,12 @@ fn lesemeldungen_einziehen(tab: &mut Tabinhalt) -> Einzug {
                     einzug.meldung_neu = true;
                 }
                 tab.wunsch_melden = false;
-                // Uebersprungene Namen eines fernen Ordners (Entscheidung 8):
+                // Uebersprungene Namen eines fernen Ordners (Entscheidung 8)
+                // oder ausgelassene eines Archivs (E4 des Plans der Archive):
                 // nach jeder anderen Meldung, die den Vorrang hat.
                 if uebersprungen > 0 && tab.meldung.is_none() {
                     tab.meldung =
-                        Some(anzahl(Zahlwort::FernNamenUebersprungen, uebersprungen, &[]));
+                        Some(anzahl(uebersprungen_zahlwort(&tab.ort), uebersprungen, &[]));
                     einzug.meldung_neu = true;
                 }
                 tab.gelesen = true;
@@ -2105,6 +2188,17 @@ fn lesemeldungen_einziehen(tab: &mut Tabinhalt) -> Einzug {
         tab.lesevorgang = None;
     }
     einzug
+}
+
+/// Das Zahlwort fuer die Namen, die ein Lesevorgang ausgelassen hat.
+///
+/// Lokal zaehlt der Leser immer null; der Zweig steht, weil die
+/// Fallunterscheidung vollstaendig ist.
+fn uebersprungen_zahlwort(ort: &Tabort) -> Zahlwort {
+    match ort {
+        Tabort::Lokal(_) | Tabort::Fern { .. } => Zahlwort::FernNamenUebersprungen,
+        Tabort::Archiv { .. } => Zahlwort::ArchivNamenAusgelassen,
+    }
 }
 
 /// Was die Statuszeile zum Abschluss eines Lesevorgangs sagt, oder nichts.
@@ -2124,11 +2218,12 @@ fn lesefehlertext(ort: &Tabort, abschluss: &Abschluss) -> Option<String> {
                     &[("ordner", &ordner.display()), ("fehler", &fehler)],
                 )
             }),
-            Tabort::Fern { .. } => satz(
+            Tabort::Fern { .. } | Tabort::Archiv { .. } => satz(
                 Text::TabNichtVollstaendigGelesen,
                 &[("ordner", &ort.anzeige()), ("fehler", &fehler)],
             ),
         }),
+        Abschluss::Archiv(fehler) => archivfehlertext(ort, fehler),
         Abschluss::Fern(fehler) => Some(match (ort, fehler) {
             (Tabort::Fern { ort, .. }, Fernfehler::Getrennt(_)) => satz(
                 Text::FernVerbindungGetrennt,
@@ -2139,6 +2234,52 @@ fn lesefehlertext(ort: &Tabort, abschluss: &Abschluss) -> Option<String> {
                 &[("ordner", &ort.anzeige()), ("fehler", fehler)],
             ),
         }),
+    }
+}
+
+/// Der Satz zu einem gescheiterten Lesevorgang in einem Archiv, oder keiner.
+///
+/// Vollstaendig ueber [`Archivfehler`] und [`Verzeichnisfehler`] und ohne
+/// Auffangzweig. Ein Abbruch kommt nicht an: der Leser meldet ihn als
+/// [`Abschluss::Abgebrochen`], und kaeme er doch, sagte der Satz nichts, wie dort.
+fn archivfehlertext(ort: &Tabort, fehler: &Archivfehler) -> Option<String> {
+    let datei = match ort {
+        Tabort::Archiv { ort, .. } => ort.datei().display().to_string(),
+        Tabort::Lokal(_) | Tabort::Fern { .. } => ort.anzeige(),
+    };
+    let format = match ort {
+        Tabort::Archiv { ort, .. } => archivformatname(ort.format()),
+        Tabort::Lokal(_) | Tabort::Fern { .. } => "",
+    };
+    Some(match fehler {
+        Archivfehler::Verzeichnis(Verzeichnisfehler::Abgebrochen) => return None,
+        Archivfehler::Verzeichnis(Verzeichnisfehler::Lesen(grund)) => satz(
+            Text::TabNichtVollstaendigGelesen,
+            &[("ordner", &datei), ("fehler", grund)],
+        ),
+        Archivfehler::Verzeichnis(Verzeichnisfehler::KeineDatei) => {
+            satz(Text::ArchivKeineDatei, &[("datei", &datei)])
+        }
+        Archivfehler::Verzeichnis(Verzeichnisfehler::Ungueltig(grund)) => satz(
+            Text::ArchivUngueltig,
+            &[("datei", &datei), ("format", &format), ("grund", grund)],
+        ),
+        Archivfehler::Verzeichnis(Verzeichnisfehler::ZuGross) => satz(
+            Text::ArchivZuGross,
+            &[("datei", &datei), ("grenze", &HOECHSTENS_EINTRAEGE)],
+        ),
+        Archivfehler::KeinOrdner => satz(Text::ArchivOrdnerFehlt, &[("ort", &ort.anzeige())]),
+    })
+}
+
+/// Wie ein Archivformat in einer Meldung heisst: die Endung, die es traegt,
+/// in jeder Sprache gleich.
+fn archivformatname(format: Archivformat) -> &'static str {
+    match format {
+        Archivformat::Zip => "zip",
+        Archivformat::Tar => "tar",
+        Archivformat::TarGz => "tar.gz",
+        Archivformat::Gz => "gz",
     }
 }
 
@@ -4418,5 +4559,116 @@ mod tests {
         fertig_lesen(&mut liste);
         assert_eq!(liste.aktiver().ort(), Ort::Fern(unter("auf-ordner")));
         assert_eq!(liste.aktiver().meldung(), None);
+    }
+
+    // ------------------------------------------------------------------
+    // Ein Ordner in einem Archiv (Schritt 2 des Plans der Archive)
+    // ------------------------------------------------------------------
+
+    /// Ein Archivtab liest ueber den Archivlesevorgang, nennt sich nach der
+    /// Archivdatei, bekommt weder Durchlauf noch Gitlauf und sagt im
+    /// Git-Bereich, warum; seine Stelle in `tabordner` ist leer.
+    #[test]
+    fn ein_archivtab_liest_und_bekommt_weder_durchlauf_noch_gitlauf() {
+        let ordner = Pruefordner::neu("tab-archiv");
+        let inhalt = ordner.ordner("inhalt");
+        for name in ["a.txt", "b.txt"] {
+            std::fs::write(inhalt.join(name), b"x").expect("Datei");
+        }
+        std::fs::create_dir(inhalt.join("unterordner-mit-a")).expect("Ordner");
+        let datei = ordner.zip_packen("paket.zip", "inhalt");
+        let mut liste = liste(&[&ordner.pfad().display().to_string()]);
+        let _ = liste.git_gefragt_setzen(true);
+        liste.sichtbaren_lesen();
+        fertig_lesen(&mut liste);
+
+        let zugang = crate::archivregister::zugang(&datei, krk_core::archiv::Archivformat::Zip);
+        let wurzel = Archivort::wurzel(zugang);
+        liste.archiv_setzen(wurzel.clone(), ordner.pfad().to_path_buf(), None);
+        fertig_lesen(&mut liste);
+        assert_eq!(liste.aktiver().titel(), "paket.zip");
+        assert_eq!(
+            liste.aktiver().modell().zeilenzahl(),
+            1,
+            "die Wurzel traegt `inhalt`"
+        );
+
+        let inneres = wurzel.kind("inhalt").expect("Name");
+        liste.archiv_setzen(inneres, ordner.pfad().to_path_buf(), None);
+        fertig_lesen(&mut liste);
+        let tab = liste.aktiver();
+        assert!(tab.lokaler_ordner().is_none());
+        assert!(matches!(tab.ort(), Ort::Archiv(_)));
+        assert_eq!(tab.titel(), "inhalt");
+        assert_eq!(tab.modell().zeilenzahl(), 3);
+        assert_eq!(tab.meldung(), None);
+        assert!(
+            tab.gitlauf.is_none(),
+            "ein Archivtab bekommt keinen Gitlauf"
+        );
+        assert_eq!(
+            tab.gitmodell().kopfzeile(),
+            krk_core::git::texte::im_archiv(),
+            "der Git-Bereich nennt den Grund"
+        );
+        assert_eq!(liste.tabordner(), [None]);
+
+        liste.aktiver_mut().modell_mut().tief_setzen(true);
+        liste
+            .aktiver_mut()
+            .modell_mut()
+            .filtertext_setzen("unterordner");
+        assert!(
+            !liste.durchlauf_nachziehen(),
+            "ein Archivtab bekommt keinen Durchlauf"
+        );
+        assert_eq!(
+            liste.aktiver().modell().zeilenzahl(),
+            1,
+            "der Namensfilter wirkt flach"
+        );
+    }
+
+    /// Eine Datei mit der Endung `.zip`, die keines ist, meldet sich aus dem
+    /// Lesevorgang mit dem Grund des Lesers, statt still leer zu bleiben.
+    #[test]
+    fn ein_ungueltiges_archiv_meldet_sich_aus_dem_lesevorgang() {
+        let ordner = Pruefordner::neu("tab-archiv-ungueltig");
+        let datei = ordner.pfad().join("kaputt.zip");
+        std::fs::write(&datei, b"kein zip").expect("Datei");
+        let mut liste = liste(&[&ordner.pfad().display().to_string()]);
+        let zugang = crate::archivregister::zugang(&datei, krk_core::archiv::Archivformat::Zip);
+        liste.archiv_setzen(Archivort::wurzel(zugang), ordner.pfad().to_path_buf(), None);
+        fertig_lesen(&mut liste);
+        let meldung = liste.aktiver().meldung().expect("eine Meldung");
+        assert!(meldung.contains("kaputt.zip"), "{meldung}");
+        assert!(meldung.contains("zip"), "{meldung}");
+    }
+
+    /// Die Sitzung nennt kein Archiv: ein Archivtab schreibt seinen
+    /// Rueckkehrordner, ohne Auswahl und ohne Bildlauf, und ein neuer Tab
+    /// daneben zeigt denselben Archivort mit derselben Rueckkehr (E16).
+    #[test]
+    fn die_sitzung_nennt_kein_archiv() {
+        let ordner = Pruefordner::neu("tab-archiv-sitzung");
+        let daheim = ordner.ordner("daheim");
+        let datei = daheim.join("paket.zip");
+        let zugang = crate::archivregister::zugang(&datei, krk_core::archiv::Archivformat::Zip);
+        let ort = Archivort::wurzel(zugang).kind("innen").expect("Name");
+        let mut liste = liste(&[&daheim.display().to_string()]);
+        liste.archiv_setzen(ort.clone(), daheim.clone(), None);
+        liste.aktiven_verdoppeln();
+        assert_eq!(liste.zahl(), 2);
+        assert!(
+            matches!(liste.aktiver().tabort(), Tabort::Archiv { rueckkehr, .. } if *rueckkehr == daheim),
+            "der neue Tab zeigt denselben Archivort mit demselben Rueckkehrordner"
+        );
+        assert_eq!(liste.aktiver().ort(), Ort::Archiv(ort));
+        let zustand = liste.zustand();
+        for tab in &zustand.tabs {
+            assert_eq!(tab.ordner, daheim);
+            assert_eq!(tab.auswahl, None);
+            assert_eq!(tab.bildlauf, 0.0);
+        }
     }
 }

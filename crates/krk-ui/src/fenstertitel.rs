@@ -99,7 +99,10 @@ pub enum Editoranzeige<'a> {
 /// auf einem Server, heisst er `konto@rechner:/pfad`, mit Port
 /// `konto@rechner:port:/pfad` (Entscheidung 15 des Plans
 /// `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`); geschrieben
-/// wird er, wie er dasteht, ohne Anfrage, wie jeder lokale.
+/// wird er, wie er dasteht, ohne Anfrage, wie jeder lokale. Liegt er in
+/// einem Archiv, heisst er `/pfad/zum/archiv.zip:/innen/pfad`, in derselben
+/// Schreibweise mit dem Doppelpunkt (E16 des Plans
+/// `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`).
 ///
 /// **Die offene Quicknote hat keinen Pfad und nennt sich selbst**: steht der
 /// Fokus im Editor und zeigt der die Quicknote, heisst der Titel „Quicknote",
@@ -114,6 +117,8 @@ pub fn titel(
     let ordner = || match aktiver_ordner {
         Ort::Lokal(pfad) => pfad.display().to_string(),
         Ort::Fern(ort) => ort.to_string(),
+        // `/pfad/zum/archiv.zip:/innen/pfad` (E16 des Plans der Archive).
+        Ort::Archiv(ort) => ort.to_string(),
     };
     let pfad = match fokus {
         Fokus::Dateifenster => return Some(ordner()),
@@ -335,6 +340,50 @@ mod tests {
             assert_eq!(
                 titel(fokus, &ohne_port, Editoranzeige::Datei(None), None).as_deref(),
                 Some("kai@server.test:/var/www"),
+                "{fokus:?}"
+            );
+        }
+    }
+
+    /// Ein Ordner in einem Archiv steht als `/pfad/zum/archiv.zip:/innen` im
+    /// Titel, die Wurzel als `…:/` (E16 des Plans der Archive), und jeder
+    /// Fokuswert, der lokal auf den Ordner faellt, faellt auch hier auf ihn.
+    #[test]
+    fn der_fenstertitel_nennt_archiv_und_innenpfad() {
+        let zugang = std::sync::Arc::new(krk_core::archiv::Archivzugang::neu(
+            PathBuf::from("/Users/k1/Downloads/paket.tar.gz"),
+            krk_core::archiv::Archivformat::TarGz,
+        ));
+        let wurzel = krk_core::ort::Archivort::wurzel(zugang);
+        let innen = wurzel
+            .kind("src")
+            .and_then(|src| src.kind("lib"))
+            .expect("Namen");
+        assert_eq!(
+            titel(
+                Fokus::Dateifenster,
+                &Ort::Archiv(wurzel),
+                Editoranzeige::Datei(None),
+                None
+            )
+            .as_deref(),
+            Some("/Users/k1/Downloads/paket.tar.gz:/")
+        );
+        for fokus in [
+            Fokus::Dateifenster,
+            Fokus::Leiste,
+            Fokus::Git,
+            Fokus::Vorschau,
+        ] {
+            assert_eq!(
+                titel(
+                    fokus,
+                    &Ort::Archiv(innen.clone()),
+                    Editoranzeige::Datei(None),
+                    None
+                )
+                .as_deref(),
+                Some("/Users/k1/Downloads/paket.tar.gz:/src/lib"),
                 "{fokus:?}"
             );
         }

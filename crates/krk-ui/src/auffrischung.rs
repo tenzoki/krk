@@ -189,6 +189,12 @@ pub trait Dateifenstersicht {
 /// `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`): FSEvents
 /// sieht allein dieses Geraet, und am Wert entschieden faellt er hier heraus,
 /// ohne Systemaufruf.
+///
+/// **Ein Ordner in einem Archiv beobachtet den Ordner seiner Archivdatei**
+/// (E16 des Plans `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`):
+/// FSEvents meldet eine Aenderung der Datei an ihrem Ordner, und
+/// [`ort_neu_lesen`] liest den Archivtab daraufhin neu. Der Ordner kommt aus
+/// dem Pfad am Wert, ohne Systemaufruf.
 pub fn sichtbare_ordner(sicht: &impl Dateifenstersicht) -> Vec<PathBuf> {
     let mut ordner: Vec<PathBuf> = Vec::with_capacity(3);
     let mut aufnehmen = |dieser: PathBuf| {
@@ -203,6 +209,11 @@ pub fn sichtbare_ordner(sicht: &impl Dateifenstersicht) -> Vec<PathBuf> {
         match sicht.ordner(seite) {
             Ort::Lokal(dieser) => aufnehmen(dieser),
             Ort::Fern(_) => {}
+            Ort::Archiv(archiv) => {
+                if let Some(ordner_der_datei) = archiv.datei().parent() {
+                    aufnehmen(ordner_der_datei.to_path_buf());
+                }
+            }
         }
     }
     if let Some(ordner_der_datei) = editorordner(sicht.editordatei().as_deref()) {
@@ -300,7 +311,9 @@ pub fn ordner_neu_lesen(sicht: &impl Dateifenstersicht, pfad: &Path) -> usize {
     ort_neu_lesen(sicht, &Ort::Lokal(pfad.to_path_buf()))
 }
 
-/// Liest jedes Dateifenster neu, das diesen Ort zeigt, lokal oder fern.
+/// Liest jedes Dateifenster neu, das diesen Ort zeigt, lokal, fern oder in
+/// einem Archiv; ein Archivtab auch, wenn der gemeldete lokale Ordner der
+/// Ordner seiner Archivdatei ist ([`zeigt_gemeldeten_ort`]).
 ///
 /// Der Rumpf von [`ordner_neu_lesen`], fuer den Abschluss eines Vorgangs, dessen
 /// Ziel oder Quelle auf einem Server liegt (Schritt 5 des Plans der
@@ -310,7 +323,7 @@ pub fn ordner_neu_lesen(sicht: &impl Dateifenstersicht, pfad: &Path) -> usize {
 pub fn ort_neu_lesen(sicht: &impl Dateifenstersicht, gemeldet: &Ort) -> usize {
     let mut aufgefrischt = 0;
     for seite in Fensterseite::ALLE {
-        if !gleicher_ort(&sicht.ordner(seite), gemeldet) {
+        if !zeigt_gemeldeten_ort(&sicht.ordner(seite), gemeldet) {
             continue;
         }
         if sicht.namenszelle_in_bearbeitung(seite) {
@@ -562,11 +575,38 @@ fn auswurfmeldung(name: &str, ziel: &Path, sichtbar: bool, verdeckt: usize) -> S
 /// Wert** verglichen, ueber Serverkennung und Pfad und ohne `canonicalize`,
 /// denn ein ferner Pfad ist auf diesem Geraet keiner. Ein lokaler und ein
 /// ferner sind nie derselbe.
+///
+/// Zwei Orte in einem Archiv sind derselbe ueber die Archivdatei und den
+/// Innenpfad, am Wert (E16 des Plans der Archive); ein Archivort ist nie
+/// derselbe wie ein lokaler oder ferner.
 fn gleicher_ort(einer: &Ort, anderer: &Ort) -> bool {
     match (einer, anderer) {
         (Ort::Lokal(einer), Ort::Lokal(anderer)) => gleicher_ordner(einer, anderer),
         (Ort::Fern(einer), Ort::Fern(anderer)) => einer == anderer,
-        (Ort::Lokal(_), Ort::Fern(_)) | (Ort::Fern(_), Ort::Lokal(_)) => false,
+        (Ort::Archiv(einer), Ort::Archiv(anderer)) => einer == anderer,
+        (Ort::Lokal(_), Ort::Fern(_) | Ort::Archiv(_))
+        | (Ort::Fern(_), Ort::Lokal(_) | Ort::Archiv(_))
+        | (Ort::Archiv(_), Ort::Lokal(_) | Ort::Fern(_)) => false,
+    }
+}
+
+/// Ob ein Dateifenster, das `angezeigt` zeigt, von einer Meldung ueber
+/// `gemeldet` betroffen ist.
+///
+/// Derselbe Ort ([`gleicher_ort`]), und dazu der eine Fall, den FSEvents
+/// ueber einen anderen Ort meldet: ein Archivtab, dessen Archivdatei im
+/// gemeldeten lokalen Ordner liegt. Die Kennungspruefung des Zugangs macht
+/// das Neulesen billig, wenn die Meldung einer anderen Datei galt (E3, E16
+/// des Plans der Archive).
+fn zeigt_gemeldeten_ort(angezeigt: &Ort, gemeldet: &Ort) -> bool {
+    match (angezeigt, gemeldet) {
+        (Ort::Archiv(archiv), Ort::Lokal(ordner)) => archiv
+            .datei()
+            .parent()
+            .is_some_and(|ordner_der_datei| gleicher_ordner(ordner_der_datei, ordner)),
+        (Ort::Archiv(_), Ort::Fern(_) | Ort::Archiv(_)) | (Ort::Lokal(_) | Ort::Fern(_), _) => {
+            gleicher_ort(angezeigt, gemeldet)
+        }
     }
 }
 
@@ -622,6 +662,9 @@ mod tests {
         /// Ein ferner Ort, den der sichtbare Tab dieser Seite statt seines
         /// Pfades zeigt.
         fern: [Option<krk_core::ort::FernerOrt>; 2],
+        /// Ein Ort in einem Archiv, den der sichtbare Tab dieser Seite statt
+        /// seines Pfades zeigt.
+        archiv: [Option<krk_core::ort::Archivort>; 2],
         sichtbarer_tab: [usize; 2],
         sichtbar: [bool; 2],
         /// Die Datei, die der Editor haelt; ohne Editor `None`.
@@ -637,6 +680,7 @@ mod tests {
             Self {
                 tabs: [vec![PathBuf::from(links)], vec![PathBuf::from(rechts)]],
                 fern: [None, None],
+                archiv: [None, None],
                 sichtbarer_tab: [0, 0],
                 sichtbar: [true, true],
                 editordatei: None,
@@ -670,6 +714,13 @@ mod tests {
             self
         }
 
+        /// Laesst den sichtbaren Tab dieser Seite einen Ort in einem Archiv
+        /// zeigen.
+        fn mit_archiv(mut self, seite: Fensterseite, ort: krk_core::ort::Archivort) -> Self {
+            self.archiv[seite.index()] = Some(ort);
+            self
+        }
+
         fn ohne_rechtes(mut self) -> Self {
             self.sichtbar[1] = false;
             self
@@ -686,6 +737,9 @@ mod tests {
 
     impl Dateifenstersicht for Probe {
         fn ordner(&self, seite: Fensterseite) -> Ort {
+            if let Some(ort) = &self.archiv[seite.index()] {
+                return Ort::Archiv(ort.clone());
+            }
             match &self.fern[seite.index()] {
                 Some(ort) => Ort::Fern(ort.clone()),
                 None => {
@@ -696,7 +750,7 @@ mod tests {
 
         fn tabordner(&self, seite: Fensterseite) -> Vec<Option<PathBuf>> {
             let sichtbar = self.sichtbarer_tab[seite.index()];
-            let fern = self.fern[seite.index()].is_some();
+            let fern = self.fern[seite.index()].is_some() || self.archiv[seite.index()].is_some();
             self.tabs[seite.index()]
                 .iter()
                 .enumerate()
@@ -845,6 +899,43 @@ mod tests {
         assert!(!gleicher_ort(
             &Ort::Fern(fern()),
             &Ort::Lokal(PathBuf::from("/a"))
+        ));
+    }
+
+    /// Ein Archivtab beobachtet den Ordner seiner Archivdatei, frischt auf
+    /// eine Meldung dort auf und auf keine ueber seinen Rueckkehrpfad hinaus;
+    /// zwei Archivorte vergleichen sich am Wert (E16 des Plans der Archive).
+    #[test]
+    fn ein_archivtab_beobachtet_den_ordner_seiner_datei() {
+        let ort = |innen: &str| {
+            let zugang = std::sync::Arc::new(krk_core::archiv::Archivzugang::neu(
+                PathBuf::from("/c/paket.zip"),
+                krk_core::archiv::Archivformat::Zip,
+            ));
+            let wurzel = krk_core::ort::Archivort::wurzel(zugang);
+            if innen.is_empty() {
+                wurzel
+            } else {
+                wurzel.kind(innen).expect("Name")
+            }
+        };
+        let probe = Probe::neu("/a", "/b").mit_archiv(Fensterseite::Links, ort("innen"));
+        assert_eq!(
+            sichtbare_ordner(&probe),
+            [PathBuf::from("/c"), PathBuf::from("/b")]
+        );
+        assert_eq!(ordner_neu_lesen(&probe, Path::new("/a")), 0);
+        assert_eq!(ordner_neu_lesen(&probe, Path::new("/c")), 1);
+        assert_eq!(probe.protokoll(), ["neu_lesen 0"]);
+        assert_eq!(ort_neu_lesen(&probe, &Ort::Archiv(ort("innen"))), 1);
+        assert_eq!(ort_neu_lesen(&probe, &Ort::Archiv(ort(""))), 0);
+        assert!(gleicher_ort(
+            &Ort::Archiv(ort("innen")),
+            &Ort::Archiv(ort("innen"))
+        ));
+        assert!(!gleicher_ort(
+            &Ort::Archiv(ort("")),
+            &Ort::Lokal(PathBuf::from("/c/paket.zip"))
         ));
     }
 

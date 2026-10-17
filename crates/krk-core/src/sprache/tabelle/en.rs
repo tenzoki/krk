@@ -163,6 +163,24 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "the half-written entry remained in the archive: {fehler}"
         }
         Text::PackenNichtInsArchivGeschrieben => "not written to the archive: {fehler}",
+        Text::ArchivUnveraendert => "the archive is unchanged: {grund}",
+        Text::ArchivUnveraendertNachAbbruch => "cancelled; the archive is unchanged",
+        Text::ArchivVonAussenVeraendert => "the archive was changed from outside during the change",
+        Text::ArchivVerschluesseltNurLesbar => {
+            "the archive contains encrypted entries and is not changed"
+        }
+        Text::ArchivNurLesbar => "this archive is read-only",
+        Text::ArchivZipUngewoehnlicheForm => {
+            "the zip has data before its first entry or is split into several parts"
+        }
+        Text::ArchivTarMitLuecken => {
+            "the tar contains a file with holes (GNU sparse) and cannot be rewritten"
+        }
+        Text::ArchivTarGroesseAusPax => {
+            "the tar gives two different sizes for one entry and cannot be rewritten"
+        }
+        Text::ArchivQuelleVeraendert => "the source changed its size while being read",
+        Text::ArchivUmbauZuGross => "the archive has more than {grenze} entries",
         Text::StapelKeinStartwert => "“{text}” is not a starting value for the numbering",
         Text::StapelKeineStellenzahl => {
             "“{text}” is not a number of digits between 1 and {hoechste}"
@@ -396,6 +414,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::ProfilJuengsteNull => "juengste with anzahl = 0 can never show an entry",
         Text::GitKeinRepository => "This folder is not in any Git repository.",
         Text::GitAmFernenOrt => "A folder on a server is not checked with Git.",
+        Text::GitImArchiv => "A folder inside an archive is not checked with Git.",
         Text::GitOhneCommit => "no commit yet",
         Text::GitUnveraendert => "unchanged",
         Text::GitImOrdner => "{marken} in this folder",
@@ -1018,6 +1037,19 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "“{name}” is connected, but {pfad} is not a folder; showing {heim}."
         }
         Text::AmFernenOrtNichtVerfuegbar => "This is not possible in a folder on a server.",
+        Text::ImArchivNichtVerfuegbar => "This is not possible inside an archive.",
+        Text::ArchivAmFernenOrt => {
+            "An archive on a server cannot be opened as a folder; copy it here first."
+        }
+        Text::ArchivImArchiv => {
+            "An archive inside an archive cannot be opened as a folder; copy it out first."
+        }
+        Text::ArchivUngueltig => {
+            "{datei} is not a readable archive in the {format} format: {grund}"
+        }
+        Text::ArchivKeineDatei => "{datei} is not a regular file.",
+        Text::ArchivZuGross => "{datei} holds more than {grenze} entries and is not shown.",
+        Text::ArchivOrdnerFehlt => "The folder {ort} no longer exists in the archive.",
         Text::FernVerbindungGetrennt => {
             "The connection “{name}” is closed; clicking the connection reconnects."
         }
@@ -1078,6 +1110,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
 pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &'static str) {
     match schluessel {
         Zahlwort::Byte => ("{n} byte", "{n} bytes"),
+        Zahlwort::ArchivVerdeckteWeggefallen => (
+            "one hidden entry was dropped while rewriting",
+            "{n} hidden entries were dropped while rewriting",
+        ),
         Zahlwort::NeuerungenEintraegeIn => ("{n} entry in {datei}", "{n} entries in {datei}"),
         Zahlwort::HeimZettelUebernommen => (
             "{themen} taken over as a note into {notizen}",
@@ -1151,6 +1187,10 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::FernNamenUebersprungen => (
             "One name was skipped: it is not UTF-8 or not a valid file name.",
             "{n} names were skipped: they are not UTF-8 or not valid file names.",
+        ),
+        Zahlwort::ArchivNamenAusgelassen => (
+            "One name in the archive was left out: it is unsafe or duplicated.",
+            "{n} names in the archive were left out: they are unsafe or duplicated.",
         ),
     }
 }

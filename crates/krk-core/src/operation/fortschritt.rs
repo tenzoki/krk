@@ -323,6 +323,16 @@ impl Steuerung {
         self.abbruch.load(Ordering::Relaxed)
     }
 
+    /// Dasselbe Abbruchkennzeichen fuer einen Leser oder Schreiber, der es je
+    /// Block fragt, waehrend die Steuerung anderswo geliehen ist.
+    ///
+    /// Der Umbau eines Archivs reicht es an das Lesen des alten Archivs und
+    /// an `Archivzugang::verzeichnis` weiter (`crate::archiv::umbau`); es ist
+    /// kein zweites Kennzeichen, sondern ein Verweis auf das eine.
+    pub(crate) fn abbruchkennzeichen(&self) -> Arc<AtomicBool> {
+        Arc::clone(&self.abbruch)
+    }
+
     /// Meldet einen Zwischenstand innerhalb eines Eintrags, getaktet.
     pub(crate) fn zwischenstand(&mut self, eintrag: &Path, bytes_im_eintrag: u64) {
         let jetzt = Instant::now();

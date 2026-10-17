@@ -26,9 +26,29 @@
 //! ohnehin; damit die frueheren trotzdem in der Zahl der ausgelassenen Namen
 //! stehen, zaehlt [`zentrale_koepfe_zaehlen`] die Koepfe des
 //! Zentralverzeichnisses selbst nach.
+//!
+//! # Die rohe Form fuer den Umbau
+//!
+//! Der Umbau eines Zip (`super::umbau`) kopiert jeden unveraenderten Eintrag
+//! **Byte fuer Byte**: lokaler Kopf, gepackte Daten und ein etwaiger
+//! Datenbeschreiber gehen unveraendert hinueber, der Satz im
+//! Zentralverzeichnis ebenso, bis auf den Versatz seines lokalen Kopfs. Die
+//! Kiste bietet dafuer `raw_copy_file`, und das reicht nicht: es baut den
+//! Eintrag aus `ZipFile::options` neu, und die tragen weder die Zusatzfelder
+//! (also nicht die Zeitfelder `0x5455` und `0x5855`, ohne die KRK jeden
+//! kopierten Eintrag auf 1970 zeigte) noch das Typkennzeichen einer
+//! Verknuepfung, die danach eine gewoehnliche Datei waere (gelesen in der
+//! Quelle von `zip-8.6.0`, `ZipFile::options` und `FileOptions::normalize`).
+//! Die Saetze liest und schreibt deshalb [`Zentralsatz`] selbst, das Ende des
+//! Archivs samt ZIP64 [`ende_lesen`] und [`ende_schreiben`]; neue Eintraege
+//! packt weiter die Kiste.
+//!
+//! Ein Zip mit Daten vor seinem ersten Eintrag oder ueber mehrere Teile
+//! verteilt meldet sich hier mit `io::ErrorKind::InvalidData`, und der Umbau
+//! schreibt es nicht: die Versaetze waeren dort nicht die, die er setzt.
 
 use std::fs::{self, File};
-use std::io::{BufReader, Read, Seek, SeekFrom};
+use std::io::{self, BufReader, Read, Seek, SeekFrom, Write};
 use std::sync::atomic::AtomicBool;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -150,12 +170,28 @@ pub(crate) const FELD_INFOZIP_UNIX: u16 = 0x5855;
 /// [`crate::operation::fortschritt::Steuerung`] entgegen: sie hat nichts zu melden.
 #[must_use = "ohne die Wahl traegt der Eintrag kein Datum"]
 pub(crate) fn zeit_uebernehmen(
-    mut wahl: FullFileOptions<'static>,
+    wahl: FullFileOptions<'static>,
     angaben: Option<&fs::Metadata>,
 ) -> FullFileOptions<'static> {
     let Some(geaendert) = angaben.and_then(|angaben| angaben.modified().ok()) else {
         return wahl;
     };
+    let gelesen = angaben.and_then(|angaben| angaben.accessed().ok());
+    zeit_eintragen(wahl, geaendert, gelesen)
+}
+
+/// Traegt ein Aenderungsdatum und, wenn bekannt, eine Zugriffszeit in die
+/// Wahl ein, wie [`zeit_uebernehmen`] es aus den Angaben einer Datei tut.
+///
+/// Der Umbau eines Archivs kennt fuer einen neuen Eintrag ein Datum und keine
+/// `Metadata`: seine Quelle kann auf einem Server oder in einem anderen Archiv
+/// liegen. Die Regel ist dieselbe und steht deshalb hier und nicht zweimal.
+#[must_use = "ohne die Wahl traegt der Eintrag kein Datum"]
+pub(crate) fn zeit_eintragen(
+    mut wahl: FullFileOptions<'static>,
+    geaendert: SystemTime,
+    gelesen: Option<SystemTime>,
+) -> FullFileOptions<'static> {
     // Die Zugriffszeit ist die Zugabe und nicht der Gegenstand: gibt sie nichts
     // her, steht das Aenderungsdatum an beiden Stellen, so wie `ditto(1)` es
     // auch haelt. Sie gibt in zwei Lagen nichts her, und beide sind hier
@@ -163,8 +199,6 @@ pub(crate) fn zeit_uebernehmen(
     // die zwei Zusatzfelder dafuer vorsehen. Haenge die Felder an die Zugabe,
     // verhinderte eine Zugriffszeit von 1969 das Zusatzfeld eines tadellosen
     // Aenderungsdatums, und zwar ohne eine Zeile in der Abschlussliste.
-    let gelesen = angaben.and_then(|angaben| angaben.accessed().ok());
-
     if let Some(zeitpunkt) = archivzeitpunkt(geaendert) {
         wahl = wahl.last_modified_time(zeitpunkt);
     }
@@ -379,4 +413,457 @@ fn zentrale_koepfe_zaehlen(datei: File, anfang: u64) -> usize {
         }
     }
     zahl
+}
+
+/// Kennung eines zentralen Kopfs.
+const SIG_ZENTRAL: u32 = 0x0201_4b50;
+/// Kennung eines lokalen Kopfs.
+const SIG_LOKAL: u32 = 0x0403_4b50;
+/// Kennung des Endes des Zentralverzeichnisses.
+const SIG_ENDE: u32 = 0x0605_4b50;
+/// Kennung des ZIP64-Endes.
+const SIG_ENDE64: u32 = 0x0606_4b50;
+/// Kennung des Zeigers auf das ZIP64-Ende.
+const SIG_ZEIGER64: u32 = 0x0706_4b50;
+/// Das Zusatzfeld mit den ZIP64-Groessen und dem ZIP64-Versatz.
+const FELD_ZIP64: u16 = 0x0001;
+/// Das Info-ZIP-Feld fuer einen Namen in Unicode. Es nennt den alten Namen und
+/// faellt deshalb bei einem umbenannten Eintrag weg; ein Leser zoege es sonst
+/// dem neuen Namen vor.
+const FELD_UNICODE_NAME: u16 = 0x7075;
+/// Das Kennzeichen „Name in UTF-8“ im Allzweckfeld.
+const KENNZEICHEN_UTF8: u16 = 0x0800;
+/// Die Version, ab der ein Leser ZIP64 kennen muss.
+const VERSION_ZIP64: u16 = 45;
+/// Der Platzhalter eines 32-Bit-Felds, dessen Wert im ZIP64-Feld steht.
+const VOLL32: u32 = u32::MAX;
+/// Der Platzhalter eines 16-Bit-Felds, dessen Wert im ZIP64-Ende steht.
+const VOLL16: u16 = u16::MAX;
+
+/// Ein Fehler der rohen Form: das Zip hat eine Gestalt, die der Umbau nicht
+/// schreibt.
+fn formfehler(was: &str) -> io::Error {
+    io::Error::new(io::ErrorKind::InvalidData, was.to_owned())
+}
+
+fn u16_an(bytes: &[u8], stelle: usize) -> u16 {
+    u16::from_le_bytes([bytes[stelle], bytes[stelle + 1]])
+}
+
+fn u32_an(bytes: &[u8], stelle: usize) -> u32 {
+    u32::from_le_bytes([
+        bytes[stelle],
+        bytes[stelle + 1],
+        bytes[stelle + 2],
+        bytes[stelle + 3],
+    ])
+}
+
+fn u64_an(bytes: &[u8], stelle: usize) -> u64 {
+    let mut feld = [0u8; 8];
+    feld.copy_from_slice(&bytes[stelle..stelle + 8]);
+    u64::from_le_bytes(feld)
+}
+
+fn u16_setzen(bytes: &mut [u8], stelle: usize, wert: u16) {
+    bytes[stelle..stelle + 2].copy_from_slice(&wert.to_le_bytes());
+}
+
+fn u32_setzen(bytes: &mut [u8], stelle: usize, wert: u32) {
+    bytes[stelle..stelle + 4].copy_from_slice(&wert.to_le_bytes());
+}
+
+/// Das Ende eines Zip: wo das Zentralverzeichnis beginnt, wie viele Saetze es
+/// fuehrt, und der Kommentar des Archivs als rohe Bytes.
+#[derive(Debug)]
+pub(crate) struct Zipende {
+    /// Der Versatz des ersten zentralen Kopfs.
+    pub(crate) anfang: u64,
+    /// Die Zahl der zentralen Koepfe.
+    pub(crate) anzahl: u64,
+    /// Der Kommentar des Archivs, unveraendert.
+    pub(crate) kommentar: Vec<u8>,
+}
+
+/// Liest das Ende eines Zip, ZIP64 eingeschlossen.
+///
+/// Gesucht wird die Kennung des Endes von hinten, im Bereich, den ein
+/// Kommentar hoechstens einnimmt. Ein Zip ueber mehrere Teile und eines, an
+/// dessen genanntem Anfang kein zentraler Kopf steht (Daten vor dem ersten
+/// Eintrag), melden `InvalidData`.
+pub(crate) fn ende_lesen<R: Read + Seek>(leser: &mut R) -> io::Result<Zipende> {
+    let laenge = leser.seek(SeekFrom::End(0))?;
+    let fenster = laenge.min(22 + u64::from(u16::MAX));
+    leser.seek(SeekFrom::Start(laenge - fenster))?;
+    let mut schwanz = vec![0u8; usize::try_from(fenster).map_err(io::Error::other)?];
+    leser.read_exact(&mut schwanz)?;
+    if schwanz.len() < 22 {
+        return Err(formfehler("zip: no end of central directory"));
+    }
+
+    let mut gefunden = None;
+    let mut stelle = schwanz.len().saturating_sub(22);
+    loop {
+        if u32_an(&schwanz, stelle) == SIG_ENDE {
+            let kommentarlaenge = usize::from(u16_an(&schwanz, stelle + 20));
+            if stelle + 22 + kommentarlaenge <= schwanz.len() {
+                gefunden = Some(stelle);
+                break;
+            }
+        }
+        if stelle == 0 {
+            break;
+        }
+        stelle -= 1;
+    }
+    let stelle = gefunden.ok_or_else(|| formfehler("zip: no end of central directory"))?;
+    let ende = &schwanz[stelle..];
+    let ende_versatz = laenge - fenster + stelle as u64;
+    let teil = u16_an(ende, 4);
+    let teil_des_verzeichnisses = u16_an(ende, 6);
+    let mut anzahl = u64::from(u16_an(ende, 10));
+    let mut anfang = u64::from(u32_an(ende, 16));
+    let kommentar = ende[22..22 + usize::from(u16_an(ende, 20))].to_vec();
+
+    let braucht_zip64 = anzahl == u64::from(VOLL16) || anfang == u64::from(VOLL32);
+    if braucht_zip64 && ende_versatz >= 20 {
+        let mut zeiger = [0u8; 20];
+        leser.seek(SeekFrom::Start(ende_versatz - 20))?;
+        leser.read_exact(&mut zeiger)?;
+        if u32_an(&zeiger, 0) == SIG_ZEIGER64 {
+            let mut ende64 = [0u8; 56];
+            leser.seek(SeekFrom::Start(u64_an(&zeiger, 8)))?;
+            leser.read_exact(&mut ende64)?;
+            if u32_an(&ende64, 0) != SIG_ENDE64 {
+                return Err(formfehler("zip: broken zip64 end record"));
+            }
+            if u32_an(&ende64, 16) != 0 || u32_an(&ende64, 20) != 0 {
+                return Err(formfehler("zip: spans several disks"));
+            }
+            anzahl = u64_an(&ende64, 32);
+            anfang = u64_an(&ende64, 48);
+        }
+    } else if (teil != 0 && teil != VOLL16)
+        || (teil_des_verzeichnisses != 0 && teil_des_verzeichnisses != VOLL16)
+    {
+        return Err(formfehler("zip: spans several disks"));
+    }
+
+    if anzahl > 0 {
+        let mut kennung = [0u8; 4];
+        leser.seek(SeekFrom::Start(anfang))?;
+        leser.read_exact(&mut kennung)?;
+        if u32::from_le_bytes(kennung) != SIG_ZENTRAL {
+            return Err(formfehler("zip: data before the first entry"));
+        }
+    }
+    Ok(Zipende {
+        anfang,
+        anzahl,
+        kommentar,
+    })
+}
+
+/// Zerlegt eine Folge von Zusatzfeldern in Kennung und Rumpf.
+fn felder(roh: &[u8]) -> io::Result<Vec<(u16, Vec<u8>)>> {
+    let mut felder = Vec::new();
+    let mut rest = roh;
+    while !rest.is_empty() {
+        if rest.len() < 4 {
+            return Err(formfehler("zip: broken extra field"));
+        }
+        let kennung = u16_an(rest, 0);
+        let laenge = usize::from(u16_an(rest, 2));
+        let rumpf = rest
+            .get(4..4 + laenge)
+            .ok_or_else(|| formfehler("zip: broken extra field"))?;
+        felder.push((kennung, rumpf.to_vec()));
+        rest = &rest[4 + laenge..];
+    }
+    Ok(felder)
+}
+
+/// Setzt Zusatzfelder wieder zu einer Folge zusammen.
+fn felder_zusammen(felder: &[(u16, Vec<u8>)]) -> io::Result<Vec<u8>> {
+    let mut roh = Vec::new();
+    for (kennung, rumpf) in felder {
+        let laenge =
+            u16::try_from(rumpf.len()).map_err(|_| formfehler("zip: extra field too long"))?;
+        roh.extend_from_slice(&kennung.to_le_bytes());
+        roh.extend_from_slice(&laenge.to_le_bytes());
+        roh.extend_from_slice(rumpf);
+    }
+    Ok(roh)
+}
+
+/// Das Allzweckfeld mit dem Kennzeichen „Name in UTF-8“, gesetzt fuer einen
+/// Namen ausserhalb von ASCII und sonst wie es war.
+fn kennzeichen_fuer(kennzeichen: u16, name: &[u8]) -> u16 {
+    if name.is_ascii() {
+        kennzeichen
+    } else {
+        kennzeichen | KENNZEICHEN_UTF8
+    }
+}
+
+/// Ein Satz des Zentralverzeichnisses, wie er dasteht.
+#[derive(Debug, Clone)]
+pub(crate) struct Zentralsatz {
+    fest: [u8; 46],
+    name: Vec<u8>,
+    zusatz: Vec<u8>,
+    kommentar: Vec<u8>,
+    /// Wo der Satz im Archiv steht.
+    stelle: u64,
+    /// Der Versatz des lokalen Kopfs, aus dem ZIP64-Feld, wenn es ihn traegt.
+    lokal: u64,
+    /// Die entpackte Groesse, sofern sie im ZIP64-Feld steht.
+    groesse64: Option<u64>,
+    /// Die gepackte Groesse, sofern sie im ZIP64-Feld steht.
+    gepackt64: Option<u64>,
+}
+
+impl Zentralsatz {
+    /// Wo der Satz im Archiv steht, wie `ZipFile::central_header_start` es
+    /// nennt.
+    pub(crate) fn stelle(&self) -> u64 {
+        self.stelle
+    }
+
+    /// Der Versatz des lokalen Kopfs.
+    pub(crate) fn lokal(&self) -> u64 {
+        self.lokal
+    }
+
+    /// Der Name, wie er im Satz steht.
+    pub(crate) fn name(&self) -> &[u8] {
+        &self.name
+    }
+
+    /// Ob der Eintrag verschluesselt ist.
+    pub(crate) fn verschluesselt(&self) -> bool {
+        u16_an(&self.fest, 8) & 1 != 0
+    }
+
+    /// Der Satz, wie er an der neuen Stelle `lokal` und gegebenenfalls unter
+    /// dem neuen Namen `name` dasteht, als Bytes.
+    ///
+    /// Alles andere bleibt: Verfahren, Pruefsumme, Groessen, Zeiten, Rechte,
+    /// Typkennzeichen und jedes Zusatzfeld ausser dem ZIP64-Feld, das neu
+    /// entsteht, und bei einem neuen Namen dem Info-ZIP-Namensfeld, das den
+    /// alten traegt.
+    pub(crate) fn verlegt(&self, lokal: u64, name: Option<&[u8]>) -> io::Result<Vec<u8>> {
+        let mut fest = self.fest;
+        let name = match name {
+            Some(neu) => {
+                let kennzeichen = kennzeichen_fuer(u16_an(&fest, 8), neu);
+                u16_setzen(&mut fest, 8, kennzeichen);
+                neu
+            }
+            None => &self.name,
+        };
+        let mut felder = felder(&self.zusatz)?;
+        felder.retain(|(kennung, _)| {
+            *kennung != FELD_ZIP64
+                && !(name != self.name.as_slice() && *kennung == FELD_UNICODE_NAME)
+        });
+        let mut zip64 = Vec::new();
+        if let Some(groesse) = self.groesse64 {
+            zip64.extend_from_slice(&groesse.to_le_bytes());
+        }
+        if let Some(gepackt) = self.gepackt64 {
+            zip64.extend_from_slice(&gepackt.to_le_bytes());
+        }
+        match u32::try_from(lokal) {
+            Ok(klein) if klein != VOLL32 => u32_setzen(&mut fest, 42, klein),
+            _ => {
+                u32_setzen(&mut fest, 42, VOLL32);
+                zip64.extend_from_slice(&lokal.to_le_bytes());
+            }
+        }
+        // Die Nummer des Teils: ein Archiv aus einem Teil fuehrt die 0.
+        u16_setzen(&mut fest, 34, 0);
+        if !zip64.is_empty() {
+            felder.insert(0, (FELD_ZIP64, zip64));
+            let noetig = u16_an(&fest, 6).max(VERSION_ZIP64);
+            u16_setzen(&mut fest, 6, noetig);
+        }
+        let zusatz = felder_zusammen(&felder)?;
+        let laenge = |teil: &[u8]| {
+            u16::try_from(teil.len()).map_err(|_| formfehler("zip: name or field too long"))
+        };
+        u16_setzen(&mut fest, 28, laenge(name)?);
+        u16_setzen(&mut fest, 30, laenge(&zusatz)?);
+        let mut satz = Vec::with_capacity(46 + name.len() + zusatz.len() + self.kommentar.len());
+        satz.extend_from_slice(&fest);
+        satz.extend_from_slice(name);
+        satz.extend_from_slice(&zusatz);
+        satz.extend_from_slice(&self.kommentar);
+        Ok(satz)
+    }
+}
+
+/// Liest die zentralen Saetze, die `ende` nennt, in ihrer Folge.
+pub(crate) fn zentralsaetze_lesen<R: Read + Seek>(
+    leser: &mut R,
+    ende: &Zipende,
+) -> io::Result<Vec<Zentralsatz>> {
+    leser.seek(SeekFrom::Start(ende.anfang))?;
+    let mut leser = BufReader::new(leser);
+    let mut stelle = ende.anfang;
+    let mut saetze = Vec::new();
+    for _ in 0..ende.anzahl {
+        let mut fest = [0u8; 46];
+        leser.read_exact(&mut fest)?;
+        if u32_an(&fest, 0) != SIG_ZENTRAL {
+            return Err(formfehler("zip: central directory ends early"));
+        }
+        let mut name = vec![0u8; usize::from(u16_an(&fest, 28))];
+        let mut zusatz = vec![0u8; usize::from(u16_an(&fest, 30))];
+        let mut kommentar = vec![0u8; usize::from(u16_an(&fest, 32))];
+        leser.read_exact(&mut name)?;
+        leser.read_exact(&mut zusatz)?;
+        leser.read_exact(&mut kommentar)?;
+
+        // Das ZIP64-Feld fuehrt in fester Folge genau die Werte, deren
+        // 32-Bit-Feld den Platzhalter traegt.
+        let mut groesse64 = None;
+        let mut gepackt64 = None;
+        let mut lokal = u64::from(u32_an(&fest, 42));
+        let groesse_voll = u32_an(&fest, 24) == VOLL32;
+        let gepackt_voll = u32_an(&fest, 20) == VOLL32;
+        let lokal_voll = u32_an(&fest, 42) == VOLL32;
+        if groesse_voll || gepackt_voll || lokal_voll {
+            let feld = felder(&zusatz)?
+                .into_iter()
+                .find(|(kennung, _)| *kennung == FELD_ZIP64)
+                .map(|(_, rumpf)| rumpf)
+                .ok_or_else(|| formfehler("zip: zip64 field missing"))?;
+            let mut lesestelle = 0;
+            let mut naechster = || -> io::Result<u64> {
+                let wert = feld
+                    .get(lesestelle..lesestelle + 8)
+                    .map(|teil| u64_an(teil, 0))
+                    .ok_or_else(|| formfehler("zip: zip64 field too short"))?;
+                lesestelle += 8;
+                Ok(wert)
+            };
+            if groesse_voll {
+                groesse64 = Some(naechster()?);
+            }
+            if gepackt_voll {
+                gepackt64 = Some(naechster()?);
+            }
+            if lokal_voll {
+                lokal = naechster()?;
+            }
+        }
+
+        let laenge = 46 + name.len() + zusatz.len() + kommentar.len();
+        saetze.push(Zentralsatz {
+            fest,
+            name,
+            zusatz,
+            kommentar,
+            stelle,
+            lokal,
+            groesse64,
+            gepackt64,
+        });
+        stelle += laenge as u64;
+    }
+    Ok(saetze)
+}
+
+/// Liest den lokalen Kopf an der Stelle des Lesers und gibt ihn unter dem
+/// neuen Namen zurueck, zusammen mit der Laenge des alten Kopfs.
+///
+/// Das Info-ZIP-Namensfeld faellt weg, aus dem Grund bei
+/// [`FELD_UNICODE_NAME`]; jedes andere Zusatzfeld bleibt, auch das lokale
+/// ZIP64-Feld, denn es traegt Groessen und keinen Versatz.
+pub(crate) fn lokalkopf_umbenannt<R: Read>(
+    leser: &mut R,
+    name: &[u8],
+) -> io::Result<(Vec<u8>, u64)> {
+    let mut fest = [0u8; 30];
+    leser.read_exact(&mut fest)?;
+    if u32_an(&fest, 0) != SIG_LOKAL {
+        return Err(formfehler("zip: local header missing"));
+    }
+    let mut alter_name = vec![0u8; usize::from(u16_an(&fest, 26))];
+    let mut zusatz = vec![0u8; usize::from(u16_an(&fest, 28))];
+    leser.read_exact(&mut alter_name)?;
+    leser.read_exact(&mut zusatz)?;
+    let alte_laenge = (30 + alter_name.len() + zusatz.len()) as u64;
+
+    let zusatz = match felder(&zusatz) {
+        Ok(mut felder) => {
+            felder.retain(|(kennung, _)| *kennung != FELD_UNICODE_NAME);
+            felder_zusammen(&felder)?
+        }
+        // Ein lokales Zusatzfeld, das sich nicht zerlegen laesst, liest auch
+        // kein anderer Leser; es bleibt, wie es war.
+        Err(_) => zusatz,
+    };
+    let kennzeichen = kennzeichen_fuer(u16_an(&fest, 6), name);
+    u16_setzen(&mut fest, 6, kennzeichen);
+    let laenge = |teil: &[u8]| {
+        u16::try_from(teil.len()).map_err(|_| formfehler("zip: name or field too long"))
+    };
+    u16_setzen(&mut fest, 26, laenge(name)?);
+    u16_setzen(&mut fest, 28, laenge(&zusatz)?);
+    let mut kopf = Vec::with_capacity(30 + name.len() + zusatz.len());
+    kopf.extend_from_slice(&fest);
+    kopf.extend_from_slice(name);
+    kopf.extend_from_slice(&zusatz);
+    Ok((kopf, alte_laenge))
+}
+
+/// Schreibt das Ende eines Zip hinter ein Zentralverzeichnis, das bei
+/// `anfang` beginnt und `groesse` Bytes lang ist.
+///
+/// Mehr als 65 534 Saetze oder ein Versatz oder eine Groesse ueber 32 Bit
+/// schreiben vorher das ZIP64-Ende und seinen Zeiger.
+pub(crate) fn ende_schreiben<W: Write>(
+    schreiber: &mut W,
+    anzahl: u64,
+    anfang: u64,
+    groesse: u64,
+    kommentar: &[u8],
+) -> io::Result<()> {
+    let anzahl16 = u16::try_from(anzahl).ok().filter(|&wert| wert != VOLL16);
+    let anfang32 = u32::try_from(anfang).ok().filter(|&wert| wert != VOLL32);
+    let groesse32 = u32::try_from(groesse).ok().filter(|&wert| wert != VOLL32);
+    if anzahl16.is_none() || anfang32.is_none() || groesse32.is_none() {
+        let stelle64 = anfang + groesse;
+        let mut ende64 = Vec::with_capacity(56 + 20);
+        ende64.extend_from_slice(&SIG_ENDE64.to_le_bytes());
+        ende64.extend_from_slice(&44u64.to_le_bytes());
+        ende64.extend_from_slice(&VERSION_ZIP64.to_le_bytes());
+        ende64.extend_from_slice(&VERSION_ZIP64.to_le_bytes());
+        ende64.extend_from_slice(&0u32.to_le_bytes());
+        ende64.extend_from_slice(&0u32.to_le_bytes());
+        ende64.extend_from_slice(&anzahl.to_le_bytes());
+        ende64.extend_from_slice(&anzahl.to_le_bytes());
+        ende64.extend_from_slice(&groesse.to_le_bytes());
+        ende64.extend_from_slice(&anfang.to_le_bytes());
+        ende64.extend_from_slice(&SIG_ZEIGER64.to_le_bytes());
+        ende64.extend_from_slice(&0u32.to_le_bytes());
+        ende64.extend_from_slice(&stelle64.to_le_bytes());
+        ende64.extend_from_slice(&1u32.to_le_bytes());
+        schreiber.write_all(&ende64)?;
+    }
+    let kommentarlaenge =
+        u16::try_from(kommentar.len()).map_err(|_| formfehler("zip: comment too long"))?;
+    let mut ende = Vec::with_capacity(22 + kommentar.len());
+    ende.extend_from_slice(&SIG_ENDE.to_le_bytes());
+    ende.extend_from_slice(&0u16.to_le_bytes());
+    ende.extend_from_slice(&0u16.to_le_bytes());
+    ende.extend_from_slice(&anzahl16.unwrap_or(VOLL16).to_le_bytes());
+    ende.extend_from_slice(&anzahl16.unwrap_or(VOLL16).to_le_bytes());
+    ende.extend_from_slice(&groesse32.unwrap_or(VOLL32).to_le_bytes());
+    ende.extend_from_slice(&anfang32.unwrap_or(VOLL32).to_le_bytes());
+    ende.extend_from_slice(&kommentarlaenge.to_le_bytes());
+    ende.extend_from_slice(kommentar);
+    schreiber.write_all(&ende)
 }

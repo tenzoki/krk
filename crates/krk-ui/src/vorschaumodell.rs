@@ -300,7 +300,10 @@ fn geheimnishinweis() -> &'static str {
 pub enum Beschreibung {
     /// Ein lokaler Eintrag oder Ordner.
     Lokal(PathBuf),
-    /// Ein Eintrag oder Ordner auf einem Server.
+    /// Ein Eintrag oder Ordner auf einem Server oder in einem Archiv: beide
+    /// haben keinen lokalen Pfad, und die Vorschau zeigt fuer beide allein die
+    /// Angaben aus dem Eintrag (E14 des Plans
+    /// `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`).
     Fern(Fernangaben),
 }
 
@@ -313,7 +316,8 @@ pub enum Beschreibung {
 pub struct Fernangaben {
     /// Der Name ohne Pfad, an der Wurzel `/`.
     pub name: String,
-    /// Der Ort als `konto@rechner:/pfad`.
+    /// Der Ort als `konto@rechner:/pfad`, in einem Archiv als
+    /// `/pfad/zum/archiv.zip:/innen`.
     pub ort: String,
     /// Die Groesse in Bytes, falls bekannt.
     pub groesse: Option<u64>,

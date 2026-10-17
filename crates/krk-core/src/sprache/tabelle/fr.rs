@@ -189,6 +189,26 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "l’entrée à moitié écrite est restée dans l’archive\u{a0}: {fehler}"
         }
         Text::PackenNichtInsArchivGeschrieben => "non écrit dans l’archive\u{a0}: {fehler}",
+        Text::ArchivUnveraendert => "l’archive est restée inchangée\u{a0}: {grund}",
+        Text::ArchivUnveraendertNachAbbruch => "annulé\u{202f}; l’archive est restée inchangée",
+        Text::ArchivVonAussenVeraendert => {
+            "l’archive a été modifiée de l’extérieur pendant la modification"
+        }
+        Text::ArchivVerschluesseltNurLesbar => {
+            "l’archive contient des entrées chiffrées et n’est pas modifiée"
+        }
+        Text::ArchivNurLesbar => "cette archive est en lecture seule",
+        Text::ArchivZipUngewoehnlicheForm => {
+            "le zip contient des données avant sa première entrée ou est réparti en plusieurs parties"
+        }
+        Text::ArchivTarMitLuecken => {
+            "le tar contient un fichier à trous (GNU sparse) et ne peut pas être réécrit"
+        }
+        Text::ArchivTarGroesseAusPax => {
+            "le tar indique deux tailles différentes pour une entrée et ne peut pas être réécrit"
+        }
+        Text::ArchivQuelleVeraendert => "la source a changé de taille pendant la lecture",
+        Text::ArchivUmbauZuGross => "l’archive contient plus de {grenze} entrées",
         Text::StapelKeinStartwert => {
             "«\u{a0}{text}\u{a0}» n’est pas une valeur de départ pour la numérotation"
         }
@@ -438,6 +458,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::ProfilJuengsteNull => "juengste avec anzahl = 0 ne peut jamais montrer d’entrée",
         Text::GitKeinRepository => "Ce dossier ne se trouve dans aucun dépôt Git.",
         Text::GitAmFernenOrt => "Un dossier situé sur un serveur n’est pas interrogé par Git.",
+        Text::GitImArchiv => "Un dossier situé dans une archive n’est pas interrogé par Git.",
         Text::GitOhneCommit => "pas encore de commit",
         Text::GitUnveraendert => "inchangé",
         Text::GitImOrdner => "{marken} dans ce dossier",
@@ -1149,6 +1170,19 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::AmFernenOrtNichtVerfuegbar => {
             "Ce n’est pas possible dans un dossier situé sur un serveur."
         }
+        Text::ImArchivNichtVerfuegbar => "Ce n’est pas possible dans une archive.",
+        Text::ArchivAmFernenOrt => {
+            "Une archive sur un serveur ne s’ouvre pas comme un dossier\u{202f}; copiez-la d’abord ici."
+        }
+        Text::ArchivImArchiv => {
+            "Une archive dans une archive ne s’ouvre pas comme un dossier\u{202f}; copiez-la d’abord à l’extérieur."
+        }
+        Text::ArchivUngueltig => {
+            "{datei} n’est pas une archive lisible au format {format}\u{a0}: {grund}"
+        }
+        Text::ArchivKeineDatei => "{datei} n’est pas un fichier ordinaire.",
+        Text::ArchivZuGross => "{datei} contient plus de {grenze} entrées et n’est pas affichée.",
+        Text::ArchivOrdnerFehlt => "Le dossier {ort} n’existe plus dans l’archive.",
         Text::FernVerbindungGetrennt => {
             "La connexion «\u{a0}{name}\u{a0}» est interrompue\u{202f}; un clic sur la connexion la rétablit."
         }
@@ -1217,6 +1251,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
 pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &'static str) {
     match schluessel {
         Zahlwort::Byte => ("{n} octet", "{n} octets"),
+        Zahlwort::ArchivVerdeckteWeggefallen => (
+            "une entrée masquée a disparu lors de la réécriture",
+            "{n} entrées masquées ont disparu lors de la réécriture",
+        ),
         Zahlwort::NeuerungenEintraegeIn => ("{n} entrée dans {datei}", "{n} entrées dans {datei}"),
         Zahlwort::HeimZettelUebernommen => (
             "{themen} repris comme note dans {notizen}",
@@ -1297,6 +1335,10 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::FernNamenUebersprungen => (
             "Un nom a été ignoré\u{a0}: il n’est pas en UTF-8 ou n’est pas un nom de fichier valide.",
             "{n} noms ont été ignorés\u{a0}: ils ne sont pas en UTF-8 ou ne sont pas des noms de fichier valides.",
+        ),
+        Zahlwort::ArchivNamenAusgelassen => (
+            "Un nom de l’archive a été omis\u{a0}: il est dangereux ou en double.",
+            "{n} noms de l’archive ont été omis\u{a0}: ils sont dangereux ou en double.",
         ),
     }
 }
