@@ -908,6 +908,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VorschauBildZuGross => {
             "The image in the clipboard is {groesse} MB. The Preview shows images up to {grenze} MB."
         }
+        Text::VorschauJsonzeileUngueltig => "not valid JSON, shown as is",
+        Text::VorschauJsonzeilenGekuerzt => {
+            "Truncated: the file is larger than {grenze} MB. Shown are the complete lines at its beginning."
+        }
         Text::VorschauNichtLesbar => "{pfad} could not be read: {fehler}",
         Text::VorschauLeertext => "No content. The selection in the file pane fills this tab.",
         Text::VorschauBildNichtDarstellbar => {

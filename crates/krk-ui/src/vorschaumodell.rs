@@ -130,6 +130,11 @@
 //! sind der eine Unterschied zwischen Ansehen und Bearbeiten (siehe
 //! [`TEXTGRENZE`]).
 //!
+//! **Die eine Ausnahme ist eine Datei aus JSON-Zeilen**: sie geht ueber
+//! [`krk_core::text::datei::anlesen`], dieselbe Tuer mit einem Deckel statt
+//! einer Abweisung, und zeigt ueber der Grenze ihren Anfang
+//! ([`jsonzeilen_laden`]).
+//!
 //! **Die Huelle wohnt seit der Runde 11 in `krk-core` und nicht mehr hier.**
 //! Bis dahin stand ihr Rumpf in dieser Datei, und er stand damit an einer
 //! Stelle, die der Inhaltsfilter der Dateiliste nicht erreicht; der Rumpf ist
@@ -226,11 +231,12 @@ use krk_core::heimordner::{Heimordner, Sonderdatei};
 use krk_core::leseprofil::bildfolge::{Bildverzeichnis, Foto, Kuerzung};
 use krk_core::leseprofil::{Auskunft, Profile, Zusammenfassungszeile, zusammenfassen};
 use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
-use krk_core::text::datei::bis_zur_grenze_lesen;
+use krk_core::text::datei::{anlesen, bis_zur_grenze_lesen};
 use krk_core::verzeichnis::Typ;
 
 use crate::editormodell::Dateityp;
 use crate::hervorhebung::{self, Darstellungsart, Tafel};
+use crate::jsonzeilen;
 use crate::markdown::{self, Gerendert, Lesart};
 
 /// Bis zu welcher Groesse eine Textdatei als Inhalt erscheint (C6).
@@ -1594,6 +1600,9 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile, heim: Option<&Heimordner>
             },
         };
     }
+    if jsonzeilen::ist_jsonzeilenpfad(pfad) {
+        return jsonzeilen_laden(pfad, metadaten);
+    }
     // Eine Textdatei ueber 1 MB faellt auf die Metadaten, siehe den Modulkopf.
     match bis_zur_grenze_lesen(pfad, TEXTGRENZE)
         .ok()
@@ -1625,6 +1634,47 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile, heim: Option<&Heimordner>
             metadaten,
             zaehlzeilen: Vec::new(),
         },
+    }
+}
+
+/// Liest eine Datei aus JSON-Zeilen und gibt sie aufbereitet als Text zurueck
+/// ([`jsonzeilen::aufbereiten`]); laeuft wie [`laden`] auf dem Arbeitsfaden.
+///
+/// **Ueber [`TEXTGRENZE`] wird angelesen und nicht abgewiesen**, anders als
+/// bei jeder anderen Textdatei: ein Protokoll aus JSON-Zeilen ist gewoehnlich
+/// groesser als 1 MB, und sein Anfang ist eine vollstaendige Auskunft, weil
+/// jede Zeile fuer sich steht. Gelesen werden hoechstens `TEXTGRENZE + 1`
+/// Bytes; das eine Byte mehr sagt, ob gekuerzt ist, ohne eine zweite Frage
+/// nach der Groesse, die zwischen `lstat(2)` und dem Lesen veralten koennte.
+/// Gekuerzt wird an das letzte Zeilenende vor der Grenze, sodass kein
+/// angeschnittener Datensatz als ungueltig erscheint und kein mehrbytiges
+/// UTF-8-Zeichen zerschnitten wird (ein `\n` steht nie mitten in einem).
+///
+/// Nicht lesbar, keine gewoehnliche Datei oder kein UTF-8: dieselbe Antwort
+/// wie bei jeder Textdatei, die Metadaten.
+fn jsonzeilen_laden(pfad: &Path, metadaten: Metadaten) -> Inhalt {
+    let auf_die_metadaten = |metadaten| Inhalt::Metadaten {
+        metadaten,
+        zaehlzeilen: Vec::new(),
+    };
+    let Ok(mut bytes) = anlesen(pfad, TEXTGRENZE + 1) else {
+        return auf_die_metadaten(metadaten);
+    };
+    let gekuerzt = bytes.len() as u64 > TEXTGRENZE;
+    if gekuerzt {
+        bytes.truncate(TEXTGRENZE as usize);
+        let bis = bytes
+            .iter()
+            .rposition(|&b| b == b'\n')
+            .map_or(0, |stelle| stelle + 1);
+        bytes.truncate(bis);
+    }
+    match String::from_utf8(bytes) {
+        Ok(text) => Inhalt::Text(jsonzeilen::aufbereiten(
+            &text,
+            gekuerzt.then_some(TEXTGRENZE / (1024 * 1024)),
+        )),
+        Err(_) => auf_die_metadaten(metadaten),
     }
 }
 
@@ -2262,6 +2312,55 @@ mod tests {
         assert_eq!(
             laden(&html, Tafel::Hell, &Profile::default(), None),
             Inhalt::Text("<p>Hallo</p>\n".to_owned())
+        );
+    }
+
+    /// Eine Datei aus JSON-Zeilen kommt aufbereitet als Text und wird als
+    /// JSON eingefaerbt; eine ungueltige Zeile laesst die Vorschau nicht
+    /// scheitern.
+    #[test]
+    fn eine_jsonl_datei_kommt_eingerueckt_und_als_json_eingefaerbt() {
+        let ordner = Pruefordner::neu("jsonl");
+        for name in ["protokoll.jsonl", "STROM.NDJSON"] {
+            let pfad = ordner.pfad().join(name);
+            std::fs::write(&pfad, "{\"a\":[1,{}]}\nkein json\n").expect("Probendatei");
+            let Inhalt::Text(text) = laden(&pfad, Tafel::Hell, &Profile::default(), None) else {
+                panic!("{name} erscheint als Text");
+            };
+            assert_eq!(
+                text,
+                jsonzeilen::aufbereiten("{\"a\":[1,{}]}\nkein json\n", None)
+            );
+            assert!(text.starts_with("// ── 1 ──\n{\n  \"a\": [\n    1,\n    {}\n  ]\n}\n"));
+            assert_eq!(
+                hervorhebung::art(Some(&pfad), Dateityp::von_pfad(&pfad, None)),
+                Darstellungsart::Code,
+                "{name} wird eingefaerbt"
+            );
+        }
+    }
+
+    /// Ueber der Lesegrenze faellt eine Datei aus JSON-Zeilen nicht auf die
+    /// Metadaten, sondern zeigt ihren Anfang bis zum letzten vollstaendigen
+    /// Zeilenende und sagt, dass gekuerzt ist.
+    #[test]
+    fn eine_jsonl_datei_ueber_der_grenze_zeigt_ihren_anfang_mit_hinweis() {
+        let ordner = Pruefordner::neu("jsonl-gross");
+        let pfad = ordner.pfad().join("gross.jsonl");
+        let zeile = "{\"n\":\"äöü\"}\n";
+        let mal = (TEXTGRENZE as usize / zeile.len()) + 10;
+        std::fs::write(&pfad, zeile.repeat(mal)).expect("Probendatei");
+        let Inhalt::Text(text) = laden(&pfad, Tafel::Hell, &Profile::default(), None) else {
+            panic!("eine grosse jsonl-Datei erscheint gekuerzt als Text");
+        };
+        let hinweis = satz(Text::VorschauJsonzeilenGekuerzt, &[("grenze", &1)]);
+        assert!(text.starts_with(&format!("// {hinweis}\n\n// ── 1 ──\n")));
+        let ganze = TEXTGRENZE as usize / zeile.len();
+        assert!(text.contains(&format!("// ── {ganze} ──\n")));
+        assert!(!text.contains(&format!("// ── {} ──", ganze + 1)));
+        assert!(
+            !text.contains(krk_core::sprache::text(Text::VorschauJsonzeileUngueltig)),
+            "kein angeschnittener Datensatz erscheint als ungueltig"
         );
     }
 

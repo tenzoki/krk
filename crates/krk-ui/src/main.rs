@@ -27,7 +27,9 @@
 //! abweicht, die gewaehlte Ansicht und den laufenden Suchlauf. `hervorhebung`
 //! haelt daneben, was die Formatansicht des Editors ueber einen Text weiss:
 //! welche Stelle welche Farbe traegt, welche unterstrichen ist und welche eine
-//! Markdown-Auszeichnung ist. `markdown` zerlegt daneben eine Markdown-Datei
+//! Markdown-Auszeichnung ist. `jsonzeilen` bereitet eine Datei aus
+//! JSON-Zeilen fuer die Vorschau auf, je Datensatz eingerueckt und nummeriert.
+//! `markdown` zerlegt daneben eine Markdown-Datei
 //! fuer die Vorschau der Runde 6: heraus kommen der Text ohne die
 //! Auszeichnungszeichen und dieselbe `Formatierung`, die `hervorhebung`
 //! liefert, damit es eine Umsetzung in AppKit-Merkmale gibt und nicht zwei.
@@ -94,6 +96,7 @@ mod filteranzeige;
 mod gitmodell;
 mod heimgriff;
 mod hervorhebung;
+mod jsonzeilen;
 mod kommandos;
 mod leistenmodell;
 mod markdown;

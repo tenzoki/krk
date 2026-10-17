@@ -1017,6 +1017,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VorschauBildZuGross => {
             "L’image du presse-papiers pèse {groesse} Mo. L’Aperçu affiche les images jusqu’à {grenze} Mo."
         }
+        Text::VorschauJsonzeileUngueltig => "JSON non valide, affiché tel quel",
+        Text::VorschauJsonzeilenGekuerzt => {
+            "Tronqué\u{a0}: le fichier dépasse {grenze} Mo. Seules les lignes complètes de son début sont affichées."
+        }
         Text::VorschauNichtLesbar => "{pfad} n’a pas pu être lu\u{a0}: {fehler}",
         Text::VorschauLeertext => {
             "Aucun contenu. La sélection dans le volet de fichiers remplit cet onglet."

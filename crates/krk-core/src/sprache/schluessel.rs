@@ -1443,6 +1443,12 @@ pub enum Text {
     /// `zu_gross_text`: ein Bild der Zwischenablage ueber der Bildgrenze;
     /// `{groesse}` und `{grenze}` in MB.
     VorschauBildZuGross,
+    /// `jsonzeilen::aufbereiten`: die Markierung hinter der Trennzeile eines
+    /// Datensatzes, der kein gueltiges JSON ist.
+    VorschauJsonzeileUngueltig,
+    /// `jsonzeilen::aufbereiten`: die Datei aus JSON-Zeilen ist groesser als
+    /// die Lesegrenze der Vorschau und erscheint gekuerzt; `{grenze}` in MB.
+    VorschauJsonzeilenGekuerzt,
     /// `vorschaumodell::laden`: der Eintrag liess sich nicht lesen; `{pfad}`,
     /// `{fehler}`.
     VorschauNichtLesbar,
@@ -1754,7 +1760,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 725] = [
+    pub const ALLE: [Text; 727] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -2361,6 +2367,8 @@ impl Text {
         Text::VorschautabZwischenablage,
         Text::VorschauZwischenablageLeer,
         Text::VorschauBildZuGross,
+        Text::VorschauJsonzeileUngueltig,
+        Text::VorschauJsonzeilenGekuerzt,
         Text::VorschauNichtLesbar,
         Text::VorschauLeertext,
         Text::VorschauBildNichtDarstellbar,

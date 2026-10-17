@@ -950,6 +950,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VorschauBildZuGross => {
             "Das Bild in der Zwischenablage ist {groesse} MB groß. Die Vorschau zeigt Bilder bis {grenze} MB."
         }
+        Text::VorschauJsonzeileUngueltig => "kein gültiges JSON, unverändert",
+        Text::VorschauJsonzeilenGekuerzt => {
+            "Gekürzt: Die Datei ist größer als {grenze} MB. Gezeigt sind die vollständigen Zeilen ihres Anfangs."
+        }
         Text::VorschauNichtLesbar => "{pfad} ließ sich nicht lesen: {fehler}",
         Text::VorschauLeertext => "Kein Inhalt. Die Auswahl im Dateifenster füllt diesen Tab.",
         Text::VorschauBildNichtDarstellbar => {

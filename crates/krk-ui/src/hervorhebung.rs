@@ -409,12 +409,21 @@ fn tafelsatz() -> &'static ThemeSet {
 /// Ruecksicht auf Gross- und Kleinschreibung, wie `MARKDOWNENDUNGEN` in
 /// [`crate::editormodell`].
 ///
+/// **Eine Datei aus JSON-Zeilen nimmt die JSON-Definition**, weil die Kiste
+/// `jsonl` und `ndjson` nicht fuehrt; welche Endungen das sind, sagt
+/// [`crate::jsonzeilen::ENDUNGEN`] und keine Liste hier.
+///
 /// **Die Datei wird dabei nicht gelesen.** `syntect` kann eine Sprache auch an
 /// der ersten Zeile erkennen; das kostete einen Zugriff auf die Platte fuer eine
 /// Frage, die der Editor schon beantwortet hat, als er die Datei einlas.
 fn sprache_fuer(pfad: Option<&Path>) -> Option<&'static SyntaxReference> {
     let pfad = pfad?;
     let satz = sprachsatz();
+    // JSON-Zeilen kennt die Kiste nicht; jede Zeile ist ein JSON-Wert, und die
+    // Vorschau zeigt sie als eingerueckten JSON-Text (`crate::jsonzeilen`).
+    if crate::jsonzeilen::ist_jsonzeilenpfad(pfad) {
+        return satz.find_syntax_by_extension("json");
+    }
     if let Some(name) = pfad.file_name() {
         let name = name.to_string_lossy().to_ascii_lowercase();
         if let Some(sprache) = satz.find_syntax_by_extension(&name) {

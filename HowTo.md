@@ -702,6 +702,18 @@ Der PDF-Betrachter der Vorschau kennt außer den drei Zoombefehlen keine eigenen
 Tasten. Bild-auf, Bild-ab, Pos1 und Ende sind dort keine Befehle von KRK; sie
 laufen an AppKit weiter und blättern.
 
+**Dateien aus JSON-Zeilen (`.jsonl`, `.ndjson`) zeigt die Vorschau Datensatz
+für Datensatz.** Jede nicht leere Zeile erscheint eingerückt über mehrere
+Zeilen, mit zwei Leerzeichen je Ebene und als JSON eingefärbt, und über jedem
+Datensatz steht eine Trennzeile mit seiner Nummer, etwa `// ── 3 ──`. Werte
+bleiben, wie sie in der Datei stehen: eine Zahl wie `1.50` und ein Escape wie
+`é` werden nicht umgeschrieben. Eine Zeile, die kein gültiges JSON ist,
+erscheint unverändert hinter `//`, und ihre Trennzeile sagt es dazu. Eine
+solche Datei darf größer sein als die 1 MB, bis zu denen die Vorschau andere
+Textdateien zeigt: dann zeigt sie die vollständigen Zeilen des ersten MB und
+sagt in der ersten Zeile, dass gekürzt ist. Der Editor zeigt dieselbe Datei
+unverändert, eine Zeile je Datensatz.
+
 ---
 
 ## Die Quicknote
