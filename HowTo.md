@@ -253,7 +253,8 @@ trägt nicht über die Grenze, an der der Filtertext leer wird. `cmd+delete` und
 
 **An einem Ort ohne Papierkorb löscht derselbe Befehl endgültig, nach einer
 eigenen Rückfrage.** Das betrifft jeden Ordner auf einem Server (siehe „Ordner
-auf einem Server“ unter „Verbindungen“) und eine eingehängte Freigabe, die
+auf einem Server“ unter „Verbindungen“), jeden Ordner in einem Archiv (siehe
+„Archive im Dateifenster“) und eine eingehängte Freigabe, die
 keinen Papierkorb führt, etwa über `smb`. Die Rückfrage sagt dann „endgültig
 löschen“ und dass sich nichts zurückholen lässt, die Schaltfläche heißt
 „Endgültig löschen“, und vorbelegt ist „Abbrechen“: Return und Esc brechen ab,
@@ -337,6 +338,151 @@ zu hinterlassen. Jeder andere Fehlschlag, etwa fehlende Rechte, ein voller
 Datenträger oder eine inzwischen verschwundene Datei, öffnet das Blatt nicht
 erneut, sondern steht mit seinem Grund in der Liste der übersprungenen
 Einträge, die nach dem Vorgang aufgeht.
+
+---
+
+## Archive im Dateifenster
+
+**Ein Archiv lässt sich im Dateifenster betreten wie ein Ordner.** Betreten
+werden Dateien mit diesen Endungen, ohne Rücksicht auf Groß- und
+Kleinschreibung:
+
+| Endung | Was das Fenster zeigt | Schreiben |
+|---|---|---|
+| `.zip` | den Inhalt des Zip | ja |
+| `.tar` | den Inhalt des tar | ja |
+| `.tar.gz`, `.tgz` | den Inhalt des gepackten tar | ja |
+| `.gz` (ohne `.tar` davor) | eine einzige Datei | nein, allein lesbar |
+
+Andere Formate betritt KRK nicht, auch nicht Abkömmlinge des Zip wie `.jar`,
+`.docx` oder `.epub`, und ebenso wenig `.tar.bz2`, `.tar.xz`, `.7z` oder
+`.rar`. **Ob eine Datei betreten wird, entscheidet allein ihre Endung.** Trägt
+eine Datei die Endung, ist aber kein solches Archiv, betritt KRK sie trotzdem
+und sagt in der Statuszeile, dass sie kein lesbares Archiv im genannten Format
+ist, und warum.
+
+**Hinein mit Pfeil rechts oder einem Doppelklick, hinaus mit Pfeil links.**
+Pfeil links (oder `cmd+up`) geht im Archiv einen Ordner höher und an der
+obersten Ebene zurück in den Ordner, in dem das Archiv liegt; dort steht die
+Auswahl dann auf der Archivdatei. Eine Verknüpfung auf ein Archiv wird ebenso
+betreten. **`return` öffnet ein Archiv weiter mit dem Standardprogramm**, also
+mit dem Archivprogramm des Systems, so wie `return` einen Ordner im Finder
+öffnet und nicht betritt. Der Fenstertitel nennt das Archiv und den Ordner
+darin als `/pfad/zum/archiv.zip:/ordner/darin`.
+
+Ein großes Archiv zeigt seinen Inhalt erst, wenn KRK sein Inhaltsverzeichnis
+gelesen hat; bei einem `.tar.gz` heißt das, einmal durch das ganze Archiv. KRK
+bleibt dabei bedienbar. Danach merkt es sich das Verzeichnis, solange sich die
+Datei nicht ändert, und das Betreten eines Unterordners kostet nichts mehr.
+
+**Eine `.gz`-Datei zeigt genau einen Eintrag**: ihren Namen ohne `.gz`
+(`bericht.txt.gz` zeigt `bericht.txt`), mit der entpackten Größe. Diesen
+Eintrag kann man herauskopieren, und er kommt dabei entpackt an. Mehr geht in
+einer `.gz`-Datei nicht: Hineinkopieren, Verschieben, Umbenennen, Anlegen und
+Löschen sind dort ausgegraut, ein Kopieren aus dem anderen Fenster in ein
+solches Fenster meldet „dieses Archiv ist allein lesbar“, und einen Abwurf aus
+dem Finder nimmt es nicht an.
+
+**Was im Archiv geht:**
+
+- **Herauskopieren** (`f5`) ins andere Dateifenster, lokal oder auf einen
+  Server. Ordner kommen samt Inhalt heraus, mit Rechten und Änderungszeit;
+  eine Verknüpfung im Archiv wird am Ziel wieder eine Verknüpfung. Für einen
+  vorhandenen Namen am Ziel gilt dasselbe Blatt wie bei jedem Kopieren.
+- **Hineinkopieren** (`f5`) aus dem anderen Dateifenster, lokal, von einem
+  Server oder aus einem anderen Archiv, und durch Ziehen aus dem Finder auf
+  das Archivfenster. Steht der Name im Archiv schon, fragt dasselbe Blatt wie
+  lokal: „Überschreiben“ ersetzt den Eintrag, bei einem Ordner samt Inhalt,
+  „Umbenennen“ nimmt einen freien Namen, „Überspringen“ lässt aus, und Ordner
+  auf Ordner führt ohne Frage zusammen. **Alle diese Fragen kommen, bevor KRK
+  das erste Byte schreibt.**
+- **Verschieben** (`f6`) in jede dieser Richtungen. Innerhalb desselben
+  Archivs hängt KRK nur die Namen um. **Die Quelle wird erst entfernt, wenn ihr
+  Inhalt vollständig am Ziel steht**: beim Verschieben in ein Archiv also erst
+  nachdem das Archiv fertig geschrieben ist. **Beim Verschieben aus einem
+  Archiv entfernt KRK die Einträge dort am Ende, in einem Umbau je
+  Quellarchiv**, und allein die, die vollständig angekommen sind. Scheitert
+  dieser letzte Umbau, stehen die Einträge doppelt da, am Ziel und weiter im
+  Archiv, und nicht nirgends; die Abschlussliste nennt sie.
+- **Umbenennen** (`shift+f6`), **neuer Ordner** (`f7`) und **neue Datei**
+  (`ctrl+cmd+n`). Ein vergebener Name wird nie überschrieben, und die
+  Statuszeile meldet ihn wie in einem lokalen Ordner.
+- **Löschen ist endgültig**, denn ein Archiv hat keinen Papierkorb. `delete`,
+  `cmd+delete` und `f8` führen gleich zur Rückfrage „endgültig löschen“, die
+  den Ort als `/pfad/zum/archiv.zip:/ordner/darin` nennt; vorbelegt ist
+  „Abbrechen“.
+- **Der Filtertext** filtert über die Namen des angezeigten Ordners im Archiv.
+
+**Wie KRK in ein Archiv schreibt, und was das kostet.** KRK öffnet das Archiv
+nie zum Schreiben. Jede Änderung schreibt ein vollständiges neues Archiv unter
+einem Zwischennamen `.krk-umbau-…` neben das alte, in denselben Ordner, und
+ersetzt das alte erst ganz am Ende in einem Schritt. Daraus folgt:
+
+- **Bei einem Abbruch (`Esc`) oder einem Fehler bleibt das Archiv unverändert**,
+  auch mit den Einträgen, die bis dahin schon geschrieben waren; der
+  Zwischenname verschwindet wieder. Das ist anders als beim lokalen Kopieren,
+  nach dem stehen bleibt, was fertig ist. Die Abschlussliste sagt „das Archiv
+  ist unverändert geblieben“.
+- **Jede Änderung schreibt das ganze Archiv neu**, auch wenn sie nur einen
+  Namen ändert. Bei einem großen `.tar.gz` heißt das einmal ganz entpacken und
+  ganz neu packen; ein Zip kopiert die unveränderten Einträge, ohne sie neu zu
+  packen. Der Ordner des Archivs braucht dafür vorübergehend so viel freien
+  Platz wie das neue Archiv, und KRK braucht dort Schreibrecht; das
+  Schreibrecht an der Archivdatei allein genügt nicht.
+- **Beim Ersetzen geht verloren, was an der alten Datei hing**: Finder-Etiketten
+  und andere erweiterte Attribute, Zugriffslisten und das Erstellungsdatum der
+  Archivdatei. Die Rechte der Datei bleiben. Ein harter Verweis auf das Archiv
+  zeigt danach weiter auf die alte Fassung. Eine Verknüpfung auf das Archiv
+  bleibt eine Verknüpfung, geschrieben wird an ihrem Ziel.
+- **Ändert ein anderes Programm das Archiv, während KRK es umbaut**, ersetzt
+  KRK es nicht und meldet „das Archiv hat sich während der Änderung von außen
+  geändert“. Ganz schließen lässt sich das nicht: was ein anderes Programm im
+  allerletzten Augenblick vor dem Ersetzen schreibt, geht verloren.
+- **Stürzt KRK mitten im Umbau ab**, bleibt der Zwischenname `.krk-umbau-…`
+  als versteckte Datei im Ordner des Archivs liegen; KRK räumt ihn nicht auf,
+  und man kann ihn löschen.
+- **Einträge, die das Fenster verdeckt, fallen beim Umbau weg**, etwa der
+  frühere von zwei Einträgen gleichen Namens: sonst holte ein Löschen des
+  späteren den früheren wieder hervor. Die Abschlussliste nennt ihre Zahl.
+
+**Was im Archiv nicht geht, oder nur zum Teil:**
+
+- **Ausgegraut** sind dort „Terminal öffnen“, „Mit dem Standardprogramm
+  öffnen“, beide Pfadkopien, „Bearbeiten“, das Stapelumbenennen und die
+  Schalter „Deep“ und „Content“, dazu mit dem Fokus im Dateifenster „Teilen“,
+  „Lesezeichen anlegen“ und der Rundweg (`cmd+e`). In einer `.gz`-Datei kommen
+  Verschieben, Papierkorb, Umbenennen und die zwei Anlegebefehle dazu.
+- **Das Kontextmenü graut nichts aus**, sondern meldet: „Öffnen mit“, Zippen,
+  Entpacken, Duplizieren, „Im Finder öffnen“, „Im Finder anzeigen“ und
+  „Auswerfen“ sagen in der Statuszeile „Das geht in einem Archiv nicht.“
+  Dasselbe sagen `cmd+c` und `cmd+x`, die aus einem Archiv keine
+  Dateiverweise ablegen, und ein Doppelklick auf eine Datei im Archiv. Aus
+  einem Archivfenster lässt sich nichts in den Finder ziehen.
+- **Die Vorschau** zeigt Name, Größe, Änderungszeit und Typ aus der Liste und
+  liest keinen Inhalt; wer eine Datei ansehen oder bearbeiten will, kopiert sie
+  vorher heraus. Der Git-Bereich fragt einen Ordner in einem Archiv nicht.
+- **Ein Archiv in einem Archiv** lässt sich nicht betreten; die Statuszeile
+  sagt „erst herauskopieren“, und herauskopiert lässt es sich betreten.
+- **Ein Archiv auf einem Server** lässt sich nicht betreten; die Statuszeile
+  sagt „erst herunterkopieren“.
+- **Verschlüsselte Zips** zeigt KRK mit allen Einträgen, kann aber keinen
+  verschlüsselten Eintrag herauskopieren und schreibt in ein solches Archiv
+  nicht hinein: jede Änderung endet mit „das Archiv trägt verschlüsselte
+  Einträge und wird nicht geändert“. Ebenso nicht heraus kommen Einträge, die
+  mit einem Verfahren gepackt sind, das KRK nicht entpackt (etwa bzip2, LZMA,
+  zstd oder Deflate64), und aus einem tar harte Verweise und Gerätedateien; die
+  Abschlussliste nennt jeden mit seinem Grund.
+- **Unsichere Namen**, etwa mit `..`, zeigt KRK nicht; die Statuszeile nennt
+  ihre Zahl. Ein Name mit `/` am Anfang erscheint ohne ihn.
+- **Ein Zip ohne Zeitangaben**, wie es manche Programme unter Windows packen,
+  zeigt seine Einträge mit dem Datum 1. Januar 1970.
+
+**Änderungen von außen erscheinen von selbst**: ein Archivtab beobachtet den
+Ordner, in dem die Archivdatei liegt, und liest das Archiv neu, wenn sie sich
+ändert. **Nach einem Neustart steht ein Tab, der ein Archiv zeigte, im Ordner
+der Archivdatei** und nicht mehr im Archiv; hinein geht es wieder mit Pfeil
+rechts. Die Pfadeingabe (`shift+cmd+g`) in einem Archivtab nimmt einen Pfad auf
+dem Mac und verlässt damit das Archiv; vorbelegt ist der Pfad der Archivdatei.
 
 ---
 

@@ -421,6 +421,19 @@ auf der neuen Fassung holt man die Lesezeichen bei ausgeschaltetem KRK aus
 dieser Kopie zurück; wie, steht in `HowTo.md` unter „Zurück auf eine ältere
 Fassung“.
 
+### Archive im Dateifenster: womit KRK sie liest und schreibt
+
+KRK betritt `.zip`, `.tar`, `.tar.gz`/`.tgz` und `.gz` wie Ordner; was das für
+den Nutzer heißt, steht in `HowTo.md` unter „Archive im Dateifenster“. Gelesen
+und geschrieben wird im Programm selbst und nicht über `/usr/bin/zip`,
+`/usr/bin/tar` oder `/usr/bin/gzip`: Zip über die Kiste `zip`, die schon das
+Zippen und Entpacken des Kontextmenüs trägt, gzip über `flate2`, und **tar seit
+diesem Ausbau über die Kiste `tar`**, ohne Vorgabemerkmale und auf eine Fassung
+festgenagelt. Sie bringt auf keinem der beiden Mac-Ziele `cc` oder ein Paket
+mit einem Namen auf `-sys` in den Baum; die Begründung steht in der
+Wurzel-`Cargo.toml`. Geschrieben wird ein Archiv nie an Ort und Stelle, sondern
+jedes Mal ganz neu neben dem alten, das zuletzt in einem `rename` ersetzt wird.
+
 ---
 
 Alles Weitere richtet sich an den, der KRK baut, signiert und ausliefert.
