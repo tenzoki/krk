@@ -248,6 +248,7 @@ use std::cmp::Reverse;
 use std::path::{Path, PathBuf};
 
 use krk_core::operation::umbenennen::{Namensfehler, name_pruefen, namen_teilen};
+use krk_core::ort::Ortsart;
 use krk_core::sprache::{Text, text};
 use krk_core::tasten::Ortsbedarf;
 use krk_core::verzeichnis::{Ordnermodell, Typ};
@@ -544,17 +545,27 @@ impl Kontextbefehl {
 }
 
 /// Ob ein angeklickter Eintrag des Kontextmenues statt seiner Wirkung meldet,
-/// dass er an einem fernen Ort nicht geht (Entscheidung 13 des Plans der
-/// sftp-Ordner).
+/// dass er an diesem Ort nicht geht: an einem fernen Ort oder in einem
+/// Archiv (Entscheidung 13 des Plans der sftp-Ordner, E14 des Plans der
+/// Archive).
 ///
-/// `fern` sagt, ob das Dateifenster des Rechtsklicks einen Ordner auf einem
-/// Server zeigt. Rein und ohne Fenster pruefbar; der eine Rufer ist
-/// `Anwendungsdelegierter::kontextbefehl_ausfuehren`, vor seiner Zuordnung.
+/// `ort` ist die Art des Orts, den das Dateifenster des Rechtsklicks zeigt;
+/// der Name stammt aus der Zeit, als es allein lokal und fern gab. Welcher
+/// Text gemeldet wird, waehlt der Rufer nach derselben Art
+/// (`krk_core::ort::nicht_verfuegbar_text`). Rein und ohne Fenster pruefbar;
+/// der eine Rufer ist `Anwendungsdelegierter::kontextbefehl_ausfuehren`, vor
+/// seiner Zuordnung. Vollstaendig ueber [`Ortsbedarf`] und [`Ortsart`] und
+/// ohne Auffangzweig.
 #[must_use = "fallengelassen liefe der Eintrag am fernen Ort in seinen Zweig"]
-pub fn am_fernen_ort_meldet(befehl: Kontextbefehl, fern: bool) -> bool {
-    match befehl.ortsbedarf() {
-        Ortsbedarf::Ueberall => false,
-        Ortsbedarf::Lokal | Ortsbedarf::LokalImDateifenster => fern,
+pub fn am_fernen_ort_meldet(befehl: Kontextbefehl, ort: Ortsart) -> bool {
+    match (befehl.ortsbedarf(), ort) {
+        (Ortsbedarf::Ueberall, _) | (_, Ortsart::Lokal) => false,
+        (
+            Ortsbedarf::Lokal | Ortsbedarf::LokalImDateifenster,
+            Ortsart::Fern | Ortsart::Archiv { .. },
+        ) => true,
+        (Ortsbedarf::Beschreibbar, Ortsart::Fern) => false,
+        (Ortsbedarf::Beschreibbar, Ortsart::Archiv { beschreibbar }) => !beschreibbar,
     }
 }
 
@@ -1402,14 +1413,33 @@ mod tests {
     fn jeder_kontextbefehl_meldet_an_einem_fernen_ort() {
         for befehl in Kontextbefehl::ALLE {
             assert!(
-                !am_fernen_ort_meldet(befehl, false),
+                !am_fernen_ort_meldet(befehl, Ortsart::Lokal),
                 "{befehl:?} meldet an einem lokalen Ort"
             );
             assert_eq!(
-                am_fernen_ort_meldet(befehl, true),
+                am_fernen_ort_meldet(befehl, Ortsart::Fern),
                 befehl != Kontextbefehl::Verbinden,
                 "{befehl:?} antwortet an einem fernen Ort falsch"
             );
+        }
+    }
+
+    /// Jeder Kontextbefehl meldet in einem Archiv, ausser „Verbinden…“, und
+    /// zwar in einem beschreibbaren wie in einer `.gz`-Datei (E14 des Plans
+    /// der Archive): Öffnen mit, Zippen, Entpacken, Duplizieren, Auswerfen und
+    /// die zwei Finderbefehle brauchen einen lokalen Pfad, den ein Eintrag im
+    /// Archiv nicht hat. Welchen Text die Meldung traegt, waehlt
+    /// `krk_core::ort::nicht_verfuegbar_text` nach der Art des Orts.
+    #[test]
+    fn jeder_kontextbefehl_meldet_im_archiv() {
+        for befehl in Kontextbefehl::ALLE {
+            for beschreibbar in [true, false] {
+                assert_eq!(
+                    am_fernen_ort_meldet(befehl, Ortsart::Archiv { beschreibbar }),
+                    befehl != Kontextbefehl::Verbinden,
+                    "{befehl:?} antwortet im Archiv (beschreibbar: {beschreibbar}) falsch"
+                );
+            }
         }
     }
 

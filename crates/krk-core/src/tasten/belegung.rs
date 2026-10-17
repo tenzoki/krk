@@ -747,6 +747,11 @@ pub enum Seite {
 /// den Editor. Mit [`Ortsbedarf::Lokal`] graute ein ferner Tab im aktiven
 /// Dateifenster sie auch dort aus, wo sie an einer lokalen Datei im Editor
 /// wirken; sie tragen deshalb [`Ortsbedarf::LokalImDateifenster`].
+///
+/// **Seit den Archiven ein vierter Wert**, [`Ortsbedarf::Beschreibbar`]: ein
+/// Ordner in einem Archiv ist weder lokal noch fern, und ob in ihn geschrieben
+/// werden darf, haengt am Format. Die zwei lokalen Werte sagen in einem
+/// Archiv nein wie an einem fernen Ort.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Ortsbedarf {
     /// Wirkt an jedem Ort, lokal wie fern.
@@ -758,6 +763,15 @@ pub enum Ortsbedarf {
     /// im Dateifenster steht; mit dem Fokus anderswo nimmt der Befehl seinen
     /// Gegenstand nicht von dort.
     LokalImDateifenster,
+    /// Schreibt in den angezeigten Ordner oder entfernt aus ihm: wirkt an
+    /// jedem Ort ausser in einem Archiv, das KRK allein lesen darf, also einer
+    /// einzelnen `.gz`-Datei (E14 des Plans
+    /// `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`).
+    ///
+    /// Lokal und fern sagt dieser Wert dasselbe wie [`Ortsbedarf::Ueberall`];
+    /// ob ein Archiv beschreibbar ist, entscheidet sein Format am Wert
+    /// (`Archivformat::beschreibbar`), ohne Systemaufruf.
+    Beschreibbar,
 }
 
 /// Was ein Tastendruck im Dateifenster ausloest.
@@ -1936,14 +1950,15 @@ impl Kommando {
     /// (Entscheidung 13 des Plans der sftp-Ordner).
     ///
     /// **Vollstaendig und ohne Auffangzweig**: ein neues Kommando haelt den Bau
-    /// hier an und bekommt seinen Ortsbedarf bewusst. Was die drei Werte
+    /// hier an und bekommt seinen Ortsbedarf bewusst. Was die vier Werte
     /// heissen, steht bei [`Ortsbedarf`].
     ///
-    /// **Was `Ueberall` traegt, wirkt am fernen Ort oder meldet dort selbst.**
-    /// Kopieren, Verschieben, Anlegen und Umbenennen wirken dort ueber die
-    /// Maschine fuer ferne Vorgaenge (`operation::fern`), „In den Papierkorb
-    /// raeumen“ fuehrt dort zur endgueltigen Rueckfrage, und Navigation,
-    /// Markierung, Sortierung, Pfadeingabe und Angleichen wirken wie lokal.
+    /// **Was `Ueberall` oder `Beschreibbar` traegt, wirkt am fernen Ort oder
+    /// meldet dort selbst.** Kopieren, Verschieben, Anlegen und Umbenennen
+    /// wirken dort ueber die Maschine fuer ferne Vorgaenge (`operation::fern`),
+    /// „In den Papierkorb raeumen“ fuehrt dort zur endgueltigen Rueckfrage,
+    /// und Navigation, Markierung, Sortierung, Pfadeingabe und Angleichen
+    /// wirken wie lokal.
     /// Was dort nicht wirken kann, meldet sein Ausfuehrungszweig.
     #[must_use]
     pub const fn ortsbedarf(self) -> Ortsbedarf {
@@ -1967,6 +1982,15 @@ impl Kommando {
             Kommando::Teilen | Kommando::LesezeichenAnlegen | Kommando::EditorRundweg => {
                 Ortsbedarf::LokalImDateifenster
             }
+            // Sie schreiben in den angezeigten Ordner oder entfernen aus ihm:
+            // Verschieben nimmt die Quellen weg, der Papierkorb und das
+            // endgueltige Loeschen ebenso, Anlegen und Umbenennen schreiben
+            // dort. In einem Archiv, das allein lesbar ist, wirkt keiner davon.
+            Kommando::Verschieben
+            | Kommando::InPapierkorb
+            | Kommando::OrdnerAnlegen
+            | Kommando::DateiAnlegen
+            | Kommando::Umbenennen => Ortsbedarf::Beschreibbar,
             Kommando::AuswahlHoch
             | Kommando::AuswahlRunter
             | Kommando::SeiteHoch
@@ -2007,12 +2031,7 @@ impl Kommando {
             | Kommando::BereichVerbreitern
             | Kommando::BereichVerschmaelern
             | Kommando::Kopieren
-            | Kommando::Verschieben
-            | Kommando::InPapierkorb
             | Kommando::Abbrechen
-            | Kommando::OrdnerAnlegen
-            | Kommando::DateiAnlegen
-            | Kommando::Umbenennen
             | Kommando::LesezeichenUmbenennen
             | Kommando::LesezeichenLoeschen
             | Kommando::LesezeichenHoch

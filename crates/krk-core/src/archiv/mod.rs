@@ -25,6 +25,9 @@
 //!   Leser des Zentralverzeichnisses, dazu die rohe Form der Saetze fuer den
 //!   Umbau.
 //! - [`zugang`] haelt eine Archivdatei samt Zwischenspeicher.
+//! - [`lesen`] liest einen Eintrag fuer das Herauskopieren: Zip wahlfrei,
+//!   tar und tar.gz ueber einen Zeiger, der nur vorwaerts laeuft (Schritt 4
+//!   des Plans).
 //! - [`umbau`] aendert ein Archiv: jede Konfliktfrage am Verzeichnis, dann das
 //!   ganze Archiv neu (Schritt 5 des Plans).
 //! - [`ersetzen`] ist der einzige Schreiber an einer Archivdatei: das neue
@@ -39,6 +42,7 @@
 pub mod ersetzen;
 pub mod format;
 pub mod innenpfad;
+pub mod lesen;
 pub mod umbau;
 pub mod verzeichnis;
 pub(crate) mod zipform;
@@ -46,6 +50,7 @@ pub mod zugang;
 
 pub use format::Archivformat;
 pub use innenpfad::Innenpfad;
+pub use lesen::{Archivleser, Lesefehler};
 pub use verzeichnis::{
     Archiveintrag, Fundstelle, Inhaltsverzeichnis, Lesbarkeit, Verzeichnisfehler,
 };

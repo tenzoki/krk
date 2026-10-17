@@ -191,6 +191,15 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::ArchivQuelleVeraendert => "die Quelle hat beim Lesen ihre Größe geändert",
         Text::ArchivUmbauZuGross => "das Archiv führt mehr als {grenze} Einträge",
+        Text::ArchivEintragVerschluesselt => "der Eintrag ist verschlüsselt und kommt nicht heraus",
+        Text::ArchivVerfahrenUnbekannt => {
+            "der Eintrag ist mit {verfahren} gepackt, das KRK nicht entpackt"
+        }
+        Text::ArchivHarterVerweis => "ein harter Verweis im Archiv kommt nicht heraus",
+        Text::ArchivBeimLesenVeraendert => {
+            "das Archiv hat sich seit dem Lesen seines Inhaltsverzeichnisses geändert"
+        }
+        Text::ArchivEintragFehlt => "der Eintrag steht nicht mehr an seiner Stelle im Archiv",
         Text::StapelKeinStartwert => "„{text}“ ist kein Startwert für die Nummerierung",
         Text::StapelKeineStellenzahl => "„{text}“ ist keine Stellenzahl zwischen 1 und {hoechste}",
         Text::EditorKeinFreierDateizugriff => {

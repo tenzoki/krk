@@ -84,7 +84,7 @@ use krk_core::fern::{Fernfehler, Fernzugang};
 use krk_core::git::Marke;
 use krk_core::git::lauf::{Gitfrage, Gitlauf, Gitmeldung};
 use krk_core::heimordner::Heimordner;
-use krk_core::ort::{Archivort, FernerOrt, Ort};
+use krk_core::ort::{Archivort, FernerOrt, Ort, Ortsart};
 use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
 use krk_core::verzeichnis::modell::Befund;
 use krk_core::verzeichnis::{
@@ -141,6 +141,18 @@ impl Tabort {
         match self {
             Tabort::Lokal(ordner) => Some(ordner),
             Tabort::Fern { .. } | Tabort::Archiv { .. } => None,
+        }
+    }
+
+    /// Die Art des Orts, am Wert und ohne Systemaufruf, ohne den Ort zu
+    /// kopieren; dieselbe Antwort wie `Ort::art` am Ort dieses Tabs.
+    pub fn art(&self) -> Ortsart {
+        match self {
+            Tabort::Lokal(_) => Ortsart::Lokal,
+            Tabort::Fern { .. } => Ortsart::Fern,
+            Tabort::Archiv { ort, .. } => Ortsart::Archiv {
+                beschreibbar: ort.format().beschreibbar(),
+            },
         }
     }
 

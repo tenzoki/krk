@@ -181,6 +181,15 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::ArchivQuelleVeraendert => "the source changed its size while being read",
         Text::ArchivUmbauZuGross => "the archive has more than {grenze} entries",
+        Text::ArchivEintragVerschluesselt => "the entry is encrypted and cannot be extracted",
+        Text::ArchivVerfahrenUnbekannt => {
+            "the entry is compressed with {verfahren}, which KRK cannot decompress"
+        }
+        Text::ArchivHarterVerweis => "a hard link in the archive cannot be extracted",
+        Text::ArchivBeimLesenVeraendert => {
+            "the archive has changed since its table of contents was read"
+        }
+        Text::ArchivEintragFehlt => "the entry is no longer where the archive lists it",
         Text::StapelKeinStartwert => "“{text}” is not a starting value for the numbering",
         Text::StapelKeineStellenzahl => {
             "“{text}” is not a number of digits between 1 and {hoechste}"

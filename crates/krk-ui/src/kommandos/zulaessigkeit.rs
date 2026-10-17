@@ -102,7 +102,9 @@
 //!    stehen hier die Datei, die der Editor haelt ([`datei_passt`]), seit
 //!    der Bildfolge, ob die Vorschau eine Bildfolge zeigt ([`folge_passt`]),
 //!    und seit den sftp-Ordnern, ob der Befehl einen lokalen Ort braucht und
-//!    der aktive Tab einen fernen zeigt ([`ort_passt`]). Die letzte fragt
+//!    der aktive Tab einen fernen zeigt ([`ort_passt`]), seit den Archiven
+//!    auch, ob er einen beschreibbaren braucht und der Tab ein Archiv zeigt,
+//!    das allein lesbar ist. Die letzte fragt
 //!    nicht den Wirkungsbereich, sondern den Ortsbedarf des Befehls; sie
 //!    steht trotzdem hier, weil sie wie die anderen nach dem **Befehl** fragt
 //!    und die Ausnahmeliste sie deshalb nicht aufhebt.
@@ -180,6 +182,7 @@
 //! fest. Eine Ordnungszahl steht hier bewusst nicht: sie altert mit jedem
 //! neuen Eintrag, die Regel darueber nicht.
 
+use krk_core::ort::Ortsart;
 use krk_core::tasten::{Kommando, Ortsbedarf, Wirkungsbereich};
 
 use super::fokus::{self, Fokus};
@@ -271,14 +274,17 @@ pub struct Lage {
     /// Dieselbe Bauart wie [`Lage::editorform`]: der Kern sagt, dass die Frage
     /// zu stellen ist, und die Oberflaeche beantwortet sie.
     pub bildfolge: bool,
-    /// Ob der sichtbare Tab des aktiven Dateifensters einen Ordner auf einem
-    /// Server zeigt (Entscheidung 13 des Plans der sftp-Ordner).
+    /// Welche Art Ort der sichtbare Tab des aktiven Dateifensters zeigt:
+    /// einen lokalen Ordner, einen auf einem Server oder einen in einem
+    /// Archiv, beschreibbar oder nicht (Entscheidung 13 des Plans der
+    /// sftp-Ordner, E14 des Plans der Archive).
     ///
     /// Erhoben von `Anwendungsdelegierter::lage` ueber
-    /// `DateifensterQuelle::zeigt_fern`, am Wert des Tabs und ohne
-    /// Systemaufruf; gelesen allein von [`ort_passt`]. Vor dem Aufbau der
-    /// Oberflaeche ist es `false`.
-    pub aktiv_fern: bool,
+    /// `DateifensterQuelle::ortsart`, am Wert des Tabs und ohne Systemaufruf;
+    /// gelesen allein von [`ort_passt`]. Vor dem Aufbau der Oberflaeche ist es
+    /// [`Ortsart::Lokal`]. Bis zu den Archiven stand hier `aktiv_fern: bool`;
+    /// `Ortsart::Fern` ist dessen `true`.
+    pub aktiv_ort: Ortsart,
 }
 
 /// Was der Editor gerade zeigt: Text in der Textflaeche oder die Eintraege
@@ -514,28 +520,39 @@ fn gestattet(anspruch: Anspruch, lage: Lage) -> bool {
         && form_passt(bereich, lage.editorform)
         && datei_passt(bereich, lage.pin_aenderbar, lage.eintragsdatei)
         && folge_passt(bereich, lage.bildfolge)
-        && ort_passt(anspruch.ortsbedarf(), lage.aktiv_fern, lage.fokus)
+        && ort_passt(anspruch.ortsbedarf(), lage.aktiv_ort, lage.fokus)
 }
 
 /// Ob der Ort des aktiven Dateifensters dem Ortsbedarf des Befehls genuegt
 /// (Entscheidung 13 des Plans der sftp-Ordner).
 ///
-/// **Vollstaendig ueber [`Ortsbedarf`] und ohne Auffangzweig**, wie
-/// [`form_passt`]. An einem lokalen Ort sagt sie zu jedem Befehl ja, und die
-/// Regel antwortet dort, wie sie vor den sftp-Ordnern antwortete; die Probe
-/// `an_einem_lokalen_ort_aendert_der_ortsbedarf_nichts` haelt das.
+/// **Vollstaendig ueber [`Ortsbedarf`] und [`Ortsart`] und ohne
+/// Auffangzweig**, wie [`form_passt`]. An einem lokalen Ort sagt sie zu jedem
+/// Befehl ja, und die Regel antwortet dort, wie sie vor den sftp-Ordnern
+/// antwortete; die Probe `an_einem_lokalen_ort_aendert_der_ortsbedarf_nichts`
+/// haelt das, und `an_einem_fernen_ort_aendert_der_ortsbedarf_nichts` haelt,
+/// dass ein ferner Ort antwortet wie vor den Archiven.
 ///
-/// **Sie fragt neben `aktiv_fern` den Fokus, und das ist eine Abweichung vom
-/// Plan**, der allein `aktiv_fern` nennt: [`Ortsbedarf::LokalImDateifenster`]
-/// sagt nur mit dem Fokus im Dateifenster nein, weil die drei Befehle mit
-/// diesem Wert ihren Gegenstand sonst aus Editor oder Vorschau nehmen. Der
-/// Grund steht bei [`Ortsbedarf`].
+/// **Ein Ordner in einem Archiv ist fuer die zwei lokalen Werte wie ein
+/// ferner**: er hat keinen lokalen Pfad. [`Ortsbedarf::Beschreibbar`] sagt
+/// allein in einem Archiv nein, das KRK nicht beschreiben darf, und wirkt
+/// sonst wie [`Ortsbedarf::Ueberall`] (E14 des Plans der Archive).
+///
+/// **Sie fragt neben dem Ort den Fokus, und das ist eine Abweichung vom
+/// Plan der sftp-Ordner**, der allein den Ort nennt:
+/// [`Ortsbedarf::LokalImDateifenster`] sagt nur mit dem Fokus im Dateifenster
+/// nein, weil die drei Befehle mit diesem Wert ihren Gegenstand sonst aus
+/// Editor oder Vorschau nehmen. Der Grund steht bei [`Ortsbedarf`].
 #[must_use = "fallengelassen laeuft der Befehl am fernen Ort weiter"]
-fn ort_passt(bedarf: Ortsbedarf, aktiv_fern: bool, fokus: Fokus) -> bool {
-    match bedarf {
-        Ortsbedarf::Ueberall => true,
-        Ortsbedarf::Lokal => !aktiv_fern,
-        Ortsbedarf::LokalImDateifenster => !(aktiv_fern && fokus == Fokus::Dateifenster),
+fn ort_passt(bedarf: Ortsbedarf, ort: Ortsart, fokus: Fokus) -> bool {
+    match (bedarf, ort) {
+        (Ortsbedarf::Ueberall, _) | (_, Ortsart::Lokal) => true,
+        (Ortsbedarf::Lokal, Ortsart::Fern | Ortsart::Archiv { .. }) => false,
+        (Ortsbedarf::LokalImDateifenster, Ortsart::Fern | Ortsart::Archiv { .. }) => {
+            fokus != Fokus::Dateifenster
+        }
+        (Ortsbedarf::Beschreibbar, Ortsart::Fern) => true,
+        (Ortsbedarf::Beschreibbar, Ortsart::Archiv { beschreibbar }) => beschreibbar,
     }
 }
 
@@ -1048,8 +1065,39 @@ mod tests {
             pin_aenderbar: false,
             eintragsdatei: false,
             bildfolge: false,
-            aktiv_fern: false,
+            aktiv_ort: Ortsart::Lokal,
         }
+    }
+
+    /// Jede Art Ort, fuer die Proben: lokal, fern und ein Archiv, das KRK
+    /// beschreiben darf, und eines, das es allein lesen darf.
+    const JEDE_ORTSART: [Ortsart; 4] = [
+        Ortsart::Lokal,
+        Ortsart::Fern,
+        Ortsart::Archiv { beschreibbar: true },
+        Ortsart::Archiv {
+            beschreibbar: false,
+        },
+    ];
+
+    /// [`JEDE_ORTSART`] fuehrt jeden Wert von [`Ortsart`] genau einmal. Die
+    /// Fallunterscheidung ist vollstaendig und ohne Auffangzweig, also haelt
+    /// ein weiterer Wert den Bau hier an.
+    #[test]
+    fn jede_ortsart_steht_in_der_probenliste() {
+        let stelle = |ort: Ortsart| match ort {
+            Ortsart::Lokal => 0,
+            Ortsart::Fern => 1,
+            Ortsart::Archiv { beschreibbar: true } => 2,
+            Ortsart::Archiv {
+                beschreibbar: false,
+            } => 3,
+        };
+        let mut gesehen = [0usize; 4];
+        for ort in JEDE_ORTSART {
+            gesehen[stelle(ort)] += 1;
+        }
+        assert_eq!(gesehen, [1; 4]);
     }
 
     /// Jede Form des Editors, fuer die Proben.
@@ -1398,10 +1446,10 @@ mod tests {
 
     /// Jede Lage, die die Regel unterscheidet: jeder Fokus, jede Form, alle
     /// acht Achtel aus Blattstand, Ersthelferbefund und Schluesselfenster und
-    /// beide Werte von `pin_aenderbar`, von `eintragsdatei`, von `bildfolge`
-    /// und von `aktiv_fern`.
+    /// beide Werte von `pin_aenderbar`, von `eintragsdatei` und von
+    /// `bildfolge` und jede Art Ort aus [`JEDE_ORTSART`].
     ///
-    /// **Die zweite Dimension von `bildfolge` und von `aktiv_fern` steht von
+    /// **Die zweite Dimension von `bildfolge` und die Arten Ort stehen von
     /// Hand da**: das Literal in [`lage_in`] zwingt nur zu einem Wert, und eine
     /// Schleife ueber beide ergaenzt niemand von selbst.
     fn jede_lage() -> Vec<Lage> {
@@ -1412,12 +1460,12 @@ mod tests {
                     for pin_aenderbar in [false, true] {
                         for eintragsdatei in [false, true] {
                             for bildfolge in [false, true] {
-                                for aktiv_fern in [false, true] {
+                                for aktiv_ort in JEDE_ORTSART {
                                     lagen.push(Lage {
                                         pin_aenderbar,
                                         eintragsdatei,
                                         bildfolge,
-                                        aktiv_fern,
+                                        aktiv_ort,
                                         ..lage_in(blatt, appkit, krk, fokus, form)
                                     });
                                 }
@@ -1475,7 +1523,7 @@ mod tests {
                         // derselben Lage mit lokalem Ort, und dort muss der
                         // weitere zulaessig sein wie vor den sftp-Ordnern.
                         let ohne_ort = Lage {
-                            aktiv_fern: false,
+                            aktiv_ort: Ortsart::Lokal,
                             ..lage
                         };
                         assert!(
@@ -2639,13 +2687,16 @@ mod tests {
         let lagen = jede_lage();
         let mut gefunden = Vec::new();
         for (kommando, _) in Kommando::KENNUNGEN {
-            let ausgegraut = lagen.iter().filter(|lage| !lage.aktiv_fern).any(|&lokal| {
-                let fern = Lage {
-                    aktiv_fern: true,
-                    ..lokal
-                };
-                zulaessig(kommando, lokal) && !zulaessig(kommando, fern)
-            });
+            let ausgegraut = lagen
+                .iter()
+                .filter(|lage| lage.aktiv_ort == Ortsart::Lokal)
+                .any(|&lokal| {
+                    let fern = Lage {
+                        aktiv_ort: Ortsart::Fern,
+                        ..lokal
+                    };
+                    zulaessig(kommando, lokal) && !zulaessig(kommando, fern)
+                });
             if ausgegraut {
                 gefunden.push(kommando);
             }
@@ -2667,7 +2718,7 @@ mod tests {
         // zulaessig: sie wirken am fernen Ort ueber `operation::fern`.
         let (blatt, appkit, krk) = OHNE_HINDERNIS;
         let fern_in_der_liste = Lage {
-            aktiv_fern: true,
+            aktiv_ort: Ortsart::Fern,
             ..lage(blatt, appkit, krk, Fokus::Dateifenster)
         };
         for kommando in [
@@ -2711,7 +2762,8 @@ mod tests {
     }
 
     /// An einem lokalen Ort aendert der Ortsbedarf nichts: jede Lage mit
-    /// `aktiv_fern = false` gibt dieselbe Antwort wie vor den sftp-Ordnern.
+    /// `aktiv_ort = Ortsart::Lokal` gibt dieselbe Antwort wie vor den
+    /// sftp-Ordnern.
     ///
     /// **Zwei Haelften.** Die erste steht hier: [`ort_passt`] sagt mit
     /// lokalem Ort zu jedem Ortsbedarf in jedem Fokus ja, und weil sie in
@@ -2720,25 +2772,155 @@ mod tests {
     /// Rumpfs zum Vergleich steht bewusst nicht da: sie waere die Regel ein
     /// zweites Mal. Die zweite Haelfte ist die Tafel
     /// `die_tafel_aus_allen_faellen_geht_auf`, die ihre Lagen ueber
-    /// [`lage_in`] mit `aktiv_fern = false` baut und mit unveraenderten
-    /// Erwartungen gruen bleibt.
+    /// [`lage_in`] mit lokalem Ort baut und mit unveraenderten Erwartungen
+    /// gruen bleibt.
     ///
     /// **Was sie nicht sieht:** ein Glied, das jemand vor `ort_passt` in den
     /// Rumpf setzt und das den Ort selbst fragt. Sie liest die Funktion und
     /// nicht den Rumpf.
     #[test]
     fn an_einem_lokalen_ort_aendert_der_ortsbedarf_nichts() {
-        for bedarf in [
-            Ortsbedarf::Ueberall,
-            Ortsbedarf::Lokal,
-            Ortsbedarf::LokalImDateifenster,
-        ] {
+        for bedarf in JEDER_ORTSBEDARF {
             for fokus in JEDER_FOKUS {
                 assert!(
-                    ort_passt(bedarf, false, fokus),
+                    ort_passt(bedarf, Ortsart::Lokal, fokus),
                     "{bedarf:?} sagt an einem lokalen Ort mit dem Fokus {fokus:?} nein"
                 );
             }
+        }
+    }
+
+    /// Jeder Ortsbedarf, fuer die Proben. Die Vollstaendigkeit haelt
+    /// [`ort_passt`], das ueber ihn ohne Auffangzweig verzweigt; dass die
+    /// Liste ihm folgt, haelt die Zahl hier mit der Zuordnung darunter.
+    const JEDER_ORTSBEDARF: [Ortsbedarf; 4] = [
+        Ortsbedarf::Ueberall,
+        Ortsbedarf::Lokal,
+        Ortsbedarf::LokalImDateifenster,
+        Ortsbedarf::Beschreibbar,
+    ];
+
+    /// An einem fernen Ort aendert der vierte Ortsbedarf nichts: jede
+    /// Verbindung aus Bedarf und Fokus antwortet, wie sie vor den Archiven
+    /// antwortete (E19 des Plans der Archive).
+    ///
+    /// Vor den Archiven trugen die fuenf Befehle mit
+    /// [`Ortsbedarf::Beschreibbar`] den Wert [`Ortsbedarf::Ueberall`]; die
+    /// erwartete Antwort steht deshalb fuer beide als ja da, und die zwei
+    /// lokalen Werte antworten wie unter `aktiv_fern = true`.
+    #[test]
+    fn an_einem_fernen_ort_aendert_der_ortsbedarf_nichts() {
+        for bedarf in JEDER_ORTSBEDARF {
+            for fokus in JEDER_FOKUS {
+                let vorher = match bedarf {
+                    Ortsbedarf::Ueberall | Ortsbedarf::Beschreibbar => true,
+                    Ortsbedarf::Lokal => false,
+                    Ortsbedarf::LokalImDateifenster => fokus != Fokus::Dateifenster,
+                };
+                assert_eq!(
+                    ort_passt(bedarf, Ortsart::Fern, fokus),
+                    vorher,
+                    "{bedarf:?} antwortet an einem fernen Ort mit dem Fokus {fokus:?} anders"
+                );
+            }
+        }
+    }
+
+    /// Die Befehle, die in einem Ordner einer Archivart ausgegraut sind, wo
+    /// sie lokal zulaessig waeren: es gibt eine Lage, in der der Befehl mit
+    /// lokalem Ort zulaessig ist und mit diesem nicht.
+    fn ausgegraut_an(ort: Ortsart) -> Vec<Kommando> {
+        let lagen = jede_lage();
+        Kommando::KENNUNGEN
+            .into_iter()
+            .map(|(kommando, _)| kommando)
+            .filter(|&kommando| {
+                lagen
+                    .iter()
+                    .filter(|lage| lage.aktiv_ort == Ortsart::Lokal)
+                    .any(|&lokal| {
+                        zulaessig(kommando, lokal)
+                            && !zulaessig(
+                                kommando,
+                                Lage {
+                                    aktiv_ort: ort,
+                                    ..lokal
+                                },
+                            )
+                    })
+            })
+            .collect()
+    }
+
+    /// In einem Archiv sind genau diese Befehle ausgegraut, und keiner sonst
+    /// (E14 des Plans der Archive), getrennt nach einem Archiv, in das KRK
+    /// schreiben darf, und einer `.gz`-Datei, die allein lesbar ist.
+    ///
+    /// **Gemessen an der Regel und nicht am Ortsbedarf allein**, wie
+    /// `an_einem_fernen_ort_sind_genau_diese_befehle_ausgegraut`. In einem
+    /// beschreibbaren Archiv ist es dieselbe Liste wie fern: was einen lokalen
+    /// Pfad braucht. In einer `.gz`-Datei kommen die fuenf dazu, die in den
+    /// angezeigten Ordner schreiben oder aus ihm entfernen.
+    ///
+    /// **Was sie nicht sieht:** ob ein Befehl, der hier zulaessig bleibt, im
+    /// Archiv wirkt oder meldet; Kopieren heraus wirkt (Schritt 4), Kopieren
+    /// hinein, Verschieben, Umbenennen, Anlegen und Loeschen melden bis zu den
+    /// Schritten 6 und 7 in ihren Zweigen beim Anwendungsdelegierten.
+    #[test]
+    fn im_archiv_sind_genau_diese_befehle_ausgegraut() {
+        const LOKALER_PFAD: [Kommando; 11] = [
+            Kommando::TerminalOeffnen,
+            Kommando::MitStandardprogrammOeffnen,
+            Kommando::Teilen,
+            Kommando::OrdnerpfadKopieren,
+            Kommando::EintragspfadKopieren,
+            Kommando::LesezeichenAnlegen,
+            Kommando::Bearbeiten,
+            Kommando::TiefeSucheUmschalten,
+            Kommando::InhaltssucheUmschalten,
+            Kommando::UmbenennenStapel,
+            Kommando::EditorRundweg,
+        ];
+        const SCHREIBEND: [Kommando; 5] = [
+            Kommando::Verschieben,
+            Kommando::InPapierkorb,
+            Kommando::OrdnerAnlegen,
+            Kommando::DateiAnlegen,
+            Kommando::Umbenennen,
+        ];
+        let mut im_zip = ausgegraut_an(Ortsart::Archiv { beschreibbar: true });
+        let mut im_gz = ausgegraut_an(Ortsart::Archiv {
+            beschreibbar: false,
+        });
+        let mut erwartet_zip = LOKALER_PFAD.to_vec();
+        let mut erwartet_gz: Vec<Kommando> =
+            LOKALER_PFAD.iter().chain(&SCHREIBEND).copied().collect();
+        for liste in [&mut im_zip, &mut im_gz, &mut erwartet_zip, &mut erwartet_gz] {
+            liste.sort_by_key(|kommando| format!("{kommando:?}"));
+        }
+        assert_eq!(im_zip, erwartet_zip, "beschreibbares Archiv");
+        assert_eq!(im_gz, erwartet_gz, "allein lesbares Archiv");
+
+        // Kopieren, Navigation und Markierung bleiben auch in einer
+        // `.gz`-Datei zulaessig: herauskopieren geht.
+        let (blatt, appkit, krk) = OHNE_HINDERNIS;
+        let gz_in_der_liste = Lage {
+            aktiv_ort: Ortsart::Archiv {
+                beschreibbar: false,
+            },
+            ..lage(blatt, appkit, krk, Fokus::Dateifenster)
+        };
+        for kommando in [
+            Kommando::Kopieren,
+            Kommando::Oeffnen,
+            Kommando::OrdnerAufwaerts,
+            Kommando::MarkierungUmschalten,
+            Kommando::Pfadeingabe,
+        ] {
+            assert!(
+                zulaessig(kommando, gz_in_der_liste),
+                "{kommando:?} ist in einer .gz-Datei ausgegraut"
+            );
         }
     }
 }

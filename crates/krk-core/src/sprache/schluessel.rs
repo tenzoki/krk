@@ -282,6 +282,20 @@ pub enum Text {
     ArchivQuelleVeraendert,
     /// `archiv::umbau`: das Archiv fuehrt zu viele Eintraege; `{grenze}`.
     ArchivUmbauZuGross,
+    /// `archiv::lesen`: ein verschluesselter Eintrag kommt beim
+    /// Herauskopieren nicht heraus.
+    ArchivEintragVerschluesselt,
+    /// `archiv::lesen`: ein Eintrag, dessen Verfahren KRK nicht entpackt;
+    /// `{verfahren}`.
+    ArchivVerfahrenUnbekannt,
+    /// `archiv::lesen`: ein harter Verweis im tar kommt nicht heraus.
+    ArchivHarterVerweis,
+    /// `archiv::lesen`: die Archivdatei ist nicht mehr die, aus der ihr
+    /// Inhaltsverzeichnis gelesen ist.
+    ArchivBeimLesenVeraendert,
+    /// `archiv::lesen`: der Eintrag steht nicht an der Fundstelle, die das
+    /// Inhaltsverzeichnis nennt.
+    ArchivEintragFehlt,
     /// `Regelfehler::Startwert` in der Hinweiszeile des Stapelumbenennens;
     /// `{text}` ist die Eingabe.
     StapelKeinStartwert,
@@ -1719,7 +1733,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 713] = [
+    pub const ALLE: [Text; 718] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1829,6 +1843,11 @@ impl Text {
         Text::ArchivTarGroesseAusPax,
         Text::ArchivQuelleVeraendert,
         Text::ArchivUmbauZuGross,
+        Text::ArchivEintragVerschluesselt,
+        Text::ArchivVerfahrenUnbekannt,
+        Text::ArchivHarterVerweis,
+        Text::ArchivBeimLesenVeraendert,
+        Text::ArchivEintragFehlt,
         Text::StapelKeinStartwert,
         Text::StapelKeineStellenzahl,
         Text::EditorKeinFreierDateizugriff,

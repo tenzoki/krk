@@ -379,7 +379,7 @@ fn ist_sonderdatei(modus: u32) -> bool {
 
 /// Ordnet einen Fehler der Kiste zu, wie [`Verzeichnisfehler::aus_strom`]
 /// einen Fehler beim Lesen eines Stroms.
-fn zipfehler(fehler: ZipError) -> Verzeichnisfehler {
+pub(crate) fn zipfehler(fehler: ZipError) -> Verzeichnisfehler {
     match fehler {
         ZipError::Io(fehler) if fehler.raw_os_error().is_some() => Verzeichnisfehler::Lesen(fehler),
         andere => Verzeichnisfehler::Ungueltig(andere.to_string()),

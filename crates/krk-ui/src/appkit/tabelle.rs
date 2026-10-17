@@ -347,7 +347,7 @@ use krk_core::archiv::Archivformat;
 use krk_core::fern::Fernzugang;
 use krk_core::git::Marke;
 use krk_core::heimordner::Heimordner;
-use krk_core::ort::{Archivort, FernerOrt, Ort};
+use krk_core::ort::{Archivort, FernerOrt, Ort, Ortsart};
 use krk_core::sprache::{Text, satz, text};
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::filter::traegt_ein_dateiname;
@@ -1689,27 +1689,21 @@ impl DateifensterQuelle {
             .map(Path::to_path_buf)
     }
 
-    /// Ob der sichtbare Tab einen Ordner auf einem Server oder in einem
-    /// Archiv zeigt, also keinen lokalen Ordner.
+    /// Welche Art Ort der sichtbare Tab zeigt: einen lokalen Ordner, einen
+    /// auf einem Server oder einen in einem Archiv, beschreibbar oder nicht.
     ///
-    /// **Seit dem Archivpaket gilt die Antwort auch fuer ein Archiv**, und bis
-    /// Schritt 3 des Plans der Archive ist das gewollt: ein Befehl, der allein
-    /// lokal wirkt, ist dort ausgegraut wie fern, die Schalter „Deep“ und
-    /// „Content“ sind nicht bedienbar, und das Kontextmenue meldet ueber
-    /// `Anwendungsdelegierter::am_fernen_ort_melden` den Text der Art des Orts.
+    /// **Bis Schritt 3 des Plans der Archive hiess sie `zeigt_fern`** und
+    /// antwortete fuer ein Archiv wie fuer einen Server; seither unterscheidet
+    /// die Antwort beide, damit die Zulaessigkeit ein Archiv, das allein
+    /// lesbar ist, von einem beschreibbaren trennen kann (E14).
     ///
     /// Am Wert des Tabs und ohne Systemaufruf, ohne den Ort zu kopieren;
-    /// gefragt von `Anwendungsdelegierter::lage` fuer `Lage::aktiv_fern`, von
+    /// gefragt von `Anwendungsdelegierter::lage` fuer `Lage::aktiv_ort`, von
     /// `Anwendungsdelegierter::bereichsleiste_nachziehen` fuer die Schalter
     /// „Deep“ und „Content“ und von `kontextbefehl_ausfuehren` (Entscheidung 13
     /// des Plans der sftp-Ordner).
-    pub fn zeigt_fern(&self) -> bool {
-        self.ivars()
-            .tabs
-            .borrow()
-            .aktiver()
-            .lokaler_ordner()
-            .is_none()
+    pub fn ortsart(&self) -> Ortsart {
+        self.ivars().tabs.borrow().aktiver().tabort().art()
     }
 
     /// Die lokalen Ordner aller Tabs, in der Reihenfolge der Leiste (C9);

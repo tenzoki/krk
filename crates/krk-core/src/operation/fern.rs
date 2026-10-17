@@ -38,6 +38,21 @@
 //! [`Steuerung`] mit Fortschritt, Abbruch und Konfliktfrage, der Bericht und
 //! die Meldungen an den Hauptfaden.
 //!
+//! **Seit den Archiven traegt die Maschine jeden Vorgang mit einer Seite, die
+//! kein gewoehnlicher lokaler Ordner ist** (E10 des Plans
+//! `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`); der Name
+//! `Fern…` ist geblieben. Aus einem Archiv wird herauskopiert, und dafuer
+//! **trennt das Modul Lesen und Schreiben am Typ** (E11): eine [`Quelle`] ist
+//! eine [`Stelle`] oder ein Eintrag in einem Archiv und traegt allein
+//! Lesehandlungen; die Schreibhandlungen stehen allein an [`Stelle`], und jedes
+//! Ziel ist eine. Gelesen wird ein Archiveintrag ueber den
+//! `archiv::Archivleser`, den alle Quellen eines Archivs im Vorgang teilen, in
+//! einem tar-Strom in der Folge der Fundstellen, damit ein Baum einen
+//! Durchlauf kostet. Fuer das Ziel gelten Zielklaerung, Konfliktfrage und
+//! Tausch unveraendert. Hinein, Verschieben heraus, Umbenennen, Anlegen und
+//! Loeschen im Archiv melden je Quelle `Text::ImArchivNichtVerfuegbar`, bis der
+//! Umbau in der Maschine steht.
+//!
 //! **Eine Schleife fuer jede Richtung.** Lokal nach fern, fern nach lokal und
 //! fern nach fern, auf demselben Server wie zwischen zweien, laufen durch
 //! dieselbe Uebertragung zwischen einer Lesequelle und einem Schreibziel, von
@@ -172,6 +187,7 @@
 //!   OpenSSH zu erkennen gibt ([`Gespraech::spricht_openssh`]); sonst steht
 //!   sie im Bericht.
 
+use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::ffi::OsStr;
 use std::fs::{self, File, FileTimes, OpenOptions, Permissions};
@@ -180,11 +196,14 @@ use std::ops::ControlFlow;
 use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::{MetadataExt, PermissionsExt};
 use std::path::{Path, PathBuf};
+use std::rc::Rc;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::channel;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use crate::archiv::lesen::lesbarkeit_grund;
+use crate::archiv::{Archiveintrag, Archivleser, Innenpfad, Lesbarkeit, Lesefehler};
 use crate::fern::paket::{Attribute, Name, S_IFDIR, S_IFLNK, S_IFMT, S_IFREG, oeffnen, status};
 use crate::fern::{
     self as fernzugriff, Ausstehend, BLOCK, Fernfaden, Fernfehler, Fernpfad, Gespraech, Handle,
@@ -403,25 +422,71 @@ pub(crate) fn starten(auftrag: Fernauftrag) -> Lauf {
 /// Der Zielordner wird einmal vor der Schleife zur [`Stelle`], damit jede
 /// Quelle dasselbe Gespraech an ihm nimmt.
 ///
-/// **Ein Ort in einem Archiv ist hier noch keine Stelle** (Schritt 2 des
-/// Plans `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`): bis
-/// die Archivstelle als Lesequelle und der Umbau gebaut sind, meldet jede
-/// Quelle, deren Seite in einem Archiv liegt, `Text::ImArchivNichtVerfuegbar`
-/// und wird nicht angefasst. Die Oberflaeche stellt einen solchen Auftrag gar
-/// nicht erst; die Zeilen stehen, damit die Maschine es auch dann nicht tut.
+/// **Ein Ort in einem Archiv ist eine Lesequelle und keine Stelle** (E11 des
+/// Plans `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`): aus
+/// einem Archiv wird herauskopiert, in ein lokales oder fernes Ziel, ueber
+/// [`Quelle::Archiv`]. Je Archiv entsteht ein [`Archivleser`], den jede
+/// Quelle darin teilt; die Quellen eines tar oder tar.gz kommen in der Folge
+/// ihrer Fundstelle dran ([`Archivleser::lesefolge`]), damit der Strom
+/// einmal durchlaufen wird. **Bis der Umbau in der Maschine steht** (Schritt
+/// 6 und 7 des Plans) meldet jede Quelle `Text::ImArchivNichtVerfuegbar`,
+/// deren Vorgang in ein Archiv schreibt oder aus einem Archiv etwas
+/// entfernt: Kopieren und Verschieben in ein Archiv, Verschieben aus einem
+/// Archiv, Umbenennen, Anlegen und Loeschen darin. Die Oberflaeche stellt
+/// einen solchen Auftrag gar nicht erst; die Zeilen stehen, damit die
+/// Maschine es auch dann nicht tut.
 fn ausfuehren(pfand: &Fernfaden, auftrag: &Fernauftrag, steuerung: &mut Steuerung) -> Abschluss {
     let ziel_im_archiv = auftrag
         .zielordner()
         .is_some_and(|ziel| ziel.archiv().is_some());
+    let liest_aus_archiv = match &auftrag.art {
+        Fernart::Kopieren { .. } => !ziel_im_archiv,
+        Fernart::Verschieben { .. }
+        | Fernart::Umbenennen { .. }
+        | Fernart::Anlegen { .. }
+        | Fernart::Loeschen => false,
+    };
     let zielordner = auftrag.zielordner().and_then(Stelle::von);
-    for quelle in &auftrag.quellen {
+    let mut leser: Vec<Archivzugriff> = Vec::new();
+    let mut quellen: Vec<(PathBuf, Result<Quelle, String>)> =
+        Vec::with_capacity(auftrag.quellen.len());
+    for ort in &auftrag.quellen {
         if steuerung.abgebrochen() {
             return Abschluss::Abgebrochen;
         }
-        let quelle = match Stelle::von(quelle) {
-            Some(stelle) if !ziel_im_archiv => stelle,
-            Some(_) | None => {
-                steuerung.ueberspringen(&bezeichnung(quelle), text(Text::ImArchivNichtVerfuegbar));
+        let quelle = match ort {
+            Ort::Lokal(_) | Ort::Fern(_) if ziel_im_archiv => {
+                Err(text(Text::ImArchivNichtVerfuegbar).to_owned())
+            }
+            Ort::Lokal(_) | Ort::Fern(_) => match Stelle::von(ort) {
+                Some(stelle) => Ok(Quelle::Stelle(stelle)),
+                None => Err(text(Text::VorgangPfadBenenntKeinenEintrag).to_owned()),
+            },
+            Ort::Archiv(_) if !liest_aus_archiv => {
+                Err(text(Text::ImArchivNichtVerfuegbar).to_owned())
+            }
+            Ort::Archiv(archivort) => {
+                match archivzugriff(pfand, &mut leser, archivort, steuerung) {
+                    Ok(geteilt) => Ok(Quelle::Archiv(Archivstelle {
+                        leser: geteilt,
+                        innen: archivort.innen.clone(),
+                    })),
+                    Err(Lesefehler::Abgebrochen) => return Abschluss::Abgebrochen,
+                    Err(fehler) => Err(fehler.grund()),
+                }
+            }
+        };
+        quellen.push((bezeichnung(ort), quelle));
+    }
+    in_lesefolge_bringen(&mut quellen);
+    for (bezeichnung, quelle) in quellen {
+        if steuerung.abgebrochen() {
+            return Abschluss::Abgebrochen;
+        }
+        let quelle = match quelle {
+            Ok(quelle) => quelle,
+            Err(grund) => {
+                steuerung.ueberspringen(&bezeichnung, grund);
                 continue;
             }
         };
@@ -438,25 +503,94 @@ fn ausfuehren(pfand: &Fernfaden, auftrag: &Fernauftrag, steuerung: &mut Steuerun
     }
 }
 
+/// Ein Archiv dieses Vorgangs: der Pfad seiner Datei und sein Leser, oder
+/// der Grund, aus dem er sich nicht oeffnen liess.
+type Archivzugriff = (PathBuf, Result<Rc<RefCell<Archivleser>>, String>);
+
+/// Der geteilte Leser des Archivs, in dem `ort` liegt, beim ersten Mal
+/// geoeffnet; ein gescheitertes Oeffnen wird je Archiv einmal versucht.
+///
+/// Gleich sind zwei Archive ueber den Pfad ihrer Datei, wie
+/// [`crate::ort::Archivort`] es haelt.
+fn archivzugriff(
+    pfand: &Fernfaden,
+    leser: &mut Vec<Archivzugriff>,
+    ort: &crate::ort::Archivort,
+    steuerung: &Steuerung,
+) -> Result<Rc<RefCell<Archivleser>>, Lesefehler> {
+    if let Some((_, vorhanden)) = leser.iter().find(|(datei, _)| datei == ort.datei()) {
+        return vorhanden
+            .as_ref()
+            .map(Rc::clone)
+            .map_err(|grund| Lesefehler::Unlesbar(grund.clone()));
+    }
+    let geoeffnet = match Archivleser::oeffnen(
+        pfand,
+        Arc::clone(&ort.zugang),
+        steuerung.abbruchkennzeichen(),
+    ) {
+        Ok(neu) => Ok(Rc::new(RefCell::new(neu))),
+        Err(Lesefehler::Abgebrochen) => return Err(Lesefehler::Abgebrochen),
+        Err(fehler) => Err(fehler.grund()),
+    };
+    leser.push((ort.datei().to_path_buf(), geoeffnet.clone()));
+    geoeffnet.map_err(Lesefehler::Unlesbar)
+}
+
+/// Ordnet die Quellen in die Lesefolge ihres Archivs, wenn alle aus einem
+/// tar-Strom kommen; sonst bleibt die Folge des Auftrags.
+///
+/// Der Lesezeiger eines tar laeuft nur vorwaerts ([`Archivleser`]), und
+/// Quellen in der Folge ihrer Fundstelle kosten damit einen Durchlauf statt
+/// einen je Quelle. Ein Zip liest wahlfrei, und seine Quellen behalten wie
+/// jede lokale oder ferne die Folge, in der sie kamen.
+fn in_lesefolge_bringen(quellen: &mut [(PathBuf, Result<Quelle, String>)]) {
+    let mut gemeinsam: Option<&Rc<RefCell<Archivleser>>> = None;
+    for (_, quelle) in quellen.iter() {
+        let Ok(Quelle::Archiv(stelle)) = quelle else {
+            return;
+        };
+        match gemeinsam {
+            Some(leser) if !Rc::ptr_eq(leser, &stelle.leser) => return,
+            Some(_) | None => gemeinsam = Some(&stelle.leser),
+        }
+    }
+    let Some(leser) = gemeinsam.map(Rc::clone) else {
+        return;
+    };
+    let leser = leser.borrow();
+    if !leser.liest_strom() {
+        return;
+    }
+    quellen.sort_by_cached_key(|(_, quelle)| match quelle {
+        Ok(Quelle::Archiv(stelle)) => leser.lesefolge(&stelle.innen),
+        Ok(Quelle::Stelle(_)) | Err(_) => u64::MAX,
+    });
+}
+
 /// Eine Quelle, nach der Art verzweigt. Vollstaendig ueber [`Fernart`] und
 /// ohne Auffangzweig.
+///
+/// Umbenennen, Anlegen und Loeschen schreiben an der Quelle selbst und nehmen
+/// deshalb allein eine [`Stelle`]; eine Quelle im Archiv meldet dort
+/// `Text::ImArchivNichtVerfuegbar`, bis der Umbau in der Maschine steht.
 fn einen_abarbeiten(
     pfand: &Fernfaden,
     art: &Fernart,
-    quelle: &Stelle,
+    quelle: &Quelle,
     zielordner: Option<&Stelle>,
     steuerung: &mut Steuerung,
 ) -> Ablauf {
     let verschieben = match art {
         Fernart::Kopieren { .. } => false,
         Fernart::Verschieben { .. } => true,
-        Fernart::Umbenennen { neuer_name } => {
-            return eintrag_umbenennen(pfand, quelle, neuer_name, steuerung);
+        Fernart::Umbenennen { .. } | Fernart::Anlegen { .. } | Fernart::Loeschen => {
+            let Some(stelle) = quelle.als_stelle() else {
+                steuerung.ueberspringen(&quelle.bezeichnung(), text(Text::ImArchivNichtVerfuegbar));
+                return Ablauf::Weiter;
+            };
+            return an_der_stelle_abarbeiten(pfand, art, stelle, steuerung);
         }
-        Fernart::Anlegen { name, typ } => {
-            return eintrag_anlegen(pfand, quelle, name, *typ, steuerung);
-        }
-        Fernart::Loeschen => return eintrag_loeschen(pfand, quelle, steuerung),
     };
     // `zielordner` steht genau dann, wenn die Art einen hat
     // ([`Fernauftrag::zielordner`]); der Fall ist trotzdem behandelt, wie die
@@ -468,12 +602,35 @@ fn einen_abarbeiten(
     einen_uebertragen(pfand, verschieben, quelle, zielordner, steuerung)
 }
 
+/// Umbenennen, Anlegen oder Loeschen an einer Stelle. Kopieren und
+/// Verschieben kommen nicht hierher; ihr Zweig steht, weil die
+/// Unterscheidung vollstaendig ist, und meldet den fehlenden Zielordner wie
+/// [`einen_abarbeiten`].
+fn an_der_stelle_abarbeiten(
+    pfand: &Fernfaden,
+    art: &Fernart,
+    quelle: &Stelle,
+    steuerung: &mut Steuerung,
+) -> Ablauf {
+    match art {
+        Fernart::Umbenennen { neuer_name } => {
+            eintrag_umbenennen(pfand, quelle, neuer_name, steuerung)
+        }
+        Fernart::Anlegen { name, typ } => eintrag_anlegen(pfand, quelle, name, *typ, steuerung),
+        Fernart::Loeschen => eintrag_loeschen(pfand, quelle, steuerung),
+        Fernart::Kopieren { .. } | Fernart::Verschieben { .. } => {
+            steuerung.ueberspringen(&quelle.bezeichnung(), text(Text::VorgangZielordnerFehlt));
+            Ablauf::Weiter
+        }
+    }
+}
+
 /// Eine Quelle kopieren oder verschieben: Angaben holen, Ziel rechnen, die
 /// zwei Faelle abweisen, in denen es keines gibt, und dann verzweigen.
 fn einen_uebertragen(
     pfand: &Fernfaden,
     verschieben: bool,
-    quelle: &Stelle,
+    quelle: &Quelle,
     zielordner: &Stelle,
     steuerung: &mut Steuerung,
 ) -> Ablauf {
@@ -509,12 +666,18 @@ fn einen_uebertragen(
         }
         Gleichheit::Nein | Gleichheit::Unklar(_) => {}
     }
-    if angaben.typ == Typ::Ordner && zielordner.liegt_in(pfand, quelle) {
+    if angaben.typ == Typ::Ordner && quelle.enthaelt(pfand, zielordner) {
         steuerung.ueberspringen(&bezeichnung, text(Text::VorgangZielLiegtInDerQuelle));
         return Ablauf::Weiter;
     }
     if verschieben {
-        eintrag_verschieben(pfand, quelle, &angaben, ziel, steuerung)
+        // Verschieben entfernt die Quelle; aus einem Archiv geht das erst mit
+        // dem Umbau (Schritt 6 des Plans der Archive).
+        let Some(stelle) = quelle.als_stelle() else {
+            steuerung.ueberspringen(&bezeichnung, text(Text::ImArchivNichtVerfuegbar));
+            return Ablauf::Weiter;
+        };
+        eintrag_verschieben(pfand, stelle, &angaben, ziel, steuerung)
     } else {
         eintrag_kopieren(
             pfand,
@@ -772,7 +935,7 @@ fn angaben_uebernehmen(
 /// Namen weiter.
 fn eintrag_kopieren(
     pfand: &Fernfaden,
-    quelle: &Stelle,
+    quelle: &Quelle,
     angaben: &Angaben,
     ziel: Stelle,
     zweck: Zweck,
@@ -780,6 +943,12 @@ fn eintrag_kopieren(
     weg: &mut Hinweisweg<'_>,
 ) -> Ablauf {
     let bezeichnung = quelle.bezeichnung();
+    // Was aus einem Archiv nicht herauskommt, steht mit seinem Grund im
+    // Bericht, bevor am Ziel etwas entsteht.
+    if let Some(warum) = quelle.kommt_nicht_heraus() {
+        steuerung.ueberspringen(&bezeichnung, warum);
+        return Ablauf::Weiter;
+    }
     let anlage = match angaben.typ {
         Typ::Datei if !angaben.gewoehnlich => {
             steuerung.ueberspringen(&bezeichnung, text(Text::VorgangKeineGewoehnlicheDatei));
@@ -865,7 +1034,7 @@ fn zwischenname(versuch: u32) -> String {
 /// danach traefe den Ersatz (Modulkopf, „Was dieses Modul nicht haelt“).
 fn ersetzen_erlaubt(
     pfand: &Fernfaden,
-    quelle: &Stelle,
+    quelle: &Quelle,
     ziel: &Stelle,
     zweck: Zweck,
     steuerung: &mut Steuerung,
@@ -946,9 +1115,13 @@ fn netzbefund(zweck: Zweck, lokale_seite: impl FnOnce() -> Option<io::Result<boo
 /// Einhaengepunkt eines Netzlaufwerks sein, und sein Ordner ist der Ort, an
 /// dem `LSTAT` den Namen nachschlaegt. Ein Systemaufruf je Frage, also allein
 /// auf dem Arbeitsfaden und allein bei „Ueberschreiben“.
-fn lokale_seite_liegt_lokal(quelle: &Stelle, ziel: &Stelle) -> Option<io::Result<bool>> {
+///
+/// Eine Quelle im Archiv hat keine lokale Seite in diesem Sinn: verschoben
+/// wird aus ihr nicht, und nach ihrem Namen fragt der Tausch an der
+/// Archivdatei.
+fn lokale_seite_liegt_lokal(quelle: &Quelle, ziel: &Stelle) -> Option<io::Result<bool>> {
     let mut gefragt = false;
-    for stelle in [quelle, ziel] {
+    for stelle in [quelle.als_stelle(), Some(ziel)].into_iter().flatten() {
         let Stelle::Lokal(pfad) = stelle else {
             continue;
         };
@@ -1004,7 +1177,7 @@ fn zwischen_anlegen(
 /// Ob ersetzt werden darf, hat der Rufer schon gefragt ([`ersetzen_erlaubt`]).
 fn kopie_ersetzt_ziel(
     pfand: &Fernfaden,
-    quelle: &Stelle,
+    quelle: &Quelle,
     angaben: &Angaben,
     anlage: &Anlage,
     ziel: &Stelle,
@@ -1284,7 +1457,7 @@ fn tauschen(
     pfand: &Fernfaden,
     zwischen: &Stelle,
     ziel: &Stelle,
-    quelle: Option<&Stelle>,
+    quelle: Option<&Quelle>,
 ) -> Tausch {
     let name = match ziel.name() {
         Ok(name) => name,
@@ -1398,7 +1571,7 @@ fn konflikt_klaeren(
 /// und Aenderungszeit, und verbucht den Eintrag als fertig.
 fn datei_fuellen(
     pfand: &Fernfaden,
-    quelle: &Stelle,
+    quelle: &Quelle,
     angaben: &Angaben,
     ziel: &Stelle,
     schreibziel: Schreibziel,
@@ -1431,7 +1604,7 @@ fn datei_fuellen(
 /// ausschliessend; entfernt wird also nie ein Eintrag, der vorher dastand.
 fn datei_uebertragen(
     pfand: &Fernfaden,
-    quelle: &Stelle,
+    quelle: &Quelle,
     ziel: &Stelle,
     schreibziel: Schreibziel,
     steuerung: &mut Steuerung,
@@ -1494,7 +1667,7 @@ fn halbes_ziel_wegraeumen(pfand: &Fernfaden, ziel: &Stelle, steuerung: &mut Steu
 /// verbucht den Ordner als fertig.
 fn ordner_fuellen(
     pfand: &Fernfaden,
-    quelle: &Stelle,
+    quelle: &Quelle,
     angaben: &Angaben,
     ziel: &Stelle,
     zweck: Zweck,
@@ -1521,13 +1694,13 @@ fn ordner_fuellen(
 /// sich nicht lesen (steht im Bericht), oder der Nutzer brach ab.
 fn ordnerinhalt_fuellen(
     pfand: &Fernfaden,
-    quelle: &Stelle,
+    quelle: &Quelle,
     ziel: &Stelle,
     zweck: Zweck,
     steuerung: &mut Steuerung,
     weg: &mut Hinweisweg<'_>,
 ) -> Result<(), Ablauf> {
-    let kinder = kinder_lesen(pfand, quelle, steuerung)?;
+    let kinder = quellkinder_lesen(pfand, quelle, steuerung)?;
     for (unterquelle, unterangaben) in kinder {
         if steuerung.abgebrochen() {
             return Err(Ablauf::Abgebrochen);
@@ -1539,8 +1712,12 @@ fn ordnerinhalt_fuellen(
             );
             continue;
         };
-        let Some(unterangaben) = unterangaben_holen(pfand, &unterquelle, unterangaben, steuerung)
-        else {
+        let Some(unterangaben) = unterangaben_holen(
+            unterangaben,
+            &unterquelle.bezeichnung(),
+            || unterquelle.angaben(pfand),
+            steuerung,
+        ) else {
             continue;
         };
         if eintrag_kopieren(
@@ -1603,22 +1780,47 @@ fn kinder_lesen(
     Ok(kinder)
 }
 
-/// Die Angaben eines Kindes: die mitgebrachten, sonst ein eigenes `LSTAT`.
+/// Die Angaben eines Kindes: die mitgebrachten, sonst ein eigenes `LSTAT`
+/// ueber `holen`; scheitert das, steht es unter `bezeichnung` im Bericht.
 fn unterangaben_holen(
-    pfand: &Fernfaden,
-    kind: &Stelle,
     mitgebracht: Option<Angaben>,
+    bezeichnung: &Path,
+    holen: impl FnOnce() -> Result<Angaben, Fehlschlag>,
     steuerung: &mut Steuerung,
 ) -> Option<Angaben> {
     if let Some(angaben) = mitgebracht {
         return Some(angaben);
     }
-    match kind.angaben(pfand) {
+    match holen() {
         Ok(angaben) => Some(angaben),
         Err(fehler) => {
-            steuerung.ueberspringen(&kind.bezeichnung(), grund(&fehler));
+            steuerung.ueberspringen(bezeichnung, grund(&fehler));
             None
         }
+    }
+}
+
+/// Die Kinder einer Lesequelle, wie [`kinder_lesen`] sie fuer eine Stelle
+/// liefert. Im Archiv kommen sie aus dem Inhaltsverzeichnis, mit ihren
+/// Angaben und, in einem tar-Strom, in der Folge ihrer Fundstelle
+/// ([`Archivleser::lesefolge`]): ein Ordnerbaum kostet so einen Durchlauf.
+fn quellkinder_lesen(
+    pfand: &Fernfaden,
+    quelle: &Quelle,
+    steuerung: &mut Steuerung,
+) -> Result<Vec<(Quelle, Option<Angaben>)>, Ablauf> {
+    match quelle {
+        Quelle::Stelle(stelle) => Ok(kinder_lesen(pfand, stelle, steuerung)?
+            .into_iter()
+            .map(|(kind, angaben)| (Quelle::Stelle(kind), angaben))
+            .collect()),
+        Quelle::Archiv(stelle) => match stelle.kinder() {
+            Some(kinder) => Ok(kinder),
+            None => {
+                steuerung.ueberspringen(&stelle.bezeichnung(), text(Text::ArchivEintragFehlt));
+                Err(Ablauf::Weiter)
+            }
+        },
     }
 }
 
@@ -1708,7 +1910,13 @@ fn umbenennen_ersetzt_ziel(
     steuerung: &mut Steuerung,
 ) -> Ablauf {
     let bezeichnung = quelle.bezeichnung();
-    if !ersetzen_erlaubt(pfand, quelle, ziel, Zweck::Verschieben, steuerung) {
+    if !ersetzen_erlaubt(
+        pfand,
+        &Quelle::Stelle(quelle.clone()),
+        ziel,
+        Zweck::Verschieben,
+        steuerung,
+    ) {
         return Ablauf::Weiter;
     }
     let mut zwischen = None;
@@ -1852,8 +2060,12 @@ fn verschmelzen(
             );
             continue;
         };
-        let Some(unterangaben) = unterangaben_holen(pfand, &unterquelle, unterangaben, steuerung)
-        else {
+        let Some(unterangaben) = unterangaben_holen(
+            unterangaben,
+            &unterquelle.bezeichnung(),
+            || unterquelle.angaben(pfand),
+            steuerung,
+        ) else {
             continue;
         };
         if eintrag_verschieben(pfand, &unterquelle, &unterangaben, unterziel, steuerung)
@@ -1900,7 +2112,7 @@ fn ueber_die_grenze(
     let mut weg = Hinweisweg::bericht();
     if eintrag_kopieren(
         pfand,
-        quelle,
+        &Quelle::Stelle(quelle.clone()),
         angaben,
         ziel,
         Zweck::Verschieben,
@@ -1955,14 +2167,26 @@ enum Fehlschlag {
     ZuVieleNamen(usize),
     /// Der Nutzer hat abgebrochen.
     Abgebrochen,
+    /// Ein Eintrag eines Archivs liess sich nicht lesen.
+    Archiv(Lesefehler),
 }
 
 impl Fehlschlag {
+    /// Der Fehlschlag zu einem Lesefehler im Archiv; ein Abbruch bleibt ein
+    /// Abbruch, damit die Wege dieses Moduls ihn als solchen sehen.
+    fn aus_archiv(fehler: Lesefehler) -> Self {
+        match fehler {
+            Lesefehler::Abgebrochen => Fehlschlag::Abgebrochen,
+            andere => Fehlschlag::Archiv(andere),
+        }
+    }
+
     /// Ob der Eintrag fehlt, an dem gefragt wurde.
     fn ist_nicht_da(&self) -> bool {
         match self {
             Fehlschlag::Lokal(fehler) => fehler.kind() == io::ErrorKind::NotFound,
             Fehlschlag::Fern(fehler) => fehler.ist_status(status::NO_SUCH_FILE),
+            Fehlschlag::Archiv(fehler) => fehler.ist_nicht_da(),
             Fehlschlag::NameOhneUtf8
             | Fehlschlag::KeineGewoehnlicheDatei
             | Fehlschlag::KeineVerknuepfung
@@ -1995,7 +2219,8 @@ impl Fehlschlag {
             | Fehlschlag::KeineVerknuepfung
             | Fehlschlag::KeinEintrag
             | Fehlschlag::ZuVieleNamen(_)
-            | Fehlschlag::Abgebrochen => false,
+            | Fehlschlag::Abgebrochen
+            | Fehlschlag::Archiv(_) => false,
         }
     }
 
@@ -2071,6 +2296,7 @@ fn grund(fehler: &Fehlschlag) -> String {
         // Ein Abbruch endet den Vorgang und kommt nicht in die Abschlussliste;
         // der Zweig steht, weil die Unterscheidung vollstaendig ist.
         Fehlschlag::Abgebrochen => Fernfehler::Abgebrochen.to_string(),
+        Fehlschlag::Archiv(fehler) => fehler.grund(),
     }
 }
 
@@ -2145,6 +2371,29 @@ impl Angaben {
             rechte: attribute.rechte.map(|rechte| rechte & 0o7777),
             geaendert: attribute.zeiten.map(|(_, geaendert)| zeitpunkt(geaendert)),
             zugriff: attribute.zeiten.map(|(zugriff, _)| zeitpunkt(zugriff)),
+        }
+    }
+}
+
+impl Angaben {
+    /// Die Angaben eines Eintrags im Archiv, aus dem Inhaltsverzeichnis.
+    ///
+    /// Eine Sonderdatei im tar ist keine gewoehnliche Datei; was sonst nicht
+    /// herauskommt, sagt [`Quelle::kommt_nicht_heraus`] vor dem Anlegen. Eine
+    /// Zugriffszeit fuehrt kein Archiv, also gilt die Aenderungszeit fuer
+    /// beide, wie bei einer Quelle ohne Zugriffszeit.
+    fn aus_archiveintrag(eintrag: &Archiveintrag) -> Self {
+        Angaben {
+            typ: eintrag.typ,
+            gewoehnlich: eintrag.lesbarkeit != Lesbarkeit::Sonderdatei,
+            groesse: if eintrag.typ == Typ::Datei {
+                eintrag.groesse
+            } else {
+                0
+            },
+            rechte: eintrag.rechte,
+            geaendert: Some(eintrag.geaendert),
+            zugriff: None,
         }
     }
 }
@@ -2727,6 +2976,199 @@ impl Stelle {
     }
 }
 
+// ----------------------------------------------------------------------
+// Lesequelle: eine Stelle oder ein Eintrag in einem Archiv (E11)
+// ----------------------------------------------------------------------
+
+/// Woraus kopiert wird: eine [`Stelle`], lokal oder fern, oder ein Eintrag in
+/// einem Archiv.
+///
+/// **Lesen und Schreiben sind am Typ getrennt** (E11 des Plans
+/// `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`): diese
+/// Aufzaehlung traegt allein Lesehandlungen, die Schreibhandlungen stehen
+/// allein an [`Stelle`]. Die Kopierwege nehmen ihre Quelle als `&Quelle` und
+/// ihr Ziel als `&Stelle`, also laesst sich eine Schreibhandlung an einem
+/// Archiveintrag gar nicht erst schreiben. Wer an einer Quelle schreiben
+/// will, holt sich ueber [`Quelle::als_stelle`] die Stelle und bekommt fuer
+/// ein Archiv keine.
+#[derive(Clone)]
+enum Quelle {
+    Stelle(Stelle),
+    Archiv(Archivstelle),
+}
+
+/// Ein Eintrag in einem Archiv, mit dem Leser, den alle Eintraege dieses
+/// Archivs im Vorgang teilen.
+///
+/// Geteilt ueber `Rc` und nicht `Arc`: der Vorgang laeuft auf einem Faden,
+/// und der Leser haelt seinen Strom zwischen zwei Eintraegen offen.
+#[derive(Clone)]
+struct Archivstelle {
+    leser: Rc<RefCell<Archivleser>>,
+    innen: Innenpfad,
+}
+
+impl Archivstelle {
+    /// `/pfad/zum/archiv.zip:/innen/pfad`, die Schreibweise des
+    /// Fenstertitels und von [`bezeichnung`].
+    fn bezeichnung(&self) -> PathBuf {
+        PathBuf::from(format!(
+            "{}:{}",
+            self.leser.borrow().datei().display(),
+            self.innen
+        ))
+    }
+
+    /// Die Kinder dieses Ordners samt Angaben, in der Lesefolge eines
+    /// tar-Stroms, oder `None`, wenn er im Verzeichnis kein Ordner ist.
+    fn kinder(&self) -> Option<Vec<(Quelle, Option<Angaben>)>> {
+        let leser = self.leser.borrow();
+        let mut kinder: Vec<(Quelle, Option<Angaben>)> = leser
+            .verzeichnis()
+            .kinder(&self.innen)?
+            .map(|eintrag| {
+                (
+                    Quelle::Archiv(Archivstelle {
+                        leser: Rc::clone(&self.leser),
+                        innen: eintrag.innen.clone(),
+                    }),
+                    Some(Angaben::aus_archiveintrag(eintrag)),
+                )
+            })
+            .collect();
+        if leser.liest_strom() {
+            kinder.sort_by_cached_key(|(kind, _)| match kind {
+                Quelle::Archiv(stelle) => leser.lesefolge(&stelle.innen),
+                Quelle::Stelle(_) => u64::MAX,
+            });
+        }
+        Some(kinder)
+    }
+}
+
+impl Quelle {
+    /// Die Stelle, sofern die Quelle keine im Archiv ist.
+    fn als_stelle(&self) -> Option<&Stelle> {
+        match self {
+            Quelle::Stelle(stelle) => Some(stelle),
+            Quelle::Archiv(_) => None,
+        }
+    }
+
+    fn bezeichnung(&self) -> PathBuf {
+        match self {
+            Quelle::Stelle(stelle) => stelle.bezeichnung(),
+            Quelle::Archiv(stelle) => stelle.bezeichnung(),
+        }
+    }
+
+    /// Der letzte Namensteil, oder der Schluessel des Grundes, warum es
+    /// keinen gibt. Im Archiv ist er eine einzelne Komponente nach der einen
+    /// Namensregel (`Innenpfad::aus_archivname`); ein Name mit `..` oder `/`
+    /// kommt also nie bis ans Ziel.
+    fn name(&self) -> Result<String, Text> {
+        match self {
+            Quelle::Stelle(stelle) => stelle.name(),
+            Quelle::Archiv(stelle) => stelle
+                .innen
+                .name()
+                .map(str::to_owned)
+                .ok_or(Text::VorgangPfadBenenntKeinenEintrag),
+        }
+    }
+
+    /// Die Angaben der Quelle. Im Archiv fragt es zuerst, ob die Archivdatei
+    /// noch unter ihrem Namen steht: der Tausch beim Ueberschreiben fragt so
+    /// nach der Quelle, und liegt das Archiv im beiseitegelegten Ziel, fehlt
+    /// sie wie eine lokale ([`tauschen`]).
+    fn angaben(&self, pfand: &Fernfaden) -> Result<Angaben, Fehlschlag> {
+        match self {
+            Quelle::Stelle(stelle) => stelle.angaben(pfand),
+            Quelle::Archiv(stelle) => {
+                let leser = stelle.leser.borrow();
+                fs::metadata(leser.datei()).map_err(Fehlschlag::Lokal)?;
+                leser
+                    .verzeichnis()
+                    .eintrag(&stelle.innen)
+                    .map(Angaben::aus_archiveintrag)
+                    .ok_or(Fehlschlag::Archiv(Lesefehler::Fehlt))
+            }
+        }
+    }
+
+    /// Warum diese Quelle nicht herauskommt, oder `None`. Eine Stelle kommt
+    /// immer; ein Archiveintrag nicht, wenn er verschluesselt, mit einem
+    /// unbekannten Verfahren gepackt, ein harter Verweis oder eine
+    /// Sonderdatei ist ([`lesbarkeit_grund`]).
+    fn kommt_nicht_heraus(&self) -> Option<String> {
+        match self {
+            Quelle::Stelle(_) => None,
+            Quelle::Archiv(stelle) => {
+                let leser = stelle.leser.borrow();
+                let eintrag = leser.verzeichnis().eintrag(&stelle.innen)?;
+                lesbarkeit_grund(&eintrag.lesbarkeit)
+            }
+        }
+    }
+
+    /// Ob Quelle und `ziel` denselben Eintrag benennen. Ein Eintrag im Archiv
+    /// ist nie derselbe wie eine Stelle: ein Ziel liegt immer ausserhalb des
+    /// Archivs.
+    fn derselbe_eintrag(&self, pfand: &Fernfaden, ziel: &Stelle) -> Gleichheit {
+        match self {
+            Quelle::Stelle(stelle) => stelle.derselbe_eintrag(pfand, ziel),
+            Quelle::Archiv(_) => Gleichheit::Nein,
+        }
+    }
+
+    /// Ob der Ordner `ordner` diese Quelle ist oder in ihr liegt; ein Ordner
+    /// ausserhalb eines Archivs liegt nie in einem Eintrag darin.
+    fn enthaelt(&self, pfand: &Fernfaden, ordner: &Stelle) -> bool {
+        match self {
+            Quelle::Stelle(stelle) => ordner.liegt_in(pfand, stelle),
+            Quelle::Archiv(_) => false,
+        }
+    }
+
+    fn verknuepfung_lesen(&self, pfand: &Fernfaden) -> Result<Vec<u8>, Fehlschlag> {
+        match self {
+            Quelle::Stelle(stelle) => stelle.verknuepfung_lesen(pfand),
+            Quelle::Archiv(stelle) => stelle
+                .leser
+                .borrow_mut()
+                .verweis_lesen(pfand, &stelle.innen)
+                .map_err(Fehlschlag::aus_archiv),
+        }
+    }
+
+    /// Liest die Datei in Bloecken, wie [`Stelle::lesen`]; im Archiv ueber
+    /// den geteilten [`Archivleser`].
+    ///
+    /// **Kein Block ist groesser als [`BLOCK`]**, auch aus dem Archiv, dessen
+    /// Leser in groesseren Stuecken liest: ein fernes Ziel schickt jeden
+    /// Block als ein `WRITE`, und ein Paket ueber der Grenze des Servers
+    /// beendet die Verbindung.
+    fn lesen(
+        &self,
+        pfand: &Fernfaden,
+        mut empfang: impl FnMut(&[u8]) -> ControlFlow<()>,
+    ) -> Result<u64, Fehlschlag> {
+        match self {
+            Quelle::Stelle(stelle) => stelle.lesen(pfand, empfang),
+            Quelle::Archiv(stelle) => stelle
+                .leser
+                .borrow_mut()
+                .lesen(pfand, &stelle.innen, |daten| {
+                    for stueck in daten.chunks(BLOCK as usize) {
+                        empfang(stueck)?;
+                    }
+                    ControlFlow::Continue(())
+                })
+                .map_err(Fehlschlag::aus_archiv),
+        }
+    }
+}
+
 /// Ein zum Schreiben geoeffnetes Ziel.
 enum Schreibziel {
     Lokal(File),
@@ -3222,7 +3664,7 @@ mod tests {
         // Zwei lokale Seiten auf der Platte dieses Geraets: gefragt, und lokal.
         let ordner = pruefpfad("netzbefund");
         let befund = lokale_seite_liegt_lokal(
-            &Stelle::Lokal(ordner.join("a")),
+            &Quelle::Stelle(Stelle::Lokal(ordner.join("a"))),
             &Stelle::Lokal(ordner.clone()),
         );
         abraeumen(&ordner);
@@ -3231,7 +3673,7 @@ mod tests {
             "a gibt es nicht: {befund:?}"
         );
         let befund = lokale_seite_liegt_lokal(
-            &Stelle::Lokal(PathBuf::from("/")),
+            &Quelle::Stelle(Stelle::Lokal(PathBuf::from("/"))),
             &Stelle::Lokal(std::env::temp_dir()),
         );
         assert!(matches!(befund, Some(Ok(true))), "{befund:?}");
@@ -3275,7 +3717,7 @@ mod tests {
         let (q, z) = (quelle.clone(), server.join("a.txt"));
         let (ablauf, gemeldet, zielname) =
             mit_trennendem_gespraech(".krk-alt-", move |pfand, g| {
-                let quelle = Stelle::Lokal(q);
+                let quelle = Quelle::Stelle(Stelle::Lokal(q));
                 let ziel = fernstelle(g, &z);
                 let Ok(angaben) = quelle.angaben(pfand) else {
                     panic!("die Quelle steht nicht da");
@@ -3368,5 +3810,134 @@ mod tests {
             grund_text.contains(&zwischen),
             "der Bericht nennt den Zwischennamen der Quelle nicht: {grund_text}"
         );
+    }
+
+    /// Packt einen Ordnerbaum als tar.gz, Ordner vor ihrem Inhalt, in der
+    /// Folge, in der die Probe die Namen nennt.
+    fn tgz_packen(wurzel: &Path, namen: &[&str], archiv: &Path) {
+        let gepackt = flate2::write::GzEncoder::new(
+            File::create(archiv).expect("tgz anlegen"),
+            flate2::Compression::default(),
+        );
+        let mut bauer = tar::Builder::new(gepackt);
+        for name in namen {
+            bauer
+                .append_path_with_name(wurzel.join(name), name)
+                .expect("Eintrag packen");
+        }
+        bauer
+            .into_inner()
+            .expect("tar abschliessen")
+            .finish()
+            .expect("gzip abschliessen");
+    }
+
+    /// Ein Ordnerbaum aus einem tar.gz kostet einen Durchlauf durch den
+    /// Strom: die Maschine nimmt die Quellen und die Kinder jedes Ordners in
+    /// der Folge ihrer Fundstelle (`in_lesefolge_bringen`,
+    /// `quellkinder_lesen`), und der Lesezeiger beginnt nie neu, auch wenn die
+    /// Auswahl die Namen umgekehrt nennt. Zwei Quellen in absichtlich
+    /// umgekehrter Folge, an der Ordnung vorbei, kosten genau einen Neustart.
+    ///
+    /// **Was sie nicht sieht:** ein tar, dessen Unterbaeume nicht
+    /// zusammenhaengend im Strom liegen; dort sind Neustarts unvermeidlich,
+    /// und die Probe misst keinen solchen.
+    #[test]
+    fn ein_baum_aus_einem_tgz_kostet_einen_durchlauf() {
+        let ordner = pruefpfad("tgz-durchlauf");
+        let quelle = ordner.join("quelle");
+        for unter in ["a/b", "c"] {
+            fs::create_dir_all(quelle.join(unter)).expect("Ordner");
+        }
+        for (name, inhalt) in [
+            ("a/x.txt", "x"),
+            ("a/b/y.txt", "y"),
+            ("c/z.txt", "z"),
+            ("d.txt", "d"),
+        ] {
+            fs::write(quelle.join(name), inhalt).expect("Datei");
+        }
+        let archiv = ordner.join("baum.tgz");
+        tgz_packen(
+            &quelle,
+            &["a", "a/b", "a/b/y.txt", "a/x.txt", "c", "c/z.txt", "d.txt"],
+            &archiv,
+        );
+        let ziel = ordner.join("ziel");
+        let umgekehrt = ordner.join("umgekehrt");
+        fs::create_dir(&ziel).expect("ziel");
+        fs::create_dir(&umgekehrt).expect("umgekehrt");
+
+        let zugang = Arc::new(crate::archiv::Archivzugang::neu(
+            archiv,
+            crate::archiv::Archivformat::TarGz,
+        ));
+        let (geordnet, ungeordnet, gemeldet) = {
+            let (ziel, umgekehrt) = (ziel.clone(), umgekehrt.clone());
+            faden("krk-probe-tgz".to_owned(), move |pfand| {
+                let abbruch = Arc::new(AtomicBool::new(false));
+                let mut steuerung =
+                    Steuerung::neu(Arc::clone(&abbruch), None, Konfliktregel::default());
+                let kopieren = |namen: &[&str],
+                                ordnen: bool,
+                                nach: &Path,
+                                steuerung: &mut Steuerung| {
+                    let leser = Rc::new(RefCell::new(
+                        Archivleser::oeffnen(pfand, Arc::clone(&zugang), Arc::clone(&abbruch))
+                            .expect("das Verzeichnis entsteht"),
+                    ));
+                    let mut quellen: Vec<(PathBuf, Result<Quelle, String>)> = namen
+                        .iter()
+                        .map(|name| {
+                            let stelle = Archivstelle {
+                                leser: Rc::clone(&leser),
+                                innen: Innenpfad::aus_archivname(name).expect("Name"),
+                            };
+                            (stelle.bezeichnung(), Ok(Quelle::Archiv(stelle)))
+                        })
+                        .collect();
+                    if ordnen {
+                        in_lesefolge_bringen(&mut quellen);
+                    }
+                    let art = Fernart::Kopieren {
+                        ziel: Ort::Lokal(nach.to_path_buf()),
+                    };
+                    let zielordner = Stelle::Lokal(nach.to_path_buf());
+                    for (_, quelle) in quellen {
+                        let quelle = quelle.expect("eine Quelle");
+                        let ablauf =
+                            einen_abarbeiten(pfand, &art, &quelle, Some(&zielordner), steuerung);
+                        assert!(ablauf == Ablauf::Weiter);
+                    }
+                    leser.borrow().neustarts()
+                };
+                let geordnet = kopieren(&["d.txt", "c", "a"], true, &ziel, &mut steuerung);
+                let ungeordnet = kopieren(&["c", "a"], false, &umgekehrt, &mut steuerung);
+                (geordnet, ungeordnet, bericht(&steuerung))
+            })
+            .expect("Faden")
+            .join()
+            .expect("die Probe ist abgestuerzt")
+        };
+        let angekommen: Vec<Option<Vec<u8>>> = ["a/x.txt", "a/b/y.txt", "c/z.txt", "d.txt"]
+            .iter()
+            .map(|name| fs::read(ziel.join(name)).ok())
+            .collect();
+        let umgekehrt_angekommen = fs::read(umgekehrt.join("a/b/y.txt")).ok();
+        abraeumen(&ordner);
+
+        assert!(gemeldet.is_empty(), "{gemeldet:?}");
+        assert_eq!(
+            angekommen,
+            [
+                Some(b"x".to_vec()),
+                Some(b"y".to_vec()),
+                Some(b"z".to_vec()),
+                Some(b"d".to_vec())
+            ]
+        );
+        assert_eq!(umgekehrt_angekommen.as_deref(), Some(&b"y"[..]));
+        assert_eq!(geordnet, 0, "der geordnete Baum hat den Strom neu begonnen");
+        assert_eq!(ungeordnet, 1, "zwei Quellen in umgekehrter Folge");
     }
 }

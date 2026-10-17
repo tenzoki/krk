@@ -209,6 +209,13 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::ArchivQuelleVeraendert => "la source a changé de taille pendant la lecture",
         Text::ArchivUmbauZuGross => "l’archive contient plus de {grenze} entrées",
+        Text::ArchivEintragVerschluesselt => "l’entrée est chiffrée et ne peut pas être extraite",
+        Text::ArchivVerfahrenUnbekannt => {
+            "l’entrée est compressée avec {verfahren}, que KRK ne sait pas décompresser"
+        }
+        Text::ArchivHarterVerweis => "un lien physique de l’archive ne peut pas être extrait",
+        Text::ArchivBeimLesenVeraendert => "l’archive a changé depuis la lecture de son sommaire",
+        Text::ArchivEintragFehlt => "l’entrée ne se trouve plus à sa place dans l’archive",
         Text::StapelKeinStartwert => {
             "«\u{a0}{text}\u{a0}» n’est pas une valeur de départ pour la numérotation"
         }

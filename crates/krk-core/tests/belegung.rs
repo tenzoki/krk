@@ -3683,8 +3683,9 @@ fn nach_dem_sichern_traegt_jede_funktion_name_in_der_geltenden_sprache() {
     }
 }
 
-/// Genau diese Kommandos brauchen einen lokalen Ort, und keines sonst
-/// (Entscheidung 13 des Plans der sftp-Ordner).
+/// Genau diese Kommandos brauchen einen lokalen Ort oder einen, in den KRK
+/// schreiben darf, und keines sonst (Entscheidung 13 des Plans der
+/// sftp-Ordner, E14 des Plans der Archive).
 ///
 /// Der Kern sagt, welcher Befehl seinen Gegenstand als lokalen Pfad aus dem
 /// aktiven Dateifenster nimmt; ausgegraut wird in `krk-ui`. Die Liste steht
@@ -3711,11 +3712,24 @@ fn genau_diese_kommandos_brauchen_einen_lokalen_ort() {
         Kommando::LesezeichenAnlegen,
         Kommando::EditorRundweg,
     ];
+    // Seit den Archiven (E14 des Plans der Archive): sie schreiben in den
+    // angezeigten Ordner oder entfernen aus ihm und sind in einem Archiv, das
+    // allein lesbar ist, ausgegraut. Lokal und fern sagt der Wert dasselbe
+    // wie `Ueberall`; die Antworten dort haelt `krk-ui`.
+    const BESCHREIBBAR: [Kommando; 5] = [
+        Kommando::Verschieben,
+        Kommando::InPapierkorb,
+        Kommando::OrdnerAnlegen,
+        Kommando::DateiAnlegen,
+        Kommando::Umbenennen,
+    ];
     for (kommando, _) in Kommando::KENNUNGEN {
         let erwartet = if LOKAL.contains(&kommando) {
             Ortsbedarf::Lokal
         } else if LOKAL_IM_DATEIFENSTER.contains(&kommando) {
             Ortsbedarf::LokalImDateifenster
+        } else if BESCHREIBBAR.contains(&kommando) {
+            Ortsbedarf::Beschreibbar
         } else {
             Ortsbedarf::Ueberall
         };

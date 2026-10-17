@@ -336,7 +336,7 @@ use crate::spalten::Spalte;
 use crate::tabs::{Auswahlversuch, Tabliste, Vormerkung, Wunschmeldung};
 use crate::tresorweg::{self, Anhaengausgang, Verbindungsentwurf, Verbindungshindernis};
 use crate::vorschaumodell::{Beschreibung, Blaetterrichtung};
-use krk_core::ort::Ort as Dateiort;
+use krk_core::ort::{Ort as Dateiort, Ortsart};
 
 use super::aufteilung::Aufteilung;
 use super::auswurf::{self, Auswurfergebnis};
@@ -4418,22 +4418,25 @@ impl Anwendungsdelegierter {
                 .get()
                 .is_some_and(|editor| editor.haelt_eintragsdatei()),
             bildfolge: self.bildfolge_steht(),
-            aktiv_fern: self.aktiv_fern(),
+            aktiv_ort: self.aktiv_ort(),
         }
     }
 
-    /// Ob der sichtbare Tab des aktiven Dateifensters fern ist; der Wert von
-    /// `Lage::aktiv_fern` (Entscheidung 13 des Plans der sftp-Ordner).
+    /// Welche Art Ort der sichtbare Tab des aktiven Dateifensters zeigt; der
+    /// Wert von `Lage::aktiv_ort` (Entscheidung 13 des Plans der sftp-Ordner,
+    /// E14 des Plans der Archive).
     ///
     /// **Allein von [`Self::lage`] gerufen**, wie [`Self::bildfolge_steht`],
     /// und am Wert des Tabs ohne Systemaufruf. Vor dem Aufbau der Oberflaeche
-    /// gibt es keinen Tab und also keinen fernen.
-    fn aktiv_fern(&self) -> bool {
+    /// gibt es keinen Tab, und die Antwort ist lokal.
+    fn aktiv_ort(&self) -> Ortsart {
         let aktiv = self.ivars().modell.borrow().aktiv();
         self.ivars()
             .dateifenster
             .get()
-            .is_some_and(|dateifenster| dateifenster[aktiv.index()].quelle().zeigt_fern())
+            .map_or(Ortsart::Lokal, |dateifenster| {
+                dateifenster[aktiv.index()].quelle().ortsart()
+            })
     }
 
     /// Ob die Vorschau eine Bildfolge zeigt, die zu dem gehoert, was das
@@ -7146,11 +7149,12 @@ impl Anwendungsdelegierter {
         let quelle = self.dateifenster(aktiv).quelle();
         let tief = quelle.tiefe_suche_steht();
         let inhalt = quelle.inhaltssuche_steht();
-        // An einem fernen Ort gibt es keinen Durchlauf; die zwei Schalter
-        // sind dort nicht bedienbar (Entscheidung 13 des Plans der
-        // sftp-Ordner). Nachgezogen wird bei jedem Tab- und Ordnerwechsel,
-        // ueber den Melder des Ordnerwechsels.
-        let suche_bedienbar = !quelle.zeigt_fern();
+        // An einem fernen Ort und in einem Archiv gibt es keinen Durchlauf;
+        // die zwei Schalter sind dort nicht bedienbar (Entscheidung 13 des
+        // Plans der sftp-Ordner, E14 des Plans der Archive). Nachgezogen wird
+        // bei jedem Tab- und Ordnerwechsel, ueber den Melder des
+        // Ordnerwechsels.
+        let suche_bedienbar = quelle.ortsart() == Ortsart::Lokal;
         // Der Text des Filteretiketts, gerechnet ohne AppKit; die Ausleihe
         // des Tabmodells endet in `filtertext`, bevor die Leiste schreibt.
         let filter = filteranzeige::anzeigetext(&quelle.filtertext());
@@ -7389,18 +7393,34 @@ impl Anwendungsdelegierter {
     /// ([`Self::fernauftrag_stellen`], Entscheidung 9 des Plans der
     /// sftp-Ordner). Entschieden wird am Wert der zwei Tabs, ohne Systemaufruf
     /// und ohne Anfrage.
+    ///
+    /// **Aus einem Archiv heraus kopiert ebenso ein [`Fernauftrag`]** (E10 und
+    /// E11 des Plans `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`):
+    /// die Maschine liest den Eintrag aus dem Archiv und schreibt ihn lokal oder
+    /// auf den Server. Ein Archiv als Ziel, das KRK allein lesen darf, meldet
+    /// `Text::ArchivNurLesbar` vor dem Start (E14). Hineinkopieren und
+    /// Verschieben aus einem Archiv melden `Text::ImArchivNichtVerfuegbar`,
+    /// bis der Umbau in der Maschine steht (Schritt 6).
     fn uebertragen(&self, kommando: Kommando) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
         let verschieben = kommando == Kommando::Verschieben;
         let quelle = self.dateifenster(aktiv).quelle().angezeigter_ort();
         let ziel = self.dateifenster(aktiv.andere()).quelle().angezeigter_ort();
         match (quelle, ziel) {
-            // Bis die Archivstelle und der Umbau gebaut sind, stellt die
-            // Oberflaeche keinen Vorgang mit einer Archivseite (Schritt 2 des
-            // Plans `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`).
-            (Dateiort::Archiv(_), _) | (_, Dateiort::Archiv(_)) => {
+            (_, Dateiort::Archiv(ziel)) if !ziel.format().beschreibbar() => {
+                self.antwort_zeigen(aktiv, text(Text::ArchivNurLesbar));
+                true
+            }
+            (_, Dateiort::Archiv(_)) | (Dateiort::Archiv(_), _) if verschieben => {
                 self.antwort_zeigen(aktiv, text(Text::ImArchivNichtVerfuegbar));
                 true
+            }
+            (_, Dateiort::Archiv(_)) => {
+                self.antwort_zeigen(aktiv, text(Text::ImArchivNichtVerfuegbar));
+                true
+            }
+            (quelle @ Dateiort::Archiv(_), ziel) => {
+                self.fernauftrag_stellen(aktiv, quelle, ziel, verschieben)
             }
             (Dateiort::Lokal(_), Dateiort::Lokal(ziel)) => {
                 let art = if verschieben {
@@ -8928,9 +8948,15 @@ impl Anwendungsdelegierter {
                 let _ = self.auftrag_starten(seite, auftrag, ziel, positionen, 0);
             }
             // Ein Abwurf auf ein Archivfenster ist ein Hineinkopieren, und
-            // das kommt erst mit dem Umbau (Schritt 2 des Plans der Archive).
-            Dateiort::Archiv(_) => {
-                self.antwort_zeigen(seite, text(Text::ImArchivNichtVerfuegbar));
+            // das kommt erst mit dem Umbau (Schritt 6 des Plans der Archive);
+            // in ein Archiv, das KRK allein lesen darf, nie (E14).
+            Dateiort::Archiv(archiv) => {
+                let schluessel = if archiv.format().beschreibbar() {
+                    Text::ImArchivNichtVerfuegbar
+                } else {
+                    Text::ArchivNurLesbar
+                };
+                self.antwort_zeigen(seite, text(schluessel));
             }
             ziel @ Dateiort::Fern(_) => {
                 let quellen = quellen.into_iter().map(Dateiort::Lokal).collect();
@@ -8981,8 +9007,8 @@ impl Anwendungsdelegierter {
         // statt zu wirken, und zwar hier vor der Zuordnung und nicht je Zweig
         // (Entscheidung 13 des Plans der sftp-Ordner). Gefragt am Wert des
         // Tabs, ohne Systemaufruf.
-        let fern = self.dateifenster(seite).quelle().zeigt_fern();
-        if kontextmenue::am_fernen_ort_meldet(befehl, fern) {
+        let ort = self.dateifenster(seite).quelle().ortsart();
+        if kontextmenue::am_fernen_ort_meldet(befehl, ort) {
             self.am_fernen_ort_melden(seite);
             return;
         }
@@ -15411,7 +15437,7 @@ mod kontextproben {
     /// `jeder_kontextbefehl_meldet_an_einem_fernen_ort` in
     /// [`crate::kommandos::kontextmenue`].
     ///
-    /// **Was sie nicht sieht:** ob `zeigt_fern` die richtige Seite fragt; sie
+    /// **Was sie nicht sieht:** ob `ortsart` die richtige Seite fragt; sie
     /// liest Zeilen und keinen Datenfluss.
     #[test]
     fn das_kontextmenue_fragt_den_ort_vor_der_zuordnung() {
