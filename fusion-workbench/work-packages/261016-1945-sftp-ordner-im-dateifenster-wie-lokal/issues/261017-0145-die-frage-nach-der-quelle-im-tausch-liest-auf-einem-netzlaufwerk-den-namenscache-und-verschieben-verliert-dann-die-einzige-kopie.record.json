@@ -1,0 +1,26 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "d45c5dc9-5f81-4640-b397-93b9ef6e895e",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261016-1945-sftp-ordner-im-dateifenster-wie-lokal/issues/261017-0145-die-frage-nach-der-quelle-im-tausch-liest-auf-einem-netzlaufwerk-den-namenscache-und-verschieben-verliert-dann-die-einzige-kopie.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "closed",
+    "disposition": {
+      "kind": "fixed",
+      "reason_ref": null
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "259f4051-4f7c-4b1c-8f53-c595353625bb",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261016-1945-sftp-ordner-im-dateifenster-wie-lokal/issues/261017-0145-ein-rename-dessen-antwort-mit-der-trennung-verloren-geht-hinterlaesst-einen-zwischennamen-den-der-bericht-nicht-nennt.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "closed",
+    "disposition": {
+      "kind": "fixed",
+      "reason_ref": null
+    }
+  }
+}

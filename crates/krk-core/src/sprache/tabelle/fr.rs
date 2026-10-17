@@ -139,6 +139,15 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VorgangQuelleIstTeilDesZiels => {
             "la source est la destination elle-même ou se trouve à l’intérieur\u{202f}; la destination reste inchangée"
         }
+        Text::VorgangNetzlaufwerkNichtErsetzt => {
+            "non remplacé, car le côté sur ce Mac se trouve sur un volume réseau\u{202f}; copiez d’abord, puis supprimez la source"
+        }
+        Text::VorgangZielVielleichtBeiseite => {
+            "non remplacé\u{202f}; la destination se trouve sous son nom ou sous «\u{a0}{alt}\u{a0}»\u{a0}: {grund}"
+        }
+        Text::VorgangQuelleVielleichtUnterZwischennamen => {
+            "la destination n’a pas pu être remplacée, et l’entrée se trouve sous son nom ou sous «\u{a0}{name}\u{a0}»\u{a0}: {grund}"
+        }
         Text::VorgangKeinPapierkorb => {
             "aucune Corbeille n’est disponible\u{202f}; rien n’a été supprimé"
         }

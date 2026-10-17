@@ -645,6 +645,106 @@ fn ueberschreiben_gelingt_auch_wenn_der_server_rechte_und_zeit_ablehnt() {
     assert_eq!(ausgang.bericht.eintraege, 3, "{:?}", ausgang.bericht);
 }
 
+/// Verschieben ueber eine Grenze entfernt die Quelle, wenn allein Hinweise zu
+/// angekommenen Eintraegen im Bericht stehen, und nennt sie nie als „nicht
+/// vollstaendig kopiert“ (Befund
+/// `261017-0145-verschieben-ueber-eine-grenze-nennt-einen-vollstaendigen-ersatz-…`).
+///
+/// Drei Faelle: eine Datei ueber eine Datei gleichen Namens und eine ohne
+/// Konflikt, je auf einen Server, der Rechte und Zeit ablehnt; dazu eine
+/// Datei ueber einen Ordner, von dem nach dem Tausch ein Rest bleibt. Bis zur
+/// Behebung zaehlte jeder dieser Hinweise als Luecke: die Quelle blieb und
+/// stand als fertig und als „nicht vollstaendig kopiert, in der Quelle
+/// geblieben“ im Bericht.
+#[test]
+fn verschieben_ueber_eine_grenze_entfernt_die_quelle_auch_wenn_allein_hinweise_bleiben() {
+    let ordner = Pruefordner::neu("fern-verschieben-hinweise");
+    let _ = ordner.ordner("quelle");
+    let ersetzend = ordner.datei("quelle/a.txt", b"neu");
+    let frei = ordner.datei("quelle/b.txt", b"b");
+    let fernordner = ordner.ordner("server");
+    fs::write(fernordner.join("a.txt"), b"alt").expect("a.txt");
+    let ohne_setstat = zugang_ohne_setstat("server.test");
+    let am_ziel = |ordner: &Path, name: &str| {
+        PathBuf::from(format!("kai@server.test:{}", ordner.join(name).display()))
+    };
+
+    let ausgang = fahren(
+        Fernauftrag::verschieben(
+            vec![lokal(&ersetzend), lokal(&frei)],
+            fern(&ohne_setstat, &fernordner),
+        ),
+        Konfliktantwort::Ueberschreiben,
+    );
+    assert_eq!(ausgang.konflikte.len(), 1, "{:?}", ausgang.konflikte);
+    assert_eq!(fs::read(fernordner.join("a.txt")).expect("a.txt"), b"neu");
+    assert_eq!(fs::read(fernordner.join("b.txt")).expect("b.txt"), b"b");
+    assert!(!ersetzend.exists(), "die Quelle des Ersatzes steht noch");
+    assert!(!frei.exists(), "die Quelle ohne Konflikt steht noch");
+    let gemeldet: Vec<&Path> = ausgang
+        .bericht
+        .uebersprungen
+        .iter()
+        .map(|eintrag| eintrag.pfad.as_path())
+        .collect();
+    assert_eq!(
+        gemeldet,
+        vec![am_ziel(&fernordner, "a.txt"), am_ziel(&fernordner, "b.txt")],
+        "{:?}",
+        ausgang.bericht
+    );
+    assert_eq!(ausgang.bericht.eintraege, 2, "{:?}", ausgang.bericht);
+
+    // Eine Datei ueber einen Ordner, dessen Rest nach dem Tausch bleibt.
+    let _ = ordner.ordner("quelle2");
+    let quelle = ordner.datei("quelle2/d", b"neue datei");
+    let zweiter = ordner.ordner("server2");
+    let _ = ordner.ordner("server2/d");
+    let zu = ordner.ordner("server2/d/zu");
+    fs::write(zu.join("b.txt"), b"b").expect("b.txt");
+    fs::set_permissions(&zu, fs::Permissions::from_mode(0o555)).expect("Rechte");
+    gemeinsam::rechtesperre_haelt_oder_abbruch(
+        "ein Kind von zu/ laesst sich nicht entfernen",
+        fs::remove_file(zu.join("b.txt")).is_err(),
+    );
+    let server = zugang("server.test");
+
+    let ausgang = fahren(
+        Fernauftrag::verschieben(vec![lokal(&quelle)], fern(&server, &zweiter)),
+        Konfliktantwort::Ueberschreiben,
+    );
+    let alte = namen_mit(&zweiter, ".krk-alt-");
+    for alt in &alte {
+        let _ = fs::set_permissions(
+            zweiter.join(alt).join("zu"),
+            fs::Permissions::from_mode(0o755),
+        );
+    }
+    let _ = fs::set_permissions(&zu, fs::Permissions::from_mode(0o755));
+
+    assert_eq!(
+        fs::read(zweiter.join("d")).ok().as_deref(),
+        Some(&b"neue datei"[..]),
+        "der Ersatz steht nicht am Ziel"
+    );
+    assert!(!quelle.exists(), "die Quelle steht noch");
+    assert_eq!(alte.len(), 1, "{alte:?}");
+    assert_eq!(
+        ausgang.bericht.uebersprungen.len(),
+        1,
+        "{:?}",
+        ausgang.bericht
+    );
+    let gemeldet = &ausgang.bericht.uebersprungen[0];
+    assert_eq!(gemeldet.pfad, am_ziel(&zweiter, "d"));
+    assert!(
+        gemeldet.grund.contains(alte[0].as_str()),
+        "{}",
+        gemeldet.grund
+    );
+    assert_eq!(ausgang.bericht.eintraege, 1, "{:?}", ausgang.bericht);
+}
+
 /// Verschieben mit „Ueberschreiben“ verliert nie die einzige Kopie, wenn
 /// Quelle und Ziel ueber zwei Wege derselbe Eintrag sind (Befund
 /// `261017-0113-verschieben-mit-ueberschreiben-loescht-die-einzige-kopie-…`).

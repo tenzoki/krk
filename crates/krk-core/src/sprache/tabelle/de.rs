@@ -127,6 +127,15 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VorgangQuelleIstTeilDesZiels => {
             "die Quelle ist das Ziel selbst oder liegt darin; das Ziel bleibt unverändert"
         }
+        Text::VorgangNetzlaufwerkNichtErsetzt => {
+            "nicht ersetzt, weil die Seite auf diesem Mac auf einem Netzlaufwerk liegt; erst kopieren, dann die Quelle löschen"
+        }
+        Text::VorgangZielVielleichtBeiseite => {
+            "nicht ersetzt; das Ziel liegt unter seinem Namen oder unter „{alt}“: {grund}"
+        }
+        Text::VorgangQuelleVielleichtUnterZwischennamen => {
+            "das Ziel ließ sich nicht ersetzen, und der Eintrag liegt unter seinem Namen oder unter „{name}“: {grund}"
+        }
         Text::VorgangKeinPapierkorb => "kein Papierkorb eingehängt; es wurde nichts gelöscht",
         Text::VorgangKeineGewoehnlicheDatei => "keine gewöhnliche Datei",
         Text::VorgangDateiangabenNichtKopiert => {

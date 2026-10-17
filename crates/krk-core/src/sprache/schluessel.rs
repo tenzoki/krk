@@ -202,6 +202,16 @@ pub enum Text {
     /// beiseite, sie ist also das Ziel selbst, ueber einen zweiten Weg, oder
     /// liegt in ihm; das Ziel bleibt.
     VorgangQuelleIstTeilDesZiels,
+    /// `operation::fern`, Ueberschreiben beim Verschieben ueber eine Grenze: die
+    /// lokale Seite liegt auf einem Netzlaufwerk, und ersetzt wird nicht.
+    VorgangNetzlaufwerkNichtErsetzt,
+    /// `operation::fern`, Ueberschreiben: das `RENAME`, das das Ziel beiseitelegen
+    /// sollte, blieb ohne Antwort; `{alt}` (der Zwischenname), `{grund}`.
+    VorgangZielVielleichtBeiseite,
+    /// `operation::fern`, Ueberschreiben beim Verschieben auf demselben Server: ein
+    /// `RENAME` der Quelle blieb ohne Antwort; `{name}` (der Zwischenname),
+    /// `{grund}`.
+    VorgangQuelleVielleichtUnterZwischennamen,
     /// `OhnePapierkorb`: der Papierkorb, den es nicht gibt.
     VorgangKeinPapierkorb,
     /// Duplizieren und Packen: die Quelle ist Ordner, Verknuepfung, Roehre,
@@ -1639,7 +1649,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 683] = [
+    pub const ALLE: [Text; 686] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1717,6 +1727,9 @@ impl Text {
         Text::VorgangErsatzNichtWeggeraeumt,
         Text::VorgangHalbeDateiNichtWeggeraeumt,
         Text::VorgangQuelleIstTeilDesZiels,
+        Text::VorgangNetzlaufwerkNichtErsetzt,
+        Text::VorgangZielVielleichtBeiseite,
+        Text::VorgangQuelleVielleichtUnterZwischennamen,
         Text::VorgangKeinPapierkorb,
         Text::VorgangKeineGewoehnlicheDatei,
         Text::VorgangDateiangabenNichtKopiert,

@@ -115,6 +115,15 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VorgangQuelleIstTeilDesZiels => {
             "the source is the destination itself or lies inside it; the destination is unchanged"
         }
+        Text::VorgangNetzlaufwerkNichtErsetzt => {
+            "not replaced because the side on this Mac is on a network volume; copy first, then delete the source"
+        }
+        Text::VorgangZielVielleichtBeiseite => {
+            "not replaced; the destination is under its own name or at “{alt}”: {grund}"
+        }
+        Text::VorgangQuelleVielleichtUnterZwischennamen => {
+            "the destination could not be replaced, and the entry is under its own name or at “{name}”: {grund}"
+        }
         Text::VorgangKeinPapierkorb => "no Trash attached; nothing was deleted",
         Text::VorgangKeineGewoehnlicheDatei => "not a regular file",
         Text::VorgangDateiangabenNichtKopiert => {

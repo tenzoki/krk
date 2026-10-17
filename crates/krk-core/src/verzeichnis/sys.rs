@@ -1,5 +1,5 @@
-//! Die Systemschicht des Kerns: die acht Schnittstellen, die KRK braucht, und
-//! die zwoelf Funktionen, die sie binden.
+//! Die Systemschicht des Kerns: die neun Schnittstellen, die KRK braucht, und
+//! die dreizehn Funktionen, die sie binden.
 //!
 //! Dies ist das einzige Modul in `krk-core`, das die Regel `deny(unsafe_code)`
 //! aus `lib.rs` oeffnet. Die Regel lautet dort `deny` und nicht `forbid`, damit
@@ -27,10 +27,11 @@
 //! clock_gettime_nsec_np(3)
 //!                    ──> wachzeit             ──> krk-ui, als `jetzt` an
 //!                                                 heimordner::schluesselmerker
+//! statfs(2)          ──> auf_lokalem_...      ──> operation::fern
 //! ```
 //!
-//! **Acht ist die Zahl der Schnittstellen und nicht die der Bindungen: es sind
-//! acht Schnittstellen und zwoelf gebundene Funktionen, denn `copyfile(3)`
+//! **Neun ist die Zahl der Schnittstellen und nicht die der Bindungen: es sind
+//! neun Schnittstellen und dreizehn gebundene Funktionen, denn `copyfile(3)`
 //! braucht seine vier `copyfile_state_*`-Helfer.** Ohne sie liesse sich der
 //! Fortschrittsrueckruf nicht setzen und die Zahl der kopierten Bytes nicht
 //! abfragen; eine eigene Schnittstelle sind sie deshalb nicht, aber vier weitere
@@ -39,10 +40,12 @@
 //! `verzeichnis/mod.rs`; die dritte Stelle hat der Defekt `260810-1017`
 //! nachgezogen, die fuenfte Schnittstelle die Runde 7, die sechste die
 //! Runde 18, die siebte, `fsync(2)`, der Defekt vom 261004 (das Sichern auf
-//! einem Cryptomator-Tresor, siehe [`auf_die_platte_bringen`]) und die achte,
+//! einem Cryptomator-Tresor, siehe [`auf_die_platte_bringen`]), die achte,
 //! `clock_gettime_nsec_np(3)`, die Arbeit am gemerkten Schluessel von
-//! `secrets.txt` vom 261016 (siehe [`wachzeit`]). Gebunden sind alle zwoelf in
-//! den sechs `unsafe extern "C"`-Bloecken dieses Moduls; `fsync` steht im Block
+//! `secrets.txt` vom 261016 (siehe [`wachzeit`]) und die neunte, `statfs(2)`,
+//! der Befund vom 261017 zum Ueberschreiben auf einem Netzlaufwerk (siehe
+//! [`auf_lokalem_dateisystem`]). Gebunden sind alle dreizehn in
+//! den sieben `unsafe extern "C"`-Bloecken dieses Moduls; `fsync` steht im Block
 //! von `fcntl`, weil es dessen Rueckfall ist.
 //!
 //! **`flock(2)` ist die fuenfte, und sie ist die erste, die keine Datei liest
@@ -1425,6 +1428,82 @@ pub fn wachzeit() -> Duration {
     Duration::from_nanos(nanosekunden)
 }
 
+/// `MNT_LOCAL` aus dem SDK-Kopf `usr/include/sys/mount.h`: das Dateisystem
+/// liegt auf diesem Geraet und nicht hinter einem Client wie NFS oder SMB.
+const MNT_LOCAL: u32 = 0x0000_1000;
+
+/// `struct statfs` aus `usr/include/sys/mount.h`, in der Form
+/// `__DARWIN_STRUCT_STATFS64` (nachgelesen am 261017 im SDK unter
+/// `xcrun --show-sdk-path`). Auf arm64 ist sie die einzige; auf x86_64 liefert
+/// sie das Symbol `statfs$INODE64` (`__DARWIN_INODE64` in `sys/cdefs.h`), und
+/// deshalb traegt die Bindung dort diesen Namen.
+///
+/// Gelesen wird allein `f_flags`; die uebrigen Felder stehen, damit Groesse und
+/// Lage der Antwort die des Kerns sind, und die Groesse haelt die Zusicherung
+/// darunter beim Uebersetzen fest.
+#[repr(C)]
+struct Statfs {
+    f_bsize: u32,
+    f_iosize: i32,
+    f_blocks: u64,
+    f_bfree: u64,
+    f_bavail: u64,
+    f_files: u64,
+    f_ffree: u64,
+    f_fsid: [i32; 2],
+    f_owner: u32,
+    f_type: u32,
+    f_flags: u32,
+    f_fssubtype: u32,
+    f_fstypename: [c_char; 16],
+    f_mntonname: [c_char; 1024],
+    f_mntfromname: [c_char; 1024],
+    f_flags_ext: u32,
+    f_reserved: [u32; 7],
+}
+
+const _: () = assert!(std::mem::size_of::<Statfs>() == 2168);
+
+unsafe extern "C" {
+    /// `int statfs(const char *, struct statfs *)`
+    ///
+    /// Liefert 0 und fuellt die Antwort, -1 im Fehlerfall. Folgt einer
+    /// Verknuepfung. Seit macOS 10.6 in dieser Form, weit unter dem
+    /// Mindest-Zielsystem 15.0.
+    #[cfg_attr(target_arch = "x86_64", link_name = "statfs$INODE64")]
+    fn statfs(pfad: *const c_char, antwort: *mut Statfs) -> c_int;
+}
+
+/// Ob `pfad` auf einem Dateisystem dieses Geraets liegt (`MNT_LOCAL` aus
+/// `statfs(2)`), und nicht auf einem eingehaengten Netzlaufwerk.
+///
+/// Gebraucht wird die Antwort von `operation::fern`: dort fragt ein Tausch,
+/// ob eine Quelle unter ihrem Namen noch steht, und ein Client mit
+/// Namenscache, wie der von NFS und SMB, kann darauf mit einem Eintrag
+/// antworten, den der Server eben umbenannt hat. Die Frage stellt einen
+/// Systemaufruf, der an einem haengenden Netzlaufwerk warten kann; gerufen
+/// wird sie deshalb allein auf einem Arbeitsfaden.
+///
+/// `statfs(2)` folgt einer Verknuepfung: fuer eine Verknuepfung, die auf ein
+/// Netzlaufwerk zeigt, ist die Antwort nein.
+///
+/// Dieselbe Frage beantwortet `krk-ui` fuer die Rueckfrage vor dem Loeschen
+/// ueber `NSURLVolumeIsLocalKey` (`appkit/volumes.rs`,
+/// `liegt_auf_netzlaufwerk`); Foundation liegt ausserhalb des Kerns, und
+/// deshalb steht die Frage hier ein zweites Mal, am Systemaufruf.
+pub fn auf_lokalem_dateisystem(pfad: &Path) -> io::Result<bool> {
+    let c_pfad = als_c_pfad(pfad)?;
+    let mut antwort = std::mem::MaybeUninit::<Statfs>::uninit();
+    // SICHERHEIT: `c_pfad` ist nullterminiert und lebt bis nach dem Aufruf;
+    // `antwort` bietet Platz fuer genau die Struktur, die der Kern schreibt
+    // (Groesse oben zugesichert).
+    ohne_unterbrechung(|| kernantwort(unsafe { statfs(c_pfad.as_ptr(), antwort.as_mut_ptr()) }))?;
+    // SICHERHEIT: der Kern hat die Antwort bei Rueckgabe 0 vollstaendig
+    // geschrieben, und jedes Bitmuster ist fuer die Felder gueltig.
+    let antwort = unsafe { antwort.assume_init() };
+    Ok(antwort.f_flags & MNT_LOCAL != 0)
+}
+
 /// Macht aus einem Pfad eine nullterminierte Zeichenkette fuer die C-Aufrufe.
 ///
 /// Ein Pfad mit einem Nullbyte darin kann im Dateisystem nicht vorkommen; er
@@ -1446,6 +1525,29 @@ mod tests {
     fn attrlist_hat_die_groesse_aus_sys_attr_h() {
         assert_eq!(size_of::<Attrlist>(), 24);
         assert_eq!(align_of::<Attrlist>(), 4);
+    }
+
+    /// Die Bindung [`Statfs`] hat die Speicherform aus `sys/mount.h`, und
+    /// `f_flags` liegt an der Stelle, die der Kopf ihm gibt: hinter zwei
+    /// Feldern zu vier Bytes, fuenf zu acht, `fsid_t` und zwei zu vier.
+    #[test]
+    fn struct_statfs_hat_die_form_aus_sys_mount_h() {
+        assert_eq!(size_of::<Statfs>(), 2168);
+        assert_eq!(align_of::<Statfs>(), 8);
+        assert_eq!(std::mem::offset_of!(Statfs, f_flags), 64);
+        assert_eq!(std::mem::offset_of!(Statfs, f_mntonname), 88);
+    }
+
+    /// Die Wurzel dieses Geraets liegt auf einem lokalen Dateisystem, und ein
+    /// Pfad, den es nicht gibt, ist ein Fehler und kein Nein.
+    #[test]
+    fn die_wurzel_liegt_lokal_und_ein_fehlender_pfad_ist_ein_fehler() {
+        assert!(matches!(auf_lokalem_dateisystem(Path::new("/")), Ok(true)));
+        let fehlt = auf_lokalem_dateisystem(Path::new("/gibt-es-nicht-krk-statfs"));
+        assert!(
+            matches!(&fehlt, Err(fehler) if fehler.kind() == io::ErrorKind::NotFound),
+            "{fehlt:?}"
+        );
     }
 
     /// Die Bindung [`Tm`] hat die Speicherform, die `<time.h>` beschreibt.

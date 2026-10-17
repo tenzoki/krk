@@ -1969,12 +1969,27 @@ verbunden wird nicht.
   Schreibrecht darin, steht der Ersatz trotzdem am Ziel, und die
   Abschlussliste nennt den Namen `.krk-alt-…`, unter dem der Rest liegt.
   Lehnt der Server nur Rechte und Änderungszeit ab, wird trotzdem ersetzt,
-  mit einem Hinweis. Benennen Quelle und Ziel auf dem Server über eine
-  Verknüpfung denselben Eintrag, wird nichts überschrieben. Erreichen beide
-  Seiten denselben Speicher auf zwei Wegen, etwa ein NAS, das eingehängt und
-  zugleich über sftp geöffnet ist, fragt KRK zwar nach, überschreibt aber
-  nichts: die Quelle bleibt, und die Abschlussliste sagt es. **Mit gehen Rechte
-  und Änderungszeit, nicht aber erweiterte Attribute**: Finder-Etiketten,
+  mit einem Hinweis. **Beim Verschieben zwischen Mac und Server oder zwischen
+  zwei Servern wird die Quelle erst entfernt, wenn alles angekommen ist**;
+  ein solcher Hinweis oder ein Rest `.krk-alt-…` hält sie nicht auf, denn
+  der Inhalt steht dann vollständig am Ziel, und die Abschlussliste nennt
+  den Hinweis unter dem Namen am Ziel. Fehlt dagegen ein Teil, bleibt die
+  Quelle mit dem Grund „nicht vollständig kopiert, in der Quelle geblieben“.
+  Bricht die Verbindung ab, während KRK beim Überschreiben einen Eintrag
+  umbenennt, weiß KRK nicht, ob der Server das Umbenennen noch ausgeführt
+  hat; die Abschlussliste nennt dann beide Namen, unter denen der Eintrag
+  liegen kann. Benennen Quelle und Ziel auf dem Server über eine Verknüpfung
+  denselben Eintrag, wird nichts überschrieben. Erreichen beide Seiten
+  denselben Speicher auf zwei Wegen, etwa ein NAS, das eingehängt und
+  zugleich über sftp geöffnet ist, fragt KRK zwar nach, verliert aber
+  nichts: beim Kopieren bleibt der Inhalt am Ziel erhalten, beim Verschieben
+  bleibt die Quelle, und die Abschlussliste sagt es. **Liegt die Seite auf
+  dem Mac auf einem Netzlaufwerk, ersetzt „Verschieben“ ein vorhandenes Ziel
+  nie**, auch wenn es ein anderer Eintrag ist: dort kann der Mac nicht
+  sicher sagen, ob die Quelle noch unter ihrem Namen steht. Die
+  Abschlussliste nennt den Eintrag; dann erst kopieren und danach die Quelle
+  löschen. **Mit gehen Rechte und Änderungszeit, nicht aber erweiterte
+  Attribute**: Finder-Etiketten,
   Kommentare und andere Zusatzdaten einer Datei gehen auf dem Weg zum Server
   verloren. Verknüpfungen bleiben Verknüpfungen; auf einen Server, der sich
   nicht als OpenSSH ausweist, legt KRK keine an und nennt sie in der
