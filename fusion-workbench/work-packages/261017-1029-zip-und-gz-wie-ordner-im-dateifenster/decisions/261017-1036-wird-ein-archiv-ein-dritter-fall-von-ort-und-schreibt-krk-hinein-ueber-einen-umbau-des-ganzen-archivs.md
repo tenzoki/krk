@@ -39,3 +39,6 @@ Das Arbeitspaket `261017-1029-zip-und-gz-wie-ordner-im-dateifenster` verlangt, d
 ## Recommendation
 
 Möglichkeit 1. Sie ist die einzige, die die Zusage „das Original wird nicht beschädigt“ an einer einzigen Stelle hält, nämlich am letzten `rename` des Umbaus, statt sie über viele Einzelhandlungen zu verteilen. Sie nimmt zudem den dritten Fall über die Nähte auf, die `Ort` schon hat. Den Preis „jede Änderung schreibt das ganze Archiv“ nennt `HowTo.md`. Ein Archiv auf einem Server bleibt in diesem Paket ausgegraut; `Archivzugang` hält dafür eine lokale Archivdatei. Ein späteres Paket kann sie gegen einen `Ort` tauschen, sobald es ein atomares Ersetzen auf dem Server gibt, das Entscheidung 10 des sftp-Plans nicht verletzt.
+
+---
+Implemented: crates/krk-core/src/ort.rs, crates/krk-core/src/archiv/umbau.rs, crates/krk-core/src/archiv/ersetzen.rs (Modulkoepfe) — Moeglichkeit 1: Ort::Archiv als dritter Ort, Schreiben ueber einen Umbau des ganzen Archivs mit atomarem Ersetzen

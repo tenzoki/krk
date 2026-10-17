@@ -31,3 +31,6 @@ Der Nutzer verlangt neben Zip auch gz, und die Directive nennt `.tar.gz` und `.t
 ## Recommendation
 
 Möglichkeit 1, mit der Fassung festgenagelt wie `gix` und mit der Begründung in der Wurzel-`Cargo.toml`. Bringt `cargo tree` in Schritt 1 entgegen der Kistenbeschreibung ein weiteres Paket mit, das `cc` oder einen Namen auf `-sys` trägt, gilt Möglichkeit 1 als nicht erfüllbar. Dann hält der Schritt an und legt die Frage mit dem Beleg neu vor; er weicht nicht still auf Möglichkeit 2 aus.
+
+---
+Implemented: Cargo.toml (Begruendung tar), crates/krk-core/src/archiv/verzeichnis.rs — Kiste tar ohne Vorgabemerkmale, kein cc und kein Paket mit Namen auf -sys
