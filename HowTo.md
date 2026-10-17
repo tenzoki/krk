@@ -491,9 +491,16 @@ ersetzt das alte erst ganz am Ende in einem Schritt. Daraus folgt:
   Dasselbe sagen `cmd+c` und `cmd+x`, die aus einem Archiv keine
   Dateiverweise ablegen, und ein Doppelklick auf eine Datei im Archiv. Aus
   einem Archivfenster lässt sich nichts in den Finder ziehen.
-- **Die Vorschau** zeigt Name, Größe, Änderungszeit und Typ aus der Liste und
-  liest keinen Inhalt; wer eine Datei ansehen oder bearbeiten will, kopiert sie
-  vorher heraus. Der Git-Bereich fragt einen Ordner in einem Archiv nicht.
+- **Die Vorschau** zeigt eine Datei im Archiv wie dieselbe Datei auf dem Mac:
+  Text bis 1 MB, Markdown gerendert, Quelltext eingefärbt, ein Bild als Bild,
+  und eine `.jsonl` Datensatz für Datensatz, über 1 MB mit ihrem Anfang. KRK
+  liest dafür den Anfang des Eintrags aus dem Archiv und entpackt nichts auf
+  die Platte; bei einem `.tar.gz` heißt das, bis zu diesem Eintrag durch das
+  Archiv. Für einen verschlüsselten Eintrag, ein PDF, einen Text über 1 MB und
+  alles, was kein Text ist, zeigt sie Name, Größe, Änderungszeit und Typ aus
+  der Liste, ebenso für einen Ordner. Bearbeiten lässt sich eine Datei im
+  Archiv nicht; dafür kopiert man sie heraus. Der Git-Bereich fragt einen
+  Ordner in einem Archiv nicht.
 - **Ein Archiv in einem Archiv** lässt sich nicht betreten; die Statuszeile
   sagt „erst herauskopieren“, und herauskopiert lässt es sich betreten.
 - **Ein Archiv auf einem Server** lässt sich nicht betreten; die Statuszeile
@@ -712,7 +719,14 @@ erscheint unverändert hinter `//`, und ihre Trennzeile sagt es dazu. Eine
 solche Datei darf größer sein als die 1 MB, bis zu denen die Vorschau andere
 Textdateien zeigt: dann zeigt sie die vollständigen Zeilen des ersten MB und
 sagt in der ersten Zeile, dass gekürzt ist. Der Editor zeigt dieselbe Datei
-unverändert, eine Zeile je Datensatz.
+unverändert, eine Zeile je Datensatz. Dasselbe gilt für eine `.jsonl` in einem
+Archiv, auch in einer `.jsonl.gz`.
+
+**Zeigt die Vorschau nichts, ist sie vielleicht ausgeblendet.** Die Vorschau
+und der Editor teilen sich den rechten Rand: steht dort der Editor, ist in der
+Leiste am Fensterfuß „Vorschau“ nicht angekreuzt, und die Auswahl in der
+Dateiliste erscheint nirgends. `f3` (oder `cmd+y`) blendet die Vorschau wieder
+ein, und sie zeigt dann den gewählten Eintrag.
 
 ---
 

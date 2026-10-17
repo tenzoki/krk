@@ -371,7 +371,7 @@ use crate::kommandos::operationen::{self, Dateiablage, Umbenennungswunsch};
 use crate::kommandos::pfadeingabe::{self, Ergebnis, FernErgebnis};
 use crate::spalten::Spalte;
 use crate::tabs::{Auswahlversuch, Tabliste, Tabort, Vormerkung};
-use crate::vorschaumodell::{Beschreibung, Fernangaben};
+use crate::vorschaumodell::{Archivangaben, Beschreibung, Fernangaben};
 
 use super::abwurf;
 use super::blaetter;
@@ -663,8 +663,9 @@ fn fernangaben_des_ordners(ort: &FernerOrt) -> Fernangaben {
 
 /// Die Angaben eines Eintrags in einem Archiv fuer die Vorschau, aus dem
 /// `Eintrag` des Ordnermodells wie fern (E14 des Plans
-/// `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`); den Inhalt
-/// zeigt die Vorschau nicht, denn er liegt in keiner Datei auf der Platte.
+/// `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`). Fuer eine
+/// Datei sind sie seit dem 261018 der Rueckfall, wenn ihr Inhalt nichts
+/// Lesbares hergibt ([`archivbeschreibung_des_eintrags`]).
 fn archivangaben_des_eintrags(ort: &Archivort, eintrag: &Eintrag) -> Fernangaben {
     let pfad = match ort.kind(&eintrag.name) {
         Some(kind) => kind.to_string(),
@@ -678,6 +679,22 @@ fn archivangaben_des_eintrags(ort: &Archivort, eintrag: &Eintrag) -> Fernangaben
         groesse: Some(eintrag.groesse),
         geaendert: Some(eintrag.geaendert),
         typ: eintrag.typ,
+    }
+}
+
+/// Was die Vorschau ueber einen Eintrag in einem Archiv beschreibt: eine
+/// Datei mit ihrem Ort, sodass die Vorschau ihren Anfang liest, alles Uebrige
+/// mit den Angaben allein.
+///
+/// **Eine Datei und sonst nichts.** Ein Ordner hat keine Bytes, und eine
+/// Verknuepfung im Archiv zeigt auf einen Namen, nicht auf Daten. Ein Name,
+/// der keine einzelne Komponente ist, bekommt keinen Ort und bleibt bei den
+/// Angaben, wie in [`archivangaben_des_eintrags`].
+fn archivbeschreibung_des_eintrags(ort: &Archivort, eintrag: &Eintrag) -> Beschreibung {
+    let angaben = archivangaben_des_eintrags(ort, eintrag);
+    match (eintrag.typ, ort.kind(&eintrag.name)) {
+        (Typ::Datei, Some(kind)) => Beschreibung::Archiv(Archivangaben { angaben, ort: kind }),
+        _ => Beschreibung::Fern(angaben),
     }
 }
 
@@ -3016,11 +3033,11 @@ impl DateifensterQuelle {
                 gewaehlt.map(|eintrag| Beschreibung::Fern(fernangaben_des_eintrags(ort, eintrag))),
                 Beschreibung::Fern(fernangaben_des_ordners(ort)),
             ),
-            // Im Archiv wie fern: die Angaben aus dem Eintrag und kein Inhalt
-            // (E14 des Plans der Archive).
+            // Im Archiv eine Datei mit ihrem Ort, damit die Vorschau ihren
+            // Anfang lesen kann; ein Ordner und die Wurzel wie fern, mit den
+            // Angaben allein ([`archivbeschreibung_des_eintrags`]).
             Tabort::Archiv { ort, .. } => (
-                gewaehlt
-                    .map(|eintrag| Beschreibung::Fern(archivangaben_des_eintrags(ort, eintrag))),
+                gewaehlt.map(|eintrag| archivbeschreibung_des_eintrags(ort, eintrag)),
                 Beschreibung::Fern(archivangaben_des_ordners(ort)),
             ),
         };

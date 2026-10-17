@@ -133,7 +133,13 @@
 //! **Die eine Ausnahme ist eine Datei aus JSON-Zeilen**: sie geht ueber
 //! [`krk_core::text::datei::anlesen`], dieselbe Tuer mit einem Deckel statt
 //! einer Abweisung, und zeigt ueber der Grenze ihren Anfang
-//! ([`jsonzeilen_laden`]).
+//! ([`jsonzeilen_aus_bytes`]).
+//!
+//! **Eine Datei in einem lokalen Archiv liest derselbe Faden an**
+//! ([`archiveintrag_laden`]), ueber den `Archivleser` des Herauskopierens und
+//! bis zur selben Grenze, und bereitet sie auf wie eine Datei derselben
+//! Endung auf der Platte ([`Leseart`]); was nicht herauskommt, zeigt die
+//! Angaben aus dem Eintrag.
 //!
 //! **Die Huelle wohnt seit der Runde 11 in `krk-core` und nicht mehr hier.**
 //! Bis dahin stand ihr Rumpf in dieser Datei, und er stand damit an einer
@@ -218,6 +224,7 @@
 //! der Nutzer verloere sonst seine Stelle. Ein Auswahlwechsel und die Rueckkehr
 //! (C3.6) sowie das Neuladen beim Zuruecksetzen laden neu.
 
+use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -225,11 +232,14 @@ use std::sync::mpsc::{Receiver, Sender, SyncSender, channel, sync_channel};
 use std::thread;
 use std::time::SystemTime;
 
+use krk_core::archiv::{Archivleser, Lesefehler};
 use krk_core::bild::Aufnahmezeit;
+use krk_core::fern::Fernfaden;
 use krk_core::heimordner::eintraege::termine;
 use krk_core::heimordner::{Heimordner, Sonderdatei};
 use krk_core::leseprofil::bildfolge::{Bildverzeichnis, Foto, Kuerzung};
 use krk_core::leseprofil::{Auskunft, Profile, Zusammenfassungszeile, zusammenfassen};
+use krk_core::ort::Archivort;
 use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
 use krk_core::text::datei::{anlesen, bis_zur_grenze_lesen};
 use krk_core::verzeichnis::Typ;
@@ -296,21 +306,42 @@ fn geheimnishinweis() -> &'static str {
 }
 
 /// Was die Vorschau fuer ein Dateifenster zu beschreiben hat: einen lokalen
-/// Pfad, oder die Angaben eines Eintrags oder Ordners auf einem Server.
+/// Pfad, die Angaben eines Eintrags oder Ordners auf einem Server, oder eine
+/// Datei in einem lokalen Archiv.
 ///
 /// **Ein ferner Eintrag wird nicht gelesen** (Entscheidung 13 des Plans
 /// `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`): die Vorschau
 /// zeigt, was das Ordnermodell ueber ihn weiss, und stellt keine Anfrage. Der
 /// lokale Fall geht den Weg, den die Vorschau ohne ferne Orte ging.
+///
+/// **Eine Datei in einem lokalen Archiv wird angelesen** ([`Archivangaben`]),
+/// seit dem 261018 und anders, als E14 des Plans
+/// `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md` es noch sagte:
+/// die Bytequelle, die E14 vermisste, ist der [`Archivleser`] des
+/// Herauskopierens. Ein Ordner im Archiv und die Wurzel bleiben bei den
+/// Angaben ([`Beschreibung::Fern`]), denn ein Ordner hat keine Bytes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Beschreibung {
     /// Ein lokaler Eintrag oder Ordner.
     Lokal(PathBuf),
-    /// Ein Eintrag oder Ordner auf einem Server oder in einem Archiv: beide
-    /// haben keinen lokalen Pfad, und die Vorschau zeigt fuer beide allein die
-    /// Angaben aus dem Eintrag (E14 des Plans
-    /// `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`).
+    /// Ein Eintrag oder Ordner auf einem Server, oder ein Ordner in einem
+    /// Archiv: keiner hat einen lokalen Pfad oder Bytes, die die Vorschau
+    /// liest, und sie zeigt allein die Angaben aus dem Eintrag.
     Fern(Fernangaben),
+    /// Eine Datei in einem lokalen Archiv: die Vorschau liest ihren Anfang
+    /// auf einem Arbeitsfaden und zeigt sonst die Angaben.
+    Archiv(Archivangaben),
+}
+
+/// Eine Datei in einem lokalen Archiv, wie die Vorschau sie beschreibt: die
+/// Angaben aus dem Eintrag als Rueckfall und der Ort, an dem ihr Anfang
+/// gelesen wird.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Archivangaben {
+    /// Was ohne lesbaren Inhalt erscheint, dieselben Angaben wie fern.
+    pub angaben: Fernangaben,
+    /// Der Eintrag im Archiv; sein Zugang ist der des Tabs.
+    pub ort: Archivort,
 }
 
 /// Was die Vorschau ueber einen Eintrag oder Ordner auf einem Server zeigt.
@@ -646,8 +677,14 @@ struct Geladen {
 pub struct Ladevorgang {
     empfaenger: Receiver<Geladen>,
     /// Welche Datei geladen wird. Beim Eintreffen der Meldung wird sie zum
-    /// angezeigten Pfad des Tabs.
+    /// angezeigten Pfad des Tabs; bei einer Datei in einem Archiv ist es ihr
+    /// Name und wird zum [`Vorschautab::archivname`].
     pfad: PathBuf,
+    /// Ob der Vorgang eine Datei in einem Archiv liest
+    /// ([`Ladevorgang::archiv_starten`]). Dann ist [`Self::pfad`] kein Pfad
+    /// auf der Platte, und kein lokaler Weg darf ihn lesen, teilen oder neu
+    /// laden.
+    im_archiv: bool,
     /// Die Marke des Fadens. Kommt eine Bildfolge, wandert sie in den
     /// [`Folgebetrieb`]; sonst faellt sie mit dem Vorgang.
     abbruch: Option<Abbruchmarke>,
@@ -735,6 +772,49 @@ impl Ladevorgang {
         Self {
             empfaenger,
             pfad,
+            im_archiv: false,
+            abbruch: Some(Abbruchmarke(marke)),
+            tafel,
+        }
+    }
+
+    /// Startet den Arbeitsfaden, der den Anfang einer Datei in einem Archiv
+    /// liest ([`archiveintrag_laden`]).
+    ///
+    /// **Ein Faden mit dem Pfand [`Fernfaden`]**, den allein
+    /// [`krk_core::fern::faden()`] startet: jeder Zugriff auf eine Archivdatei
+    /// verlangt es (E9 des Plans der Archive), und so erreicht keiner davon
+    /// den Hauptfaden. Die Marke des Vorgangs ist zugleich das
+    /// Abbruchkennzeichen des [`Archivleser`]s: waehlt der Nutzer weiter,
+    /// faellt der Vorgang, und das Lesen des Verzeichnisses und das Vorspulen
+    /// in einem tar-Strom hoeren auf.
+    ///
+    /// `ersatz` ist der fertige Text der Angaben, der erscheint, wenn der
+    /// Eintrag nicht herauskommt (verschluesselt, unbekanntes Verfahren), zu
+    /// gross ist oder nichts Lesbares enthaelt.
+    fn archiv_starten(eintrag: &Archivangaben, ersatz: String, tafel: Tafel) -> Self {
+        let (sender, empfaenger) = sync_channel(1);
+        let marke = Arc::new(AtomicBool::new(false));
+        let marke_im_faden = Arc::clone(&marke);
+        let ort = eintrag.ort.clone();
+        let ergebnis = krk_core::fern::faden("krk-vorschau".to_owned(), move |pfand| {
+            let inhalt = archiveintrag_laden(pfand, &ort, tafel, ersatz, marke_im_faden);
+            let _ = SyncSender::send(
+                &sender,
+                Geladen {
+                    inhalt,
+                    nachlieferung: None,
+                },
+            );
+        });
+        if let Err(fehler) = ergebnis {
+            // Dieselbe Spur und derselbe Grund wie in `starten`.
+            eprintln!("krk: der Vorschau-Arbeitsfaden liess sich nicht starten: {fehler}");
+        }
+        Self {
+            empfaenger,
+            pfad: PathBuf::from(&eintrag.angaben.name),
+            im_archiv: true,
             abbruch: Some(Abbruchmarke(marke)),
             tafel,
         }
@@ -786,7 +866,16 @@ struct Vorschautab {
     /// Der Pfad wechselt erst, wenn der Arbeitsfaden geliefert hat — genau
     /// wie der Inhalt. Waehrend eines Ladens sagt er also weiterhin, was auf
     /// dem Schirm steht, und die Endbedingung von L7 fragt genau das.
+    ///
+    /// **Eine Datei in einem Archiv hat hier keinen Pfad**, denn sie liegt
+    /// nicht auf der Platte: Teilen, „Ordner der angezeigten Datei zeigen“
+    /// und das Neuladen fragen dieses Feld und faenden sonst einen Pfad, den
+    /// es nicht gibt. Ihr Name steht in [`Vorschautab::archivname`].
     pfad: Option<PathBuf>,
+    /// Der Name der Datei in einem Archiv, deren Anfang der Tab zeigt; allein
+    /// fuer die Frage, wie ihr Text dargestellt wird (Endung), und fuer die
+    /// Nummernspalte ([`Vorschaumodell::darstellungspfad`]).
+    archivname: Option<PathBuf>,
     /// Das laufende Laden, falls eines laeuft.
     ladevorgang: Option<Ladevorgang>,
     /// Der Betrieb einer stehenden Bildfolge, falls der Tab eine zeigt und
@@ -800,6 +889,7 @@ impl Vorschautab {
             titel: text(Text::VorschautabLeer).to_owned(),
             inhalt: Inhalt::Leer,
             pfad: None,
+            archivname: None,
             ladevorgang: None,
             folge: None,
         }
@@ -1129,11 +1219,14 @@ impl Vorschaumodell {
     ) -> usize {
         let mut auftraege = 0;
         for tab in &mut self.tabs {
-            let pfad = tab
-                .ladevorgang
-                .as_ref()
-                .map(|vorgang| vorgang.pfad.clone())
-                .or_else(|| tab.pfad.clone());
+            // Eine Datei in einem Archiv haengt weder an den Profilen noch am
+            // Heimordner, und ihr Name ist kein Pfad, den `laden` lesen
+            // koennte; der Tab bleibt, wie er ist.
+            let pfad = match tab.ladevorgang.as_ref() {
+                Some(vorgang) if vorgang.im_archiv => continue,
+                Some(vorgang) => Some(vorgang.pfad.clone()),
+                None => tab.pfad.clone(),
+            };
             let Some(pfad) = pfad else {
                 continue;
             };
@@ -1170,7 +1263,22 @@ impl Vorschaumodell {
         tab.ladevorgang = None;
         tab.folge = None;
         tab.pfad = None;
+        tab.archivname = None;
         tab.inhalt = Inhalt::Hinweis(angaben);
+    }
+
+    /// Zeigt im aktiven Tab den Anfang einer Datei in einem lokalen Archiv.
+    ///
+    /// Kehrt sofort zurueck wie [`Vorschaumodell::datei_anzeigen`]: gelesen
+    /// wird auf dem Arbeitsfaden ([`Ladevorgang::archiv_starten`]), und Titel
+    /// und Inhalt des Tabs bleiben bis zur Lieferung stehen. `ersatz` ist der
+    /// Text der Angaben, den der Faden zeigt, wenn der Eintrag nichts
+    /// Lesbares hergibt.
+    pub fn archiv_anzeigen(&mut self, eintrag: &Archivangaben, ersatz: String, tafel: Tafel) {
+        let tab = &mut self.tabs[self.aktiv];
+        tab.titel = eintrag.angaben.name.clone();
+        tab.folge = None;
+        tab.ladevorgang = Some(Ladevorgang::archiv_starten(eintrag, ersatz, tafel));
     }
 
     /// Zeigt den Inhalt der Zwischenablage im aktiven Tab (C10).
@@ -1184,6 +1292,7 @@ impl Vorschaumodell {
         tab.ladevorgang = None;
         tab.folge = None;
         tab.pfad = None;
+        tab.archivname = None;
         tab.inhalt = match inhalt {
             Zwischenablageinhalt::Text(text) => Inhalt::Text(text),
             Zwischenablageinhalt::Bild(daten) => Inhalt::Bild {
@@ -1320,6 +1429,16 @@ impl Vorschaumodell {
         self.tabs[self.aktiv].pfad.clone()
     }
 
+    /// Woran die Darstellung des Textes im aktiven Tab haengt: der Pfad der
+    /// angezeigten Datei, oder der Name einer Datei in einem Archiv. Allein
+    /// fuer Endung und Nummernspalte; wer eine Datei auf der Platte braucht,
+    /// fragt [`Self::aktiver_pfad`].
+    #[must_use]
+    pub fn darstellungspfad(&self) -> Option<PathBuf> {
+        let tab = &self.tabs[self.aktiv];
+        tab.pfad.clone().or_else(|| tab.archivname.clone())
+    }
+
     /// Ob der aktive Tab den rohen Inhalt einer **Datei** zeigt (C10).
     ///
     /// Die eine Stelle, die entscheidet, ob die Nummernspalte in der Vorschau
@@ -1342,7 +1461,7 @@ impl Vorschaumodell {
     #[must_use]
     pub fn zeigt_dateitext(&self) -> bool {
         match self.aktiver_inhalt() {
-            Inhalt::Text(_) => self.aktiver_pfad().is_some(),
+            Inhalt::Text(_) => self.darstellungspfad().is_some(),
             // **Eine Zusammenfassung traegt keine Nummern**, aus demselben
             // Grund wie gerendertes Markdown darueber: die Zahlen zaehlten die
             // Zeilen der Zusammenfassung, und daneben steht keine Datei mit
@@ -1389,7 +1508,13 @@ impl Vorschaumodell {
                             tafel: vorgang.tafel,
                         });
                         tab.inhalt = geladen.inhalt;
-                        tab.pfad = Some(geladener_pfad);
+                        if vorgang.im_archiv {
+                            tab.pfad = None;
+                            tab.archivname = Some(geladener_pfad);
+                        } else {
+                            tab.pfad = Some(geladener_pfad);
+                            tab.archivname = None;
+                        }
                         tab.ladevorgang = None;
                         geaendert = true;
                     }
@@ -1566,100 +1691,133 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile, heim: Option<&Heimordner>
             },
         };
     }
-    if ist_bildpfad(pfad) {
-        // Ueber der Bildgrenze wird nicht gelesen, sondern beschrieben; dieselbe
-        // Antwort wie beim Text und aus demselben Grund.
-        return match bis_zur_grenze_lesen(pfad, BILDGRENZE) {
+    let auf_die_metadaten = |metadaten| Inhalt::Metadaten {
+        metadaten,
+        zaehlzeilen: Vec::new(),
+    };
+    match Leseart::von(pfad) {
+        // Ueber der Bildgrenze wird nicht gelesen, sondern beschrieben;
+        // dieselbe Antwort wie beim Text und aus demselben Grund. Jeder der
+        // vier Gruende endet in den Metadaten; welcher es war, fragt die
+        // Vorschau nicht.
+        Leseart::Bild => match bis_zur_grenze_lesen(pfad, BILDGRENZE) {
             Ok(daten) => Inhalt::Bild {
                 daten: Arc::new(daten),
                 metadaten: Some(metadaten),
             },
-            // Jeder der vier Gruende endet in den Metadaten; welcher es war,
-            // fragt die Vorschau nicht.
-            Err(_) => Inhalt::Metadaten {
-                metadaten,
-                zaehlzeilen: Vec::new(),
-            },
-        };
-    }
-    if ist_pdfpfad(pfad) {
+            Err(_) => auf_die_metadaten(metadaten),
+        },
         // Dieselbe Grenze und dieselbe Huelle wie beim Bild, und keine zweite
         // Zahl daneben (C2.1, C2.7 der Runde 20): ueber `BILDGRENZE` wird
         // nicht gelesen, sondern beschrieben, und unter ihr reisen die Bytes
         // ungedeutet in die Ansicht.
-        return match bis_zur_grenze_lesen(pfad, BILDGRENZE) {
+        Leseart::Pdf => match bis_zur_grenze_lesen(pfad, BILDGRENZE) {
             Ok(daten) => Inhalt::Pdf {
                 daten: Arc::new(daten),
                 metadaten,
             },
-            // Jeder der vier Gruende endet in den Metadaten; welcher es war,
-            // fragt die Vorschau nicht.
-            Err(_) => Inhalt::Metadaten {
-                metadaten,
-                zaehlzeilen: Vec::new(),
-            },
-        };
-    }
-    if jsonzeilen::ist_jsonzeilenpfad(pfad) {
-        return jsonzeilen_laden(pfad, metadaten);
-    }
-    // Eine Textdatei ueber 1 MB faellt auf die Metadaten, siehe den Modulkopf.
-    match bis_zur_grenze_lesen(pfad, TEXTGRENZE)
-        .ok()
-        .and_then(|bytes| String::from_utf8(bytes).ok())
-    {
-        // Die drei Wege der Anzeige entscheidet die **eine** vorhandene Stelle
-        // (C4, fuenfzehntes Kriterium der Runde 6): Markdown wird gerendert,
-        // was die Syntaxkiste als Sprache kennt und alles Uebrige bleibt der
-        // Text, der dasteht. Eine zweite Endungsliste neben `Dateityp` und
-        // `hervorhebung::art` entsteht hier nicht.
-        //
-        // Eingefaerbt wird der Quelltext **nicht** hier: das gehoert hinter die
-        // Endbedingung von L7 und damit in die Ansicht, denn `syntect` ist mit
-        // 0,3 MB/s zu langsam, um darauf zu warten.
-        Some(text) => {
-            let typ = Dateityp::von_pfad(pfad, heim);
-            match hervorhebung::art(Some(pfad), typ) {
-                Darstellungsart::Markdown => Inhalt::Markdown(Box::new(markdown::rendern(
-                    &vorschautext(typ, text),
-                    tafel,
-                    Lesart::von_dateityp(typ),
-                ))),
-                Darstellungsart::Code | Darstellungsart::EinfacherText => Inhalt::Text(text),
-            }
-        }
-        // Zu gross, nicht lesbar, keine gewoehnliche Datei oder kein UTF-8, also
-        // keine Textdatei im Sinne von C6.
-        None => Inhalt::Metadaten {
-            metadaten,
-            zaehlzeilen: Vec::new(),
+            Err(_) => auf_die_metadaten(metadaten),
+        },
+        // Ueber der Grenze angelesen statt abgewiesen, siehe
+        // [`jsonzeilen_aus_bytes`]. Nicht lesbar, keine gewoehnliche Datei
+        // oder kein UTF-8: dieselbe Antwort wie bei jeder Textdatei.
+        Leseart::Jsonzeilen => match anlesen(pfad, TEXTGRENZE + 1)
+            .ok()
+            .and_then(jsonzeilen_aus_bytes)
+        {
+            Some(text) => Inhalt::Text(text),
+            None => auf_die_metadaten(metadaten),
+        },
+        // Eine Textdatei ueber 1 MB faellt auf die Metadaten, siehe den
+        // Modulkopf; ebenso eine, die nicht lesbar, keine gewoehnliche Datei
+        // oder kein UTF-8 ist, also keine Textdatei im Sinne von C6.
+        Leseart::Text => match bis_zur_grenze_lesen(pfad, TEXTGRENZE)
+            .ok()
+            .and_then(|bytes| String::from_utf8(bytes).ok())
+        {
+            Some(text) => text_als_inhalt(pfad, text, Dateityp::von_pfad(pfad, heim), tafel),
+            None => auf_die_metadaten(metadaten),
         },
     }
 }
 
-/// Liest eine Datei aus JSON-Zeilen und gibt sie aufbereitet als Text zurueck
-/// ([`jsonzeilen::aufbereiten`]); laeuft wie [`laden`] auf dem Arbeitsfaden.
+/// Welchen der vier Wege eine Datei in der Vorschau nimmt, allein nach ihrem
+/// Namen; Magic Bytes liest die Vorschau nicht.
+///
+/// **Die eine Stelle fuer die Datei auf der Platte und die Datei im Archiv**
+/// ([`laden`], [`archiveintrag_laden`]): beide Wege fragen hier, und eine
+/// Datei im Archiv erscheint damit wie eine lokale derselben Endung.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Leseart {
+    /// Eines der gaengigen Bildformate ([`ist_bildpfad`]).
+    Bild,
+    /// Ein PDF fuer den Betrachter ([`ist_pdfpfad`]).
+    Pdf,
+    /// Eine Datei aus JSON-Zeilen ([`jsonzeilen::ist_jsonzeilenpfad`]).
+    Jsonzeilen,
+    /// Alles Uebrige: Text, wenn es UTF-8 unter [`TEXTGRENZE`] ist.
+    Text,
+}
+
+impl Leseart {
+    fn von(pfad: &Path) -> Self {
+        if ist_bildpfad(pfad) {
+            Leseart::Bild
+        } else if ist_pdfpfad(pfad) {
+            Leseart::Pdf
+        } else if jsonzeilen::ist_jsonzeilenpfad(pfad) {
+            Leseart::Jsonzeilen
+        } else {
+            Leseart::Text
+        }
+    }
+
+    /// Wie viele Bytes dieser Weg hoechstens braucht; ein Byte mehr sagt
+    /// dem Archivweg, dass die Datei darueber liegt.
+    fn grenze(self) -> u64 {
+        match self {
+            Leseart::Bild | Leseart::Pdf => BILDGRENZE,
+            Leseart::Jsonzeilen | Leseart::Text => TEXTGRENZE,
+        }
+    }
+}
+
+/// Ein Text, wie die Vorschau ihn zeigt: Markdown gerendert, alles Uebrige
+/// als der Text, der dasteht.
+///
+/// Die drei Wege der Anzeige entscheidet die **eine** vorhandene Stelle (C4,
+/// fuenfzehntes Kriterium der Runde 6): Markdown wird gerendert, was die
+/// Syntaxkiste als Sprache kennt und alles Uebrige bleibt der Text, der
+/// dasteht. Eine zweite Endungsliste neben `Dateityp` und `hervorhebung::art`
+/// entsteht hier nicht.
+///
+/// Eingefaerbt wird der Quelltext **nicht** hier: das gehoert hinter die
+/// Endbedingung von L7 und damit in die Ansicht, denn `syntect` ist mit
+/// 0,3 MB/s zu langsam, um darauf zu warten.
+fn text_als_inhalt(pfad: &Path, text: String, typ: Dateityp, tafel: Tafel) -> Inhalt {
+    match hervorhebung::art(Some(pfad), typ) {
+        Darstellungsart::Markdown => Inhalt::Markdown(Box::new(markdown::rendern(
+            &vorschautext(typ, text),
+            tafel,
+            Lesart::von_dateityp(typ),
+        ))),
+        Darstellungsart::Code | Darstellungsart::EinfacherText => Inhalt::Text(text),
+    }
+}
+
+/// Bereitet die angelesenen Bytes einer Datei aus JSON-Zeilen als Text auf
+/// ([`jsonzeilen::aufbereiten`]); `None`, wenn sie kein UTF-8 sind.
 ///
 /// **Ueber [`TEXTGRENZE`] wird angelesen und nicht abgewiesen**, anders als
 /// bei jeder anderen Textdatei: ein Protokoll aus JSON-Zeilen ist gewoehnlich
 /// groesser als 1 MB, und sein Anfang ist eine vollstaendige Auskunft, weil
-/// jede Zeile fuer sich steht. Gelesen werden hoechstens `TEXTGRENZE + 1`
+/// jede Zeile fuer sich steht. Der Rufer liest hoechstens `TEXTGRENZE + 1`
 /// Bytes; das eine Byte mehr sagt, ob gekuerzt ist, ohne eine zweite Frage
 /// nach der Groesse, die zwischen `lstat(2)` und dem Lesen veralten koennte.
 /// Gekuerzt wird an das letzte Zeilenende vor der Grenze, sodass kein
 /// angeschnittener Datensatz als ungueltig erscheint und kein mehrbytiges
 /// UTF-8-Zeichen zerschnitten wird (ein `\n` steht nie mitten in einem).
-///
-/// Nicht lesbar, keine gewoehnliche Datei oder kein UTF-8: dieselbe Antwort
-/// wie bei jeder Textdatei, die Metadaten.
-fn jsonzeilen_laden(pfad: &Path, metadaten: Metadaten) -> Inhalt {
-    let auf_die_metadaten = |metadaten| Inhalt::Metadaten {
-        metadaten,
-        zaehlzeilen: Vec::new(),
-    };
-    let Ok(mut bytes) = anlesen(pfad, TEXTGRENZE + 1) else {
-        return auf_die_metadaten(metadaten);
-    };
+fn jsonzeilen_aus_bytes(mut bytes: Vec<u8>) -> Option<String> {
     let gekuerzt = bytes.len() as u64 > TEXTGRENZE;
     if gekuerzt {
         bytes.truncate(TEXTGRENZE as usize);
@@ -1669,13 +1827,78 @@ fn jsonzeilen_laden(pfad: &Path, metadaten: Metadaten) -> Inhalt {
             .map_or(0, |stelle| stelle + 1);
         bytes.truncate(bis);
     }
-    match String::from_utf8(bytes) {
-        Ok(text) => Inhalt::Text(jsonzeilen::aufbereiten(
-            &text,
-            gekuerzt.then_some(TEXTGRENZE / (1024 * 1024)),
-        )),
-        Err(_) => auf_die_metadaten(metadaten),
+    let text = String::from_utf8(bytes).ok()?;
+    Some(jsonzeilen::aufbereiten(
+        &text,
+        gekuerzt.then_some(TEXTGRENZE / (1024 * 1024)),
+    ))
+}
+
+/// Liest den Anfang einer Datei in einem lokalen Archiv und bereitet ihn auf
+/// wie eine Datei derselben Endung auf der Platte; laeuft allein auf dem
+/// Faden aus [`Ladevorgang::archiv_starten`] und braucht deshalb das Pfand.
+///
+/// **Dieselbe Lesegrenze wie lokal** ([`Leseart::grenze`]): gelesen wird
+/// hoechstens ein Byte ueber sie, dann bricht der Empfang ab und der Strom
+/// wird nicht weiter entpackt. Eine Datei aus JSON-Zeilen zeigt ueber der
+/// Grenze ihren Anfang, jede andere ueber der Grenze die Angaben.
+///
+/// **Die Angaben (`ersatz`) erscheinen**, wenn der Eintrag nicht herauskommt
+/// (verschluesselt, ein unbekanntes Verfahren, ein harter Verweis), wenn das
+/// Archiv nicht mehr das gelesene ist, wenn die Daten kein UTF-8 sind und fuer
+/// ein PDF: den Betrachter erreicht ein PDF mit seinen Metadaten, und die
+/// Rechte und den Pfad, die sie tragen, hat eine Datei im Archiv nicht. Ein
+/// Bild geht ohne Metadaten in die Ansicht, wie ein Bild aus der
+/// Zwischenablage.
+fn archiveintrag_laden(
+    pfand: &Fernfaden,
+    ort: &Archivort,
+    tafel: Tafel,
+    ersatz: String,
+    abbruch: Arc<AtomicBool>,
+) -> Inhalt {
+    let name = PathBuf::from(ort.innen.name().unwrap_or_default());
+    let art = Leseart::von(&name);
+    if art == Leseart::Pdf {
+        return Inhalt::Hinweis(ersatz);
     }
+    let grenze = art.grenze();
+    let Ok(mut leser) = Archivleser::oeffnen(pfand, Arc::clone(&ort.zugang), abbruch) else {
+        return Inhalt::Hinweis(ersatz);
+    };
+    let mut bytes = Vec::new();
+    let mut voll = false;
+    let ergebnis = leser.lesen(pfand, &ort.innen, |block| {
+        let platz = usize::try_from(grenze + 1)
+            .unwrap_or(usize::MAX)
+            .saturating_sub(bytes.len());
+        bytes.extend_from_slice(&block[..block.len().min(platz)]);
+        voll = bytes.len() as u64 > grenze;
+        if voll {
+            ControlFlow::Break(())
+        } else {
+            ControlFlow::Continue(())
+        }
+    });
+    match ergebnis {
+        Ok(_) => {}
+        // Den Abbruch hat der Empfang selbst ausgeloest, weil die Grenze
+        // erreicht ist; jeder andere Abbruch kommt von der Marke.
+        Err(Lesefehler::Abgebrochen) if voll => {}
+        Err(_) => return Inhalt::Hinweis(ersatz),
+    }
+    let inhalt = match art {
+        Leseart::Bild if !voll => Some(Inhalt::Bild {
+            daten: Arc::new(bytes),
+            metadaten: None,
+        }),
+        Leseart::Jsonzeilen => jsonzeilen_aus_bytes(bytes).map(Inhalt::Text),
+        Leseart::Text if !voll => String::from_utf8(bytes)
+            .ok()
+            .map(|text| text_als_inhalt(&name, text, Dateityp::von_pfad(&name, None), tafel)),
+        Leseart::Bild | Leseart::Pdf | Leseart::Text => None,
+    };
+    inhalt.unwrap_or(Inhalt::Hinweis(ersatz))
 }
 
 /// Der Text, den die Vorschau rendert: fuer `appointments.md` im erkannten
@@ -2364,6 +2587,271 @@ mod tests {
         );
     }
 
+    /// Wartet, bis der aktive Tab seinen Auftrag geliefert hat, hoechstens
+    /// zehn Sekunden.
+    fn bis_geliefert(modell: &mut Vorschaumodell) {
+        let beginn = std::time::Instant::now();
+        while modell.laedt_noch() {
+            let _ = modell.einziehen();
+            assert!(
+                beginn.elapsed() < Duration::from_secs(10),
+                "der Arbeitsfaden liefert nicht"
+            );
+            std::thread::sleep(Duration::from_millis(1));
+        }
+    }
+
+    /// Der Inhalt einer grossen Datei aus JSON-Zeilen: mehr als die
+    /// Lesegrenze, jede Zeile ein Datensatz.
+    fn grosse_jsonzeilen() -> String {
+        let zeile = "{\"n\":\"äöü\",\"liste\":[1,2,{\"x\":null}]}\n";
+        zeile.repeat(TEXTGRENZE as usize / zeile.len() + 10)
+    }
+
+    /// Datensatz `261018-0106-eine-jsonl-erscheint-nicht-in-der-vorschau.md`: der Weg, den die Auswahl einer lokalen
+    /// `.jsonl` in der Oberflaeche nimmt, und nicht allein die Aufbereitung.
+    /// `datei_anzeigen` startet den Arbeitsfaden, `einziehen` holt seine
+    /// Meldung ab, und danach traegt der aktive Tab den aufbereiteten Text,
+    /// den Pfad fuer die Einfaerbung und die Nummernspalte.
+    ///
+    /// **Diese Probe war vor der Arbeit am Defekt nicht rot**, und das ist
+    /// ihre Aussage: der Weg zeigt eine `.jsonl` ueber und unter der Grenze
+    /// und eine `.ndjson`. Was der Nutzer sah, lag nicht an diesem Weg,
+    /// sondern daran, dass die Vorschau ausgeblendet war; der Datensatz
+    /// fuehrt die Belege.
+    #[test]
+    fn die_auswahl_einer_jsonl_datei_zeigt_sie_ueber_den_arbeitsfaden() {
+        let ordner = Pruefordner::neu("jsonl-weg");
+        let gross = ordner.pfad().join("entries.jsonl");
+        std::fs::write(&gross, grosse_jsonzeilen()).expect("Probendatei");
+        let klein = ordner.pfad().join("strom.ndjson");
+        std::fs::write(&klein, "{\"a\":1}\n\n{\"b\":[true]}\n").expect("Probendatei");
+        for pfad in [&gross, &klein] {
+            let mut modell = Vorschaumodell::neu();
+            modell.datei_anzeigen(pfad, Tafel::Hell, Arc::default(), None);
+            bis_geliefert(&mut modell);
+            let Inhalt::Text(text) = modell.aktiver_inhalt() else {
+                panic!("{} erscheint nicht als Text", pfad.display());
+            };
+            assert_eq!(
+                *modell.aktiver_inhalt(),
+                laden(pfad, Tafel::Hell, &Profile::default(), None)
+            );
+            assert!(text.contains("// ── 1 ──\n{\n"));
+            assert_eq!(modell.aktiver_pfad().as_deref(), Some(pfad.as_path()));
+            assert!(modell.zeigt_dateitext(), "die Nummernspalte steht");
+            assert_eq!(
+                hervorhebung::art(Some(pfad), Dateityp::von_pfad(pfad, None)),
+                Darstellungsart::Code
+            );
+        }
+    }
+
+    /// Packt `dateien` (Name, Inhalt) mit `/usr/bin/zip` in `ziel`, auf
+    /// Wunsch verschluesselt.
+    fn zip_packen(
+        ordner: &Pruefordner,
+        ziel: &str,
+        dateien: &[(&str, &[u8])],
+        passwort: Option<&str>,
+    ) -> PathBuf {
+        let quelle = ordner.ordner(&format!("{ziel}-quelle"));
+        for (name, inhalt) in dateien {
+            std::fs::write(quelle.join(name), inhalt).expect("Probendatei");
+        }
+        let archiv = ordner.pfad().join(ziel);
+        let mut befehl = std::process::Command::new("/usr/bin/zip");
+        befehl.current_dir(&quelle).arg("-q");
+        if let Some(passwort) = passwort {
+            befehl.args(["-P", passwort]);
+        }
+        befehl.arg(&archiv);
+        for (name, _) in dateien {
+            befehl.arg(name);
+        }
+        assert!(befehl.status().expect("zip laeuft").success(), "zip packt");
+        archiv
+    }
+
+    /// Die Beschreibung einer Datei `name` an der Wurzel des Archivs `datei`.
+    fn archivdatei(
+        datei: &Path,
+        format: krk_core::archiv::Archivformat,
+        name: &str,
+    ) -> Archivangaben {
+        let zugang = Arc::new(krk_core::archiv::Archivzugang::neu(
+            datei.to_path_buf(),
+            format,
+        ));
+        let ort = Archivort::wurzel(zugang)
+            .kind(name)
+            .expect("ein einzelner Name");
+        Archivangaben {
+            angaben: Fernangaben {
+                name: name.to_owned(),
+                ort: ort.to_string(),
+                groesse: None,
+                geaendert: None,
+                typ: Typ::Datei,
+            },
+            ort,
+        }
+    }
+
+    /// Zeigt `eintrag` in einem neuen Modell und wartet auf die Lieferung.
+    fn archiv_geladen(eintrag: &Archivangaben) -> Vorschaumodell {
+        let mut modell = Vorschaumodell::neu();
+        modell.archiv_anzeigen(eintrag, "ANGABEN".to_owned(), Tafel::Hell);
+        assert!(modell.laedt_noch(), "gelesen wird auf dem Arbeitsfaden");
+        bis_geliefert(&mut modell);
+        modell
+    }
+
+    /// Teil 2: eine `.jsonl` in einem Zip erscheint wie dieselbe Datei auf
+    /// der Platte, ueber und unter der Lesegrenze; der Tab haelt keinen Pfad
+    /// auf der Platte, aber den Namen fuer Einfaerbung und Nummernspalte.
+    #[test]
+    fn eine_jsonl_datei_im_zip_erscheint_wie_auf_der_platte() {
+        let ordner = Pruefordner::neu("archiv-jsonl-zip");
+        let gross = grosse_jsonzeilen();
+        let klein = "{\"a\":[1,{}]}\nkein json\n";
+        let archiv = zip_packen(
+            &ordner,
+            "daten.zip",
+            &[
+                ("gross.jsonl", gross.as_bytes()),
+                ("klein.jsonl", klein.as_bytes()),
+            ],
+            None,
+        );
+        for (name, inhalt) in [("gross.jsonl", gross.as_str()), ("klein.jsonl", klein)] {
+            let lokal = ordner.pfad().join(name);
+            std::fs::write(&lokal, inhalt).expect("Vergleichsdatei");
+            let modell = archiv_geladen(&archivdatei(
+                &archiv,
+                krk_core::archiv::Archivformat::Zip,
+                name,
+            ));
+            assert_eq!(
+                *modell.aktiver_inhalt(),
+                laden(&lokal, Tafel::Hell, &Profile::default(), None),
+                "{name} im Zip erscheint wie auf der Platte"
+            );
+            assert_eq!(modell.aktiver_pfad(), None, "kein Pfad auf der Platte");
+            assert_eq!(modell.darstellungspfad(), Some(PathBuf::from(name)));
+            assert!(modell.zeigt_dateitext(), "die Nummernspalte steht");
+        }
+    }
+
+    /// Teil 2: eine `.jsonl.gz` ist ein Archiv mit einem Eintrag, und der
+    /// erscheint aufbereitet; ueber der Grenze hoert das Entpacken auf.
+    #[test]
+    fn eine_jsonl_datei_in_einem_gz_erscheint_aufbereitet() {
+        let ordner = Pruefordner::neu("archiv-jsonl-gz");
+        let lokal = ordner.pfad().join("entries.jsonl");
+        std::fs::write(&lokal, grosse_jsonzeilen()).expect("Probendatei");
+        let stand = std::process::Command::new("/usr/bin/gzip")
+            .arg("-k")
+            .arg(&lokal)
+            .status()
+            .expect("gzip laeuft");
+        assert!(stand.success(), "gzip packt");
+        let archiv = ordner.pfad().join("entries.jsonl.gz");
+        let zugang = Arc::new(krk_core::archiv::Archivzugang::neu(
+            archiv.clone(),
+            krk_core::archiv::Archivformat::Gz,
+        ));
+        let verzeichnis = krk_core::fern::faden("krk-probe".to_owned(), {
+            let zugang = Arc::clone(&zugang);
+            move |pfand| {
+                zugang.verzeichnis(pfand, &AtomicBool::new(false)).map(|v| {
+                    v.kinder(&krk_core::archiv::Innenpfad::wurzel()).map(|k| {
+                        k.map(|e| e.innen.name().unwrap_or_default().to_owned())
+                            .collect::<Vec<_>>()
+                    })
+                })
+            }
+        })
+        .expect("Faden")
+        .join()
+        .expect("Faden endet")
+        .expect("Verzeichnis");
+        assert_eq!(verzeichnis, Some(vec!["entries.jsonl".to_owned()]));
+        let modell = archiv_geladen(&archivdatei(
+            &archiv,
+            krk_core::archiv::Archivformat::Gz,
+            "entries.jsonl",
+        ));
+        assert_eq!(
+            *modell.aktiver_inhalt(),
+            laden(&lokal, Tafel::Hell, &Profile::default(), None)
+        );
+    }
+
+    /// Teil 2: ein verschluesselter Eintrag zeigt die Angaben, ebenso eine
+    /// Textdatei ueber der Grenze und ein PDF; Markdown wird gerendert wie
+    /// auf der Platte.
+    #[test]
+    fn was_im_archiv_nicht_herauskommt_zeigt_die_angaben() {
+        let ordner = Pruefordner::neu("archiv-rueckfall");
+        let geheim = zip_packen(&ordner, "geheim.zip", &[("a.jsonl", b"{}\n")], Some("pw"));
+        let gross = "x".repeat(TEXTGRENZE as usize + 1);
+        let offen = zip_packen(
+            &ordner,
+            "offen.zip",
+            &[
+                ("gross.txt", gross.as_bytes()),
+                ("doku.pdf", b"%PDF-1.4\n"),
+                ("liesmich.md", b"# Titel\n\nText\n"),
+            ],
+            None,
+        );
+        let zip = krk_core::archiv::Archivformat::Zip;
+        for (archiv, name) in [
+            (&geheim, "a.jsonl"),
+            (&offen, "gross.txt"),
+            (&offen, "doku.pdf"),
+        ] {
+            let modell = archiv_geladen(&archivdatei(archiv, zip, name));
+            assert_eq!(
+                *modell.aktiver_inhalt(),
+                Inhalt::Hinweis("ANGABEN".to_owned()),
+                "{name} zeigt die Angaben"
+            );
+            assert!(!modell.zeigt_dateitext());
+        }
+        let lokal = ordner.pfad().join("liesmich.md");
+        std::fs::write(&lokal, "# Titel\n\nText\n").expect("Vergleichsdatei");
+        let modell = archiv_geladen(&archivdatei(&offen, zip, "liesmich.md"));
+        assert_eq!(
+            *modell.aktiver_inhalt(),
+            laden(&lokal, Tafel::Hell, &Profile::default(), None)
+        );
+    }
+
+    /// Ein Tab, der eine Datei im Archiv laedt oder zeigt, wird beim Neuladen
+    /// nach einem Profilwechsel nicht angefasst: sein Name ist kein Pfad, den
+    /// `laden` lesen koennte.
+    #[test]
+    fn ein_archivtab_wird_nicht_neu_geladen() {
+        let ordner = Pruefordner::neu("archiv-neuladen");
+        let archiv = zip_packen(&ordner, "a.zip", &[("t.txt", b"hallo\n")], None);
+        let eintrag = archivdatei(&archiv, krk_core::archiv::Archivformat::Zip, "t.txt");
+        let mut modell = Vorschaumodell::neu();
+        modell.archiv_anzeigen(&eintrag, "ANGABEN".to_owned(), Tafel::Hell);
+        let alle = |_: &Tabstand<'_>| true;
+        assert_eq!(
+            modell.neu_laden_wo(alle, Tafel::Hell, &Arc::default(), None),
+            0
+        );
+        bis_geliefert(&mut modell);
+        assert_eq!(*modell.aktiver_inhalt(), Inhalt::Text("hallo\n".to_owned()));
+        assert_eq!(
+            modell.neu_laden_wo(alle, Tafel::Hell, &Arc::default(), None),
+            0
+        );
+    }
+
     #[test]
     fn ein_ordner_erscheint_als_metadaten() {
         let ordner = Pruefordner::neu("ordner");
@@ -2681,6 +3169,7 @@ mod tests {
             titel: titel_von(pfad),
             inhalt,
             pfad: Some(pfad.to_path_buf()),
+            archivname: None,
             ladevorgang: None,
             folge: None,
         }

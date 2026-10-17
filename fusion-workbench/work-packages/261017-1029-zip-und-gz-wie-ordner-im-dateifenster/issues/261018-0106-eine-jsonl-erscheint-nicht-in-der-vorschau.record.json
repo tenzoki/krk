@@ -1,0 +1,26 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "71afb06b-ef20-4d1c-99f1-13a203d6ab3d",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261017-1029-zip-und-gz-wie-ordner-im-dateifenster/issues/261018-0106-eine-jsonl-erscheint-nicht-in-der-vorschau.md"
+  },
+  "filed_by": {
+    "actor": "code-implementer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "closed",
+    "disposition": {
+      "kind": "rejected",
+      "reason_ref": null
+    }
+  }
+}

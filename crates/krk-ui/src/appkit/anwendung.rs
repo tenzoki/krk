@@ -2640,7 +2640,8 @@ impl Anwendungsdelegierter {
     /// **Ein ferner Eintrag wird nicht gelesen** (Entscheidung 13 des Plans
     /// der sftp-Ordner): die Vorschau zeigt die Angaben, die das Ordnermodell
     /// ueber ihn hat ([`Beschreibung::Fern`]), und der lokale Fall geht den
-    /// Weg, den er vorher ging.
+    /// Weg, den er vorher ging. Eine Datei in einem lokalen Archiv liest die
+    /// Vorschau an, auf ihrem Arbeitsfaden ([`Beschreibung::Archiv`]).
     fn vorschau_fuellen(&self, seite: Fensterseite, beschreibung: Beschreibung) {
         if seite != self.ivars().modell.borrow().aktiv() {
             return;
@@ -2661,6 +2662,7 @@ impl Anwendungsdelegierter {
         match beschreibung {
             Beschreibung::Lokal(pfad) => self.vorschau().datei_anzeigen(pfad),
             Beschreibung::Fern(angaben) => self.vorschau().fern_anzeigen(angaben),
+            Beschreibung::Archiv(eintrag) => self.vorschau().archiv_anzeigen(eintrag),
         }
     }
 
@@ -4485,9 +4487,9 @@ impl Anwendungsdelegierter {
         };
         match dateifenster[aktiv.index()].quelle().beschrieben() {
             Beschreibung::Lokal(beschrieben) => vorschau.zeigt_bildfolge_von(&beschrieben),
-            // Ein ferner Eintrag wird nicht gelesen, also steht fuer ihn keine
-            // Bildfolge.
-            Beschreibung::Fern(_) => false,
+            // Ein ferner Eintrag wird nicht gelesen, und eine Datei im Archiv
+            // ist kein Ordner; fuer keinen steht eine Bildfolge.
+            Beschreibung::Fern(_) | Beschreibung::Archiv(_) => false,
         }
     }
 

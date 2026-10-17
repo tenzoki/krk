@@ -331,7 +331,7 @@ use crate::hervorhebung::{
 };
 use crate::markdown::Quellbezug;
 use crate::vorschaumodell::{
-    Blaetterrichtung, Fernangaben, Inhalt, Metadaten, Tabstand, Vorschaumodell,
+    Archivangaben, Blaetterrichtung, Fernangaben, Inhalt, Metadaten, Tabstand, Vorschaumodell,
     Zwischenablageinhalt, rechte_text,
 };
 
@@ -1308,6 +1308,36 @@ impl Vorschaufenster {
     /// ohne die Rechte, die das Modell nicht kennt, und ohne Groesse und
     /// Datum, wo sie fehlen; formatiert wird mit denselben Formatierern.
     pub fn fern_anzeigen(&self, angaben: &Fernangaben) {
+        let zeilen = self.angabenzeilen(angaben);
+        self.ivars()
+            .modell
+            .borrow_mut()
+            .fern_anzeigen(angaben.name.clone(), zeilen);
+        self.anzeigen();
+    }
+
+    /// Zeigt den Anfang einer Datei in einem lokalen Archiv im aktiven Tab.
+    ///
+    /// Kehrt sofort zurueck wie [`Self::datei_anzeigen`]: gelesen wird auf
+    /// dem Arbeitsfaden des Modells, mit dem Pfand fuer jeden Zugriff auf die
+    /// Archivdatei, und der Zeitgeber holt die Meldung ab. Die Angaben, die
+    /// [`Self::fern_anzeigen`] zeigen wuerde, reisen als Rueckfall mit; sie
+    /// erscheinen, wenn der Eintrag nichts Lesbares hergibt.
+    pub fn archiv_anzeigen(&self, eintrag: &Archivangaben) {
+        let ersatz = self.angabenzeilen(&eintrag.angaben);
+        self.ivars()
+            .modell
+            .borrow_mut()
+            .archiv_anzeigen(eintrag, ersatz, self.ivars().tafel.get());
+        // Aus demselben Grund wie in `datei_anzeigen` allein die Leiste.
+        self.tableiste_nachziehen();
+        self.takt_starten();
+    }
+
+    /// Die Zeilen der Angaben eines Eintrags ohne lokalen Pfad: die der
+    /// Metadaten, ohne die Rechte, die das Ordnermodell nicht kennt, und ohne
+    /// Groesse und Datum, wo sie fehlen.
+    fn angabenzeilen(&self, angaben: &Fernangaben) -> String {
         let mut zeilen = vec![
             satz(Text::MetadatenName, &[("name", &angaben.name)]),
             satz(Text::MetadatenPfad, &[("pfad", &angaben.ort)]),
@@ -1324,11 +1354,7 @@ impl Vorschaufenster {
             Text::MetadatenTyp,
             &[("typ", &typ_beschriften(angaben.typ))],
         ));
-        self.ivars()
-            .modell
-            .borrow_mut()
-            .fern_anzeigen(angaben.name.clone(), zeilen.join("\n"));
-        self.anzeigen();
+        zeilen.join("\n")
     }
 
     /// Zeigt den Inhalt der Zwischenablage im aktiven Tab (C10).
@@ -1707,7 +1733,9 @@ impl Vorschaufenster {
         let heim = heimgriff::lesen(&self.ivars().heim);
         let angaben = {
             let modell = self.ivars().modell.borrow();
-            let pfad = modell.aktiver_pfad();
+            // Der Darstellungspfad und nicht der Pfad der Datei: auch der
+            // Anfang einer Datei im Archiv wird nach ihrer Endung eingefaerbt.
+            let pfad = modell.darstellungspfad();
             einzufaerben(modell.aktiver_inhalt(), pfad.as_deref(), heim.as_ref())
                 .map(|(text, pfad)| (text.to_owned(), pfad.to_path_buf()))
         };
