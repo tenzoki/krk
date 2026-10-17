@@ -177,6 +177,9 @@ pub enum Text {
     /// `verschieben::ueber_datentraeger`: die Quelle liess sich nach der Kopie
     /// nicht entfernen; `{grund}`.
     VorgangKopiertAberInQuelleGeblieben,
+    /// `operation::fern`, Verschieben in ein Archiv: eine lokale Quelle hat
+    /// sich seit dem Zusammenstellen geaendert und bleibt stehen.
+    VorgangQuelleSeitDemLesenVeraendert,
     /// `operation::fern`, Ueberschreiben: der Ersatz ist nicht vollstaendig
     /// angekommen, und das Ziel bleibt, wie es war.
     VorgangErsatzUnvollstaendig,
@@ -268,6 +271,9 @@ pub enum Text {
     ArchivVonAussenVeraendert,
     /// `archiv::umbau`: ein Archiv mit verschluesseltem Eintrag.
     ArchivVerschluesseltNurLesbar,
+    /// `archiv::umbau`: ein Archiv mit einem Eintrag, den ein anderer
+    /// verdeckt, etwa zwei gleichen Namens.
+    ArchivVerdecktNurLesbar,
     /// `archiv::umbau`: ein Format, das allein lesbar ist (gz).
     ArchivNurLesbar,
     /// `archiv::umbau`: ein Zip mit Daten vor dem ersten Eintrag oder ueber
@@ -277,6 +283,8 @@ pub enum Text {
     ArchivTarMitLuecken,
     /// `archiv::umbau`: ein tar, dessen PAX-Kopf eine andere Groesse nennt.
     ArchivTarGroesseAusPax,
+    /// `archiv::umbau`: ein tar mit einem harten Verweis.
+    ArchivTarHarteVerweise,
     /// `archiv::umbau`: die Quelle eines neuen Eintrags hat beim Lesen ihre
     /// Groesse geaendert.
     ArchivQuelleVeraendert,
@@ -1733,7 +1741,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 718] = [
+    pub const ALLE: [Text; 721] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1804,6 +1812,7 @@ impl Text {
         Text::VorgangOrdnerSelbstBlieb,
         Text::VorgangNichtVollstaendigKopiert,
         Text::VorgangKopiertAberInQuelleGeblieben,
+        Text::VorgangQuelleSeitDemLesenVeraendert,
         Text::VorgangErsatzUnvollstaendig,
         Text::VorgangErsatzUnterZwischennamen,
         Text::VorgangQuelleUnterZwischennamen,
@@ -1837,10 +1846,12 @@ impl Text {
         Text::ArchivUnveraendertNachAbbruch,
         Text::ArchivVonAussenVeraendert,
         Text::ArchivVerschluesseltNurLesbar,
+        Text::ArchivVerdecktNurLesbar,
         Text::ArchivNurLesbar,
         Text::ArchivZipUngewoehnlicheForm,
         Text::ArchivTarMitLuecken,
         Text::ArchivTarGroesseAusPax,
+        Text::ArchivTarHarteVerweise,
         Text::ArchivQuelleVeraendert,
         Text::ArchivUmbauZuGross,
         Text::ArchivEintragVerschluesselt,
@@ -2463,9 +2474,6 @@ impl Text {
 pub enum Zahlwort {
     /// Eine Datenmenge unter 1.000 Bytes, hinter `Sprache::menge`.
     Byte,
-    /// `archiv::umbau`: verdeckte Eintraege, die beim Umbau weggefallen
-    /// sind.
-    ArchivVerdeckteWeggefallen,
     /// `neuerungen::startzeile`: die Zahl der neuen Eintraege je Datei;
     /// `{datei}` ist der Dateiname.
     NeuerungenEintraegeIn,
@@ -2573,9 +2581,8 @@ pub enum Zahlwort {
 
 impl Zahlwort {
     /// Alle Zahlwoerter, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Zahlwort; 37] = [
+    pub const ALLE: [Zahlwort; 36] = [
         Zahlwort::Byte,
-        Zahlwort::ArchivVerdeckteWeggefallen,
         Zahlwort::NeuerungenEintraegeIn,
         Zahlwort::HeimZettelUebernommen,
         Zahlwort::MarkeGeaendert,

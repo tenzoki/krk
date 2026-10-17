@@ -117,6 +117,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "contenu déplacé, mais le dossier lui-même est resté\u{a0}: {grund}"
         }
         Text::VorgangNichtVollstaendigKopiert => "copie incomplète, resté dans la source",
+        Text::VorgangQuelleSeitDemLesenVeraendert => "la source a changé depuis sa lecture",
         Text::VorgangKopiertAberInQuelleGeblieben => {
             "copié, mais resté dans la source\u{a0}: {grund}"
         }
@@ -197,6 +198,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::ArchivVerschluesseltNurLesbar => {
             "l’archive contient des entrées chiffrées et n’est pas modifiée"
         }
+        Text::ArchivVerdecktNurLesbar => {
+            "l’archive contient des entrées masquées dans la liste, par exemple deux du même nom, et n’est pas modifiée"
+        }
         Text::ArchivNurLesbar => "cette archive est en lecture seule",
         Text::ArchivZipUngewoehnlicheForm => {
             "le zip contient des données avant sa première entrée ou est réparti en plusieurs parties"
@@ -207,6 +211,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::ArchivTarGroesseAusPax => {
             "le tar indique deux tailles différentes pour une entrée et ne peut pas être réécrit"
         }
+        Text::ArchivTarHarteVerweise => "le tar contient des liens physiques et n’est pas modifié",
         Text::ArchivQuelleVeraendert => "la source a changé de taille pendant la lecture",
         Text::ArchivUmbauZuGross => "l’archive contient plus de {grenze} entrées",
         Text::ArchivEintragVerschluesselt => "l’entrée est chiffrée et ne peut pas être extraite",
@@ -1258,10 +1263,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
 pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &'static str) {
     match schluessel {
         Zahlwort::Byte => ("{n} octet", "{n} octets"),
-        Zahlwort::ArchivVerdeckteWeggefallen => (
-            "une entrée masquée a disparu lors de la réécriture",
-            "{n} entrées masquées ont disparu lors de la réécriture",
-        ),
         Zahlwort::NeuerungenEintraegeIn => ("{n} entrée dans {datei}", "{n} entrées dans {datei}"),
         Zahlwort::HeimZettelUebernommen => (
             "{themen} repris comme note dans {notizen}",

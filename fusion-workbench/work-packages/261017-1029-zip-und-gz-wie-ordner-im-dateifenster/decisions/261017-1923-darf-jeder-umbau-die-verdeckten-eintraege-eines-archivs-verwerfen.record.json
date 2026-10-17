@@ -1,0 +1,26 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "9dbd91a2-7022-4588-8e2a-6dda5a0534fe",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/261017-1029-zip-und-gz-wie-ordner-im-dateifenster/decisions/261017-1923-darf-jeder-umbau-die-verdeckten-eintraege-eines-archivs-verwerfen.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "answer_ref": null,
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

@@ -109,6 +109,37 @@ fn infozip_unix_zeit(zusatzfelder: &[u8]) -> Option<u32> {
     None
 }
 
+/// Ab welcher Groesse ein neuer Zip-Eintrag die ZIP64-Form bekommt.
+///
+/// Die Kiste `zip` bricht einen Eintrag ohne `large_file(true)` ab, sobald
+/// seine Daten `u32::MAX` Bytes ueberschreiten, ungepackt beim Schreiben und
+/// gepackt beim Abschluss; `set_auto_large_file` aendert daran nichts, es
+/// wirkt allein auf den Datenbeschreiber. Gepackte Daten koennen etwas
+/// groesser sein als ungepackte (ein Block, der sich nicht packen laesst,
+/// kostet fuenf Bytes je 64 KiB), deshalb liegt die Schwelle um ein
+/// Zweihundertsechsundfuenfzigstel unter `u32::MAX` und nicht an ihm.
+const ZIP64_AB: u64 = u32::MAX as u64 - (u32::MAX as u64 >> 8);
+
+/// Ob ein neuer Eintrag mit `groesse` Bytes die ZIP64-Form braucht; eine
+/// unbekannte Groesse braucht sie.
+#[must_use]
+pub(crate) fn braucht_zip64(groesse: Option<u64>) -> bool {
+    groesse.is_none_or(|groesse| groesse >= ZIP64_AB)
+}
+
+/// Setzt die ZIP64-Form eines neuen Datei-Eintrags nach [`braucht_zip64`].
+///
+/// Die eine Stelle dieser Regel fuer das Packen (`operation::zippen`) und den
+/// Umbau eines Archivs (`archiv::umbau`). Kleine Eintraege bekommen kein
+/// ZIP64-Feld, damit ein Archiv aus kleinen Dateien so aussieht wie vorher.
+#[must_use = "ohne die Wahl scheitert ein Eintrag ueber 4 GiB"]
+pub(crate) fn grosse_form_waehlen(
+    wahl: FullFileOptions<'static>,
+    groesse: Option<u64>,
+) -> FullFileOptions<'static> {
+    wahl.large_file(braucht_zip64(groesse))
+}
+
 /// Uebernimmt die Rechte der Quelle in die Wahl, notfalls die genannte Vorgabe.
 ///
 /// Ein Archiv, das die Rechte fortwirft, macht aus einem ausfuehrbaren Skript
@@ -866,4 +897,60 @@ pub(crate) fn ende_schreiben<W: Write>(
     ende.extend_from_slice(&kommentarlaenge.to_le_bytes());
     ende.extend_from_slice(kommentar);
     schreiber.write_all(&ende)
+}
+
+#[cfg(test)]
+mod pruefung {
+    use std::io::{Cursor, Write};
+
+    use zip::ZipWriter;
+    use zip::write::FullFileOptions;
+
+    use super::{ZIP64_AB, braucht_zip64, grosse_form_waehlen};
+
+    /// Die Kennungen der Zusatzfelder im ersten lokalen Kopf eines Zip.
+    fn felder_des_ersten_kopfs(daten: &[u8]) -> Vec<u16> {
+        assert_eq!(&daten[..4], b"PK\x03\x04", "kein lokaler Kopf");
+        let name = usize::from(u16::from_le_bytes([daten[26], daten[27]]));
+        let zusatz = usize::from(u16::from_le_bytes([daten[28], daten[29]]));
+        let mut rest = &daten[30 + name..30 + name + zusatz];
+        let mut felder = Vec::new();
+        while rest.len() >= 4 {
+            felder.push(u16::from_le_bytes([rest[0], rest[1]]));
+            let laenge = usize::from(u16::from_le_bytes([rest[2], rest[3]]));
+            rest = &rest[(4 + laenge).min(rest.len())..];
+        }
+        felder
+    }
+
+    fn ein_eintrag(groesse: Option<u64>) -> Vec<u8> {
+        let mut schreiber = ZipWriter::new(Cursor::new(Vec::new()));
+        schreiber
+            .start_file(
+                "a.bin",
+                grosse_form_waehlen(FullFileOptions::default(), groesse),
+            )
+            .expect("Eintrag beginnen");
+        schreiber.write_all(b"abc").expect("schreiben");
+        schreiber.finish().expect("abschliessen").into_inner()
+    }
+
+    /// Eine Datei ueber 4 GiB und eine unbekannter Groesse bekommen die
+    /// ZIP64-Form, und zwar so, dass die Kiste sie in den lokalen Kopf
+    /// schreibt; eine kleine Datei nicht. Ohne die Wahl schriebe die Kiste den
+    /// Eintrag ohne ZIP64-Feld und braeche bei 4 GiB ab (Defekt
+    /// `261017-1923-eine-datei-ueber-4-gib-laesst-sich-in-kein-zip-kopieren.md`).
+    #[test]
+    fn eine_datei_ab_vier_gib_und_eine_unbekannter_groesse_bekommen_zip64() {
+        assert!(braucht_zip64(Some((1 << 32) + 4096)));
+        assert!(braucht_zip64(Some(u64::from(u32::MAX))));
+        assert!(braucht_zip64(Some(ZIP64_AB)));
+        assert!(braucht_zip64(None));
+        assert!(!braucht_zip64(Some(ZIP64_AB - 1)));
+        assert!(!braucht_zip64(Some(0)));
+
+        assert!(felder_des_ersten_kopfs(&ein_eintrag(Some((1 << 32) + 4096))).contains(&0x0001));
+        assert!(felder_des_ersten_kopfs(&ein_eintrag(None)).contains(&0x0001));
+        assert!(!felder_des_ersten_kopfs(&ein_eintrag(Some(3))).contains(&0x0001));
+    }
 }

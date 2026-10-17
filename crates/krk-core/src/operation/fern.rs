@@ -787,11 +787,15 @@ fn aus_dem_archiv_verschieben(
         }
         return Ablauf::Weiter;
     }
-    let zugang = Arc::clone(stelle.leser.borrow().zugang());
+    let (zugang, kennung) = {
+        let leser = stelle.leser.borrow();
+        (Arc::clone(leser.zugang()), leser.verzeichnis().kennung())
+    };
     nachher.push(archiv::Entfernposten::neu(
         zugang,
         stelle.innen.clone(),
         bezeichnung,
+        kennung,
     ));
     Ablauf::Weiter
 }

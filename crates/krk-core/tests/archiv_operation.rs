@@ -1383,3 +1383,282 @@ fn gespeichert_packen(wurzel: &Path, ziel: &Path) {
     }
     schreiber.finish().expect("Zip abschliessen");
 }
+
+/// Eine Datei ueber 4 GiB kommt in ein Zip: der Umbau gibt dem neuen Eintrag
+/// die ZIP64-Form, `/usr/bin/unzip -t` liest das Ergebnis, und das
+/// Inhaltsverzeichnis nennt die volle Groesse. Ohne `large_file` blieb das
+/// Archiv mit „Large file option has not been set“ unveraendert (Defekt
+/// `261017-1923-eine-datei-ueber-4-gib-laesst-sich-in-kein-zip-kopieren.md`).
+#[test]
+#[ignore = "packt 4 GiB Nullen und dauert im Profil dev Minuten"]
+fn eine_datei_ueber_vier_gib_kommt_in_ein_zip() {
+    let ordner = Pruefordner::neu("archiv-gross");
+    let quelle = ordner.ordner("quelle");
+    fs::write(quelle.join("klein.txt"), b"k").expect("klein");
+    let archiv = ordner.unter("gross.zip");
+    zip_packen(&quelle, &archiv);
+    let gross = ordner.unter("gross.bin");
+    File::create(&gross)
+        .expect("anlegen")
+        .set_len((1 << 32) + 4096)
+        .expect("Groesse");
+
+    let ausgang = fahren(
+        Fernauftrag::kopieren(vec![Ort::Lokal(gross)], Ort::Archiv(archivort(&archiv, ""))),
+        Konfliktantwort::Abbrechen,
+    );
+
+    ohne_uebersprungene(&ausgang.bericht);
+    let pruefung = Command::new("/usr/bin/unzip")
+        .arg("-tqq")
+        .arg(&archiv)
+        .status()
+        .expect("unzip");
+    assert!(pruefung.success(), "unzip -t liest das Zip nicht");
+    let mut kiste = zip::ZipArchive::new(File::open(&archiv).expect("Zip")).expect("lesbar");
+    let stelle = kiste.index_for_name("gross.bin").expect("Eintrag");
+    assert_eq!(
+        kiste.by_index(stelle).expect("Eintrag").size(),
+        (1 << 32) + 4096
+    );
+}
+
+/// Wie [`fahren`], und `bei_frage` beantwortet jede Konfliktfrage; was es
+/// dabei tut, geschieht, waehrend der Lauf auf die Antwort wartet.
+fn fahren_mit(auftrag: Fernauftrag, mut bei_frage: impl FnMut() -> Konfliktantwort) -> Bericht {
+    let lauf = starten(auftrag, Arc::new(OhnePapierkorb));
+    let bericht = loop {
+        match lauf
+            .meldungen()
+            .recv_timeout(Duration::from_secs(60))
+            .expect("der Lauf meldet sich nicht")
+        {
+            Meldung::Fortschritt(_) | Meldung::Uebersprungen(_) => {}
+            Meldung::Konflikt { antwort: weg, .. } => {
+                weg.send(Konfliktentscheid::einmal(bei_frage()))
+                    .expect("der Lauf wartet nicht mehr");
+            }
+            Meldung::Fertig(bericht) => break bericht,
+        }
+    };
+    lauf.warten();
+    bericht
+}
+
+/// Ob der Bericht `pfad` mit genau dem Grund `grund` nennt.
+fn nennt(bericht: &Bericht, pfad: &Path, grund: &str) -> bool {
+    bericht
+        .uebersprungen
+        .iter()
+        .any(|eintrag| eintrag.pfad == pfad && eintrag.grund == grund)
+}
+
+/// Eine lokale Quelle, die das Zielarchiv selbst ist oder es enthaelt, wird
+/// vor dem Umbau abgewiesen, beim Verschieben wie beim Kopieren: danach
+/// stehen Archiv und Ordner Byte fuer Byte, und der Bericht nennt die Quelle
+/// mit Grund. Bis dahin ersetzte der Umbau das Archiv, und das Verschieben
+/// entfernte danach die „angekommene“ Quelle, also das neue Archiv oder den
+/// Ordner, der es traegt (Defekt
+/// `261017-1923-verschieben-einer-lokalen-quelle-die-das-zielarchiv-ist-oder-enthaelt-loescht-das-archiv.md`).
+#[test]
+fn eine_lokale_quelle_die_das_zielarchiv_ist_oder_enthaelt_wird_abgewiesen() {
+    let ordner = Pruefordner::neu("archiv-in-sich-selbst");
+    let inhalt_wurzel = ordner.ordner("inhalt");
+    fs::write(inhalt_wurzel.join("wert.txt"), b"wertvoll").expect("wert");
+
+    for (endung, packen) in BESCHREIBBAR {
+        let projekt = ordner.ordner(&format!("projekt-{endung}"));
+        fs::write(projekt.join("x.txt"), b"x").expect("x");
+        let archiv = projekt.join(format!("a.{endung}"));
+        packen(&inhalt_wurzel, &archiv);
+        let vorher = fs::read(&archiv).expect("vorher");
+
+        for verschieben in [true, false] {
+            for quelle in [archiv.clone(), projekt.clone()] {
+                let quellen = vec![Ort::Lokal(quelle.clone())];
+                let ziel = Ort::Archiv(archivort(&archiv, ""));
+                let auftrag = if verschieben {
+                    Fernauftrag::verschieben(quellen, ziel)
+                } else {
+                    Fernauftrag::kopieren(quellen, ziel)
+                };
+                let ausgang = fahren(auftrag, Konfliktantwort::Abbrechen);
+                let fall = format!("{endung}, verschieben {verschieben}, {}", quelle.display());
+                assert_eq!(fs::read(&archiv).expect("nachher"), vorher, "{fall}");
+                assert_eq!(fs::read(projekt.join("x.txt")).expect("x"), b"x", "{fall}");
+                assert!(
+                    nennt(
+                        &ausgang.bericht,
+                        &quelle,
+                        text(Text::VorgangZielLiegtInDerQuelle)
+                    ),
+                    "{fall}: {:?}",
+                    ausgang.bericht.uebersprungen
+                );
+                assert!(zwischennamen(&projekt).is_empty(), "{fall}");
+            }
+        }
+    }
+}
+
+/// Zwei Schreibweisen derselben Archivdatei, eine davon ueber eine
+/// Verknuepfung, sind dasselbe Archiv: ein Ordner, der in seinen eigenen
+/// Unterordner verschoben wird, wird abgewiesen wie im selben Archiv, und
+/// kein Eintrag fehlt. Bis dahin entschied der Pfadtext, kopierte `a` nach
+/// `a/b/a` und entfernte danach `a` samt der Kopie.
+#[test]
+fn zwei_schreibweisen_desselben_archivs_sind_ein_archiv() {
+    let ordner = Pruefordner::neu("archiv-zwei-schreibweisen");
+    let inhalt_wurzel = ordner.ordner("inhalt");
+    fs::create_dir_all(inhalt_wurzel.join("a/b")).expect("a/b");
+    fs::write(inhalt_wurzel.join("a/datei.txt"), b"datei").expect("datei");
+
+    for (endung, packen) in BESCHREIBBAR {
+        let archiv = ordner.unter(&format!("echt.{endung}"));
+        packen(&inhalt_wurzel, &archiv);
+        let verweis = ordner.verknuepfung(&format!("verweis.{endung}"), &archiv);
+        let vorher = fs::read(&archiv).expect("vorher");
+
+        let ausgang = fahren(
+            Fernauftrag::verschieben(
+                vec![Ort::Archiv(archivort(&verweis, "a"))],
+                Ort::Archiv(archivort(&archiv, "a/b")),
+            ),
+            Konfliktantwort::Abbrechen,
+        );
+
+        assert_eq!(fs::read(&archiv).expect("nachher"), vorher, "{endung}");
+        let steht = inhalt(&archiv);
+        assert_eq!(steht["a/datei.txt"].1, b"datei", "{endung}");
+        assert!(steht.contains_key("a/b"), "{endung}");
+        assert!(
+            !ausgang.bericht.uebersprungen.is_empty(),
+            "{endung}: die Abweisung steht nicht im Bericht"
+        );
+    }
+}
+
+/// Das Entfernen nach einem Verschieben aus einem Archiv geschieht allein an
+/// der Datei, aus der kopiert wurde: ersetzt ein anderes Programm das Archiv
+/// waehrend der Konfliktfrage eines zweiten Eintrags, bleibt das ersetzende
+/// Archiv Byte fuer Byte stehen, und der Bericht nennt den kopierten Eintrag
+/// als „kopiert, aber in der Quelle geblieben“ (Defekt
+/// `261017-1923-das-entfernen-nach-dem-verschieben-aus-einem-archiv-prueft-nicht-ob-das-archiv-seit-dem-kopieren-dasselbe-ist.md`).
+#[test]
+fn das_entfernen_nach_dem_verschieben_trifft_allein_das_archiv_aus_dem_kopiert_wurde() {
+    let ordner = Pruefordner::neu("archiv-ersetzt-vor-dem-entfernen");
+    let quelle = ordner.ordner("quelle");
+    fs::write(quelle.join("a.txt"), b"alt-a").expect("a");
+    fs::write(quelle.join("b.txt"), b"alt-b").expect("b");
+    let ersatz_wurzel = ordner.ordner("ersatz");
+    fs::write(ersatz_wurzel.join("a.txt"), b"ersatz-a").expect("a");
+
+    for (endung, packen) in BESCHREIBBAR {
+        let archiv = ordner.unter(&format!("heraus.{endung}"));
+        packen(&quelle, &archiv);
+        let ersatz = ordner.unter(&format!("ersatz.{endung}"));
+        packen(&ersatz_wurzel, &ersatz);
+        let ersatz_bytes = fs::read(&ersatz).expect("ersatz");
+        let ziel = ordner.ordner(&format!("ziel-{endung}"));
+        fs::write(ziel.join("b.txt"), b"am Ziel").expect("b am Ziel");
+
+        let bericht = fahren_mit(
+            Fernauftrag::verschieben(
+                im_archiv(&archiv, &["a.txt", "b.txt"]),
+                Ort::Lokal(ziel.clone()),
+            ),
+            || {
+                // Ein anderes Programm ersetzt das Archiv, wie `ersetzen` es
+                // selbst tut: neben dem Original schreiben, dann `rename`.
+                let daneben = ordner.unter(&format!("daneben.{endung}"));
+                fs::copy(&ersatz, &daneben).expect("daneben");
+                fs::rename(&daneben, &archiv).expect("ersetzen");
+                Konfliktantwort::Ueberspringen
+            },
+        );
+
+        assert_eq!(
+            fs::read(ziel.join("a.txt")).expect("a"),
+            b"alt-a",
+            "{endung}"
+        );
+        assert_eq!(
+            fs::read(&archiv).expect("nachher"),
+            ersatz_bytes,
+            "{endung}: das ersetzende Archiv ist angefasst"
+        );
+        let a_im_archiv = PathBuf::from(format!("{}:/a.txt", archiv.display()));
+        assert!(
+            nennt(
+                &bericht,
+                &a_im_archiv,
+                &satz(
+                    Text::VorgangKopiertAberInQuelleGeblieben,
+                    &[("grund", &text(Text::ArchivVonAussenVeraendert))]
+                )
+            ),
+            "{endung}: {:?}",
+            bericht.uebersprungen
+        );
+    }
+}
+
+/// Ein Verschieben ins Archiv entfernt aus einem lokalen Quellordner allein,
+/// was beim Zusammenstellen darin stand: eine Datei, die waehrend einer
+/// Konfliktfrage hinzukommt, bleibt stehen, mit ihr der Ordner, und der
+/// Bericht nennt ihn; was angekommen ist, ist fort. Bis dahin entfernte
+/// `baum_entfernen` den ganzen Quellordner samt der neuen Datei (Defekt
+/// `261017-1923-verschieben-ins-archiv-entfernt-den-ganzen-quellbaum-auch-was-waehrend-konfliktfragen-und-umbau-hinzukam.md`).
+#[test]
+fn verschieben_ins_archiv_laesst_stehen_was_waehrend_der_konfliktfrage_hinzukam() {
+    let ordner = Pruefordner::neu("archiv-hinein-hinzugekommen");
+    let alt = ordner.ordner("alt");
+    fs::create_dir(alt.join("quelle")).expect("quelle");
+    fs::write(alt.join("quelle/x.txt"), b"alt-x").expect("x");
+
+    for (endung, packen) in BESCHREIBBAR {
+        let archiv = ordner.unter(&format!("ziel.{endung}"));
+        packen(&alt, &archiv);
+        let herkunft = ordner.ordner(&format!("herkunft-{endung}"));
+        let quelle = herkunft.join("quelle");
+        fs::create_dir_all(quelle.join("unter")).expect("unter");
+        fs::write(quelle.join("x.txt"), b"neu-x").expect("x");
+        fs::write(quelle.join("y.txt"), b"neu-y").expect("y");
+        fs::write(quelle.join("unter/z.txt"), b"neu-z").expect("z");
+        let hinzu = quelle.join("hinzu.txt");
+
+        let bericht = fahren_mit(
+            Fernauftrag::verschieben(
+                vec![Ort::Lokal(quelle.clone())],
+                Ort::Archiv(archivort(&archiv, "")),
+            ),
+            || {
+                fs::write(&hinzu, b"waehrend der Frage").expect("hinzu");
+                Konfliktantwort::Ueberschreiben
+            },
+        );
+
+        assert_eq!(bericht.abschluss, Abschluss::Fertig, "{endung}");
+        let steht = inhalt(&archiv);
+        assert_eq!(steht["quelle/x.txt"].1, b"neu-x", "{endung}");
+        assert_eq!(steht["quelle/unter/z.txt"].1, b"neu-z", "{endung}");
+        assert!(!steht.contains_key("quelle/hinzu.txt"), "{endung}");
+        assert_eq!(
+            fs::read(&hinzu).expect("die hinzugekommene Datei ist fort"),
+            b"waehrend der Frage",
+            "{endung}"
+        );
+        for name in ["x.txt", "y.txt", "unter"] {
+            assert!(!quelle.join(name).exists(), "{endung}: {name} blieb");
+        }
+        let vorsatz = satz(Text::VorgangKopiertAberInQuelleGeblieben, &[("grund", &"")]);
+        assert!(
+            bericht
+                .uebersprungen
+                .iter()
+                .any(|eintrag| eintrag.pfad == quelle && eintrag.grund.starts_with(&vorsatz)),
+            "{endung}: {:?}",
+            bericht.uebersprungen
+        );
+    }
+}

@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "078e0f3d-f21d-4b80-a588-8e1e9a9ab5cc",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261017-1029-zip-und-gz-wie-ordner-im-dateifenster/issues/261017-1923-ein-abwurf-auf-eine-ordnerzeile-im-archivfenster-landet-im-angezeigten-ordner.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

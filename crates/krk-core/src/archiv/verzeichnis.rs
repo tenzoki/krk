@@ -21,6 +21,34 @@
 //!   Aenderungsdatum der Archivdatei. Eine Datei, deren Name zugleich ein
 //!   solcher Ordner sein muesste, faellt weg und zaehlt.
 //!
+//! Die drei Regeln, die einen Eintrag mit gueltigem Namen weglassen (der
+//! fruehere von doppelten Namen, der Weg ueber eine Verknuepfung, die Datei,
+//! die einem Ordner weicht), zaehlen ihn zusaetzlich als **verdeckt**
+//! ([`Inhaltsverzeichnis::verdeckt`]). Ein Archiv mit einem verdeckten Eintrag
+//! schreibt KRK nicht um (`archiv::umbau`, Entscheid
+//! `261017-1923-darf-jeder-umbau-die-verdeckten-eintraege-eines-archivs-verwerfen.md`,
+//! Moeglichkeit 3): jeder Umbau liesse ihn sonst fallen oder kaeme beim
+//! Loeschen des verdeckenden wieder hervor.
+//!
+//! # Die Obergrenze fuer die Vorkoepfe eines tar
+//!
+//! Die Kiste `tar` liest einen langen Namen, einen langen Verweis und einen
+//! PAX-Kopf ganz in den Speicher, so gross, wie sein Kopf ihn angibt; ein
+//! tar.gz von wenigen Kilobyte kann so einen Kopf von einem Gigabyte Nullen
+//! tragen. **Jeder Leser eines tar-Stroms geht deshalb ueber
+//! `Kopfwache::naechster`**: waehrend die Kiste den naechsten Eintrag
+//! sucht, darf sie nach jedem Sprung hoechstens `HOECHSTENS_VORKOPF` und
+//! einen Kopf lesen, dann scheitert das Lesen, und das Archiv ist ungueltig
+//! ([`Verzeichnisfehler::Ungueltig`]). Das ist dieselbe Grenze, die der Umbau
+//! an seinen Vorkoepfen haelt. Die Kiste springt vor jedem Kopf (auch um null
+//! Bytes, wenn der Strom `Seek` kann), also faellt jeder Vorkopf einzeln unter
+//! die Grenze; der gepackte Strom bekommt dafuer einen Sprung, der vorwaerts
+//! liest (`Vorwaerts`). Was die Kiste dabei zuteilt, waechst mit dem
+//! Gelesenen und bleibt deshalb unter dem Doppelten der Grenze je Vorkopf.
+//! **Was die Wache nicht begrenzt:** die Erweiterungsbloecke einer GNU-Datei
+//! mit Luecken, die die Kiste nach dem Kopf ohne Sprung liest, fallen unter
+//! dieselbe Zahl, nicht unter eine eigene.
+//!
 //! # Abbruch
 //!
 //! Gefragt wird je Eintrag und, fuer die gepackten Stroeme, je MiB entpackter
@@ -38,6 +66,7 @@
 //! falsche Auskunft (E3 und E11 des Plans
 //! `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`).
 
+use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{self, BufReader, Read, Seek, SeekFrom};
@@ -165,6 +194,7 @@ pub struct Inhaltsverzeichnis {
     stellen: HashMap<Innenpfad, usize>,
     kinder: HashMap<Innenpfad, Vec<usize>>,
     ausgelassen: u64,
+    verdeckt: u64,
     verschluesselt: bool,
 }
 
@@ -204,6 +234,16 @@ impl Inhaltsverzeichnis {
     #[must_use]
     pub fn ausgelassen(&self) -> u64 {
         self.ausgelassen
+    }
+
+    /// Wie viele der [`ausgelassenen`](Self::ausgelassen) Eintraege einen
+    /// gueltigen Namen tragen und von einem anderen verdeckt sind: fruehere von
+    /// doppelten Namen, Eintraege hinter einer Verknuepfung und Dateien, die
+    /// einem Ordner weichen mussten. Ein solches Archiv schreibt KRK nicht um
+    /// (Modulkopf).
+    #[must_use]
+    pub fn verdeckt(&self) -> u64 {
+        self.verdeckt
     }
 
     /// Ob ein Eintrag des Archivs verschluesselt ist. Ein solches Archiv
@@ -252,6 +292,7 @@ impl Sammler {
             zeilen,
             mut ausgelassen,
         } = self;
+        let mut verdeckt = 0;
 
         // Doppelte Namen: der spaetere gilt, ein Ordner geht vor.
         let mut plaetze: Vec<Option<Archiveintrag>> = Vec::with_capacity(zeilen.len());
@@ -260,6 +301,7 @@ impl Sammler {
             match stelle_von.get(&zeile.innen) {
                 Some(&stelle) => {
                     ausgelassen += 1;
+                    verdeckt += 1;
                     let bisher_ordner = plaetze[stelle]
                         .as_ref()
                         .is_some_and(|bisher| matches!(bisher.typ, Typ::Ordner));
@@ -291,6 +333,7 @@ impl Sammler {
                 if durch_verknuepfung {
                     *platz = None;
                     ausgelassen += 1;
+                    verdeckt += 1;
                 }
             }
         }
@@ -312,6 +355,7 @@ impl Sammler {
             if weicht {
                 *platz = None;
                 ausgelassen += 1;
+                verdeckt += 1;
             }
         }
 
@@ -364,6 +408,7 @@ impl Sammler {
             stellen,
             kinder,
             ausgelassen,
+            verdeckt,
             verschluesselt,
         }
     }
@@ -429,6 +474,131 @@ pub(crate) fn abbruch_fragen(abbruch: &AtomicBool) -> Result<(), Verzeichnisfehl
     }
 }
 
+/// Wie gross ein Vorkopf eines tar-Eintrags (langer Name, langer Verweis,
+/// PAX) hoechstens sein darf. Groessere sind kein Name mehr, sondern ein
+/// kaputtes oder feindliches Archiv (Modulkopf).
+pub(crate) const HOECHSTENS_VORKOPF: u64 = 16 * 1024 * 1024;
+
+/// Der Wortlaut, mit dem ein zu grosser Vorkopf ein tar ungueltig macht; in
+/// der Form der Kiste wie jeder andere Grund von [`Verzeichnisfehler::Ungueltig`].
+pub(crate) const VORKOPF_ZU_GROSS: &str = "tar: extension header too large";
+
+/// Haelt die Kiste `tar` beim Suchen des naechsten Eintrags unter
+/// [`HOECHSTENS_VORKOPF`] (Modulkopf).
+///
+/// Scharf ist sie allein waehrend `Kopfwache::naechster`; die Daten eines
+/// Eintrags liest der Rufer danach unbegrenzt. Gezaehlt wird in einem
+/// [`Bewacht`], durch das der Strom der Kiste laeuft.
+#[derive(Debug, Default)]
+pub(crate) struct Kopfwache {
+    scharf: Cell<bool>,
+    seit_sprung: Cell<u64>,
+}
+
+impl Kopfwache {
+    /// Der naechste Eintrag, mit scharfer Wache gesucht.
+    pub(crate) fn naechster<'a, R: Read>(
+        &self,
+        eintraege: &mut tar::Entries<'a, R>,
+    ) -> Option<io::Result<tar::Entry<'a, R>>> {
+        self.seit_sprung.set(0);
+        self.scharf.set(true);
+        let naechster = eintraege.next();
+        self.scharf.set(false);
+        naechster
+    }
+
+    /// Der Strom `innen`, bewacht von dieser Wache.
+    pub(crate) fn bewachen<R>(&self, innen: R) -> Bewacht<'_, R> {
+        Bewacht { innen, wache: self }
+    }
+}
+
+/// Ein Strom unter einer [`Kopfwache`]: zaehlt, was die Kiste seit ihrem
+/// letzten Sprung liest, und laesst das Lesen ueber der Grenze scheitern.
+pub(crate) struct Bewacht<'w, R> {
+    innen: R,
+    wache: &'w Kopfwache,
+}
+
+impl<R: Read> Read for Bewacht<'_, R> {
+    fn read(&mut self, puffer: &mut [u8]) -> io::Result<usize> {
+        if !self.wache.scharf.get() {
+            return self.innen.read(puffer);
+        }
+        let grenze = HOECHSTENS_VORKOPF + 512;
+        let rest = grenze.saturating_sub(self.wache.seit_sprung.get());
+        if rest == 0 && !puffer.is_empty() {
+            return Err(io::Error::other(VORKOPF_ZU_GROSS));
+        }
+        let erlaubt = puffer
+            .len()
+            .min(usize::try_from(rest).unwrap_or(usize::MAX));
+        let gelesen = self.innen.read(&mut puffer[..erlaubt])?;
+        self.wache
+            .seit_sprung
+            .set(self.wache.seit_sprung.get() + gelesen as u64);
+        Ok(gelesen)
+    }
+}
+
+impl<R: Seek> Seek for Bewacht<'_, R> {
+    fn seek(&mut self, stelle: SeekFrom) -> io::Result<u64> {
+        let neu = self.innen.seek(stelle)?;
+        self.wache.seit_sprung.set(0);
+        Ok(neu)
+    }
+}
+
+/// Ein Strom, der allein vorwaerts springt, indem er liest und verwirft: fuer
+/// den gepackten tar-Strom, damit die Kiste auch dort vor jedem Kopf springt
+/// und die [`Kopfwache`] jeden Vorkopf einzeln misst.
+pub(crate) struct Vorwaerts<R> {
+    innen: R,
+    stelle: u64,
+}
+
+impl<R> Vorwaerts<R> {
+    pub(crate) fn neu(innen: R) -> Self {
+        Vorwaerts { innen, stelle: 0 }
+    }
+}
+
+impl<R: Read> Read for Vorwaerts<R> {
+    fn read(&mut self, puffer: &mut [u8]) -> io::Result<usize> {
+        let gelesen = self.innen.read(puffer)?;
+        self.stelle += gelesen as u64;
+        Ok(gelesen)
+    }
+}
+
+impl<R: Read> Seek for Vorwaerts<R> {
+    fn seek(&mut self, ziel: SeekFrom) -> io::Result<u64> {
+        match ziel {
+            SeekFrom::Current(sprung) if sprung >= 0 => {
+                let mut rest = sprung.unsigned_abs();
+                let mut puffer = [0u8; 32 * 1024];
+                while rest > 0 {
+                    let stueck = usize::try_from(rest.min(puffer.len() as u64)).unwrap_or(0);
+                    let gelesen = match self.innen.read(&mut puffer[..stueck]) {
+                        Ok(0) => return Err(io::ErrorKind::UnexpectedEof.into()),
+                        Ok(gelesen) => gelesen,
+                        Err(fehler) if fehler.kind() == io::ErrorKind::Interrupted => continue,
+                        Err(fehler) => return Err(fehler),
+                    };
+                    rest -= gelesen as u64;
+                    self.stelle += gelesen as u64;
+                }
+                Ok(self.stelle)
+            }
+            SeekFrom::Current(_) | SeekFrom::Start(_) | SeekFrom::End(_) => Err(io::Error::new(
+                io::ErrorKind::Unsupported,
+                "tar: the archive reader only seeks forward",
+            )),
+        }
+    }
+}
+
 /// Prueft die zwei Bytes, mit denen jeder gzip-Strom beginnt, und stellt die
 /// Datei danach an den Anfang zurueck.
 ///
@@ -459,17 +629,20 @@ pub(crate) fn tar_lesen(
     sammler: &mut Sammler,
     abbruch: &AtomicBool,
 ) -> Result<(), Verzeichnisfehler> {
-    let mut archiv = tar::Archive::new(Abbruchleser::neu(BufReader::new(datei), abbruch));
+    let wache = Kopfwache::default();
+    let mut archiv =
+        tar::Archive::new(wache.bewachen(Abbruchleser::neu(BufReader::new(datei), abbruch)));
     let eintraege = archiv
         .entries_with_seek()
         .map_err(|fehler| Verzeichnisfehler::aus_strom(fehler, abbruch))?;
-    tar_eintraege_sammeln(eintraege, sammler, abbruch)
+    tar_eintraege_sammeln(eintraege, &wache, sammler, abbruch)
 }
 
 /// Liest das Verzeichnis eines gepackten tar-Stroms.
 ///
 /// Der ganze Strom wird einmal entpackt und verworfen; anders ist das Ende
-/// eines Eintrags in einem gzip-Strom nicht zu finden.
+/// eines Eintrags in einem gzip-Strom nicht zu finden. Gesprungen wird
+/// dabei ueber [`Vorwaerts`], damit die [`Kopfwache`] jeden Vorkopf misst.
 pub(crate) fn tar_gz_lesen(
     mut datei: File,
     sammler: &mut Sammler,
@@ -477,20 +650,23 @@ pub(crate) fn tar_gz_lesen(
 ) -> Result<(), Verzeichnisfehler> {
     gzip_kopf_pruefen(&mut datei)?;
     let strom = MultiGzDecoder::new(BufReader::new(datei));
-    let mut archiv = tar::Archive::new(Abbruchleser::neu(strom, abbruch));
+    let wache = Kopfwache::default();
+    let mut archiv =
+        tar::Archive::new(wache.bewachen(Vorwaerts::neu(Abbruchleser::neu(strom, abbruch))));
     let eintraege = archiv
-        .entries()
+        .entries_with_seek()
         .map_err(|fehler| Verzeichnisfehler::aus_strom(fehler, abbruch))?;
-    tar_eintraege_sammeln(eintraege, sammler, abbruch)
+    tar_eintraege_sammeln(eintraege, &wache, sammler, abbruch)
 }
 
 /// Der gemeinsame Teil von [`tar_lesen`] und [`tar_gz_lesen`].
 fn tar_eintraege_sammeln<R: Read>(
-    eintraege: tar::Entries<'_, R>,
+    mut eintraege: tar::Entries<'_, R>,
+    wache: &Kopfwache,
     sammler: &mut Sammler,
     abbruch: &AtomicBool,
 ) -> Result<(), Verzeichnisfehler> {
-    for eintrag in eintraege {
+    while let Some(eintrag) = wache.naechster(&mut eintraege) {
         abbruch_fragen(abbruch)?;
         let eintrag = eintrag.map_err(|fehler| Verzeichnisfehler::aus_strom(fehler, abbruch))?;
         let kopf = eintrag.header();

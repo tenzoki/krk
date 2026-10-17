@@ -153,7 +153,7 @@ use zip::write::FullFileOptions;
 
 #[cfg(doc)]
 use crate::archiv::zipform::{FELD_ERWEITERTE_ZEIT, FELD_INFOZIP_UNIX};
-use crate::archiv::zipform::{rechte_uebernehmen, zeit_uebernehmen};
+use crate::archiv::zipform::{grosse_form_waehlen, rechte_uebernehmen, zeit_uebernehmen};
 use crate::sprache::{Text, satz, text};
 use crate::verzeichnis::{Typ, lesen};
 
@@ -217,9 +217,11 @@ pub(crate) fn lauf(
             return Abschluss::Fertig;
         }
     };
-    // `set_auto_large_file` schaltet die ZIP64-Form fuer den einzelnen Eintrag
-    // ein, der die 4-GiB-Grenze reisst, und nur fuer ihn. Ohne sie bricht ein
-    // solcher Eintrag mit einem Fehler ab, statt sich packen zu lassen.
+    // `set_auto_large_file` wirkt allein auf den Datenbeschreiber. Die
+    // ZIP64-Form eines Eintrags ueber 4 GiB setzt `dateiwahl` je Datei ueber
+    // `zipform::grosse_form_waehlen`; ohne sie bricht die Kiste einen solchen
+    // Eintrag mit einem Fehler ab (Defekt
+    // `261017-1923-eine-datei-ueber-4-gib-laesst-sich-in-kein-zip-kopieren.md`).
     let mut schreiber = ZipWriter::new(BufWriter::new(datei)).set_auto_large_file();
 
     let stand = quellen_packen(auftrag, &mut schreiber, steuerung);
@@ -565,14 +567,15 @@ fn verknuepfung_packen(
     }
 }
 
-/// Die Wahl fuer einen Dateieintrag: verdichtet, mit den Rechten und dem
-/// Aenderungsdatum der Quelle.
+/// Die Wahl fuer einen Dateieintrag: verdichtet, ab 4 GiB in der ZIP64-Form,
+/// mit den Rechten und dem Aenderungsdatum der Quelle.
 ///
 /// `angaben` ist die Antwort, die [`datei_packen`] schon am offenen Deskriptor
 /// eingeholt hat, und sie wird hier nicht ein zweites Mal am Pfad erfragt.
 #[must_use = "ohne die Wahl traegt der Eintrag weder Rechte noch Datum"]
 fn dateiwahl(angaben: &fs::Metadata) -> FullFileOptions<'static> {
     let wahl = zeit_uebernehmen(FullFileOptions::default(), Some(angaben));
+    let wahl = grosse_form_waehlen(wahl, Some(angaben.len()));
     rechte_uebernehmen(wahl, Some(angaben), 0o644)
 }
 

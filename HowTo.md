@@ -403,7 +403,17 @@ dem Finder nimmt es nicht an.
   Archiv entfernt KRK die Einträge dort am Ende, in einem Umbau je
   Quellarchiv**, und allein die, die vollständig angekommen sind. Scheitert
   dieser letzte Umbau, stehen die Einträge doppelt da, am Ziel und weiter im
-  Archiv, und nicht nirgends; die Abschlussliste nennt sie.
+  Archiv, und nicht nirgends; die Abschlussliste nennt sie. Dasselbe gilt,
+  wenn ein anderes Programm das Archiv ersetzt hat, während KRK kopierte:
+  dann entfernt KRK darin nichts.
+  **Aus einem Ordner auf dem Mac, der ins Archiv verschoben wird, entfernt KRK
+  allein, was beim Zusammenstellen darin stand**, Datei für Datei und nur,
+  wenn sie seitdem unverändert ist. Was während einer Rückfrage oder des
+  Schreibens in den Ordner kommt oder sich dort ändert, bleibt stehen, mit
+  ihm der Ordner, und die Abschlussliste nennt beides.
+  **Das Archiv selbst oder einen Ordner, in dem es liegt, nimmt das Archiv
+  nicht auf**, weder beim Kopieren noch beim Verschieben; die Abschlussliste
+  sagt „das Ziel liegt in der Quelle“.
 - **Umbenennen** (`shift+f6`), **neuer Ordner** (`f7`) und **neue Datei**
   (`ctrl+cmd+n`). Ein vergebener Name wird nie überschrieben, und die
   Statuszeile meldet ihn wie in einem lokalen Ordner.
@@ -441,9 +451,20 @@ ersetzt das alte erst ganz am Ende in einem Schritt. Daraus folgt:
 - **Stürzt KRK mitten im Umbau ab**, bleibt der Zwischenname `.krk-umbau-…`
   als versteckte Datei im Ordner des Archivs liegen; KRK räumt ihn nicht auf,
   und man kann ihn löschen.
-- **Einträge, die das Fenster verdeckt, fallen beim Umbau weg**, etwa der
-  frühere von zwei Einträgen gleichen Namens: sonst holte ein Löschen des
-  späteren den früheren wieder hervor. Die Abschlussliste nennt ihre Zahl.
+- **Ein Archiv mit Einträgen, die die Liste verdeckt, ändert KRK nicht**: der
+  frühere von zwei Einträgen gleichen Namens, eine Datei, die einem
+  gleichnamigen Ordner weichen muss, und ein Eintrag hinter einer Verknüpfung
+  im selben Archiv. Jede Änderung endet dort mit „das Archiv trägt Einträge,
+  die die Liste verdeckt, etwa zwei gleichen Namens, und wird nicht geändert“;
+  herauskopieren lässt sich, was die Liste zeigt. Sonst ließe jede Änderung
+  die verdeckten Einträge fallen, auch an ganz anderer Stelle, oder ein
+  Löschen holte den früheren wieder hervor.
+- **Ein tar mit harten Verweisen ändert KRK ebenso nicht** und meldet „das tar
+  trägt harte Verweise und wird nicht geändert“: ein harter Verweis hat keine
+  eigenen Daten, und ein Löschen oder Umbenennen seines Ziels ließe ihn ins
+  Leere zeigen.
+- **Eine Datei über 4 GiB** kommt in ein Zip in der ZIP64-Form, beim
+  Hineinkopieren wie beim Zippen über das Kontextmenü.
 
 **Was im Archiv nicht geht, oder nur zum Teil:**
 
@@ -473,7 +494,12 @@ ersetzt das alte erst ganz am Ende in einem Schritt. Daraus folgt:
   zstd oder Deflate64), und aus einem tar harte Verweise und Gerätedateien; die
   Abschlussliste nennt jeden mit seinem Grund.
 - **Unsichere Namen**, etwa mit `..`, zeigt KRK nicht; die Statuszeile nennt
-  ihre Zahl. Ein Name mit `/` am Anfang erscheint ohne ihn.
+  ihre Zahl. Ein Name mit `/` am Anfang erscheint ohne ihn. Ein solcher
+  Eintrag hält eine Änderung nicht auf und bleibt dabei unverändert im Archiv.
+- **Ein tar mit einem Namen oder einer Zusatzangabe über 16 MiB** gilt als
+  kaputt und lässt sich nicht betreten; die Statuszeile nennt den Grund. So
+  kann ein kleines `.tar.gz` KRK nicht dazu bringen, Gigabytes in den Speicher
+  zu lesen.
 - **Ein Zip ohne Zeitangaben**, wie es manche Programme unter Windows packen,
   zeigt seine Einträge mit dem Datum 1. Januar 1970.
 

@@ -40,7 +40,7 @@ use krk_core::operation::Konfliktregel;
 use krk_core::operation::fortschritt::{
     Abschluss, Bericht, Konfliktantwort, Konfliktentscheid, Meldung,
 };
-use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
+use krk_core::sprache::{Text, satz, text};
 use krk_core::verzeichnis::Typ;
 use zip::ZipWriter;
 use zip::write::FullFileOptions;
@@ -840,61 +840,188 @@ fn ein_erschlossener_ordner_bleibt_nach_dem_entfernen_seines_letzten_eintrags_st
     }
 }
 
-/// Ein verdeckter Eintrag faellt beim Umbau weg und wird gezaehlt, ein
-/// Eintrag mit unsicherem Namen bleibt Byte fuer Byte (Modulkopf von
-/// `archiv::umbau`, „Was im Fenster nicht steht“): sonst kaeme nach dem
-/// Entfernen von `dup.txt` dessen frueherer Eintrag wieder hervor.
+/// Ein tar aus den genannten Eintraegen, deren Namen roh im Kopf stehen.
+fn tar_roh(archiv: &Path, eintraege: &[(&str, &[u8])]) {
+    let mut daten = Vec::new();
+    {
+        let mut bauer = tar::Builder::new(&mut daten);
+        for (name, inhalt) in eintraege {
+            let mut kopf = tar::Header::new_ustar();
+            kopf.as_old_mut().name[..name.len()].copy_from_slice(name.as_bytes());
+            kopf.set_size(inhalt.len() as u64);
+            kopf.set_mode(0o644);
+            kopf.set_cksum();
+            bauer.append(&kopf, *inhalt).expect("Eintrag");
+        }
+        bauer.finish().expect("tar abschliessen");
+    }
+    if archiv.extension().is_some_and(|endung| endung == "tgz") {
+        daten = gzip_glied(&daten);
+    }
+    fs::write(archiv, daten).expect("Archiv schreiben");
+}
+
+/// Ein Archiv mit einem verdeckten Eintrag wird nicht umgeschrieben, auch
+/// nicht fuer eine Aenderung an ganz anderer Stelle: es bleibt Byte fuer Byte
+/// stehen, und der Bericht nennt den Grund (Entscheid
+/// `261017-1923-darf-jeder-umbau-die-verdeckten-eintraege-eines-archivs-verwerfen.md`,
+/// Moeglichkeit 3). Verdeckt sind der fruehere von doppelten Namen im tar und
+/// ein Eintrag hinter einer Verknuepfung im Zip. Bis dahin liess jeder Umbau
+/// den frueheren `dup.txt` still fallen.
 #[test]
-fn ein_verdeckter_eintrag_faellt_weg_und_ein_unsicherer_bleibt() {
-    for endung in ["tar", "tgz"] {
+fn ein_archiv_mit_verdecktem_eintrag_wird_nicht_umgeschrieben() {
+    for endung in ["tar", "tgz", "zip"] {
         let ordner = Pruefordner::neu(&format!("umbau-verdeckt-{endung}"));
+        let archiv = ordner.unter(&format!("archiv.{endung}"));
+        if endung == "zip" {
+            let mut schreiber = ZipWriter::new(File::create(&archiv).expect("Zip anlegen"));
+            let wahl = FullFileOptions::default();
+            schreiber
+                .add_symlink("a", "anderswo", wahl.clone())
+                .expect("Verknuepfung");
+            schreiber
+                .start_file("a/hinter.txt", wahl.clone())
+                .expect("hinter");
+            schreiber.write_all(b"hinter").expect("hinter");
+            schreiber.start_file("x.txt", wahl).expect("x");
+            schreiber.write_all(b"x").expect("x");
+            schreiber.finish().expect("Zip abschliessen");
+        } else {
+            tar_roh(
+                &archiv,
+                &[
+                    ("dup.txt", b"frueher"),
+                    ("x.txt", b"x"),
+                    ("dup.txt", b"spaeter"),
+                ],
+            );
+        }
+        assert_eq!(verzeichnis(&archiv).verdeckt(), 1, "{endung}");
+        let vorher = fs::read(&archiv).expect("vorher");
+
+        let plan = Umbauplan::neu().mit(Umbauschritt::Entfernen(innen("x.txt")));
+        let fahrt = fahren(&archiv, plan, Konfliktregel::Fragen, Vec::new());
+
+        assert_eq!(fahrt.bericht.abschluss, Abschluss::Fertig, "{endung}");
+        assert_eq!(
+            gruende(&fahrt.bericht, &archiv),
+            [unveraendert_weil(Text::ArchivVerdecktNurLesbar)],
+            "{endung}"
+        );
+        assert_eq!(fs::read(&archiv).expect("nachher"), vorher, "{endung}");
+        assert!(zwischennamen(ordner.pfad()).is_empty(), "{endung}");
+    }
+}
+
+/// Ein Eintrag mit unsicherem Namen ist nicht verdeckt: er kann nie
+/// erscheinen, das Archiv bleibt beschreibbar, und der Eintrag geht Byte fuer
+/// Byte hinueber (Modulkopf von `archiv::umbau`, „Was im Fenster nicht
+/// steht“).
+#[test]
+fn ein_unsicherer_name_bleibt_byte_fuer_byte_und_haelt_den_umbau_nicht_auf() {
+    for endung in ["tar", "tgz"] {
+        let ordner = Pruefordner::neu(&format!("umbau-unsicher-{endung}"));
+        let archiv = ordner.unter(&format!("archiv.{endung}"));
+        tar_roh(
+            &archiv,
+            &[("x.txt", b"x"), ("../boese", b"boese"), ("y.txt", b"y")],
+        );
+        let vorher = verzeichnis(&archiv);
+        assert_eq!(vorher.ausgelassen(), 1, "{endung}: allein ../boese");
+        assert_eq!(vorher.verdeckt(), 0, "{endung}");
+        let boese_vorher = tar_bloecke(&archiv).remove("../boese").expect("../boese");
+
+        let plan = Umbauplan::neu().mit(Umbauschritt::Entfernen(innen("x.txt")));
+        let fahrt = fahren(&archiv, plan, Konfliktregel::Fragen, Vec::new());
+        assert_eq!(fahrt.bericht.abschluss, Abschluss::Fertig, "{endung}");
+        assert!(gruende(&fahrt.bericht, &archiv).is_empty(), "{endung}");
+
+        let nachher = verzeichnis(&archiv);
+        assert_eq!(pfade(&nachher), ["y.txt"], "{endung}");
+        assert_eq!(
+            tar_bloecke(&archiv).remove("../boese"),
+            Some(boese_vorher),
+            "{endung}"
+        );
+    }
+}
+
+/// Baut einen Plan, je Lauf neu, weil ein Plan beim Umbau verbraucht wird.
+type Planbauer = fn() -> Umbauplan;
+
+/// Ein tar mit einem harten Verweis wird nicht umgeschrieben: der Verweis hat
+/// keine eigenen Daten, und ein Umbau, der sein Ziel entfernt oder umbenennt,
+/// liesse ihn ins Leere zeigen. Das Archiv bleibt Byte fuer Byte, und der
+/// Bericht nennt den Grund. Bis dahin verlor ein Loeschen von `a.txt` still
+/// auch `b.txt` (Defekt
+/// `261017-1923-ein-umbau-eines-tar-bricht-harte-verweise-deren-ziel-er-entfernt-oder-umbenennt.md`).
+#[test]
+fn ein_tar_mit_hartem_verweis_wird_nicht_umgeschrieben() {
+    for endung in ["tar", "tgz"] {
+        let ordner = Pruefordner::neu(&format!("umbau-hart-{endung}"));
         let archiv = ordner.unter(&format!("archiv.{endung}"));
         let mut daten = Vec::new();
         {
             let mut bauer = tar::Builder::new(&mut daten);
-            for (name, inhalt) in [
-                ("dup.txt", &b"frueher"[..]),
-                ("x.txt", &b"x"[..]),
-                ("../boese", &b"boese"[..]),
-                ("dup.txt", &b"spaeter"[..]),
-            ] {
-                let mut kopf = tar::Header::new_ustar();
-                kopf.as_old_mut().name[..name.len()].copy_from_slice(name.as_bytes());
-                kopf.set_size(inhalt.len() as u64);
-                kopf.set_mode(0o644);
-                kopf.set_cksum();
-                bauer.append(&kopf, inhalt).expect("Eintrag");
-            }
+            let inhalt = b"der einzige Inhalt";
+            let mut kopf = tar::Header::new_gnu();
+            kopf.set_size(inhalt.len() as u64);
+            kopf.set_mode(0o644);
+            kopf.set_cksum();
+            bauer
+                .append_data(&mut kopf, "a.txt", &inhalt[..])
+                .expect("a");
+            let mut verweis = tar::Header::new_gnu();
+            verweis.set_entry_type(tar::EntryType::Link);
+            verweis.set_size(0);
+            verweis.set_mode(0o644);
+            bauer
+                .append_link(&mut verweis, "b.txt", "a.txt")
+                .expect("b");
             bauer.finish().expect("tar abschliessen");
         }
         if endung == "tgz" {
             daten = gzip_glied(&daten);
         }
-        fs::write(&archiv, daten).expect("Archiv schreiben");
-        let vorher = verzeichnis(&archiv);
-        assert_eq!(
-            vorher.ausgelassen(),
-            2,
-            "{endung}: der fruehere dup.txt und ../boese"
-        );
-        let boese_vorher = tar_bloecke(&archiv).remove("../boese").expect("../boese");
+        fs::write(&archiv, &daten).expect("Archiv schreiben");
+        let vorher = fs::read(&archiv).expect("vorher");
 
-        let plan = Umbauplan::neu().mit(Umbauschritt::Entfernen(innen("dup.txt")));
-        let fahrt = fahren(&archiv, plan, Konfliktregel::Fragen, Vec::new());
-        assert_eq!(fahrt.bericht.abschluss, Abschluss::Fertig, "{endung}");
+        let plaene: [(&str, Planbauer); 2] = [
+            ("Loeschen", || {
+                Umbauplan::neu().mit(Umbauschritt::Entfernen(innen("a.txt")))
+            }),
+            ("Umbenennen", || {
+                Umbauplan::neu().mit(Umbauschritt::Umhaengen {
+                    von: innen("a.txt"),
+                    nach: innen("c.txt"),
+                })
+            }),
+        ];
+        for (was, plan) in plaene {
+            let fahrt = fahren(&archiv, plan(), Konfliktregel::Fragen, Vec::new());
+            assert_eq!(fahrt.bericht.abschluss, Abschluss::Fertig, "{endung} {was}");
+            assert_eq!(
+                gruende(&fahrt.bericht, &archiv),
+                [unveraendert_weil(Text::ArchivTarHarteVerweise)],
+                "{endung} {was}"
+            );
+            assert_eq!(
+                fs::read(&archiv).expect("nachher"),
+                vorher,
+                "{endung} {was}"
+            );
+        }
+        let aus = ordner.ordner("aus");
+        let entpackt = Command::new("/usr/bin/tar")
+            .arg("-xf")
+            .arg(&archiv)
+            .current_dir(&aus)
+            .status()
+            .expect("tar");
+        assert!(entpackt.success(), "{endung}");
         assert_eq!(
-            gruende(&fahrt.bericht, &archiv),
-            [anzahl(Zahlwort::ArchivVerdeckteWeggefallen, 1, &[])],
-            "{endung}"
-        );
-
-        let nachher = verzeichnis(&archiv);
-        assert_eq!(pfade(&nachher), ["x.txt"], "{endung}");
-        assert_eq!(nachher.ausgelassen(), 1, "{endung}: allein ../boese");
-        assert_eq!(
-            tar_bloecke(&archiv).remove("../boese"),
-            Some(boese_vorher),
-            "{endung}"
+            fs::read(aus.join("b.txt")).expect("b"),
+            b"der einzige Inhalt"
         );
     }
 }
@@ -1123,6 +1250,14 @@ fn die_konfliktfragen_kommen_vor_dem_ersten_byte_und_jede_antwort_wirkt() {
 /// einen Deskriptor, den ein Rufer von aussen hereinreicht. Das Schreiben in
 /// die Datei unter dem Zwischennamen, die `ersetzen` dem Umbau reicht, sieht
 /// sie mit Absicht nicht: jene Datei ist das neue Archiv und nicht das alte.
+///
+/// Ebenso ausserhalb ihrer Sicht liegt das Entfernen einer lokalen Quelle
+/// nach einem Verschieben in ein Archiv (`operation/archiv.rs`,
+/// `lokal_entfernen`): es loescht Dateien und Ordner, und dass darunter nie
+/// die Archivdatei selbst oder ein Ordner ist, der sie traegt, haelt nicht
+/// diese Probe, sondern die Abweisung `zielarchiv_in_quelle` vor dem Umbau
+/// und die Probe `eine_lokale_quelle_die_das_zielarchiv_ist_oder_enthaelt_wird_abgewiesen`
+/// in `tests/archiv_operation.rs`.
 #[test]
 fn archiv_ersetzen_ist_der_einzige_schreiber_an_einer_archivdatei() {
     let nadeln = [

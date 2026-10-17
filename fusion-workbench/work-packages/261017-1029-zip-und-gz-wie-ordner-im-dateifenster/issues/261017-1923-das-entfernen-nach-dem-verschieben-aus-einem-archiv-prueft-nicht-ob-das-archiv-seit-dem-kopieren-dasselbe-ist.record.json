@@ -1,0 +1,26 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "02824772-2d88-4d45-9271-a6b6e0d32c29",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261017-1029-zip-und-gz-wie-ordner-im-dateifenster/issues/261017-1923-das-entfernen-nach-dem-verschieben-aus-einem-archiv-prueft-nicht-ob-das-archiv-seit-dem-kopieren-dasselbe-ist.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "closed",
+    "disposition": {
+      "kind": "fixed",
+      "reason_ref": null
+    }
+  }
+}

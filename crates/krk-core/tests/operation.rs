@@ -3470,3 +3470,36 @@ fn eine_zweite_quelle_am_duplizierauftrag_bekommt_den_namen_nicht() {
         ]
     );
 }
+
+/// Eine Datei ueber 4 GiB laesst sich zippen: der Eintrag bekommt die
+/// ZIP64-Form, und `/usr/bin/unzip -t` liest das Ergebnis. Die Datei ist
+/// duenn und belegt keinen Platz; ohne `large_file` brach die Kiste bei 4 GiB
+/// mit „Large file option has not been set“ ab (Defekt
+/// `261017-1923-eine-datei-ueber-4-gib-laesst-sich-in-kein-zip-kopieren.md`).
+#[test]
+#[ignore = "packt 4 GiB Nullen und dauert im Profil dev Minuten"]
+fn eine_datei_ueber_vier_gib_laesst_sich_zippen() {
+    let ordner = Pruefordner::neu("zippen-gross");
+    let gross = ordner.unter("gross.bin");
+    File::create(&gross)
+        .expect("anlegen")
+        .set_len((1 << 32) + 4096)
+        .expect("Groesse");
+    let archiv = ordner.unter("gross.zip");
+
+    let bericht = durchlaufen_ohne_papierkorb(Auftrag::zippen(vec![gross.clone()], &archiv));
+
+    assert!(
+        bericht.uebersprungen.is_empty(),
+        "{:?}",
+        bericht.uebersprungen
+    );
+    let pruefung = std::process::Command::new("/usr/bin/unzip")
+        .arg("-tqq")
+        .arg(&archiv)
+        .status()
+        .expect("unzip");
+    assert!(pruefung.success(), "unzip -t liest das Zip nicht");
+    let mut kiste = zip::ZipArchive::new(File::open(&archiv).expect("Zip")).expect("lesbar");
+    assert_eq!(kiste.by_index(0).expect("Eintrag").size(), (1 << 32) + 4096);
+}

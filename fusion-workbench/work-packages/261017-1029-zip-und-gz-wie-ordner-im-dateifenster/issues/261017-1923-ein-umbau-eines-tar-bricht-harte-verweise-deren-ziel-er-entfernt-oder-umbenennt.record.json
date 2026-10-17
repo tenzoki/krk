@@ -1,0 +1,26 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "21767d2e-8d61-469f-8b7b-d9962e01a3e3",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261017-1029-zip-und-gz-wie-ordner-im-dateifenster/issues/261017-1923-ein-umbau-eines-tar-bricht-harte-verweise-deren-ziel-er-entfernt-oder-umbenennt.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "closed",
+    "disposition": {
+      "kind": "fixed",
+      "reason_ref": null
+    }
+  }
+}

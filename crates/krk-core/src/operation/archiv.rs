@@ -26,11 +26,36 @@
 //! vollstaendig gemeldet hat und das Archiv ersetzt ist.** Vollstaendig heisst
 //! zweierlei: der Schritt endet in `Schrittausgang::Vollstaendig`, und beim
 //! Zusammenstellen ihres Baums ist nichts in den Bericht gekommen, also kein
-//! Kind, das sich nicht lesen liess oder nicht herauskommt. Eine lokale oder
-//! ferne Quelle entfernt danach die Maschine, ohne Abbruchfrage wie
-//! `ueber_die_grenze`; eine Quelle in einem anderen Archiv entfernt ein zweiter
-//! Umbau jenes Archivs. Scheitert er, stehen die Eintraege in beiden Archiven
-//! und nicht in keinem, und der Bericht nennt jeden.
+//! Kind, das sich nicht lesen liess oder nicht herauskommt. Danach gilt je
+//! Herkunft eine eigene Regel:
+//!
+//! - **Lokal wird Eintrag fuer Eintrag entfernt, und allein, was
+//!   zusammengestellt wurde** ([`lokal_entfernen`] ueber die `Lokalspur` des
+//!   Baums): eine Datei oder Verknuepfung nur, wenn Geraet, Inode, Groesse und
+//!   Aenderungszeit noch die beim Zusammenstellen sind, ein Ordner mit
+//!   `rmdir(2)`, das an einem Ordner scheitert, in den inzwischen etwas kam.
+//!   Was stehen bleibt, nennt der Bericht. So faellt nichts mit, was waehrend
+//!   der Konfliktfragen oder des Umbaus in den Quellordner kam.
+//! - Eine ferne Quelle entfernt die Maschine wie bisher als Baum, ohne
+//!   Abbruchfrage wie `ueber_die_grenze`.
+//! - Eine Quelle in einem anderen Archiv entfernt ein zweiter Umbau jenes
+//!   Archivs, **und allein an der Datei, aus der kopiert wurde**
+//!   ([`Entfernposten`] traegt deren Kennung, `umbau::umbauen_an_kennung`).
+//!   Hat ein anderes Programm das Archiv inzwischen ersetzt, entfernt er
+//!   nichts. Scheitert er, stehen die Eintraege in beiden Archiven und nicht
+//!   in keinem, und der Bericht nennt jeden.
+//!
+//! **Eine lokale Quelle, die das Zielarchiv ist oder es enthaelt, wird vor
+//! dem Umbau abgewiesen**, beim Verschieben wie beim Kopieren
+//! ([`zielarchiv_in_quelle`]): verschoben verloere sie mit dem Entfernen das
+//! eben ersetzte Archiv, kopiert stuende das alte Archiv als Datei im neuen.
+//! Verglichen werden Geraet und Inode der Quelle mit denen der aufgeloesten
+//! Archivdatei und jedes ihrer Vorfahren, nicht der Pfadtext; laesst sich
+//! eines davon nicht fragen, wird ebenso abgewiesen. **Ob eine Archivquelle im
+//! Zielarchiv liegt, entscheiden ebenso Geraet und Inode** und nicht der
+//! Pfadtext: zwei Schreibweisen derselben Datei, auch ueber eine
+//! Verknuepfung, sind dasselbe Archiv, und verschoben wird darin durch
+//! Umhaengen.
 //!
 //! **Die Daten einer neuen Datei liest ein eigener Faden**, wenn sie auf einem
 //! Server oder in einem Archiv liegen ([`Zulieferung`]). Der Umbau zieht die
@@ -51,15 +76,18 @@
 //!
 //! # Was dieses Modul nicht haelt
 //!
-//! - Eine lokale Quelle wird beim Verschieben mit `loeschen::baum_entfernen`
-//!   entfernt, wie in `ueber_die_grenze`: was zwischen dem Zusammenstellen und
-//!   dem Entfernen in einen Quellordner kam, faellt mit.
-//! - Ein Kopieren eines Ordners in sich selbst wird im selben Archiv
-//!   abgewiesen, am Innenpfad. Liegt das Zielarchiv in einem lokalen Ordner,
-//!   der hineinkopiert wird, steht das alte Archiv als Datei im neuen.
+//! - Eine **ferne** Quelle wird beim Verschieben als Baum entfernt, wie in
+//!   `ueber_die_grenze`: was zwischen dem Zusammenstellen und dem Entfernen in
+//!   einen fernen Quellordner kam, faellt mit.
+//! - Zwischen der Frage nach Geraet, Inode, Groesse und Zeit einer lokalen
+//!   Datei und ihrem Entfernen liegt kein Schutz: was ein anderes Programm in
+//!   diesem Augenblick in sie schreibt, geht mit ihr.
 
+use std::collections::HashSet;
+use std::fs;
 use std::io::{self, Read};
 use std::ops::ControlFlow;
+use std::os::unix::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{Receiver, sync_channel};
 use std::sync::{Arc, Mutex, PoisonError};
@@ -68,15 +96,16 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::archiv::lesen::lesbarkeit_grund;
 use crate::archiv::umbau::{
-    self, Datenquelle, Geoeffnet, Leer, Neuart, Neueintrag, Schrittausgang, Umbaufehler, Umbauplan,
-    Umbauschritt, Umgebaut,
+    self, Datenquelle, Geoeffnet, Leer, Lokalspur, Neuart, Neueintrag, Schrittausgang, Umbaufehler,
+    Umbauplan, Umbauschritt,
 };
 use crate::archiv::{
-    Archiveintrag, Archivleser, Archivzugang, Inhaltsverzeichnis, Innenpfad, Lesefehler,
+    Archiveintrag, Archivleser, Archivzugang, Dateikennung, Inhaltsverzeichnis, Innenpfad,
+    Lesefehler,
 };
 use crate::fern::{self as fernzugriff, Fernfaden};
 use crate::ort::{Archivort, Ort};
-use crate::sprache::{Text, Zahlwort, anzahl, satz, text};
+use crate::sprache::{Text, satz, text};
 use crate::verzeichnis::Typ;
 
 use super::{
@@ -109,7 +138,10 @@ enum Herkunft {
     /// Aus dem Zielarchiv selbst: verschoben wird durch Umhaengen, und es
     /// bleibt nichts zu entfernen.
     Zielarchiv,
-    /// Lokal oder fern: die Maschine entfernt sie.
+    /// Lokal: entfernt wird Eintrag fuer Eintrag, was die Spur fuehrt
+    /// ([`lokal_entfernen`]).
+    Lokal(Vec<Lokalspur>),
+    /// Fern: die Maschine entfernt sie.
     Stelle(Stelle),
     /// Aus einem anderen Archiv: ein zweiter Umbau entfernt sie.
     Archiv(Entfernposten),
@@ -125,22 +157,69 @@ struct Posten {
 }
 
 /// Ein Eintrag eines Archivs, der nach einem vollstaendigen Kopieren aus dem
-/// Archiv entfernt wird.
+/// Archiv entfernt wird, samt der Kennung der Datei, aus der kopiert wurde.
 pub(super) struct Entfernposten {
     zugang: Arc<Archivzugang>,
     innen: Innenpfad,
     bezeichnung: PathBuf,
+    kennung: Dateikennung,
 }
 
 impl Entfernposten {
-    /// Der Eintrag `innen` im Archiv hinter `zugang`.
-    pub(super) fn neu(zugang: Arc<Archivzugang>, innen: Innenpfad, bezeichnung: PathBuf) -> Self {
+    /// Der Eintrag `innen` im Archiv hinter `zugang`, kopiert aus der Datei
+    /// mit der Kennung `kennung` (die des Inhaltsverzeichnisses, aus dem der
+    /// Leser las).
+    pub(super) fn neu(
+        zugang: Arc<Archivzugang>,
+        innen: Innenpfad,
+        bezeichnung: PathBuf,
+        kennung: Dateikennung,
+    ) -> Self {
         Entfernposten {
             zugang,
             innen,
             bezeichnung,
+            kennung,
         }
     }
+}
+
+/// Ob zwei Pfade dieselbe Datei nennen, an Geraet und Inode nach dem
+/// Aufloesen jeder Verknuepfung. Gleicher Pfadtext ist dieselbe Datei ohne
+/// Frage.
+fn dieselbe_datei(eine: &Path, andere: &Path) -> io::Result<bool> {
+    if eine == andere {
+        return Ok(true);
+    }
+    let (eine, andere) = (fs::metadata(eine)?, fs::metadata(andere)?);
+    Ok(eine.dev() == andere.dev() && eine.ino() == andere.ino())
+}
+
+/// Ob die lokale Quelle `quelle` die Archivdatei `archiv` ist oder sie
+/// enthaelt (Modulkopf).
+///
+/// Die Quelle wird an ihrem eigenen Eintrag gefragt (`lstat(2)`): eine
+/// Verknuepfung wird als Verknuepfung hineingelegt und entfernt, und das
+/// Archiv, auf das sie zeigt, bleibt unberuehrt. Das Archiv wird aufgeloest,
+/// denn der Umbau schreibt an seinem Ziel, und mit ihm jeder seiner
+/// Vorfahren gegen Geraet und Inode der Quelle gehalten.
+///
+/// # Errors
+///
+/// Der Fehler einer der Fragen; der Rufer weist die Quelle dann ab.
+fn zielarchiv_in_quelle(quelle: &Path, archiv: &Path) -> io::Result<bool> {
+    let quelle = fs::symlink_metadata(quelle)?;
+    if quelle.file_type().is_symlink() {
+        return Ok(false);
+    }
+    let archiv = fs::canonicalize(archiv)?;
+    for stufe in archiv.ancestors() {
+        let angaben = fs::metadata(stufe)?;
+        if angaben.dev() == quelle.dev() && angaben.ino() == quelle.ino() {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }
 
 /// Die Leser der Quellarchive dieses Vorgangs, je Archivdatei einer, geteilt
@@ -210,29 +289,45 @@ pub(super) fn hinein(
         }
         let stand = steuerung.uebersprungen_stand();
         let gebaut = match ort {
-            Ort::Archiv(quelle) if quelle.datei() == ziel.datei() => {
-                aus_dem_zielarchiv(pfand, quelle, ziel, verschieben, &mut leser, steuerung)
-            }
-            Ort::Archiv(quelle) => {
-                aus_einem_archiv(pfand, quelle, &ziel.innen, &mut leser, steuerung).map(|schritt| {
-                    schritt.map(|schritt| {
-                        let herkunft = Herkunft::Archiv(Entfernposten::neu(
-                            Arc::clone(&quelle.zugang),
-                            quelle.innen.clone(),
-                            bezeichnung(ort),
-                        ));
-                        (schritt, herkunft)
-                    })
-                })
-            }
-            Ort::Lokal(pfad) => match Neueintrag::lokal(pfand, pfad) {
-                Ok(eintrag) => Ok(Some((
-                    Umbauschritt::Hinzufuegen {
-                        ordner: ziel.innen.clone(),
-                        eintrag,
-                    },
-                    Herkunft::Stelle(Stelle::Lokal(pfad.clone())),
-                ))),
+            Ort::Archiv(quelle) => match dieselbe_datei(quelle.datei(), ziel.datei()) {
+                Ok(true) => {
+                    aus_dem_zielarchiv(pfand, quelle, ziel, verschieben, &mut leser, steuerung)
+                }
+                Ok(false) => aus_einem_archiv(pfand, quelle, &ziel.innen, &mut leser, steuerung)
+                    .map(|schritt| {
+                        schritt.map(|(schritt, kennung)| {
+                            let herkunft = Herkunft::Archiv(Entfernposten::neu(
+                                Arc::clone(&quelle.zugang),
+                                quelle.innen.clone(),
+                                bezeichnung(ort),
+                                kennung,
+                            ));
+                            (schritt, herkunft)
+                        })
+                    }),
+                Err(fehler) => {
+                    steuerung.ueberspringen(&bezeichnung(ort), crate::operation::grund(&fehler));
+                    Ok(None)
+                }
+            },
+            Ort::Lokal(pfad) => match zielarchiv_in_quelle(pfad, ziel.datei()) {
+                Ok(false) => match Neueintrag::lokal_mit_spur(pfand, pfad) {
+                    Ok((eintrag, spur)) => Ok(Some((
+                        Umbauschritt::Hinzufuegen {
+                            ordner: ziel.innen.clone(),
+                            eintrag,
+                        },
+                        Herkunft::Lokal(spur),
+                    ))),
+                    Err(fehler) => {
+                        steuerung.ueberspringen(pfad, crate::operation::grund(&fehler));
+                        Ok(None)
+                    }
+                },
+                Ok(true) => {
+                    steuerung.ueberspringen(pfad, text(Text::VorgangZielLiegtInDerQuelle));
+                    Ok(None)
+                }
                 Err(fehler) => {
                     steuerung.ueberspringen(pfad, crate::operation::grund(&fehler));
                     Ok(None)
@@ -276,7 +371,6 @@ pub(super) fn hinein(
         Ok(umgebaut) => umgebaut,
         Err(fehler) => return umbaufehler_melden(&fehler, ziel.datei(), steuerung),
     };
-    verworfene_melden(&umgebaut, ziel.datei(), steuerung);
 
     let mut aus_archiven = Vec::new();
     for eintrag in posten {
@@ -301,6 +395,7 @@ pub(super) fn hinein(
         }
         match eintrag.herkunft {
             Herkunft::Zielarchiv => {}
+            Herkunft::Lokal(spur) => lokal_entfernen(&spur, steuerung),
             Herkunft::Stelle(stelle) => {
                 // Ohne Abbruchfrage, aus dem Grund in `ueber_die_grenze`.
                 if let Err(fehler) = stelle.baum_entfernen(pfand, &nie_abgebrochen) {
@@ -339,16 +434,44 @@ fn umbaufehler_melden(fehler: &Umbaufehler, archiv: &Path, steuerung: &mut Steue
     }
 }
 
-/// Die Zeile fuer verdeckte Eintraege, die der Umbau weggelassen hat
-/// (Modulkopf von `archiv::umbau`).
-fn verworfene_melden(umgebaut: &Umgebaut, archiv: &Path, steuerung: &mut Steuerung) {
-    if umgebaut.verworfen > 0 {
-        let zeile = anzahl(
-            Zahlwort::ArchivVerdeckteWeggefallen,
-            umgebaut.verworfen,
-            &[],
-        );
-        steuerung.ueberspringen(archiv, zeile);
+/// Entfernt eine lokale Quelle nach ihrer Spur, Kinder vor ihrem Ordner, und
+/// allein, was beim Zusammenstellen dastand (Modulkopf).
+///
+/// Eine Datei oder Verknuepfung geht nur, wenn sie noch dieselbe ist; ein
+/// Ordner geht mit `rmdir(2)`, also nur leer. Was stehen bleibt, kommt mit
+/// Grund in den Bericht; ein Ordner, in dem schon ein Kind stehen blieb, nicht
+/// noch einmal, denn sein Bleiben erklaert das Kind. Ein Eintrag, der schon
+/// fort ist, gilt als entfernt.
+fn lokal_entfernen(spur: &[Lokalspur], steuerung: &mut Steuerung) {
+    let mut geblieben: HashSet<&Path> = HashSet::new();
+    for eintrag in spur {
+        let pfad = eintrag.pfad.as_path();
+        let ausgang = if eintrag.ordner {
+            if geblieben.iter().any(|kind| kind.parent() == Some(pfad)) {
+                geblieben.insert(pfad);
+                continue;
+            }
+            fs::remove_dir(pfad).map_err(|fehler| crate::operation::grund(&fehler))
+        } else {
+            match eintrag.unveraendert() {
+                Ok(true) => {
+                    fs::remove_file(pfad).map_err(|fehler| crate::operation::grund(&fehler))
+                }
+                Ok(false) => Err(text(Text::VorgangQuelleSeitDemLesenVeraendert).to_owned()),
+                Err(fehler) if fehler.kind() == io::ErrorKind::NotFound => Ok(()),
+                Err(fehler) => Err(crate::operation::grund(&fehler)),
+            }
+        };
+        if let Err(warum) = ausgang {
+            steuerung.ueberspringen(
+                pfad,
+                satz(
+                    Text::VorgangKopiertAberInQuelleGeblieben,
+                    &[("grund", &warum)],
+                ),
+            );
+            geblieben.insert(pfad);
+        }
     }
 }
 
@@ -396,18 +519,19 @@ fn aus_dem_zielarchiv(
         return Ok(None);
     }
     let schritt = aus_einem_archiv(pfand, quelle, &ziel.innen, leser, steuerung)?;
-    Ok(schritt.map(|schritt| (schritt, Herkunft::Zielarchiv)))
+    Ok(schritt.map(|(schritt, _)| (schritt, Herkunft::Zielarchiv)))
 }
 
 /// Der Schritt, der den Eintrag `quelle` samt Unterbaum aus seinem Archiv in
-/// den Ordner `ordner` des Zielarchivs bringt.
+/// den Ordner `ordner` des Zielarchivs bringt, mit der Kennung der
+/// Quellarchivdatei, aus der gelesen wird.
 fn aus_einem_archiv(
     pfand: &Fernfaden,
     quelle: &Archivort,
     ordner: &Innenpfad,
     leser: &mut Leserliste,
     steuerung: &mut Steuerung,
-) -> Result<Option<Umbauschritt>, Ablauf> {
+) -> Result<Option<(Umbauschritt, Dateikennung)>, Ablauf> {
     let wo = archivbezeichnung(quelle.datei(), &quelle.innen);
     let geteilt = match leser.fuer(pfand, &quelle.zugang, steuerung) {
         Ok(geteilt) => geteilt,
@@ -433,9 +557,14 @@ fn aus_einem_archiv(
         eintrag,
         steuerung,
     )?;
-    Ok(neu.map(|eintrag| Umbauschritt::Hinzufuegen {
-        ordner: ordner.clone(),
-        eintrag,
+    Ok(neu.map(|eintrag| {
+        (
+            Umbauschritt::Hinzufuegen {
+                ordner: ordner.clone(),
+                eintrag,
+            },
+            verzeichnis.kennung(),
+        )
     }))
 }
 
@@ -623,6 +752,13 @@ fn stelleneintrag_bauen(
 /// nirgends**: das Archiv ist unveraendert (`archiv::umbau`), und der Bericht
 /// nennt jeden Eintrag mit dem Grund. Nach einem Abbruch wird kein Archiv
 /// mehr angefasst, und jeder Eintrag steht ebenso im Bericht.
+///
+/// **Entfernt wird allein an der Datei, aus der kopiert wurde**: der Umbau
+/// laeuft ueber `umbau::umbauen_an_kennung` mit der Kennung der Posten, und
+/// traegt die Archivdatei inzwischen eine andere, entfernt er nichts.
+/// Nennen zwei Posten desselben Archivs verschiedene Kennungen, hat sich das
+/// Archiv schon waehrend des Kopierens geaendert, und es wird ebenso nichts
+/// entfernt.
 pub(super) fn aus_archiven_entfernen(
     pfand: &Fernfaden,
     posten: Vec<Entfernposten>,
@@ -658,12 +794,23 @@ pub(super) fn aus_archiven_entfernen(
             );
             continue;
         }
+        let Some(kennung) = gruppe.first().map(|eintrag| eintrag.kennung) else {
+            continue;
+        };
+        if gruppe.iter().any(|eintrag| eintrag.kennung != kennung) {
+            geblieben(
+                steuerung,
+                &gruppe,
+                &Umbaufehler::VonAussenVeraendert.grund(),
+            );
+            continue;
+        }
         let mut plan = Umbauplan::neu();
         for eintrag in &gruppe {
             let _ = plan.anfuegen(Umbauschritt::Entfernen(eintrag.innen.clone()));
         }
-        match umbau::umbauen(pfand, &zugang, plan, steuerung) {
-            Ok(umgebaut) => verworfene_melden(&umgebaut, zugang.datei(), steuerung),
+        match umbau::umbauen_an_kennung(pfand, &zugang, kennung, plan, steuerung) {
+            Ok(_) => {}
             Err(fehler) => geblieben(steuerung, &gruppe, &fehler.grund()),
         }
     }
@@ -805,7 +952,6 @@ fn im_einen_archiv(
                     Some(Schrittausgang::Ausgelassen) | None => {}
                 }
             }
-            verworfene_melden(&umgebaut, zugang.datei(), steuerung);
             Ablauf::Weiter
         }
         Err(fehler) => match umbaufehler_melden(&fehler, zugang.datei(), steuerung) {

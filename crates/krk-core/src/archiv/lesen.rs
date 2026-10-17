@@ -29,6 +29,11 @@
 //! Schreiber an derselben Datei aendert, solange sie offen ist, sieht die
 //! Frage nicht; ein Zip faengt das an der Pruefsumme, ein tar nicht.
 //!
+//! **Der Lesezeiger sucht unter derselben Obergrenze fuer Vorkoepfe** wie das
+//! Inhaltsverzeichnis (`verzeichnis::Kopfwache`): ein langer Name oder
+//! PAX-Kopf ueber der Grenze macht das Lesen ungueltig, statt ihn ganz in
+//! den Speicher zu holen.
+//!
 //! **Was nicht herauskommt**, sagt die [`Lesbarkeit`] des Eintrags, und zwar
 //! vor jedem Zugriff: ein verschluesselter Eintrag, ein Verfahren, das
 //! `deflate-flate2` nicht entpackt, ein harter Verweis und eine Sonderdatei im
@@ -60,7 +65,8 @@ use crate::verzeichnis::sys::ohne_warten_oeffnen;
 use super::HOECHSTENS_EINTRAEGE;
 use super::innenpfad::Innenpfad;
 use super::verzeichnis::{
-    Archiveintrag, Fundstelle, Inhaltsverzeichnis, Lesbarkeit, Verzeichnisfehler,
+    Archiveintrag, Bewacht, Fundstelle, Inhaltsverzeichnis, Kopfwache, Lesbarkeit,
+    Verzeichnisfehler,
 };
 use super::zipform::zipfehler;
 use super::zugang::{Archivzugang, Dateikennung};
@@ -519,7 +525,7 @@ impl Archivleser {
         &mut self,
         pfand: &Fernfaden,
         versatz: u64,
-        mit: impl FnOnce(&mut tar::Entry<'_, Ausschnitt<'_>>) -> Result<T, Lesefehler>,
+        mit: impl FnOnce(&mut tar::Entry<'_, Bewacht<'_, Ausschnitt<'_>>>) -> Result<T, Lesefehler>,
     ) -> Result<T, Lesefehler> {
         let mut zeiger = match self.offen.take() {
             Some(Offen::Tar(zeiger)) if zeiger.stelle <= versatz => zeiger,
@@ -558,22 +564,23 @@ fn tar_suchen<T>(
     zeiger: &mut Zeiger,
     versatz: u64,
     abbruch: &AtomicBool,
-    mit: impl FnOnce(&mut tar::Entry<'_, Ausschnitt<'_>>) -> Result<T, Lesefehler>,
+    mit: impl FnOnce(&mut tar::Entry<'_, Bewacht<'_, Ausschnitt<'_>>>) -> Result<T, Lesefehler>,
 ) -> Result<T, Lesefehler> {
     let auffuellung = (512 - zeiger.stelle % 512) % 512;
     zeiger
         .vorspulen(auffuellung, abbruch)
         .map_err(|fehler| strom_oder_abbruch(fehler, abbruch))?;
     let basis = zeiger.stelle;
-    let mut archiv = tar::Archive::new(Ausschnitt {
+    let wache = Kopfwache::default();
+    let mut archiv = tar::Archive::new(wache.bewachen(Ausschnitt {
         zeiger,
         basis,
         abbruch,
-    });
-    let eintraege = archiv
+    }));
+    let mut eintraege = archiv
         .entries_with_seek()
         .map_err(|fehler| strom_oder_abbruch(fehler, abbruch))?;
-    for eintrag in eintraege {
+    while let Some(eintrag) = wache.naechster(&mut eintraege) {
         let mut eintrag = eintrag.map_err(|fehler| strom_oder_abbruch(fehler, abbruch))?;
         let kopf = basis + eintrag.raw_header_position();
         if kopf < versatz {

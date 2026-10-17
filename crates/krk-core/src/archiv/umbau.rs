@@ -6,7 +6,8 @@
 //!    │ umbauen(&Fernfaden, &Archivzugang, plan, &mut Steuerung)
 //!    v
 //!  1. Format beschreibbar?        Gz: NurLesbar, vor jedem Zugriff
-//!  2. oeffnen, fstat, Verzeichnis zur Kennung; verschluesselt? abweisen
+//!  2. oeffnen, fstat, Verzeichnis zur Kennung; verschluesselt, verdeckt,
+//!     harte Verweise? abweisen
 //!  3. Aufstellung: jede Konfliktfrage am Verzeichnis     <- kein Byte
 //!  4. ersetzen::ersetzen(ziel, kennung, rechte, |neu| ...)
 //!       Zip:      neue Eintraege ueber die Kiste, dann jeder alte roh
@@ -57,15 +58,29 @@
 //! keinem Namen zusammenstossen. Ein nicht gezeigter Eintrag **mit** einem
 //! gueltigen Pfad ist verdeckt, ein frueherer von doppelten Namen, eine
 //! Datei, die einem Ordner weichen musste, oder ein Eintrag hinter einer
-//! Verknuepfung; behielte der Umbau ihn, kaeme er nach dem Entfernen des
-//! verdeckenden Eintrags wieder hervor, und „Loeschen“ hiesse dann
-//! „Aufdecken“. Er faellt deshalb weg, und der Bericht nennt die Zahl
-//! ([`Umgebaut::verworfen`]).
+//! Verknuepfung. **Ein Archiv mit einem verdeckten Eintrag schreibt der Umbau
+//! nicht** ([`Umbaufehler::Verdeckt`], Entscheid
+//! `261017-1923-darf-jeder-umbau-die-verdeckten-eintraege-eines-archivs-verwerfen.md`,
+//! Moeglichkeit 3): behielte er ihn, kaeme er nach dem Entfernen des
+//! verdeckenden wieder hervor, und „Loeschen“ hiesse „Aufdecken“; verwuerfe er
+//! ihn, entfernte eine Aenderung an einer Stelle Daten an einer anderen, nach
+//! denen niemand gefragt hat. Gefragt wird zweimal: vor der Aufstellung an
+//! [`Inhaltsverzeichnis::verdeckt`] und beim Schreiben an jedem alten Eintrag,
+//! den das Verzeichnis nicht fuehrt und dessen Name ein gueltiger Pfad ist.
 //!
 //! # Was der Umbau nicht schreibt
 //!
 //! Ein Archiv mit einem verschluesselten Eintrag: dass eine rohe Kopie einen
 //! solchen Eintrag unversehrt hinuebertraegt, ist nicht belegt.
+//! Ein Archiv mit einem verdeckten Eintrag (oben).
+//! Ein tar mit einem harten Verweis ([`Unumschreibbar::TarHarteVerweise`]):
+//! ein harter Verweis hat keine eigenen Daten, sondern nennt einen frueheren
+//! Eintrag, und ein Umbau, der jenen entfernt oder umhaengt, liesse den
+//! Verweis ins Leere zeigen. Abgewiesen wird jedes solche tar und nicht allein
+//! der Schritt, der das Ziel beruehrt: das Ziel eines Verweises kann auch ein
+//! Eintrag sein, den das Fenster nicht zeigt, und die vorsichtige Regel braucht
+//! keine Zuordnung von Verweis zu Ziel. Gefragt wird wie beim verdeckten
+//! Eintrag vor der Aufstellung und beim Schreiben.
 //! Eine gz-Datei: [`Schreibform`] hat keinen Fall fuer sie, also gibt es
 //! keinen Schreiber, den der Uebersetzer fuer sie annaehme.
 //! Ein Zip mit Daten vor dem ersten Eintrag oder ueber mehrere Teile, ein tar
@@ -105,7 +120,7 @@ use crate::operation::fortschritt::{
     Abschluss, Bericht, Konfliktantwort, Lauf, Meldung, Steuerung, Uebersprungen,
 };
 use crate::operation::{Konfliktregel, freier_name_unter, grund, name_pruefen};
-use crate::sprache::{Text, Zahlwort, anzahl, satz, text, zahl};
+use crate::sprache::{Text, satz, text, zahl};
 use crate::verzeichnis::Typ;
 use crate::verzeichnis::sys::ohne_warten_oeffnen;
 
@@ -113,16 +128,15 @@ use super::HOECHSTENS_EINTRAEGE;
 use super::ersetzen::ersetzen;
 use super::format::Archivformat;
 use super::innenpfad::Innenpfad;
-use super::verzeichnis::{Abbruchleser, Fundstelle, Inhaltsverzeichnis, Verzeichnisfehler};
+use super::verzeichnis::{
+    Abbruchleser, Fundstelle, HOECHSTENS_VORKOPF, Inhaltsverzeichnis, Lesbarkeit, VORKOPF_ZU_GROSS,
+    Verzeichnisfehler,
+};
 use super::zipform::{self, Zentralsatz};
 use super::zugang::{Archivzugang, Dateikennung};
 
 /// Die Groesse des Puffers, mit dem Daten von einem Archiv ins andere gehen.
 const PUFFER: usize = 256 * 1024;
-
-/// Wie gross ein Vorkopf eines tar-Eintrags (langer Name, PAX) hoechstens
-/// sein darf. Groessere sind kein Name mehr, sondern ein kaputtes Archiv.
-const HOECHSTENS_VORKOPF: u64 = 16 * 1024 * 1024;
 
 // ---------------------------------------------------------------------------
 // Der Plan als Wert
@@ -237,10 +251,23 @@ impl Neueintrag {
     ///
     /// Der Fehler des Systems an `pfad` oder an einem Eintrag darunter.
     pub fn lokal(_pfand: &Fernfaden, pfad: &Path) -> io::Result<Self> {
-        Self::lokal_lesen(pfad)
+        Self::lokal_lesen(pfad, &mut Vec::new())
     }
 
-    fn lokal_lesen(pfad: &Path) -> io::Result<Self> {
+    /// Wie [`Neueintrag::lokal`], und dazu die [`Lokalspur`] jedes Eintrags
+    /// des Baums, Kinder vor ihrem Ordner: das, was ein Verschieben nach dem
+    /// Umbau entfernen darf, und nichts, was erst danach hinzukam.
+    ///
+    /// # Errors
+    ///
+    /// Der Fehler des Systems an `pfad` oder an einem Eintrag darunter.
+    pub fn lokal_mit_spur(_pfand: &Fernfaden, pfad: &Path) -> io::Result<(Self, Vec<Lokalspur>)> {
+        let mut spur = Vec::new();
+        let eintrag = Self::lokal_lesen(pfad, &mut spur)?;
+        Ok((eintrag, spur))
+    }
+
+    fn lokal_lesen(pfad: &Path, spur: &mut Vec<Lokalspur>) -> io::Result<Self> {
         let angaben = fs::symlink_metadata(pfad)?;
         let name = pfad
             .file_name()
@@ -255,12 +282,17 @@ impl Neueintrag {
                 .collect::<io::Result<_>>()?;
             namen.sort();
             for kind in namen {
-                kinder.push(Neueintrag::lokal_lesen(&kind)?);
+                kinder.push(Neueintrag::lokal_lesen(&kind, spur)?);
             }
             Neuart::Ordner(kinder)
         } else {
             Neuart::Datei(Box::new(LokaleDatei::neu(pfad.to_path_buf())))
         };
+        spur.push(Lokalspur {
+            pfad: pfad.to_path_buf(),
+            ordner: angaben.is_dir(),
+            kennung: Dateikennung::aus_angaben(&angaben),
+        });
         Ok(Neueintrag {
             name,
             herkunft: pfad.to_path_buf(),
@@ -268,6 +300,34 @@ impl Neueintrag {
             geaendert: angaben.modified().unwrap_or(UNIX_EPOCH),
             art,
         })
+    }
+}
+
+/// Ein lokaler Eintrag, wie er beim Zusammenstellen eines Baums stand
+/// ([`Neueintrag::lokal_mit_spur`]).
+#[derive(Debug, Clone)]
+pub struct Lokalspur {
+    /// Der Pfad auf der Platte.
+    pub pfad: PathBuf,
+    /// Ob er ein Ordner war; dann entscheidet beim Entfernen `rmdir(2)`, ob
+    /// etwas hinzukam.
+    pub ordner: bool,
+    /// Geraet, Inode, Groesse und Aenderungszeit beim Zusammenstellen, an
+    /// `lstat(2)` gefragt.
+    kennung: Dateikennung,
+}
+
+impl Lokalspur {
+    /// Ob unter dem Pfad noch derselbe Eintrag steht, mit derselben Groesse
+    /// und Aenderungszeit wie beim Zusammenstellen. Bei einem Ordner sagt das
+    /// nichts, denn das Entfernen seiner Kinder aendert seine Zeit.
+    ///
+    /// # Errors
+    ///
+    /// Der Fehler von `lstat(2)` am Pfad.
+    pub fn unveraendert(&self) -> io::Result<bool> {
+        let jetzt = fs::symlink_metadata(&self.pfad)?;
+        Ok(Dateikennung::aus_angaben(&jetzt) == self.kennung)
     }
 }
 
@@ -341,8 +401,6 @@ pub struct Umgebaut {
     pub schritte: Vec<Schrittausgang>,
     /// Je Schritt die Bytes seiner neuen Daten.
     pub bytes: Vec<u64>,
-    /// Wie viele verdeckte Eintraege weggefallen sind (Modulkopf).
-    pub verworfen: u64,
     /// Ob das Archiv ersetzt worden ist; nein, wenn kein Schritt etwas
     /// geaendert haette.
     pub ersetzt: bool,
@@ -357,6 +415,8 @@ pub enum Unumschreibbar {
     TarLuecken,
     /// Ein tar, dessen PAX-Kopf eine andere Groesse nennt als der Kopf.
     TarGroesseAusPax,
+    /// Ein tar mit einem harten Verweis (Modulkopf).
+    TarHarteVerweise,
 }
 
 /// Warum ein Umbau nichts ersetzt hat. Das Archiv ist in jedem Fall
@@ -369,6 +429,8 @@ pub enum Umbaufehler {
     NurLesbar,
     /// Das Archiv traegt einen verschluesselten Eintrag.
     Verschluesselt,
+    /// Das Archiv traegt einen Eintrag, den ein anderer verdeckt (Modulkopf).
+    Verdeckt,
     /// Das Archiv hat sich waehrend des Umbaus von aussen geaendert.
     VonAussenVeraendert,
     /// Das Archiv hat eine Gestalt, die der Umbau nicht treu schreibt.
@@ -395,11 +457,13 @@ impl Umbaufehler {
             Umbaufehler::Abgebrochen => text(Text::ArchivUnveraendertNachAbbruch).to_owned(),
             Umbaufehler::NurLesbar => text(Text::ArchivNurLesbar).to_owned(),
             Umbaufehler::Verschluesselt => text(Text::ArchivVerschluesseltNurLesbar).to_owned(),
+            Umbaufehler::Verdeckt => text(Text::ArchivVerdecktNurLesbar).to_owned(),
             Umbaufehler::VonAussenVeraendert => text(Text::ArchivVonAussenVeraendert).to_owned(),
             Umbaufehler::Unumschreibbar(art) => text(match art {
                 Unumschreibbar::ZipForm => Text::ArchivZipUngewoehnlicheForm,
                 Unumschreibbar::TarLuecken => Text::ArchivTarMitLuecken,
                 Unumschreibbar::TarGroesseAusPax => Text::ArchivTarGroesseAusPax,
+                Unumschreibbar::TarHarteVerweise => Text::ArchivTarHarteVerweise,
             })
             .to_owned(),
             Umbaufehler::Lesen(fehler) => match fehler {
@@ -478,15 +542,38 @@ pub fn umbauen(
     plan: Umbauplan,
     steuerung: &mut Steuerung,
 ) -> Result<Umgebaut, Umbaufehler> {
-    umbauen_mit(pfand, zugang, plan, steuerung, None)
+    umbauen_mit(pfand, zugang, None, plan, steuerung, None)
 }
 
-/// Wie [`umbauen`], und `grenze` laesst das Schreiben nach so vielen Bytes
-/// scheitern wie ein voller Datentraeger. Die Grenze gibt es fuer die Proben;
-/// der Betrieb reicht `None`.
+/// Wie [`umbauen`], und allein an der Datei mit der Kennung `erwartet`: traegt
+/// die Archivdatei beim Oeffnen eine andere, endet der Umbau mit
+/// [`Umbaufehler::VonAussenVeraendert`], bevor er ein Byte schreibt.
+///
+/// Das ist der Weg fuer ein Entfernen nach einem Kopieren aus dem Archiv:
+/// entfernt werden darf allein, was aus genau dieser Datei kopiert ist, und
+/// nicht, was ein anderes Programm inzwischen unter demselben Namen ablegte.
+///
+/// # Errors
+///
+/// [`Umbaufehler`]; das Archiv ist dann in jedem Fall unveraendert.
+pub fn umbauen_an_kennung(
+    pfand: &Fernfaden,
+    zugang: &Archivzugang,
+    erwartet: Dateikennung,
+    plan: Umbauplan,
+    steuerung: &mut Steuerung,
+) -> Result<Umgebaut, Umbaufehler> {
+    umbauen_mit(pfand, zugang, Some(erwartet), plan, steuerung, None)
+}
+
+/// Wie [`umbauen`], mit der erwarteten Kennung aus [`umbauen_an_kennung`], und
+/// `grenze` laesst das Schreiben nach so vielen Bytes scheitern wie ein voller
+/// Datentraeger. Die Grenze gibt es fuer die Proben; der Betrieb reicht
+/// `None`.
 fn umbauen_mit(
     pfand: &Fernfaden,
     zugang: &Archivzugang,
+    erwartet: Option<Dateikennung>,
     plan: Umbauplan,
     steuerung: &mut Steuerung,
     grenze: Option<u64>,
@@ -507,9 +594,24 @@ fn umbauen_mit(
         return Err(Umbaufehler::Lesen(Verzeichnisfehler::KeineDatei));
     }
     let kennung = Dateikennung::aus_angaben(&angaben);
+    if erwartet.is_some_and(|erwartet| erwartet != kennung) {
+        return Err(Umbaufehler::VonAussenVeraendert);
+    }
     let verzeichnis = verzeichnis_zur_kennung(pfand, zugang, &abbruch, kennung)?;
     if verzeichnis.verschluesselt() {
         return Err(Umbaufehler::Verschluesselt);
+    }
+    if verzeichnis.verdeckt() > 0 {
+        return Err(Umbaufehler::Verdeckt);
+    }
+    if verzeichnis
+        .eintraege()
+        .iter()
+        .any(|eintrag| eintrag.lesbarkeit == Lesbarkeit::HarterVerweis)
+    {
+        return Err(Umbaufehler::Unumschreibbar(
+            Unumschreibbar::TarHarteVerweise,
+        ));
     }
 
     let schritte = plan.schritte.len();
@@ -519,7 +621,6 @@ fn umbauen_mit(
         return Ok(Umgebaut {
             schritte: ausgaenge,
             bytes: vec![0; schritte],
-            verworfen: 0,
             ersetzt: false,
         });
     }
@@ -531,7 +632,6 @@ fn umbauen_mit(
     let besitzer = (u64::from(angaben.uid()), u64::from(angaben.gid()));
     let archiv = zugang.datei().to_path_buf();
     let mut bytes = vec![0u64; schritte];
-    let mut verworfen = 0;
     ersetzen(&ziel, kennung, rechte, |datei| {
         let mut aus = Ausgabe {
             datei,
@@ -542,7 +642,7 @@ fn umbauen_mit(
             abbruch: Arc::clone(&abbruch),
         };
         let mut alt = alt;
-        verworfen = match form {
+        match form {
             Schreibform::Zip => zip_schreiben(
                 pfand,
                 &mut alt,
@@ -563,13 +663,12 @@ fn umbauen_mit(
                 besitzer,
                 &mut bytes,
             )?,
-        };
+        }
         Ok(())
     })?;
     Ok(Umgebaut {
         schritte: ausgaenge,
         bytes,
-        verworfen,
         ersetzt: true,
     })
 }
@@ -657,14 +756,6 @@ fn berichten(
                     }
                     Schrittausgang::Ausgelassen => {}
                 }
-            }
-            if umgebaut.verworfen > 0 {
-                let zeile = anzahl(
-                    Zahlwort::ArchivVerdeckteWeggefallen,
-                    umgebaut.verworfen,
-                    &[],
-                );
-                steuerung.ueberspringen(archiv, zeile);
             }
             Abschluss::Fertig
         }
@@ -1434,7 +1525,7 @@ fn zip_schreiben(
     ziele: &Ziele,
     neue: &mut [Neuer],
     bytes: &mut [u64],
-) -> Result<u64, Umbaufehler> {
+) -> Result<(), Umbaufehler> {
     let abbruch = Arc::clone(&aus.abbruch);
 
     let ende = zipform::ende_lesen(alt).map_err(|fehler| zipformfehler(fehler, &abbruch))?;
@@ -1493,14 +1584,12 @@ fn zip_schreiben(
 
     // Die alten Eintraege, roh.
     let mut zentral: Vec<Vec<u8>> = Vec::with_capacity(saetze.len() + neue_saetze.len());
-    let mut verworfen = 0;
     for (nummer, satz) in saetze.iter().enumerate() {
         let wahl = match satz_zu_stelle.get(&nummer) {
             Some(&stelle) => ziele.fuer(verzeichnis, stelle),
-            None if verdeckt(satz.name()) => {
-                verworfen += 1;
-                Altwahl::Weg
-            }
+            // Vor der Aufstellung schon abgewiesen; steht er trotzdem hier,
+            // haben Verzeichnis und Strom verschieden gezaehlt (Modulkopf).
+            None if verdeckt(satz.name()) => return Err(Umbaufehler::Verdeckt),
             None => Altwahl::Roh,
         };
         let name = match wahl {
@@ -1562,8 +1651,7 @@ fn zip_schreiben(
     .map_err(|fehler| schreibfehler(fehler, &abbruch))?;
     puffer
         .flush()
-        .map_err(|fehler| schreibfehler(fehler, &abbruch))?;
-    Ok(verworfen)
+        .map_err(|fehler| schreibfehler(fehler, &abbruch))
 }
 
 /// Ordnet jeden zentralen Satz, den das Verzeichnis zeigt, seiner Stelle im
@@ -1639,6 +1727,7 @@ fn neuen_zip_eintrag<W: Write + Seek>(
         }
         Neudaten::Datei(quelle) => {
             let mut geoeffnet = quelle_oeffnen(quelle, pfand, &neuer.herkunft, abbruch)?;
+            let wahl = zipform::grosse_form_waehlen(wahl, Some(geoeffnet.groesse));
             schreiber.start_file(pfad, wahl).map_err(fehler)?;
             quelle_schreiben(&mut geoeffnet, schreiber, &neuer.herkunft, abbruch)
         }
@@ -1670,7 +1759,7 @@ fn tar_schreiben(
     neue: &mut [Neuer],
     besitzer: (u64, u64),
     bytes: &mut [u64],
-) -> Result<u64, Umbaufehler> {
+) -> Result<(), Umbaufehler> {
     let abbruch = Arc::clone(&aus.abbruch);
     let roh = BufReader::with_capacity(PUFFER, alt);
     let eingang: Box<dyn Read> = if gepackt {
@@ -1687,25 +1776,22 @@ fn tar_schreiben(
         besitzer,
         abbruch: &abbruch,
     };
-    let verworfen = if gepackt {
+    if gepackt {
         let mut packer = GzEncoder::new(puffer, Compression::new(6));
-        let verworfen = strom.schreiben(eingang, &mut packer, neue, bytes)?;
+        strom.schreiben(eingang, &mut packer, neue, bytes)?;
         let mut puffer = packer
             .finish()
             .map_err(|fehler| schreibfehler(fehler, &abbruch))?;
         puffer
             .flush()
-            .map_err(|fehler| schreibfehler(fehler, &abbruch))?;
-        verworfen
+            .map_err(|fehler| schreibfehler(fehler, &abbruch))
     } else {
         let mut puffer = puffer;
-        let verworfen = strom.schreiben(eingang, &mut puffer, neue, bytes)?;
+        strom.schreiben(eingang, &mut puffer, neue, bytes)?;
         puffer
             .flush()
-            .map_err(|fehler| schreibfehler(fehler, &abbruch))?;
-        verworfen
-    };
-    Ok(verworfen)
+            .map_err(|fehler| schreibfehler(fehler, &abbruch))
+    }
 }
 
 /// Was das Schreiben eines tar-Stroms von aussen braucht.
@@ -1794,7 +1880,7 @@ impl Tarstrom<'_> {
         aus: &mut W,
         neue: &mut [Neuer],
         bytes: &mut [u64],
-    ) -> Result<u64, Umbaufehler> {
+    ) -> Result<(), Umbaufehler> {
         let nach_versatz: HashMap<u64, usize> = self
             .verzeichnis
             .eintraege()
@@ -1812,7 +1898,6 @@ impl Tarstrom<'_> {
             .map_err(|fehler| self.lese(fehler))?
             .raw(true);
         let mut gruppe: Vec<Vorkopf> = Vec::new();
-        let mut verworfen = 0;
         for eintrag in eintraege {
             let mut eintrag = eintrag.map_err(|fehler| self.lese(fehler))?;
             let kopf = eintrag.header().clone();
@@ -1821,7 +1906,7 @@ impl Tarstrom<'_> {
                 let groesse = eintrag.size();
                 if groesse > HOECHSTENS_VORKOPF {
                     return Err(Umbaufehler::Lesen(Verzeichnisfehler::Ungueltig(
-                        "tar: extension header too large".to_owned(),
+                        VORKOPF_ZU_GROSS.to_owned(),
                     )));
                 }
                 let mut daten = Vec::new();
@@ -1839,6 +1924,13 @@ impl Tarstrom<'_> {
             if art.is_gnu_sparse() {
                 return Err(Umbaufehler::Unumschreibbar(Unumschreibbar::TarLuecken));
             }
+            // Vor der Aufstellung schon abgewiesen, sofern das Verzeichnis den
+            // Verweis zeigt; hier auch einer mit unsicherem Namen (Modulkopf).
+            if art == EntryType::Link {
+                return Err(Umbaufehler::Unumschreibbar(
+                    Unumschreibbar::TarHarteVerweise,
+                ));
+            }
 
             let pax = self.pax_der_gruppe(&gruppe)?;
             if let Some((_, wert)) = pax.iter().find(|(schluessel, _)| schluessel == b"size") {
@@ -1854,9 +1946,9 @@ impl Tarstrom<'_> {
 
             let wahl = match nach_versatz.get(&eintrag.raw_header_position()) {
                 Some(&stelle) => self.ziele.fuer(self.verzeichnis, stelle),
+                // Wie im Zip: vor der Aufstellung schon abgewiesen.
                 None if verdeckt(&gruppenname(&gruppe, &pax, &kopf)) => {
-                    verworfen += 1;
-                    Altwahl::Weg
+                    return Err(Umbaufehler::Verdeckt);
                 }
                 None => Altwahl::Roh,
             };
@@ -1884,8 +1976,7 @@ impl Tarstrom<'_> {
             }
         }
         aus.write_all(&[0u8; 1024])
-            .map_err(|fehler| self.schreib(fehler))?;
-        Ok(verworfen)
+            .map_err(|fehler| self.schreib(fehler))
     }
 
     fn pax_der_gruppe(&self, gruppe: &[Vorkopf]) -> Result<Paxsaetze, Umbaufehler> {
@@ -2187,7 +2278,7 @@ mod tests {
                             },
                         });
                     let ausgang =
-                        umbauen_mit(pfand, &fuer_faden, plan, &mut steuerung(), Some(grenze));
+                        umbauen_mit(pfand, &fuer_faden, None, plan, &mut steuerung(), Some(grenze));
                     matches!(ausgang, Err(Umbaufehler::Schreiben(fehler)) if fehler.kind() == io::ErrorKind::StorageFull)
                 })
                 .expect("Faden")

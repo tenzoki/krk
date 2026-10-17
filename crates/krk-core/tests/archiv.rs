@@ -832,3 +832,133 @@ fn hunderttausend_zip_eintraege_messen() {
         namen / verzeichnis.eintraege().len()
     );
 }
+
+/// Wie gross der lange Name der Bombe ist: weit ueber der Grenze von 16 MiB,
+/// und so gross, dass die Kiste ohne Grenze ein Gigabyte zuteilte.
+const BOMBENNAME: u64 = 1 << 30;
+
+/// Der Kopf eines GNU-Langnamens mit `groesse` Bytes Daten.
+fn langnamenkopf(groesse: u64) -> tar::Header {
+    let mut kopf = tar::Header::new_gnu();
+    kopf.as_old_mut().name[..13].copy_from_slice(b"././@LongLink");
+    kopf.set_entry_type(tar::EntryType::GNULongName);
+    kopf.set_mode(0o644);
+    kopf.set_size(groesse);
+    kopf.set_cksum();
+    kopf
+}
+
+/// Der Rest eines tar nach dem langen Namen: ein gewoehnlicher Eintrag und
+/// das Ende.
+fn tar_rest() -> Vec<u8> {
+    let mut rest = Vec::new();
+    {
+        let mut bauer = tar::Builder::new(&mut rest);
+        let mut kopf = tar::Header::new_gnu();
+        kopf.set_size(4);
+        kopf.set_mode(0o644);
+        kopf.set_cksum();
+        bauer
+            .append_data(&mut kopf, "da.txt", &b"inhalt"[..4])
+            .expect("Eintrag");
+        bauer.finish().expect("Ende");
+    }
+    rest
+}
+
+/// Ein tar und ein tar.gz, deren erster Kopf einen langen Namen von
+/// [`BOMBENNAME`] Nullen ankuendigt. Das tar steht duenn auf der Platte, das
+/// tar.gz besteht aus vielen gzip-Gliedern zu je 1 MiB Nullen und ist rund ein
+/// Megabyte gross.
+fn bomben_bauen(ordner: &Path) {
+    let tar_pfad = ordner.join("bombe.tar");
+    let mut datei = File::create(&tar_pfad).expect("tar anlegen");
+    datei
+        .write_all(langnamenkopf(BOMBENNAME).as_bytes())
+        .expect("Kopf");
+    datei.set_len(512 + BOMBENNAME).expect("Luecke");
+    use std::io::{Seek, SeekFrom};
+    datei.seek(SeekFrom::End(0)).expect("ans Ende");
+    datei.write_all(&tar_rest()).expect("Rest");
+    drop(datei);
+
+    let mut tgz = File::create(ordner.join("bombe.tgz")).expect("tgz anlegen");
+    tgz.write_all(&gzip_glied(langnamenkopf(BOMBENNAME).as_bytes()))
+        .expect("Kopf");
+    let mebibyte = gzip_glied(&vec![0u8; 1 << 20]);
+    for _ in 0..(BOMBENNAME >> 20) {
+        tgz.write_all(&mebibyte).expect("Nullen");
+    }
+    tgz.write_all(&gzip_glied(&tar_rest())).expect("Rest");
+}
+
+/// Die Bomben lesen und halten, dass jede als ungueltig endet, mit dem
+/// Wortlaut der Grenze.
+fn bomben_lesen(ordner: &Path) {
+    for name in ["bombe.tar", "bombe.tgz"] {
+        match lesen(&ordner.join(name)) {
+            Err(Verzeichnisfehler::Ungueltig(wortlaut)) => {
+                assert_eq!(wortlaut, "tar: extension header too large", "{name}")
+            }
+            anders => panic!("{name}: der lange Name ueber der Grenze ergibt {anders:?}"),
+        }
+    }
+}
+
+/// Ein langer Name ueber der Grenze macht ein tar und ein tar.gz ungueltig,
+/// statt in den Speicher gelesen zu werden, und zwar ohne mehr als einige
+/// Dutzend MiB zu belegen (Defekt
+/// `261017-1923-lange-namen-und-pax-koepfe-im-tar-werden-beim-lesen-ohne-obergrenze-in-den-speicher-gelesen.md`).
+///
+/// Gemessen wird der hoechste Stand des Speichers im Kind ueber
+/// `/usr/bin/time -l`, damit die Probe nicht nur das Ergebnis, sondern auch
+/// das Zuteilen haelt: ohne die Grenze lese die Kiste das Gigabyte Nullen ganz
+/// in einen `Vec` und laese danach den Eintrag dahinter, und das Verzeichnis
+/// entstuende mit einem ausgelassenen Namen.
+#[test]
+fn ein_langer_name_ueber_der_grenze_macht_das_tar_ungueltig_ohne_ihn_zu_lesen() {
+    let ordner = Pruefordner::neu("archiv-langnamenbombe");
+    bomben_bauen(ordner.pfad());
+
+    let selbst = std::env::current_exe().expect("die Testdatei kennt ihren Pfad nicht");
+    let name = "kind_liest_die_langnamenbomben";
+    let ergebnis = Command::new("/usr/bin/time")
+        .arg("-l")
+        .arg(&selbst)
+        .args([
+            "--exact",
+            "--ignored",
+            "--nocapture",
+            "--test-threads",
+            "1",
+            name,
+        ])
+        .env(gemeinsam::KINDAUFTRAG, ordner.pfad())
+        .output()
+        .expect("das Kind laesst sich starten");
+    let stdout = String::from_utf8_lossy(&ergebnis.stdout);
+    let stderr = String::from_utf8_lossy(&ergebnis.stderr);
+    assert!(
+        ergebnis.status.success() && stdout.contains("test result: ok. 1 passed;"),
+        "das Kind `{name}` ist nicht als genau ein Kind gelaufen\n{stdout}\n{stderr}"
+    );
+    let spitze: u64 = stderr
+        .lines()
+        .find(|zeile| zeile.contains("maximum resident set size"))
+        .and_then(|zeile| zeile.split_whitespace().next())
+        .and_then(|zahl| zahl.parse().ok())
+        .unwrap_or_else(|| panic!("`time -l` nennt keinen Hoechststand:\n{stderr}"));
+    assert!(
+        spitze < 160 * 1024 * 1024,
+        "das Lesen der Bomben belegte {spitze} Bytes"
+    );
+}
+
+#[test]
+#[ignore = "Kindprobe, vom Elternteil ueber KRK_KINDPROBE_AUFTRAG gestartet"]
+fn kind_liest_die_langnamenbomben() {
+    let Some(ordner) = gemeinsam::kindauftrag() else {
+        return;
+    };
+    bomben_lesen(&ordner);
+}

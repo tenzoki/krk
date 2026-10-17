@@ -99,6 +99,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::VorgangOrdnerSelbstBlieb => "contents moved, but the folder itself remained: {grund}",
         Text::VorgangNichtVollstaendigKopiert => "not completely copied, left in the source",
+        Text::VorgangQuelleSeitDemLesenVeraendert => "the source changed since it was read",
         Text::VorgangKopiertAberInQuelleGeblieben => "copied, but left in the source: {grund}",
         Text::VorgangErsatzUnvollstaendig => "not completely copied, the destination is unchanged",
         Text::VorgangErsatzUnterZwischennamen => {
@@ -169,6 +170,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::ArchivVerschluesseltNurLesbar => {
             "the archive contains encrypted entries and is not changed"
         }
+        Text::ArchivVerdecktNurLesbar => {
+            "the archive contains entries hidden from the list, such as two with the same name, and is not changed"
+        }
         Text::ArchivNurLesbar => "this archive is read-only",
         Text::ArchivZipUngewoehnlicheForm => {
             "the zip has data before its first entry or is split into several parts"
@@ -179,6 +183,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::ArchivTarGroesseAusPax => {
             "the tar gives two different sizes for one entry and cannot be rewritten"
         }
+        Text::ArchivTarHarteVerweise => "the tar contains hard links and is not changed",
         Text::ArchivQuelleVeraendert => "the source changed its size while being read",
         Text::ArchivUmbauZuGross => "the archive has more than {grenze} entries",
         Text::ArchivEintragVerschluesselt => "the entry is encrypted and cannot be extracted",
@@ -1119,10 +1124,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
 pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &'static str) {
     match schluessel {
         Zahlwort::Byte => ("{n} byte", "{n} bytes"),
-        Zahlwort::ArchivVerdeckteWeggefallen => (
-            "one hidden entry was dropped while rewriting",
-            "{n} hidden entries were dropped while rewriting",
-        ),
         Zahlwort::NeuerungenEintraegeIn => ("{n} entry in {datei}", "{n} entries in {datei}"),
         Zahlwort::HeimZettelUebernommen => (
             "{themen} taken over as a note into {notizen}",

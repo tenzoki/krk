@@ -105,6 +105,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VorgangNichtVollstaendigKopiert => {
             "nicht vollständig kopiert, in der Quelle geblieben"
         }
+        Text::VorgangQuelleSeitDemLesenVeraendert => "die Quelle hat sich seit dem Lesen geändert",
         Text::VorgangKopiertAberInQuelleGeblieben => {
             "kopiert, aber in der Quelle geblieben: {grund}"
         }
@@ -179,6 +180,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::ArchivVerschluesseltNurLesbar => {
             "das Archiv trägt verschlüsselte Einträge und wird nicht geändert"
         }
+        Text::ArchivVerdecktNurLesbar => {
+            "das Archiv trägt Einträge, die die Liste verdeckt, etwa zwei gleichen Namens, und wird nicht geändert"
+        }
         Text::ArchivNurLesbar => "dieses Archiv ist allein lesbar",
         Text::ArchivZipUngewoehnlicheForm => {
             "das Zip hat Daten vor seinem ersten Eintrag oder ist auf mehrere Teile verteilt"
@@ -189,6 +193,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::ArchivTarGroesseAusPax => {
             "das tar nennt für einen Eintrag zwei verschiedene Größen und lässt sich nicht umschreiben"
         }
+        Text::ArchivTarHarteVerweise => "das tar trägt harte Verweise und wird nicht geändert",
         Text::ArchivQuelleVeraendert => "die Quelle hat beim Lesen ihre Größe geändert",
         Text::ArchivUmbauZuGross => "das Archiv führt mehr als {grenze} Einträge",
         Text::ArchivEintragVerschluesselt => "der Eintrag ist verschlüsselt und kommt nicht heraus",
@@ -1169,10 +1174,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
 pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &'static str) {
     match schluessel {
         Zahlwort::Byte => ("{n} Byte", "{n} Bytes"),
-        Zahlwort::ArchivVerdeckteWeggefallen => (
-            "ein verdeckter Eintrag ist beim Umschreiben weggefallen",
-            "{n} verdeckte Einträge sind beim Umschreiben weggefallen",
-        ),
         Zahlwort::NeuerungenEintraegeIn => ("{n} Eintrag in {datei}", "{n} Einträge in {datei}"),
         Zahlwort::HeimZettelUebernommen => (
             "{themen} als Notiz in {notizen} übernommen",

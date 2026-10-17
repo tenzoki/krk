@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "4c5c81c1-c1a2-4ad8-a882-247bee9c224c",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261017-1029-zip-und-gz-wie-ordner-im-dateifenster/issues/261017-1923-der-text-archiv-nur-lesbar-steht-als-kleingeschriebener-satzrest-in-der-statuszeile.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

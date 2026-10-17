@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "b2ce4f65-e199-4ae4-95d9-1fd12e64e566",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261017-1029-zip-und-gz-wie-ordner-im-dateifenster/issues/261017-1923-der-vorgangsstatus-sagt-abgebrochen-obwohl-das-archiv-ersetzt-und-die-quellen-entfernt-sind.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

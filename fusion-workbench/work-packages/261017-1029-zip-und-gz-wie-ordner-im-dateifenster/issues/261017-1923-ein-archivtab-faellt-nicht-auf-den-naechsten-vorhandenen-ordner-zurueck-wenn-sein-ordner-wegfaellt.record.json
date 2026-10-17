@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "494c8299-c617-4122-baf6-5aac357d2039",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261017-1029-zip-und-gz-wie-ordner-im-dateifenster/issues/261017-1923-ein-archivtab-faellt-nicht-auf-den-naechsten-vorhandenen-ordner-zurueck-wenn-sein-ordner-wegfaellt.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}
