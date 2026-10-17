@@ -742,6 +742,40 @@ zeroize = { version = "~1.9", default-features = false, features = ["alloc"] }
 # denen `HOECHSTENS_BYTES_JE_FOTO` ruht, gelten fuer genau diesen Quelltext.
 # Wer die Fassung hebt, misst sie neu.
 kamadak-exif = { version = "=0.6.1", default-features = false }
+# Das tar-Format fuer `.tar`, `.tar.gz` und `.tgz` als Ort im Dateifenster
+# (Arbeitspaket `261017-1029-zip-und-gz-wie-ordner-im-dateifenster`, Entscheid
+# `261017-1036-liest-und-schreibt-krk-tar-ueber-die-kiste-tar-oder-ueber-einen-eigenen-leser.md`,
+# Moeglichkeit 1). Die Kiste liest und schreibt ustar, die Koepfe nach PAX und
+# die langen Namen nach GNU, prueft die Kopfsumme und baut lange Namen beim
+# Schreiben selbst; ein eigener Leser muesste genau diese Fallen selbst
+# pflegen, und jede Luecke faende erst der Nutzer an einem fremden Archiv. Den
+# gzip-Strom darum herum bringt `flate2` schon mit (`MultiGzDecoder`,
+# `GzEncoder`); fuer tar.gz kommt deshalb keine zweite Kiste dazu.
+#
+# **`default-features = false` laesst `xattr` weg**, das einzige Merkmal. Es
+# liest und schreibt erweiterte Attribute beim Entpacken auf die Platte, das
+# KRK ueber die Kiste nie tut, und braechte die Kiste `xattr` mit ihren
+# eigenen Abhaengigkeiten herein.
+#
+# **Was die Kiste mitbringt, ist gezaehlt und nicht geschaetzt.** Am 261017 auf
+# diesem Geraet erhoben, mit `cargo tree --workspace --target <ziel> -e
+# normal,build` vor und nach der Aufnahme:
+#
+# - **Ein neues Paket je Mac-Ziel**, die Kiste selbst; ihre zwei
+#   Abhaengigkeiten `filetime` und `libc` standen schon ueber `gix` und
+#   `objc2` im Baum. `Cargo.lock` fuehrt danach allein `tar` als neues Paket.
+# - **Weder `cc` noch ein `-sys`-Paket kommt hinzu.** Auf den beiden
+#   Mac-Zielen kommt weder `cc` noch ein Paket mit einem Namen auf `-sys` im
+#   Baum an; `Cargo.lock` fuehrt daneben `windows-sys` und `linux-raw-sys`,
+#   beide an fremden Zielen. Pruefmittel ist `cargo tree --target <ziel> -e
+#   normal,build` und nicht ein `grep` ueber `Cargo.lock`. Die Kiste traegt
+#   kein `build.rs`.
+#
+# **Die Fassung ist auf `=0.4.46` festgenagelt**, aus dem Grund von `gix`:
+# unter 1.0 darf jede kleine Fassung brechen, und ein Bruch hiesse hier ein
+# Archiv, das KRK anders liest als vorher. Wer die Fassung hebt, faehrt die
+# Proben in `crates/krk-core/tests/archiv.rs` und den `cargo tree`-Beleg neu.
+tar = { version = "=0.4.46", default-features = false }
 
 # Argon2id im Profil `dev` voll optimiert, und nur diese Rechnung. Die Ableitung
 # mit den Parametern des Codes kostet im Profil `release` rund eine halbe

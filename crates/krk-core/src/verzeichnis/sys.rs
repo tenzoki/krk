@@ -1076,7 +1076,9 @@ fn haltbar_machen_mit(
 /// Der Defekt, der die Funktion verlangt hat, ist `260809-1652`; der zweite
 /// Aufrufer ist mit `260810-1247` dazugekommen, der dritte mit der Runde 16, der
 /// vierte und der fuenfte mit der Runde 17, der sechste mit dem Defekt
-/// `260826-1221`, der siebte mit der Bildfolge. **Wie viele es heute sind, steht hier trotzdem nicht**: die
+/// `260826-1221`, der siebte mit der Bildfolge, der achte mit dem
+/// Inhaltsverzeichnis eines Archivs (`archiv::zugang`), das wie die Textwege
+/// `is_file()` am Deskriptor verlangt und sonst "keine Datei" meldet. **Wie viele es heute sind, steht hier trotzdem nicht**: die
 /// Zahl waechst mit jeder Runde, die einen weiteren Leser baut, und der
 /// Ordinalsatz oben ist die Herkunft und keine Zusage ueber den heutigen Stand
 /// (`shared/issues/260826-1933_*_zwei-prosastellen-an-ohne-warten-oeffnen-zaehlen-fuenf-rufer-*`).

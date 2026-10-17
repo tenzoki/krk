@@ -126,7 +126,9 @@
 //! und legt eine Januardatei im August eine Stunde daneben ab. Deshalb stehen
 //! daneben zwei Zusatzfelder, die die Zeit in Epochensekunden tragen und keine
 //! Zone brauchen: [`FELD_ERWEITERTE_ZEIT`] (`0x5455`), das `unzip` liest, und
-//! [`FELD_INFOZIP_UNIX`] (`0x5855`), das `ditto(1)` liest. Welches Werkzeug
+//! [`FELD_INFOZIP_UNIX`] (`0x5855`), das `ditto(1)` liest. Beide stehen samt
+//! ihren Schreib- und Lesehelfern seit dem Archivpaket in [`crate::archiv::zipform`],
+//! weil der Leser des Inhaltsverzeichnisses dieselben zwei Felder liest. Welches Werkzeug
 //! welches uebergeht, steht als Messtabelle in der Wurzel-`Cargo.toml` neben
 //! dem Merkmal `unreserved`, das `0x5855` ueberhaupt erst zulaesst.
 //!
@@ -145,12 +147,13 @@
 use std::fs::{self, File};
 use std::io::{self, BufWriter, Read, Write};
 use std::path::{Path, PathBuf};
-use std::time::{SystemTime, UNIX_EPOCH};
 
-use zip::DateTime;
 use zip::ZipWriter;
 use zip::write::FullFileOptions;
 
+#[cfg(doc)]
+use crate::archiv::zipform::{FELD_ERWEITERTE_ZEIT, FELD_INFOZIP_UNIX};
+use crate::archiv::zipform::{rechte_uebernehmen, zeit_uebernehmen};
 use crate::sprache::{Text, satz, text};
 use crate::verzeichnis::{Typ, lesen};
 
@@ -605,140 +608,4 @@ fn verknuepfungswahl(pfad: &Path) -> FullFileOptions<'static> {
     let angaben = fs::symlink_metadata(pfad).ok();
     let wahl = zeit_uebernehmen(FullFileOptions::default(), angaben.as_ref());
     wahl.unix_permissions(0o120777)
-}
-
-/// Uebernimmt die Rechte der Quelle in die Wahl, notfalls die genannte Vorgabe.
-///
-/// Ein Archiv, das die Rechte fortwirft, macht aus einem ausfuehrbaren Skript
-/// beim Entpacken eine gewoehnliche Datei. Laesst sich die Quelle gerade nicht
-/// befragen, steht die uebliche Vorgabe da; ein Eintrag ohne Rechte waere
-/// schlechter als ein Eintrag mit den ueblichen.
-#[must_use = "ohne die Wahl traegt der Eintrag keine Rechte"]
-fn rechte_uebernehmen(
-    wahl: FullFileOptions<'static>,
-    angaben: Option<&fs::Metadata>,
-    vorgabe: u32,
-) -> FullFileOptions<'static> {
-    use std::os::unix::fs::PermissionsExt;
-
-    let rechte = angaben.map_or(vorgabe, |angaben| angaben.permissions().mode());
-    wahl.unix_permissions(rechte)
-}
-
-/// Kennung des erweiterten Zeitfeldes (`Extended Timestamp`), das `unzip` liest.
-///
-/// Rumpf: ein Kennzeichenbyte, dann die genannten Zeiten als Epochensekunden in
-/// der Reihenfolge Aenderung, Zugriff, Erzeugung. KRK setzt die ersten zwei
-/// Kennzeichenbits, schreibt also acht Byte Zeit hinter das Kennzeichen.
-pub(super) const FELD_ERWEITERTE_ZEIT: u16 = 0x5455;
-
-/// Kennung des alten Info-ZIP-Unix-Feldes, das `ditto(1)` liest.
-///
-/// Rumpf in der kurzen Form: Zugriffszeit, dann Aenderungszeit, je vier Byte
-/// Epochensekunden. Die lange Form haengt Benutzer- und Gruppenkennung an; KRK
-/// schreibt sie nicht, denn `ditto` setzt sie beim Auspacken um, und dieses
-/// Vorhaben packt Zeitstempel und keine Eigentumsverhaeltnisse.
-///
-/// **Diese Kennung ist der einzige Grund fuer das Merkmal `unreserved`** in der
-/// Wurzel-`Cargo.toml`; ohne es weist `add_extra_data` sie ab.
-pub(super) const FELD_INFOZIP_UNIX: u16 = 0x5855;
-
-/// Traegt das Aenderungsdatum der Quelle in die Wahl ein, dreifach.
-///
-/// Einmal als MS-DOS-Feld, das jeder Leser versteht und das keine Zone kennt,
-/// und zweimal als Zusatzfeld in Epochensekunden. Warum es zwei Zusatzfelder
-/// sein muessen, steht als Messtabelle in der Wurzel-`Cargo.toml`.
-///
-/// **Ein Zeitpunkt, den keines der Felder fasst, weist den Eintrag nicht ab,
-/// und er bleibt stumm.** Der Eintrag traegt dann das Vorgabedatum des
-/// Formats; ein Archiv ohne diese Datei waere die schlechtere Antwort als eine
-/// Datei mit einem Datum, das der Nutzer als falsch erkennt. Dasselbe gilt fuer
-/// ein Aenderungsdatum, das nicht zu lesen war, und fuer ein Zusatzfeld, das
-/// nicht in den Eintrag kam.
-///
-/// Stumm, weil die Abschlussliste die Liste der **nicht bearbeiteten**
-/// Eintraege ist ([`super::fortschritt::Uebersprungen`]) und das Blatt sie dem
-/// Nutzer so ausschreibt: die Datei steht vollstaendig im Archiv, und sie dort
-/// als uebersprungen zu nennen, waere die falsche Auskunft. Das ist die Wahl,
-/// die [`super::entpacken`] fuer den Fehlschlag beim Rechte- und Datumsetzen
-/// trifft, und bis zum 260825 traf das Packen fuer dieselbe Lage die
-/// entgegengesetzte — mit bis zu drei Zeilen je Eintrag
-/// (`shared/issues/260825-2127_*_ein-gepackter-eintrag-mit-ersatzdatum-steht-
-/// in-der-liste-der-uebersprungenen.md`). Deshalb nimmt diese Funktion keine
-/// [`Steuerung`] entgegen: sie hat nichts zu melden.
-#[must_use = "ohne die Wahl traegt der Eintrag kein Datum"]
-fn zeit_uebernehmen(
-    mut wahl: FullFileOptions<'static>,
-    angaben: Option<&fs::Metadata>,
-) -> FullFileOptions<'static> {
-    let Some(geaendert) = angaben.and_then(|angaben| angaben.modified().ok()) else {
-        return wahl;
-    };
-    // Die Zugriffszeit ist die Zugabe und nicht der Gegenstand: gibt sie nichts
-    // her, steht das Aenderungsdatum an beiden Stellen, so wie `ditto(1)` es
-    // auch haelt. Sie gibt in zwei Lagen nichts her, und beide sind hier
-    // gleich behandelt: sie fehlt, oder sie liegt ausserhalb der vier Byte, die
-    // die zwei Zusatzfelder dafuer vorsehen. Haenge die Felder an die Zugabe,
-    // verhinderte eine Zugriffszeit von 1969 das Zusatzfeld eines tadellosen
-    // Aenderungsdatums, und zwar ohne eine Zeile in der Abschlussliste.
-    let gelesen = angaben.and_then(|angaben| angaben.accessed().ok());
-
-    if let Some(zeitpunkt) = archivzeitpunkt(geaendert) {
-        wahl = wahl.last_modified_time(zeitpunkt);
-    }
-
-    if let Some(geaendert) = epochensekunden(geaendert) {
-        let gelesen = gelesen.and_then(epochensekunden).unwrap_or(geaendert);
-        let mut erweitert = Vec::with_capacity(9);
-        // Bit 0: die Aenderungszeit steht da. Bit 1: die Zugriffszeit steht da.
-        erweitert.push(0b0000_0011);
-        erweitert.extend_from_slice(&geaendert.to_le_bytes());
-        erweitert.extend_from_slice(&gelesen.to_le_bytes());
-
-        let mut infozip = Vec::with_capacity(8);
-        infozip.extend_from_slice(&gelesen.to_le_bytes());
-        infozip.extend_from_slice(&geaendert.to_le_bytes());
-
-        // Beide Felder gehen in den lokalen Kopf; die Kiste wiederholt ihn im
-        // Hauptverzeichnis, ein zweiter Eintrag als "nur zentral" stuende dort
-        // also doppelt.
-        for (kennung, rumpf) in [
-            (FELD_ERWEITERTE_ZEIT, erweitert),
-            (FELD_INFOZIP_UNIX, infozip),
-        ] {
-            // Ein Feld, das nicht hineinkam, laesst das MS-DOS-Feld stehen;
-            // der Eintrag traegt dann ein Datum ohne Zone statt keines.
-            let _ = wahl.add_extra_data(kennung, rumpf, false);
-        }
-    }
-
-    wahl
-}
-
-/// Rechnet ein Aenderungsdatum in die MS-DOS-Zeitform des Zip-Formats um.
-///
-/// `None` heisst: der Zeitpunkt liegt ausserhalb von 1980 bis 2107, oder das
-/// System konnte ihn nicht in einen Kalendertag uebersetzen. Die Sekunde faellt
-/// dabei auf ein gerades Raster, denn das Format traegt fuer sie nur fuenf Bit.
-fn archivzeitpunkt(zeitpunkt: SystemTime) -> Option<DateTime> {
-    let ortszeit = crate::verzeichnis::sys::ortszeit(zeitpunkt)?;
-    DateTime::from_date_and_time(
-        u16::try_from(ortszeit.jahr).ok()?,
-        ortszeit.monat,
-        ortszeit.tag,
-        ortszeit.stunde,
-        ortszeit.minute,
-        ortszeit.sekunde,
-    )
-    .ok()
-}
-
-/// Macht aus einem Zeitpunkt die Zahl der Sekunden seit 1970, wie die zwei
-/// Zusatzfelder sie tragen.
-///
-/// `None` heisst: der Zeitpunkt liegt vor 1970 oder nach 2106 und passt damit
-/// nicht in die vier Byte, die beide Felder dafuer vorsehen.
-fn epochensekunden(zeitpunkt: SystemTime) -> Option<u32> {
-    let seither = zeitpunkt.duration_since(UNIX_EPOCH).ok()?;
-    u32::try_from(seither.as_secs()).ok()
 }

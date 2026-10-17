@@ -72,3 +72,9 @@ zeroize = { workspace = true }
 # `tests/bilder/`. Die Merkmalswahl und der Befund zu `cc` und `-sys` stehen in
 # der Wurzel-`Cargo.toml`.
 kamadak-exif = { workspace = true }
+# Das tar-Format fuer die Archive als Ort im Dateifenster. Es steht hier und
+# nicht in `krk-ui`, weil das Inhaltsverzeichnis im Kern entsteht:
+# `archiv::verzeichnis` ist die Stelle, die die Kiste nennt, und ihre Proben in
+# `tests/archiv.rs` bauen ihre Archive ohne Fenster. Begruendung, Merkmalswahl
+# und der Befund zu `cc` und `-sys` stehen in der Wurzel-`Cargo.toml`.
+tar = { workspace = true }

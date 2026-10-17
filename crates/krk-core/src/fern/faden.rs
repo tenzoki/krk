@@ -12,6 +12,14 @@
 //! `261016-1956-welche-form-hat-ein-ort-im-dateifenster-und-wie-haelt-der-bau-fernaufrufe-vom-hauptfaden-fern.md`,
 //! Moeglichkeit 1).
 //!
+//! **Das Pfand haelt seit dem Archivpaket mehr als den Netzweg**: jeden
+//! Zugriff, dessen Dauer die Groesse einer fremden Datei bestimmt. So verlangt
+//! [`crate::archiv::Archivzugang::verzeichnis`] es ebenfalls, denn das
+//! Inhaltsverzeichnis eines grossen tar.gz entsteht erst nach einem Durchlauf
+//! durch den ganzen Strom (E9 des Plans
+//! `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`). Der Name
+//! bleibt der aus dem sftp-Paket.
+//!
 //! ```
 //! use krk_core::fern::{Fernfaden, faden};
 //!

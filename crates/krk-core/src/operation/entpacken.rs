@@ -112,12 +112,11 @@ use std::fs::{self, File, FileTimes, Permissions};
 use std::io::{self, BufReader, Read, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Component, Path, PathBuf};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::SystemTime;
 
 use zip::ZipArchive;
-use zip::extra_fields::ExtraField;
-use zip::read::ZipFile;
 
+use crate::archiv::zipform::eintragszeit;
 use crate::sprache::{Text, satz, text};
 use crate::verzeichnis::sys::ohne_warten_oeffnen;
 
@@ -362,49 +361,6 @@ fn eintraege_entpacken(
         }
     }
     Ablauf::Weiter
-}
-
-/// Liest das Aenderungsdatum eines Archiveintrags, soweit es in Epochensekunden
-/// dasteht.
-///
-/// Zwei Quellen, in dieser Reihenfolge: das erweiterte Zeitfeld `0x5455`, das
-/// die Kiste selbst zerlegt, und das alte Info-ZIP-Unix-Feld `0x5855`, das sie
-/// nicht zerlegt und das [`infozip_unix_zeit`] deshalb aus den Rohbytes holt.
-/// `None` heisst: der Eintrag fuehrt keines von beiden, und dann bleibt die
-/// entpackte Datei bei der Uhrzeit des Entpackens. Warum das MS-DOS-Pflichtfeld
-/// hier nicht einspringt, steht im Kopf dieser Datei.
-fn eintragszeit<R: Read>(eintrag: &ZipFile<'_, R>) -> Option<SystemTime> {
-    let erweitert = eintrag.extra_data_fields().find_map(|feld| match feld {
-        ExtraField::ExtendedTimestamp(zeit) => zeit.mod_time(),
-        _ => None,
-    });
-    let sekunden = erweitert.or_else(|| eintrag.extra_data().and_then(infozip_unix_zeit))?;
-    Some(UNIX_EPOCH + Duration::from_secs(u64::from(sekunden)))
-}
-
-/// Holt die Aenderungszeit aus dem alten Info-ZIP-Unix-Feld `0x5855`.
-///
-/// Der uebergebene Block ist die Folge der Zusatzfelder, jedes mit zwei Byte
-/// Kennung, zwei Byte Laenge und seinem Rumpf. Gesucht wird
-/// [`super::zippen::FELD_INFOZIP_UNIX`]; sein Rumpf traegt zuerst die
-/// Zugriffszeit und dann die Aenderungszeit, je vier Byte Epochensekunden.
-///
-/// **Die Kennung steht in [`super::zippen`] und nicht hier**, damit sie im
-/// Vorhaben genau einmal dasteht: dieselbe Zahl schreibt der Packlauf.
-fn infozip_unix_zeit(zusatzfelder: &[u8]) -> Option<u32> {
-    let mut rest = zusatzfelder;
-    while rest.len() >= 4 {
-        let kennung = u16::from_le_bytes([rest[0], rest[1]]);
-        let laenge = usize::from(u16::from_le_bytes([rest[2], rest[3]]));
-        let rumpf = rest.get(4..4 + laenge)?;
-        if kennung == super::zippen::FELD_INFOZIP_UNIX
-            && let Some(zeit) = rumpf.get(4..8)
-        {
-            return Some(u32::from_le_bytes([zeit[0], zeit[1], zeit[2], zeit[3]]));
-        }
-        rest = &rest[4 + laenge..];
-    }
-    None
 }
 
 /// Setzt das Aenderungsdatum eines angelegten Eintrags.

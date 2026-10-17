@@ -991,3 +991,143 @@ pub fn kind_mit_deskriptorgrenze(zusage: &str, grenze: usize, name: &str, wert: 
         ergebnis.status
     );
 }
+
+/// Die Archivbauer der Archivproben: ein Ordnerbaum, gepackt als Zip, tar oder
+/// tar.gz, und eine einzelne gzip-Datei.
+///
+/// **Gebaut wird mit den Kisten, mit denen KRK liest**, und nicht mit festen
+/// Archivdateien im Baum (Grundabnahme des Plans
+/// `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`). Der Baum wird
+/// in einer festen Folge gepackt, Ordner vor ihrem Inhalt, und jeder Eintrag
+/// traegt die Rechte und das Aenderungsdatum seiner Quelle; Verknuepfungen
+/// bleiben Verknuepfungen. Ein Zip-Eintrag traegt sein Datum im Zeitfeld
+/// `0x5455`, weil KRK das MS-DOS-Feld nicht liest.
+pub mod archivbau {
+    use std::fs::{self, File};
+    use std::io::{self, Write};
+    use std::os::unix::fs::PermissionsExt;
+    use std::path::{Path, PathBuf};
+    use std::time::UNIX_EPOCH;
+
+    use flate2::Compression;
+    use flate2::write::GzEncoder;
+    use zip::ZipWriter;
+    use zip::write::FullFileOptions;
+
+    /// Die Eintraege unter `wurzel` mit ihrem Namen relativ zu ihr, Ordner vor
+    /// ihrem Inhalt, Geschwister nach Namen geordnet.
+    pub fn baum(wurzel: &Path) -> Vec<(String, PathBuf)> {
+        let mut gesammelt = Vec::new();
+        sammeln(wurzel, "", &mut gesammelt);
+        gesammelt
+    }
+
+    fn sammeln(ordner: &Path, vorsatz: &str, gesammelt: &mut Vec<(String, PathBuf)>) {
+        let mut namen: Vec<_> = fs::read_dir(ordner)
+            .expect("der Baum laesst sich lesen")
+            .map(|eintrag| eintrag.expect("ein Eintrag laesst sich lesen").path())
+            .collect();
+        namen.sort();
+        for pfad in namen {
+            let name = format!(
+                "{vorsatz}{}",
+                pfad.file_name()
+                    .and_then(|name| name.to_str())
+                    .expect("UTF-8")
+            );
+            let angaben = fs::symlink_metadata(&pfad).expect("Angaben");
+            gesammelt.push((name.clone(), pfad.clone()));
+            if angaben.is_dir() {
+                sammeln(&pfad, &format!("{name}/"), gesammelt);
+            }
+        }
+    }
+
+    fn sekunden(angaben: &fs::Metadata) -> u32 {
+        let seither = angaben
+            .modified()
+            .expect("Aenderungsdatum")
+            .duration_since(UNIX_EPOCH)
+            .expect("nach 1970");
+        u32::try_from(seither.as_secs()).expect("vor 2106")
+    }
+
+    /// Packt den Baum unter `wurzel` als Zip nach `ziel`.
+    pub fn zip_packen(wurzel: &Path, ziel: &Path) {
+        let mut schreiber = ZipWriter::new(File::create(ziel).expect("Zip anlegen"));
+        for (name, pfad) in baum(wurzel) {
+            let angaben = fs::symlink_metadata(&pfad).expect("Angaben");
+            let mut zeit = vec![0b0000_0001];
+            zeit.extend_from_slice(&sekunden(&angaben).to_le_bytes());
+            let mut wahl =
+                FullFileOptions::default().unix_permissions(angaben.permissions().mode() & 0o7777);
+            wahl.add_extra_data(0x5455, zeit, false).expect("Zeitfeld");
+            if angaben.is_symlink() {
+                let ziel = fs::read_link(&pfad).expect("Verweis");
+                schreiber
+                    .add_symlink(name, ziel.to_str().expect("UTF-8"), wahl)
+                    .expect("Verknuepfung packen");
+            } else if angaben.is_dir() {
+                schreiber
+                    .add_directory(format!("{name}/"), wahl)
+                    .expect("Ordner packen");
+            } else {
+                schreiber.start_file(name, wahl).expect("Datei beginnen");
+                schreiber
+                    .write_all(&fs::read(&pfad).expect("Datei lesen"))
+                    .expect("Datei packen");
+            }
+        }
+        schreiber.finish().expect("Zip abschliessen");
+    }
+
+    /// Packt den Baum unter `wurzel` als tar in einen Schreiber.
+    pub fn tar_schreiben<W: Write>(wurzel: &Path, ausgabe: W) -> W {
+        let mut bauer = tar::Builder::new(ausgabe);
+        for (name, pfad) in baum(wurzel) {
+            let angaben = fs::symlink_metadata(&pfad).expect("Angaben");
+            let mut kopf = tar::Header::new_gnu();
+            kopf.set_metadata(&angaben);
+            if angaben.is_symlink() {
+                kopf.set_size(0);
+                let ziel = fs::read_link(&pfad).expect("Verweis");
+                bauer
+                    .append_link(&mut kopf, &name, &ziel)
+                    .expect("Verknuepfung packen");
+            } else if angaben.is_dir() {
+                kopf.set_size(0);
+                bauer
+                    .append_data(&mut kopf, format!("{name}/"), io::empty())
+                    .expect("Ordner packen");
+            } else {
+                bauer
+                    .append_data(&mut kopf, &name, File::open(&pfad).expect("Datei"))
+                    .expect("Datei packen");
+            }
+        }
+        bauer.into_inner().expect("tar abschliessen")
+    }
+
+    /// Packt den Baum unter `wurzel` als tar nach `ziel`.
+    pub fn tar_packen(wurzel: &Path, ziel: &Path) {
+        tar_schreiben(wurzel, File::create(ziel).expect("tar anlegen"));
+    }
+
+    /// Packt den Baum unter `wurzel` als tar.gz nach `ziel`.
+    pub fn tar_gz_packen(wurzel: &Path, ziel: &Path) {
+        let gepackt = GzEncoder::new(
+            File::create(ziel).expect("tgz anlegen"),
+            Compression::default(),
+        );
+        tar_schreiben(wurzel, gepackt)
+            .finish()
+            .expect("gzip abschliessen");
+    }
+
+    /// Ein gzip-Glied mit dem genannten Inhalt.
+    pub fn gzip_glied(inhalt: &[u8]) -> Vec<u8> {
+        let mut gepackt = GzEncoder::new(Vec::new(), Compression::default());
+        gepackt.write_all(inhalt).expect("gzip packen");
+        gepackt.finish().expect("gzip abschliessen")
+    }
+}

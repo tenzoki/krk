@@ -56,6 +56,11 @@
 //! entsteht; eine Anfrage vom Hauptfaden aus uebersetzt nicht. Den Grund und
 //! die Grenzen schreibt der Kopf jenes Moduls aus.
 //!
+//! `archiv` liest Zip, tar, tar.gz und gz, ohne sie zu entpacken, damit ein
+//! Dateifenster ein Archiv wie einen Ordner zeigen kann. Jeder Zugriff auf
+//! die Archivdatei verlangt dasselbe Pfand `fern::Fernfaden` wie eine Anfrage
+//! an einen Server; die Bauweise steht im Kopf jenes Moduls.
+//!
 //! Der Kern kennt AppKit nicht. Das ist der Grund, aus dem er ohne Fenster
 //! testbar ist, und es ist die Grenze, die `krk-ui` von `krk-core` trennt.
 //!
@@ -75,6 +80,7 @@
 //! hinzugebracht haben.
 
 pub mod ablage;
+pub mod archiv;
 pub mod bild;
 pub mod fern;
 pub mod git;
