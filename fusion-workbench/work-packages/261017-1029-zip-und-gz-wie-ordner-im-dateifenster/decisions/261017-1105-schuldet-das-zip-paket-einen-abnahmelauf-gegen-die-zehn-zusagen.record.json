@@ -1,0 +1,30 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "96560471-881b-4e55-8d05-0be515f4d5d0",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/261017-1029-zip-und-gz-wie-ordner-im-dateifenster/decisions/261017-1105-schuldet-das-zip-paket-einen-abnahmelauf-gegen-die-zehn-zusagen.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": {
+      "kind": "other",
+      "path": "work-packages/261017-1029-zip-und-gz-wie-ordner-im-dateifenster/decisions/261017-1105-schuldet-das-zip-paket-einen-abnahmelauf-gegen-die-zehn-zusagen.md",
+      "sha256": "sha256:a582061feca8d3f7515508cd07963e79cbd57f8824799c83da0497c4cc71ab64"
+    },
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

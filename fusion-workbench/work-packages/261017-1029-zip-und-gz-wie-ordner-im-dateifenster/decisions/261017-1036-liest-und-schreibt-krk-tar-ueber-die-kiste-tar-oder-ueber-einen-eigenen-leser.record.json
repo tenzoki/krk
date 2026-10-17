@@ -1,0 +1,26 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "c91c29f2-53e6-45d8-b937-8cd5e83922b5",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/261017-1029-zip-und-gz-wie-ordner-im-dateifenster/decisions/261017-1036-liest-und-schreibt-krk-tar-ueber-die-kiste-tar-oder-ueber-einen-eigenen-leser.md"
+  },
+  "filed_by": {
+    "actor": "implementation-planner",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "answer_ref": null,
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

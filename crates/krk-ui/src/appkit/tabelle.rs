@@ -3201,8 +3201,20 @@ impl DateifensterQuelle {
     /// Rechnung dafuer ist reine Pfadarithmetik und steht im Kern; an einem
     /// fernen Ort am `Fernpfad`, und oberhalb von `/` gibt es kein Aufwaerts
     /// (Entscheidung 15 des Plans der sftp-Ordner).
+    ///
+    /// **Der Ort steht in einer eigenen Bindung und nicht im `match`**, und
+    /// daran haengt, dass `left` KRK nicht beendet. Ein Temporaerwert im
+    /// Pruefausdruck eines `match` lebt bis zum Ende des ganzen `match`, also
+    /// hielte `tabs.borrow()` dort die Tabliste geliehen, waehrend
+    /// [`Self::ordner_lesen`] und [`Self::fern_lesen`] sie mit `borrow_mut`
+    /// verlangen. Die Panik darauf beendete seit den sftp-Ordnern
+    /// (`bfb5ce77`) bei jedem `left` den Prozess
+    /// (`261017-1039-pfeil-links-im-dateifenster-beendet-krk-mit-refcell-already-borrowed.md`).
+    /// Die Probe `der_aufstieg_haelt_die_tabliste_nicht_geliehen` haelt die
+    /// Bauform.
     fn ordner_aufwaerts(&self) {
-        match self.ivars().tabs.borrow().aktiver().tabort().clone() {
+        let ort = self.ivars().tabs.borrow().aktiver().tabort().clone();
+        match ort {
             Tabort::Lokal(hier) => {
                 if let Some((eltern, verlassen)) = aufwaerts(&hier) {
                     self.ordner_lesen(&eltern, Some(Vormerkung::still(verlassen)));
@@ -6827,6 +6839,106 @@ mod tests {
             stelle(anzeigen) < stelle(melden),
             "der Anstoss der Vorschau steht vor auswahl_anzeigen und meldete \
              damit die Zeile des vorigen Ordners"
+        );
+    }
+
+    /// `left` im Dateifenster steigt in den uebergeordneten Ordner auf und
+    /// beendet KRK nicht.
+    ///
+    /// **An der gebauten Datenquelle und nicht am Rumpf gelesen**, weil die
+    /// Panik erst zur Laufzeit entsteht: seit den sftp-Ordnern (`bfb5ce77`)
+    /// hielt der Pruefausdruck des `match` in [`DateifensterQuelle::ordner_aufwaerts`] die Tabliste mit
+    /// `borrow` geliehen, und [`DateifensterQuelle::ordner_lesen`] verlangte
+    /// sie darin mit `borrow_mut`; `RefCell already borrowed` beendete den
+    /// Prozess, gleich welcher Eintrag gewaehlt war
+    /// (`261017-1039-pfeil-links-im-dateifenster-beendet-krk-mit-refcell-already-borrowed.md`).
+    /// Gebaut wird wie in den Proben des Editors auf dem Faden der Probe, mit
+    /// behauptetem Hauptfaden. Geprueft werden beide Zweige, der lokale und
+    /// der ferne.
+    #[test]
+    fn der_aufstieg_haelt_die_tabliste_nicht_geliehen() {
+        let ordner = crate::pruefordner::Pruefordner::neu("aufstieg");
+        let unten = ordner.unter("unten");
+        std::fs::create_dir(&unten).expect("der Unterordner laesst sich anlegen");
+        let zustand = krk_core::ablage::Dateifenster {
+            aktiver_tab: 0,
+            tabs: vec![krk_core::ablage::Tab::auf(&unten)],
+        };
+        let tabs = Tabliste::aus_zustand(&zustand, crate::heimgriff::ungelesen());
+        // SAFETY: `libtest` gibt den Hauptfaden nicht her; die Probe baut ihre
+        // Ansichten allein auf ihrem eigenen Faden und reicht keine weiter,
+        // wie `an_einer_flaeche` im Pruefmodul des Editors.
+        let mtm = unsafe { MainThreadMarker::new_unchecked() };
+        // Allein die Datenquelle mit ihrer Tabelle und nicht das ganze
+        // Dateifenster: `Dateifenster::bauen` wartet ohne laufenden
+        // Hauptfaden zehn Sekunden, und die Tableiste, der Delegierte und der
+        // Abwurf spielen fuer diesen Weg keine Rolle.
+        let rahmen = NSRect::new(NSPoint::ZERO, NSSize::ZERO);
+        let tabelle = Dateiliste::neu(mtm, rahmen);
+        let sicht = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), rahmen);
+        let quelle = DateifensterQuelle::neu(mtm, tabelle, sicht, tabs);
+        // Der Weg von `left`; welcher Eintrag gewaehlt ist, spielt fuer die
+        // Panik keine Rolle, und hier ist keiner gewaehlt.
+        assert!(quelle.kommando_ausfuehren(Kommando::OrdnerAufwaerts));
+        assert_eq!(
+            quelle.ivars().tabs.borrow().aktiver().tabort(),
+            &Tabort::Lokal(ordner.pfad().to_path_buf()),
+        );
+        // Derselbe Weg an einem fernen Ort: der zweite Zweig verlangte die
+        // Tabliste in `fern_lesen` ebenso. Gelesen wird ueber den Server des
+        // Systems und denselben Unterordner.
+        let unten_text = unten.to_str().expect("der Probenpfad ist UTF-8");
+        let fern = crate::fernprobe::ferner_ort("server.test", None, unten_text);
+        quelle.fern_lesen(fern, None);
+        assert!(quelle.kommando_ausfuehren(Kommando::OrdnerAufwaerts));
+        let tabs = quelle.ivars().tabs.borrow();
+        let Tabort::Fern { ort, .. } = tabs.aktiver().tabort() else {
+            panic!("der Tab hat den fernen Ort verlassen");
+        };
+        assert_eq!(
+            ort.pfad.als_text(),
+            ordner.pfad().to_str().expect("der Probenpfad ist UTF-8"),
+        );
+    }
+
+    /// Kein Pruefausdruck eines `match`, `if let` oder `while let` in dieser
+    /// Datei leiht die Tabliste.
+    ///
+    /// **Die Bauform hinter dem Absturz von `left`, fuer die ganze Datei.**
+    /// Ein Temporaerwert im Pruefausdruck lebt bis zum Ende des Zweigs, und
+    /// fast jeder Weg dieser Datei, der einen Zweig betritt, verlangt die
+    /// Tabliste darin mit `borrow_mut`: `ordner_lesen`, `fern_lesen`,
+    /// `auswahl_merken`. Die Probe darueber haelt den einen Weg, den es heute
+    /// gibt, zur Laufzeit; diese haelt jeden kuenftigen, der dieselbe Form
+    /// annimmt, ohne dass ein Fenster ihn erst gehen muss. **Was sie nicht
+    /// sieht:** eine benannte Ausleihe (`let tabs = …borrow();`), die ueber
+    /// einen solchen Ruf hinaus lebt, und jede andere Zelle als `tabs`.
+    #[test]
+    fn kein_pruefausdruck_leiht_die_tabliste() {
+        let datei = diese_datei();
+        let code: String = code_zeilen(vor_dem_pruefmodul(&datei))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let mut funde = Vec::new();
+        for schluessel in ["match ", "if let ", "while let "] {
+            for (stelle, _) in code.match_indices(schluessel) {
+                let vorher = code[..stelle].chars().next_back();
+                if vorher.is_some_and(|zeichen| zeichen.is_alphanumeric() || zeichen == '_') {
+                    continue;
+                }
+                let rest = &code[stelle..];
+                let ende = rest.find(['{', ';']).unwrap_or(rest.len());
+                let pruefausdruck = &rest[..ende];
+                if pruefausdruck.contains("tabs.borrow") {
+                    let zeile = code[..stelle].matches('\n').count() + 1;
+                    funde.push(format!("Codezeile {zeile}: {}", pruefausdruck.trim()));
+                }
+            }
+        }
+        assert!(
+            funde.is_empty(),
+            "ein Pruefausdruck haelt die Tabliste geliehen, waehrend sein Zweig \
+             sie mit borrow_mut verlangen kann: {funde:?}"
         );
     }
 }

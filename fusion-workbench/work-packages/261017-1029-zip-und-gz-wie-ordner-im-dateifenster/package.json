@@ -1,0 +1,53 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "72ce3d7e-4de1-42c9-aa5d-f51c91bd8205",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "claimed",
+  "claim": {
+    "checkout_id": "6c11b1f2",
+    "person": "Kai Stalmann <kai@stalmann.org>",
+    "claimed_at": "2026-10-17T08:29:47Z"
+  },
+  "mode": {
+    "value": "autonomous",
+    "source": {
+      "kind": "user-word",
+      "ref": {
+        "path": "work-packages/261017-1029-zip-und-gz-wie-ordner-im-dateifenster/261017-1029-zip-und-gz-wie-ordner-im-dateifenster.md",
+        "sha256": "sha256:ff1b9162846a81599c0419d0530a9d2e4670d0f263f76b1fc30ba58cf2879c59",
+        "kind": "other"
+      }
+    }
+  },
+  "origin": {
+    "kind": "user-request",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "user",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "narrative": {
+    "path": "work-packages/261017-1029-zip-und-gz-wie-ordner-im-dateifenster/261017-1029-zip-und-gz-wie-ordner-im-dateifenster.md"
+  },
+  "depends_on": [],
+  "active_documents": [
+    {
+      "ref": {
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "record_id": "45629673-aec2-47d3-97f2-d7192baec26c"
+      },
+      "role": "plan",
+      "revision": "sha256:6ec32b6f56f8e16090485d3cef8c4017d676444b044c9a7f53bc5b48d6f9cc09"
+    }
+  ],
+  "references": [],
+  "evidence": [],
+  "outcome": null,
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {}
+}
