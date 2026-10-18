@@ -3,7 +3,7 @@
   "id": "72ce3d7e-4de1-42c9-aa5d-f51c91bd8205",
   "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
   "domain": "code",
-  "status": "claimed",
+  "status": "done",
   "claim": {
     "checkout_id": "6c11b1f2",
     "person": "Kai Stalmann <kai@stalmann.org>",
@@ -44,7 +44,11 @@
   ],
   "references": [],
   "evidence": [],
-  "outcome": null,
+  "outcome": {
+    "class": "completed",
+    "reason": "Zip, tar, tar.gz und gz im Dateifenster wie Ordner, lesend und schreibend (9d0afb5b..46192d60), Vorschau im Archiv (e7397d56); ausgeliefert in 3.6.0 bis 3.8.0; vom Nutzer abgeschlossen",
+    "evidence": []
+  },
   "provenance": {
     "source": "created",
     "legacy_fields": {}
