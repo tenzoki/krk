@@ -30,6 +30,8 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::WirkungsbereichBildfolge => {
             "volet de fichiers, tant que l’Aperçu montre une série de photos"
         }
+        Text::WirkungsbereichTrenntext => "tableaux d’un fichier CSV ou TSV dans l’Éditeur",
+        Text::WirkungsbereichCsv => "tableaux d’un fichier CSV dans l’Éditeur",
         Text::WirkungsbereichUeberall => "partout",
         Text::OrtsmangelAbsolut => "est un chemin absolu",
         Text::OrtsmangelLeeresStueck => "contient un segment vide",
@@ -1055,6 +1057,22 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::TrennzeichenKomma => "Virgule",
         Text::TrennzeichenSemikolon => "Point-virgule",
         Text::TrennzeichenTabulator => "Tabulation",
+        Text::TrenntextSpalteEingefuegt => "colonne insérée\u{202f}; cmd+z l’annule",
+        Text::TrenntextSpalteAngehaengt => "colonne ajoutée\u{202f}; cmd+z l’annule",
+        Text::TrenntextLetzteSpalte => {
+            "la sélection couvre toutes les colonnes, et un tableau en garde au moins une\u{202f}; rien n’est supprimé"
+        }
+        Text::TrenntextBereichEingefuegt => {
+            "collé\u{a0}: {zeilen} × {spalten}\u{202f}; cmd+z l’annule"
+        }
+        Text::TrenntextAblageOhneText => {
+            "le presse-papiers ne contient aucun texte pour le tableau"
+        }
+        Text::TrenntextNichtsGeaendert => "le tableau reste tel quel",
+        Text::TrenntextTrennzeichenFest => "un fichier TSV sépare toujours par une tabulation",
+        Text::TrenntextZuBreit => {
+            "le tableau aurait alors {spalten} colonnes, il en affiche au plus {hoechstens}\u{202f}; rien n’est modifié"
+        }
         Text::VorschauNichtLesbar => "{pfad} n’a pas pu être lu\u{a0}: {fehler}",
         Text::VorschauLeertext => {
             "Aucun contenu. La sélection dans le volet de fichiers remplit cet onglet."
@@ -1396,6 +1414,14 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         ),
         Zahlwort::TrenntextZeilen => ("une ligne", "{n} lignes"),
         Zahlwort::TrenntextSpalten => ("une colonne", "{n} colonnes"),
+        Zahlwort::TrenntextZeilenEingefuegt => (
+            "une ligne insérée\u{202f}; cmd+z l’annule",
+            "{n} lignes insérées\u{202f}; cmd+z les annule",
+        ),
+        Zahlwort::TrenntextSpaltenGeloescht => (
+            "une colonne supprimée\u{202f}; cmd+z la rétablit",
+            "{n} colonnes supprimées\u{202f}; cmd+z les rétablit",
+        ),
     }
 }
 
@@ -1487,6 +1513,11 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::EintragHoch => "Entrée vers le haut",
         Kommando::EintragRunter => "Entrée vers le bas",
         Kommando::EintragLoeschen => "Supprimer l’entrée",
+        Kommando::TrenntextZeileEinfuegen => "Insérer une ligne au-dessus",
+        Kommando::TrenntextSpalteEinfuegen => "Insérer une colonne à gauche",
+        Kommando::TrenntextSpalteAnhaengen => "Ajouter une colonne",
+        Kommando::TrenntextSpalteLoeschen => "Supprimer les colonnes",
+        Kommando::TrenntextTrennzeichenWechseln => "Changer de séparateur",
         Kommando::AufgabeAbhaken => "Cocher ou rouvrir la tâche",
         Kommando::PinAendern => "Modifier le code PIN",
         Kommando::TermineRichtungUmkehren => "Rendez-vous\u{a0}: inverser l’ordre de tri",

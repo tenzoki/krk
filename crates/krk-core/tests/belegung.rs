@@ -187,13 +187,17 @@ fn kennungen(belegung: &Belegung) -> Vec<&str> {
 /// einer Datei. Die zweite Quelle ist hier `resources/default-keymap.toml`,
 /// und die liest [`ab_werk_traegt_genau_diese_liste_keine_kombination`] ueber
 /// [`Belegung::auslieferung`].
-const OHNE_KOMBINATION_AB_WERK: [&str; 10] = [
+const OHNE_KOMBINATION_AB_WERK: [&str; 11] = [
     "spalte_groesse_umschalten",
     "spalte_datum_umschalten",
     "spalte_typ_umschalten",
     "spalte_marke_umschalten",
     "tiefe_suche_umschalten",
     "inhaltssuche_umschalten",
+    // Ein seltener Befehl der Tabelle einer CSV (E2 und E14 des Plans der
+    // CSV-Tabelle); er steht vor der Quicknote, weil sein Block in der
+    // Belegungsdatei dort steht.
+    "trenntext_trennzeichen_wechseln",
     "quicknote_leeren",
     "belegungsdatei_ansehen",
     "ort_waehlen",
@@ -2432,7 +2436,8 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
         // `Editortext`, `Eintraege` und `Aufgaben` mit den Eintragstabellen der
         // krkhome-Arbeit, `Geheimnisse` mit „PIN ändern" aus deren Schritt 5.5,
         // `Reihenfolge` und `Termine` mit den Terminen, `Quicknote` mit der
-        // Quicknote auf F10, `Bildfolge` mit den drei Befehlen der Bildfolge.
+        // Quicknote auf F10, `Bildfolge` mit den drei Befehlen der Bildfolge,
+        // `Trenntext` und `Csv` mit den Befehlen der Tabelle einer CSV.
         let bereich = kommando.wirkungsbereich();
         assert!(
             matches!(
@@ -2453,6 +2458,8 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
                     | Wirkungsbereich::Navigator
                     | Wirkungsbereich::Vorschau
                     | Wirkungsbereich::Bildfolge
+                    | Wirkungsbereich::Trenntext
+                    | Wirkungsbereich::Csv
                     | Wirkungsbereich::Ueberall
             ),
             "{kennung} traegt keinen der Bereiche"
@@ -2872,7 +2879,7 @@ fn pin_aendern_traegt_den_bereich_der_geheimnisse() {
 /// [`varianten_der_aufzaehlung`] aus dem Quelltext der Aufzaehlung; ein Wert
 /// ohne Zeile in diesem Feld wird dort rot, statt still ungeprueft zu bleiben
 /// (`shared/issues/260826-1302_*_ein-achter-wirkungsbereich-uebersetzt-ohne-eintrag-im-beschriftungsfeld-der-doc-kommentar-sagt-das-gegenteil.md`).
-const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 17] = [
+const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 19] = [
     (Wirkungsbereich::Dateifenster, "Dateifenster"),
     (Wirkungsbereich::Leiste, "Lesezeichen- und Geräteleiste"),
     (
@@ -2902,6 +2909,11 @@ const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 17] = [
     ),
     (Wirkungsbereich::Ueberall, "überall"),
     (Wirkungsbereich::Eintragsdatei, "Eintragsdateien im Editor"),
+    (
+        Wirkungsbereich::Trenntext,
+        "Tabellen einer CSV- oder TSV-Datei im Editor",
+    ),
+    (Wirkungsbereich::Csv, "Tabellen einer CSV-Datei im Editor"),
 ];
 
 /// Die Stelle eines Bereichs in [`BESCHRIFTUNGEN`].
@@ -2934,6 +2946,8 @@ fn stelle_im_feld(bereich: Wirkungsbereich) -> usize {
         Wirkungsbereich::Bildfolge => 14,
         Wirkungsbereich::Ueberall => 15,
         Wirkungsbereich::Eintragsdatei => 16,
+        Wirkungsbereich::Trenntext => 17,
+        Wirkungsbereich::Csv => 18,
     }
 }
 
@@ -3735,4 +3749,85 @@ fn genau_diese_kommandos_brauchen_einen_lokalen_ort() {
         };
         assert_eq!(kommando.ortsbedarf(), erwartet, "{kommando:?}");
     }
+}
+
+/// Die fuenf Befehle allein der Tabelle einer CSV tragen ihre Bereiche, ihre
+/// Kennungen fuehren zu ihnen, und die ausgelieferten Kombinationen treffen je
+/// genau sie (E14 des Plans
+/// `261018-0822_*_plan-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md`).
+/// „Trennzeichen wechseln“ ist ab Werk unbelegt.
+#[test]
+fn die_trenntextbefehle_tragen_ihre_bereiche_und_ihre_tasten() {
+    for (kommando, kennung, bereich, tasten) in [
+        (
+            Kommando::TrenntextZeileEinfuegen,
+            "trenntext_zeile_einfuegen",
+            Wirkungsbereich::Trenntext,
+            &["opt+cmd+return"][..],
+        ),
+        (
+            Kommando::TrenntextSpalteEinfuegen,
+            "trenntext_spalte_einfuegen",
+            Wirkungsbereich::Trenntext,
+            &["ctrl+cmd+return"][..],
+        ),
+        (
+            Kommando::TrenntextSpalteAnhaengen,
+            "trenntext_spalte_anhaengen",
+            Wirkungsbereich::Trenntext,
+            &["ctrl+shift+cmd+return"][..],
+        ),
+        (
+            Kommando::TrenntextSpalteLoeschen,
+            "trenntext_spalte_loeschen",
+            Wirkungsbereich::Trenntext,
+            &["ctrl+shift+cmd+delete"][..],
+        ),
+        (
+            Kommando::TrenntextTrennzeichenWechseln,
+            "trenntext_trennzeichen_wechseln",
+            Wirkungsbereich::Csv,
+            &[][..],
+        ),
+    ] {
+        assert_eq!(kommando.wirkungsbereich(), bereich, "{kennung}");
+        assert_eq!(
+            kommando.wirkungsbereich().seite(),
+            Seite::Editor,
+            "{kennung}"
+        );
+        assert_eq!(Kommando::aus_kennung(kennung), Some(kommando));
+        let belegung = Belegung::auslieferung();
+        let funktion = belegung
+            .funktion(kennung)
+            .unwrap_or_else(|| panic!("die Auslieferung kennt {kennung} nicht"));
+        let erwartet: Vec<Kombination> = tasten
+            .iter()
+            .map(|taste| Kombination::lesen(taste).expect("gueltige Schreibweise"))
+            .collect();
+        assert_eq!(funktion.tasten(), erwartet.as_slice(), "{kennung}");
+        for kombination in erwartet {
+            let getroffen = getroffene(belegung.nachschlag(kombination.tastendruck()));
+            assert_eq!(
+                getroffen
+                    .iter()
+                    .map(|funktion| funktion.kommando())
+                    .collect::<Vec<_>>(),
+                [Some(kommando)],
+                "{kennung} teilt seine Kombination mit niemandem"
+            );
+        }
+    }
+}
+
+/// Die neuen Kombinationen der Tabelle einer CSV tragen ab Werk keinen
+/// Konflikt: die Konflikterkennung der Auslieferung bleibt leer (E14).
+#[test]
+fn die_neuen_kombinationen_tragen_ab_werk_keinen_konflikt() {
+    let belegung = Belegung::auslieferung();
+    assert!(
+        belegung.konflikte().is_empty(),
+        "die Auslieferung traegt Konflikte: {:?}",
+        belegung.konflikte()
+    );
 }

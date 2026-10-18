@@ -809,12 +809,16 @@ mod tests {
             vec![(DELEGIERTER.to_owned(), 1)],
             "`cut:` steht nicht genau einmal, beim Anwendungsdelegierten"
         );
+        // Seit Schritt 4 des Plans der CSV-Tabelle beantwortet die
+        // Eintragstabelle `paste:`, allein in der Tabelle einer CSV und sonst
+        // die Kette hinauf (E12); das Einfuegen in den Filtertext bleibt auf
+        // `cmd+f`, und `cmd+v` im Dateifenster erreicht diese Stelle nicht.
         assert_eq!(
             stellen_von(einfuegen),
-            Vec::new(),
-            "`paste:` ist im Baum wieder ueberschrieben; seit dem 260907 traegt \
-             `cmd+f` das Einfuegen in den Filtertext, und `cmd+v` ist fuer die \
-             Dateizwischenablage freigezogen"
+            vec![("krk-ui/src/appkit/eintragsansicht.rs".to_owned(), 1)],
+            "`paste:` steht nicht genau einmal, an der Eintragstabelle; seit dem \
+             260907 traegt `cmd+f` das Einfuegen in den Filtertext, und `cmd+v` \
+             ist fuer die Dateizwischenablage freigezogen"
         );
         assert_eq!(
             stellen_von(filtereinfuegen),

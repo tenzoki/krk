@@ -262,6 +262,16 @@ pub struct Lage {
     /// der Editor eine Eintragstabelle, ist das Feld wahr; die Umkehrung gilt
     /// nicht, und daran haengt die Rohansicht.
     pub eintragsdatei: bool,
+    /// Ob der Editor eine `.csv` haelt, deren Trennzeichen eine Regel gewaehlt
+    /// hat und sich wechseln laesst (E2 des Plans
+    /// `261018-0822_*_plan-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md`);
+    /// eine `.tsv` und eine `.tab` melden `false`.
+    ///
+    /// Erhoben von `Anwendungsdelegierter::lage` ueber
+    /// `Editorbereich::haelt_csv`, am Namen, den das Modell beim Laden gelesen
+    /// hat, und ohne Systemaufruf; gelesen allein von [`datei_passt`] fuer
+    /// `Wirkungsbereich::Csv`, den Bereich von „Trennzeichen wechseln“.
+    pub csv: bool,
     /// Ob die Vorschau sichtbar ist und im aktiven Tab eine Bildfolge fuer
     /// genau den Pfad zeigt, den das aktive Dateifenster beschreibt, ohne
     /// wartenden neueren Auftrag
@@ -528,7 +538,7 @@ fn gestattet(anspruch: Anspruch, lage: Lage) -> bool {
     durchgelassen
         && fokus::wirkt(bereich, lage.fokus)
         && form_passt(bereich, lage.editorform)
-        && datei_passt(bereich, lage.pin_aenderbar, lage.eintragsdatei)
+        && datei_passt(bereich, lage)
         && folge_passt(bereich, lage.bildfolge)
         && ort_passt(anspruch.ortsbedarf(), lage.aktiv_ort, lage.fokus)
 }
@@ -693,6 +703,18 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
             | Editorform::Trenntext => true,
             Editorform::Quicknote => false,
         },
+        // Die Befehle allein der Tabelle einer CSV und das Trennzeichen
+        // wirken allein, solange der Editor sie zeigt (E14 des Plans der
+        // CSV-Tabelle); ob die Datei eine `.csv` ist, fragt `datei_passt`.
+        Wirkungsbereich::Trenntext | Wirkungsbereich::Csv => match form {
+            Editorform::Text
+            | Editorform::Aufgaben
+            | Editorform::Notizen
+            | Editorform::Geheimnisse
+            | Editorform::Termine
+            | Editorform::Quicknote => false,
+            Editorform::Trenntext => true,
+        },
         Wirkungsbereich::Dateifenster
         | Wirkungsbereich::Leiste
         | Wirkungsbereich::Dateibereiche
@@ -707,23 +729,26 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
 /// Ob der Editor die Datei haelt, die dieser Wirkungsbereich verlangt (die
 /// dritte Haelfte von Bestandteil (3), Schritt 5.5 der krkhome-Arbeit).
 ///
-/// **Zwei Bereiche fragen hier etwas.** [`Wirkungsbereich::Geheimnisse`]
+/// **Drei Bereiche fragen hier etwas.** [`Wirkungsbereich::Geheimnisse`]
 /// fragt [`Lage::pin_aenderbar`]: „PIN ändern" wirkt nur, solange der Editor
 /// `secrets.txt` entsperrt haelt und ihre PIN schon in einem Kopf auf der
 /// Platte steht. [`Wirkungsbereich::Eintragsdatei`] fragt seit dem 261005
 /// [`Lage::eintragsdatei`]: „Eintrag hinzufügen“ wirkt vor jeder
 /// Eintragsdatei, als Tabelle wie in der Rohansicht, und vor keiner anderen
-/// Datei. Vollstaendig und ohne Auffangzweig wie [`form_passt`]: ein
+/// Datei. [`Wirkungsbereich::Csv`] fragt [`Lage::csv`]: „Trennzeichen
+/// wechseln“ wirkt allein an einer `.csv`, denn eine `.tsv` trennt fest mit
+/// dem Tabulator (E1, E2 des Plans der CSV-Tabelle). Vollstaendig und ohne Auffangzweig wie [`form_passt`]: ein
 /// weiterer Wirkungsbereich haelt den Bau hier an und bekommt seine Antwort
 /// bewusst.
 ///
 /// Eine eigene Funktion und keine Zeile in [`form_passt`], weil die Frage eine
 /// andere ist: die Form sagt, was der Editor zeigt, dieses Feld, was er haelt.
 #[must_use = "fallengelassen laeuft der Befehl an der falschen Datei weiter"]
-fn datei_passt(bereich: Wirkungsbereich, pin_aenderbar: bool, eintragsdatei: bool) -> bool {
+fn datei_passt(bereich: Wirkungsbereich, lage: Lage) -> bool {
     match bereich {
-        Wirkungsbereich::Geheimnisse => pin_aenderbar,
-        Wirkungsbereich::Eintragsdatei => eintragsdatei,
+        Wirkungsbereich::Geheimnisse => lage.pin_aenderbar,
+        Wirkungsbereich::Eintragsdatei => lage.eintragsdatei,
+        Wirkungsbereich::Csv => lage.csv,
         Wirkungsbereich::Dateifenster
         | Wirkungsbereich::Leiste
         | Wirkungsbereich::Dateibereiche
@@ -738,6 +763,7 @@ fn datei_passt(bereich: Wirkungsbereich, pin_aenderbar: bool, eintragsdatei: boo
         | Wirkungsbereich::Navigator
         | Wirkungsbereich::Vorschau
         | Wirkungsbereich::Bildfolge
+        | Wirkungsbereich::Trenntext
         | Wirkungsbereich::Ueberall => true,
     }
 }
@@ -769,6 +795,8 @@ fn folge_passt(bereich: Wirkungsbereich, bildfolge: bool) -> bool {
         | Wirkungsbereich::Tabbereich
         | Wirkungsbereich::Navigator
         | Wirkungsbereich::Vorschau
+        | Wirkungsbereich::Trenntext
+        | Wirkungsbereich::Csv
         | Wirkungsbereich::Ueberall => true,
     }
 }
@@ -972,7 +1000,7 @@ mod tests {
     /// wird, und die Probe `jeder_wirkungsbereich_hat_einen_stellvertreter`
     /// darunter, die die Zahl der Zeilen gegen die Aufzaehlung im Quelltext
     /// haelt.
-    const STELLVERTRETER: [(Wirkungsbereich, Kommando); 17] = [
+    const STELLVERTRETER: [(Wirkungsbereich, Kommando); 19] = [
         (Wirkungsbereich::Dateifenster, Kommando::Oeffnen),
         (Wirkungsbereich::Leiste, Kommando::LesezeichenLoeschen),
         (Wirkungsbereich::Dateibereiche, Kommando::EditorRundweg),
@@ -995,6 +1023,16 @@ mod tests {
         // Am Ende und nicht bei `Eintraege`, damit die Zeilen der Tafeln
         // darunter ihre Stelle behalten.
         (Wirkungsbereich::Eintragsdatei, Kommando::EintragHinzufuegen),
+        // Die zwei Bereiche der Tabelle einer CSV, aus demselben Grund am
+        // Ende (E14 des Plans der CSV-Tabelle).
+        (
+            Wirkungsbereich::Trenntext,
+            Kommando::TrenntextSpalteEinfuegen,
+        ),
+        (
+            Wirkungsbereich::Csv,
+            Kommando::TrenntextTrennzeichenWechseln,
+        ),
     ];
 
     /// Jede Variante von [`Wirkungsbereich`] hat genau einen Stellvertreter.
@@ -1089,6 +1127,7 @@ mod tests {
             editorform,
             pin_aenderbar: false,
             eintragsdatei: false,
+            csv: false,
             bildfolge: false,
             aktiv_ort: Ortsart::Lokal,
         }
@@ -1260,7 +1299,7 @@ mod tests {
         // gegen `Fokus::ALLE`.
         //
         // Die Zeilen stehen in der Reihenfolge von STELLVERTRETER.
-        const IN_DER_TEXTFLAECHE: [[bool; 6]; 17] = [
+        const IN_DER_TEXTFLAECHE: [[bool; 6]; 19] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1286,9 +1325,13 @@ mod tests {
             [false, false, false, false, false, false],
             [true, true, true, true, true, true],
             // Eintragsdatei: ohne `eintragsdatei` nirgends
+            [false, false, false, false, false, false],
+            // Trenntext: allein in der Tabelle einer CSV
+            [false, false, false, false, false, false],
+            // Csv: ohne `csv` nirgends
             [false, false, false, false, false, false],
         ];
-        const IN_DER_AUFGABENTABELLE: [[bool; 6]; 17] = [
+        const IN_DER_AUFGABENTABELLE: [[bool; 6]; 19] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1314,11 +1357,15 @@ mod tests {
             [false, false, false, false, false, false],
             [true, true, true, true, true, true],
             // Eintragsdatei: ohne `eintragsdatei` nirgends
+            [false, false, false, false, false, false],
+            // Trenntext: allein in der Tabelle einer CSV
+            [false, false, false, false, false, false],
+            // Csv: ohne `csv` nirgends
             [false, false, false, false, false, false],
         ];
         // Wie die Aufgabentabelle, nur ohne die Zeile `Aufgaben`: die
         // Notiztabelle traegt keine Kaestchen (Schritt 4.3).
-        const IN_DER_NOTIZTABELLE: [[bool; 6]; 17] = [
+        const IN_DER_NOTIZTABELLE: [[bool; 6]; 19] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1344,12 +1391,16 @@ mod tests {
             [false, false, false, false, false, false],
             [true, true, true, true, true, true],
             // Eintragsdatei: ohne `eintragsdatei` nirgends
+            [false, false, false, false, false, false],
+            // Trenntext: allein in der Tabelle einer CSV
+            [false, false, false, false, false, false],
+            // Csv: ohne `csv` nirgends
             [false, false, false, false, false, false],
         ];
         // Wie die Notiztabelle, nur ohne die Zeile `Reihenfolge`: die
         // Termintabelle ordnet nach dem Datum, und verschieben laesst sich
         // darin nichts (Schritt 6 des Plans der Termine, T3.7).
-        const IN_DER_TERMINTABELLE: [[bool; 6]; 17] = [
+        const IN_DER_TERMINTABELLE: [[bool; 6]; 19] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1376,12 +1427,16 @@ mod tests {
             [true, true, true, true, true, true],
             // Eintragsdatei: ohne `eintragsdatei` nirgends
             [false, false, false, false, false, false],
+            // Trenntext: allein in der Tabelle einer CSV
+            [false, false, false, false, false, false],
+            // Csv: ohne `csv` nirgends
+            [false, false, false, false, false, false],
         ];
         // Wie die Textflaeche, nur dass jede Zeile, die an der Datei darunter
         // arbeitet, ueberall nein sagt und allein die Zeile `Quicknote` mit
         // dem Fokus im Editor ja (Schritt 2 des Plans der Quicknote,
         // Entscheidung 7).
-        const IN_DER_QUICKNOTE: [[bool; 6]; 17] = [
+        const IN_DER_QUICKNOTE: [[bool; 6]; 19] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1409,8 +1464,47 @@ mod tests {
             [true, true, true, true, true, true],
             // Eintragsdatei: ohne `eintragsdatei` nirgends
             [false, false, false, false, false, false],
+            // Trenntext: allein in der Tabelle einer CSV
+            [false, false, false, false, false, false],
+            // Csv: ohne `csv` nirgends
+            [false, false, false, false, false, false],
         ];
-        const ALLES_ABGEWIESEN: [[bool; 6]; 17] = [[false; 6]; 17];
+        // Wie die Notiztabelle, dazu die Zeile `Trenntext`: die Befehle allein
+        // der Tabelle einer CSV wirken hier und sonst nirgends (E14 des Plans
+        // der CSV-Tabelle). Die Zeile `Csv` bleibt ohne `csv` leer.
+        const IN_DER_TRENNTEXTTABELLE: [[bool; 6]; 19] = [
+            [true, false, false, false, false, false],
+            [false, true, false, false, false, false],
+            [true, false, true, true, false, false],
+            [false, false, false, true, false, false],
+            // Editortext
+            [false, false, false, false, false, false],
+            // Eintraege
+            [false, false, false, true, false, false],
+            // Reihenfolge, gleich der Zeile darueber
+            [false, false, false, true, false, false],
+            // Aufgaben
+            [false, false, false, false, false, false],
+            // Termine
+            [false, false, false, false, false, false],
+            // Geheimnisse: ohne `pin_aenderbar` nirgends
+            [false, false, false, false, false, false],
+            // Quicknote: in keiner Form dieser Tafel
+            [false, false, false, false, false, false],
+            [true, false, true, false, false, false],
+            [true, true, true, false, true, false],
+            [false, false, true, false, false, false],
+            // Bildfolge: ohne stehende Bildfolge nirgends
+            [false, false, false, false, false, false],
+            [true, true, true, true, true, true],
+            // Eintragsdatei: ohne `eintragsdatei` nirgends
+            [false, false, false, false, false, false],
+            // Trenntext: allein hier, mit dem Fokus im Editor
+            [false, false, false, true, false, false],
+            // Csv: ohne `csv` nirgends
+            [false, false, false, false, false, false],
+        ];
+        const ALLES_ABGEWIESEN: [[bool; 6]; 19] = [[false; 6]; 19];
 
         // Je Form die Tafel ohne Sperre. Ein `match` und keine Liste, damit
         // eine weitere Form den Bau hier anhaelt.
@@ -1420,10 +1514,11 @@ mod tests {
             // Die Geheimnisse zeigen dieselbe Tabelle wie die Notizen und
             // nehmen dieselben Befehle an (Schritt 5.4b).
             Editorform::Notizen | Editorform::Geheimnisse => IN_DER_NOTIZTABELLE,
-            // Die Tabelle einer CSV antwortet in jedem Wirkungsbereich wie die
-            // Notiztabelle: Zeilenbefehle und Verschieben ja, Kaestchen,
-            // Termine und Textflaeche nein (E13 des Plans der CSV-Tabelle).
-            Editorform::Trenntext => IN_DER_NOTIZTABELLE,
+            // Die Tabelle einer CSV antwortet wie die Notiztabelle:
+            // Zeilenbefehle und Verschieben ja, Kaestchen, Termine und
+            // Textflaeche nein (E13 des Plans der CSV-Tabelle), und dazu ihre
+            // eigenen Befehle (E14).
+            Editorform::Trenntext => IN_DER_TRENNTEXTTABELLE,
             Editorform::Termine => IN_DER_TERMINTABELLE,
             Editorform::Quicknote => IN_DER_QUICKNOTE,
         };
@@ -1433,7 +1528,7 @@ mod tests {
         for form in JEDE_FORM {
             // blatt_steht, ersthelfer_gehoert_appkit,
             // schluesselfenster_gehoert_krk, und welches Achtel gilt.
-            let achtel: [(bool, bool, bool, [[bool; 6]; 17]); 8] = [
+            let achtel: [(bool, bool, bool, [[bool; 6]; 19]); 8] = [
                 (false, false, true, ohne_sperre(form)),
                 (false, false, false, ALLES_ABGEWIESEN),
                 (false, true, true, ALLES_ABGEWIESEN),
@@ -1489,15 +1584,18 @@ mod tests {
                 for (blatt, appkit, krk) in HINDERNISSE.into_iter().chain([OHNE_HINDERNIS]) {
                     for pin_aenderbar in [false, true] {
                         for eintragsdatei in [false, true] {
-                            for bildfolge in [false, true] {
-                                for aktiv_ort in JEDE_ORTSART {
-                                    lagen.push(Lage {
-                                        pin_aenderbar,
-                                        eintragsdatei,
-                                        bildfolge,
-                                        aktiv_ort,
-                                        ..lage_in(blatt, appkit, krk, fokus, form)
-                                    });
+                            for csv in [false, true] {
+                                for bildfolge in [false, true] {
+                                    for aktiv_ort in JEDE_ORTSART {
+                                        lagen.push(Lage {
+                                            pin_aenderbar,
+                                            eintragsdatei,
+                                            csv,
+                                            bildfolge,
+                                            aktiv_ort,
+                                            ..lage_in(blatt, appkit, krk, fokus, form)
+                                        });
+                                    }
                                 }
                             }
                         }
@@ -2462,6 +2560,66 @@ mod tests {
                         assert!(!zulaessig(kommando, gesperrt));
                     }
                 }
+            }
+        }
+    }
+
+    /// Die Befehle allein der Tabelle einer CSV wirken allein mit dem Fokus
+    /// im Editor und in der Form `Trenntext`; „Trennzeichen wechseln“ dazu
+    /// allein an einer `.csv` (E14 des Plans der CSV-Tabelle). Kein anderer
+    /// Befehl fragt `csv`.
+    #[test]
+    fn die_trenntextbefehle_wirken_nur_in_der_trenntextform() {
+        let zeilen_und_spalten = [
+            Kommando::TrenntextZeileEinfuegen,
+            Kommando::TrenntextSpalteEinfuegen,
+            Kommando::TrenntextSpalteAnhaengen,
+            Kommando::TrenntextSpalteLoeschen,
+        ];
+        let trennzeichen = Kommando::TrenntextTrennzeichenWechseln;
+        let (blatt, appkit, krk) = OHNE_HINDERNIS;
+        for csv in [false, true] {
+            for form in JEDE_FORM {
+                for fokus in JEDER_FOKUS {
+                    let lage = Lage {
+                        csv,
+                        ..lage_in(blatt, appkit, krk, fokus, form)
+                    };
+                    let tabelle = fokus == Fokus::Editor && form == Editorform::Trenntext;
+                    for kommando in zeilen_und_spalten {
+                        assert_eq!(
+                            zulaessig(kommando, lage),
+                            tabelle,
+                            "{kommando:?} in {fokus:?} bei {form:?} mit csv={csv}"
+                        );
+                    }
+                    assert_eq!(
+                        zulaessig(trennzeichen, lage),
+                        tabelle && csv,
+                        "das Trennzeichen in {fokus:?} bei {form:?} mit csv={csv}"
+                    );
+                    for (blatt, appkit, krk) in HINDERNISSE {
+                        let gesperrt = Lage {
+                            csv,
+                            ..lage_in(blatt, appkit, krk, fokus, form)
+                        };
+                        for kommando in zeilen_und_spalten.into_iter().chain([trennzeichen]) {
+                            assert!(!zulaessig(kommando, gesperrt), "{kommando:?}");
+                        }
+                    }
+                }
+            }
+        }
+        for kommando in Kommando::KENNUNGEN.map(|(kommando, _)| kommando) {
+            if kommando == trennzeichen {
+                continue;
+            }
+            for lage in jede_lage() {
+                assert_eq!(
+                    zulaessig(kommando, Lage { csv: true, ..lage }),
+                    zulaessig(kommando, Lage { csv: false, ..lage }),
+                    "{kommando:?} fragt csv"
+                );
             }
         }
     }

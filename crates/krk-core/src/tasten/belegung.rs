@@ -536,6 +536,28 @@ pub enum Wirkungsbereich {
     /// seiner Zulaessigkeitsregel, wie bei [`Wirkungsbereich::Editortext`] die
     /// Form.
     Bildfolge,
+    /// Wirkt nur, wenn der Fokus im Editor steht und der Editor die Tabelle
+    /// einer CSV- oder TSV-Datei zeigt (E14 des Plans
+    /// `261018-0822_*_plan-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md`).
+    ///
+    /// Der Wert der Befehle, die allein in einer Tabelle mit Spalten aus der
+    /// Datei etwas bedeuten: eine Zeile darueber einfuegen, eine Spalte links
+    /// einfuegen oder anhaengen, Spalten loeschen. Die Zeilenbefehle, die jede
+    /// Eintragstabelle kennt, tragen weiter [`Wirkungsbereich::Eintraege`] und
+    /// ihre Nachbarn. **Welche Form der Editor zeigt, weiss der Kern nicht**;
+    /// die Frage stellt `krk_ui`, wie bei [`Wirkungsbereich::Editortext`].
+    Trenntext,
+    /// Wirkt nur, wenn der Fokus im Editor steht und der Editor die Tabelle
+    /// einer `.csv` zeigt, deren Trennzeichen eine Regel gewaehlt hat (E2 des
+    /// Plans der CSV-Tabelle).
+    ///
+    /// Der Wert allein von „Trennzeichen wechseln“: eine `.tsv` trennt fest
+    /// mit dem Tabulator, und dort ist der Befehl ausgegraut. Ein eigener Wert
+    /// und keine Frage nach dem Kommando, weil die Zulaessigkeit in `krk_ui`
+    /// allein den Wirkungsbereich fragt; **ob die Datei eine `.csv` ist, weiss
+    /// der Kern nicht**, und `krk_ui` fragt es neben der Form, wie bei
+    /// [`Wirkungsbereich::Geheimnisse`].
+    Csv,
     /// Wirkt ohne Vorbehalt.
     ///
     /// Zwei Sorten von Befehlen tragen ihn. Die einen gehoeren dem Fenster als
@@ -597,6 +619,8 @@ impl Wirkungsbereich {
             Wirkungsbereich::Navigator => text(Text::WirkungsbereichNavigator),
             Wirkungsbereich::Vorschau => text(Text::WirkungsbereichVorschau),
             Wirkungsbereich::Bildfolge => text(Text::WirkungsbereichBildfolge),
+            Wirkungsbereich::Trenntext => text(Text::WirkungsbereichTrenntext),
+            Wirkungsbereich::Csv => text(Text::WirkungsbereichCsv),
             Wirkungsbereich::Ueberall => text(Text::WirkungsbereichUeberall),
         }
     }
@@ -621,7 +645,9 @@ impl Wirkungsbereich {
             | Wirkungsbereich::Aufgaben
             | Wirkungsbereich::Termine
             | Wirkungsbereich::Geheimnisse
-            | Wirkungsbereich::Quicknote => Seite::Editor,
+            | Wirkungsbereich::Quicknote
+            | Wirkungsbereich::Trenntext
+            | Wirkungsbereich::Csv => Seite::Editor,
             Wirkungsbereich::Dateifenster
             | Wirkungsbereich::Leiste
             | Wirkungsbereich::Tabbereich
@@ -690,6 +716,8 @@ impl Wirkungsbereich {
             | Wirkungsbereich::Tabbereich
             | Wirkungsbereich::Navigator
             | Wirkungsbereich::Vorschau
+            | Wirkungsbereich::Trenntext
+            | Wirkungsbereich::Csv
             | Wirkungsbereich::Ueberall => None,
         }
     }
@@ -1163,6 +1191,28 @@ pub enum Kommando {
     EintragRunter,
     /// Den gewaehlten Eintrag entfernen; mit `cmd+z` zuruecknehmbar (C6).
     EintragLoeschen,
+    /// In der Tabelle einer CSV so viele leere Zeilen ueber der Auswahl
+    /// einfuegen, wie sie Zeilen umfasst (E14 des Plans
+    /// `261018-0822_*_plan-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md`).
+    ///
+    /// Traegt [`Wirkungsbereich::Trenntext`]: die Eintragstabellen kennen
+    /// kein Einfuegen an einer Stelle, nur das Anlegen am Ende.
+    TrenntextZeileEinfuegen,
+    /// In der Tabelle einer CSV eine leere Spalte links der Auswahl einfuegen
+    /// (E7, E14).
+    TrenntextSpalteEinfuegen,
+    /// In der Tabelle einer CSV eine leere Spalte hinter der letzten anhaengen
+    /// (E7, E14).
+    TrenntextSpalteAnhaengen,
+    /// In der Tabelle einer CSV die Spalten der Auswahl loeschen; die letzte
+    /// Spalte bleibt (E7, E14).
+    TrenntextSpalteLoeschen,
+    /// Die `.csv` im Editor mit dem naechsten Trennzeichen lesen, reihum
+    /// Komma, Semikolon, Tabulator, ohne ein Byte zu aendern (E2, E14).
+    ///
+    /// Traegt [`Wirkungsbereich::Csv`]: eine `.tsv` trennt fest mit dem
+    /// Tabulator. Ab Werk ohne Kombination.
+    TrenntextTrennzeichenWechseln,
     /// Die gewaehlte Aufgabe abhaken oder wieder oeffnen (C6).
     ///
     /// Traegt [`Wirkungsbereich::Aufgaben`] und nicht
@@ -1376,7 +1426,7 @@ const _: () = assert!(Kommando::KENNUNGEN.len() <= u16::MAX as usize);
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 104] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 109] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -1482,6 +1532,26 @@ impl Kommando {
         (Kommando::EintragHoch, "eintrag_hoch"),
         (Kommando::EintragRunter, "eintrag_runter"),
         (Kommando::EintragLoeschen, "eintrag_loeschen"),
+        (
+            Kommando::TrenntextZeileEinfuegen,
+            "trenntext_zeile_einfuegen",
+        ),
+        (
+            Kommando::TrenntextSpalteEinfuegen,
+            "trenntext_spalte_einfuegen",
+        ),
+        (
+            Kommando::TrenntextSpalteAnhaengen,
+            "trenntext_spalte_anhaengen",
+        ),
+        (
+            Kommando::TrenntextSpalteLoeschen,
+            "trenntext_spalte_loeschen",
+        ),
+        (
+            Kommando::TrenntextTrennzeichenWechseln,
+            "trenntext_trennzeichen_wechseln",
+        ),
         (Kommando::AufgabeAbhaken, "aufgabe_abhaken"),
         (Kommando::PinAendern, "pin_aendern"),
         (
@@ -1786,6 +1856,13 @@ impl Kommando {
             // `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
             Kommando::EintragHoch | Kommando::EintragRunter => Wirkungsbereich::Reihenfolge,
             Kommando::AufgabeAbhaken => Wirkungsbereich::Aufgaben,
+            // Die Befehle allein der Tabelle einer CSV (E14 des Plans der
+            // CSV-Tabelle); das Trennzeichen wechselt allein eine `.csv`.
+            Kommando::TrenntextZeileEinfuegen
+            | Kommando::TrenntextSpalteEinfuegen
+            | Kommando::TrenntextSpalteAnhaengen
+            | Kommando::TrenntextSpalteLoeschen => Wirkungsbereich::Trenntext,
+            Kommando::TrenntextTrennzeichenWechseln => Wirkungsbereich::Csv,
             // „PIN ändern" (C7, Schritt 5.5 der krkhome-Arbeit): allein an der
             // entsperrten `secrets.txt`, deren PIN schon in einem Kopf steht;
             // ob das so ist, fragt `krk_ui`.
@@ -2059,6 +2136,11 @@ impl Kommando {
             | Kommando::EintragHoch
             | Kommando::EintragRunter
             | Kommando::EintragLoeschen
+            | Kommando::TrenntextZeileEinfuegen
+            | Kommando::TrenntextSpalteEinfuegen
+            | Kommando::TrenntextSpalteAnhaengen
+            | Kommando::TrenntextSpalteLoeschen
+            | Kommando::TrenntextTrennzeichenWechseln
             | Kommando::AufgabeAbhaken
             | Kommando::PinAendern
             | Kommando::TermineRichtungUmkehren

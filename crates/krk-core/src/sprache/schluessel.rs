@@ -55,6 +55,10 @@ pub enum Text {
     WirkungsbereichVorschau,
     /// `Wirkungsbereich::Bildfolge`.
     WirkungsbereichBildfolge,
+    /// `Wirkungsbereich::Trenntext`.
+    WirkungsbereichTrenntext,
+    /// `Wirkungsbereich::Csv`.
+    WirkungsbereichCsv,
     /// `Wirkungsbereich::Ueberall`.
     WirkungsbereichUeberall,
     /// `Ortsmangel::Absolut`: der Satzteil in der Statuszeile zu einer
@@ -1501,6 +1505,31 @@ pub enum Text {
     TrennzeichenSemikolon,
     /// Der Name des Trennzeichens Tabulator.
     TrennzeichenTabulator,
+    /// `Trenntextantwort::SpalteEingefuegt`: eine leere Spalte steht links
+    /// der Auswahl der Tabelle einer CSV.
+    TrenntextSpalteEingefuegt,
+    /// `Trenntextantwort::SpalteAngehaengt`: eine leere Spalte steht hinter
+    /// der letzten.
+    TrenntextSpalteAngehaengt,
+    /// `Trenntextantwort::LetzteSpalte`: die Auswahl umfasst jede Spalte, und
+    /// geloescht ist nichts.
+    TrenntextLetzteSpalte,
+    /// `Trenntextantwort::BereichEingefuegt`: ein Block aus der
+    /// Zwischenablage steht ab der Auswahl; `{zeilen}` und `{spalten}` sind
+    /// die Mengenangaben dazu.
+    TrenntextBereichEingefuegt,
+    /// `Trenntextantwort::AblageOhneText`: die Zwischenablage traegt keinen
+    /// Text fuer die Tabelle.
+    TrenntextAblageOhneText,
+    /// `Trenntextantwort::NichtsGeaendert`: die Handlung haette nichts
+    /// geaendert.
+    TrenntextNichtsGeaendert,
+    /// `Trenntextantwort::TrennzeichenFest`: eine TSV-Datei trennt fest mit
+    /// dem Tabulator.
+    TrenntextTrennzeichenFest,
+    /// `Trenntextantwort::ZuBreit`: die Handlung truege die Tabelle ueber die
+    /// Spaltengrenze; `{spalten}`, `{hoechstens}`.
+    TrenntextZuBreit,
     /// `vorschaumodell::laden`: der Eintrag liess sich nicht lesen; `{pfad}`,
     /// `{fehler}`.
     VorschauNichtLesbar,
@@ -1812,7 +1841,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 751] = [
+    pub const ALLE: [Text; 761] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1829,6 +1858,8 @@ impl Text {
         Text::WirkungsbereichNavigator,
         Text::WirkungsbereichVorschau,
         Text::WirkungsbereichBildfolge,
+        Text::WirkungsbereichTrenntext,
+        Text::WirkungsbereichCsv,
         Text::WirkungsbereichUeberall,
         Text::OrtsmangelAbsolut,
         Text::OrtsmangelLeeresStueck,
@@ -2445,6 +2476,14 @@ impl Text {
         Text::TrennzeichenKomma,
         Text::TrennzeichenSemikolon,
         Text::TrennzeichenTabulator,
+        Text::TrenntextSpalteEingefuegt,
+        Text::TrenntextSpalteAngehaengt,
+        Text::TrenntextLetzteSpalte,
+        Text::TrenntextBereichEingefuegt,
+        Text::TrenntextAblageOhneText,
+        Text::TrenntextNichtsGeaendert,
+        Text::TrenntextTrennzeichenFest,
+        Text::TrenntextZuBreit,
         Text::VorschauNichtLesbar,
         Text::VorschauLeertext,
         Text::VorschauBildNichtDarstellbar,
@@ -2683,11 +2722,16 @@ pub enum Zahlwort {
     TrenntextZeilen,
     /// Ebenso die Spalten, als `{spalten}`.
     TrenntextSpalten,
+    /// `Trenntextantwort::ZeilenEingefuegt`: so viele leere Zeilen stehen
+    /// ueber der Auswahl der Tabelle einer CSV.
+    TrenntextZeilenEingefuegt,
+    /// `Trenntextantwort::SpaltenGeloescht`: so viele Spalten sind fort.
+    TrenntextSpaltenGeloescht,
 }
 
 impl Zahlwort {
     /// Alle Zahlwoerter, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Zahlwort; 38] = [
+    pub const ALLE: [Zahlwort; 40] = [
         Zahlwort::Byte,
         Zahlwort::NeuerungenEintraegeIn,
         Zahlwort::HeimZettelUebernommen,
@@ -2726,5 +2770,7 @@ impl Zahlwort {
         Zahlwort::ArchivNamenAusgelassen,
         Zahlwort::TrenntextZeilen,
         Zahlwort::TrenntextSpalten,
+        Zahlwort::TrenntextZeilenEingefuegt,
+        Zahlwort::TrenntextSpaltenGeloescht,
     ];
 }

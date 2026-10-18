@@ -350,7 +350,10 @@ use super::blaetter::{
     self, Blattgriff, konflikt, loeschbestaetigung, namenseingabe, stapelumbenennen,
     startmeldungen, uebersprungen,
 };
-use super::editor::{Editorbereich, Editormeldung, Oeffnungsherkunft, Zellenausgang};
+use super::editor::{
+    Editorbereich, Editormeldung, Oeffnungsherkunft, Tabellenhandlung, Zellenausgang,
+};
+use super::eintragsansicht;
 use super::ereignisse::{self, Anschlag, Eingabe, Tastenabgriff};
 use super::fenster::{self, FensterDelegierter};
 use super::finder;
@@ -3891,7 +3894,7 @@ impl Anwendungsdelegierter {
             let ansicht = self.ivars().belegungsansicht.borrow();
             match ansicht.as_ref() {
                 Some(quelle) => (quelle.clone(), quelle.nimmt_auf()),
-                None => return false,
+                None => return self.tabellentaste_fangen(druck),
             }
         };
 
@@ -3914,6 +3917,31 @@ impl Anwendungsdelegierter {
             Faengerstation::Suchzeichen(zeichen) => quelle.suchzeichen_aufnehmen(zeichen),
             Faengerstation::Keine => false,
         }
+    }
+
+    /// Die dritte Station des Faengers: die Pfeile und `return` an der Tabelle
+    /// einer CSV (E10, E16 des Plans der CSV-Tabelle), solange keine
+    /// Belegungsansicht steht.
+    ///
+    /// **Eine Station dieses einen Abgriffs und keine `keyDown:`-Behandlung
+    /// der Tabelle**: der Modulkopf von [`super::ereignisse`] sagt, warum es
+    /// keinen zweiten Weg gibt. Sie steht vor dem Nachschlag, weil die nackten
+    /// Pfeile und `return` dort Befehlen des Dateifensters gehoeren, die im
+    /// Editor nein sagen und den Druck an AppKit reichten; `NSTableView`
+    /// bewegte dann allein ihre Zeilenauswahl. Welche Taste es ist, sagt die
+    /// reine Regel `eintragsansicht::tabellentaste`, ob die Tabelle der
+    /// Ersthelfer ist, `Editorbereich::tabellentaste_fangen`.
+    fn tabellentaste_fangen(&self, druck: Tastendruck) -> bool {
+        let Some(taste) = eintragsansicht::tabellentaste(druck) else {
+            return false;
+        };
+        let Some(editor) = self.ivars().editor.get() else {
+            return false;
+        };
+        let ersthelfer = NSApplication::sharedApplication(self.mtm())
+            .keyWindow()
+            .and_then(|fenster| fenster.firstResponder());
+        ersthelfer.is_some_and(|ersthelfer| editor.tabellentaste_fangen(&ersthelfer, taste))
     }
 
     // ------------------------------------------------------------------
@@ -4434,6 +4462,12 @@ impl Anwendungsdelegierter {
                 .editor
                 .get()
                 .is_some_and(|editor| editor.haelt_eintragsdatei()),
+            // Ohne Editorbereich haelt niemand eine `.csv`.
+            csv: self
+                .ivars()
+                .editor
+                .get()
+                .is_some_and(|editor| editor.haelt_csv()),
             bildfolge: self.bildfolge_steht(),
             aktiv_ort: self.aktiv_ort(),
         }
@@ -4948,6 +4982,15 @@ impl Anwendungsdelegierter {
             Kommando::EintragRunter => self.editorbefehl(Editorbereich::eintrag_runter),
             Kommando::EintragLoeschen => self.editorbefehl(Editorbereich::eintrag_loeschen),
             Kommando::AufgabeAbhaken => self.editorbefehl(Editorbereich::aufgabe_abhaken),
+            // Die Befehle allein der Tabelle einer CSV (E14 des Plans der
+            // CSV-Tabelle), derselbe Zuschnitt: ein Ruf in den Editor, eine
+            // Meldung zurueck. Gehalten von
+            // `zweigproben::jeder_dieser_befehle_hat_einen_eigenen_ausfuehrungszweig`.
+            Kommando::TrenntextZeileEinfuegen => self.trenntext(Tabellenhandlung::ZeilenDarueber),
+            Kommando::TrenntextSpalteEinfuegen => self.trenntext(Tabellenhandlung::SpalteLinks),
+            Kommando::TrenntextSpalteAnhaengen => self.trenntext(Tabellenhandlung::SpalteAnhaengen),
+            Kommando::TrenntextSpalteLoeschen => self.trenntext(Tabellenhandlung::SpaltenLoeschen),
+            Kommando::TrenntextTrennzeichenWechseln => self.trennzeichen_wechseln(),
             // „PIN ändern" (C7.15, Schritt 5.5 der krkhome-Arbeit): ein
             // eigener Zweig, weil er ein Blatt zeigt. Ohne ihn fiele der
             // Befehl durch den Auffangzweig unten, stuende im Hauptmenue und
@@ -11918,6 +11961,23 @@ impl Anwendungsdelegierter {
         true
     }
 
+    /// Eine Handlung allein an der Tabelle einer CSV (E14 des Plans der
+    /// CSV-Tabelle): derselbe Zuschnitt wie [`Self::editorbefehl`], ein Ruf in
+    /// den Editor und eine Meldung zurueck, mit der Handlung als Wert.
+    fn trenntext(&self, handlung: Tabellenhandlung) -> bool {
+        let Some(editor) = self.ivars().editor.get() else {
+            return false;
+        };
+        let meldung = editor.tabellenhandlung_ausfuehren(&handlung);
+        self.editormeldung_zeigen(&meldung);
+        true
+    }
+
+    /// „Trennzeichen wechseln“ (E2, E14), ueber [`Self::editorbefehl`].
+    fn trennzeichen_wechseln(&self) -> bool {
+        self.editorbefehl(Editorbereich::trennzeichen_wechseln)
+    }
+
     /// `cmd+j`: fragt nach einer Zeilennummer und springt dorthin (C5).
     ///
     /// Das Blatt fragt, der Editor springt. **Die Regel fuer eine Nummer ueber
@@ -13601,7 +13661,7 @@ mod zweigproben {
     ///
     /// `NeuerungenZeigen` ist der erste, und bis zur krkhome-Arbeit hielt ihn
     /// eine eigene Probe im Pruefmodul der Neuerungen.
-    const BEFEHLE: [&str; 19] = [
+    const BEFEHLE: [&str; 24] = [
         "NeuerungenZeigen",
         "Notizordner",
         "OrtWaehlen",
@@ -13610,6 +13670,11 @@ mod zweigproben {
         "EintragHoch",
         "EintragRunter",
         "EintragLoeschen",
+        "TrenntextZeileEinfuegen",
+        "TrenntextSpalteEinfuegen",
+        "TrenntextSpalteAnhaengen",
+        "TrenntextSpalteLoeschen",
+        "TrenntextTrennzeichenWechseln",
         "AufgabeAbhaken",
         "PinAendern",
         "TermineRichtungUmkehren",

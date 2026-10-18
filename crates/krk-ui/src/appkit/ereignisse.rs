@@ -23,8 +23,10 @@
 //!    ├─ Tastendruck::aus_ereignis ..... Maske normalisiert, Zeichen gemeldet
 //!    ├─ isARepeat ..................... Anschlag = Tastendruck + Wiederholung
 //!    │
-//!    ├─ Faenger der Belegungsansicht .. zwei Stationen, siehe unten;
-//!    │                                  nimmt eine an: Ereignis verbraucht
+//!    ├─ Faenger ....................... zwei Stationen der Belegungsansicht
+//!    │                                  und die Tabelle einer CSV, siehe
+//!    │                                  unten; nimmt eine an: Ereignis
+//!    │                                  verbraucht
 //!    │
 //!    └─ Belegung::nachschlag
 //!         ├─ Kommando ──> mit Anschlag ──> Senke ─┐ ist der Befehl hier
@@ -97,6 +99,18 @@
 //!
 //! `esc`, die Pfeiltasten und jede Kombination mit Befehls-, Steuerungs- oder
 //! Wahltaste fallen durch beide Stationen und laufen weiter wie bisher.
+//!
+//! **Steht keine Belegungsansicht, hat der Faenger seit dem 261018 eine
+//! dritte Station: die Tabelle einer CSV- oder TSV-Datei** (E10 und E16 des
+//! Plans `261018-0822_*_plan-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md`).
+//! Ist sie der Ersthelfer, nimmt die Station die Pfeile, mit und ohne
+//! Umschalttaste, und `return` und bewegt damit die Rechteckauswahl oder
+//! oeffnet ihre Zelle; jeder andere Druck faellt durch. Sie steht hier und
+//! nicht als `keyDown:` an der Tabelle, aus dem Grund dieses Kopfes, und vor
+//! dem Nachschlag, weil dort die nackten Pfeile und `return` Befehlen des
+//! Dateifensters gehoeren. Auch sie wohnt beim Anwendungsdelegierten
+//! (`Anwendungsdelegierter::tabellentaste_fangen`), und welche Taste es ist,
+//! sagt die reine Regel `eintragsansicht::tabellentaste`.
 //!
 //! # Der Fokusvorbehalt
 //!

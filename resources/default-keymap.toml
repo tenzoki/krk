@@ -39,7 +39,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 111 Funktionen mit zusammen 113 Kombinationen.
+# Ausgeliefert sind 116 Funktionen mit zusammen 117 Kombinationen.
 #
 # Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
@@ -1087,6 +1087,47 @@ tasten = ["ctrl+cmd+r"]
 # Dieselbe Systematik wie "umbenennen" gegen "umbenennen_stapel": die
 # Einzelform auf shift+cmd, die Stapelform auf ctrl+cmd.
 
+# ── Die Tabelle einer CSV- oder TSV-Datei ────────────────────────────────────
+# Vier Funktionen aus E14 des Plans
+# `261018-0822_*_plan-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md`, die
+# allein in der Tabelle wirken, die die Formatansicht des Editors fuer eine
+# `.csv`, `.tsv` oder `.tab` zeigt; sonst sind sie ausgegraut, und die Taste
+# geht an AppKit. Die Spaltenbefehle stehen im Menue "Editor", der eine
+# Zeilenbefehl "trenntext_zeile_einfuegen" im Menue "Home" bei den
+# Eintragsbefehlen (Nutzerentscheid vom 261018).
+#
+# Die Spalte traegt ctrl vor der Familie von cmd+return: ctrl+cmd+return fuegt
+# links ein, ctrl+shift+cmd+return haengt an, wie shift+cmd+return eine Zeile
+# anhaengt, und ctrl+shift+cmd+delete loescht, wie shift+cmd+delete eine Zeile
+# loescht. Alle drei waren am 261018 in keiner Tastenliste dieser Datei
+# vergeben, und `StandardKeyBinding.dict` belegt keine davon: mit der
+# Befehlstaste fuehrt es am 261018 (macOS 15) allein Pfeile, Leertaste, Punkt
+# und cmd+delete, mit return keine Kombination mit cmd. Sie tragen cmd und
+# wirken deshalb auch in einer laufenden Zelle
+# (`crates/krk-ui/src/kommandos/zellentaste.rs`).
+
+[[funktion]]
+id = "trenntext_spalte_einfuegen"
+tasten = ["ctrl+cmd+return"]
+
+[[funktion]]
+id = "trenntext_spalte_anhaengen"
+tasten = ["ctrl+shift+cmd+return"]
+
+[[funktion]]
+id = "trenntext_spalte_loeschen"
+tasten = ["ctrl+shift+cmd+delete"]
+# Die Spalten der Auswahl, ohne Rueckfrage und mit cmd+z zuruecknehmbar; die
+# letzte Spalte einer Tabelle bleibt.
+
+[[funktion]]
+id = "trenntext_trennzeichen_wechseln"
+tasten = []
+# Ab Werk unbelegt: ein seltener Befehl, wenn die Regel das Trennzeichen einer
+# `.csv` falsch gewaehlt hat (E2). Er geht reihum Komma, Semikolon, Tabulator,
+# aendert kein Byte und ist fuer `.tsv` und `.tab` ausgegraut. In F1 belegbar
+# und im Menue "Editor" erreichbar.
+
 # ── Die Quicknote ────────────────────────────────────────────────────────────
 # Drei Funktionen aus dem Spec
 # `260926-2300_*_spec-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`. Die
@@ -1367,6 +1408,22 @@ id = "eintrag_bearbeiten"
 tasten = ["cmd+return"]
 # Oeffnet die Zelle der gewaehlten Zeile; waehrend eine Zelle laeuft, uebernimmt
 # dieselbe Kombination sie, und ein zweites cmd+return oeffnet sie wieder.
+
+[[funktion]]
+id = "trenntext_zeile_einfuegen"
+tasten = ["opt+cmd+return"]
+# Allein in der Tabelle einer CSV- oder TSV-Datei: so viele leere Zeilen ueber
+# der Auswahl, wie sie Zeilen umfasst (E14 des Plans
+# `261018-0822_*_plan-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md`).
+# Die Familie von cmd+return: die blanke Cmd-Ebene bearbeitet, shift davor
+# legt am Ende an, opt davor fuegt an der Auswahl ein. Ein Zeilenbefehl und
+# darum hier im Menue "Home" bei den Eintragsbefehlen; die Spaltenbefehle
+# stehen im Menue "Editor" (Nutzerentscheid vom 261018). opt+cmd+return war am
+# 261018 in keiner Tastenliste dieser Datei vergeben, und
+# `StandardKeyBinding.dict` belegt es nicht (was es mit der Befehlstaste
+# belegt, nennt der Block der CSV-Tabelle weiter oben); im Feldeditor einer
+# Zelle wirkt es, weil es cmd traegt
+# (`crates/krk-ui/src/kommandos/zellentaste.rs`).
 
 [[funktion]]
 id = "eintrag_hoch"

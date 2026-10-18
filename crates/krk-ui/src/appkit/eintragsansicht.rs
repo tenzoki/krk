@@ -330,6 +330,19 @@
 //!   10.0 `setHasHorizontalScroller:`, `hasHorizontalScroller`,
 //!   `setAllowsColumnReordering:`, `columnAutoresizingStyle`,
 //!   `scrollColumnToVisible:`, `numberOfColumns`, `title` und `pointSize`
+//! - fuer die Rechteckauswahl der Tabelle einer CSV (Schritt 4 des Plans der
+//!   CSV-Tabelle) `NSTableViewSelectionHighlightStyle` samt
+//!   `setSelectionHighlightStyle:` und `selectionHighlightStyle` seit 10.5
+//!   (`NSTableView.h`), ohne Angabe und damit seit 10.0 `NSEvent` und die
+//!   Aufzaehlung `NSEventModifierFlags` samt `modifierFlags` und
+//!   `clickCount`, `rowAtPoint:`, `columnAtPoint:`, `autoscroll:`,
+//!   `deselectAll:`, `nextResponder`, `tryToPerform:with:`,
+//!   `setBackgroundColor:`, `drawsBackground` und
+//!   `selectedTextBackgroundColor`, dazu die **gebauten** Methoden
+//!   `mouseDown:` und `mouseDragged:` (`NSResponder.h`) und die Aktionen
+//!   `paste:` und `selectAll:`; seit 10.7 `enumerateAvailableRowViewsUsingBlock:`
+//!   (`NSTableView.h`), dessen Block `StackBlock` aus `block2` ist, ein
+//!   Rust-Typ der Kiste ohne macOS-Alter
 //!
 //! Keine von ihnen ist nach macOS 15 hinzugekommen, und keine Beruehrung in
 //! dieser Datei braucht deshalb eine Verfuegbarkeitspruefung zur Laufzeit.
@@ -349,19 +362,21 @@
 
 use std::borrow::Cow;
 use std::cell::{Cell, RefCell};
+use std::ptr::NonNull;
 use std::rc::Rc;
 
+use block2::StackBlock;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, Bool, ProtocolObject, Sel};
 use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSApplication, NSAutoresizingMaskOptions, NSButton, NSColor, NSControl, NSControlStateValueOff,
-    NSControlStateValueOn, NSControlTextEditingDelegate, NSFont, NSImage,
-    NSLayoutConstraintOrientation, NSLayoutPriorityRequired, NSLineBreakMode, NSResponder,
+    NSControlStateValueOn, NSControlTextEditingDelegate, NSEvent, NSEventModifierFlags, NSFont,
+    NSImage, NSLayoutConstraintOrientation, NSLayoutPriorityRequired, NSLineBreakMode, NSResponder,
     NSScrollView, NSTableCellView, NSTableColumn, NSTableColumnResizingOptions, NSTableHeaderView,
     NSTableRowView, NSTableView, NSTableViewColumnAutoresizingStyle, NSTableViewDataSource,
-    NSTableViewDelegate, NSTableViewStyle, NSText, NSTextField, NSTextFieldDelegate, NSTextView,
-    NSUserInterfaceItemIdentification, NSView, NSWindow,
+    NSTableViewDelegate, NSTableViewSelectionHighlightStyle, NSTableViewStyle, NSText, NSTextField,
+    NSTextFieldDelegate, NSTextView, NSUserInterfaceItemIdentification, NSView, NSWindow,
 };
 use objc2_foundation::{
     MainThreadMarker, NSIndexSet, NSInteger, NSNotification, NSObject, NSObjectProtocol, NSPoint,
@@ -371,6 +386,7 @@ use objc2_foundation::{
 use krk_core::heimordner::eintraege::geheimnisse::{Feld, Geheimnisse};
 use krk_core::heimordner::eintraege::{Aufgaben, Notizen, Tag, aufgabenzeile, termine};
 use krk_core::sprache::{Text, text};
+use krk_core::tasten::{ModMaske, Tastendruck};
 use krk_core::trenntext::{self, Satzindex, Zellbereich};
 use krk_core::verzeichnis::Richtung;
 
@@ -1184,6 +1200,289 @@ pub fn auswahl_nach_neuladen(vorher: Option<usize>, laenge: usize) -> Option<usi
     Some(vorher.map_or(0, |stelle| stelle.min(letzte)))
 }
 
+/// Wie gross die Tabelle einer CSV ist: Zeilen und Felder, ohne die
+/// Nummernspalte.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Tabellenmass {
+    /// Die Zahl der Zeilen.
+    pub zeilen: usize,
+    /// Die Zahl der Felder, mindestens eins, sobald es Zeilen gibt.
+    pub spalten: usize,
+}
+
+impl Tabellenmass {
+    /// Die letzte Zelle, `None` fuer eine Tabelle ohne Zeilen oder Spalten.
+    fn letzte(self) -> Option<(usize, usize)> {
+        Some((self.zeilen.checked_sub(1)?, self.spalten.checked_sub(1)?))
+    }
+}
+
+/// Eine Pfeiltaste, wie sie die Tabelle einer CSV beantwortet (E10).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Pfeil {
+    /// Eine Zeile hoeher.
+    Hoch,
+    /// Eine Zeile tiefer.
+    Runter,
+    /// Ein Feld nach links.
+    Links,
+    /// Ein Feld nach rechts.
+    Rechts,
+}
+
+/// Wohin ein Klick in der Tabelle einer CSV faellt (E10).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Klickort {
+    /// Eine Zelle, in Zeile und Feld der Datei.
+    Zelle {
+        /// Die Zeile.
+        zeile: usize,
+        /// Das Feld, nie die Tabellenspalte.
+        feld: usize,
+    },
+    /// Die Nummer einer Zeile in der Nummernspalte: die ganze Zeile.
+    Nummer {
+        /// Die Zeile.
+        zeile: usize,
+    },
+    /// Der Kopf einer Spalte: die ganze Spalte.
+    Kopf {
+        /// Das Feld der Spalte.
+        feld: usize,
+    },
+}
+
+/// Die Auswahl der Tabelle einer CSV: **immer ein Rechteck aus Zellen**,
+/// gegeben durch einen Anker und ein Ende in Zeile und Feld (E10 des Plans
+/// `261018-0822_*_plan-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md`).
+///
+/// **Rein und ohne AppKit.** Eine ganze Zeile und eine ganze Spalte sind
+/// Rechtecke ueber alle Felder oder alle Zeilen und kein eigener Fall. Jede
+/// Handlung an diesem Wert beschneidet auf das [`Tabellenmass`], also liegt
+/// das Rechteck immer in der Tabelle und umfasst mindestens eine Zelle; eine
+/// Tabelle ohne Zeilen hat keine Auswahl, und das steht als `None` beim
+/// Halter und nicht als leerer Wert hier.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Zellauswahl {
+    /// Wo die Auswahl begann: der Klick, die Zeile, der Kopf.
+    anker: (usize, usize),
+    /// Wohin sie reicht: das Ende eines Umschaltklicks, eines Ziehens, eines
+    /// Umschaltpfeils. Die Pfeile ohne Umschalttaste gehen von hier aus.
+    ende: (usize, usize),
+}
+
+impl Zellauswahl {
+    /// Die Auswahl genau einer Zelle, auf das Mass beschnitten; `None` ohne
+    /// Zeilen.
+    #[must_use]
+    pub fn zelle(zeile: usize, feld: usize, mass: Tabellenmass) -> Option<Self> {
+        let punkt = beschnitten((zeile, feld), mass)?;
+        Some(Self {
+            anker: punkt,
+            ende: punkt,
+        })
+    }
+
+    /// Die Auswahl, die ein Zellbereich des Kerns meint, auf das Mass
+    /// beschnitten; `None` ohne Zeilen. Ein leerer Bereich meint seine erste
+    /// Zelle.
+    #[must_use]
+    pub fn aus_bereich(bereich: &Zellbereich, mass: Tabellenmass) -> Option<Self> {
+        let anker = beschnitten((bereich.zeilen.start, bereich.spalten.start), mass)?;
+        let ende = beschnitten(
+            (
+                bereich
+                    .zeilen
+                    .end
+                    .saturating_sub(1)
+                    .max(bereich.zeilen.start),
+                bereich
+                    .spalten
+                    .end
+                    .saturating_sub(1)
+                    .max(bereich.spalten.start),
+            ),
+            mass,
+        )?;
+        Some(Self { anker, ende })
+    }
+
+    /// Alle Zellen der Tabelle; `None` ohne Zeilen.
+    #[must_use]
+    pub fn alles(mass: Tabellenmass) -> Option<Self> {
+        Some(Self {
+            anker: (0, 0),
+            ende: mass.letzte()?,
+        })
+    }
+
+    /// Der Anker, in Zeile und Feld.
+    #[must_use]
+    pub fn anker(self) -> (usize, usize) {
+        self.anker
+    }
+
+    /// Das Ende, in Zeile und Feld.
+    #[must_use]
+    pub fn ende(self) -> (usize, usize) {
+        self.ende
+    }
+
+    /// Das Rechteck als Zellbereich des Kerns, nie leer.
+    #[must_use]
+    pub fn bereich(self) -> Zellbereich {
+        let (oben, unten) = (self.anker.0.min(self.ende.0), self.anker.0.max(self.ende.0));
+        let (links, rechts) = (self.anker.1.min(self.ende.1), self.anker.1.max(self.ende.1));
+        Zellbereich {
+            zeilen: oben..unten + 1,
+            spalten: links..rechts + 1,
+        }
+    }
+
+    /// Ob die Zelle in Zeile `zeile` und Feld `feld` im Rechteck liegt.
+    #[must_use]
+    pub fn enthaelt(self, zeile: usize, feld: usize) -> bool {
+        let bereich = self.bereich();
+        bereich.zeilen.contains(&zeile) && bereich.spalten.contains(&feld)
+    }
+
+    /// Dieselbe Auswahl mit dem Ende an der genannten Zelle: der
+    /// Umschaltklick und das Ziehen.
+    #[must_use]
+    pub fn bis(self, zeile: usize, feld: usize, mass: Tabellenmass) -> Option<Self> {
+        Some(Self {
+            anker: beschnitten(self.anker, mass)?,
+            ende: beschnitten((zeile, feld), mass)?,
+        })
+    }
+
+    /// Die Auswahl nach einer Pfeiltaste: ohne `ausdehnen` eine Zelle neben
+    /// dem Ende, mit `ausdehnen` dasselbe Rechteck mit dem Ende eine Zelle
+    /// weiter; am Rand bleibt es, wo es ist.
+    #[must_use]
+    pub fn bewegt(self, pfeil: Pfeil, ausdehnen: bool, mass: Tabellenmass) -> Option<Self> {
+        let (letzte_zeile, letztes_feld) = mass.letzte()?;
+        let (zeile, feld) = beschnitten(self.ende, mass)?;
+        let ziel = match pfeil {
+            Pfeil::Hoch => (zeile.saturating_sub(1), feld),
+            Pfeil::Runter => ((zeile + 1).min(letzte_zeile), feld),
+            Pfeil::Links => (zeile, feld.saturating_sub(1)),
+            Pfeil::Rechts => (zeile, (feld + 1).min(letztes_feld)),
+        };
+        if ausdehnen {
+            self.bis(ziel.0, ziel.1, mass)
+        } else {
+            Self::zelle(ziel.0, ziel.1, mass)
+        }
+    }
+
+    /// Dieselbe Auswahl auf ein neues Mass beschnitten, nach einem Umbau.
+    #[must_use]
+    pub fn beschnitten(self, mass: Tabellenmass) -> Option<Self> {
+        self.bis(self.ende.0, self.ende.1, mass)
+    }
+}
+
+/// Ein Punkt in Zeile und Feld, auf das Mass beschnitten.
+fn beschnitten(punkt: (usize, usize), mass: Tabellenmass) -> Option<(usize, usize)> {
+    let (letzte_zeile, letztes_feld) = mass.letzte()?;
+    Some((punkt.0.min(letzte_zeile), punkt.1.min(letztes_feld)))
+}
+
+/// Was ein Ziehen mit gedrueckter Maustaste ausdehnt: Zellen, wenn der Klick
+/// davor in eine Zelle fiel, ganze Zeilen, wenn er in die Nummernspalte fiel.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Ziehart {
+    /// Das Ziehen setzt das Ende auf die Zelle unter dem Zeiger.
+    Zellen,
+    /// Das Ziehen setzt das Ende auf die ganze Zeile unter dem Zeiger.
+    Zeilen,
+    /// Das Ziehen tut nichts, etwa nach einem Klick unter die Zeilen.
+    Keine,
+}
+
+/// Die Auswahl nach einem Klick (E10): ein Klick setzt Anker und Ende, ein
+/// Umschaltklick allein das Ende; die Nummer waehlt die Zeile, der Kopf die
+/// Spalte, mit der Umschalttaste bis zu ihr. Dazu, was ein Ziehen danach
+/// ausdehnt.
+///
+/// **Rein und ohne Fenster pruefbar**; die Umrechnung der Spaltennummer von
+/// AppKit in ein Feld ist vorher geschehen ([`klickort`]).
+#[must_use]
+pub fn klick_waehlen(
+    vorher: Option<Zellauswahl>,
+    ort: Klickort,
+    umschalt: bool,
+    mass: Tabellenmass,
+) -> (Option<Zellauswahl>, Ziehart) {
+    let Some((letzte_zeile, letztes_feld)) = mass.letzte() else {
+        return (None, Ziehart::Keine);
+    };
+    let anker = vorher.filter(|_| umschalt).map(Zellauswahl::anker);
+    let auswahl = match ort {
+        Klickort::Zelle { zeile, feld } => match vorher.filter(|_| umschalt) {
+            Some(vorher) => vorher.bis(zeile, feld, mass),
+            None => Zellauswahl::zelle(zeile, feld, mass),
+        },
+        Klickort::Nummer { zeile } => Some(Zellauswahl {
+            anker: (anker.map_or(zeile, |anker| anker.0).min(letzte_zeile), 0),
+            ende: (zeile.min(letzte_zeile), letztes_feld),
+        }),
+        Klickort::Kopf { feld } => Some(Zellauswahl {
+            anker: (0, anker.map_or(feld, |anker| anker.1).min(letztes_feld)),
+            ende: (letzte_zeile, feld.min(letztes_feld)),
+        }),
+    };
+    let ziehart = match ort {
+        Klickort::Zelle { .. } => Ziehart::Zellen,
+        Klickort::Nummer { .. } => Ziehart::Zeilen,
+        Klickort::Kopf { .. } => Ziehart::Keine,
+    };
+    (auswahl, ziehart)
+}
+
+/// Die Auswahl, waehrend die Maus nach einem Klick ueber Zeile `zeile` und
+/// Feld `feld` gezogen wird; beides ist schon auf die Tabelle beschnitten.
+#[must_use]
+pub fn ziehen_waehlen(
+    vorher: Option<Zellauswahl>,
+    ziehart: Ziehart,
+    zeile: usize,
+    feld: usize,
+    mass: Tabellenmass,
+) -> Option<Zellauswahl> {
+    let vorher = vorher?;
+    match ziehart {
+        Ziehart::Zellen => vorher.bis(zeile, feld, mass),
+        Ziehart::Zeilen => {
+            let letztes_feld = mass.letzte()?.1;
+            Some(Zellauswahl {
+                anker: (beschnitten(vorher.anker, mass)?.0, 0),
+                ende: (beschnitten((zeile, 0), mass)?.0, letztes_feld),
+            })
+        }
+        Ziehart::Keine => Some(vorher),
+    }
+}
+
+/// Wohin ein Klick an AppKits Zeile `zeile` und Tabellenspalte `spalte`
+/// faellt, ueber die Umrechnung an [`Zeilen`]; `None` ausserhalb jeder Zeile
+/// und jenseits der letzten Spalte, und in jeder Art ausser der Tabelle
+/// einer CSV, die allein eine Zellauswahl traegt.
+#[must_use]
+pub fn klickort(zeilen: &Zeilen, zeile: NSInteger, spalte: NSInteger) -> Option<Klickort> {
+    if zeilen.art() != Eintragsart::Trenntext {
+        return None;
+    }
+    let zeile = zeilen.stelle_der_zeile(usize::try_from(zeile).ok()?)?;
+    let spalte = usize::try_from(spalte).ok()?;
+    if spalte == NUMMERNSPALTE {
+        return Some(Klickort::Nummer { zeile });
+    }
+    let feld = zeilen.feld_der_tabellenspalte(spalte)?;
+    Some(Klickort::Zelle { zeile, feld })
+}
+
 /// Die Wege aus der Tabelle in den Editor.
 ///
 /// **Rueckrufe und kein Verweis auf den Editorbereich**, aus zwei Gruenden:
@@ -1210,6 +1509,11 @@ pub struct Zellenwege {
     /// Der Editorbereich reicht ihn als Kommando weiter, damit er denselben
     /// Weg geht wie die Taste.
     pub kopf_geklickt: Box<dyn Fn()>,
+    /// `cmd+v` in der Tabelle einer CSV ohne laufende Zelle: der Text der
+    /// Zwischenablage soll als Zellbereich ab der Auswahl eingesetzt werden
+    /// (E12 des Plans der CSV-Tabelle). Der Text kommt allein aus
+    /// `zwischenablage::nur_text_lesen`; was daraus wird, rechnet der Editor.
+    pub einfuegen: Box<dyn Fn(&str)>,
 }
 
 define_class!(
@@ -1248,23 +1552,112 @@ define_class!(
         // Objektargument, keine Rueckgabe.
         #[unsafe(method(copy:))]
         fn kopieren(&self, _absender: Option<&AnyObject>) {
-            // SAFETY: Ein Leser ohne Vorbedingung; die Datenquelle ist eine
-            // nullende schwache Eigenschaft.
-            let quelle = unsafe { self.dataSource() };
-            let Some(quelle) = quelle else {
-                return;
-            };
-            let Some(ansicht) =
-                AsRef::<AnyObject>::as_ref(&*quelle).downcast_ref::<Eintragsansicht>()
-            else {
-                return;
-            };
-            if let Some(text) = ansicht.gewaehlter_text() {
+            if let Some(Some(text)) = self.mit_ansicht(Eintragsansicht::gewaehlter_text) {
                 let _ = zwischenablage::text_schreiben(&text);
+            }
+        }
+
+        /// `cmd+v` und "Bearbeiten › Einfügen" mit der Tabelle als
+        /// Ersthelfer: in der Tabelle einer CSV der Text der Zwischenablage
+        /// als Zellbereich ab der Auswahl (E12 des Plans der CSV-Tabelle).
+        ///
+        /// **Gelesen wird allein Text**, ueber
+        /// [`zwischenablage::nur_text_lesen`]: ein im Finder kopierter Eintrag
+        /// kaeme sonst als Pfad in die Zellen. Was daraus wird, rechnet der
+        /// Editor ueber [`Zellenwege::einfuegen`]. In jeder anderen Art geht
+        /// die Aktion an das naechste Glied der Antwortkette, als stuende
+        /// diese Methode nicht da; eine laufende Zelle sieht sie nie, denn
+        /// dann ist ihr Feldeditor der Ersthelfer und fuegt selbst ein.
+        // SAFETY: Die Signatur ist die einer Aktion: ein optionales
+        // Objektargument, keine Rueckgabe.
+        #[unsafe(method(paste:))]
+        fn einfuegen(&self, absender: Option<&AnyObject>) {
+            let trenntext = self
+                .mit_ansicht(|ansicht| ansicht.art() == Eintragsart::Trenntext)
+                .unwrap_or(false);
+            if !trenntext {
+                self.weiterreichen(sel!(paste:), absender);
+                return;
+            }
+            let Some(text) = zwischenablage::nur_text_lesen() else {
+                return;
+            };
+            let _ = self.mit_ansicht(|ansicht| ansicht.bereich_einfuegen(&text));
+        }
+
+        /// `cmd+a` mit der Tabelle als Ersthelfer: in der Tabelle einer CSV
+        /// jede Zelle (E10), in jeder anderen Art die Antwort der Oberklasse.
+        // SAFETY: wie bei `paste:`.
+        #[unsafe(method(selectAll:))]
+        fn alles_waehlen(&self, absender: Option<&AnyObject>) {
+            if self.mit_ansicht(Eintragsansicht::alles_waehlen) != Some(true) {
+                // SAFETY: Die Oberklasse beantwortet dieselbe Aktion mit
+                // demselben Argument.
+                let _: () = unsafe { msg_send![super(self), selectAll: absender] };
+            }
+        }
+
+        /// Ein Mausklick: in der Tabelle einer CSV waehlt er Zellen, Zeilen
+        /// und Spalten selbst (E10), und die Oberklasse sieht ihn nicht; in
+        /// jeder anderen Art geht er an sie wie bisher.
+        ///
+        /// **Die Oberklasse faehrt bei einem Klick ihre eigene Verfolgung**,
+        /// und ein Ziehen kaeme dann nie hier an. Ohne sie stellt das Fenster
+        /// die folgenden `mouseDragged:` dieser Ansicht zu, und der
+        /// Doppelklick kommt als `clickCount` 2 statt ueber die Doppelaktion;
+        /// er geht durch dieselbe Regel [`doppelklick`].
+        // SAFETY: Die Signatur entspricht der von NSResponder: ein Ereignis,
+        // keine Rueckgabe.
+        #[unsafe(method(mouseDown:))]
+        fn maus_gedrueckt(&self, ereignis: &NSEvent) {
+            if self.mit_ansicht(|ansicht| ansicht.maus_gedrueckt(ereignis)) != Some(true) {
+                // SAFETY: Die Oberklasse beantwortet dieselbe Nachricht mit
+                // demselben Argument.
+                let _: () = unsafe { msg_send![super(self), mouseDown: ereignis] };
+            }
+        }
+
+        /// Ein Ziehen nach einem Klick, der in der Tabelle einer CSV hier
+        /// beantwortet wurde.
+        // SAFETY: wie bei `mouseDown:`.
+        #[unsafe(method(mouseDragged:))]
+        fn maus_gezogen(&self, ereignis: &NSEvent) {
+            if self.mit_ansicht(|ansicht| ansicht.maus_gezogen(ereignis)) != Some(true) {
+                // SAFETY: wie bei `mouseDown:`.
+                let _: () = unsafe { msg_send![super(self), mouseDragged: ereignis] };
             }
         }
     }
 );
+
+impl Eintragstabelle {
+    /// Ruft `tun` mit der Eintragsansicht, die diese Tabelle als Datenquelle
+    /// fuehrt; `None` ohne eine.
+    ///
+    /// Gelesen ueber die Datenquelle und nicht ueber einen eigenen Verweis:
+    /// die Tabelle hat keine Ivars, und die Datenquelle ist die eine
+    /// Verbindung, die schon besteht.
+    fn mit_ansicht<R>(&self, tun: impl FnOnce(&Eintragsansicht) -> R) -> Option<R> {
+        // SAFETY: Ein Leser ohne Vorbedingung; die Datenquelle ist eine
+        // nullende schwache Eigenschaft.
+        let quelle = unsafe { self.dataSource() }?;
+        let ansicht = AsRef::<AnyObject>::as_ref(&*quelle).downcast_ref::<Eintragsansicht>()?;
+        Some(tun(ansicht))
+    }
+
+    /// Reicht eine Aktion an das naechste Glied der Antwortkette weiter, als
+    /// beantwortete diese Tabelle sie nicht.
+    fn weiterreichen(&self, aktion: Sel, absender: Option<&AnyObject>) {
+        // SAFETY: Ein Leser ohne Vorbedingung; das naechste Glied haelt die
+        // Antwortkette, solange die Tabelle in einem Fenster steht.
+        if let Some(naechstes) = unsafe { self.nextResponder() } {
+            // SAFETY: `tryToPerform:with:` schickt die Aktion mit dem einen
+            // Objektargument, das jede Aktion traegt, an das erste Glied, das
+            // sie beantwortet.
+            let _ = unsafe { naechstes.tryToPerform_with(aktion, absender) };
+        }
+    }
+}
 
 define_class!(
     /// Der Feldeditor der Eintragszellen, mit eigenem Rueckgaengigverwalter.
@@ -1532,6 +1925,24 @@ pub struct EintragsansichtIvars {
     /// Der zuletzt zerlegte Satz der Tabelle einer CSV, fuer die uebrigen
     /// Zellen seiner Zeile (E9); siehe [`Satzspeicher`].
     satzspeicher: RefCell<Option<Satzspeicher>>,
+    /// Die Rechteckauswahl der Tabelle einer CSV (E10); `None` in jeder
+    /// anderen Art und in einer Tabelle ohne Zeilen.
+    ///
+    /// **Die Auswahl dieser Art steht hier und nicht in der Tabelle**: deren
+    /// Zeilenauswahl kennt kein Rechteck, und ihre Hervorhebung ist in dieser
+    /// Art aus ([`spalten_einrichten`]). Geschrieben allein ueber
+    /// [`Eintragsansicht::zellauswahl_setzen`], das die Zellen danach
+    /// nachzeichnet.
+    zellauswahl: Cell<Option<Zellauswahl>>,
+    /// Was ein Ziehen nach dem letzten Klick in die Tabelle einer CSV
+    /// ausdehnt; gesetzt beim Klick und gelesen allein beim Ziehen danach.
+    ziehart: Cell<Ziehart>,
+    /// Ob die naechste Sicht einer CSV eine neue Datei zeigt: dann entstehen
+    /// ihre Spalten mit Anfangsbreiten neu, und die Auswahl beginnt bei A1,
+    /// auch wenn die Tabelle eben eine andere CSV zeigte. Gesetzt allein von
+    /// [`Eintragsansicht::neue_datei`], verbraucht von
+    /// [`Eintragsansicht::zeilen_zeigen`].
+    frisch: Cell<bool>,
     /// Der Hauptfadenbeweis vom Aufbau.
     ///
     /// Gemerkt und nicht mit `mtm()` erfragt, weil `mtm()` den wirklichen
@@ -1685,15 +2096,30 @@ define_class!(
         // (`NSTableView.h:659`).
         #[unsafe(method(tableView:didClickTableColumn:))]
         fn kopf_geklickt(&self, tabelle: &NSTableView, spalte: &NSTableColumn) {
-            if self.art() != Eintragsart::Termine
-                || usize::try_from(tabelle.columnWithIdentifier(&spalte.identifier()))
-                    != Ok(DATUMSSPALTE)
-            {
-                return;
-            }
-            self.fokus_in_die_tabelle();
-            if let Some(wege) = self.ivars().wege.borrow().as_ref() {
-                (wege.kopf_geklickt)();
+            let stelle = tabelle.columnWithIdentifier(&spalte.identifier());
+            match self.art() {
+                Eintragsart::Termine => {
+                    if usize::try_from(stelle) != Ok(DATUMSSPALTE) {
+                        return;
+                    }
+                    self.fokus_in_die_tabelle();
+                    if let Some(wege) = self.ivars().wege.borrow().as_ref() {
+                        (wege.kopf_geklickt)();
+                    }
+                }
+                // Die Tabelle einer CSV waehlt mit dem Kopf die Spalte, mit
+                // der Umschalttaste bis zu ihr, und mit dem Kopf der
+                // Nummernspalte jede Zelle (E10); auch hier zuerst der Fokus.
+                Eintragsart::Trenntext => {
+                    self.fokus_in_die_tabelle();
+                    let umschalt = NSApplication::sharedApplication(self.ivars().mtm)
+                        .currentEvent()
+                        .is_some_and(|ereignis| {
+                            ereignis.modifierFlags().contains(NSEventModifierFlags::Shift)
+                        });
+                    self.kopf_angeklickt(stelle, umschalt);
+                }
+                Eintragsart::Aufgaben | Eintragsart::Notizen | Eintragsart::Geheimnisse => {}
             }
         }
 
@@ -1826,6 +2252,9 @@ impl Eintragsansicht {
             kopfzeile,
             zeilen: RefCell::new(zeilen),
             satzspeicher: RefCell::new(None),
+            zellauswahl: Cell::new(None),
+            ziehart: Cell::new(Ziehart::Keine),
+            frisch: Cell::new(false),
             wege: RefCell::new(None),
             verwerfen: Cell::new(false),
             endet: Cell::new(false),
@@ -1936,16 +2365,25 @@ impl Eintragsansicht {
     pub fn zeilen_zeigen(&self, zeilen: impl Into<Zeilen>) {
         let zeilen = zeilen.into();
         self.fremde_zelle_verwerfen();
-        if *self.ivars().zeilen.borrow() == zeilen {
+        let art = zeilen.art();
+        // Eine neue CSV richtet ihre Spalten neu ein, auch wenn die Tabelle
+        // eben eine andere zeigte und der Vergleich der Generation sonst nur
+        // nachzoege ([`Self::neue_datei`]).
+        let frisch = art == Eintragsart::Trenntext && self.ivars().frisch.replace(false);
+        if !frisch && *self.ivars().zeilen.borrow() == zeilen {
             return;
         }
         let laenge = zeilen.len();
-        let art = zeilen.art();
-        let artwechsel = self.art() != art;
+        let artwechsel = self.art() != art || frisch;
         let vorher = if artwechsel {
             None
         } else {
             self.gewaehlte_stelle()
+        };
+        let vorige_auswahl = if artwechsel {
+            None
+        } else {
+            self.ivars().zellauswahl.get()
         };
         // Die Ausleihe endet an ihrem Semikolon: `reloadData` fragt die Zeilen
         // gleich wieder ab.
@@ -1966,7 +2404,26 @@ impl Eintragsansicht {
             // der ersten Zeile. Gezogene Breiten bleiben stehen.
             trenntextspalten_angleichen(ivars.mtm, &ivars.tabelle, sicht, false);
         }
+        // Die Rechteckauswahl einer CSV steht vor dem Neuladen, damit die neu
+        // gebauten Zellen sie schon zeigen: die vorige auf das neue Mass
+        // beschnitten, ohne eine die Zelle A1 (E10). In jeder anderen Art
+        // gibt es kein Mass und damit keine.
+        let zellauswahl = self.tabellenmass().and_then(|mass| match vorige_auswahl {
+            Some(auswahl) => auswahl.beschnitten(mass),
+            None => Zellauswahl::zelle(0, 0, mass),
+        });
+        self.ivars().zellauswahl.set(zellauswahl);
+        if art == Eintragsart::Trenntext && artwechsel {
+            // SAFETY: Eine Aktion mit optionalem Absender; ohne Absender
+            // nimmt die Tabelle allein ihre Zeilenauswahl zurueck.
+            unsafe { self.ivars().tabelle.deselectAll(None) };
+        }
         self.ivars().tabelle.reloadData();
+        // Die Tabelle einer CSV waehlt ueber ihre Rechteckauswahl oben und
+        // nicht ueber die Zeilenauswahl von AppKit.
+        if art == Eintragsart::Trenntext {
+            return;
+        }
         // Die Regel rechnet eine Auswahl davor als Stelle weiter; ohne eine
         // meint sie die erste Zeile des Schirms, und die zeigt in der
         // Termintabelle nicht die Stelle 0.
@@ -1988,6 +2445,270 @@ impl Eintragsansicht {
             | Zeilen::Notizen(_)
             | Zeilen::Geheimnisse(_)
             | Zeilen::Trenntext(_) => false,
+        }
+    }
+
+    /// Das Mass der Tabelle einer CSV; `None` in jeder anderen Art.
+    #[must_use]
+    fn tabellenmass(&self) -> Option<Tabellenmass> {
+        match &*self.ivars().zeilen.borrow() {
+            Zeilen::Trenntext(sicht) => Some(Tabellenmass {
+                zeilen: sicht.index().zeilenzahl(),
+                spalten: sicht.index().spaltenzahl(),
+            }),
+            Zeilen::Aufgaben(_)
+            | Zeilen::Notizen(_)
+            | Zeilen::Termine(_)
+            | Zeilen::Geheimnisse(_) => None,
+        }
+    }
+
+    /// Die Rechteckauswahl der Tabelle einer CSV; `None` in jeder anderen Art
+    /// und ohne Zeilen. Allein fuer die Proben; der Betrieb fragt
+    /// [`Self::gewaehlter_bereich`].
+    #[cfg(test)]
+    #[must_use]
+    pub(super) fn zellauswahl(&self) -> Option<Zellauswahl> {
+        self.ivars().zellauswahl.get()
+    }
+
+    /// Die Auswahl der Tabelle einer CSV als Zellbereich des Kerns, den die
+    /// Handlungen nehmen; `None` in jeder anderen Art und ohne Zeilen.
+    #[must_use]
+    pub fn gewaehlter_bereich(&self) -> Option<Zellbereich> {
+        self.ivars().zellauswahl.get().map(Zellauswahl::bereich)
+    }
+
+    /// Setzt die Auswahl der Tabelle einer CSV auf den Bereich, den eine
+    /// Handlung des Kerns danach nennt (E10), und bringt ihr Ende ins Bild; in
+    /// jeder anderen Art tut es nichts.
+    pub fn bereich_setzen(&self, bereich: &Zellbereich) {
+        let Some(mass) = self.tabellenmass() else {
+            return;
+        };
+        self.zellauswahl_setzen(Zellauswahl::aus_bereich(bereich, mass), true);
+    }
+
+    /// Sagt der Ansicht, dass die naechste Sicht einer CSV eine neue Datei
+    /// zeigt: ihre Spalten entstehen mit Anfangsbreiten neu, und die Auswahl
+    /// beginnt bei A1. Ohne diesen Ruf behielte eine CSV die gezogenen
+    /// Breiten der zuvor gezeigten, denn beide sind dieselbe Art.
+    ///
+    /// Gerufen vom Editorbereich, wenn eine andere Datei eintrifft oder das
+    /// Trennzeichen wechselt und damit die Spalten etwas anderes meinen.
+    pub fn neue_datei(&self) {
+        self.ivars().frisch.set(true);
+    }
+
+    /// Schreibt die Rechteckauswahl und zeichnet die Zellen nach; mit
+    /// `zeigen` rollt die Tabelle ihr Ende ins Bild.
+    ///
+    /// **Die eine Stelle, an der die Auswahl geschrieben wird**, ausser dem
+    /// Neuladen in [`Self::zeilen_zeigen`], das die Zellen ohnehin neu baut.
+    fn zellauswahl_setzen(&self, auswahl: Option<Zellauswahl>, zeigen: bool) {
+        self.ivars().zellauswahl.set(auswahl);
+        if zeigen && let Some(auswahl) = auswahl {
+            let (stelle, feld) = auswahl.ende();
+            let ziel = {
+                let zeilen = self.ivars().zeilen.borrow();
+                zeilen
+                    .zeile_der_stelle(stelle)
+                    .map(|zeile| (zeile, zeilen.tabellenspalte_des_feldes(feld)))
+            };
+            if let Some((zeile, spalte)) = ziel {
+                let tabelle = &self.ivars().tabelle;
+                tabelle.scrollRowToVisible(NSInteger::try_from(zeile).unwrap_or(NSInteger::MAX));
+                tabelle
+                    .scrollColumnToVisible(NSInteger::try_from(spalte).unwrap_or(NSInteger::MAX));
+            }
+        }
+        self.auswahl_zeichnen();
+    }
+
+    /// Faerbt jede gebaute Zelle der Tabelle einer CSV nach der Auswahl
+    /// (E10).
+    ///
+    /// **Jede Zeile, die AppKit gerade haelt**, ueber
+    /// `enumerateAvailableRowViewsUsingBlock:`, und nicht allein die
+    /// sichtbaren: die Tabelle baut Zeilen ueber den sichtbaren Teil hinaus vor
+    /// und fragt sie beim Rollen nicht neu ab, und eine solche Zelle zeigte
+    /// sonst die Auswahl von vorher. Gefragt werden allein schon gebaute
+    /// Zellen (`makeIfNecessary` nein); jede spaeter gebaute bekommt ihre Farbe
+    /// in [`Self::zellenansicht`]. **Kein `reloadData`**: eine Auswahl ist kein
+    /// neuer Stand, und ein Neuladen baute bei jedem Schritt eines Ziehens jede
+    /// Zelle neu.
+    fn auswahl_zeichnen(&self) {
+        let ivars = self.ivars();
+        let auswahl = ivars.zellauswahl.get();
+        let tabelle = &ivars.tabelle;
+        let gehaltene = RefCell::new(Vec::new());
+        let sammler = StackBlock::new(|_: NonNull<NSTableRowView>, zeile: NSInteger| {
+            gehaltene.borrow_mut().push(zeile);
+        });
+        tabelle.enumerateAvailableRowViewsUsingBlock(&sammler);
+        let spalten = tabelle.numberOfColumns();
+        for zeile in gehaltene.into_inner() {
+            let Some(stelle) = self.stelle_an(zeile) else {
+                continue;
+            };
+            for spalte in 0..spalten {
+                let Some(feld) = self.feld_an(spalte) else {
+                    continue;
+                };
+                let textfeld = tabelle
+                    .viewAtColumn_row_makeIfNecessary(spalte, zeile, false)
+                    .and_then(|zelle| zelle.downcast::<NSTableCellView>().ok())
+                    // SAFETY: Ein Leser ohne Vorbedingung.
+                    .and_then(|zelle| unsafe { zelle.textField() });
+                if let Some(textfeld) = textfeld {
+                    auswahl_faerben(
+                        &textfeld,
+                        auswahl.is_some_and(|auswahl| auswahl.enthaelt(stelle, feld)),
+                    );
+                }
+            }
+        }
+    }
+
+    /// Ein Klick an diesen Ort der Tabelle einer CSV, mit oder ohne
+    /// Umschalttaste, nach der reinen Regel [`klick_waehlen`].
+    ///
+    /// `pub(super)` allein fuer die Proben in [`super::editor`], die kein
+    /// Mausereignis haben und den Ort deshalb hereinreichen.
+    pub(super) fn klick(&self, ort: Option<Klickort>, umschalt: bool) {
+        let (Some(ort), Some(mass)) = (ort, self.tabellenmass()) else {
+            self.ivars().ziehart.set(Ziehart::Keine);
+            return;
+        };
+        let (auswahl, ziehart) = klick_waehlen(self.ivars().zellauswahl.get(), ort, umschalt, mass);
+        self.ivars().ziehart.set(ziehart);
+        self.zellauswahl_setzen(auswahl, true);
+    }
+
+    /// Ein Klick auf den Kopf der Tabellenspalte `spalte` einer CSV: die
+    /// Spalte, und der Kopf der Nummernspalte jede Zelle (E10).
+    ///
+    /// `pub(super)` aus demselben Grund wie [`Self::klick`].
+    pub(super) fn kopf_angeklickt(&self, spalte: NSInteger, umschalt: bool) {
+        if usize::try_from(spalte) == Ok(NUMMERNSPALTE) {
+            let _ = self.alles_waehlen();
+            return;
+        }
+        let ort = self.feld_an(spalte).map(|feld| Klickort::Kopf { feld });
+        self.klick(ort, umschalt);
+    }
+
+    /// Ein Mausklick in die Tabelle; `true`, wenn sie die einer CSV ist und
+    /// der Klick hier beantwortet wurde (Doc-Kommentar an
+    /// [`Eintragstabelle`], `mouseDown:`).
+    ///
+    /// **Zuerst der Fokus**, ueber `makeFirstResponder:` des Fensters: eine
+    /// laufende Zelle endet dabei ueber die zwei Delegiertenwege wie bei jedem
+    /// Klick daneben, und lehnt AppKit das ab, geschieht nichts weiter.
+    fn maus_gedrueckt(&self, ereignis: &NSEvent) -> bool {
+        if self.art() != Eintragsart::Trenntext {
+            return false;
+        }
+        let tabelle = &self.ivars().tabelle;
+        if let Some(fenster) = tabelle.window()
+            && !fenster.makeFirstResponder(Some(tabelle))
+        {
+            return true;
+        }
+        let ort = tabelle.convertPoint_fromView(ereignis.locationInWindow(), None);
+        let (zeile, spalte) = (tabelle.rowAtPoint(ort), tabelle.columnAtPoint(ort));
+        if ereignis.clickCount() >= 2 {
+            let feld = self
+                .feld_an(spalte)
+                .and_then(|feld| NSInteger::try_from(feld).ok())
+                .unwrap_or(-1);
+            self.doppelklick_ausfuehren(doppelklick(self.stelle_an(zeile), feld, true));
+            return true;
+        }
+        let umschalt = ereignis
+            .modifierFlags()
+            .contains(NSEventModifierFlags::Shift);
+        let ort = klickort(&self.ivars().zeilen.borrow(), zeile, spalte);
+        self.klick(ort, umschalt);
+        true
+    }
+
+    /// Ein Ziehen nach einem Klick in die Tabelle einer CSV: das Ende folgt
+    /// dem Zeiger, auf die Tabelle beschnitten, und die Rolle folgt mit.
+    fn maus_gezogen(&self, ereignis: &NSEvent) -> bool {
+        let Some(mass) = self.tabellenmass() else {
+            return false;
+        };
+        let tabelle = &self.ivars().tabelle;
+        let _ = tabelle.autoscroll(ereignis);
+        let ort = tabelle.convertPoint_fromView(ereignis.locationInWindow(), None);
+        let letzte_zeile = mass.zeilen.saturating_sub(1);
+        let zeile = self
+            .stelle_an(tabelle.rowAtPoint(ort))
+            .unwrap_or(if ort.y < 0.0 { 0 } else { letzte_zeile });
+        let spalte = tabelle.columnAtPoint(ort);
+        let feld = self.feld_an(spalte).unwrap_or(
+            if ort.x < 0.0 || usize::try_from(spalte) == Ok(NUMMERNSPALTE) {
+                0
+            } else {
+                mass.spalten.saturating_sub(1)
+            },
+        );
+        let auswahl = ziehen_waehlen(
+            self.ivars().zellauswahl.get(),
+            self.ivars().ziehart.get(),
+            zeile,
+            feld,
+            mass,
+        );
+        self.zellauswahl_setzen(auswahl, false);
+        true
+    }
+
+    /// Fuehrt eine Tabellentaste aus.
+    ///
+    /// `pub(super)` aus demselben Grund wie [`Self::klick`].
+    pub(super) fn tabellentaste_ausfuehren(&self, taste: Tabellentaste) {
+        let Some(mass) = self.tabellenmass() else {
+            return;
+        };
+        match taste {
+            Tabellentaste::Pfeil(pfeil, ausdehnen) => {
+                let auswahl = self
+                    .ivars()
+                    .zellauswahl
+                    .get()
+                    .and_then(|auswahl| auswahl.bewegt(pfeil, ausdehnen, mass))
+                    .or_else(|| Zellauswahl::zelle(0, 0, mass));
+                self.zellauswahl_setzen(auswahl, true);
+            }
+            Tabellentaste::Oeffnen => {
+                if let Some(bereich) = self.gewaehlter_bereich() {
+                    let _ = self.zelle_beginnen(Zelle {
+                        stelle: bereich.zeilen.start,
+                        spalte: bereich.spalten.start,
+                    });
+                }
+            }
+        }
+    }
+
+    /// `cmd+a` in der Tabelle einer CSV: jede Zelle (E10); `false` in jeder
+    /// anderen Art.
+    #[must_use = "in jeder anderen Art beantwortet die Oberklasse die Aktion"]
+    pub(super) fn alles_waehlen(&self) -> bool {
+        let Some(mass) = self.tabellenmass() else {
+            return false;
+        };
+        self.zellauswahl_setzen(Zellauswahl::alles(mass), false);
+        true
+    }
+
+    /// `cmd+v` in der Tabelle einer CSV mit dem Text der Zwischenablage: geht
+    /// an den Editor ueber [`Zellenwege::einfuegen`].
+    fn bereich_einfuegen(&self, text: &str) {
+        if let Some(wege) = self.ivars().wege.borrow().as_ref() {
+            (wege.einfuegen)(text);
         }
     }
 
@@ -2074,6 +2795,24 @@ impl Eintragsansicht {
     /// zu grosse Zeile beantwortete AppKit mit einer Ausnahme, die Rust nicht
     /// fangen kann.
     pub fn auswahl_setzen(&self, stelle: Option<usize>) {
+        // In der Tabelle einer CSV die Zelle in dieser Zeile, im Feld des
+        // bisherigen Endes; wer ein Rechteck meint, setzt danach
+        // [`Self::bereich_setzen`].
+        if self.art() == Eintragsart::Trenntext {
+            let Some(stelle) = stelle else {
+                return;
+            };
+            let feld = self
+                .ivars()
+                .zellauswahl
+                .get()
+                .map_or(0, |auswahl| auswahl.ende().1);
+            let auswahl = self
+                .tabellenmass()
+                .and_then(|mass| Zellauswahl::zelle(stelle, feld, mass));
+            self.zellauswahl_setzen(auswahl, true);
+            return;
+        }
         let Some(zeile) = stelle.and_then(|stelle| self.zeile_von(stelle)) else {
             return;
         };
@@ -2086,6 +2825,15 @@ impl Eintragsansicht {
     /// ist; nie die Zeilennummer (Modulkopf, „Stelle und Zeile").
     #[must_use]
     pub fn gewaehlte_stelle(&self) -> Option<usize> {
+        // Die Tabelle einer CSV waehlt ein Rechteck und keine Zeile; ihre
+        // gewaehlte Stelle ist die oberste Zeile des Rechtecks.
+        if self.art() == Eintragsart::Trenntext {
+            return self
+                .ivars()
+                .zellauswahl
+                .get()
+                .map(|auswahl| auswahl.bereich().zeilen.start);
+        }
         self.stelle_an(self.ivars().tabelle.selectedRow())
     }
 
@@ -2113,7 +2861,16 @@ impl Eintragsansicht {
     /// einem Geheimnis seine Notizen, und der Name nur ohne Notizen: dieselbe
     /// Regel wie bei der Notiz, deren Form es traegt.
     #[must_use]
-    fn gewaehlter_text(&self) -> Option<String> {
+    pub(super) fn gewaehlter_text(&self) -> Option<String> {
+        // Die Tabelle einer CSV kopiert ihr Rechteck als TSV (E11).
+        if let Zeilen::Trenntext(sicht) = &*self.ivars().zeilen.borrow() {
+            let bereich = self.ivars().zellauswahl.get()?.bereich();
+            return Some(trenntext::bereich_als_tsv(
+                sicht.text(),
+                sicht.index(),
+                &bereich,
+            ));
+        }
         let zeile = self.zeile_von(self.gewaehlte_stelle()?)?;
         let text_oder = |text: &str, kopf: &str| {
             if text.is_empty() {
@@ -2133,17 +2890,8 @@ impl Eintragsansicht {
             Zeilen::Geheimnisse(zeilen) => zeilen.get(zeile).map(|geheimnis| {
                 text_oder(geheimnis.feld(Feld::Notizen), geheimnis.feld(Feld::Name))
             }),
-            // Von einer Zeile einer CSV die ganze Zeile als TSV, wie der
-            // Bereich, den Schritt 4 des Plans der CSV-Tabelle kopiert; ohne
-            // laufende Zelle ist die gewaehlte Zeile die Auswahl.
-            Zeilen::Trenntext(sicht) => Some(trenntext::bereich_als_tsv(
-                sicht.text(),
-                sicht.index(),
-                &Zellbereich {
-                    zeilen: zeile..zeile + 1,
-                    spalten: 0..sicht.index().spaltenzahl(),
-                },
-            )),
+            // Oben beantwortet, ueber das Rechteck der Auswahl.
+            Zeilen::Trenntext(_) => None,
         }
     }
 
@@ -2216,6 +2964,14 @@ impl Eintragsansicht {
         let Some((zeile, spalte)) = self.ziel_der_zelle(zelle) else {
             return false;
         };
+        // In der Tabelle einer CSV ist die geoeffnete Zelle die Auswahl, auch
+        // nach `tab` in die naechste; ein Umbau danach behaelt sie.
+        if self.art() == Eintragsart::Trenntext {
+            let auswahl = self
+                .tabellenmass()
+                .and_then(|mass| Zellauswahl::zelle(zelle.stelle, zelle.spalte, mass));
+            self.zellauswahl_setzen(auswahl, false);
+        }
         let tabelle = &self.ivars().tabelle;
         tabelle.scrollRowToVisible(zeile);
         tabelle.scrollColumnToVisible(spalte);
@@ -2544,13 +3300,17 @@ impl Eintragsansicht {
                 if zeile >= sicht.index().zeilenzahl() {
                     return None;
                 }
-                let inhalt = if spalte == NUMMERNSPALTE {
-                    (zeile + 1).to_string()
-                } else {
-                    let feld = zeilen.feld_der_tabellenspalte(spalte)?;
-                    zellanzeige(&self.satzwert(sicht, zeile, feld)).into_owned()
-                };
-                Some(self.trenntextzelle(&inhalt, spalte == NUMMERNSPALTE))
+                if spalte == NUMMERNSPALTE {
+                    return Some(self.trenntextzelle(&(zeile + 1).to_string(), true, false));
+                }
+                let feld = zeilen.feld_der_tabellenspalte(spalte)?;
+                let inhalt = zellanzeige(&self.satzwert(sicht, zeile, feld)).into_owned();
+                let gewaehlt = self
+                    .ivars()
+                    .zellauswahl
+                    .get()
+                    .is_some_and(|auswahl| auswahl.enthaelt(zeile, feld));
+                Some(self.trenntextzelle(&inhalt, false, gewaehlt))
             }
         }
     }
@@ -2582,8 +3342,10 @@ impl Eintragsansicht {
     /// **Das Feld ist nicht bearbeitbar**, auch das wiederverwendete nicht:
     /// es wird es allein in [`Self::trenntextfeld_oeffnen`] (Modulkopf).
     /// `nummer` nennt die Nummernspalte, die eine eigene Kennung traegt, damit
-    /// eine Zelle der Nummern nie als Zelle eines Feldes wiederkommt.
-    fn trenntextzelle(&self, inhalt: &str, nummer: bool) -> Retained<NSView> {
+    /// eine Zelle der Nummern nie als Zelle eines Feldes wiederkommt;
+    /// `gewaehlt`, ob die Zelle in der Rechteckauswahl liegt (E10), und das
+    /// setzt jede, auch eine wiederverwendete, ueber [`auswahl_faerben`].
+    fn trenntextzelle(&self, inhalt: &str, nummer: bool, gewaehlt: bool) -> Retained<NSView> {
         let kennung = if nummer {
             ns_string!("trenntextnummer")
         } else {
@@ -2599,6 +3361,7 @@ impl Eintragsansicht {
         if let Some(feld) = unsafe { zelle.textField() } {
             feld.setStringValue(&NSString::from_str(inhalt));
             trenntextfeld_schalten(&feld, false);
+            auswahl_faerben(&feld, gewaehlt);
         }
         Retained::into_super(zelle)
     }
@@ -2850,6 +3613,10 @@ fn spalten_einrichten(
     // Die Spalten der Datei stehen in ihrer Folge; ein Vertauschen am Kopf
     // truege die Nummer einer Tabellenspalte auf ein anderes Feld.
     tabelle.setAllowsColumnReordering(!waagerecht);
+    // Die Tabelle einer CSV zeichnet ihre Rechteckauswahl selbst, ueber den
+    // Hintergrund der Zellen (E10); die Hervorhebung der Zeile ist dort aus,
+    // in jeder anderen Art an wie vorher.
+    tabelle.setSelectionHighlightStyle(hervorhebung(art));
     // Die Kennung ist ein Bezeichner und bleibt ein Literal; der Titel kommt
     // aus der Sprachtabelle.
     let spalte_bauen = |kennung: &NSString, titel: Text| {
@@ -2943,6 +3710,87 @@ fn spalten_einrichten(
 /// und das Wiederverwenden einer Zelle ihn gleich setzen.
 fn trenntextfeld_schalten(feld: &NSTextField, bearbeitbar: bool) {
     feld.setEditable(bearbeitbar);
+}
+
+/// Wie die Tabelle dieser Art ihre Auswahl hervorhebt: die einer CSV gar
+/// nicht, weil sie ihre Rechteckauswahl selbst zeichnet (E10), jede andere
+/// mit der Zeile wie vorher.
+#[must_use]
+pub fn hervorhebung(art: Eintragsart) -> NSTableViewSelectionHighlightStyle {
+    match art {
+        Eintragsart::Trenntext => NSTableViewSelectionHighlightStyle::None,
+        Eintragsart::Aufgaben
+        | Eintragsart::Notizen
+        | Eintragsart::Termine
+        | Eintragsart::Geheimnisse => NSTableViewSelectionHighlightStyle::Regular,
+    }
+}
+
+/// Faerbt das Feld einer Zelle der Tabelle einer CSV als gewaehlt oder nicht
+/// (E10): **die eine Stelle dieser Faerbung**, fuer gebaute, wiederverwendete
+/// und schon stehende Zellen.
+///
+/// Der Hintergrund ist die Farbe ausgewaehlten Textes und nicht die einer
+/// gewaehlten Zeile: die Schrift der Zelle bleibt dunkel, und lesbar bleibt
+/// sie in hell wie in dunkel, weil das System die Farbe je Erscheinung
+/// stellt.
+fn auswahl_faerben(feld: &NSTextField, gewaehlt: bool) {
+    feld.setDrawsBackground(gewaehlt);
+    if gewaehlt {
+        feld.setBackgroundColor(Some(&NSColor::selectedTextBackgroundColor()));
+    }
+}
+
+/// Was eine Taste in der Tabelle einer CSV ohne laufende Zelle tut (E10, E16).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Tabellentaste {
+    /// Ein Pfeil bewegt die Auswahl, mit der Umschalttaste ihr Ende.
+    Pfeil(Pfeil, bool),
+    /// `return` oeffnet die obere linke Zelle der Auswahl.
+    Oeffnen,
+}
+
+/// Der Pfeil nach links, nach dem Tastencode der einen Tastentabelle.
+const TASTE_LINKS: u16 = krk_core::tasten::code_von_pflicht("left");
+/// Der Pfeil nach rechts.
+const TASTE_RECHTS: u16 = krk_core::tasten::code_von_pflicht("right");
+/// Der Pfeil nach oben.
+const TASTE_HOCH: u16 = krk_core::tasten::code_von_pflicht("up");
+/// Der Pfeil nach unten.
+const TASTE_RUNTER: u16 = krk_core::tasten::code_von_pflicht("down");
+/// Die Eingabetaste.
+const TASTE_RETURN: u16 = krk_core::tasten::code_von_pflicht("return");
+
+/// Welche Tabellentaste ein Tastendruck ist: ein Pfeil oder `return` ohne
+/// Befehls-, Wahl- und Steuerungstaste; jeder andere Druck ist keine.
+///
+/// **Rein und ohne Fenster pruefbar.** Gefragt wird sie vom Faenger des
+/// Ereignisabgriffs, und allein dann, wenn die Tabelle einer CSV der
+/// Ersthelfer ist (`Anwendungsdelegierter::tabellentaste_fangen`): die
+/// Tabelle selbst ueberschreibt `keyDown:` nicht, denn einen Tastendruck
+/// faengt in diesem Baum allein der Abgriff, und `NSTableView` stellt die
+/// Pfeile nicht als `moveLeft:` und seine Geschwister zu (gemessen am 261018
+/// unter `libtest`: ein `keyDown:` mit dem Pfeil nach unten erreichte eine
+/// ueberschriebene `moveDown:` nicht). Die Umschalttaste dehnt beim Pfeil die
+/// Auswahl aus und laesst `return` unberuehrt.
+#[must_use]
+pub fn tabellentaste(druck: Tastendruck) -> Option<Tabellentaste> {
+    if druck.maske.enthaelt(ModMaske::BEFEHL)
+        || druck.maske.enthaelt(ModMaske::WAHL)
+        || druck.maske.enthaelt(ModMaske::STEUERUNG)
+    {
+        return None;
+    }
+    let umschalt = druck.maske.enthaelt(ModMaske::UMSCHALT);
+    let pfeil = match druck.code {
+        TASTE_LINKS => Pfeil::Links,
+        TASTE_RECHTS => Pfeil::Rechts,
+        TASTE_HOCH => Pfeil::Hoch,
+        TASTE_RUNTER => Pfeil::Runter,
+        TASTE_RETURN if !umschalt => return Some(Tabellentaste::Oeffnen),
+        _ => return None,
+    };
+    Some(Tabellentaste::Pfeil(pfeil, umschalt))
 }
 
 /// Ob die Tabelle dieser Art waagerecht rollt: allein die einer CSV (E8).
@@ -3327,5 +4175,132 @@ mod tests {
         let heute: &AnyObject = &heute;
         assert!(!NSColor::selectedContentBackgroundColor().isEqual(Some(heute)));
         assert!(!NSColor::unemphasizedSelectedContentBackgroundColor().isEqual(Some(heute)));
+    }
+
+    /// Die Rechteckauswahl der Tabelle einer CSV ist nach jeder Folge aus
+    /// Klick, Umschaltklick, Pfeil, Umschaltpfeil, Zeile, Spalte, Ziehen und
+    /// Beschneiden ein Rechteck in der Tabelle mit mindestens einer Zelle
+    /// (E10); gefahren an den Raendern und mit einem eigenen Zufallsgenerator
+    /// mit festem Startwert, damit ein Fehler wiederholbar bleibt.
+    #[test]
+    fn die_zellauswahl_ist_immer_ein_rechteck_mit_mindestens_einer_zelle() {
+        let mut zustand: u64 = 0x5eed_2610_1800_0004;
+        let mut zufall = |grenze: usize| -> usize {
+            zustand ^= zustand << 13;
+            zustand ^= zustand >> 7;
+            zustand ^= zustand << 17;
+            usize::try_from(zustand % u64::try_from(grenze.max(1)).unwrap_or(1)).unwrap_or(0)
+        };
+        let pfeile = [Pfeil::Hoch, Pfeil::Runter, Pfeil::Links, Pfeil::Rechts];
+        for (zeilen, spalten) in [(1, 1), (1, 5), (5, 1), (4, 3), (30, 12)] {
+            let mass = Tabellenmass { zeilen, spalten };
+            let mut auswahl = Zellauswahl::zelle(0, 0, mass);
+            let mut ziehart = Ziehart::Keine;
+            for schritt in 0..2000 {
+                // Auch Orte jenseits des Randes, damit das Beschneiden greift.
+                let zeile = zufall(zeilen + 3);
+                let feld = zufall(spalten + 3);
+                let umschalt = zufall(2) == 1;
+                auswahl = match zufall(7) {
+                    0 => {
+                        let (neu, art) =
+                            klick_waehlen(auswahl, Klickort::Zelle { zeile, feld }, umschalt, mass);
+                        ziehart = art;
+                        neu
+                    }
+                    1 => klick_waehlen(auswahl, Klickort::Nummer { zeile }, umschalt, mass).0,
+                    2 => klick_waehlen(auswahl, Klickort::Kopf { feld }, umschalt, mass).0,
+                    3 | 4 => auswahl
+                        .and_then(|auswahl| auswahl.bewegt(pfeile[zufall(4)], umschalt, mass)),
+                    5 => ziehen_waehlen(auswahl, ziehart, zeile, feld, mass),
+                    _ => auswahl.and_then(|auswahl| auswahl.beschnitten(mass)),
+                };
+                let auswahl =
+                    auswahl.unwrap_or_else(|| panic!("ohne Auswahl nach Schritt {schritt}"));
+                let bereich = auswahl.bereich();
+                assert!(
+                    !bereich.zeilen.is_empty() && !bereich.spalten.is_empty(),
+                    "leer nach Schritt {schritt}: {bereich:?}"
+                );
+                assert!(
+                    bereich.zeilen.end <= zeilen && bereich.spalten.end <= spalten,
+                    "ausserhalb der Tabelle {zeilen}x{spalten} nach Schritt {schritt}: {bereich:?}"
+                );
+                assert!(auswahl.enthaelt(auswahl.anker().0, auswahl.anker().1));
+                assert!(auswahl.enthaelt(auswahl.ende().0, auswahl.ende().1));
+            }
+        }
+
+        // An den Raendern ausgeschrieben.
+        let mass = Tabellenmass {
+            zeilen: 3,
+            spalten: 2,
+        };
+        let a1 = Zellauswahl::zelle(0, 0, mass).expect("A1");
+        assert_eq!(
+            a1.bewegt(Pfeil::Hoch, false, mass),
+            Some(a1),
+            "oben bleibt oben"
+        );
+        assert_eq!(
+            a1.bewegt(Pfeil::Links, true, mass),
+            Some(a1),
+            "links bleibt links"
+        );
+        let ecke = Zellauswahl::zelle(9, 9, mass).expect("beschnitten");
+        assert_eq!(ecke.bereich(), Zellbereich::zelle(2, 1));
+        assert_eq!(
+            ecke.bewegt(Pfeil::Rechts, false, mass)
+                .map(Zellauswahl::bereich),
+            Some(Zellbereich::zelle(2, 1))
+        );
+        let gezogen = a1
+            .bewegt(Pfeil::Runter, true, mass)
+            .and_then(|auswahl| auswahl.bewegt(Pfeil::Rechts, true, mass))
+            .expect("ausgedehnt");
+        assert_eq!(
+            gezogen.bereich(),
+            Zellbereich {
+                zeilen: 0..2,
+                spalten: 0..2
+            }
+        );
+        assert_eq!(
+            gezogen
+                .bewegt(Pfeil::Hoch, false, mass)
+                .map(Zellauswahl::bereich),
+            Some(Zellbereich::zelle(0, 1)),
+            "ohne Umschalttaste eine Zelle neben dem Ende"
+        );
+        assert_eq!(
+            gezogen
+                .beschnitten(Tabellenmass {
+                    zeilen: 1,
+                    spalten: 1
+                })
+                .map(Zellauswahl::bereich),
+            Some(Zellbereich::zelle(0, 0)),
+            "nach einem Umbau auf das neue Mass"
+        );
+        assert_eq!(
+            gezogen.beschnitten(Tabellenmass {
+                zeilen: 0,
+                spalten: 1
+            }),
+            None,
+            "ohne Zeilen keine Auswahl"
+        );
+        assert_eq!(
+            Zellauswahl::aus_bereich(
+                &Zellbereich {
+                    zeilen: 1..1,
+                    spalten: 1..1
+                },
+                mass
+            )
+            .map(Zellauswahl::bereich),
+            Some(Zellbereich::zelle(1, 1)),
+            "ein leerer Bereich meint seine erste Zelle"
+        );
     }
 }

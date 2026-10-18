@@ -440,7 +440,9 @@ pub fn wirkt(bereich: Wirkungsbereich, fokus: Fokus) -> bool {
         | Wirkungsbereich::Aufgaben
         | Wirkungsbereich::Termine
         | Wirkungsbereich::Geheimnisse
-        | Wirkungsbereich::Quicknote => fokus == Fokus::Editor,
+        | Wirkungsbereich::Quicknote
+        | Wirkungsbereich::Trenntext
+        | Wirkungsbereich::Csv => fokus == Fokus::Editor,
         Wirkungsbereich::Tabbereich => {
             matches!(fokus, Fokus::Dateifenster | Fokus::Vorschau)
         }
@@ -513,7 +515,7 @@ mod tests {
         // Eine Zeile je Wirkungsbereich; die Spalten stehen in der Reihenfolge
         // von JEDER_FOKUS: Dateifenster, Leiste, Vorschau, Editor, Git,
         // Anderswo.
-        const TAFEL: [(Wirkungsbereich, [bool; 6]); 17] = [
+        const TAFEL: [(Wirkungsbereich, [bool; 6]); 19] = [
             (
                 Wirkungsbereich::Dateifenster,
                 [true, false, false, false, false, false],
@@ -577,6 +579,14 @@ mod tests {
             (
                 Wirkungsbereich::Bildfolge,
                 [true, false, false, false, false, false],
+            ),
+            (
+                Wirkungsbereich::Trenntext,
+                [false, false, false, true, false, false],
+            ),
+            (
+                Wirkungsbereich::Csv,
+                [false, false, false, true, false, false],
             ),
             (
                 Wirkungsbereich::Ueberall,
@@ -1007,7 +1017,9 @@ mod tests {
                 | Wirkungsbereich::Aufgaben
                 | Wirkungsbereich::Termine
                 | Wirkungsbereich::Geheimnisse
-                | Wirkungsbereich::Quicknote => {
+                | Wirkungsbereich::Quicknote
+                | Wirkungsbereich::Trenntext
+                | Wirkungsbereich::Csv => {
                     assert!(
                         wirkt(kommando.wirkungsbereich(), Fokus::Editor),
                         "„{kennung}“ wirkt in seinem eigenen Bereich nicht"

@@ -26,6 +26,8 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::WirkungsbereichNavigator => "file pane, bar, Preview and Git area",
         Text::WirkungsbereichVorschau => "Preview",
         Text::WirkungsbereichBildfolge => "file pane, while the Preview shows a photo sequence",
+        Text::WirkungsbereichTrenntext => "tables of a CSV or TSV file in the Editor",
+        Text::WirkungsbereichCsv => "tables of a CSV file in the Editor",
         Text::WirkungsbereichUeberall => "everywhere",
         Text::OrtsmangelAbsolut => "is an absolute path",
         Text::OrtsmangelLeeresStueck => "contains an empty segment",
@@ -946,6 +948,18 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::TrennzeichenKomma => "Comma",
         Text::TrennzeichenSemikolon => "Semicolon",
         Text::TrennzeichenTabulator => "Tab",
+        Text::TrenntextSpalteEingefuegt => "column inserted; cmd+z undoes it",
+        Text::TrenntextSpalteAngehaengt => "column appended; cmd+z undoes it",
+        Text::TrenntextLetzteSpalte => {
+            "the selection covers every column, and a table keeps at least one; nothing deleted"
+        }
+        Text::TrenntextBereichEingefuegt => "pasted: {zeilen} × {spalten}; cmd+z undoes it",
+        Text::TrenntextAblageOhneText => "the clipboard holds no text for the table",
+        Text::TrenntextNichtsGeaendert => "the table stays as it is",
+        Text::TrenntextTrennzeichenFest => "a TSV file always separates with a tab",
+        Text::TrenntextZuBreit => {
+            "the table would then have {spalten} columns, it shows at most {hoechstens}; nothing changed"
+        }
         Text::VorschauNichtLesbar => "{pfad} could not be read: {fehler}",
         Text::VorschauLeertext => "No content. The selection in the file pane fills this tab.",
         Text::VorschauBildNichtDarstellbar => {
@@ -1250,6 +1264,14 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         ),
         Zahlwort::TrenntextZeilen => ("one row", "{n} rows"),
         Zahlwort::TrenntextSpalten => ("one column", "{n} columns"),
+        Zahlwort::TrenntextZeilenEingefuegt => (
+            "one row inserted; cmd+z undoes it",
+            "{n} rows inserted; cmd+z undoes them",
+        ),
+        Zahlwort::TrenntextSpaltenGeloescht => (
+            "one column deleted; cmd+z brings it back",
+            "{n} columns deleted; cmd+z brings them back",
+        ),
     }
 }
 
@@ -1341,6 +1363,11 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::EintragHoch => "Move Entry Up",
         Kommando::EintragRunter => "Move Entry Down",
         Kommando::EintragLoeschen => "Delete Entry",
+        Kommando::TrenntextZeileEinfuegen => "Insert Row Above",
+        Kommando::TrenntextSpalteEinfuegen => "Insert Column Left",
+        Kommando::TrenntextSpalteAnhaengen => "Append Column",
+        Kommando::TrenntextSpalteLoeschen => "Delete Columns",
+        Kommando::TrenntextTrennzeichenWechseln => "Change Delimiter",
         Kommando::AufgabeAbhaken => "Check Off or Reopen Task",
         Kommando::PinAendern => "Change PIN",
         Kommando::TermineRichtungUmkehren => "Appointments: Reverse Sort Order",

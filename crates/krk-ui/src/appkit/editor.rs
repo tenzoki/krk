@@ -788,6 +788,86 @@ pub enum Editormeldung {
     /// Die Tabelle einer CSV laesst sich nicht zeigen, und der Editor zeigt
     /// die Datei in der Rohansicht (E3, E9); `ctrl+cmd+e` versucht es neu.
     TabellenformVerweigert(Verweigerung),
+    /// Was eine Handlung allein an der Tabelle einer CSV bewirkt hat
+    /// (Schritte 4 und 5 des Plans der CSV-Tabelle).
+    Trenntext(Trenntextantwort),
+}
+
+/// Was eine Handlung allein an der Tabelle einer CSV dem Nutzer sagt: das
+/// Einfuegen eines Bereichs, die Zeilen- und Spaltenbefehle, das Trennzeichen.
+///
+/// Ein Wert je Antwort und keine Zeichenkette beim Rufer, wie
+/// [`Eintragsantwort`]; die Saetze stehen in [`Self::text`], vollstaendig
+/// und ohne Auffangzweig.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Trenntextantwort {
+    /// So viele leere Zeilen stehen ueber der Auswahl.
+    ZeilenEingefuegt(usize),
+    /// Eine leere Spalte steht links der Auswahl.
+    SpalteEingefuegt,
+    /// Eine leere Spalte steht hinter der letzten.
+    SpalteAngehaengt,
+    /// So viele Spalten sind fort.
+    SpaltenGeloescht(usize),
+    /// Die Auswahl umfasst jede Spalte, und eine Tabelle behaelt mindestens
+    /// eine; geloescht ist nichts.
+    LetzteSpalte,
+    /// Ein Block aus der Zwischenablage steht ab der Auswahl.
+    BereichEingefuegt {
+        /// Wie viele Zeilen er umfasst.
+        zeilen: usize,
+        /// Wie viele Spalten er umfasst.
+        spalten: usize,
+    },
+    /// Die Zwischenablage traegt keinen Text, den die Tabelle einsetzen
+    /// koennte.
+    AblageOhneText,
+    /// Die Handlung haette nichts geaendert, und es gibt keinen Umbau.
+    NichtsGeaendert,
+    /// Eine TSV-Datei trennt fest mit dem Tabulator, und ihr Trennzeichen
+    /// wechselt nicht (E1, E2).
+    TrennzeichenFest,
+    /// Die Handlung truege die Tabelle ueber `trenntext::HOECHSTENS_SPALTEN`
+    /// Spalten hinaus, und sie unterbleibt (E9).
+    ZuBreit(usize),
+}
+
+impl Trenntextantwort {
+    /// Der Satz fuer die Statuszeile.
+    #[must_use]
+    pub fn text(self) -> String {
+        let zahl = |n: usize| u64::try_from(n).unwrap_or(u64::MAX);
+        match self {
+            Self::ZeilenEingefuegt(n) => anzahl(Zahlwort::TrenntextZeilenEingefuegt, zahl(n), &[]),
+            Self::SpalteEingefuegt => text(Text::TrenntextSpalteEingefuegt).to_owned(),
+            Self::SpalteAngehaengt => text(Text::TrenntextSpalteAngehaengt).to_owned(),
+            Self::SpaltenGeloescht(n) => anzahl(Zahlwort::TrenntextSpaltenGeloescht, zahl(n), &[]),
+            Self::LetzteSpalte => text(Text::TrenntextLetzteSpalte).to_owned(),
+            Self::BereichEingefuegt { zeilen, spalten } => satz(
+                Text::TrenntextBereichEingefuegt,
+                &[
+                    (
+                        "zeilen",
+                        &anzahl(Zahlwort::TrenntextZeilen, zahl(zeilen), &[]),
+                    ),
+                    (
+                        "spalten",
+                        &anzahl(Zahlwort::TrenntextSpalten, zahl(spalten), &[]),
+                    ),
+                ],
+            ),
+            Self::AblageOhneText => text(Text::TrenntextAblageOhneText).to_owned(),
+            Self::NichtsGeaendert => text(Text::TrenntextNichtsGeaendert).to_owned(),
+            Self::TrennzeichenFest => text(Text::TrenntextTrennzeichenFest).to_owned(),
+            Self::ZuBreit(spalten) => satz(
+                Text::TrenntextZuBreit,
+                &[
+                    ("spalten", &spalten),
+                    ("hoechstens", &trenntext::HOECHSTENS_SPALTEN),
+                ],
+            ),
+        }
+    }
 }
 
 impl Editormeldung {
@@ -915,6 +995,7 @@ impl Editormeldung {
                     ("hoechstens", &trenntext::HOECHSTENS_SPALTEN),
                 ],
             ),
+            Self::Trenntext(antwort) => antwort.text(),
         }
     }
 }
@@ -968,11 +1049,28 @@ fn tabellenform_verweigert(index: &Satzindex) -> Option<Verweigerung> {
 
 /// Was der Editor ueber die gehaltene CSV- oder TSV-Datei weiss.
 struct Trenntextlage {
-    /// Wie die Datei zu lesen ist; gesetzt, wenn sie eintrifft (E2).
+    /// Wie die Datei zu lesen ist; gesetzt, wenn sie eintrifft (E2), und
+    /// neu gesetzt allein von [`Self::trennzeichen_weiter`].
     dialekt: Dialekt,
     /// Die zuletzt gebildete Sicht, falls es eine gibt. Sie gehoert zu dem
     /// Stand, dessen Abschrift sie traegt, und zu keinem anderen.
     sicht: Option<Trenntextsicht>,
+}
+
+impl Trenntextlage {
+    /// Wechselt das Trennzeichen reihum (E2, Befehl „Trennzeichen wechseln“)
+    /// und nennt den neuen Dialekt.
+    ///
+    /// **Die Deutung wechselt und kein Byte**: der Stand bleibt, wie er ist,
+    /// allein die Sicht faellt, weil sie im alten Dialekt zerlegt ist, und
+    /// entsteht beim naechsten Nachzug neu. Eine `.tsv` erreicht diese Stelle
+    /// nicht; die Zulaessigkeit graut den Befehl dort aus, und
+    /// `Editorbereich::trennzeichen_wechseln` fragt vorher.
+    fn trennzeichen_weiter(&mut self) -> Dialekt {
+        self.dialekt = self.dialekt.gewechselt();
+        self.sicht = None;
+        self.dialekt
+    }
 }
 
 #[cfg(test)]
@@ -1032,20 +1130,15 @@ fn sicht_zum_nachzug(
 /// Ein Stand der Tabelle einer CSV als Neustand: der Text, und als Auswahl
 /// die erste Zeile des Bereichs danach, falls er eine hat.
 ///
-/// Die Rechteckauswahl aus E10 folgt mit Schritt 4 des Plans; bis dahin ist
-/// die Auswahl eine Zeile, und die Spalten des Bereichs fallen hier.
+/// **Die Spalten des Bereichs fallen hier und gehen nicht verloren**: der
+/// Neustand traegt eine Zeile, weil `umbau_anwenden` fuer jede Art eine
+/// Zeile waehlt, und wer den ganzen Bereich meint, setzt ihn danach ueber
+/// `Eintragsansicht::bereich_setzen` ([`Editorbereich::trenntext_umbauen`]).
 fn als_neustand(stand: Trenntextstand) -> Neustand {
     Neustand {
         auswahl: (!stand.auswahl.zeilen.is_empty()).then_some(stand.auswahl.zeilen.start),
         text: stand.text,
     }
-}
-
-/// Die Zeile `zeile` als Bereich, wie ihn die Zeilenhandlungen des Kerns
-/// nehmen; die Spalte ist die erste, bis Schritt 4 die Zellauswahl bringt.
-#[must_use]
-fn zeilenbereich(zeile: usize) -> Zellbereich {
-    Zellbereich::zelle(zeile, 0)
 }
 
 /// Was eine Handlung an der Tabelle einer CSV bewirkt und was sie dem Nutzer
@@ -1054,16 +1147,21 @@ fn zeilenbereich(zeile: usize) -> Zellbereich {
 ///
 /// **Rein und ohne Fenster pruefbar**, und jede Rechnung steht im Kern
 /// (`krk_core::trenntext`), der allein die Bytes der beruehrten Saetze
-/// ersetzt. `zeile` ist die gewaehlte Zeile; eine Zeile hinter der letzten
-/// zaehlt wie keine. **Ein unterminiertes Anfuehrungszeichen haelt jede
-/// Handlung an**, mit dem Grund, aus dem auch die Tabelle nicht steht: ein
-/// angehaengter Satz laege sonst im offenen Feld.
+/// ersetzt. `auswahl` ist die Rechteckauswahl der Tabelle (E10): Loeschen
+/// und Verschieben wirken auf ihre Zeilen als Block (E13), und ein Bereich,
+/// der hinter der letzten Zeile beginnt, zaehlt wie keiner. **Ein
+/// unterminiertes Anfuehrungszeichen haelt jede Handlung an**, mit dem Grund,
+/// aus dem auch die Tabelle nicht steht: ein angehaengter Satz laege sonst im
+/// offenen Feld.
+///
+/// Der Stand danach traegt den Bereich, den der Kern nennt, und nicht allein
+/// eine Zeile; [`als_neustand`] macht daraus den Neustand des Umbaus.
 fn trenntext_handlung_rechnen(
     stand: &str,
     index: &Satzindex,
     handlung: Handlung,
-    zeile: Option<usize>,
-) -> (Editormeldung, Option<Neustand>) {
+    auswahl: Option<&Zellbereich>,
+) -> (Editormeldung, Option<Trenntextstand>) {
     use Eintragsantwort as A;
     let antwort = |antwort| Editormeldung::Eintrag(Eintragsart::Trenntext, antwort);
     if let Some(satz) = index.unterminiert() {
@@ -1072,11 +1170,11 @@ fn trenntext_handlung_rechnen(
             None,
         );
     }
-    let gewaehlt = zeile.filter(|zeile| *zeile < index.zeilenzahl());
+    let gewaehlt = auswahl.filter(|auswahl| auswahl.zeilen.start < index.zeilenzahl());
     let ohne_auswahl = (antwort(A::KeinEintragGewaehlt), None);
     match handlung {
         Handlung::Hinzufuegen => match trenntext::zeile_anhaengen(stand, index) {
-            Some(neu) => (antwort(A::Hinzugefuegt), Some(als_neustand(neu))),
+            Some(neu) => (antwort(A::Hinzugefuegt), Some(neu)),
             None => (antwort(A::KeineTabelle), None),
         },
         Handlung::Bearbeiten => match gewaehlt {
@@ -1084,11 +1182,11 @@ fn trenntext_handlung_rechnen(
             None => ohne_auswahl,
         },
         Handlung::Verschieben(richtung) => {
-            let Some(zeile) = gewaehlt else {
+            let Some(auswahl) = gewaehlt else {
                 return ohne_auswahl;
             };
-            match trenntext::zeilen_verschieben(stand, index, &zeilenbereich(zeile), richtung) {
-                Some(neu) => (antwort(A::Verschoben), Some(als_neustand(neu))),
+            match trenntext::zeilen_verschieben(stand, index, auswahl, richtung) {
+                Some(neu) => (antwort(A::Verschoben), Some(neu)),
                 None => match richtung {
                     Richtung::Hoch => (antwort(A::SchonOben), None),
                     Richtung::Runter => (antwort(A::SchonUnten), None),
@@ -1096,14 +1194,122 @@ fn trenntext_handlung_rechnen(
             }
         }
         Handlung::Loeschen => {
-            match gewaehlt
-                .and_then(|zeile| trenntext::zeilen_loeschen(stand, index, &zeilenbereich(zeile)))
-            {
-                Some(neu) => (antwort(A::Geloescht), Some(als_neustand(neu))),
+            match gewaehlt.and_then(|auswahl| trenntext::zeilen_loeschen(stand, index, auswahl)) {
+                Some(neu) => (antwort(A::Geloescht), Some(neu)),
                 None => ohne_auswahl,
             }
         }
         Handlung::Abhaken => (antwort(A::Abgehakt), None),
+    }
+}
+
+/// Eine Handlung allein an der Tabelle einer CSV, neben den Eintragsbefehlen
+/// (E12 und E14 des Plans der CSV-Tabelle).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Tabellenhandlung {
+    /// So viele leere Zeilen ueber der Auswahl, wie sie Zeilen umfasst.
+    ZeilenDarueber,
+    /// Eine leere Spalte links der Auswahl.
+    SpalteLinks,
+    /// Eine leere Spalte hinter der letzten.
+    SpalteAnhaengen,
+    /// Die Spalten der Auswahl fort.
+    SpaltenLoeschen,
+    /// Ein TSV-Text aus der Zwischenablage als Block ab der oberen linken
+    /// Zelle der Auswahl.
+    Einfuegen(String),
+}
+
+/// Was eine Handlung allein an der Tabelle einer CSV bewirkt und was sie dem
+/// Nutzer sagt; das Gegenstueck zu [`trenntext_handlung_rechnen`] fuer die
+/// Befehle aus E14 und das Einfuegen aus E12.
+///
+/// **Rein und ohne Fenster pruefbar**, und jede Rechnung steht im Kern, der
+/// allein die Bytes der beruehrten Saetze ersetzt. Ohne Auswahl, also in
+/// einer Tabelle ohne Zeilen, gilt die Zelle A1. Ein unterminiertes
+/// Anfuehrungszeichen haelt jede Handlung an wie dort; eine Handlung, nach der
+/// die Tabelle mehr Spalten truege, als sie zeigt, unterbleibt (E9). Das
+/// Einfuegen ist **eine** Handlung, auch wenn es Zeilen anhaengt und Saetze
+/// auffuellt, und damit ein `cmd+z`.
+fn tabellenhandlung_rechnen(
+    stand: &str,
+    index: &Satzindex,
+    handlung: &Tabellenhandlung,
+    auswahl: Option<&Zellbereich>,
+) -> (Editormeldung, Option<Trenntextstand>) {
+    use Trenntextantwort as T;
+    if let Some(satz) = index.unterminiert() {
+        return (
+            Editormeldung::TabellenformVerweigert(Verweigerung::Unterminiert { zeile: satz + 1 }),
+            None,
+        );
+    }
+    let antwort = |antwort| Editormeldung::Trenntext(antwort);
+    let auswahl = auswahl.cloned().unwrap_or_else(|| Zellbereich::zelle(0, 0));
+    let spaltenzahl = index.spaltenzahl();
+    let zu_breit = |spalten: usize| {
+        (spalten > trenntext::HOECHSTENS_SPALTEN).then_some((antwort(T::ZuBreit(spalten)), None))
+    };
+    let unveraendert = (antwort(T::NichtsGeaendert), None);
+    match handlung {
+        Tabellenhandlung::ZeilenDarueber => {
+            match trenntext::zeilen_einfuegen(stand, index, &auswahl) {
+                Some(neu) => (
+                    antwort(T::ZeilenEingefuegt(neu.auswahl.zeilen.len())),
+                    Some(neu),
+                ),
+                None => unveraendert,
+            }
+        }
+        Tabellenhandlung::SpalteLinks | Tabellenhandlung::SpalteAnhaengen => {
+            if let Some(abgewiesen) = zu_breit(spaltenzahl + 1) {
+                return abgewiesen;
+            }
+            let (an, gelungen) = if *handlung == Tabellenhandlung::SpalteLinks {
+                (auswahl.spalten.start.min(spaltenzahl), T::SpalteEingefuegt)
+            } else {
+                (spaltenzahl, T::SpalteAngehaengt)
+            };
+            match trenntext::spalte_einfuegen(stand, index, an, &auswahl) {
+                Some(neu) => (antwort(gelungen), Some(neu)),
+                None => unveraendert,
+            }
+        }
+        Tabellenhandlung::SpaltenLoeschen => {
+            match trenntext::spalten_loeschen(stand, index, &auswahl) {
+                Ok(Some(neu)) => (
+                    antwort(T::SpaltenGeloescht(
+                        auswahl.spalten.end.min(spaltenzahl)
+                            - auswahl.spalten.start.min(spaltenzahl),
+                    )),
+                    Some(neu),
+                ),
+                Ok(None) => unveraendert,
+                Err(trenntext::LetzteSpalte) => (antwort(T::LetzteSpalte), None),
+            }
+        }
+        Tabellenhandlung::Einfuegen(text) => {
+            let block = trenntext::tsv_lesen(text);
+            let breite = block.iter().map(Vec::len).max().unwrap_or(0);
+            if block.is_empty() || breite == 0 {
+                return (antwort(T::AblageOhneText), None);
+            }
+            let zeile = auswahl.zeilen.start.min(index.zeilenzahl());
+            let spalte = auswahl.spalten.start;
+            if let Some(abgewiesen) = zu_breit(spaltenzahl.max(spalte + breite)) {
+                return abgewiesen;
+            }
+            match trenntext::bereich_einsetzen(stand, index, zeile, spalte, &block) {
+                Some(neu) => (
+                    antwort(T::BereichEingefuegt {
+                        zeilen: block.len(),
+                        spalten: breite,
+                    }),
+                    Some(neu),
+                ),
+                None => unveraendert,
+            }
+        }
     }
 }
 
@@ -2636,6 +2842,11 @@ pub struct EditorIvars {
     /// weiter; [`Eintragsansicht::zeilen_zeigen`] erkennt an ihr einen neuen
     /// Stand ([`Trenntextsicht`]).
     trenntextgeneration: Cell<u64>,
+    /// Der Pfad der CSV- oder TSV-Datei, deren Tabelle zuletzt eingerichtet
+    /// wurde; `None`, solange der Editor keine haelt. Gelesen allein von
+    /// [`Editorbereich::trenntext_vorbereiten`]: eine andere Datei beginnt mit
+    /// Anfangsbreiten und bei A1, ein Neuladen derselben behaelt beides.
+    trenntextpfad: RefCell<Option<PathBuf>>,
 }
 
 define_class!(
@@ -2800,6 +3011,7 @@ impl Editorbereich {
             quicknote_rueckkehr: Cell::new(None),
             trenntext: RefCell::new(None),
             trenntextgeneration: Cell::new(0),
+            trenntextpfad: RefCell::new(None),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
@@ -2812,10 +3024,11 @@ impl Editorbereich {
         // Derselbe Grund an der Ansicht: der Wechsel des Erscheinungsbildes
         // laeuft ueber sie hierher, und "hierher" gibt es erst ab dieser Zeile.
         this.ivars().bereich.ziel_setzen(&this);
-        // Die vier Wege aus der Tabelle, aus demselben Grund erst hier. Jeder
+        // Die Wege aus der Tabelle, aus demselben Grund erst hier. Jeder
         // haelt den Editorbereich schwach; die Begruendung steht an
         // `Zellenwege`.
-        let (pruefer, schreiber, haker, anleger, kopf) = (
+        let (pruefer, schreiber, haker, anleger, kopf, einfueger) = (
+            Weak::from_retained(&this),
             Weak::from_retained(&this),
             Weak::from_retained(&this),
             Weak::from_retained(&this),
@@ -2854,6 +3067,16 @@ impl Editorbereich {
             kopf_geklickt: Box::new(move || {
                 if let Some(editor) = kopf.load() {
                     editor.kommando_melden(Kommando::TermineRichtungUmkehren);
+                }
+            }),
+            // `cmd+v` in der Tabelle einer CSV: eine Handlung wie jede andere,
+            // und ihre Antwort geht an die Senke, weil kein Befehl sie
+            // weitergibt (E12 des Plans der CSV-Tabelle).
+            einfuegen: Box::new(move |text| {
+                if let Some(editor) = einfueger.load() {
+                    let meldung = editor
+                        .tabellenhandlung_ausfuehren(&Tabellenhandlung::Einfuegen(text.to_owned()));
+                    editor.meldung_melden(meldung);
                 }
             }),
         });
@@ -3488,7 +3711,8 @@ impl Editorbereich {
         // Kern wie die Tabelle; der Index entsteht dafuer neu, weil beim
         // Tippen in der Rohansicht keiner nachgezogen wird (E9).
         let (meldung, neustand) = if art == Eintragsart::Trenntext {
-            self.trenntext_handlung(Handlung::Hinzufuegen, None)
+            let (meldung, stand) = self.trenntext_handlung(Handlung::Hinzufuegen, None);
+            (meldung, stand.map(als_neustand))
         } else {
             handlung_rechnen(
                 self.ivars().modell.borrow().stand(),
@@ -3559,6 +3783,32 @@ impl Editorbereich {
         if handlung == Handlung::Bearbeiten && zelle == Zellenausgang::Uebernommen {
             return Editormeldung::Eintrag(art, Eintragsantwort::Uebernommen);
         }
+        // Die Tabelle einer CSV rechnet auf ihrer Rechteckauswahl und nicht
+        // auf einer Stelle (E10, E13): Loeschen und Verschieben nehmen deren
+        // Zeilen, Bearbeiten oeffnet ihre obere linke Zelle, und die Auswahl
+        // danach ist der Bereich, den der Kern nennt.
+        if art == Eintragsart::Trenntext {
+            let auswahl = self.ivars().eintraege.gewaehlter_bereich();
+            let (meldung, stand) = self.trenntext_handlung(handlung, auswahl.as_ref());
+            let zu_bearbeiten = match handlung {
+                Handlung::Hinzufuegen => stand.as_ref().map(|stand| &stand.auswahl),
+                Handlung::Bearbeiten => auswahl.as_ref().filter(|_| {
+                    meldung == Editormeldung::Eintrag(art, Eintragsantwort::BearbeitungBegonnen)
+                }),
+                Handlung::Verschieben(_) | Handlung::Loeschen | Handlung::Abhaken => None,
+            }
+            .map(|bereich| Zelle {
+                stelle: bereich.zeilen.start,
+                spalte: bereich.spalten.start,
+            });
+            if let Some(stand) = stand {
+                self.trenntext_umbauen(stand);
+            }
+            if let Some(zelle) = zu_bearbeiten {
+                let _ = self.ivars().eintraege.zelle_beginnen(zelle);
+            }
+            return meldung;
+        }
         let stelle = stelle.or_else(|| self.ivars().eintraege.gewaehlte_stelle());
         // Die Uhr wird allein fuer einen neuen Termin gelesen, ueber die eine
         // Stelle im Kern.
@@ -3567,17 +3817,13 @@ impl Editorbereich {
         } else {
             None
         };
-        let (meldung, neustand) = if art == Eintragsart::Trenntext {
-            self.trenntext_handlung(handlung, stelle)
-        } else {
-            handlung_rechnen(
-                self.ivars().modell.borrow().stand(),
-                art,
-                handlung,
-                stelle,
-                heute,
-            )
-        };
+        let (meldung, neustand) = handlung_rechnen(
+            self.ivars().modell.borrow().stand(),
+            art,
+            handlung,
+            stelle,
+            heute,
+        );
         let auswahl = neustand.as_ref().and_then(|neustand| neustand.auswahl);
         if let Some(neustand) = neustand {
             self.umbau_anwenden(neustand);
@@ -3761,8 +4007,17 @@ impl Editorbereich {
         };
         let Some(dialekt) = dialekt else {
             *self.ivars().trenntext.borrow_mut() = None;
+            *self.ivars().trenntextpfad.borrow_mut() = None;
             return None;
         };
+        // Eine andere Datei ist eine neue, auch wenn die Tabelle eben eine
+        // andere CSV zeigte: ihre Spalten entstehen mit Anfangsbreiten, und die
+        // Auswahl beginnt bei A1. Ein Neuladen derselben Datei behaelt beides.
+        let pfad = self.ivars().modell.borrow().pfad().map(Path::to_path_buf);
+        if *self.ivars().trenntextpfad.borrow() != pfad {
+            self.ivars().eintraege.neue_datei();
+            *self.ivars().trenntextpfad.borrow_mut() = pfad;
+        }
         *self.ivars().trenntext.borrow_mut() = Some(Trenntextlage {
             dialekt,
             sicht: None,
@@ -3832,15 +4087,139 @@ impl Editorbereich {
     fn trenntext_handlung(
         &self,
         handlung: Handlung,
-        zeile: Option<usize>,
-    ) -> (Editormeldung, Option<Neustand>) {
+        auswahl: Option<&Zellbereich>,
+    ) -> (Editormeldung, Option<Trenntextstand>) {
         match self.trenntextsicht() {
-            Some(sicht) => trenntext_handlung_rechnen(sicht.text(), sicht.index(), handlung, zeile),
+            Some(sicht) => {
+                trenntext_handlung_rechnen(sicht.text(), sicht.index(), handlung, auswahl)
+            }
             None => (
                 Editormeldung::Eintrag(Eintragsart::Trenntext, Eintragsantwort::KeineTabelle),
                 None,
             ),
         }
+    }
+
+    /// Schreibt einen Stand der Tabelle einer CSV ein und waehlt danach den
+    /// Bereich, den der Kern nennt (E10).
+    ///
+    /// **Ueber [`Self::umbau_anwenden`]**, den einen Weg in den Verwalter, und
+    /// damit eine Handlung, die ein `cmd+z` ganz zuruecknimmt; der Neustand
+    /// traegt die erste Zeile des Bereichs ([`als_neustand`]), und das Rechteck
+    /// setzt die Ansicht danach.
+    fn trenntext_umbauen(&self, stand: Trenntextstand) {
+        let bereich = stand.auswahl.clone();
+        self.umbau_anwenden(als_neustand(stand));
+        self.ivars().eintraege.bereich_setzen(&bereich);
+    }
+
+    /// **Der eine Helfer, durch den jede Handlung allein an der Tabelle einer
+    /// CSV geht**: die Befehle aus E14 und das Einfuegen aus E12.
+    ///
+    /// Zuerst die laufende Zelle, wie in [`Self::handlung_ausfuehren`]: eine
+    /// abgewiesene haelt die Handlung an. Dann die Form, dann die Rechnung
+    /// ueber [`tabellenhandlung_rechnen`] auf der Rechteckauswahl, dann der
+    /// Umbau ueber [`Self::trenntext_umbauen`].
+    pub fn tabellenhandlung_ausfuehren(&self, handlung: &Tabellenhandlung) -> Editormeldung {
+        if let Zellenausgang::Abgewiesen(meldung) = self.zelle_uebernehmen() {
+            return meldung;
+        }
+        let keine_tabelle =
+            Editormeldung::Eintrag(Eintragsart::Trenntext, Eintragsantwort::KeineTabelle);
+        if self.form() != Editorform::Trenntext {
+            return keine_tabelle;
+        }
+        let Some(sicht) = self.trenntextsicht() else {
+            return keine_tabelle;
+        };
+        let auswahl = self.ivars().eintraege.gewaehlter_bereich();
+        let (meldung, stand) =
+            tabellenhandlung_rechnen(sicht.text(), sicht.index(), handlung, auswahl.as_ref());
+        if let Some(stand) = stand {
+            self.trenntext_umbauen(stand);
+        }
+        meldung
+    }
+
+    /// „Trennzeichen wechseln“ (E2, E14): die gehaltene `.csv` wird reihum mit
+    /// Komma, Semikolon und Tabulator gelesen, **ohne dass ein Byte sich
+    /// aendert**, und die Statuszeile nennt das neue Trennzeichen.
+    ///
+    /// Zuerst die laufende Zelle, wie bei jeder Tabellenhandlung. Der Wechsel
+    /// gilt fuer die geoeffnete Datei und wird nicht gemerkt; die naechste
+    /// Datei waehlt ihr Trennzeichen wieder nach der Regel des Kerns. Die
+    /// Spalten meinen danach anderes und entstehen mit Anfangsbreiten neu.
+    /// Laesst sich die Datei im neuen Dialekt nicht als Tabelle zeigen, steht
+    /// sie danach in der Rohansicht, und die Antwort nennt den Grund, wie beim
+    /// Ansichtswechsel. Eine `.tsv` trennt fest mit dem Tabulator (E1); die
+    /// Zulaessigkeit graut den Befehl dort aus, und kommt er doch an, sagt er
+    /// das.
+    pub fn trennzeichen_wechseln(&self) -> Editormeldung {
+        if let Zellenausgang::Abgewiesen(meldung) = self.zelle_uebernehmen() {
+            return meldung;
+        }
+        let art = self.ivars().modell.borrow().trenntext();
+        match art {
+            Some(trenntext::Art::Csv) => {}
+            Some(trenntext::Art::Tsv) => {
+                return Editormeldung::Trenntext(Trenntextantwort::TrennzeichenFest);
+            }
+            None => {
+                return Editormeldung::Eintrag(
+                    Eintragsart::Trenntext,
+                    Eintragsantwort::KeineTabelle,
+                );
+            }
+        }
+        let dialekt = self
+            .ivars()
+            .trenntext
+            .borrow_mut()
+            .as_mut()
+            .map(Trenntextlage::trennzeichen_weiter);
+        let Some(dialekt) = dialekt else {
+            return Editormeldung::Eintrag(Eintragsart::Trenntext, Eintragsantwort::KeineTabelle);
+        };
+        self.ivars().eintraege.neue_datei();
+        let verweigert = self.tabellenform_pruefen();
+        self.darstellung_nachziehen();
+        self.tabelle_nachziehen();
+        self.flaeche_waehlen();
+        verweigert.unwrap_or(Editormeldung::Trennzeichen(dialekt))
+    }
+
+    /// Die dritte Station des Faengers im Ereignisabgriff: ein Pfeil oder
+    /// `return` an der Tabelle einer CSV, die gerade der Ersthelfer ist (E10,
+    /// E16); `true`, wenn er hier beantwortet ist.
+    ///
+    /// **Gefragt wird die Naemlichkeit des Ersthelfers**, wie bei den eigenen
+    /// Textflaechen: ist er die Tabelle selbst, laeuft keine Zelle (deren
+    /// Feldeditor waere der Ersthelfer), kein Blatt steht davor (dessen Panel
+    /// waere das Schluesselfenster), und der Fokus steht im Editor. In jeder
+    /// anderen Lage und Form geht der Tastendruck in den Nachschlag wie
+    /// bisher.
+    #[must_use = "true heisst, der Tastendruck ist verbraucht"]
+    pub fn tabellentaste_fangen(
+        &self,
+        ersthelfer: &NSResponder,
+        taste: eintragsansicht::Tabellentaste,
+    ) -> bool {
+        let tabelle: &NSResponder = self.ivars().eintraege.tabelle();
+        if self.form() != Editorform::Trenntext || !std::ptr::eq(ersthelfer, tabelle) {
+            return false;
+        }
+        self.ivars().eintraege.tabellentaste_ausfuehren(taste);
+        true
+    }
+
+    /// Ob die gehaltene Datei eine `.csv` ist, deren Trennzeichen sich
+    /// wechseln laesst; der Wert von `Lage::csv`.
+    ///
+    /// Gelesen an der Art, die das Modell beim Laden aus dem Namen genommen
+    /// hat; die Frage stellt keinen Systemaufruf.
+    #[must_use]
+    pub fn haelt_csv(&self) -> bool {
+        self.ivars().modell.borrow().trenntext() == Some(trenntext::Art::Csv)
     }
 
     /// Bestimmt den heutigen Tag der Termintabelle neu (T6, Schritt 7 des
@@ -4372,6 +4751,7 @@ impl Editorbereich {
         self.ivars().modell.borrow_mut().schliessen();
         // Ohne Datei gibt es keinen Dialekt und keine Sicht.
         *self.ivars().trenntext.borrow_mut() = None;
+        *self.ivars().trenntextpfad.borrow_mut() = None;
         // Die Datei ist aufgegeben, und mit ihr ihr Verlauf. Die dritte der
         // drei Zeilen, die `stand_erneuern` zusammenhaelt, taugt hier
         // besonders: ohne Datei gibt es keine Sprache und nichts einzufaerben,
@@ -9064,6 +9444,10 @@ mod tests {
             "ansicht_umschalten",
             "quicknote_zeigen",
             "quicknote_verlassen",
+            // Das Trennzeichen einer CSV wechselt die Deutung, und laesst sich
+            // die Datei im neuen Dialekt nicht als Tabelle zeigen, wechselt
+            // die Ansicht auf Roh wie beim Ansichtswechsel (E2, E3).
+            "trennzeichen_wechseln",
         ];
         for name in rufer {
             assert!(
@@ -9192,7 +9576,8 @@ mod tests {
         pruefung: bool,
     ) -> (eintragsansicht::Zellenwege, Rc<RefCell<Vec<String>>>) {
         let buch = Rc::new(RefCell::new(Vec::new()));
-        let (p, f, a, n, k) = (
+        let (p, f, a, n, k, e) = (
+            buch.clone(),
             buch.clone(),
             buch.clone(),
             buch.clone(),
@@ -9223,6 +9608,9 @@ mod tests {
             }),
             kopf_geklickt: Box::new(move || {
                 k.borrow_mut().push("kopf".to_owned());
+            }),
+            einfuegen: Box::new(move |text| {
+                e.borrow_mut().push(format!("einfuegen {text}"));
             }),
         };
         (wege, buch)
@@ -9694,6 +10082,8 @@ mod tests {
             (&editor, "terminrichtung_umkehren"),
             (&editor, "quicknote_zeigen"),
             (&editor, "verbindungsname"),
+            (&editor, "tabellenhandlung_ausfuehren"),
+            (&editor, "trennzeichen_wechseln"),
             (&anwendung, "editor_stand_befragen"),
         ];
         for (quelle, name) in rufer {
@@ -10123,6 +10513,7 @@ mod tests {
                 abhaken: Box::new(|_| {}),
                 anlegen: Box::new(|| {}),
                 kopf_geklickt: Box::new(|| {}),
+                einfuegen: Box::new(|_| {}),
             });
             feld.setStringValue(ns_string!("Brot und Butter"));
             eintraege.zelle_geendet(&feld);
@@ -11885,7 +12276,15 @@ mod tests {
         let sicht = csv_sicht(stand, 1);
         let index = sicht.index();
         let antwort = |antwort| Editormeldung::Eintrag(Eintragsart::Trenntext, antwort);
-        let rechnen = |handlung, zeile| trenntext_handlung_rechnen(stand, index, handlung, zeile);
+        // Eine Zeile als Auswahl ihrer ersten Zelle, und der Stand danach als
+        // Neustand, wie `trenntext_umbauen` ihn an `umbau_anwenden` gibt; die
+        // Rechteckauswahl pruefen die Proben des Schritts 4.
+        let rechnen = |handlung, zeile: Option<usize>| {
+            let bereich = zeile.map(|zeile| Zellbereich::zelle(zeile, 0));
+            let (meldung, neu) =
+                trenntext_handlung_rechnen(stand, index, handlung, bereich.as_ref());
+            (meldung, neu.map(als_neustand))
+        };
 
         let (meldung, neu) = rechnen(Handlung::Hinzufuegen, None);
         assert_eq!(meldung, antwort(Eintragsantwort::Hinzugefuegt));
@@ -12090,5 +12489,704 @@ mod tests {
                 nachgezogen.as_secs_f64() * 1000.0
             );
         });
+    }
+
+    // ------------------------------------------------------------------
+    // Die Rechteckauswahl, Kopieren und Einfuegen (Schritt 4 des Plans der
+    // CSV-Tabelle) und die Befehle allein der Tabelle (Schritt 5)
+    // ------------------------------------------------------------------
+
+    /// Das Feld der gebauten Zelle in AppKits Spalte `spalte` und Zeile
+    /// `zeile`, ob es als gewaehlt gefaerbt ist.
+    fn als_gewaehlt_gefaerbt(
+        eintraege: &Eintragsansicht,
+        spalte: objc2_foundation::NSInteger,
+        zeile: objc2_foundation::NSInteger,
+    ) -> bool {
+        eintraege
+            .tabelle()
+            .viewAtColumn_row_makeIfNecessary(spalte, zeile, true)
+            .and_then(|zelle| zelle.downcast::<objc2_app_kit::NSTableCellView>().ok())
+            .and_then(|zelle| unsafe { zelle.textField() })
+            .is_some_and(|feld| feld.drawsBackground())
+    }
+
+    /// Ein Klick auf den Kopf waehlt die Spalte, mit der Umschalttaste bis zu
+    /// ihr, ein Klick auf die Nummer die Zeile, und der Kopf der Nummernspalte
+    /// jede Zelle (E10). Die Spaltennummer von AppKit geht dabei durch die
+    /// Umrechnung: die Tabellenspalte 2 zeigt das Feld B. Gewaehlte Zellen
+    /// zeigen sich ueber ihren Hintergrund, und nur sie.
+    #[test]
+    fn ein_klick_auf_den_kopf_waehlt_die_spalte_und_auf_die_nummer_die_zeile() {
+        use eintragsansicht::{
+            Klickort, Tabellenmass, Zellauswahl, Ziehart, klick_waehlen, klickort,
+        };
+        let mass = Tabellenmass {
+            zeilen: 4,
+            spalten: 3,
+        };
+        let bereich = |auswahl: Option<Zellauswahl>| auswahl.map(Zellauswahl::bereich);
+        let (spalte, ziehart) = klick_waehlen(None, Klickort::Kopf { feld: 1 }, false, mass);
+        assert_eq!(
+            bereich(spalte),
+            Some(Zellbereich {
+                zeilen: 0..4,
+                spalten: 1..2
+            })
+        );
+        assert_eq!(ziehart, Ziehart::Keine);
+        let (bis, _) = klick_waehlen(spalte, Klickort::Kopf { feld: 2 }, true, mass);
+        assert_eq!(
+            bereich(bis),
+            Some(Zellbereich {
+                zeilen: 0..4,
+                spalten: 1..3
+            }),
+            "mit der Umschalttaste bis zur Spalte"
+        );
+        let (zeile, ziehart) = klick_waehlen(bis, Klickort::Nummer { zeile: 2 }, false, mass);
+        assert_eq!(
+            bereich(zeile),
+            Some(Zellbereich {
+                zeilen: 2..3,
+                spalten: 0..3
+            })
+        );
+        assert_eq!(ziehart, Ziehart::Zeilen, "ein Ziehen danach nimmt Zeilen");
+        let (zeilen, _) = klick_waehlen(zeile, Klickort::Nummer { zeile: 0 }, true, mass);
+        assert_eq!(
+            bereich(zeilen),
+            Some(Zellbereich {
+                zeilen: 0..3,
+                spalten: 0..3
+            })
+        );
+        assert_eq!(
+            klick_waehlen(
+                None,
+                Klickort::Zelle { zeile: 0, feld: 0 },
+                false,
+                Tabellenmass {
+                    zeilen: 0,
+                    spalten: 1
+                }
+            )
+            .0,
+            None,
+            "eine Tabelle ohne Zeilen hat keine Auswahl"
+        );
+
+        let zeilen_der_csv = Zeilen::from(csv_sicht(CSV, 1));
+        assert_eq!(
+            klickort(&zeilen_der_csv, 1, 2),
+            Some(Klickort::Zelle { zeile: 1, feld: 1 }),
+            "die Tabellenspalte 2 zeigt das Feld B"
+        );
+        assert_eq!(
+            klickort(&zeilen_der_csv, 3, 0),
+            Some(Klickort::Nummer { zeile: 3 })
+        );
+        assert_eq!(klickort(&zeilen_der_csv, -1, 1), None);
+        assert_eq!(klickort(&zeilen_der_csv, 0, 4), None);
+        assert_eq!(
+            klickort(&Zeilen::from(eintragsansicht::notizzeilen(NOTIZEN)), 0, 0),
+            None,
+            "allein die Tabelle einer CSV traegt eine Zellauswahl"
+        );
+
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
+            assert_eq!(
+                eintraege.gewaehlter_bereich(),
+                Some(Zellbereich::zelle(0, 0)),
+                "nach dem Oeffnen ist A1 gewaehlt"
+            );
+            eintraege.kopf_angeklickt(2, false);
+            assert_eq!(
+                eintraege.gewaehlter_bereich(),
+                Some(Zellbereich {
+                    zeilen: 0..4,
+                    spalten: 1..2
+                }),
+                "der Kopf der Tabellenspalte 2 waehlt die Spalte B"
+            );
+            assert!(als_gewaehlt_gefaerbt(&eintraege, 2, 3));
+            assert!(!als_gewaehlt_gefaerbt(&eintraege, 1, 0));
+            assert!(!als_gewaehlt_gefaerbt(&eintraege, 0, 0), "die Nummer nie");
+            eintraege.klick(Some(Klickort::Nummer { zeile: 1 }), false);
+            assert_eq!(
+                eintraege.gewaehlter_bereich(),
+                Some(Zellbereich {
+                    zeilen: 1..2,
+                    spalten: 0..3
+                })
+            );
+            assert!(als_gewaehlt_gefaerbt(&eintraege, 1, 1));
+            assert!(!als_gewaehlt_gefaerbt(&eintraege, 2, 3));
+            assert_eq!(eintraege.gewaehlte_stelle(), Some(1));
+            eintraege.kopf_angeklickt(0, false);
+            assert_eq!(
+                eintraege.gewaehlter_bereich(),
+                Some(Zellbereich {
+                    zeilen: 0..4,
+                    spalten: 0..3
+                }),
+                "der Kopf der Nummernspalte waehlt jede Zelle"
+            );
+            assert!(
+                eintraege.alles_waehlen(),
+                "cmd+a beantwortet die Tabelle einer CSV"
+            );
+        });
+    }
+
+    /// `cmd+c` legt den gewaehlten Bereich als TSV ab: Zeilen durch `\n`,
+    /// Zellen durch Tabulator, jede Zelle mit Tabulator als Trennzeichen
+    /// kodiert; eine Zelle hinter dem Satzende ist leer (E11). Geschrieben
+    /// wird ueber die eine Huelle an eine eigene Ablage.
+    #[test]
+    fn cmd_c_legt_den_bereich_als_tsv_ab() {
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            let stand = "Name;Wert;Notiz\nA;1,5;\"mit\ttab\"\nB;2\n";
+            eintraege.zeilen_zeigen(csv_sicht(stand, 1));
+            eintraege.klick(
+                Some(eintragsansicht::Klickort::Zelle { zeile: 1, feld: 0 }),
+                false,
+            );
+            eintraege.klick(
+                Some(eintragsansicht::Klickort::Zelle { zeile: 2, feld: 2 }),
+                true,
+            );
+            let tsv = eintraege
+                .gewaehlter_text()
+                .expect("ein Bereich ist gewaehlt");
+            assert_eq!(tsv, "A\t1,5\t\"mit\ttab\"\nB\t2\t");
+            let ablage = super::super::zwischenablage::proben::probenablage();
+            assert!(super::super::zwischenablage::text_auf_ablage_schreiben(
+                &ablage, &tsv
+            ));
+            assert_eq!(
+                super::super::zwischenablage::nur_text_lesen_aus(&ablage).as_deref(),
+                Some(tsv.as_str())
+            );
+            eintraege.klick(
+                Some(eintragsansicht::Klickort::Zelle { zeile: 0, feld: 1 }),
+                false,
+            );
+            assert_eq!(
+                eintraege.gewaehlter_text().as_deref(),
+                Some("Wert"),
+                "eine einzelne Zelle ist ihr blosser Wert"
+            );
+        });
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let ansicht = datei("krk-ui/src/appkit/eintragsansicht.rs");
+        assert!(
+            rumpf(&ansicht, "kopieren").contains(concat!("zwischenablage::text_", "schreiben("))
+        );
+        assert!(rumpf(&ansicht, "gewaehlter_text").contains(concat!("bereich_als_", "tsv(")));
+    }
+
+    /// `cmd+v` setzt einen TSV-Block ab der oberen linken Zelle der Auswahl
+    /// ein, haengt Zeilen an und fuellt Saetze auf, wo er ueber das Ende
+    /// reicht, und ist **eine** Handlung: der eine Umkehrpunkt nimmt sie ganz
+    /// zurueck (E12, E15). Die Auswahl danach ist der eingesetzte Bereich.
+    #[test]
+    fn cmd_v_setzt_einen_tsv_block_ab_der_zelle_und_ein_cmd_z_nimmt_ihn_ganz_zurueck() {
+        let stand = "a;b;c\nd;e;f\n";
+        let sicht = csv_sicht(stand, 1);
+        let auswahl = Zellbereich::zelle(1, 1);
+        let einfuegen = |text: &str| {
+            tabellenhandlung_rechnen(
+                stand,
+                sicht.index(),
+                &Tabellenhandlung::Einfuegen(text.to_owned()),
+                Some(&auswahl),
+            )
+        };
+        let (meldung, neu) = einfuegen("x\ty\tz\n1\t2\t3\n");
+        assert_eq!(
+            meldung,
+            Editormeldung::Trenntext(Trenntextantwort::BereichEingefuegt {
+                zeilen: 2,
+                spalten: 3
+            })
+        );
+        let neu = neu.expect("der Block steht");
+        assert_eq!(
+            neu.text, "a;b;c\nd;x;y;z\n;1;2;3\n",
+            "ueberschrieben ab B2, aufgefuellt und angehaengt"
+        );
+        assert_eq!(
+            neu.auswahl,
+            Zellbereich {
+                zeilen: 1..3,
+                spalten: 1..4
+            }
+        );
+        let punkt = Umkehrpunkt::zwischen(stand, &neu.text, NSRange::new(0, 0));
+        assert_eq!(
+            punkt.angewandt_auf(&neu.text),
+            stand,
+            "ein Umkehrpunkt, ein cmd+z, der ganze Block"
+        );
+        assert_eq!(
+            einfuegen("e").0,
+            Editormeldung::Trenntext(Trenntextantwort::NichtsGeaendert),
+            "derselbe Wert ist kein Umbau"
+        );
+        assert_eq!(
+            einfuegen("").0,
+            Editormeldung::Trenntext(Trenntextantwort::AblageOhneText)
+        );
+        assert_eq!(
+            einfuegen("\n").1.map(|neu| neu.text).as_deref(),
+            Some("a;b;c\nd;;f\n"),
+            "eine leere Zeile leert die Zelle"
+        );
+        let (_, ohne_zeilen) = tabellenhandlung_rechnen(
+            "",
+            csv_sicht("", 2).index(),
+            &Tabellenhandlung::Einfuegen("p\tq".to_owned()),
+            None,
+        );
+        assert_eq!(
+            ohne_zeilen.map(|neu| neu.text).as_deref(),
+            Some("p,q\n"),
+            "in eine leere Datei ab A1"
+        );
+        let breit = vec!["w"; trenntext::HOECHSTENS_SPALTEN].join("\t");
+        assert_eq!(
+            einfuegen(&breit),
+            (
+                Editormeldung::Trenntext(Trenntextantwort::ZuBreit(
+                    trenntext::HOECHSTENS_SPALTEN + 1
+                )),
+                None
+            ),
+            "ab B ruecken die Werte ueber die Spaltengrenze"
+        );
+
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        let ausfuehren = rumpf(&quelle, "tabellenhandlung_ausfuehren");
+        assert!(ausfuehren.contains(concat!("tabellenhandlung_", "rechnen(")));
+        assert!(ausfuehren.contains(concat!("self.trenntext_", "umbauen(")));
+        assert!(rumpf(&quelle, "trenntext_umbauen").contains(concat!("self.umbau_", "anwenden(")));
+        let ansicht = datei("krk-ui/src/appkit/eintragsansicht.rs");
+        assert!(
+            rumpf(&ansicht, "einfuegen").contains(concat!("zwischenablage::nur_text_", "lesen()"))
+        );
+    }
+
+    /// Loeschen nimmt die Zeilen der Auswahl, Verschieben bewegt sie als
+    /// Block, und die Auswahl wandert mit (E13); jede Spalte der Auswahl
+    /// bleibt dabei, wie sie war.
+    #[test]
+    fn loeschen_nimmt_die_zeilen_der_auswahl_und_verschieben_bewegt_sie_als_block() {
+        let stand = "a;1\nb;2\nc;3\nd;4\n";
+        let sicht = csv_sicht(stand, 1);
+        let bloeck = Zellbereich {
+            zeilen: 1..3,
+            spalten: 1..2,
+        };
+        let antwort = |antwort| Editormeldung::Eintrag(Eintragsart::Trenntext, antwort);
+        let (meldung, neu) =
+            trenntext_handlung_rechnen(stand, sicht.index(), Handlung::Loeschen, Some(&bloeck));
+        assert_eq!(meldung, antwort(Eintragsantwort::Geloescht));
+        let neu = neu.expect("geloescht");
+        assert_eq!(neu.text, "a;1\nd;4\n", "beide Zeilen der Auswahl");
+        assert_eq!(
+            neu.auswahl.zeilen.start, 1,
+            "gewaehlt ist die nachrueckende"
+        );
+        let (meldung, neu) = trenntext_handlung_rechnen(
+            stand,
+            sicht.index(),
+            Handlung::Verschieben(Richtung::Runter),
+            Some(&bloeck),
+        );
+        assert_eq!(meldung, antwort(Eintragsantwort::Verschoben));
+        let neu = neu.expect("verschoben");
+        assert_eq!(neu.text, "a;1\nd;4\nb;2\nc;3\n", "als Block um eine Stelle");
+        assert_eq!(
+            neu.auswahl,
+            Zellbereich {
+                zeilen: 2..4,
+                spalten: 1..2
+            },
+            "die Auswahl wandert mit"
+        );
+        let (meldung, _) = trenntext_handlung_rechnen(
+            stand,
+            sicht.index(),
+            Handlung::Verschieben(Richtung::Runter),
+            Some(&Zellbereich {
+                zeilen: 2..4,
+                spalten: 0..1,
+            }),
+        );
+        assert_eq!(meldung, antwort(Eintragsantwort::SchonUnten));
+        assert_eq!(
+            trenntext_handlung_rechnen(
+                stand,
+                sicht.index(),
+                Handlung::Loeschen,
+                Some(&Zellbereich::zelle(4, 0))
+            ),
+            (antwort(Eintragsantwort::KeinEintragGewaehlt), None),
+            "ein Bereich hinter der letzten Zeile zaehlt wie keiner"
+        );
+
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        assert!(
+            rumpf(&quelle, "handlung_ausfuehren")
+                .contains(concat!(".eintraege.gewaehlter_", "bereich()"))
+        );
+    }
+
+    /// Die uebrigen Arten behalten ihre Zeilenauswahl: sie heben die Zeile
+    /// hervor wie vorher, waehlen ueber AppKits Zeilenauswahl und tragen keine
+    /// Zellauswahl; allein die Tabelle einer CSV schaltet die Hervorhebung ab
+    /// und waehlt ein Rechteck (E10).
+    #[test]
+    fn die_uebrigen_arten_behalten_ihre_zeilenauswahl() {
+        use objc2_app_kit::NSTableViewSelectionHighlightStyle as Hervorhebung;
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            let tabelle = eintraege.tabelle();
+            let zeilenweise = |eintraege: &Eintragsansicht, art: Eintragsart| {
+                let tabelle = eintraege.tabelle();
+                assert_eq!(eintraege.art(), art);
+                assert_eq!(
+                    tabelle.selectionHighlightStyle(),
+                    Hervorhebung::Regular,
+                    "{art:?}"
+                );
+                assert!(!tabelle.allowsMultipleSelection(), "{art:?}");
+                assert_eq!(eintraege.zellauswahl(), None, "{art:?}");
+                assert_eq!(eintraege.gewaehlter_bereich(), None, "{art:?}");
+                eintraege.auswahl_setzen(Some(1));
+                assert_eq!(tabelle.selectedRow(), 1, "{art:?} waehlt ueber AppKit");
+                assert_eq!(eintraege.gewaehlte_stelle(), Some(1), "{art:?}");
+                assert!(!eintraege.alles_waehlen(), "{art:?}: cmd+a geht an AppKit");
+            };
+            eintraege.zeilen_zeigen(eintragsansicht::notizzeilen(NOTIZEN));
+            zeilenweise(&eintraege, Eintragsart::Notizen);
+            eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
+            assert_eq!(tabelle.selectionHighlightStyle(), Hervorhebung::None);
+            assert_eq!(
+                eintraege.gewaehlter_bereich(),
+                Some(Zellbereich::zelle(0, 0))
+            );
+            eintraege.auswahl_setzen(Some(2));
+            assert_eq!(
+                eintraege.gewaehlter_bereich(),
+                Some(Zellbereich::zelle(2, 0)),
+                "in der Tabelle einer CSV die Zelle der Zeile"
+            );
+            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+            zeilenweise(&eintraege, Eintragsart::Aufgaben);
+            eintraege.zeilen_zeigen(eintragsansicht::geheimniszeilen(GEHEIMNISSE));
+            zeilenweise(&eintraege, Eintragsart::Geheimnisse);
+            eintraege.zeilen_zeigen(eintragsansicht::terminzeilen(
+                TERMINE,
+                Sortierrichtung::Aufsteigend,
+                None,
+            ));
+            zeilenweise(&eintraege, Eintragsart::Termine);
+        });
+        for art in [
+            Eintragsart::Aufgaben,
+            Eintragsart::Notizen,
+            Eintragsart::Termine,
+            Eintragsart::Geheimnisse,
+        ] {
+            assert_eq!(eintragsansicht::hervorhebung(art), Hervorhebung::Regular);
+        }
+        assert_eq!(
+            eintragsansicht::hervorhebung(Eintragsart::Trenntext),
+            Hervorhebung::None
+        );
+    }
+
+    /// Eine neue CSV beginnt mit Anfangsbreiten und bei A1, auch wenn die
+    /// Tabelle eben eine andere zeigte und ihre Spalten gezogen waren; ein
+    /// neuer Stand derselben Datei behaelt beides.
+    #[test]
+    fn eine_neue_csv_beginnt_mit_anfangsbreiten_und_bei_a1() {
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
+            let breite = || {
+                eintraege
+                    .tabelle()
+                    .tableColumns()
+                    .iter()
+                    .nth(1)
+                    .map(|spalte| spalte.width())
+            };
+            let anfang = breite().expect("die Spalte A");
+            if let Some(spalte) = eintraege.tabelle().tableColumns().iter().nth(1) {
+                spalte.setWidth(anfang + 77.0);
+            }
+            eintraege.klick(
+                Some(eintragsansicht::Klickort::Zelle { zeile: 2, feld: 2 }),
+                false,
+            );
+            let geaendert = CSV.replace("Kiwi", "Kiwis");
+            eintraege.zeilen_zeigen(csv_sicht(&geaendert, 2));
+            assert_eq!(
+                breite(),
+                Some(anfang + 77.0),
+                "derselbe Datei bleibt die Breite"
+            );
+            assert_eq!(
+                eintraege.gewaehlter_bereich(),
+                Some(Zellbereich::zelle(2, 2))
+            );
+            eintraege.neue_datei();
+            eintraege.zeilen_zeigen(csv_sicht(CSV, 3));
+            assert_eq!(
+                breite(),
+                Some(anfang),
+                "die neue Datei beginnt mit der Anfangsbreite"
+            );
+            assert_eq!(
+                eintraege.gewaehlter_bereich(),
+                Some(Zellbereich::zelle(0, 0))
+            );
+        });
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        assert!(
+            rumpf(&quelle, "trenntext_vorbereiten")
+                .contains(concat!(".eintraege.neue_", "datei()"))
+        );
+    }
+
+    /// Die Pfeile und `return` sind die Tabellentasten, ohne Befehls-, Wahl-
+    /// und Steuerungstaste; mit der Umschalttaste dehnt ein Pfeil das Rechteck
+    /// aus (E10, E16). Gefangen werden sie an der einen Stelle des Abgriffs.
+    #[test]
+    fn die_pfeile_bewegen_die_auswahl_und_return_oeffnet_ihre_zelle() {
+        use eintragsansicht::{Pfeil, Tabellentaste, tabellentaste};
+        use krk_core::tasten::{Kombination, Tastendruck};
+        let druck = |schreibweise: &str| -> Tastendruck {
+            Kombination::lesen(schreibweise)
+                .expect("eine gueltige Kombination")
+                .tastendruck()
+        };
+        assert_eq!(
+            tabellentaste(druck("down")),
+            Some(Tabellentaste::Pfeil(Pfeil::Runter, false))
+        );
+        assert_eq!(
+            tabellentaste(druck("shift+left")),
+            Some(Tabellentaste::Pfeil(Pfeil::Links, true))
+        );
+        assert_eq!(tabellentaste(druck("return")), Some(Tabellentaste::Oeffnen));
+        for anderer in [
+            "cmd+down",
+            "opt+up",
+            "ctrl+right",
+            "cmd+return",
+            "shift+return",
+            "a",
+            "tab",
+        ] {
+            assert_eq!(tabellentaste(druck(anderer)), None, "{anderer}");
+        }
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
+            eintraege.tabellentaste_ausfuehren(Tabellentaste::Pfeil(Pfeil::Rechts, false));
+            eintraege.tabellentaste_ausfuehren(Tabellentaste::Pfeil(Pfeil::Runter, true));
+            eintraege.tabellentaste_ausfuehren(Tabellentaste::Pfeil(Pfeil::Rechts, true));
+            assert_eq!(
+                eintraege.gewaehlter_bereich(),
+                Some(Zellbereich {
+                    zeilen: 0..2,
+                    spalten: 1..3
+                })
+            );
+            eintraege.tabellentaste_ausfuehren(Tabellentaste::Pfeil(Pfeil::Hoch, false));
+            assert_eq!(
+                eintraege.gewaehlter_bereich(),
+                Some(Zellbereich::zelle(0, 2))
+            );
+        });
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let anwendung = datei("krk-ui/src/appkit/anwendung.rs");
+        assert!(
+            rumpf(&anwendung, "tastendruck_fangen")
+                .contains(concat!("self.tabellentaste_", "fangen(druck)"))
+        );
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        assert!(rumpf(&quelle, "tabellentaste_fangen").contains(concat!("std::ptr::", "eq(")));
+    }
+
+    /// „Trennzeichen wechseln“ geht reihum Komma, Semikolon, Tabulator und
+    /// aendert kein Byte: es wechselt allein die Deutung, und die Sicht im
+    /// alten Dialekt faellt (E2).
+    #[test]
+    fn trennzeichen_wechseln_aendert_kein_byte_und_geht_reihum() {
+        let stand = "a,b;c\td\n";
+        let mut lage = Trenntextlage {
+            dialekt: trenntext::dialekt_erkennen(trenntext::Art::Csv, stand),
+            sicht: None,
+        };
+        let generation = Cell::new(0);
+        let anfang = lage.dialekt.trennzeichen;
+        assert_eq!(anfang, trenntext::Trennzeichen::Komma);
+        let erste = trenntextsicht_fuer(stand, &mut lage, &generation);
+        assert_eq!(erste.werte(0), ["a", "b;c\td"]);
+        let mut gesehen = Vec::new();
+        for _ in 0..3 {
+            let dialekt = lage.trennzeichen_weiter();
+            assert!(lage.sicht.is_none(), "die Sicht im alten Dialekt faellt");
+            assert_eq!(dialekt.herkunft, trenntext::Herkunft::Gewechselt);
+            gesehen.push(dialekt.trennzeichen);
+            let sicht = trenntextsicht_fuer(stand, &mut lage, &generation);
+            assert_eq!(sicht.text(), stand, "kein Byte geaendert");
+        }
+        assert_eq!(
+            gesehen,
+            [
+                trenntext::Trennzeichen::Semikolon,
+                trenntext::Trennzeichen::Tabulator,
+                trenntext::Trennzeichen::Komma
+            ],
+            "reihum und zurueck zum Anfang"
+        );
+        assert_eq!(
+            Editormeldung::Trenntext(Trenntextantwort::TrennzeichenFest).text(),
+            "eine TSV-Datei trennt fest mit dem Tabulator"
+        );
+
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        let wechseln = rumpf(&quelle, "trennzeichen_wechseln");
+        for nadel in [
+            concat!(".bear", "beiten("),
+            concat!("umbau_", "anwenden("),
+            concat!("stand_", "einsetzen("),
+        ] {
+            assert!(!wechseln.contains(nadel), "der Wechsel ruft {nadel}");
+        }
+        assert!(wechseln.contains(concat!("self.tabellenform_", "pruefen()")));
+        assert!(wechseln.contains(concat!(".eintraege.neue_", "datei()")));
+    }
+
+    /// „Zeile darüber einfügen“ fuegt so viele leere Zeilen ueber der Auswahl
+    /// ein, wie sie umfasst, „Spalte links einfügen“ eine leere Spalte links
+    /// von ihr, „Spalte anhängen“ hinter der letzten, „Spalten löschen“ die
+    /// Spalten der Auswahl bis auf die letzte (E7, E14).
+    #[test]
+    fn zeile_darueber_und_spalte_links_entstehen_an_der_auswahl() {
+        let stand = "a;b;c\nd;e\n";
+        let sicht = csv_sicht(stand, 1);
+        let rechnen = |handlung: Tabellenhandlung, auswahl: Zellbereich| {
+            tabellenhandlung_rechnen(stand, sicht.index(), &handlung, Some(&auswahl))
+        };
+        let zwei_zeilen = Zellbereich {
+            zeilen: 0..2,
+            spalten: 1..2,
+        };
+        let (meldung, neu) = rechnen(Tabellenhandlung::ZeilenDarueber, zwei_zeilen.clone());
+        assert_eq!(
+            meldung,
+            Editormeldung::Trenntext(Trenntextantwort::ZeilenEingefuegt(2))
+        );
+        let neu = neu.expect("zwei Zeilen");
+        assert_eq!(neu.text, ";;\n;;\na;b;c\nd;e\n");
+        assert_eq!(
+            neu.auswahl, zwei_zeilen,
+            "die neuen Zeilen in den Spalten davor"
+        );
+
+        let (meldung, neu) = rechnen(Tabellenhandlung::SpalteLinks, Zellbereich::zelle(1, 1));
+        assert_eq!(
+            meldung,
+            Editormeldung::Trenntext(Trenntextantwort::SpalteEingefuegt)
+        );
+        let neu = neu.expect("eine Spalte");
+        assert_eq!(
+            neu.text, "a;;b;c\nd;;e\n",
+            "links von B, in jedem langen Satz"
+        );
+        assert_eq!(neu.auswahl.spalten, 1..2, "gewaehlt ist die neue Spalte");
+
+        let (meldung, neu) = rechnen(Tabellenhandlung::SpalteAnhaengen, Zellbereich::zelle(0, 0));
+        assert_eq!(
+            meldung,
+            Editormeldung::Trenntext(Trenntextantwort::SpalteAngehaengt)
+        );
+        assert_eq!(
+            neu.map(|neu| neu.text).as_deref(),
+            Some("a;b;c;\nd;e\n"),
+            "der laengste Satz bekommt das Trennzeichen, der kuerzere bleibt"
+        );
+
+        let (meldung, neu) = rechnen(
+            Tabellenhandlung::SpaltenLoeschen,
+            Zellbereich {
+                zeilen: 0..1,
+                spalten: 0..2,
+            },
+        );
+        assert_eq!(
+            meldung,
+            Editormeldung::Trenntext(Trenntextantwort::SpaltenGeloescht(2))
+        );
+        assert_eq!(neu.map(|neu| neu.text).as_deref(), Some("c\n\n"));
+        assert_eq!(
+            rechnen(
+                Tabellenhandlung::SpaltenLoeschen,
+                Zellbereich {
+                    zeilen: 0..1,
+                    spalten: 0..3
+                }
+            ),
+            (
+                Editormeldung::Trenntext(Trenntextantwort::LetzteSpalte),
+                None
+            ),
+            "die letzte Spalte bleibt"
+        );
+        let breit = format!("{}\n", ",".repeat(trenntext::HOECHSTENS_SPALTEN - 1));
+        assert_eq!(
+            tabellenhandlung_rechnen(
+                &breit,
+                csv_sicht(&breit, 2).index(),
+                &Tabellenhandlung::SpalteAnhaengen,
+                None
+            ),
+            (
+                Editormeldung::Trenntext(Trenntextantwort::ZuBreit(
+                    trenntext::HOECHSTENS_SPALTEN + 1
+                )),
+                None
+            )
+        );
+        assert_eq!(
+            tabellenhandlung_rechnen(
+                "a,\"b\n",
+                csv_sicht("a,\"b\n", 3).index(),
+                &Tabellenhandlung::SpalteLinks,
+                None
+            ),
+            (
+                Editormeldung::TabellenformVerweigert(Verweigerung::Unterminiert { zeile: 1 }),
+                None
+            )
+        );
+        assert_eq!(
+            Editormeldung::Trenntext(Trenntextantwort::ZeilenEingefuegt(2)).text(),
+            "2 Zeilen eingefügt; cmd+z nimmt sie zurück"
+        );
     }
 }

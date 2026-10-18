@@ -16,6 +16,10 @@
 //!              │     │
 //!              │     └<── einfuegequelle_aus (jede Ablage)
 //!              │
+//!              ├─> nur_text_lesen ──> cmd+v in der Tabelle einer CSV
+//!              │     │
+//!              │     └<── nur_text_lesen_aus (jede Ablage)
+//!              │
 //!              ├<── text_schreiben <── die beiden Pfadkopierer (C1, C2)
 //!              │          │
 //!              │          └<── text_auf_ablage_schreiben (jede Ablage)
@@ -281,6 +285,33 @@ pub fn lesen_aus(ablage: &NSPasteboard) -> Option<String> {
         }
     }
     None
+}
+
+/// Der Text der Zwischenablage des Nutzers und allein der Text, fuer das
+/// Einfuegen eines Zellbereichs in die Tabelle einer CSV (E12 des Plans
+/// `261018-0822_*_plan-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md`).
+///
+/// Reicht `NSPasteboard::generalPasteboard()` an [`nur_text_lesen_aus`] und
+/// aendert dessen Antwort nicht, nach dem Muster von [`lesen`].
+#[must_use]
+pub fn nur_text_lesen() -> Option<String> {
+    nur_text_lesen_aus(&NSPasteboard::generalPasteboard())
+}
+
+/// Der Text einer beliebigen Ablage, allein `NSPasteboardTypeString`.
+///
+/// **Anders als [`lesen_aus`] fragt dieser Leser keinen Dateiverweis**:
+/// [`lesen_aus`] zieht ihn vor, und ein im Finder kopierter Eintrag kaeme in
+/// die Zellen einer Tabelle sonst als Pfad. Gelesen wird, was als Text
+/// daneben liegt, und ein Text aus Leerraum zaehlt hier mit, weil er in einer
+/// Tabelle eine Zelle setzt; allein der leere Text und eine Ablage ohne Text
+/// ergeben `None`.
+#[must_use]
+pub fn nur_text_lesen_aus(ablage: &NSPasteboard) -> Option<String> {
+    ablage
+        .stringForType(unsafe { NSPasteboardTypeString })
+        .map(|inhalt| inhalt.to_string())
+        .filter(|text| !text.is_empty())
 }
 
 /// Was in der Zwischenablage steht, fuer die Vorschau aus C10 gedeutet.
@@ -595,7 +626,7 @@ pub fn dateiverweise(ablage: &NSPasteboard) -> Vec<PathBuf> {
 }
 
 #[cfg(test)]
-mod proben {
+pub(crate) mod proben {
     use super::*;
     use crate::pruefordner::Pruefordner;
     use crate::quellbaum::quelldateien;
@@ -628,7 +659,7 @@ mod proben {
     ///
     /// Ein vergifteter Riegel wird trotzdem genommen: der Fehlschlag steht
     /// schon in der Reihe, und ein zweiter Name daneben verdeckte ihn nur.
-    fn probenablage() -> Probenablage {
+    pub(crate) fn probenablage() -> Probenablage {
         static SPERRE: std::sync::Mutex<()> = std::sync::Mutex::new(());
         let sperre = SPERRE
             .lock()
@@ -649,7 +680,7 @@ mod proben {
     /// Sie steht als eigener Typ da, damit die Sperre so lange gilt, wie die
     /// Probe die Ablage benutzt; `Deref` macht sie an jeder Aufrufstelle zu
     /// dem `&NSPasteboard`, den die Huelle erwartet.
-    struct Probenablage {
+    pub(crate) struct Probenablage {
         _sperre: std::sync::MutexGuard<'static, ()>,
         ablage: objc2::rc::Retained<NSPasteboard>,
     }
@@ -936,6 +967,44 @@ mod proben {
             "`{objekte_schreiben}` steht nicht allein in der einen Huelle um die \
              Zwischenablage; ein zweiter Schreiber von Dateiverweisen daneben \
              waere eine zweite Meinung darueber, wie ein Verweis abgelegt wird"
+        );
+    }
+
+    /// `cmd+v` in der Tabelle einer CSV liest allein den Text der Ablage und
+    /// keinen Dateiverweis (E12 des Plans der CSV-Tabelle): ein im Finder
+    /// kopierter Eintrag kommt mit den Namen, die daneben als Text liegen, und
+    /// nie als Pfad; eine Ablage ohne Text ergibt nichts.
+    #[test]
+    fn einfuegen_liest_allein_text_und_keinen_dateiverweis() {
+        let ordner = Pruefordner::neu("nur-text");
+        let datei = ordner.datei("preise.csv", b"a;b\n");
+
+        let ablage = probenablage();
+        dateien_ablegen(&ablage, std::slice::from_ref(&datei), "preise.csv");
+        let verweis = lesen_aus(&ablage).expect("die Ablage traegt einen Verweis");
+        assert!(
+            verweis.starts_with("file://") && verweis.ends_with("preise.csv"),
+            "der allgemeine Leser zieht den Dateiverweis vor: {verweis}"
+        );
+        assert_eq!(
+            nur_text_lesen_aus(&ablage).as_deref(),
+            Some("preise.csv"),
+            "der Textleser liest den Text daneben und nicht den Verweis"
+        );
+
+        assert!(text_auf_ablage_schreiben(&ablage, "x\ty\n1\t2"));
+        assert_eq!(nur_text_lesen_aus(&ablage).as_deref(), Some("x\ty\n1\t2"));
+        assert!(text_auf_ablage_schreiben(&ablage, "  "));
+        assert_eq!(
+            nur_text_lesen_aus(&ablage).as_deref(),
+            Some("  "),
+            "Leerraum setzt in einer Tabelle eine Zelle und zaehlt mit"
+        );
+        let _ = ablage.clearContents();
+        assert_eq!(
+            nur_text_lesen_aus(&ablage),
+            None,
+            "eine leere Ablage ergibt nichts"
         );
     }
 }

@@ -28,6 +28,8 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::WirkungsbereichNavigator => "Dateifenster, Leiste, Vorschau und Git-Bereich",
         Text::WirkungsbereichVorschau => "Vorschau",
         Text::WirkungsbereichBildfolge => "Dateifenster, solange die Vorschau eine Bildfolge zeigt",
+        Text::WirkungsbereichTrenntext => "Tabellen einer CSV- oder TSV-Datei im Editor",
+        Text::WirkungsbereichCsv => "Tabellen einer CSV-Datei im Editor",
         Text::WirkungsbereichUeberall => "überall",
         Text::OrtsmangelAbsolut => "ist ein absoluter Pfad",
         Text::OrtsmangelLeeresStueck => "trägt ein leeres Stück",
@@ -988,6 +990,20 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::TrennzeichenKomma => "Komma",
         Text::TrennzeichenSemikolon => "Semikolon",
         Text::TrennzeichenTabulator => "Tabulator",
+        Text::TrenntextSpalteEingefuegt => "Spalte eingefügt; cmd+z nimmt sie zurück",
+        Text::TrenntextSpalteAngehaengt => "Spalte angehängt; cmd+z nimmt sie zurück",
+        Text::TrenntextLetzteSpalte => {
+            "die Auswahl umfasst jede Spalte, und eine Tabelle behält mindestens eine; nichts gelöscht"
+        }
+        Text::TrenntextBereichEingefuegt => {
+            "eingefügt: {zeilen} × {spalten}; cmd+z nimmt es zurück"
+        }
+        Text::TrenntextAblageOhneText => "die Zwischenablage trägt keinen Text für die Tabelle",
+        Text::TrenntextNichtsGeaendert => "die Tabelle bleibt, wie sie ist",
+        Text::TrenntextTrennzeichenFest => "eine TSV-Datei trennt fest mit dem Tabulator",
+        Text::TrenntextZuBreit => {
+            "danach trüge die Tabelle {spalten} Spalten, sie zeigt höchstens {hoechstens}; nichts geändert"
+        }
         Text::VorschauNichtLesbar => "{pfad} ließ sich nicht lesen: {fehler}",
         Text::VorschauLeertext => "Kein Inhalt. Die Auswahl im Dateifenster füllt diesen Tab.",
         Text::VorschauBildNichtDarstellbar => {
@@ -1312,6 +1328,14 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         ),
         Zahlwort::TrenntextZeilen => ("eine Zeile", "{n} Zeilen"),
         Zahlwort::TrenntextSpalten => ("eine Spalte", "{n} Spalten"),
+        Zahlwort::TrenntextZeilenEingefuegt => (
+            "eine Zeile eingefügt; cmd+z nimmt sie zurück",
+            "{n} Zeilen eingefügt; cmd+z nimmt sie zurück",
+        ),
+        Zahlwort::TrenntextSpaltenGeloescht => (
+            "eine Spalte gelöscht; cmd+z holt sie zurück",
+            "{n} Spalten gelöscht; cmd+z holt sie zurück",
+        ),
     }
 }
 
@@ -1403,6 +1427,11 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::EintragHoch => "Eintrag nach oben",
         Kommando::EintragRunter => "Eintrag nach unten",
         Kommando::EintragLoeschen => "Eintrag löschen",
+        Kommando::TrenntextZeileEinfuegen => "Zeile darüber einfügen",
+        Kommando::TrenntextSpalteEinfuegen => "Spalte links einfügen",
+        Kommando::TrenntextSpalteAnhaengen => "Spalte anhängen",
+        Kommando::TrenntextSpalteLoeschen => "Spalten löschen",
+        Kommando::TrenntextTrennzeichenWechseln => "Trennzeichen wechseln",
         Kommando::AufgabeAbhaken => "Aufgabe abhaken oder öffnen",
         Kommando::PinAendern => "PIN ändern",
         Kommando::TermineRichtungUmkehren => "Termine: Sortierrichtung umkehren",
