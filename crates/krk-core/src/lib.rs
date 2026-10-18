@@ -61,6 +61,11 @@
 //! die Archivdatei verlangt dasselbe Pfand `fern::Fernfaden` wie eine Anfrage
 //! an einen Server; die Bauweise steht im Kopf jenes Moduls.
 //!
+//! `trenntext` liest CSV und TSV in einen Index aus Byte-Bereichen und rechnet
+//! jede Tabellenhandlung als Ersetzung genau der Bytes, die sie beruehrt, damit
+//! Vorschau und Editor dieselbe Zerlegung teilen; die Regeln stehen im Kopf
+//! jenes Moduls.
+//!
 //! Der Kern kennt AppKit nicht. Das ist der Grund, aus dem er ohne Fenster
 //! testbar ist, und es ist die Grenze, die `krk-ui` von `krk-core` trennt.
 //!
@@ -93,5 +98,6 @@ pub mod sprache;
 pub mod stapelumbenennen;
 pub mod tasten;
 pub mod text;
+pub mod trenntext;
 pub mod verzeichnis;
 pub mod zwischenablage;

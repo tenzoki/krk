@@ -1,0 +1,60 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "f6d8838c-f71c-4ad7-b20c-486eaafa67f6",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "plan",
+  "narrative": {
+    "path": "work-packages/261018-0812-csv-und-tsv-als-tabelle-in-vorschau-und-editor/plans/261018-0822-plan-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md"
+  },
+  "filed_by": {
+    "actor": "implementation-planner",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "in_progress",
+    "steps": [
+      {
+        "id": "1",
+        "state": "done"
+      },
+      {
+        "id": "2",
+        "state": "in_progress"
+      },
+      {
+        "id": "3",
+        "state": "in_progress"
+      },
+      {
+        "id": "4",
+        "state": "open"
+      },
+      {
+        "id": "5",
+        "state": "open"
+      },
+      {
+        "id": "6",
+        "state": "open"
+      },
+      {
+        "id": "7",
+        "state": "open"
+      }
+    ],
+    "criteria": [],
+    "acceptance": {
+      "ref": {
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "record_id": "b3613587-45ef-4515-9cc5-e9de657b768d"
+      },
+      "revision": "sha256:427ce1f73cea9df1d7cc66e3757504e239c8008beb38bc9009e6153566943074"
+    }
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "b3613587-45ef-4515-9cc5-e9de657b768d",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "claimed",
+  "claim": {
+    "checkout_id": "6c11b1f2",
+    "person": "Kai Stalmann <kai@stalmann.org>",
+    "claimed_at": "2026-10-18T06:12:27Z"
+  },
+  "mode": {
+    "value": "autonomous",
+    "source": {
+      "kind": "user-word",
+      "ref": {
+        "path": "work-packages/261018-0812-csv-und-tsv-als-tabelle-in-vorschau-und-editor/261018-0812-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md",
+        "sha256": "sha256:b666a71a47681cfa31e6162e8f01b1a9b52643e08325bf97a653d62c96682ad4",
+        "kind": "other"
+      }
+    }
+  },
+  "origin": {
+    "kind": "user-request",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "user",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "narrative": {
+    "path": "work-packages/261018-0812-csv-und-tsv-als-tabelle-in-vorschau-und-editor/261018-0812-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md"
+  },
+  "depends_on": [],
+  "active_documents": [
+    {
+      "ref": {
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "record_id": "f6d8838c-f71c-4ad7-b20c-486eaafa67f6"
+      },
+      "role": "plan",
+      "revision": "sha256:427ce1f73cea9df1d7cc66e3757504e239c8008beb38bc9009e6153566943074"
+    }
+  ],
+  "references": [],
+  "evidence": [],
+  "outcome": null,
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {}
+}

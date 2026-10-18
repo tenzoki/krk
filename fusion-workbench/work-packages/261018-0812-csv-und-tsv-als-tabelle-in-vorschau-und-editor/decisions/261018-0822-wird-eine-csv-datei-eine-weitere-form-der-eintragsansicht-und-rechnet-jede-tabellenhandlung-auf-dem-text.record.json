@@ -1,0 +1,30 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "ddb2d754-f66f-4ad9-ac68-9810cf9a204f",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/261018-0812-csv-und-tsv-als-tabelle-in-vorschau-und-editor/decisions/261018-0822-wird-eine-csv-datei-eine-weitere-form-der-eintragsansicht-und-rechnet-jede-tabellenhandlung-auf-dem-text.md"
+  },
+  "filed_by": {
+    "actor": "implementation-planner",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": {
+      "kind": "other",
+      "path": "work-packages/261018-0812-csv-und-tsv-als-tabelle-in-vorschau-und-editor/261018-0812-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md",
+      "sha256": "sha256:b666a71a47681cfa31e6162e8f01b1a9b52643e08325bf97a653d62c96682ad4"
+    },
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}
