@@ -728,6 +728,187 @@ Leiste am Fensterfuß „Vorschau“ nicht angekreuzt, und die Auswahl in der
 Dateiliste erscheint nirgends. `f3` (oder `cmd+y`) blendet die Vorschau wieder
 ein, und sie zeigt dann den gewählten Eintrag.
 
+### CSV- und TSV-Dateien
+
+**Eine Datei mit der Endung `.csv`, `.tsv` oder `.tab` erscheint in Vorschau
+und Editor als Tabelle.** Groß- und Kleinschreibung der Endung zählen nicht.
+Andere Dateien mit Tabulatoren, etwa eine `.txt`, bleiben Text.
+
+**Welches Zeichen die Felder trennt, wählt KRK nach einer festen Regel.** Eine
+`.tsv` und eine `.tab` trennen immer mit dem Tabulator. Bei einer `.csv` gilt:
+
+1. Steht in der ersten Zeile genau `sep=;`, `sep=,` oder `sep=` mit einem
+   Tabulator, gilt dieses Zeichen. Die Zeile bleibt in der Datei stehen und ist
+   keine Zeile der Tabelle.
+2. Sonst zerlegt KRK den Anfang der Datei einmal mit Komma, einmal mit
+   Semikolon und einmal mit Tabulator und nimmt das Zeichen, mit dem die meisten
+   Zeilen gleich viele Felder tragen. Eine deutsche Excel-Datei mit `Name;Preis`
+   und `Äpfel;1,50` trennt also mit dem Semikolon, obwohl sie Kommas enthält.
+3. Greift keine der beiden Regeln, gilt das Komma.
+
+Die Vorschau nennt das Zeichen in ihrer ersten Zeile, der Editor beim Öffnen in
+der Statuszeile, dort samt der Regel, die es gewählt hat. **Hat die Regel
+falsch gewählt, hilft „Trennzeichen wechseln“** im Menü „Editor“. Der Befehl
+geht reihum Komma, Semikolon, Tabulator und ändert dabei kein Byte der Datei,
+nur ihre Deutung. KRK merkt sich die Wahl nicht: beim nächsten Öffnen wählt
+die Regel neu. Ab Werk liegt der Befehl auf keiner Taste; wer eine will, weist
+sie mit **F1** und `cmd+t` zu. Für eine `.tsv` ist er ausgegraut.
+
+**Gelesen wird allein UTF-8.** Eine CSV, die ein älteres Excel als
+„CSV (Trennzeichen-getrennt)“ in Windows-Kodierung geschrieben hat, öffnet der
+Editor nicht, und die Vorschau zeigt nur ihre Angaben. Excel schreibt UTF-8
+unter „CSV UTF-8“.
+
+**Die erste Zeile ist eine gewöhnliche Zeile der Tabelle.** KRK hält sie nie für
+eine Kopfzeile: man kann sie bearbeiten, verschieben und löschen wie jede
+andere. Über den Spalten steht der Buchstabe der Spalte (A bis Z, dann AA), im
+Editor daneben gekürzt der Text, den die erste Zeile in dieser Spalte trägt.
+So bleiben die Spaltennamen beim Rollen sichtbar, und eine Datei ohne Kopfzeile
+verliert keine Zeile.
+
+**Zeilen dürfen verschieden viele Felder haben.** Die Tabelle hat so viele
+Spalten, wie die längste Zeile Felder trägt; in einer kürzeren Zeile stehen
+die fehlenden Zellen leer. In die Datei kommen sie erst, wenn man in eine
+solche Zelle etwas schreibt.
+
+#### In der Vorschau
+
+Die Vorschau zeigt die Datei als ausgerichteten Text in Festbreitenschrift:
+oben eine Zeile mit Trennzeichen, Zeilen- und Spaltenzahl, darunter die
+Spaltenbuchstaben, eine Trennlinie und links vor jeder Zeile ihre Nummer.
+
+```text
+Semikolon · 3 Zeilen · 2 Spalten
+ │ A      │ B
+─┼────────┼──────
+1│ Name   │ Preis
+2│ Äpfel  │ 1,50
+3│ Birnen │ 2,00
+```
+
+- **Sie bricht nicht um und rollt waagerecht wie senkrecht.** Eine breite
+  Tabelle reicht über den rechten Rand hinaus.
+- Eine Zelle mit mehr als 40 Zeichen endet in „…“. Ein Zeilenumbruch in einer
+  Zelle erscheint als `⏎`, ein Tabulator als `⇥`.
+- Ist die Datei größer als 1 MB, zeigt die Vorschau die vollständigen Zeilen
+  ihres ersten MB, und die erste Zeile sagt, dass gekürzt ist.
+- Kopiert wird der gezeigte Text. Zellen zum Einfügen in eine
+  Tabellenkalkulation kopiert der Editor.
+- Eine CSV in einem Archiv erscheint ebenso als Tabelle, auch eine `.csv.gz`.
+  Auf einem Server zeigt die Vorschau wie bei jeder Datei nur die Angaben.
+- Als gewöhnlicher Text erscheint die Datei, wenn sie leer ist, wenn ein
+  Anführungszeichen bis zum Dateiende nicht schließt oder wenn sie mehr Spalten
+  trägt, als die Tabelle zeigt.
+
+#### Im Editor
+
+**In der Formatansicht steht die Datei als Tabelle**, vorn eine schmale Spalte
+mit der Nummer jeder Zeile. `ctrl+cmd+e` wechselt zur Rohansicht, die die Datei
+zeigt, wie sie auf der Platte steht, und zurück. Beide Flächen rollen
+waagerecht und senkrecht. Die Breite einer Spalte lässt sich an ihrer Kante im
+Kopf ziehen. Eine Zelle zeigt einen Zeilenumbruch als `⏎` und einen Tabulator
+als `⇥`; bearbeitet wird der wirkliche Text.
+
+**Die Tabelle bleibt in zwei Fällen in der Rohansicht**, und die Statuszeile
+nennt den Grund: wenn ein Anführungszeichen bis zum Dateiende nicht schließt,
+denn dann würde der ganze Rest der Datei eine einzige Zelle, und wenn die Datei
+mehr Spalten trägt, als die Tabelle zeigt (derzeit 256; die Meldung nennt
+beide Zahlen). Nach einer Berichtigung in der Rohansicht versucht
+`ctrl+cmd+e` die Tabelle erneut.
+
+**Die Auswahl ist immer ein Rechteck aus Zellen**, nach dem Öffnen die Zelle A1.
+
+| Griff | Wirkung |
+|---|---|
+| Klick auf eine Zelle | wählt die Zelle |
+| `shift`-Klick, Ziehen | erweitert die Auswahl bis zu dieser Zelle |
+| Klick auf den Spaltenkopf | wählt die Spalte, mit `shift` bis zu ihr |
+| Klick auf die Zeilennummer | wählt die Zeile, mit `shift` bis zu ihr; Ziehen dort wählt weitere Zeilen |
+| Klick auf den Kopf über den Zeilennummern | alle Zellen |
+| Pfeiltasten | eine Zelle weiter |
+| `shift` mit Pfeiltaste | erweitert die Auswahl um eine Zelle |
+| `cmd+a` | alle Zellen |
+
+**Eine Zelle bearbeiten:** ein Doppelklick öffnet die angeklickte Zelle,
+`return` und `cmd+return` öffnen die Zelle oben links in der Auswahl. Ein
+Doppelklick unter die letzte Zeile hängt eine leere Zeile an. In der offenen
+Zelle gilt:
+
+- `return`, `cmd+return` oder ein Klick daneben übernehmen den Text.
+- `opt+return` schreibt einen Zeilenumbruch in die Zelle.
+- `tab` übernimmt und öffnet die Zelle rechts daneben, am Zeilenende die erste
+  der nächsten Zeile; `shift+tab` geht denselben Weg zurück.
+- `esc` verwirft das Getippte, und die Zelle zeigt wieder den alten Text.
+- `delete` nimmt ein Zeichen zurück und löscht keine Zeile.
+- `cmd+c` und `cmd+v` kopieren und fügen Text innerhalb der Zelle ein.
+
+Jeder Text ist erlaubt, auch einer mit Trennzeichen, Anführungszeichen oder
+Zeilenumbruch: KRK setzt den Wert dann beim Schreiben in Anführungszeichen,
+wie Excel und Numbers es lesen.
+
+**Zeilen und Spalten:**
+
+| Taste | Wirkung |
+|---|---|
+| `cmd+n`, `shift+cmd+return` | eine leere Zeile ans Ende, ihre erste Zelle gleich offen |
+| `opt+cmd+return` | so viele leere Zeilen über der Auswahl, wie sie Zeilen umfasst |
+| `opt+cmd+up`, `opt+cmd+down` | die Zeilen der Auswahl als Block eine Stelle nach oben oder unten |
+| `delete`, `shift+cmd+delete` | die Zeilen der Auswahl löschen, ohne Rückfrage |
+| `ctrl+cmd+return` | eine leere Spalte links der Auswahl |
+| `ctrl+shift+cmd+return` | eine leere Spalte hinter der letzten |
+| `ctrl+shift+cmd+delete` | die Spalten der Auswahl löschen, ohne Rückfrage |
+| `cmd+c` | die gewählten Zellen kopieren |
+| `cmd+v` | Zellen aus der Zwischenablage ab der Zelle oben links einfügen |
+| `cmd+z` | jede dieser Handlungen zurücknehmen |
+
+**`delete` löscht ganze Zeilen und nicht den Inhalt der gewählten Zellen.**
+Wer eine einzelne Zelle leeren will, öffnet sie, löscht den Text und übernimmt.
+Eine Tabelle behält immer mindestens eine Spalte. „Eintrag hinzufügen“ wirkt
+auch in der Rohansicht: dort hängt es eine leere Zeile an, und die Schreibmarke
+steht an ihrem Anfang.
+
+Die Zeilenbefehle stehen im Menü „Home“ bei den Eintragsbefehlen, die
+Spaltenbefehle und „Trennzeichen wechseln“ im Menü „Editor“. Sie wirken nur,
+solange der Fokus im Editor steht und dieser die Tabelle einer CSV- oder
+TSV-Datei zeigt; sonst sind sie ausgegraut. „Aufgabe abhaken oder öffnen“
+bleibt in dieser Tabelle ausgegraut, und Suchen, Ersetzen und der Zeilensprung
+wirken allein in der Rohansicht. **Mit einer eigenen `keymap.toml` tragen die
+neuen Befehle keine Tasten**; sie sind über das Menü erreichbar und lassen sich
+mit **F1**, `cmd+t` einzeln belegen, ohne `cmd+r`.
+
+**Kopieren und Einfügen sprechen dieselbe Form wie Numbers und Excel.** `cmd+c`
+legt die gewählten Zellen als Text ab, die Zeilen durch Zeilenumbrüche und die
+Zellen durch Tabulatoren getrennt. So eingefügt, landen sie in Numbers und
+Excel Zelle für Zelle. Eine einzelne Zelle ist dabei ihr bloßer Text. `cmd+v`
+liest einen Bereich aus Numbers oder Excel auf demselben Weg und setzt ihn ab
+der Zelle oben links in der Auswahl ein. Reicht er über das Ende der Tabelle,
+hängt KRK Zeilen an oder füllt Zeilen auf. Danach ist der eingefügte Bereich
+gewählt, und ein einziges `cmd+z` nimmt ihn ganz zurück. Gelesen wird allein
+Text: ein im Finder kopierter Eintrag kommt mit seinem Namen und nicht als
+Pfad.
+
+**Rückgängig ist ein Verlauf für Tabelle und Rohansicht zusammen.** `cmd+z`
+nimmt Tabellenhandlungen und Getipptes der Rohansicht in der Reihenfolge
+zurück, in der sie geschahen. Eine Spaltenhandlung ändert fast jede Zeile der
+Datei. In einer großen Datei kann sie deshalb so viel Platz im Verlauf
+belegen, dass ältere Schritte herausfallen und sich nicht mehr zurücknehmen
+lassen.
+
+**Jede Handlung ändert zuerst nur den Stand im Editor.** Auf die Platte kommt
+sie mit `cmd+s`. Dabei ändert KRK allein die Bytes der Zellen, Zeilen und
+Spalten, die man angefasst hat; jede andere Zeile kommt Zeichen für Zeichen
+zurück, mit ihren Anführungszeichen. Der Editor öffnet Dateien bis 16 MB.
+
+**Eine CSV- oder TSV-Datei behält beim Sichern ihre Bytefolgenmarke und ihre
+Zeilenenden.** Eine Datei, die Excel als „CSV UTF-8“ geschrieben hat, beginnt
+mit einer unsichtbaren Marke, an der Excel die Kodierung erkennt, und trennt
+ihre Zeilen mit `\r\n`; nach dem Sichern in KRK tut sie beides weiter, und
+Umlaute erscheinen in Excel richtig. Maßgeblich ist das Ende der ersten Zeile:
+eine Datei mit gemischten Zeilenenden kommt einheitlich in dieser Form zurück,
+und ein Zeilenumbruch innerhalb einer Zelle einer solchen Datei kommt als
+`\r\n` zurück. **Für jede andere Datei bleibt es bei der bisherigen Regel**:
+KRK sichert sie ohne Marke und mit `\n`.
+
 ---
 
 ## Die Quicknote

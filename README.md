@@ -434,6 +434,22 @@ mit einem Namen auf `-sys` in den Baum; die Begründung steht in der
 Wurzel-`Cargo.toml`. Geschrieben wird ein Archiv nie an Ort und Stelle, sondern
 jedes Mal ganz neu neben dem alten, das zuletzt in einem `rename` ersetzt wird.
 
+### CSV und TSV: womit KRK sie liest und schreibt
+
+KRK zeigt `.csv`, `.tsv` und `.tab` in Vorschau und Editor als Tabelle; was das
+für den Nutzer heißt, steht in `HowTo.md` unter „CSV- und TSV-Dateien“.
+**Gelesen und geschrieben wird mit einem eigenen Leser im Kern,
+`krk_core::trenntext`, und ohne fremde Kiste**: die Kiste `csv` liefert die
+Byte-Bereiche der Felder nicht in der Form, die das Ersetzen genau der
+berührten Bytes verlangt, und keine `Cargo.toml` hat sich dafür geändert. Der
+Leser folgt RFC 4180 und liest Abweichungen wie ein Anführungszeichen mitten in
+einem ungequoteten Feld so, wie sie dastehen; sie bleiben Byte für Byte stehen,
+bis ihre Zelle geändert wird. Jede Tabellenhandlung ersetzt allein die Bytes
+der berührten Felder und Zeilen. **Beim Sichern behält eine solche Datei ihre
+Bytefolgenmarke und ihre Zeilenenden**, als einzige Ausnahme von der Regel,
+dass KRK ohne Marke und mit `\n` sichert (Modulkopf von
+`crates/krk-core/src/text/datei.rs`, „Der Preis dieser Wahl“).
+
 ---
 
 Alles Weitere richtet sich an den, der KRK baut, signiert und ausliefert.

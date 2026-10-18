@@ -82,7 +82,8 @@
 //!
 //! KRK schreibt beim Sichern **immer** Unix-Zeilenenden, einen abschliessenden
 //! Umbruch, **sobald der Stand eine Zeile traegt**, und **nie** eine
-//! Bytefolgenmarke, unabhaengig von der Form, die die Datei mitbrachte. Die
+//! Bytefolgenmarke, unabhaengig von der Form, die die Datei mitbrachte; fuer
+//! CSV und TSV gilt seit dem CSV-Paket der Absatz zu ihnen weiter unten. Die
 //! eine Ausnahme steht bei [`sicherungsform`] und wird hier nicht ein zweites
 //! Mal begruendet: der leere Stand bleibt leer. Der Nutzer hat das am 260808-0043
 //! entschieden und ist damit der Empfehlung des Datensatzes
@@ -105,6 +106,19 @@
 //! sich ueber genau diese Wirkung beschwert hat, hat den richtigen Ort
 //! gefunden und die falsche Erwartung: die Antwort ist nicht ein Sonderfall
 //! hier, sondern eine neue Frage an den Nutzer.
+//!
+//! **Eine solche Frage ist einmal gestellt und fuer CSV und TSV anders
+//! beantwortet worden** (Entscheid
+//! `261018-0822-behaelt-eine-csv-oder-tsv-datei-beim-sichern-ihre-bytefolgenmarke-und-ihre-zeilenenden.md`
+//! im Arbeitspaket `261018-0812-csv-und-tsv-als-tabelle-in-vorschau-und-editor`,
+//! Moeglichkeit 2): bei einer CSV traegt die Marke fuer Excel die Kodierung,
+//! und `\r\n` ist die Norm des Formats. Eine solche Datei behaelt beim Sichern
+//! Marke und Zeilenende, und zwar **allein am Schreibweg**: [`oeffnen`]
+//! erhebt die [`Dateiform`] an den Bytes, der gehaltene Stand bleibt ohne
+//! Marke und mit `\n`, und [`sichern`] stellt beides ueber [`in_dateiform`]
+//! wieder her. Welche Datei eine CSV ist, entscheidet der Editor und nicht
+//! dieser Kern; fuer jede andere reicht er [`Dateiform::GEHALTEN`], und fuer
+//! sie gilt der Absatz darueber unveraendert.
 //!
 //! **Eine Folge, die der Rohansicht gilt:** weil die Wandlung beim Einlesen
 //! geschieht, zeigt auch die Rohansicht aus C3 keine Wagenrucklaufzeichen
@@ -491,6 +505,31 @@ pub enum Textstand {
 /// gewoehnlichen Datei — und eine andere kommt bis hierher nicht — ist der Fall
 /// nicht zu erreichen.
 pub fn lesen(pfad: &Path) -> Textstand {
+    lesen_mit_form(pfad).0
+}
+
+/// [`lesen`] samt der [`Dateiform`] der gelesenen Bytes.
+///
+/// **Die Form wird an den Bytes erhoben, bevor [`einlesen`] sie in die
+/// gehaltene Form bringt**, denn danach ist sie nicht mehr zu sehen. Fuer
+/// jeden Befund ausser [`Textstand::Text`] ist sie [`Dateiform::GEHALTEN`]:
+/// was nicht geoeffnet wird, wird auch nicht gesichert.
+fn lesen_mit_form(pfad: &Path) -> (Textstand, Dateiform) {
+    match bytes_lesen(pfad) {
+        Err(befund) => (befund, Dateiform::GEHALTEN),
+        Ok((datei, bytes)) => {
+            let form = Dateiform::der_bytes(&bytes);
+            match einlesen(bytes) {
+                Some(text) => (Textstand::Text(text), form),
+                None => (unlesbar(datei, Unlesbarkeit::KeinText), Dateiform::GEHALTEN),
+            }
+        }
+    }
+}
+
+/// Die Schritte 1 bis 5 von [`lesen`] bis vor die Wandlung: die offene Datei
+/// und ihre Bytes, oder der Befund, der schon vorher feststeht.
+fn bytes_lesen(pfad: &Path) -> Result<(File, Vec<u8>), Textstand> {
     let kein_ziel = |grund: String, fehlt: bool| Textstand::KeinGueltigesZiel {
         grund,
         fehlt,
@@ -503,20 +542,20 @@ pub fn lesen(pfad: &Path) -> Textstand {
             // Die eine Regel fuer `EMFILE` und `ENFILE`, dieselbe, die
             // `bis_zur_grenze_lesen` und `anlesen` fragen: der Mangel sagt
             // etwas ueber den Prozess und nichts ueber die Datei.
-            return Textstand::KeinGueltigesZiel {
+            return Err(Textstand::KeinGueltigesZiel {
                 grund: fehler.to_string(),
                 fehlt: fehler.kind() == io::ErrorKind::NotFound,
                 mangel: crate::verzeichnis::sys::ist_deskriptormangel(&fehler),
-            };
+            });
         }
     };
     let angaben = match datei.metadata() {
         Ok(angaben) => angaben,
-        Err(fehler) => return kein_ziel(fehler.to_string(), false),
+        Err(fehler) => return Err(kein_ziel(fehler.to_string(), false)),
     };
 
     if !angaben.is_file() {
-        return kein_ziel(
+        return Err(kein_ziel(
             text(if angaben.is_dir() {
                 Text::EditorOrdnerHatKeinenText
             } else {
@@ -524,11 +563,11 @@ pub fn lesen(pfad: &Path) -> Textstand {
             })
             .to_owned(),
             false,
-        );
+        ));
     }
 
     if angaben.len() > EDITORGRENZE {
-        return unlesbar(datei, Unlesbarkeit::ZuGross(angaben.len()));
+        return Err(unlesbar(datei, Unlesbarkeit::ZuGross(angaben.len())));
     }
 
     let mut bytes = Vec::with_capacity(angaben.len() as usize);
@@ -537,7 +576,7 @@ pub fn lesen(pfad: &Path) -> Textstand {
         .take(EDITORGRENZE + 1)
         .read_to_end(&mut bytes)
     {
-        return kein_ziel(fehler.to_string(), false);
+        return Err(kein_ziel(fehler.to_string(), false));
     }
     if bytes.len() as u64 > EDITORGRENZE {
         // Die Datei ist zwischen `fstat` und `read` gewachsen. Gemeldet wird die
@@ -548,13 +587,10 @@ pub fn lesen(pfad: &Path) -> Textstand {
             .metadata()
             .map(|angaben| angaben.len())
             .unwrap_or(bytes.len() as u64);
-        return unlesbar(datei, Unlesbarkeit::ZuGross(groesse));
+        return Err(unlesbar(datei, Unlesbarkeit::ZuGross(groesse)));
     }
 
-    match einlesen(bytes) {
-        Some(text) => Textstand::Text(text),
-        None => unlesbar(datei, Unlesbarkeit::KeinText),
-    }
+    Ok((datei, bytes))
 }
 
 /// Der Befund, der einen zurueckgespulten Deskriptor mitgibt.
@@ -575,6 +611,16 @@ fn unlesbar(mut datei: File, grund: Unlesbarkeit) -> Textstand {
     }
 }
 
+/// Was [`oeffnen`] fuer eine Textdatei liefert: den gehaltenen Stand und die
+/// Form, in der die Datei auf der Platte stand.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Geoeffnet {
+    /// Der Stand in gehaltener Form, wie [`einlesen`] ihn liefert.
+    pub stand: String,
+    /// Bytefolgenmarke und Zeilenende der gelesenen Bytes.
+    pub form: Dateiform,
+}
+
 /// Die Uebersetzung des Befundes in die Sprache des Editors (C2, C6).
 ///
 /// Signatur und Rueckgabewerte sind unveraendert das, was sie vor der Runde 9
@@ -587,30 +633,42 @@ fn unlesbar(mut datei: File, grund: Unlesbarkeit) -> Textstand {
 /// Editor oeffnet nichts, was er nicht als Text lesen kann, und braucht die
 /// Bytes deshalb nicht; gebraucht hat sie bis zur krkhome-Arbeit der
 /// Notizzettel, und der ging ueber [`lesen`].
-pub fn oeffnen(pfad: &Path) -> Result<String, Abweisung> {
-    match lesen(pfad) {
-        Textstand::Text(stand) => Ok(stand),
-        Textstand::Unlesbar {
-            grund: Unlesbarkeit::ZuGross(groesse),
-            ..
-        } => Err(Abweisung::ZuGross {
+///
+/// **Seit dem CSV-Paket reist die [`Dateiform`] mit dem Stand**, erhoben an
+/// den Bytes vor der Wandlung; ob der Rufer sie beim Sichern wieder herstellt,
+/// entscheidet er und nicht diese Stelle (siehe [`Dateiform`]).
+pub fn oeffnen(pfad: &Path) -> Result<Geoeffnet, Abweisung> {
+    match lesen_mit_form(pfad) {
+        (Textstand::Text(stand), form) => Ok(Geoeffnet { stand, form }),
+        (
+            Textstand::Unlesbar {
+                grund: Unlesbarkeit::ZuGross(groesse),
+                ..
+            },
+            _,
+        ) => Err(Abweisung::ZuGross {
             pfad: pfad.to_path_buf(),
             groesse,
         }),
-        Textstand::Unlesbar {
-            grund: Unlesbarkeit::KeinText,
-            ..
-        } => Err(Abweisung::NichtAlsTextLesbar {
+        (
+            Textstand::Unlesbar {
+                grund: Unlesbarkeit::KeinText,
+                ..
+            },
+            _,
+        ) => Err(Abweisung::NichtAlsTextLesbar {
             pfad: pfad.to_path_buf(),
         }),
         // Die fehlende Datei ist fuer den Editor kein eigener Fall: sie hat so
         // wenig Text zu zeigen wie ein Ordner. Die Uebernahme der alten Zettel
         // trennt sie, siehe das Feld `fehlt`.
-        Textstand::KeinGueltigesZiel { grund, mangel, .. } => Err(Abweisung::KeinGueltigesZiel {
-            pfad: pfad.to_path_buf(),
-            grund,
-            mangel,
-        }),
+        (Textstand::KeinGueltigesZiel { grund, mangel, .. }, _) => {
+            Err(Abweisung::KeinGueltigesZiel {
+                pfad: pfad.to_path_buf(),
+                grund,
+                mangel,
+            })
+        }
     }
 }
 
@@ -985,6 +1043,83 @@ pub fn sicherungsform(stand: &str) -> Cow<'_, str> {
     }
 }
 
+/// Bytefolgenmarke und Zeilenende einer Datei, wie sie auf der Platte stand.
+///
+/// **Der gehaltene Stand traegt beides nie** (Modulkopf); diese Angabe haelt
+/// fest, was [`einlesen`] dabei abgelegt hat, damit [`sichern`] es fuer die
+/// Dateien wiederherstellen kann, bei denen der Nutzer das so entschieden hat.
+/// Das sind allein CSV und TSV (Entscheid
+/// `261018-0822-behaelt-eine-csv-oder-tsv-datei-beim-sichern-ihre-bytefolgenmarke-und-ihre-zeilenenden.md`,
+/// Moeglichkeit 2); welche Datei es ist, weiss dieser Kern nicht, und er
+/// fragt es auch nicht: der Editor reicht fuer jede andere Datei
+/// [`Dateiform::GEHALTEN`], und dann gilt die Regel vom 260808 unveraendert.
+///
+/// **Erhoben wird an zwei Stellen der Bytes, und das ist der Preis:** die
+/// Marke am Anfang und das **erste** Zeilenende. Eine Datei mit gemischten
+/// Zeilenenden kommt einheitlich in der Form ihrer ersten Zeile zurueck, und
+/// ein `\n` in einem gequoteten Feld einer `\r\n`-Datei, wie Excel es fuer
+/// einen Umbruch in einer Zelle schreibt, kommt als `\r\n` zurueck.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Dateiform {
+    /// Ob die Datei mit einer Bytefolgenmarke begann.
+    pub marke: bool,
+    /// Ob ihr erstes Zeilenende `\r\n` war.
+    pub crlf: bool,
+}
+
+impl Dateiform {
+    /// Die Form des gehaltenen Standes: ohne Marke, mit `\n`. Wer sie reicht,
+    /// sichert wie vor dem CSV-Paket.
+    pub const GEHALTEN: Self = Self {
+        marke: false,
+        crlf: false,
+    };
+
+    /// Die Form, die diese Bytes tragen; liest nichts als die Marke und die
+    /// Bytes bis zum ersten `\n`.
+    #[must_use]
+    pub fn der_bytes(bytes: &[u8]) -> Self {
+        const MARKE: &[u8] = "\u{feff}".as_bytes();
+        let marke = bytes.starts_with(MARKE);
+        let crlf = bytes
+            .iter()
+            .position(|&byte| byte == b'\n')
+            .is_some_and(|stelle| stelle > 0 && bytes[stelle - 1] == b'\r');
+        Self { marke, crlf }
+    }
+}
+
+/// Was von einem Stand in einer [`Dateiform`] auf die Platte geht.
+///
+/// Erst [`sicherungsform`], unveraendert und fuer jede Datei, dann allein, was
+/// die Form verlangt: jedes `\n` wird `\r\n`, und vorn steht die Marke. **Die
+/// Marke steht auch vor einem leeren Stand**, damit eine Datei, die nur aus ihr
+/// bestand, Byte fuer Byte zurueckkommt. Mit [`Dateiform::GEHALTEN`] ist das
+/// Ergebnis die [`sicherungsform`] selbst und geliehen.
+#[must_use]
+pub fn in_dateiform(stand: &str, form: Dateiform) -> Cow<'_, str> {
+    let gesichert = sicherungsform(stand);
+    if form == Dateiform::GEHALTEN {
+        return gesichert;
+    }
+    let mut ausgabe = String::with_capacity(gesichert.len() + gesichert.len() / 16 + 3);
+    if form.marke {
+        ausgabe.push(BYTEFOLGENMARKE);
+    }
+    if form.crlf {
+        let mut rest: &str = &gesichert;
+        while let Some(stelle) = rest.find('\n') {
+            ausgabe.push_str(&rest[..stelle]);
+            ausgabe.push_str("\r\n");
+            rest = &rest[stelle + 1..];
+        }
+        ausgabe.push_str(rest);
+    } else {
+        ausgabe.push_str(&gesichert);
+    }
+    Cow::Owned(ausgabe)
+}
+
 /// Schreibt den Stand des Editors in die Datei.
 ///
 /// Geschrieben wird ueber [`crate::ablage::atomar`], denselben Weg, den jede
@@ -993,10 +1128,12 @@ pub fn sicherungsform(stand: &str) -> Cow<'_, str> {
 /// `rename`. Ein Absturz mittendrin laesst die alte Datei stehen, wie sie war,
 /// und ein zweiter Schreibweg im Programm entsteht nicht.
 ///
-/// Eine Bytefolgenmarke schreibt diese Stelle nicht. Sie stellt sie auch nicht
-/// ab: was am Anfang des Standes steht, ist Text des Nutzers, und der Stand
-/// traegt dort keine Marke, weil [`einlesen`] sie abgeschnitten hat.
-pub fn sichern(ziel: &Path, stand: &str) -> io::Result<()> {
-    let form = sicherungsform(stand);
-    crate::ablage::atomar::schreiben(ziel, &mut form.as_bytes())
+/// Eine Bytefolgenmarke und `\r\n` schreibt diese Stelle allein, wenn `form`
+/// sie verlangt ([`in_dateiform`]); mit [`Dateiform::GEHALTEN`] schreibt sie
+/// keine Marke und `\n`, wie vor dem CSV-Paket. Sie stellt eine Marke auch
+/// nicht ab: was am Anfang des Standes steht, ist Text des Nutzers, und der
+/// Stand traegt dort keine Marke, weil [`einlesen`] sie abgeschnitten hat.
+pub fn sichern(ziel: &Path, stand: &str, form: Dateiform) -> io::Result<()> {
+    let bytes = in_dateiform(stand, form);
+    crate::ablage::atomar::schreiben(ziel, &mut bytes.as_bytes())
 }

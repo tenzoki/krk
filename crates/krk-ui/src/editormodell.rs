@@ -316,6 +316,7 @@ use std::time::{Duration, SystemTime};
 use krk_core::heimordner::tresor::{self, Oeffnungsmittel, Pin, Schluessel, Tresorfehler};
 use krk_core::heimordner::{Heimordner, Sonderdatei};
 use krk_core::sprache::{Text, satz, text};
+use krk_core::text::datei::Dateiform;
 use krk_core::text::{Abweisung, Treffer, datei, suche};
 use krk_core::trenntext;
 
@@ -608,6 +609,10 @@ struct Geladen {
 #[derive(Debug)]
 struct Gelesen {
     stand: String,
+    /// Bytefolgenmarke und Zeilenende der gelesenen Datei
+    /// (`krk_core::text::datei::Dateiform`); ob sie beim Sichern gilt,
+    /// entscheidet [`Editormodell::uebernehmen`].
+    form: Dateiform,
     schutz: Schutz,
     /// Ob der Schluessel im Schutz aus einer eben geprueften Eingabe stammt
     /// (`tresorweg::Entsperrt::eingegeben`); nur dann wird er gemerkt.
@@ -813,8 +818,9 @@ pub fn keine_textmarke_in_geheimnissen() -> &'static str {
 /// Liest eine gewoehnliche Textdatei; die eine Stelle, die dafuer
 /// `krk_core::text::datei::oeffnen` ruft.
 fn text_lesen(pfad: &Path) -> Result<Gelesen, Abweisung> {
-    datei::oeffnen(pfad).map(|stand| Gelesen {
-        stand,
+    datei::oeffnen(pfad).map(|geoeffnet| Gelesen {
+        stand: geoeffnet.stand,
+        form: geoeffnet.form,
         schutz: Schutz::Klartext,
         eingegeben: false,
     })
@@ -838,6 +844,9 @@ fn geheimnisse_laden(
                 // Herausgenommen und nicht kopiert: der Text lebt im Editor
                 // weiter, und es faellt eine leere Zeichenkette.
                 stand: std::mem::take(&mut *entsperrt.stand),
+                // Ein Chiffrat hat keine Zeilenenden, und `secrets.txt` ist
+                // keine Trenntextdatei.
+                form: Dateiform::GEHALTEN,
                 schutz: Schutz::Verschluesselt {
                     schluessel: entsperrt.schluessel,
                     kopf_auf_platte: entsperrt.kopf_auf_platte,
@@ -1221,6 +1230,16 @@ pub struct Editormodell {
     /// ohne dass sie fuer CSV etwas anderes taeten als heute. Gesetzt allein
     /// zusammen mit dem Typ, in [`Self::uebernehmen`] und [`Self::schliessen`].
     trenntext: Option<trenntext::Art>,
+    /// In welcher Form der Stand auf die Platte geht: fuer eine CSV oder TSV
+    /// die Form, in der sie gelesen wurde, fuer jede andere Datei
+    /// [`Dateiform::GEHALTEN`] (Schritt 6 des Plans, Entscheid
+    /// `261018-0822-behaelt-eine-csv-oder-tsv-datei-beim-sichern-ihre-bytefolgenmarke-und-ihre-zeilenenden.md`,
+    /// Moeglichkeit 2).
+    ///
+    /// **Gesetzt allein zusammen mit [`Self::trenntext`]**, in
+    /// [`Self::uebernehmen`] und [`Self::schliessen`]; gelesen allein in
+    /// [`Self::sichern_ueber`]. Der gehaltene Stand traegt die Form nie.
+    dateiform: Dateiform,
     /// Der laufende Suchlauf; `None`, solange keiner laeuft (C5).
     suchlauf: Option<Suchlauf>,
     /// Der Zustand der Datei beim Oeffnen oder beim letzten Sichern (C4).
@@ -1726,7 +1745,12 @@ impl Editormodell {
     /// irgendein Feld sich bewegt.
     fn uebernehmen(&mut self, pfad: PathBuf, geladen: Geladen) -> Ladeausgang {
         match geladen.ergebnis {
-            Ok(Gelesen { stand, schutz, .. }) => {
+            Ok(Gelesen {
+                stand,
+                form,
+                schutz,
+                ..
+            }) => {
                 if matches!(schutz, Schutz::Klartext) && self.ist_geheimnisdatei(&pfad) {
                     return Ladeausgang::Abgewiesen(gesperrt(
                         &pfad,
@@ -1742,6 +1766,10 @@ impl Editormodell {
                     Dateityp::von_pfad(&pfad, heimgriff::lesen(&self.heim).as_ref())
                 };
                 self.trenntext = trenntextart(&pfad, self.typ);
+                self.dateiform = match self.trenntext {
+                    Some(_) => form,
+                    None => Dateiform::GEHALTEN,
+                };
                 self.pfad = Some(pfad);
                 self.stand = stand;
                 self.schutz = schutz;
@@ -1953,7 +1981,9 @@ impl Editormodell {
     /// Geschrieben wird ueber `krk_core::text::datei::sichern`, die eine
     /// Stelle, die die Sicherungsform herstellt: Unix-Zeilenenden, ein
     /// abschliessender Umbruch, keine Bytefolgenmarke. Dieses Modul stellt
-    /// nichts davon selbst her.
+    /// nichts davon selbst her. **Eine CSV oder TSV behaelt dabei Marke und
+    /// Zeilenende**, weil das Modell ihr ihre gelesene Form mitgibt
+    /// ([`Self::dateiform`]); hergestellt wird auch das im Kern.
     ///
     /// Nach einem gelungenen Sichern meldet der Editor keinen ungesicherten
     /// Stand mehr, und der Stempel steht auf der eben geschriebenen Datei;
@@ -2068,7 +2098,7 @@ impl Editormodell {
                         &[("pfad", &pfad.display())],
                     ));
                 }
-                datei::sichern(&pfad, &self.stand)
+                datei::sichern(&pfad, &self.stand, self.dateiform)
             }
             Schutz::Verschluesselt { schluessel, .. } => {
                 match Chiffrat::verschliessen(&self.stand, schluessel) {
@@ -2323,6 +2353,7 @@ impl Editormodell {
         self.abweichung = false;
         self.typ = Dateityp::default();
         self.trenntext = None;
+        self.dateiform = Dateiform::GEHALTEN;
         self.suchlauf = None;
         self.stempel = None;
         self.ladevorgang = None;
@@ -2657,6 +2688,46 @@ mod tests {
         assert_eq!(
             std::fs::read_to_string(&pfad).expect("die Datei ist nach dem Sichern lesbar"),
             "# Aufgaben\n- [ ] Brot und Butter\n  fremde Zeile\n* [X] Steuer\n"
+        );
+    }
+
+    /// Schritt 6 des CSV-Plans am Modell: eine Excel-CSV mit Marke und
+    /// `\r\n` kommt nach einer Zellaenderung Byte fuer Byte zurueck, bis auf
+    /// die Bytes der Zelle; eine Textdatei derselben Form bekommt beim Sichern
+    /// wie vorher `\n` und keine Marke. Das Modell haelt in beiden Faellen
+    /// einen Stand ohne Marke und ohne `\r`.
+    #[test]
+    fn eine_excel_csv_behaelt_marke_und_zeilenenden_und_jede_andere_datei_nicht() {
+        use krk_core::trenntext::{Art, dialekt_erkennen, indexieren, zelle_setzen};
+        let ordner = Pruefordner::neu("dateiform");
+        let mut roh = Vec::from("\u{feff}".as_bytes());
+        roh.extend_from_slice("Name;Preis\r\nÄpfel;1,50\r\nBirnen;2,00\r\n".as_bytes());
+
+        let csv = ordner.datei("excel.csv", &roh);
+        let mut modell = geoeffnet(&csv);
+        assert_eq!(modell.stand(), "Name;Preis\nÄpfel;1,50\nBirnen;2,00\n");
+        // Unveraendert gesichert: dieselben Bytes.
+        let _ = modell.bearbeiten(modell.stand().to_owned());
+        assert_eq!(modell.sichern(), Sicherungsausgang::Gesichert(csv.clone()));
+        assert_eq!(std::fs::read(&csv).expect("lesbar"), roh);
+
+        let dialekt = dialekt_erkennen(Art::Csv, modell.stand());
+        let index = indexieren(modell.stand(), &dialekt);
+        let neu = zelle_setzen(modell.stand(), &index, 1, 1, "1,75").expect("B2 steht");
+        let _ = modell.bearbeiten(neu.text);
+        assert_eq!(modell.sichern(), Sicherungsausgang::Gesichert(csv.clone()));
+        let mut erwartet = Vec::from("\u{feff}".as_bytes());
+        erwartet.extend_from_slice("Name;Preis\r\nÄpfel;1,75\r\nBirnen;2,00\r\n".as_bytes());
+        assert_eq!(std::fs::read(&csv).expect("lesbar"), erwartet);
+        assert!(!modell.stand().contains('\r'));
+
+        let text = ordner.datei("excel.txt", &roh);
+        let mut modell = geoeffnet(&text);
+        let _ = modell.bearbeiten(modell.stand().to_owned());
+        assert_eq!(modell.sichern(), Sicherungsausgang::Gesichert(text.clone()));
+        assert_eq!(
+            std::fs::read_to_string(&text).expect("lesbar"),
+            "Name;Preis\nÄpfel;1,50\nBirnen;2,00\n"
         );
     }
 
@@ -3679,7 +3750,9 @@ mod tests {
     }
 
     /// Die Entscheidung des Nutzers vom 260808-0043, an dem Ende gemessen, an
-    /// dem sie zaehlt: KRK schreibt beim Sichern immer Unix-Zeilenenden.
+    /// dem sie zaehlt: KRK schreibt beim Sichern immer Unix-Zeilenenden
+    /// (eine CSV oder TSV ausgenommen, die mit `\r\n` gelesen wurde; das haelt
+    /// `eine_excel_csv_behaelt_marke_und_zeilenenden_und_jede_andere_datei_nicht`).
     ///
     /// Eine `NSTextView` bewahrt eingefuegten Text zeichengetreu auf, also
     /// steht nach einem Einfuegen aus einer Windows-Quelle ein `\r\n` in dem

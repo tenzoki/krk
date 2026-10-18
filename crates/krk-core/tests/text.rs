@@ -67,7 +67,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, mpsc};
 use std::time::Duration;
 
-use krk_core::text::datei::{Lesehindernis, Textstand, Unlesbarkeit};
+use krk_core::text::datei::{Dateiform, Lesehindernis, Textstand, Unlesbarkeit};
 use krk_core::text::{Abweisung, Zeilenindex, Zeilenlage, Zeilensprung, datei, suche};
 
 mod gemeinsam;
@@ -302,7 +302,7 @@ fn die_drei_abweichungen_verschwinden_beim_lesen_und_kommen_nicht_zurueck() {
     // Der Zeilenindex sieht drei Zeilen und nicht sechs halbe.
     assert_eq!(Zeilenindex::neu(&stand).zeilenzahl(), 3);
 
-    datei::sichern(&pfad, &stand).expect("das Sichern scheitert nicht");
+    datei::sichern(&pfad, &stand, Dateiform::GEHALTEN).expect("das Sichern scheitert nicht");
     let geschrieben = bytes_von(&pfad);
 
     assert!(
@@ -354,7 +354,7 @@ fn die_zielform_ueberlebt_die_rundreise_byteweise() {
     ] {
         let pfad = ordner.datei(name, inhalt);
         let stand = datei::einlesen(bytes_von(&pfad)).expect("die Datei ist Text");
-        datei::sichern(&pfad, &stand).expect("das Sichern scheitert nicht");
+        datei::sichern(&pfad, &stand, Dateiform::GEHALTEN).expect("das Sichern scheitert nicht");
         assert_eq!(
             bytes_von(&pfad).as_slice(),
             inhalt,
@@ -555,7 +555,9 @@ fn die_sicherungsform_haengt_genau_einen_umbruch_an_und_raeumt_hinten_nicht_auf(
 /// Probelauf, und ein Deskriptor, der nie aufgeht, haelt nichts fest.
 fn oeffnen_mit_zeitschranke(pfad: &Path, schranke: Duration) -> Result<String, Abweisung> {
     let pfad = pfad.to_path_buf();
-    mit_zeitschranke("oeffnen", schranke, move || datei::oeffnen(&pfad))
+    mit_zeitschranke("oeffnen", schranke, move || {
+        datei::oeffnen(&pfad).map(|geoeffnet| geoeffnet.stand)
+    })
 }
 
 /// Fall 8: ein Ordner wird abgewiesen.
@@ -591,7 +593,7 @@ fn eine_verknuepfung_gilt_nach_ihrem_ziel() {
 
     let auf_text = ordner.verknuepfung("auf-text", &textdatei);
     assert_eq!(
-        datei::oeffnen(&auf_text),
+        datei::oeffnen(&auf_text).map(|geoeffnet| geoeffnet.stand),
         Ok(String::from("eins\nzwei\n")),
         "die Verknuepfung auf eine Textdatei wurde nicht angenommen"
     );
@@ -669,6 +671,7 @@ fn eine_datei_ueber_der_grenze_wird_abgewiesen_ohne_gelesen_zu_werden() {
     );
 
     let stand = datei::oeffnen(&auf_der_grenze)
+        .map(|geoeffnet| geoeffnet.stand)
         .expect("die Datei auf der Grenze gehoert gelesen, sonst belegt die Probe nichts");
     assert_eq!(
         stand.len() as u64,
@@ -963,7 +966,9 @@ fn genau_auf_der_grenze_wird_angenommen() {
     let ordner = Pruefordner::neu("oeffnen-grenzfall");
     let auf_der_grenze = ordner.luecke("genau.log", datei::EDITORGRENZE);
 
-    let stand = datei::oeffnen(&auf_der_grenze).expect("genau auf der Grenze gehoert angenommen");
+    let stand = datei::oeffnen(&auf_der_grenze)
+        .expect("genau auf der Grenze gehoert angenommen")
+        .stand;
     assert_eq!(stand.len() as u64, datei::EDITORGRENZE);
 }
 
@@ -1002,7 +1007,9 @@ fn zwei_gigabyte_werden_ohne_arbeitsspeicher_abgewiesen() {
     let riesig = ordner.luecke("protokoll.log", 2 * 1024 * 1024 * 1024);
 
     let begonnen = Instant::now();
-    let stand = datei::oeffnen(&messlatte).expect("das Loch auf der Grenze gehoert gelesen");
+    let stand = datei::oeffnen(&messlatte)
+        .expect("das Loch auf der Grenze gehoert gelesen")
+        .stand;
     let gelesen = begonnen.elapsed();
     assert_eq!(stand.len() as u64, datei::EDITORGRENZE);
     drop(stand);
@@ -1093,7 +1100,7 @@ fn oeffnen_liefert_denselben_stand_wie_einlesen() {
     roh.extend_from_slice(b"erste\r\nzweite\r\ndritte ohne Umbruch");
     let pfad = ordner.datei("windows.txt", &roh);
 
-    let ueber_oeffnen = datei::oeffnen(&pfad).expect("die Datei ist Text");
+    let ueber_oeffnen = datei::oeffnen(&pfad).expect("die Datei ist Text").stand;
     let ueber_einlesen = datei::einlesen(bytes_von(&pfad)).expect("die Datei ist Text");
 
     assert_eq!(ueber_oeffnen, ueber_einlesen);
@@ -1483,4 +1490,157 @@ fn kind_liest_bei_deskriptormangel_einen_mangel() {
     );
 
     drop(gehalten);
+}
+
+// ---------------------------------------------------------------------------
+// Die Dateiform einer CSV oder TSV (Schritt 6 des Plans
+// `261018-0822_*_plan-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md`)
+// ---------------------------------------------------------------------------
+
+/// Eine CSV, wie Excel sie als „CSV UTF-8“ schreibt: Bytefolgenmarke, Semikolon,
+/// `\r\n` und ein gequotetes Feld mit Trennzeichen.
+fn excel_csv() -> Vec<u8> {
+    let mut roh = Vec::from("\u{feff}".as_bytes());
+    roh.extend_from_slice(
+        "Name;Preis;Notiz\r\nÄpfel;1,50;\"rot;süß\"\r\nBirnen;2,00;\r\n".as_bytes(),
+    );
+    roh
+}
+
+/// Oeffnen und unveraendert sichern: die Bytes sind dieselben, Marke und
+/// `\r\n` eingeschlossen.
+#[test]
+fn eine_csv_mit_marke_und_crlf_kommt_unveraendert_byte_fuer_byte_zurueck() {
+    let ordner = Pruefordner::neu("dateiform-rundreise");
+    let roh = excel_csv();
+    let pfad = ordner.datei("excel.csv", &roh);
+
+    let geoeffnet = datei::oeffnen(&pfad).expect("die Datei ist Text");
+    assert_eq!(
+        geoeffnet.form,
+        Dateiform {
+            marke: true,
+            crlf: true
+        }
+    );
+    datei::sichern(&pfad, &geoeffnet.stand, geoeffnet.form).expect("das Sichern scheitert nicht");
+    assert_eq!(bytes_von(&pfad), roh);
+
+    // Ohne Marke, mit `\r\n`, und ohne abschliessenden Umbruch: das Sichern
+    // haengt genau den einen an, in der Form der Datei.
+    let ohne_marke = ordner.datei("ohne.csv", b"a,b\r\nc,d");
+    let geoeffnet = datei::oeffnen(&ohne_marke).expect("die Datei ist Text");
+    assert_eq!(
+        geoeffnet.form,
+        Dateiform {
+            marke: false,
+            crlf: true
+        }
+    );
+    datei::sichern(&ohne_marke, &geoeffnet.stand, geoeffnet.form).expect("gesichert");
+    assert_eq!(bytes_von(&ohne_marke), b"a,b\r\nc,d\r\n");
+
+    // Eine Datei, die nur aus der Marke besteht, behaelt sie.
+    let nur_marke = ordner.datei("nur-marke.csv", "\u{feff}".as_bytes());
+    let geoeffnet = datei::oeffnen(&nur_marke).expect("die Datei ist Text");
+    assert_eq!(geoeffnet.stand, "");
+    datei::sichern(&nur_marke, &geoeffnet.stand, geoeffnet.form).expect("gesichert");
+    assert_eq!(bytes_von(&nur_marke), "\u{feff}".as_bytes());
+}
+
+/// Eine Zellaenderung ueber die Handlung des Kerns, gesichert in der Form der
+/// Datei: vor und hinter dem Feld steht jedes Byte, wie es stand.
+#[test]
+fn eine_geaenderte_zelle_aendert_in_der_gesicherten_datei_nur_ihre_bytes() {
+    use krk_core::trenntext::{Art, dialekt_erkennen, indexieren, zelle_setzen};
+
+    let ordner = Pruefordner::neu("dateiform-zelle");
+    let roh = excel_csv();
+    let pfad = ordner.datei("excel.csv", &roh);
+
+    let geoeffnet = datei::oeffnen(&pfad).expect("die Datei ist Text");
+    let dialekt = dialekt_erkennen(Art::Csv, &geoeffnet.stand);
+    let index = indexieren(&geoeffnet.stand, &dialekt);
+    let neu = zelle_setzen(&geoeffnet.stand, &index, 2, 1, "2,25")
+        .expect("die Zelle B3 steht in der Datei");
+    datei::sichern(&pfad, &neu.text, geoeffnet.form).expect("das Sichern scheitert nicht");
+
+    let mut erwartet = Vec::from("\u{feff}".as_bytes());
+    erwartet.extend_from_slice(
+        "Name;Preis;Notiz\r\nÄpfel;1,50;\"rot;süß\"\r\nBirnen;2,25;\r\n".as_bytes(),
+    );
+    assert_eq!(bytes_von(&pfad), erwartet);
+
+    // Byte fuer Byte gegen das Original: allein die zwei Ziffern weichen ab.
+    let gesichert = bytes_von(&pfad);
+    let abweichend: Vec<usize> = (0..roh.len())
+        .filter(|&stelle| roh[stelle] != gesichert[stelle])
+        .collect();
+    assert_eq!(gesichert.len(), roh.len());
+    let feld = roh.len() - "25;\r\n".len();
+    assert_eq!(abweichend, [feld, feld + 1]);
+}
+
+/// Jede andere Datei sichert wie vor dem Paket: wer [`Dateiform::GEHALTEN`]
+/// reicht, bekommt keine Marke und `\n`, gleich wie die Datei kam.
+#[test]
+fn jede_andere_datei_sichert_wie_vorher() {
+    let ordner = Pruefordner::neu("dateiform-gehalten");
+    let mut roh = Vec::from("\u{feff}".as_bytes());
+    roh.extend_from_slice(b"# Titel\r\n\r\nText\r\n");
+    let pfad = ordner.datei("lies.md", &roh);
+
+    let geoeffnet = datei::oeffnen(&pfad).expect("die Datei ist Text");
+    // Erhoben wird die Form an jeder Datei; ob sie gilt, entscheidet der Rufer.
+    assert!(geoeffnet.form.marke && geoeffnet.form.crlf);
+    datei::sichern(&pfad, &geoeffnet.stand, Dateiform::GEHALTEN).expect("gesichert");
+    assert_eq!(bytes_von(&pfad), b"# Titel\n\nText\n");
+
+    // Die gehaltene Form ist die Sicherungsform selbst, geliehen.
+    for stand in ["", "ohne", "mit\n", "zwei leere Zeilen\n\n\n"] {
+        assert_eq!(
+            datei::in_dateiform(stand, Dateiform::GEHALTEN),
+            datei::sicherungsform(stand)
+        );
+    }
+    assert!(matches!(
+        datei::in_dateiform("mit\n", Dateiform::GEHALTEN),
+        std::borrow::Cow::Borrowed(_)
+    ));
+    assert_eq!(Dateiform::default(), Dateiform::GEHALTEN);
+}
+
+/// Die Zusage des gehaltenen Standes gilt auch fuer eine CSV mit Marke und
+/// `\r\n`: der Stand traegt weder das eine noch das andere.
+#[test]
+fn der_gehaltene_stand_traegt_weiter_keine_marke_und_kein_cr() {
+    let ordner = Pruefordner::neu("dateiform-stand");
+    let pfad = ordner.datei("excel.csv", excel_csv());
+
+    let geoeffnet = datei::oeffnen(&pfad).expect("die Datei ist Text");
+    assert!(!geoeffnet.stand.starts_with('\u{feff}'));
+    assert!(!geoeffnet.stand.contains('\r'));
+    assert!(datei::ist_in_gehaltener_form(&geoeffnet.stand));
+    assert_eq!(
+        geoeffnet.stand,
+        "Name;Preis;Notiz\nÄpfel;1,50;\"rot;süß\"\nBirnen;2,00;\n"
+    );
+
+    // Die Form der Bytes, einzeln: die Marke vorn, das erste Zeilenende.
+    assert_eq!(Dateiform::der_bytes(b""), Dateiform::GEHALTEN);
+    assert_eq!(Dateiform::der_bytes(b"a\nb\r\n"), Dateiform::GEHALTEN);
+    assert_eq!(
+        Dateiform::der_bytes(b"\r\n"),
+        Dateiform {
+            marke: false,
+            crlf: true
+        }
+    );
+    assert_eq!(
+        Dateiform::der_bytes("\u{feff}ohne Umbruch".as_bytes()),
+        Dateiform {
+            marke: true,
+            crlf: false
+        }
+    );
 }
