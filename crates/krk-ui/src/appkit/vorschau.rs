@@ -220,6 +220,16 @@
 //! als seine Nachbarn und steht seit 10.8 (`NSByteCountFormatter.h:38`). Das
 //! Buendel zielt auf 15.0 (`.cargo/config.toml`).
 //!
+//! **Der Umbruch der Textanzeige ist seit dem Plan der CSV schaltbar**
+//! ([`Vorschaufenster::umbruch_setzen`], entschieden von [`bricht_um`]): ein
+//! Trenntext steht ohne Umbruch und mit waagerechtem Rollbalken. Angesprochen
+//! werden dafuer `setHasHorizontalScroller:` von `NSScrollView`,
+//! `setHorizontallyResizable:` von `NSText`, `textContainer` von `NSTextView`
+//! und `setWidthTracksTextView:` von `NSTextContainer`, alle ohne
+//! Verfuegbarkeitsangabe und damit seit 10.0, dazu `NSTextContainer.size`
+//! seit macOS 10.11 (`NSTextContainer.h`), dieselbe Angabe, die der Kopf von
+//! [`super::editor`] fuer denselben Setzer am SDK gelesen hat.
+//!
 //! **Textspeicher und Layoutverwalter fasst diese Datei nicht selbst an.** Sie
 //! kommen ueber [`super::textmerkmale`], und die Angaben stehen im Kopf jener
 //! Datei; genannt seien sie hier trotzdem, weil die Beruehrung ueber den
@@ -1468,6 +1478,14 @@ impl Vorschaufenster {
         if rolle.rulersVisible() != zeigt_nummern {
             rolle.setRulersVisible(zeigt_nummern);
         }
+        // Der Umbruch an derselben Stelle und nach derselben Regel: entschieden
+        // wird ueber `bricht_um` und sonst nichts, gesetzt nur beim Wechsel.
+        // Der waagerechte Rollbalken ist dabei der Merkposten, denn er steht
+        // genau dann, wenn nicht umgebrochen wird.
+        let umbruch = bricht_um(&inhalt);
+        if rolle.hasHorizontalScroller() == umbruch {
+            self.umbruch_setzen(umbruch);
+        }
 
         self.inhalt_zeigen(inhalt);
 
@@ -1500,6 +1518,9 @@ impl Vorschaufenster {
         match inhalt {
             Inhalt::Leer => self.text_zeigen(leertext()),
             Inhalt::Text(text) => self.text_zeigen(&text),
+            // Derselbe Weg wie jeder Text; ohne Umbruch steht er, weil
+            // `anzeigen` davor `bricht_um` gefragt hat (E17).
+            Inhalt::Trenntext(text) => self.text_zeigen(&text),
             // Der gerenderte Text und seine Auszeichnungen in einem Zug: die
             // Umsetzung ist die des Editors, und eine zweite daneben entsteht
             // nicht (C4, erstes und zweites Kriterium der Runde 6).
@@ -1599,6 +1620,44 @@ impl Vorschaufenster {
         ivars.text.quellbezug_setzen(None);
         textmerkmale::zuruecksetzen(&ivars.text, Ansicht::Roh, Darstellungsart::EinfacherText);
         self.flaeche_zeigen(Flaeche::Text);
+    }
+
+    /// Schaltet den Umbruch der Textanzeige am Rand ein oder aus (E17).
+    ///
+    /// Ohne Umbruch waechst die Flaeche mit der laengsten Zeile, und die Rolle
+    /// traegt einen waagerechten Rollbalken; mit Umbruch folgt der Behaelter
+    /// der Breite der Flaeche, wie vor dem Plan der CSV fuer jeden Inhalt.
+    /// **Dieselbe Einstellung wie `Editorbereich::umbruch_setzen`** in
+    /// [`super::editor`], hier ein zweites Mal geschrieben, weil die zwei
+    /// Flaechen je ihre eigene Rolle halten und keine Hilfe beide erreicht,
+    /// ohne den Editor hierher oder die Vorschau dorthin zu ziehen.
+    ///
+    /// **Der Rahmen wird beim Einschalten auf die sichtbare Breite
+    /// zurueckgesetzt**: eine Flaeche, die ohne Umbruch breit gewachsen ist,
+    /// truege den Umbruchrand sonst ausserhalb des Sichtbaren.
+    fn umbruch_setzen(&self, umbruch: bool) {
+        let ivars = self.ivars();
+        let rolle = &ivars.textrolle;
+        let text = &ivars.text;
+        let breite = rolle.contentSize().width;
+        rolle.setHasHorizontalScroller(!umbruch);
+        text.setHorizontallyResizable(!umbruch);
+        // SAFETY: Der Behaelter gehoert der Flaeche und wird hier nur
+        // eingestellt; gehalten wird er nicht.
+        if let Some(behaelter) = unsafe { text.textContainer() } {
+            behaelter.setWidthTracksTextView(umbruch);
+            // `setSize:` und nicht `setContainerSize:`, aus dem Grund, den
+            // `Editorbereich::umbruch_setzen` nennt.
+            behaelter.setSize(if umbruch {
+                NSSize::new(breite, f64::MAX)
+            } else {
+                NSSize::new(f64::MAX, f64::MAX)
+            });
+        }
+        if umbruch {
+            let hoehe = text.frame().size.height;
+            text.setFrameSize(NSSize::new(breite, hoehe));
+        }
     }
 
     /// Der eine Schalter zwischen den drei Ansichten (Runde 20).
@@ -2002,6 +2061,10 @@ fn einzufaerben<'a>(
         // Der Betrachter zeichnet Seiten; Quelltext zum Einfaerben gibt es
         // dort nicht (Runde 20).
         Inhalt::Pdf { .. } => None,
+        // Ein ausgerichteter Trenntext ist eine Ansicht der Datei und nicht
+        // ihr Quelltext: die Syntax „Separated Values“ faerbte die Striche und
+        // Nummern der Ausrichtung, die in der Datei nicht stehen (E17).
+        Inhalt::Trenntext(_) => None,
         // Eine Bildfolge zeigt ein Foto, seine Metadaten oder einen Hinweis;
         // nichts davon ist Quelltext.
         Inhalt::Bildfolge(_) => None,
@@ -2010,6 +2073,31 @@ fn einzufaerben<'a>(
         | Inhalt::Bild { .. }
         | Inhalt::Metadaten { .. }
         | Inhalt::Hinweis(_) => None,
+    }
+}
+
+/// Ob die Textanzeige fuer `inhalt` am Rand umbricht (E17).
+///
+/// **Allein ein Trenntext bricht nicht um**: seine Zeilen sind ausgerichtete
+/// Tabellenzeilen, und ein Umbruch zerrisse die Spalten. Jeder andere Inhalt
+/// steht wie vor dem Plan der CSV, umgebrochen und ohne waagerechten
+/// Rollbalken. Eine Bildfolge zeigt ein Foto, seine Metadaten oder einen
+/// Hinweis, und die beiden letzten brechen um wie sonst.
+///
+/// **Eine reine Fallunterscheidung ohne Auffangzweig**, wie [`einzufaerben`]
+/// daneben: ein weiterer [`Inhalt`] haelt den Bau an und erzwingt die Antwort.
+fn bricht_um(inhalt: &Inhalt) -> bool {
+    match inhalt {
+        Inhalt::Trenntext(_) => false,
+        Inhalt::Leer
+        | Inhalt::Text(_)
+        | Inhalt::Markdown(_)
+        | Inhalt::Bild { .. }
+        | Inhalt::Pdf { .. }
+        | Inhalt::Metadaten { .. }
+        | Inhalt::Zusammenfassung(_)
+        | Inhalt::Bildfolge(_)
+        | Inhalt::Hinweis(_) => true,
     }
 }
 
@@ -2099,6 +2187,74 @@ mod tests {
         }
     }
 
+    /// Eine Bildfolge mit einem Foto, ueber denselben Weg wie im Betrieb.
+    fn bildfolge_mit_einem_foto() -> Inhalt {
+        use krk_core::leseprofil::bildfolge::verzeichnis_erheben;
+        use krk_core::leseprofil::{Bildfolgeangabe, Ortsangabe};
+        let ordner = crate::pruefordner::Pruefordner::neu("vorschau-einfaerben-bildfolge");
+        ordner.datei("a.jpg", b"");
+        let wurzel = std::fs::canonicalize(ordner.pfad()).expect("der Pruefordner loest sich auf");
+        let verzeichnis = verzeichnis_erheben(
+            &Bildfolgeangabe::neu(Ortsangabe::wurzel()),
+            ordner.pfad(),
+            &wurzel,
+        )
+        .expect("die Folge laesst sich erheben");
+        Inhalt::Bildfolge(Box::new(crate::vorschaumodell::Folgeanzeige::neu(
+            verzeichnis,
+        )))
+    }
+
+    /// Allein ein Trenntext bricht nicht um, und er wird nicht eingefaerbt,
+    /// auch nicht mit dem Pfad einer `.csv` daneben, deren Syntax die Kiste
+    /// kennt (E17). Jeder Wert von [`Inhalt`] kommt vor; ein weiterer haelt
+    /// den Bau an den zwei Fallunterscheidungen an und nicht erst hier.
+    #[test]
+    fn nur_der_trenntext_bricht_nicht_um_und_wird_nicht_eingefaerbt() {
+        let csv = PathBuf::from("/tmp/beispiel.csv");
+        let trenntext = Inhalt::Trenntext("Komma · eine Zeile\n │ A\n".to_owned());
+        assert!(!bricht_um(&trenntext));
+        assert!(einzufaerben(&trenntext, Some(&csv), None).is_none());
+
+        let uebrige = [
+            Inhalt::Leer,
+            Inhalt::Text("a,b\n".to_owned()),
+            Inhalt::Markdown(Box::new(crate::markdown::rendern(
+                "# Titel\n",
+                Tafel::Hell,
+                crate::markdown::Lesart::Markdown,
+            ))),
+            Inhalt::Bild {
+                daten: Arc::new(Vec::new()),
+                metadaten: Some(metadaten(&csv)),
+            },
+            Inhalt::Pdf {
+                daten: Arc::new(Vec::new()),
+                metadaten: metadaten(&csv),
+            },
+            Inhalt::Metadaten {
+                metadaten: metadaten(&csv),
+                zaehlzeilen: Vec::new(),
+            },
+            Inhalt::Zusammenfassung(krk_core::leseprofil::Zusammenfassung::neu(
+                "werkbank".to_owned(),
+                PathBuf::from("/tmp/probe/werkbank"),
+                Vec::new(),
+            )),
+            bildfolge_mit_einem_foto(),
+            Inhalt::Hinweis("etwas ging nicht".to_owned()),
+        ];
+        for inhalt in &uebrige {
+            assert!(bricht_um(inhalt), "{inhalt:?} bricht um wie vor dem Plan");
+        }
+        // Eine CSV, die als Text erscheint, faerbt weiter nach ihrer Endung,
+        // wie vor dem Plan.
+        assert!(
+            einzufaerben(&Inhalt::Text("a,b\n".to_owned()), Some(&csv), None).is_some(),
+            "eine CSV als Text wird eingefaerbt wie bisher"
+        );
+    }
+
     /// Eingefaerbt wird genau [`Darstellungsart::Code`] und sonst nichts
     /// (C4, zehntes und zwoelftes Kriterium der Runde 6).
     ///
@@ -2113,25 +2269,6 @@ mod tests {
     /// [`einzufaerben`] auf und nicht erst am Bild.
     #[test]
     fn eingefaerbt_wird_genau_darstellungsart_code() {
-        /// Eine Bildfolge mit einem Foto, ueber denselben Weg wie im Betrieb.
-        fn bildfolge_mit_einem_foto() -> Inhalt {
-            use krk_core::leseprofil::bildfolge::verzeichnis_erheben;
-            use krk_core::leseprofil::{Bildfolgeangabe, Ortsangabe};
-            let ordner = crate::pruefordner::Pruefordner::neu("vorschau-einfaerben-bildfolge");
-            ordner.datei("a.jpg", b"");
-            let wurzel =
-                std::fs::canonicalize(ordner.pfad()).expect("der Pruefordner loest sich auf");
-            let verzeichnis = verzeichnis_erheben(
-                &Bildfolgeangabe::neu(Ortsangabe::wurzel()),
-                ordner.pfad(),
-                &wurzel,
-            )
-            .expect("die Folge laesst sich erheben");
-            Inhalt::Bildfolge(Box::new(crate::vorschaumodell::Folgeanzeige::neu(
-                verzeichnis,
-            )))
-        }
-
         let quelltext = PathBuf::from("/tmp/beispiel.rs");
         let unbekannt = PathBuf::from("/tmp/beispiel.krk-gibt-es-nicht");
         let markdown = PathBuf::from("/tmp/beispiel.md");

@@ -1431,6 +1431,44 @@ pub enum Text {
     EintragTerminMitEscUebernommen,
     /// `Eintragsantwort::HeuteUnbestimmt`, jede Tabelle.
     EintragHeuteUnbestimmt,
+    /// `Eintragsantwort::KeineTabelle`, Tabelle einer CSV.
+    EintragKeineTrenntexttabelle,
+    /// `Eintragsantwort::KeinEintragGewaehlt`, Tabelle einer CSV.
+    EintragKeineZeileGewaehlt,
+    /// `Eintragsantwort::Hinzugefuegt`, Tabelle einer CSV.
+    EintragZeileHinzugefuegt,
+    /// `Eintragsantwort::BearbeitungBegonnen`, Tabelle einer CSV.
+    EintragZelleBearbeitung,
+    /// `Eintragsantwort::Uebernommen`, Tabelle einer CSV.
+    EintragZelleUebernommen,
+    /// `Eintragsantwort::Abgehakt` und `WiederOffen` in der Tabelle einer CSV.
+    EintragZeileOhneKaestchen,
+    /// `Eintragsantwort::Verschoben`, Tabelle einer CSV.
+    EintragZeileVerschoben,
+    /// `Eintragsantwort::SchonOben`, Tabelle einer CSV.
+    EintragZeileSchonOben,
+    /// `Eintragsantwort::SchonUnten`, Tabelle einer CSV.
+    EintragZeileSchonUnten,
+    /// `Eintragsantwort::Geloescht`, Tabelle einer CSV.
+    EintragZeileGeloescht,
+    /// `Eintragsantwort::MitEscUebernommen`, Tabelle einer CSV.
+    EintragZelleMitEscUebernommen,
+    /// `Editormeldung::Trennzeichen`: das Trennzeichen einer eben geoeffneten CSV oder TSV im Editor; `{trennzeichen}`, `{herkunft}`.
+    TrenntextTrennzeichen,
+    /// `trenntext::Herkunft::Endung` im Satz `TrenntextTrennzeichen`.
+    TrennzeichenHerkunftEndung,
+    /// `trenntext::Herkunft::SepZeile` im Satz `TrenntextTrennzeichen`.
+    TrennzeichenHerkunftSepZeile,
+    /// `trenntext::Herkunft::Gleichmass` im Satz `TrenntextTrennzeichen`.
+    TrennzeichenHerkunftGleichmass,
+    /// `trenntext::Herkunft::Vorgabe` im Satz `TrenntextTrennzeichen`.
+    TrennzeichenHerkunftVorgabe,
+    /// `trenntext::Herkunft::Gewechselt` im Satz `TrenntextTrennzeichen`.
+    TrennzeichenHerkunftGewechselt,
+    /// `Verweigerung::Unterminiert`: die CSV bleibt in der Rohansicht des Editors; `{zeile}`.
+    TrenntextUnterminiert,
+    /// `Verweigerung::ZuVieleSpalten`: die CSV bleibt in der Rohansicht des Editors; `{spalten}`, `{hoechstens}`.
+    TrenntextZuVieleSpalten,
     /// Die Vorschau statt des Inhalts von `secrets.txt`.
     VorschauGeheimnishinweis,
     /// Der Titel eines leeren Vorschautabs in der Tableiste.
@@ -1449,6 +1487,20 @@ pub enum Text {
     /// `jsonzeilen::aufbereiten`: die Datei aus JSON-Zeilen ist groesser als
     /// die Lesegrenze der Vorschau und erscheint gekuerzt; `{grenze}` in MB.
     VorschauJsonzeilenGekuerzt,
+    /// `trenntextvorschau::aufbereiten`: die Kopfzeile ueber der Tabelle einer
+    /// CSV- oder TSV-Datei; `{trennzeichen}` ist der Name des Trennzeichens,
+    /// `{zeilen}` und `{spalten}` die Mengenangaben dazu.
+    TrenntextKopfzeile,
+    /// Dieselbe Kopfzeile, wenn die Datei groesser ist als die Lesegrenze und
+    /// am letzten vollstaendigen Satz gekuerzt erscheint; dazu `{grenze}` in
+    /// MB.
+    TrenntextKopfzeileGekuerzt,
+    /// Der Name des Trennzeichens Komma einer CSV-Datei.
+    TrennzeichenKomma,
+    /// Der Name des Trennzeichens Semikolon.
+    TrennzeichenSemikolon,
+    /// Der Name des Trennzeichens Tabulator.
+    TrennzeichenTabulator,
     /// `vorschaumodell::laden`: der Eintrag liess sich nicht lesen; `{pfad}`,
     /// `{fehler}`.
     VorschauNichtLesbar,
@@ -1760,7 +1812,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 727] = [
+    pub const ALLE: [Text; 751] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -2362,6 +2414,25 @@ impl Text {
         Text::EintragNotizMitEscUebernommen,
         Text::EintragTerminMitEscUebernommen,
         Text::EintragHeuteUnbestimmt,
+        Text::EintragKeineTrenntexttabelle,
+        Text::EintragKeineZeileGewaehlt,
+        Text::EintragZeileHinzugefuegt,
+        Text::EintragZelleBearbeitung,
+        Text::EintragZelleUebernommen,
+        Text::EintragZeileOhneKaestchen,
+        Text::EintragZeileVerschoben,
+        Text::EintragZeileSchonOben,
+        Text::EintragZeileSchonUnten,
+        Text::EintragZeileGeloescht,
+        Text::EintragZelleMitEscUebernommen,
+        Text::TrenntextTrennzeichen,
+        Text::TrennzeichenHerkunftEndung,
+        Text::TrennzeichenHerkunftSepZeile,
+        Text::TrennzeichenHerkunftGleichmass,
+        Text::TrennzeichenHerkunftVorgabe,
+        Text::TrennzeichenHerkunftGewechselt,
+        Text::TrenntextUnterminiert,
+        Text::TrenntextZuVieleSpalten,
         Text::VorschauGeheimnishinweis,
         Text::VorschautabLeer,
         Text::VorschautabZwischenablage,
@@ -2369,6 +2440,11 @@ impl Text {
         Text::VorschauBildZuGross,
         Text::VorschauJsonzeileUngueltig,
         Text::VorschauJsonzeilenGekuerzt,
+        Text::TrenntextKopfzeile,
+        Text::TrenntextKopfzeileGekuerzt,
+        Text::TrennzeichenKomma,
+        Text::TrennzeichenSemikolon,
+        Text::TrennzeichenTabulator,
         Text::VorschauNichtLesbar,
         Text::VorschauLeertext,
         Text::VorschauBildNichtDarstellbar,
@@ -2602,11 +2678,16 @@ pub enum Zahlwort {
     /// Das Inhaltsverzeichnis eines Archivs hat unsichere oder doppelte
     /// Namen ausgelassen (E3, E4 des Plans der Archive).
     ArchivNamenAusgelassen,
+    /// `trenntextvorschau::aufbereiten`: die Zeilen einer CSV- oder
+    /// TSV-Datei, als `{zeilen}` in der Kopfzeile.
+    TrenntextZeilen,
+    /// Ebenso die Spalten, als `{spalten}`.
+    TrenntextSpalten,
 }
 
 impl Zahlwort {
     /// Alle Zahlwoerter, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Zahlwort; 36] = [
+    pub const ALLE: [Zahlwort; 38] = [
         Zahlwort::Byte,
         Zahlwort::NeuerungenEintraegeIn,
         Zahlwort::HeimZettelUebernommen,
@@ -2643,5 +2724,7 @@ impl Zahlwort {
         Zahlwort::GekuerztWeitere,
         Zahlwort::FernNamenUebersprungen,
         Zahlwort::ArchivNamenAusgelassen,
+        Zahlwort::TrenntextZeilen,
+        Zahlwort::TrenntextSpalten,
     ];
 }

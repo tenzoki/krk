@@ -57,10 +57,17 @@ pub use index::{Satzindex, indexieren};
 /// Hoechstens so viele Spalten zeigt die Tabellenform (E9); eine Datei mit
 /// mehr bleibt in der Rohansicht, und die Vorschau zeigt sie als Text.
 ///
-/// Ein Vorschlag des Plans: Schritt 3 misst die Tabelle des Editors und darf
-/// die Zahl begruendet aendern. Der Leser selbst kennt keine Grenze; er liest
-/// jede Spaltenzahl und meldet sie in [`Satzindex::spaltenzahl`].
-pub const HOECHSTENS_SPALTEN: usize = 1024;
+/// **256 und nicht die 1024, die der Plan vorschlug**, weil Schritt 3 die
+/// Tabelle des Editors gemessen hat (`--release`, Referenzgeraet, 261018):
+/// `NSTableView` legt Spalten nicht in linearer Zeit an, 128 Spalten kosten
+/// 17 ms, 256 kosten 43 ms, 512 kosten 132 ms und 1024 kosten 466 ms, und
+/// das Einrichten einer Datei mit 1024 Spalten und 1000 Zeilen dauerte samt
+/// Anfangsbreiten 1,2 s. Mit 256 bleibt das Oeffnen der breitesten Tabelle
+/// unter einer Zehntelsekunde fuer die Spalten. Die Messprobe ist
+/// `messung_der_breitesten_tabelle` in `krk-ui/src/appkit/editor.rs`. Der
+/// Leser selbst kennt keine Grenze; er liest jede Spaltenzahl und meldet sie
+/// in [`Satzindex::spaltenzahl`].
+pub const HOECHSTENS_SPALTEN: usize = 256;
 
 /// Welche Art Trenntext ein Name meint (E1).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

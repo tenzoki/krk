@@ -25,15 +25,15 @@
       },
       {
         "id": "2",
-        "state": "in_progress"
+        "state": "done"
       },
       {
         "id": "3",
-        "state": "in_progress"
+        "state": "done"
       },
       {
         "id": "4",
-        "state": "open"
+        "state": "in_progress"
       },
       {
         "id": "5",

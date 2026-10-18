@@ -333,6 +333,16 @@ pub enum Editorform {
     /// Plans). Alle uebrigen Befehle der Eintragstabelle nimmt sie an wie die
     /// Notiztabelle.
     Termine,
+    /// Die Tabelle einer CSV- oder TSV-Datei in der Formatansicht (Plan
+    /// `261018-0822_*_plan-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md`,
+    /// Schritt 3), eine weitere Art der Eintragstabelle mit Spalten aus der
+    /// Datei.
+    ///
+    /// **Die Zeilen sind ihre Eintraege**: Anlegen, Bearbeiten, Verschieben
+    /// und Loeschen wirken auf Zeilen der Datei (E13), ein Kaestchen und eine
+    /// Ordnung nach dem Datum hat sie nicht, und Suche und Zeilensprung der
+    /// Textflaeche wirken hier nicht, weil die Textflaeche ausgeblendet ist.
+    Trenntext,
     /// Die Quicknote: ein Puffer allein im Arbeitsspeicher, ueber einer im
     /// Editor gehaltenen Datei oder ohne eine (Plan
     /// `260927-0110_*_plan-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`).
@@ -581,14 +591,18 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
             | Editorform::Notizen
             | Editorform::Geheimnisse
             | Editorform::Termine
+            | Editorform::Trenntext
             | Editorform::Quicknote => false,
         },
+        // Die Tabelle einer CSV ist eine Eintragstabelle, ihre Zeilen sind
+        // ihre Eintraege (E13 des Plans der CSV-Tabelle).
         Wirkungsbereich::Eintraege => match form {
             Editorform::Text | Editorform::Quicknote => false,
             Editorform::Aufgaben
             | Editorform::Notizen
             | Editorform::Geheimnisse
-            | Editorform::Termine => true,
+            | Editorform::Termine
+            | Editorform::Trenntext => true,
         },
         // Das Anlegen wirkt in jeder Tabellenform und in der Textflaeche,
         // denn die Rohansicht einer Eintragsdatei ist eine Textflaeche
@@ -601,23 +615,30 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
             | Editorform::Aufgaben
             | Editorform::Notizen
             | Editorform::Geheimnisse
-            | Editorform::Termine => true,
+            | Editorform::Termine
+            | Editorform::Trenntext => true,
             Editorform::Quicknote => false,
         },
         // Das Verschieben verlangt eine Tabelle in Dateireihenfolge. Die
         // Termintabelle ordnet nach dem Datum und lehnt es ab (Entscheidung 2
-        // des Plans `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
+        // des Plans `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`);
+        // die Tabelle einer CSV steht in der Folge der Datei.
         Wirkungsbereich::Reihenfolge => match form {
             Editorform::Text | Editorform::Termine | Editorform::Quicknote => false,
-            Editorform::Aufgaben | Editorform::Notizen | Editorform::Geheimnisse => true,
+            Editorform::Aufgaben
+            | Editorform::Notizen
+            | Editorform::Geheimnisse
+            | Editorform::Trenntext => true,
         },
         // Die Notiztabelle traegt keine Kaestchen, die der Geheimnisse als
-        // dieselbe Tabelle ebenso wenig, die der Termine auch nicht.
+        // dieselbe Tabelle ebenso wenig, die der Termine und die einer CSV
+        // auch nicht.
         Wirkungsbereich::Aufgaben => match form {
             Editorform::Text
             | Editorform::Notizen
             | Editorform::Geheimnisse
             | Editorform::Termine
+            | Editorform::Trenntext
             | Editorform::Quicknote => false,
             Editorform::Aufgaben => true,
         },
@@ -629,6 +650,7 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
             | Editorform::Aufgaben
             | Editorform::Notizen
             | Editorform::Geheimnisse
+            | Editorform::Trenntext
             | Editorform::Quicknote => false,
             Editorform::Termine => true,
         },
@@ -639,7 +661,8 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
             | Editorform::Aufgaben
             | Editorform::Notizen
             | Editorform::Geheimnisse
-            | Editorform::Termine => false,
+            | Editorform::Termine
+            | Editorform::Trenntext => false,
             Editorform::Quicknote => true,
         },
         // Sichern, Schliessen und der Ansichtswechsel arbeiten an der Datei,
@@ -652,7 +675,8 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
             | Editorform::Aufgaben
             | Editorform::Notizen
             | Editorform::Geheimnisse
-            | Editorform::Termine => true,
+            | Editorform::Termine
+            | Editorform::Trenntext => true,
             Editorform::Quicknote => false,
         },
         // „PIN ändern" fragt sonst die Datei und nicht die Form, in
@@ -665,7 +689,8 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
             | Editorform::Aufgaben
             | Editorform::Notizen
             | Editorform::Geheimnisse
-            | Editorform::Termine => true,
+            | Editorform::Termine
+            | Editorform::Trenntext => true,
             Editorform::Quicknote => false,
         },
         Wirkungsbereich::Dateifenster
@@ -1107,12 +1132,13 @@ mod tests {
     /// aus dem Quelltext und nicht die Feldbreite; ein Programmfeld
     /// `Editorform::ALLE` gibt es nicht, weil nur Proben ueber die Formen
     /// laufen.
-    const JEDE_FORM: [Editorform; 6] = [
+    const JEDE_FORM: [Editorform; 7] = [
         Editorform::Text,
         Editorform::Aufgaben,
         Editorform::Notizen,
         Editorform::Geheimnisse,
         Editorform::Termine,
+        Editorform::Trenntext,
         Editorform::Quicknote,
     ];
 
@@ -1394,6 +1420,10 @@ mod tests {
             // Die Geheimnisse zeigen dieselbe Tabelle wie die Notizen und
             // nehmen dieselben Befehle an (Schritt 5.4b).
             Editorform::Notizen | Editorform::Geheimnisse => IN_DER_NOTIZTABELLE,
+            // Die Tabelle einer CSV antwortet in jedem Wirkungsbereich wie die
+            // Notiztabelle: Zeilenbefehle und Verschieben ja, Kaestchen,
+            // Termine und Textflaeche nein (E13 des Plans der CSV-Tabelle).
+            Editorform::Trenntext => IN_DER_NOTIZTABELLE,
             Editorform::Termine => IN_DER_TERMINTABELLE,
             Editorform::Quicknote => IN_DER_QUICKNOTE,
         };
@@ -2262,6 +2292,9 @@ mod tests {
                         kommando,
                         Kommando::AufgabeAbhaken | Kommando::EintragHoch | Kommando::EintragRunter
                     ),
+                    // Die Tabelle einer CSV: jeder Zeilenbefehl, kein
+                    // Kaestchen (E13 des Plans der CSV-Tabelle).
+                    Editorform::Trenntext => kommando != Kommando::AufgabeAbhaken,
                 };
                 for fokus in JEDER_FOKUS {
                     let lage = Lage {

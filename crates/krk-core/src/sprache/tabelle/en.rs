@@ -899,6 +899,33 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::EintragNotizMitEscUebernommen => "note accepted; cmd+z takes it back",
         Text::EintragTerminMitEscUebernommen => "appointment accepted; cmd+z takes it back",
         Text::EintragHeuteUnbestimmt => "Today’s date could not be determined.",
+        Text::EintragKeineTrenntexttabelle => "the Editor shows no table of a CSV file",
+        Text::EintragKeineZeileGewaehlt => "no row is selected",
+        Text::EintragZeileHinzugefuegt => {
+            "new row at the end; tab changes the cell, return accepts"
+        }
+        Text::EintragZelleBearbeitung => {
+            "return accepts, tab changes the cell, opt+return writes a line break, esc discards"
+        }
+        Text::EintragZelleUebernommen => "cell accepted",
+        Text::EintragZeileOhneKaestchen => "a row of a CSV file has no checkbox",
+        Text::EintragZeileVerschoben => "row moved",
+        Text::EintragZeileSchonOben => "the row is already at the top",
+        Text::EintragZeileSchonUnten => "the row is already at the bottom",
+        Text::EintragZeileGeloescht => "row deleted; cmd+z brings it back",
+        Text::EintragZelleMitEscUebernommen => "cell accepted; cmd+z takes it back",
+        Text::TrenntextTrennzeichen => "Separator: {trennzeichen} ({herkunft})",
+        Text::TrennzeichenHerkunftEndung => "by the extension",
+        Text::TrennzeichenHerkunftSepZeile => "by the line sep=",
+        Text::TrennzeichenHerkunftGleichmass => "by the field counts at the start of the file",
+        Text::TrennzeichenHerkunftVorgabe => "default, no rule applies",
+        Text::TrennzeichenHerkunftGewechselt => "changed",
+        Text::TrenntextUnterminiert => {
+            "In row {zeile} a quotation mark does not close before the end of the file; the file stays in the raw view."
+        }
+        Text::TrenntextZuVieleSpalten => {
+            "The file has {spalten} columns, the table shows at most {hoechstens}; the file stays in the raw view."
+        }
         Text::VorschauGeheimnishinweis => {
             "This file is encrypted and opens with F4 and the PIN in the Editor."
         }
@@ -912,6 +939,13 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VorschauJsonzeilenGekuerzt => {
             "Truncated: the file is larger than {grenze} MB. Shown are the complete lines at its beginning."
         }
+        Text::TrenntextKopfzeile => "{trennzeichen} · {zeilen} · {spalten}",
+        Text::TrenntextKopfzeileGekuerzt => {
+            "{trennzeichen} · {zeilen} · {spalten} · truncated: the file is larger than {grenze} MB, shown are the complete rows at its beginning."
+        }
+        Text::TrennzeichenKomma => "Comma",
+        Text::TrennzeichenSemikolon => "Semicolon",
+        Text::TrennzeichenTabulator => "Tab",
         Text::VorschauNichtLesbar => "{pfad} could not be read: {fehler}",
         Text::VorschauLeertext => "No content. The selection in the file pane fills this tab.",
         Text::VorschauBildNichtDarstellbar => {
@@ -1214,6 +1248,8 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
             "One name in the archive was left out: it is unsafe or duplicated.",
             "{n} names in the archive were left out: they are unsafe or duplicated.",
         ),
+        Zahlwort::TrenntextZeilen => ("one row", "{n} rows"),
+        Zahlwort::TrenntextSpalten => ("one column", "{n} columns"),
     }
 }
 

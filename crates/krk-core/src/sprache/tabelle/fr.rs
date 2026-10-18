@@ -1008,6 +1008,33 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::EintragNotizMitEscUebernommen => "note validée\u{202f}; cmd+z annule",
         Text::EintragTerminMitEscUebernommen => "rendez-vous validé\u{202f}; cmd+z annule",
         Text::EintragHeuteUnbestimmt => "La date du jour n’a pas pu être déterminée.",
+        Text::EintragKeineTrenntexttabelle => "l’Éditeur n’affiche pas de tableau de fichier CSV",
+        Text::EintragKeineZeileGewaehlt => "aucune ligne n’est sélectionnée",
+        Text::EintragZeileHinzugefuegt => {
+            "nouvelle ligne à la fin\u{202f}; tab change de cellule, return valide"
+        }
+        Text::EintragZelleBearbeitung => {
+            "return valide, tab change de cellule, opt+return insère un saut de ligne, esc abandonne"
+        }
+        Text::EintragZelleUebernommen => "cellule validée",
+        Text::EintragZeileOhneKaestchen => "une ligne d’un fichier CSV n’a pas de case à cocher",
+        Text::EintragZeileVerschoben => "ligne déplacée",
+        Text::EintragZeileSchonOben => "la ligne est déjà en haut",
+        Text::EintragZeileSchonUnten => "la ligne est déjà en bas",
+        Text::EintragZeileGeloescht => "ligne supprimée\u{202f}; cmd+z la rétablit",
+        Text::EintragZelleMitEscUebernommen => "cellule validée\u{202f}; cmd+z annule",
+        Text::TrenntextTrennzeichen => "Séparateur\u{a0}: {trennzeichen} ({herkunft})",
+        Text::TrennzeichenHerkunftEndung => "d’après l’extension",
+        Text::TrennzeichenHerkunftSepZeile => "d’après la ligne sep=",
+        Text::TrennzeichenHerkunftGleichmass => "d’après le nombre de champs au début du fichier",
+        Text::TrennzeichenHerkunftVorgabe => "par défaut, aucune règle ne s’applique",
+        Text::TrennzeichenHerkunftGewechselt => "changé",
+        Text::TrenntextUnterminiert => {
+            "À la ligne {zeile}, un guillemet ne se ferme pas avant la fin du fichier\u{202f}; le fichier reste en vue brute."
+        }
+        Text::TrenntextZuVieleSpalten => {
+            "Le fichier compte {spalten} colonnes, le tableau en affiche au plus {hoechstens}\u{202f}; le fichier reste en vue brute."
+        }
         Text::VorschauGeheimnishinweis => {
             "Ce fichier est chiffré et s’ouvre avec F4 et le code PIN dans l’Éditeur."
         }
@@ -1021,6 +1048,13 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::VorschauJsonzeilenGekuerzt => {
             "Tronqué\u{a0}: le fichier dépasse {grenze} Mo. Seules les lignes complètes de son début sont affichées."
         }
+        Text::TrenntextKopfzeile => "{trennzeichen} · {zeilen} · {spalten}",
+        Text::TrenntextKopfzeileGekuerzt => {
+            "{trennzeichen} · {zeilen} · {spalten} · tronqué\u{a0}: le fichier dépasse {grenze} Mo, seules les lignes complètes de son début sont affichées."
+        }
+        Text::TrennzeichenKomma => "Virgule",
+        Text::TrennzeichenSemikolon => "Point-virgule",
+        Text::TrennzeichenTabulator => "Tabulation",
         Text::VorschauNichtLesbar => "{pfad} n’a pas pu être lu\u{a0}: {fehler}",
         Text::VorschauLeertext => {
             "Aucun contenu. La sélection dans le volet de fichiers remplit cet onglet."
@@ -1360,6 +1394,8 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
             "Un nom de l’archive a été omis\u{a0}: il est dangereux ou en double.",
             "{n} noms de l’archive ont été omis\u{a0}: ils sont dangereux ou en double.",
         ),
+        Zahlwort::TrenntextZeilen => ("une ligne", "{n} lignes"),
+        Zahlwort::TrenntextSpalten => ("une colonne", "{n} colonnes"),
     }
 }
 

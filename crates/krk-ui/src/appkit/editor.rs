@@ -559,6 +559,7 @@ use krk_core::tasten::Kommando;
 use krk_core::text::{
     Abweisung, Fund, Markensprung, Treffer, Zeilenindex, Zeilenlage, datei, marke,
 };
+use krk_core::trenntext::{self, Dialekt, Herkunft, Satzindex, Trenntextstand, Zellbereich};
 use krk_core::verzeichnis::Richtung as Sortierrichtung;
 
 use crate::editormodell::{
@@ -575,7 +576,9 @@ use crate::tresorweg;
 
 use super::bereichsleiste::Kommandomelder;
 use super::blaetter::suche::Suchwahl;
-use super::eintragsansicht::{self, Eintragsansicht, Eintragsart, Zeilen, Zelle, Zellenwege};
+use super::eintragsansicht::{
+    self, Eintragsansicht, Eintragsart, Trenntextsicht, Zeilen, Zelle, Zellenwege,
+};
 use super::koordinaten;
 use super::nummernspalte::{self, Nummernspalte};
 use super::quicknote::Quicknote;
@@ -778,6 +781,13 @@ pub enum Editormeldung {
     /// Eine Aenderung haette den Puffer der Quicknote ueber ihre Grenze
     /// gebracht und ist unterblieben (Q3 des Spec der Quicknote).
     QuicknoteZuGross,
+    /// Eine CSV- oder TSV-Datei ist geoeffnet, und so liest der Editor sie:
+    /// das Trennzeichen und woher die Wahl kommt (E2 des Plans der
+    /// CSV-Tabelle).
+    Trennzeichen(Dialekt),
+    /// Die Tabelle einer CSV laesst sich nicht zeigen, und der Editor zeigt
+    /// die Datei in der Rohansicht (E3, E9); `ctrl+cmd+e` versucht es neu.
+    TabellenformVerweigert(Verweigerung),
 }
 
 impl Editormeldung {
@@ -885,8 +895,233 @@ impl Editormeldung {
             Self::QuicknoteLeer => text(Text::QuicknoteLeer).to_owned(),
             Self::QuicknoteNichtKopiert => text(Text::QuicknoteNichtKopiert).to_owned(),
             Self::QuicknoteZuGross => text(Text::QuicknoteZuGross).to_owned(),
+            Self::Trennzeichen(dialekt) => satz(
+                Text::TrenntextTrennzeichen,
+                &[
+                    (
+                        "trennzeichen",
+                        &crate::trenntextvorschau::trennzeichenname(dialekt.trennzeichen),
+                    ),
+                    ("herkunft", &herkunftsname(dialekt.herkunft)),
+                ],
+            ),
+            Self::TabellenformVerweigert(Verweigerung::Unterminiert { zeile }) => {
+                satz(Text::TrenntextUnterminiert, &[("zeile", zeile)])
+            }
+            Self::TabellenformVerweigert(Verweigerung::ZuVieleSpalten { spalten }) => satz(
+                Text::TrenntextZuVieleSpalten,
+                &[
+                    ("spalten", spalten),
+                    ("hoechstens", &trenntext::HOECHSTENS_SPALTEN),
+                ],
+            ),
         }
     }
+}
+
+/// Woher die Wahl des Trennzeichens kommt, in der geltenden Sprache;
+/// vollstaendig ueber [`Herkunft`] und ohne Auffangzweig.
+#[must_use]
+fn herkunftsname(herkunft: Herkunft) -> &'static str {
+    text(match herkunft {
+        Herkunft::Endung => Text::TrennzeichenHerkunftEndung,
+        Herkunft::SepZeile => Text::TrennzeichenHerkunftSepZeile,
+        Herkunft::Gleichmass => Text::TrennzeichenHerkunftGleichmass,
+        Herkunft::Vorgabe => Text::TrennzeichenHerkunftVorgabe,
+        Herkunft::Gewechselt => Text::TrennzeichenHerkunftGewechselt,
+    })
+}
+
+/// Warum der Editor eine CSV- oder TSV-Datei nicht als Tabelle zeigt (E3,
+/// E9 des Plans der CSV-Tabelle).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Verweigerung {
+    /// Ein Anfuehrungszeichen schliesst bis zum Dateiende nicht; der Rest der
+    /// Datei waere eine einzige Zelle.
+    Unterminiert {
+        /// Die Zeile der Datei, ab 1 gezaehlt, in deren Satz es oeffnet.
+        zeile: usize,
+    },
+    /// Die Datei traegt mehr Spalten, als die Tabelle zeigt
+    /// (`trenntext::HOECHSTENS_SPALTEN`).
+    ZuVieleSpalten {
+        /// Wie viele Spalten sie traegt.
+        spalten: usize,
+    },
+}
+
+/// Ob der Editor diesen Index als Tabelle zeigt, oder warum nicht (E3, E9).
+///
+/// **Rein und ohne Fenster pruefbar.** Das unterminierte Anfuehrungszeichen
+/// geht vor: eine Datei, die eins traegt, liest sich ohnehin falsch, und ihre
+/// Spaltenzahl sagt dann nichts. Die Zeile ist die Nummer des Satzes ab 1,
+/// wie die Nummernspalte sie zeigt; ein Vorspann aus `sep=` zaehlt nicht mit.
+#[must_use]
+fn tabellenform_verweigert(index: &Satzindex) -> Option<Verweigerung> {
+    if let Some(satz) = index.unterminiert() {
+        return Some(Verweigerung::Unterminiert { zeile: satz + 1 });
+    }
+    (index.spaltenzahl() > trenntext::HOECHSTENS_SPALTEN).then(|| Verweigerung::ZuVieleSpalten {
+        spalten: index.spaltenzahl(),
+    })
+}
+
+/// Was der Editor ueber die gehaltene CSV- oder TSV-Datei weiss.
+struct Trenntextlage {
+    /// Wie die Datei zu lesen ist; gesetzt, wenn sie eintrifft (E2).
+    dialekt: Dialekt,
+    /// Die zuletzt gebildete Sicht, falls es eine gibt. Sie gehoert zu dem
+    /// Stand, dessen Abschrift sie traegt, und zu keinem anderen.
+    sicht: Option<Trenntextsicht>,
+}
+
+#[cfg(test)]
+thread_local! {
+    /// Wie oft auf diesem Faden zerlegt wurde, fuer die Probe
+    /// `der_index_entsteht_nur_bei_gezeigter_tabelle`.
+    static ZERLEGUNGEN: Cell<usize> = const { Cell::new(0) };
+}
+
+/// **Die eine Stelle, an der der Editor einen Stand zerlegt** (E9); die
+/// Probe zaehlt hier mit.
+#[must_use]
+fn zerlegen(stand: &str, dialekt: &Dialekt) -> Satzindex {
+    #[cfg(test)]
+    ZERLEGUNGEN.with(|zahl| zahl.set(zahl.get() + 1));
+    trenntext::indexieren(stand, dialekt)
+}
+
+/// Die Sicht auf `stand`: die gebildete, wenn sie zu ihm gehoert, sonst eine
+/// neu zerlegte mit der naechsten Generation (E9).
+///
+/// **Rein bis auf den Zaehler der Generation und ohne Fenster pruefbar.**
+/// Verglichen wird der Text und nicht ein Zeiger, weil die Sicht eine
+/// Abschrift traegt; zwei verschieden lange Texte trennt der Vergleich ohne
+/// einen Durchlauf.
+fn trenntextsicht_fuer(
+    stand: &str,
+    lage: &mut Trenntextlage,
+    generation: &Cell<u64>,
+) -> Trenntextsicht {
+    if let Some(sicht) = &lage.sicht
+        && sicht.text() == stand
+    {
+        return sicht.clone();
+    }
+    let index = zerlegen(stand, &lage.dialekt);
+    generation.set(generation.get() + 1);
+    let sicht = Trenntextsicht::neu(Rc::from(stand), Rc::new(index), generation.get());
+    lage.sicht = Some(sicht.clone());
+    sicht
+}
+
+/// Die Sicht, die der Nachzug der Tabelle zeigt: **allein in der Form
+/// Trenntext**, also nur, wenn die Tabelle zu sehen ist (E9). In der
+/// Rohansicht wird beim Tippen nichts zerlegt; die Sicht gilt dann als
+/// veraltet und entsteht beim naechsten Wechsel in die Tabelle oder bei der
+/// naechsten Handlung neu.
+fn sicht_zum_nachzug(
+    form: Editorform,
+    stand: &str,
+    lage: &mut Trenntextlage,
+    generation: &Cell<u64>,
+) -> Option<Trenntextsicht> {
+    (form == Editorform::Trenntext).then(|| trenntextsicht_fuer(stand, lage, generation))
+}
+
+/// Ein Stand der Tabelle einer CSV als Neustand: der Text, und als Auswahl
+/// die erste Zeile des Bereichs danach, falls er eine hat.
+///
+/// Die Rechteckauswahl aus E10 folgt mit Schritt 4 des Plans; bis dahin ist
+/// die Auswahl eine Zeile, und die Spalten des Bereichs fallen hier.
+fn als_neustand(stand: Trenntextstand) -> Neustand {
+    Neustand {
+        auswahl: (!stand.auswahl.zeilen.is_empty()).then_some(stand.auswahl.zeilen.start),
+        text: stand.text,
+    }
+}
+
+/// Die Zeile `zeile` als Bereich, wie ihn die Zeilenhandlungen des Kerns
+/// nehmen; die Spalte ist die erste, bis Schritt 4 die Zellauswahl bringt.
+#[must_use]
+fn zeilenbereich(zeile: usize) -> Zellbereich {
+    Zellbereich::zelle(zeile, 0)
+}
+
+/// Was eine Handlung an der Tabelle einer CSV bewirkt und was sie dem Nutzer
+/// sagt (E13 des Plans der CSV-Tabelle); das Gegenstueck zu
+/// [`handlung_rechnen`] fuer diese eine Art.
+///
+/// **Rein und ohne Fenster pruefbar**, und jede Rechnung steht im Kern
+/// (`krk_core::trenntext`), der allein die Bytes der beruehrten Saetze
+/// ersetzt. `zeile` ist die gewaehlte Zeile; eine Zeile hinter der letzten
+/// zaehlt wie keine. **Ein unterminiertes Anfuehrungszeichen haelt jede
+/// Handlung an**, mit dem Grund, aus dem auch die Tabelle nicht steht: ein
+/// angehaengter Satz laege sonst im offenen Feld.
+fn trenntext_handlung_rechnen(
+    stand: &str,
+    index: &Satzindex,
+    handlung: Handlung,
+    zeile: Option<usize>,
+) -> (Editormeldung, Option<Neustand>) {
+    use Eintragsantwort as A;
+    let antwort = |antwort| Editormeldung::Eintrag(Eintragsart::Trenntext, antwort);
+    if let Some(satz) = index.unterminiert() {
+        return (
+            Editormeldung::TabellenformVerweigert(Verweigerung::Unterminiert { zeile: satz + 1 }),
+            None,
+        );
+    }
+    let gewaehlt = zeile.filter(|zeile| *zeile < index.zeilenzahl());
+    let ohne_auswahl = (antwort(A::KeinEintragGewaehlt), None);
+    match handlung {
+        Handlung::Hinzufuegen => match trenntext::zeile_anhaengen(stand, index) {
+            Some(neu) => (antwort(A::Hinzugefuegt), Some(als_neustand(neu))),
+            None => (antwort(A::KeineTabelle), None),
+        },
+        Handlung::Bearbeiten => match gewaehlt {
+            Some(_) => (antwort(A::BearbeitungBegonnen), None),
+            None => ohne_auswahl,
+        },
+        Handlung::Verschieben(richtung) => {
+            let Some(zeile) = gewaehlt else {
+                return ohne_auswahl;
+            };
+            match trenntext::zeilen_verschieben(stand, index, &zeilenbereich(zeile), richtung) {
+                Some(neu) => (antwort(A::Verschoben), Some(als_neustand(neu))),
+                None => match richtung {
+                    Richtung::Hoch => (antwort(A::SchonOben), None),
+                    Richtung::Runter => (antwort(A::SchonUnten), None),
+                },
+            }
+        }
+        Handlung::Loeschen => {
+            match gewaehlt
+                .and_then(|zeile| trenntext::zeilen_loeschen(stand, index, &zeilenbereich(zeile)))
+            {
+                Some(neu) => (antwort(A::Geloescht), Some(als_neustand(neu))),
+                None => ohne_auswahl,
+            }
+        }
+        Handlung::Abhaken => (antwort(A::Abgehakt), None),
+    }
+}
+
+/// Was der Text einer Zelle der Tabelle einer CSV am Stand aendert (E5, E7,
+/// E16): der Kern ersetzt allein das Feld der Zelle und fuellt hinter dem
+/// letzten Feld mit Trennzeichen auf; `None`, wenn nichts geaendert ist.
+///
+/// **Jeder Text ist erlaubt**: die Pruefung weist in dieser Form nichts ab,
+/// und der Kern setzt Anfuehrungszeichen, wo der Wert sie braucht. Gewaehlt
+/// ist danach die Zeile der Zelle.
+#[must_use]
+fn trenntext_zellenrechnung(
+    stand: &str,
+    index: &Satzindex,
+    zelle: Zelle,
+    text: &str,
+) -> Option<Neustand> {
+    trenntext::zelle_setzen(stand, index, zelle.stelle, zelle.spalte, text).map(als_neustand)
 }
 
 /// Was eine Handlung an der Eintragstabelle dem Nutzer sagt (C6, C5).
@@ -960,8 +1195,9 @@ impl Eintragsantwort {
             A,
             N,
             T,
+            Z,
         }
-        use Satzfamilie::{A, N, T};
+        use Satzfamilie::{A, N, T, Z};
         // Die Geheimnistabelle antwortet mit den Saetzen der Notiztabelle,
         // wie bis zum 261016, als sie sich als Notizen zeigte: ein Geheimnis
         // traegt die Form einer Notiz, und eigene Saetze sagten nichts
@@ -970,9 +1206,23 @@ impl Eintragsantwort {
             Eintragsart::Aufgaben => A,
             Eintragsart::Notizen | Eintragsart::Geheimnisse => N,
             Eintragsart::Termine => T,
+            // Die Tabelle einer CSV spricht von Zeilen und Zellen (Schritt 3
+            // des Plans der CSV-Tabelle).
+            Eintragsart::Trenntext => Z,
         };
         let schluessel = match (self, art) {
             (Self::KeineTabelle, A) => Text::EintragKeineAufgabentabelle,
+            (Self::KeineTabelle, Z) => Text::EintragKeineTrenntexttabelle,
+            (Self::KeinEintragGewaehlt, Z) => Text::EintragKeineZeileGewaehlt,
+            (Self::Hinzugefuegt, Z) => Text::EintragZeileHinzugefuegt,
+            (Self::BearbeitungBegonnen, Z) => Text::EintragZelleBearbeitung,
+            (Self::Uebernommen, Z) => Text::EintragZelleUebernommen,
+            (Self::Abgehakt | Self::WiederOffen, Z) => Text::EintragZeileOhneKaestchen,
+            (Self::Verschoben, Z) => Text::EintragZeileVerschoben,
+            (Self::SchonOben, Z) => Text::EintragZeileSchonOben,
+            (Self::SchonUnten, Z) => Text::EintragZeileSchonUnten,
+            (Self::Geloescht, Z) => Text::EintragZeileGeloescht,
+            (Self::MitEscUebernommen, Z) => Text::EintragZelleMitEscUebernommen,
             (Self::KeineTabelle, N) => Text::EintragKeineNotiztabelle,
             (Self::KeineTabelle, T) => Text::EintragKeineTermintabelle,
             (Self::KeinEintragGewaehlt, A) => Text::EintragKeineAufgabeGewaehlt,
@@ -1000,15 +1250,15 @@ impl Eintragsantwort {
             // Termine verschieben sich nicht; ein Rufer, der trotzdem hier
             // ankommt, bekommt die Ordnung genannt.
             (Self::Verschoben | Self::SchonOben | Self::SchonUnten, T)
-            | (Self::NachDatumGeordnet, A | N | T) => Text::EintragTermineNachDatum,
+            | (Self::NachDatumGeordnet, A | N | T | Z) => Text::EintragTermineNachDatum,
             (Self::Geloescht, A) => Text::EintragAufgabeGeloescht,
             (Self::Geloescht, N) => Text::EintragNotizGeloescht,
             (Self::Geloescht, T) => Text::EintragTerminGeloescht,
-            (Self::ZelleBleibt, A | N | T) => Text::EintragZelleBleibt,
+            (Self::ZelleBleibt, A | N | T | Z) => Text::EintragZelleBleibt,
             (Self::MitEscUebernommen, A) => Text::EintragAufgabeMitEscUebernommen,
             (Self::MitEscUebernommen, N) => Text::EintragNotizMitEscUebernommen,
             (Self::MitEscUebernommen, T) => Text::EintragTerminMitEscUebernommen,
-            (Self::HeuteUnbestimmt, A | N | T) => Text::EintragHeuteUnbestimmt,
+            (Self::HeuteUnbestimmt, A | N | T | Z) => Text::EintragHeuteUnbestimmt,
         };
         text(schluessel)
     }
@@ -1079,6 +1329,11 @@ fn handlung_rechnen(
         Eintragsart::Notizen | Eintragsart::Termine | Eintragsart::Geheimnisse => {
             Notizen::lesen(stand).bloecke().len()
         }
+        // Die Tabelle einer CSV rechnet ueber `trenntext_handlung_rechnen`,
+        // das den Index der Datei braucht und das der Rufer statt dieser
+        // Funktion waehlt. Ein Rufer, der trotzdem hier ankommt, bekommt die
+        // Antwort ohne Tabelle und keinen Umbau.
+        Eintragsart::Trenntext => return (antwort(A::KeineTabelle), None),
     };
     let gewaehlt = zeile.filter(|stelle| *stelle < anzahl);
     let ohne_auswahl = (antwort(A::KeinEintragGewaehlt), None);
@@ -1096,6 +1351,8 @@ fn handlung_rechnen(
                     Some(heute) => Ok(termine::hinzufuegen(stand, heute)),
                     None => return (antwort(A::HeuteUnbestimmt), None),
                 },
+                // Oben beantwortet, wie in jedem Zweig darunter.
+                Eintragsart::Trenntext => return (antwort(A::KeineTabelle), None),
             };
             match neu {
                 Ok(neustand) => (antwort(A::Hinzugefuegt), Some(neustand)),
@@ -1119,7 +1376,7 @@ fn handlung_rechnen(
                 Eintragsart::Geheimnisse => geheimnisse::verschieben(stand, stelle, richtung),
                 // Oben beantwortet; die Zeile steht, damit die Unterscheidung
                 // vollstaendig bleibt.
-                Eintragsart::Termine => None,
+                Eintragsart::Termine | Eintragsart::Trenntext => None,
             };
             match verschoben {
                 Some(neustand) => (antwort(A::Verschoben), Some(neustand)),
@@ -1135,6 +1392,7 @@ fn handlung_rechnen(
                 Eintragsart::Notizen => notizen::loeschen(stand, stelle),
                 Eintragsart::Geheimnisse => geheimnisse::loeschen(stand, stelle),
                 Eintragsart::Termine => termine::loeschen(stand, stelle),
+                Eintragsart::Trenntext => None,
             });
             match geloescht {
                 Some(neustand) => (antwort(A::Geloescht), Some(neustand)),
@@ -1638,6 +1896,10 @@ fn zellenrechnung(
 ) -> Result<Option<Neustand>, eintraege::Abweisung> {
     match form {
         Editorform::Text | Editorform::Quicknote => Ok(None),
+        // Die Tabelle einer CSV rechnet ueber `trenntext_zellenrechnung`, das
+        // den Index der Datei braucht und das `Editorbereich::zelle_rechnen`
+        // statt dieser Funktion waehlt; hier kommt sie allein ohne Index an.
+        Editorform::Trenntext => Ok(None),
         Editorform::Aufgaben => aufgaben::text_aendern(stand, zelle.stelle, text),
         // Die Geheimnisse rechnen je Spalte ueber `geheimnisse::aendern`,
         // das den beruehrten Eintrag in die Grundform bringt und jeden
@@ -1701,6 +1963,9 @@ fn esc_regel(form: Editorform, spalte: Option<usize>) -> Editorform {
         {
             Editorform::Aufgaben
         }
+        // Eine Zelle einer CSV ist einzeilig und verwirft wie die
+        // Aufgabenzelle (E16 des Plans der CSV-Tabelle).
+        Editorform::Trenntext => Editorform::Aufgaben,
         Editorform::Text
         | Editorform::Aufgaben
         | Editorform::Notizen
@@ -1833,7 +2098,8 @@ fn flaeche_der_form(form: Editorform) -> Flaeche {
         Editorform::Aufgaben
         | Editorform::Notizen
         | Editorform::Geheimnisse
-        | Editorform::Termine => Flaeche::Tabelle,
+        | Editorform::Termine
+        | Editorform::Trenntext => Flaeche::Tabelle,
         Editorform::Quicknote => Flaeche::Quicknote,
     }
 }
@@ -1850,6 +2116,7 @@ fn eintragsart_der_form(form: Editorform) -> Option<Eintragsart> {
         Editorform::Notizen => Some(Eintragsart::Notizen),
         Editorform::Geheimnisse => Some(Eintragsart::Geheimnisse),
         Editorform::Termine => Some(Eintragsart::Termine),
+        Editorform::Trenntext => Some(Eintragsart::Trenntext),
     }
 }
 
@@ -1868,6 +2135,43 @@ fn eintragsart_des_typs(typ: Dateityp) -> Option<Eintragsart> {
         Dateityp::Eintraege(Sonderdatei::Notizen) => Some(Eintragsart::Notizen),
         Dateityp::Eintraege(Sonderdatei::Geheimnisse) => Some(Eintragsart::Geheimnisse),
         Dateityp::Eintraege(Sonderdatei::Termine) => Some(Eintragsart::Termine),
+    }
+}
+
+/// Die Art der Eintraege, die diese Datei fuehrt: die ihres Typs, oder fuer
+/// eine CSV- oder TSV-Datei [`Eintragsart::Trenntext`] (E13 des Plans der
+/// CSV-Tabelle); `None` fuer jede andere Datei.
+///
+/// **Neben [`eintragsart_des_typs`] und nicht darin**, weil die Art Trenntext
+/// kein Wert von [`Dateityp`] ist (Feld `trenntext` des
+/// [`crate::editormodell::Editormodell`]). Gefragt von der Rohansicht und von
+/// `Lage::eintragsdatei`, damit „Eintrag hinzufügen“ in der Rohansicht einer
+/// CSV eine leere Zeile anhaengt.
+fn eintragsart_der_datei(typ: Dateityp, trenntext: Option<trenntext::Art>) -> Option<Eintragsart> {
+    match trenntext {
+        Some(_) => Some(Eintragsart::Trenntext),
+        None => eintragsart_des_typs(typ),
+    }
+}
+
+/// Die Form, die der Editor bei dieser Ansicht, diesem Dateityp und dieser
+/// Art Trenntext zeigt: eine CSV- oder TSV-Datei zeigt in der Formatansicht
+/// ihre Tabelle (Schritt 3 des Plans der CSV-Tabelle), jede andere Datei die
+/// Form aus [`editorform`].
+///
+/// **Rein, wie [`editorform`]**, und die eine Stelle, an der die Art
+/// Trenntext zur Form wird; [`Editorbereich::form`] fragt hier.
+#[must_use]
+fn editorform_der_datei(
+    ansicht: Ansicht,
+    typ: Dateityp,
+    trenntext: Option<trenntext::Art>,
+) -> Editorform {
+    match (ansicht, trenntext) {
+        (Ansicht::Format, Some(_)) => Editorform::Trenntext,
+        (Ansicht::Format | Ansicht::Roh, None) | (Ansicht::Roh, Some(_)) => {
+            editorform(ansicht, typ)
+        }
     }
 }
 
@@ -1893,6 +2197,14 @@ fn schreibstelle_im_letzten_eintrag(art: Eintragsart, stand: &str) -> usize {
         Eintragsart::Notizen | Eintragsart::Termine | Eintragsart::Geheimnisse => {
             stelle(Notizen::lesen(stand).bloecke())
         }
+        // Eine Zeile einer CSV hat keine Kopfzeile: die Marke steht am Anfang
+        // der angehaengten Zeile, die mit dem Zeilenende des Standes endet
+        // (E7, E13 des Plans der CSV-Tabelle).
+        Eintragsart::Trenntext => stand
+            .strip_suffix('\n')
+            .unwrap_or(stand)
+            .rfind('\n')
+            .map_or(0, |umbruch| umbruch + 1),
     }
 }
 
@@ -2312,6 +2624,18 @@ pub struct EditorIvars {
     /// [`Editorbereich::quicknote_zeigen`], genommen allein von
     /// [`Editorbereich::quicknote_verlassen`].
     quicknote_rueckkehr: Cell<Option<Rueckkehr>>,
+    /// Was der Editor ueber die gehaltene CSV- oder TSV-Datei weiss: ihr
+    /// Dialekt und die zuletzt gebildete Sicht (Schritt 3 des Plans der
+    /// CSV-Tabelle); `None` fuer jede andere Datei.
+    ///
+    /// Gesetzt allein in [`Editorbereich::trenntext_vorbereiten`], wenn eine
+    /// Datei eintrifft, und dort auch geleert; der Dialekt gilt fuer die
+    /// geoeffnete Datei und wird nicht gemerkt (E2).
+    trenntext: RefCell<Option<Trenntextlage>>,
+    /// Die Generation der zuletzt gebildeten Sicht, je neuem Index eins
+    /// weiter; [`Eintragsansicht::zeilen_zeigen`] erkennt an ihr einen neuen
+    /// Stand ([`Trenntextsicht`]).
+    trenntextgeneration: Cell<u64>,
 }
 
 define_class!(
@@ -2474,6 +2798,8 @@ impl Editorbereich {
             kommandomelder: RefCell::new(None),
             quicknote: OnceCell::new(),
             quicknote_rueckkehr: Cell::new(None),
+            trenntext: RefCell::new(None),
+            trenntextgeneration: Cell::new(0),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         let this: Retained<Self> = unsafe { msg_send![super(this), init] };
@@ -2623,7 +2949,7 @@ impl Editorbereich {
             return Editorform::Quicknote;
         }
         let modell = self.ivars().modell.borrow();
-        editorform(modell.ansicht(), modell.typ())
+        editorform_der_datei(modell.ansicht(), modell.typ(), modell.trenntext())
     }
 
     // ------------------------------------------------------------------
@@ -3005,8 +3331,9 @@ impl Editorbereich {
             // Zelle; aus demselben Grund wie bei der Textflaeche.
             Editorform::Quicknote => {}
             // `esc_regel` nennt fuer die Termintabelle je Spalte die Regel
-            // der Aufgaben oder der Notizen und diese Form nie.
-            Editorform::Termine => {}
+            // der Aufgaben oder der Notizen und diese Form nie, fuer die
+            // Tabelle einer CSV die der Aufgaben.
+            Editorform::Termine | Editorform::Trenntext => {}
         }
     }
 
@@ -3071,6 +3398,17 @@ impl Editorbereich {
         text: &str,
     ) -> Result<Option<Neustand>, eintraege::Abweisung> {
         let form = self.form();
+        if form == Editorform::Trenntext {
+            let Some(sicht) = self.trenntextsicht() else {
+                return Ok(None);
+            };
+            return Ok(trenntext_zellenrechnung(
+                sicht.text(),
+                sicht.index(),
+                zelle,
+                text,
+            ));
+        }
         zellenrechnung(form, self.ivars().modell.borrow().stand(), zelle, text)
     }
 
@@ -3099,6 +3437,7 @@ impl Editorbereich {
             | Editorform::Notizen
             | Editorform::Geheimnisse
             | Editorform::Termine
+            | Editorform::Trenntext
             | Editorform::Quicknote => self.handlung_ausfuehren(Handlung::Hinzufuegen, None),
         }
     }
@@ -3110,7 +3449,8 @@ impl Editorbereich {
     /// Frage stellt keinen Systemaufruf.
     #[must_use]
     pub fn haelt_eintragsdatei(&self) -> bool {
-        eintragsart_des_typs(self.ivars().modell.borrow().typ()).is_some()
+        let modell = self.ivars().modell.borrow();
+        eintragsart_der_datei(modell.typ(), modell.trenntext()).is_some()
     }
 
     /// Haengt in der Rohansicht einer Eintragsdatei den leeren Eintrag an, den
@@ -3132,7 +3472,11 @@ impl Editorbereich {
     /// Tabelle“ wie der Tabellenweg; die Zulaessigkeit laesst den Befehl dann
     /// gar nicht erst durch.
     fn eintrag_im_text_hinzufuegen(&self) -> Editormeldung {
-        let Some(art) = eintragsart_des_typs(self.ivars().modell.borrow().typ()) else {
+        let art = {
+            let modell = self.ivars().modell.borrow();
+            eintragsart_der_datei(modell.typ(), modell.trenntext())
+        };
+        let Some(art) = art else {
             return Editormeldung::Eintrag(Eintragsart::Aufgaben, Eintragsantwort::KeineTabelle);
         };
         let heute = if art == Eintragsart::Termine {
@@ -3140,13 +3484,20 @@ impl Editorbereich {
         } else {
             None
         };
-        let (meldung, neustand) = handlung_rechnen(
-            self.ivars().modell.borrow().stand(),
-            art,
-            Handlung::Hinzufuegen,
-            None,
-            heute,
-        );
+        // Die Rohansicht einer CSV haengt eine leere Zeile an, ueber denselben
+        // Kern wie die Tabelle; der Index entsteht dafuer neu, weil beim
+        // Tippen in der Rohansicht keiner nachgezogen wird (E9).
+        let (meldung, neustand) = if art == Eintragsart::Trenntext {
+            self.trenntext_handlung(Handlung::Hinzufuegen, None)
+        } else {
+            handlung_rechnen(
+                self.ivars().modell.borrow().stand(),
+                art,
+                Handlung::Hinzufuegen,
+                None,
+                heute,
+            )
+        };
         if let Some(neustand) = neustand {
             self.umbau_anwenden(neustand);
             let stelle = {
@@ -3216,13 +3567,17 @@ impl Editorbereich {
         } else {
             None
         };
-        let (meldung, neustand) = handlung_rechnen(
-            self.ivars().modell.borrow().stand(),
-            art,
-            handlung,
-            stelle,
-            heute,
-        );
+        let (meldung, neustand) = if art == Eintragsart::Trenntext {
+            self.trenntext_handlung(handlung, stelle)
+        } else {
+            handlung_rechnen(
+                self.ivars().modell.borrow().stand(),
+                art,
+                handlung,
+                stelle,
+                heute,
+            )
+        };
         let auswahl = neustand.as_ref().and_then(|neustand| neustand.auswahl);
         if let Some(neustand) = neustand {
             self.umbau_anwenden(neustand);
@@ -3348,6 +3703,15 @@ impl Editorbereich {
     /// [`Eintragsansicht::zeilen_zeigen`] tut dann nichts, solange die Tabelle
     /// schon Aufgaben zeigt.
     fn tabelle_nachziehen(&self) {
+        // Eine CSV- oder TSV-Datei: ihre Sicht allein bei gezeigter Tabelle,
+        // sonst nichts, auch keine leere Aufgabenliste; die Tabelle ist dann
+        // ausgeblendet und zieht beim naechsten Wechsel in sie nach (E9).
+        if self.ivars().modell.borrow().trenntext().is_some() {
+            if let Some(sicht) = self.trenntextsicht_zum_nachzug() {
+                self.ivars().eintraege.zeilen_zeigen(sicht);
+            }
+            return;
+        }
         let zeilen = {
             let modell = self.ivars().modell.borrow();
             match modell.typ() {
@@ -3373,6 +3737,110 @@ impl Editorbereich {
             }
         };
         self.ivars().eintraege.zeilen_zeigen(zeilen);
+    }
+
+    /// Nimmt eine eben eingetroffene Datei als CSV oder TSV auf, falls sie
+    /// eine ist (Schritt 3 des Plans der CSV-Tabelle), und sagt, was die
+    /// Statuszeile darueber meldet.
+    ///
+    /// **Gerufen allein, wenn eine Datei eintrifft**, vor dem Einsetzen ihres
+    /// Standes: aus [`Self::ladeausgang_einziehen`] und
+    /// [`Self::zurueckgehaltenes_uebernehmen`]. Der Dialekt entsteht hier nach
+    /// der Regel des Kerns und gilt fuer diese Datei (E2); laesst sie sich
+    /// nicht als Tabelle zeigen, steht die Ansicht danach auf Roh
+    /// ([`Self::tabellenform_pruefen`]) und die Antwort nennt den Grund, sonst
+    /// das Trennzeichen. Fuer jede andere Datei faellt die Lage, und die
+    /// Antwort ist `None`.
+    #[must_use = "die Antwort ist der Satz der Statuszeile ueber die geoeffnete CSV"]
+    fn trenntext_vorbereiten(&self) -> Option<Editormeldung> {
+        let dialekt = {
+            let modell = self.ivars().modell.borrow();
+            modell
+                .trenntext()
+                .map(|art| trenntext::dialekt_erkennen(art, modell.stand()))
+        };
+        let Some(dialekt) = dialekt else {
+            *self.ivars().trenntext.borrow_mut() = None;
+            return None;
+        };
+        *self.ivars().trenntext.borrow_mut() = Some(Trenntextlage {
+            dialekt,
+            sicht: None,
+        });
+        Some(
+            self.tabellenform_pruefen()
+                .unwrap_or(Editormeldung::Trennzeichen(dialekt)),
+        )
+    }
+
+    /// Stellt die Ansicht auf Roh, wenn der Editor die Tabelle einer CSV
+    /// zeigen soll und sie sich nicht zeigen laesst, und nennt den Grund (E3,
+    /// E9); in jeder anderen Lage tut sie nichts.
+    ///
+    /// Gerufen, wenn eine Datei eintrifft, und nach dem Ansichtswechsel, also
+    /// in beiden Faellen, bevor Darstellung und Flaeche nachziehen. Die
+    /// gebildete Sicht bleibt fuer den Nachzug danach stehen und wird nicht ein
+    /// zweites Mal zerlegt.
+    fn tabellenform_pruefen(&self) -> Option<Editormeldung> {
+        if self.form() != Editorform::Trenntext {
+            return None;
+        }
+        let verweigerung = tabellenform_verweigert(self.trenntextsicht()?.index())?;
+        let _ = self.ivars().modell.borrow_mut().ansicht_umschalten();
+        Some(Editormeldung::TabellenformVerweigert(verweigerung))
+    }
+
+    /// Die Sicht auf den gehaltenen Stand einer CSV- oder TSV-Datei, gebildet
+    /// oder aus dem Zwischenspeicher ([`trenntextsicht_fuer`]); `None` fuer
+    /// jede andere Datei.
+    ///
+    /// **Ohne Rueckfrage an die Form**: die Handlungen und die Zellen fragen
+    /// hier, auch die Rohansicht beim Anhaengen einer Zeile. Der Nachzug der
+    /// Tabelle fragt dagegen ueber [`sicht_zum_nachzug`], damit beim Tippen
+    /// in der Rohansicht nichts zerlegt wird.
+    fn trenntextsicht(&self) -> Option<Trenntextsicht> {
+        let modell = self.ivars().modell.borrow();
+        let mut lage = self.ivars().trenntext.borrow_mut();
+        lage.as_mut().map(|lage| {
+            trenntextsicht_fuer(modell.stand(), lage, &self.ivars().trenntextgeneration)
+        })
+    }
+
+    /// Die Sicht, die der Nachzug der Tabelle zeigt, nach
+    /// [`sicht_zum_nachzug`]: allein bei gezeigter Tabelle einer CSV (E9).
+    ///
+    /// Eine eigene Methode, damit [`Self::tabelle_nachziehen`] nichts
+    /// schreibend leiht; geschrieben wird hier allein der Zwischenspeicher der
+    /// Sicht und nie der Stand.
+    fn trenntextsicht_zum_nachzug(&self) -> Option<Trenntextsicht> {
+        let form = self.form();
+        let modell = self.ivars().modell.borrow();
+        let mut lage = self.ivars().trenntext.borrow_mut();
+        lage.as_mut().and_then(|lage| {
+            sicht_zum_nachzug(
+                form,
+                modell.stand(),
+                lage,
+                &self.ivars().trenntextgeneration,
+            )
+        })
+    }
+
+    /// Rechnet eine Handlung an der Tabelle einer CSV auf ihrem Index
+    /// ([`trenntext_handlung_rechnen`]); ohne Index antwortet sie wie eine
+    /// Handlung ohne Tabelle.
+    fn trenntext_handlung(
+        &self,
+        handlung: Handlung,
+        zeile: Option<usize>,
+    ) -> (Editormeldung, Option<Neustand>) {
+        match self.trenntextsicht() {
+            Some(sicht) => trenntext_handlung_rechnen(sicht.text(), sicht.index(), handlung, zeile),
+            None => (
+                Editormeldung::Eintrag(Eintragsart::Trenntext, Eintragsantwort::KeineTabelle),
+                None,
+            ),
+        }
     }
 
     /// Bestimmt den heutigen Tag der Termintabelle neu (T6, Schritt 7 des
@@ -3861,13 +4329,20 @@ impl Editorbereich {
         let Some(ausgang) = ausgang else {
             return;
         };
+        let mut trenntext = None;
         if ausgang == Ladeausgang::Geoeffnet {
+            // Wie in `ladeausgang_einziehen`: der Dialekt der Datei vor dem
+            // Einsetzen.
+            trenntext = self.trenntext_vorbereiten();
             // Ein Dateiwechsel: der Verlauf gehoerte der vorigen Datei.
             self.stand_erneuern(Verlauf::Faellt);
             self.flaeche_waehlen();
         }
         self.schluessel_weiterreichen();
         self.melden(ausgang);
+        if let Some(meldung) = trenntext {
+            self.meldung_melden(meldung);
+        }
     }
 
     /// Laesst die zurueckgehaltene Datei fallen (C4).
@@ -3895,6 +4370,8 @@ impl Editorbereich {
         // die Zelle uebernehmend, auf einem Stand, den es nicht mehr gibt.
         self.zelle_verwerfen();
         self.ivars().modell.borrow_mut().schliessen();
+        // Ohne Datei gibt es keinen Dialekt und keine Sicht.
+        *self.ivars().trenntext.borrow_mut() = None;
         // Die Datei ist aufgegeben, und mit ihr ihr Verlauf. Die dritte der
         // drei Zeilen, die `stand_erneuern` zusammenhaelt, taugt hier
         // besonders: ohne Datei gibt es keine Sprache und nichts einzufaerben,
@@ -3970,7 +4447,13 @@ impl Editorbereich {
         let Some(ausgang) = eingetroffen else {
             return;
         };
+        let mut trenntext = None;
         if ausgang == Ladeausgang::Geoeffnet {
+            // Eine CSV bringt ihren Dialekt mit, und eine, die sich nicht als
+            // Tabelle zeigen laesst, stellt die Ansicht vorher auf Roh; beides
+            // vor dem Einsetzen, damit Darstellung und Flaeche schon die
+            // richtige Form sehen.
+            trenntext = self.trenntext_vorbereiten();
             // Die neue Datei kann eine andere Besetzung der Formatansicht
             // verlangen als die vorige: Schrift, Umbruch und Einfaerbung
             // haengen am Dateityp und an der Sprache, die die Kiste kennt.
@@ -3981,6 +4464,11 @@ impl Editorbereich {
         }
         self.schluessel_weiterreichen();
         self.melden(ausgang);
+        // Nach dem Ausgang, damit der Satz ueber das Trennzeichen der letzte
+        // in der Statuszeile ist.
+        if let Some(meldung) = trenntext {
+            self.meldung_melden(meldung);
+        }
     }
 
     /// Gibt den Ausgang samt seiner Herkunft an die Senke weiter, falls jemand
@@ -5043,9 +5531,17 @@ impl Editorbereich {
         // zweiter Weg dorthin waere die Gelegenheit, beide auseinanderlaufen zu
         // lassen.
         let _ = self.ivars().modell.borrow_mut().ansicht_umschalten();
+        // Eine CSV, die sich nicht als Tabelle zeigen laesst, bleibt in der
+        // Rohansicht, und der Grund geht als Antwort nach oben (E3, E9).
+        let verweigert = self.tabellenform_pruefen();
         self.darstellung_nachziehen();
+        // Die Tabelle einer CSV ist in der Rohansicht nicht nachgezogen
+        // worden (E9); sie entsteht hier aus dem Stand, den das Tippen dort
+        // hinterlassen hat. Fuer jede andere Datei laedt der Nachzug nichts
+        // neu, weil ihre Zeilen schon stehen.
+        self.tabelle_nachziehen();
         self.flaeche_waehlen();
-        None
+        verweigert
     }
 
     /// Setzt Grundschrift, Umbruch und Merkmale auf die gewaehlte Ansicht (C3).
@@ -5228,7 +5724,14 @@ impl Editorbereich {
         }
         let angaben = {
             let modell = self.ivars().modell.borrow();
-            if !modell.haelt_datei() || modell.ansicht() != Ansicht::Format {
+            // Eine CSV- oder TSV-Datei zeigt die Textflaeche allein in der
+            // Rohansicht, also nie eingefaerbt; in der Formatansicht steht
+            // die Tabelle davor. Eingefaerbt wuerde sonst je Tabellenhandlung
+            // die ganze Datei, fuer eine ausgeblendete Flaeche.
+            if !modell.haelt_datei()
+                || modell.ansicht() != Ansicht::Format
+                || modell.trenntext().is_some()
+            {
                 None
             } else {
                 Some((
@@ -10891,5 +11394,701 @@ mod tests {
             rumpf(&anwendung, "klickmelder")
                 .contains(concat!("selbst.kommando_", "ausfuehren(kommando, None)"))
         );
+    }
+
+    // ------------------------------------------------------------------
+    // Die Tabelle einer CSV- oder TSV-Datei (Schritt 3 des Plans
+    // `261018-0822_*_plan-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md`)
+    // ------------------------------------------------------------------
+    //
+    // Wie die Proben der Eintragstabellen darueber: ein ganzer Editorbereich
+    // laesst sich nicht bauen, und gefahren werden die reinen Regeln, die
+    // Eintragsansicht an echten Rollen und die Ruempfe.
+
+    /// Eine deutsche Excel-Datei der Proben: Semikolon, Dezimalkomma,
+    /// Umlaute, ein Satz mit einem Feld weniger. Mit Komma gelesen traegt
+    /// kein Feldzahl so viele Saetze wie mit Semikolon, also waehlt der Kern
+    /// das Semikolon (E2).
+    const CSV: &str = "Name;Preis;Menge\n\u{c4}pfel;1,50;3\nBirnen;2,00;5\nKiwi;1\n";
+
+    /// Die Sicht auf `text` im Dialekt, den der Kern fuer eine `.csv` waehlt.
+    fn csv_sicht(text: &str, generation: u64) -> Trenntextsicht {
+        let dialekt = trenntext::dialekt_erkennen(trenntext::Art::Csv, text);
+        Trenntextsicht::neu(
+            Rc::from(text),
+            Rc::new(trenntext::indexieren(text, &dialekt)),
+            generation,
+        )
+    }
+
+    /// Eine `.csv`, `.tsv` oder `.tab` oeffnet in der Formatansicht als
+    /// Tabelle und in der Rohansicht als Text; die Tabelle traegt so viele
+    /// Spalten, wie der laengste Satz Felder hat, und davor die Nummernspalte.
+    #[test]
+    fn eine_csv_oeffnet_als_tabelle_mit_spalten_aus_der_datei() {
+        for (name, art) in [
+            ("preise.csv", Some(trenntext::Art::Csv)),
+            ("PREISE.TSV", Some(trenntext::Art::Tsv)),
+            ("liste.tab", Some(trenntext::Art::Tsv)),
+            ("liste.txt", None),
+        ] {
+            let pfad = PathBuf::from("/tmp").join(name);
+            let typ = Dateityp::von_pfad(&pfad, None);
+            assert_eq!(crate::editormodell::trenntextart(&pfad, typ), art, "{name}");
+        }
+        assert_eq!(
+            crate::editormodell::trenntextart(
+                Path::new("/tmp/tasks.csv"),
+                Dateityp::Eintraege(Sonderdatei::Aufgaben)
+            ),
+            None,
+            "eine Eintragsdatei ist nie Trenntext"
+        );
+        let csv = Some(trenntext::Art::Csv);
+        assert_eq!(
+            editorform_der_datei(Ansicht::Format, Dateityp::Sonstiges, csv),
+            Editorform::Trenntext
+        );
+        assert_eq!(flaeche_der_form(Editorform::Trenntext), Flaeche::Tabelle);
+        assert_eq!(
+            eintragsart_der_form(Editorform::Trenntext),
+            Some(Eintragsart::Trenntext)
+        );
+        assert_eq!(
+            editorform_der_datei(Ansicht::Roh, Dateityp::Sonstiges, csv),
+            Editorform::Text
+        );
+        for ansicht in [Ansicht::Format, Ansicht::Roh] {
+            for typ in [Dateityp::Markdown, Dateityp::Sonstiges] {
+                assert_eq!(
+                    editorform_der_datei(ansicht, typ, None),
+                    editorform(ansicht, typ),
+                    "ohne Trenntext gilt die Form der Datei"
+                );
+            }
+        }
+
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
+            let tabelle = eintraege.tabelle();
+            assert_eq!(eintraege.art(), Eintragsart::Trenntext);
+            assert_eq!(tabelle.numberOfRows(), 4, "vier Saetze, vier Zeilen");
+            assert_eq!(
+                tabelle.numberOfColumns(),
+                4,
+                "die Nummernspalte und drei Felder, die der laengste Satz traegt"
+            );
+            let erste = tabelle.tableColumns().iter().next().expect("eine Spalte");
+            assert_eq!(erste.identifier().to_string(), "trenntextnummer");
+        });
+    }
+
+    /// Der Kopf zeigt je Feld den Buchstaben und den Text der ersten Zeile,
+    /// und die erste Zeile bleibt Zeile 1 der Tabelle (E6).
+    #[test]
+    fn der_kopf_zeigt_buchstabe_und_text_der_ersten_zeile_und_die_erste_zeile_bleibt_zeile() {
+        assert_eq!(eintragsansicht::kopftitel(0, Some("Name")), "A  Name");
+        assert_eq!(eintragsansicht::kopftitel(27, Some("")), "AB");
+        assert_eq!(eintragsansicht::kopftitel(1, None), "B");
+        assert_eq!(
+            eintragsansicht::kopftitel(2, Some("eine sehr lange Ueberschrift ohne Ende")),
+            "C  eine sehr lange Uebersch…"
+        );
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
+            let tabelle = eintraege.tabelle();
+            let titel: Vec<String> = tabelle
+                .tableColumns()
+                .iter()
+                .map(|spalte| spalte.title().to_string())
+                .collect();
+            assert_eq!(titel, ["", "A  Name", "B  Preis", "C  Menge"]);
+            assert!(tabelle.headerView().is_some(), "der Kopf ist zu sehen");
+            let text = |spalte: objc2_foundation::NSInteger, zeile: objc2_foundation::NSInteger| {
+                tabelle
+                    .viewAtColumn_row_makeIfNecessary(spalte, zeile, true)
+                    .and_then(|zelle| zelle.downcast::<objc2_app_kit::NSTableCellView>().ok())
+                    .and_then(|zelle| unsafe { zelle.textField() })
+                    .map(|feld| feld.stringValue().to_string())
+            };
+            assert_eq!(
+                text(0, 0).as_deref(),
+                Some("1"),
+                "die Nummer der ersten Zeile"
+            );
+            assert_eq!(
+                text(1, 0).as_deref(),
+                Some("Name"),
+                "die erste Zeile ist Zeile 1"
+            );
+            assert_eq!(text(1, 1).as_deref(), Some("\u{c4}pfel"));
+            assert_eq!(
+                text(3, 3).as_deref(),
+                Some(""),
+                "ein fehlendes Feld ist leer"
+            );
+        });
+    }
+
+    /// Eine geaenderte Zelle ersetzt allein die Bytes ihres Feldes, und der
+    /// Umkehrpunkt, den `umbau_anwenden` daraus bildet, stellt den Stand davor
+    /// wieder her: das ist der Weg von `cmd+z` (E5, E15).
+    #[test]
+    fn eine_zellaenderung_schreibt_nur_ihr_feld_und_ein_cmd_z_nimmt_sie_zurueck() {
+        let stand = "a,\"b,c\",d\ne,f,g\n";
+        let sicht = csv_sicht(stand, 1);
+        let zelle = Zelle {
+            stelle: 1,
+            spalte: 1,
+        };
+        let neu = trenntext_zellenrechnung(stand, sicht.index(), zelle, "x;y")
+            .expect("die Zelle aendert sich");
+        assert_eq!(
+            neu.text, "a,\"b,c\",d\ne,x;y,g\n",
+            "nur das Feld, der Rest Byte fuer Byte"
+        );
+        assert_eq!(neu.auswahl, Some(1), "gewaehlt bleibt die Zeile der Zelle");
+        let mit_komma = trenntext_zellenrechnung(stand, sicht.index(), zelle, "x,y")
+            .expect("die Zelle aendert sich");
+        assert_eq!(
+            mit_komma.text, "a,\"b,c\",d\ne,\"x,y\",g\n",
+            "der Kern quotet"
+        );
+        assert_eq!(
+            trenntext_zellenrechnung(stand, sicht.index(), zelle, "f"),
+            None,
+            "ein unveraenderter Wert ist kein Umbau"
+        );
+
+        let punkt = Umkehrpunkt::zwischen(stand, &neu.text, NSRange::new(0, 0));
+        assert_eq!(punkt.angewandt_auf(&neu.text), stand);
+        assert!(
+            punkt.getragene_bytes() <= "f".len(),
+            "der Punkt traegt allein das Feld und nicht die Datei"
+        );
+
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        assert!(rumpf(&quelle, "zelle_rechnen").contains(concat!("trenntext_zellen", "rechnung(")));
+        assert!(rumpf(&quelle, "zelle_festschreiben").contains(concat!("umbau_", "anwenden(")));
+    }
+
+    /// Die Rohansicht zeigt denselben Stand wie die Tabelle: die Sicht traegt
+    /// den Stand, aus dem sie entstand, und der Ansichtswechsel fasst ihn
+    /// nicht an, sondern zieht die Tabelle allein nach.
+    #[test]
+    fn die_rohansicht_zeigt_denselben_stand_wie_die_tabelle() {
+        let mut lage = Trenntextlage {
+            dialekt: trenntext::dialekt_erkennen(trenntext::Art::Csv, CSV),
+            sicht: None,
+        };
+        let generation = Cell::new(0);
+        let sicht = trenntextsicht_fuer(CSV, &mut lage, &generation);
+        assert_eq!(
+            sicht.text(),
+            CSV,
+            "die Tabelle zeigt den Stand der Rohansicht"
+        );
+        assert_eq!(sicht.werte(1), ["\u{c4}pfel", "1,50", "3"]);
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        let umschalten = rumpf(&quelle, "ansicht_umschalten");
+        assert!(umschalten.contains(concat!("self.tabelle_", "nachziehen()")));
+        for nadel in [
+            concat!(".bear", "beiten("),
+            concat!("umbau_", "anwenden("),
+            concat!("stand_", "einsetzen("),
+        ] {
+            assert!(!umschalten.contains(nadel), "der Wechsel ruft {nadel}");
+        }
+    }
+
+    /// Eine CSV mit einem Anfuehrungszeichen, das nicht schliesst, und eine
+    /// mit mehr Spalten, als die Tabelle zeigt, bleiben in der Rohansicht, und
+    /// die Statuszeile nennt den Grund (E3, E9). Die Umstellung geschieht vor
+    /// dem Einsetzen des Standes, beim Eintreffen und beim Ansichtswechsel.
+    #[test]
+    fn eine_unterminierte_und_eine_zu_breite_csv_bleiben_in_der_rohansicht_mit_meldung() {
+        let dialekt = trenntext::dialekt_erkennen(trenntext::Art::Csv, "a,b\n");
+        let index = |text: &str| trenntext::indexieren(text, &dialekt);
+        assert_eq!(tabellenform_verweigert(&index("a,b\nc,d\n")), None);
+        let offen = index("a,b\nc,\"d\ne,f\n");
+        assert_eq!(
+            tabellenform_verweigert(&offen),
+            Some(Verweigerung::Unterminiert { zeile: 2 })
+        );
+        let breit = ",".repeat(trenntext::HOECHSTENS_SPALTEN);
+        assert_eq!(
+            tabellenform_verweigert(&index(&format!("{breit}\n"))),
+            Some(Verweigerung::ZuVieleSpalten {
+                spalten: trenntext::HOECHSTENS_SPALTEN + 1
+            })
+        );
+        let genau = ",".repeat(trenntext::HOECHSTENS_SPALTEN - 1);
+        assert_eq!(tabellenform_verweigert(&index(&format!("{genau}\n"))), None);
+        assert_eq!(
+            Editormeldung::TabellenformVerweigert(Verweigerung::Unterminiert { zeile: 2 }).text(),
+            "In Zeile 2 schließt ein Anführungszeichen bis zum Dateiende nicht; \
+             die Datei bleibt in der Rohansicht."
+        );
+        assert_eq!(
+            Editormeldung::TabellenformVerweigert(Verweigerung::ZuVieleSpalten { spalten: 2000 })
+                .text(),
+            format!(
+                "Die Datei trägt 2000 Spalten, die Tabelle zeigt höchstens {}; \
+                 die Datei bleibt in der Rohansicht.",
+                trenntext::HOECHSTENS_SPALTEN
+            )
+        );
+        assert_eq!(
+            Editormeldung::Trennzeichen(trenntext::dialekt_erkennen(trenntext::Art::Csv, CSV))
+                .text(),
+            "Trennzeichen: Semikolon (nach den Feldzahlen am Dateianfang)"
+        );
+        // Jede Zeilenhandlung haelt an einem offenen Anfuehrungszeichen an.
+        assert_eq!(
+            trenntext_handlung_rechnen("a,\"b\n", &index("a,\"b\n"), Handlung::Hinzufuegen, None),
+            (
+                Editormeldung::TabellenformVerweigert(Verweigerung::Unterminiert { zeile: 1 }),
+                None
+            )
+        );
+
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        let pruefen = rumpf(&quelle, "tabellenform_pruefen");
+        assert!(pruefen.contains(concat!("tabellenform_", "verweigert(")));
+        assert!(pruefen.contains(concat!(".ansicht_", "umschalten()")));
+        assert!(
+            rumpf(&quelle, "trenntext_vorbereiten")
+                .contains(concat!("self.tabellenform_", "pruefen()"))
+        );
+        for (name, vorher, nachher) in [
+            (
+                "ladeausgang_einziehen",
+                concat!("self.trenntext_", "vorbereiten()"),
+                concat!("self.stand_", "erneuern("),
+            ),
+            (
+                "zurueckgehaltenes_uebernehmen",
+                concat!("self.trenntext_", "vorbereiten()"),
+                concat!("self.stand_", "erneuern("),
+            ),
+            (
+                "ansicht_umschalten",
+                concat!("self.tabellenform_", "pruefen()"),
+                concat!("self.darstellung_", "nachziehen()"),
+            ),
+        ] {
+            let koerper = rumpf(&quelle, name);
+            let erst = koerper
+                .find(vorher)
+                .unwrap_or_else(|| panic!("{name} ruft {vorher} nicht"));
+            let dann = koerper
+                .find(nachher)
+                .unwrap_or_else(|| panic!("{name} ruft {nachher} nicht"));
+            assert!(erst < dann, "{name} prueft die Tabellenform zu spaet");
+        }
+    }
+
+    /// Allein die Tabelle einer CSV rollt waagerecht und richtet ihre Spalten
+    /// nicht nach der Rolle; jede andere Art behaelt `LastColumnOnly` ohne
+    /// waagerechten Rollbalken, auch nach einem Wechsel zurueck (E8).
+    #[test]
+    fn nur_die_trenntextform_rollt_waagerecht() {
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            let pruefen = |art: Eintragsart| {
+                let tabelle = eintraege.tabelle();
+                let waagerecht = art == Eintragsart::Trenntext;
+                assert_eq!(eintraege.art(), art);
+                assert_eq!(
+                    eintraege.rolle().hasHorizontalScroller(),
+                    waagerecht,
+                    "{art:?}"
+                );
+                assert_eq!(
+                    tabelle.columnAutoresizingStyle(),
+                    if waagerecht {
+                        objc2_app_kit::NSTableViewColumnAutoresizingStyle::NoColumnAutoresizing
+                    } else {
+                        objc2_app_kit::NSTableViewColumnAutoresizingStyle::LastColumnOnlyAutoresizingStyle
+                    },
+                    "{art:?}"
+                );
+                assert_eq!(tabelle.allowsColumnReordering(), !waagerecht, "{art:?}");
+            };
+            pruefen(Eintragsart::Aufgaben);
+            eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
+            pruefen(Eintragsart::Trenntext);
+            eintraege.zeilen_zeigen(eintragsansicht::notizzeilen(NOTIZEN));
+            pruefen(Eintragsart::Notizen);
+            eintraege.zeilen_zeigen(eintragsansicht::geheimniszeilen(GEHEIMNISSE));
+            pruefen(Eintragsart::Geheimnisse);
+            eintraege.zeilen_zeigen(eintragsansicht::terminzeilen(
+                TERMINE,
+                Sortierrichtung::Aufsteigend,
+                None,
+            ));
+            pruefen(Eintragsart::Termine);
+            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+            pruefen(Eintragsart::Aufgaben);
+        });
+        for art in [
+            Eintragsart::Aufgaben,
+            Eintragsart::Notizen,
+            Eintragsart::Termine,
+            Eintragsart::Geheimnisse,
+            Eintragsart::Trenntext,
+        ] {
+            assert_eq!(
+                eintragsansicht::rollt_waagerecht(art),
+                art == Eintragsart::Trenntext
+            );
+        }
+    }
+
+    /// Der Index entsteht allein bei gezeigter Tabelle (E9): beim Tippen in
+    /// der Rohansicht steht der Zaehler der Zerlegungen, ein neuer Stand in
+    /// der Tabelle zerlegt einmal, derselbe Stand ein zweites Mal nicht.
+    #[test]
+    fn der_index_entsteht_nur_bei_gezeigter_tabelle() {
+        let zerlegungen = || ZERLEGUNGEN.with(Cell::get);
+        let mut lage = Trenntextlage {
+            dialekt: trenntext::dialekt_erkennen(trenntext::Art::Csv, CSV),
+            sicht: None,
+        };
+        let generation = Cell::new(0);
+        let vorher = zerlegungen();
+        let mut stand = CSV.to_owned();
+        for zeichen in "Kirschen;4,00;1\n".chars() {
+            stand.push(zeichen);
+            assert_eq!(
+                sicht_zum_nachzug(Editorform::Text, &stand, &mut lage, &generation),
+                None
+            );
+        }
+        assert_eq!(
+            zerlegungen(),
+            vorher,
+            "die Rohansicht zerlegt beim Tippen nichts"
+        );
+        let erste = sicht_zum_nachzug(Editorform::Trenntext, &stand, &mut lage, &generation)
+            .expect("die Tabelle zeigt eine Sicht");
+        assert_eq!(
+            zerlegungen(),
+            vorher + 1,
+            "der Wechsel in die Tabelle zerlegt einmal"
+        );
+        let zweite = sicht_zum_nachzug(Editorform::Trenntext, &stand, &mut lage, &generation)
+            .expect("die Tabelle zeigt eine Sicht");
+        assert_eq!(
+            zerlegungen(),
+            vorher + 1,
+            "derselbe Stand zerlegt kein zweites Mal"
+        );
+        assert_eq!(erste, zweite, "dieselbe Generation, kein Neuladen");
+        stand.push_str("x;y;z\n");
+        let dritte = sicht_zum_nachzug(Editorform::Trenntext, &stand, &mut lage, &generation)
+            .expect("die Tabelle zeigt eine Sicht");
+        assert_eq!(zerlegungen(), vorher + 2);
+        assert_ne!(dritte, zweite, "ein neuer Stand ist eine neue Generation");
+        for form in [
+            Editorform::Aufgaben,
+            Editorform::Notizen,
+            Editorform::Geheimnisse,
+            Editorform::Termine,
+            Editorform::Quicknote,
+        ] {
+            assert_eq!(sicht_zum_nachzug(form, CSV, &mut lage, &generation), None);
+        }
+        assert_eq!(zerlegungen(), vorher + 2);
+        use super::super::anwendung::quelltextproben::datei;
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        let (code, _) = quelle
+            .split_once(concat!("#[cfg(test)]\nmod ", "tests {"))
+            .expect("das Pruefmodul steht am Fuss der Datei");
+        assert_eq!(
+            code.matches(concat!("trenntext::", "indexieren(")).count(),
+            1,
+            "der Editor zerlegt an genau einer Stelle"
+        );
+    }
+
+    /// `tab` geht in der Tabelle einer CSV von Feld zu Feld und am Ende einer
+    /// Zeile in die erste Zelle der naechsten, `shift+tab` zurueck; `return`
+    /// geht an AppKit und uebernimmt (E16).
+    #[test]
+    fn tab_geht_in_die_naechste_zelle_und_am_zeilenende_in_die_naechste_zeile() {
+        let zeilen = Zeilen::from(csv_sicht(CSV, 1));
+        let zelle = |stelle, spalte| Zelle { stelle, spalte };
+        assert_eq!(
+            naechste_zelle_der(&zeilen, zelle(0, 0), true),
+            Some(zelle(0, 1))
+        );
+        assert_eq!(
+            naechste_zelle_der(&zeilen, zelle(0, 2), true),
+            Some(zelle(1, 0))
+        );
+        assert_eq!(naechste_zelle_der(&zeilen, zelle(3, 2), true), None);
+        assert_eq!(
+            naechste_zelle_der(&zeilen, zelle(1, 0), false),
+            Some(zelle(0, 2))
+        );
+        assert_eq!(naechste_zelle_der(&zeilen, zelle(0, 0), false), None);
+        assert_eq!(
+            eintragsansicht::zellenbefehl(Eintragsart::Trenntext, 1, sel!(insertTab:)),
+            eintragsansicht::Zellenbefehl::Weiter(true)
+        );
+        assert_eq!(
+            eintragsansicht::zellenbefehl(Eintragsart::Trenntext, 1, sel!(insertBacktab:)),
+            eintragsansicht::Zellenbefehl::Weiter(false)
+        );
+        assert_eq!(
+            eintragsansicht::zellenbefehl(Eintragsart::Trenntext, 1, sel!(insertNewline:)),
+            eintragsansicht::Zellenbefehl::Appkit,
+            "return uebernimmt die Zelle"
+        );
+        assert_eq!(
+            esc_regel(Editorform::Trenntext, Some(1)),
+            Editorform::Aufgaben,
+            "esc verwirft wie in der Aufgabentabelle"
+        );
+        // Die Tabellenspalte ist nicht das Feld: davor steht die Nummer.
+        assert_eq!(zeilen.feld_der_tabellenspalte(0), None);
+        assert_eq!(zeilen.feld_der_tabellenspalte(1), Some(0));
+        assert_eq!(zeilen.feld_der_tabellenspalte(3), Some(2));
+        assert_eq!(zeilen.feld_der_tabellenspalte(4), None);
+        assert_eq!(zeilen.tabellenspalte_des_feldes(2), 3);
+        let notizen = Zeilen::from(eintragsansicht::notizzeilen(NOTIZEN));
+        assert_eq!(
+            notizen.feld_der_tabellenspalte(1),
+            Some(1),
+            "sonst die Gleichheit"
+        );
+        assert_eq!(notizen.tabellenspalte_des_feldes(1), 1);
+    }
+
+    /// `naechste_zelle` unter dem Namen, den die Probe darueber liest.
+    fn naechste_zelle_der(zeilen: &Zeilen, zelle: Zelle, vorwaerts: bool) -> Option<Zelle> {
+        eintragsansicht::naechste_zelle(zelle, vorwaerts, zeilen)
+    }
+
+    /// Anlegen, Loeschen und Verschieben wirken auf Zeilen der CSV, in der
+    /// Tabelle wie in der Rohansicht, und dort steht die Schreibmarke danach
+    /// am Anfang der neuen Zeile (E7, E13).
+    #[test]
+    fn eintrag_hinzufuegen_loeschen_und_verschieben_wirken_auf_zeilen_der_csv() {
+        let stand = "a;b;c\nd;e\n";
+        let sicht = csv_sicht(stand, 1);
+        let index = sicht.index();
+        let antwort = |antwort| Editormeldung::Eintrag(Eintragsart::Trenntext, antwort);
+        let rechnen = |handlung, zeile| trenntext_handlung_rechnen(stand, index, handlung, zeile);
+
+        let (meldung, neu) = rechnen(Handlung::Hinzufuegen, None);
+        assert_eq!(meldung, antwort(Eintragsantwort::Hinzugefuegt));
+        let neu = neu.expect("eine neue Zeile");
+        assert_eq!(
+            neu.text, "a;b;c\nd;e\n;;\n",
+            "Spaltenzahl weniger eins Trennzeichen"
+        );
+        assert_eq!(neu.auswahl, Some(2));
+        assert_eq!(
+            schreibstelle_im_letzten_eintrag(Eintragsart::Trenntext, &neu.text),
+            "a;b;c\nd;e\n".len(),
+            "die Marke am Anfang der neuen Zeile"
+        );
+        assert_eq!(
+            schreibstelle_im_letzten_eintrag(Eintragsart::Trenntext, ";;\n"),
+            0
+        );
+
+        let (meldung, neu) = rechnen(Handlung::Loeschen, Some(0));
+        assert_eq!(meldung, antwort(Eintragsantwort::Geloescht));
+        assert_eq!(neu.map(|neu| neu.text).as_deref(), Some("d;e\n"));
+        assert_eq!(
+            rechnen(Handlung::Loeschen, None),
+            (antwort(Eintragsantwort::KeinEintragGewaehlt), None)
+        );
+
+        let (meldung, neu) = rechnen(Handlung::Verschieben(Richtung::Runter), Some(0));
+        assert_eq!(meldung, antwort(Eintragsantwort::Verschoben));
+        let neu = neu.expect("verschoben");
+        assert_eq!(neu.text, "d;e\na;b;c\n");
+        assert_eq!(neu.auswahl, Some(1), "die Auswahl wandert mit");
+        assert_eq!(
+            rechnen(Handlung::Verschieben(Richtung::Hoch), Some(0)),
+            (antwort(Eintragsantwort::SchonOben), None)
+        );
+        assert_eq!(
+            rechnen(Handlung::Verschieben(Richtung::Runter), Some(1)),
+            (antwort(Eintragsantwort::SchonUnten), None)
+        );
+        assert_eq!(
+            rechnen(Handlung::Bearbeiten, Some(1)),
+            (antwort(Eintragsantwort::BearbeitungBegonnen), None)
+        );
+        assert_eq!(
+            rechnen(Handlung::Abhaken, Some(1)),
+            (antwort(Eintragsantwort::Abgehakt), None),
+            "kein Umbau"
+        );
+        assert_eq!(
+            antwort(Eintragsantwort::Abgehakt).text(),
+            "eine Zeile einer CSV-Datei hat kein Kästchen"
+        );
+
+        // Die Rohansicht einer CSV ist eine Eintragsdatei, und ihr Anlegen
+        // geht denselben Weg in den Kern.
+        assert_eq!(
+            eintragsart_der_datei(Dateityp::Sonstiges, Some(trenntext::Art::Csv)),
+            Some(Eintragsart::Trenntext)
+        );
+        assert_eq!(eintragsart_der_datei(Dateityp::Sonstiges, None), None);
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        assert!(
+            rumpf(&quelle, "eintrag_im_text_hinzufuegen")
+                .contains(concat!("self.trenntext_", "handlung("))
+        );
+        assert!(
+            rumpf(&quelle, "handlung_ausfuehren").contains(concat!("self.trenntext_", "handlung("))
+        );
+        assert!(
+            rumpf(&quelle, "haelt_eintragsdatei").contains(concat!("eintragsart_der_", "datei("))
+        );
+    }
+
+    /// Die Zeiten der Tabelle einer CSV an einer erzeugten Datei von 16 MiB
+    /// (E9): der Index, eine Zellaenderung samt Umkehrpunkt, neuer Sicht und
+    /// der Abschrift, die `stand_einsetzen` an die Textflaeche reicht, und eine
+    /// Spalteneinfuegung. `setString:` selbst misst sie nicht: eine
+    /// `NSTextView` laesst sich unter `libtest` nicht beschreiben (Kopf der
+    /// Proben zum Umbauweg).
+    ///
+    /// `cargo test --release -p krk-ui -- --ignored --nocapture messung_der_csv_tabelle_an_16_mib`
+    #[test]
+    #[ignore = "Messprobe, im Bericht von Schritt 3 genannt"]
+    fn messung_der_csv_tabelle_an_16_mib() {
+        use std::time::Instant;
+        let grenze = 16 * 1024 * 1024 - 1024;
+        let mut text = String::with_capacity(grenze + 256);
+        let mut zeile = 0usize;
+        while text.len() < grenze {
+            for feld in 0..12 {
+                if feld > 0 {
+                    text.push(',');
+                }
+                if feld == 5 && zeile.is_multiple_of(7) {
+                    text.push_str("\"mit, Komma\"");
+                } else {
+                    text.push_str(&format!("w{zeile}_{feld}"));
+                }
+            }
+            text.push('\n');
+            zeile += 1;
+        }
+        let ms = |dauer: std::time::Duration| dauer.as_secs_f64() * 1000.0;
+        let dialekt = trenntext::dialekt_erkennen(trenntext::Art::Csv, &text);
+
+        let start = Instant::now();
+        let index = zerlegen(&text, &dialekt);
+        let zerlegt = start.elapsed();
+        let start = Instant::now();
+        let sicht = Trenntextsicht::neu(Rc::from(text.as_str()), Rc::new(index), 1);
+        let abgeschrieben = start.elapsed();
+
+        let start = Instant::now();
+        let zelle = Zelle {
+            stelle: zeile / 2,
+            spalte: 3,
+        };
+        let neu = trenntext_zellenrechnung(sicht.text(), sicht.index(), zelle, "geaendert")
+            .expect("die Zelle aendert sich");
+        let gerechnet = start.elapsed();
+        let start = Instant::now();
+        let punkt = Umkehrpunkt::zwischen(sicht.text(), &neu.text, NSRange::new(0, 0));
+        let umkehrpunkt = start.elapsed();
+        let start = Instant::now();
+        let neuer_index = zerlegen(&neu.text, &dialekt);
+        let neue_sicht = Trenntextsicht::neu(Rc::from(neu.text.as_str()), Rc::new(neuer_index), 2);
+        let nachgezogen = start.elapsed();
+        let start = Instant::now();
+        let fuer_die_flaeche = NSString::from_str(&neu.text);
+        let abschrift = start.elapsed();
+
+        let start = Instant::now();
+        let spalte = trenntext::spalte_einfuegen(
+            neue_sicht.text(),
+            neue_sicht.index(),
+            3,
+            &Zellbereich::zelle(0, 3),
+        )
+        .expect("die Spalte entsteht");
+        let spalte_eingefuegt = start.elapsed();
+
+        println!(
+            "CSV {} Bytes, {} Zeilen, {} Spalten",
+            text.len(),
+            sicht.index().zeilenzahl(),
+            sicht.index().spaltenzahl()
+        );
+        println!("Index                         {:8.2} ms", ms(zerlegt));
+        println!("Abschrift in die Sicht        {:8.2} ms", ms(abgeschrieben));
+        println!("Zelle setzen (Kern)           {:8.2} ms", ms(gerechnet));
+        println!("Umkehrpunkt                   {:8.2} ms", ms(umkehrpunkt));
+        println!("neuer Index und neue Sicht    {:8.2} ms", ms(nachgezogen));
+        println!("NSString fuer setString:      {:8.2} ms", ms(abschrift));
+        println!(
+            "Zellübernahme ohne setString: {:8.2} ms",
+            ms(gerechnet + umkehrpunkt + nachgezogen + abschrift)
+        );
+        println!(
+            "Spalte einfuegen (Kern)       {:8.2} ms",
+            ms(spalte_eingefuegt)
+        );
+        assert_eq!(punkt.angewandt_auf(&neu.text), text);
+        assert!(fuer_die_flaeche.length() > 0);
+        assert!(spalte.text.len() > neu.text.len());
+    }
+
+    /// Wie lange die Tabelle braucht, um die Spalten einer Datei mit
+    /// `trenntext::HOECHSTENS_SPALTEN` Spalten einzurichten, und wie lange
+    /// ein Nachzug derselben Art mit geaendertem Stand braucht (E9); die
+    /// Grundlage fuer die Zahl der Spalten.
+    ///
+    /// `cargo test --release -p krk-ui -- --ignored --nocapture messung_der_breitesten_tabelle`
+    #[test]
+    #[ignore = "Messprobe, im Bericht von Schritt 3 genannt"]
+    fn messung_der_breitesten_tabelle() {
+        use std::time::Instant;
+        let spalten = trenntext::HOECHSTENS_SPALTEN;
+        let zeile: String = (0..spalten)
+            .map(|feld| format!("w{feld}"))
+            .collect::<Vec<_>>()
+            .join(",");
+        let text: String = std::iter::repeat_n(format!("{zeile}\n"), 1000).collect();
+        an_einer_flaeche(|mtm| {
+            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+            let start = Instant::now();
+            eintraege.zeilen_zeigen(csv_sicht(&text, 1));
+            let eingerichtet = start.elapsed();
+            let mut zweiter = text.clone();
+            zweiter.replace_range(0..2, "xx");
+            let start = Instant::now();
+            eintraege.zeilen_zeigen(csv_sicht(&zweiter, 2));
+            let nachgezogen = start.elapsed();
+            assert_eq!(
+                usize::try_from(eintraege.tabelle().numberOfColumns()).ok(),
+                Some(spalten + 1)
+            );
+            println!(
+                "{spalten} Spalten, 1000 Zeilen: einrichten {:.2} ms, nachziehen {:.2} ms",
+                eingerichtet.as_secs_f64() * 1000.0,
+                nachgezogen.as_secs_f64() * 1000.0
+            );
+        });
     }
 }

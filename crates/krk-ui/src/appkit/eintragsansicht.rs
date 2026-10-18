@@ -38,6 +38,44 @@
 //! Notizen mehrzeilig wie die Notiz ([`mehrzeilige_spalte`]). Bis dahin
 //! zeigten sich die Geheimnisse als Notizen.
 //!
+//! # Die Tabelle einer CSV- oder TSV-Datei
+//!
+//! Seit Schritt 3 des Plans
+//! `261018-0822_*_plan-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md`
+//! zeigt dieselbe Ansicht eine fuenfte Art, [`Zeilen::Trenntext`], und sie
+//! unterscheidet sich von den vier anderen in drei Stuecken:
+//!
+//! - **Die Spalten kommen aus der Datei** und nicht aus der Art: so viele, wie
+//!   der Satzindex des Kerns meldet, davor eine schmale Nummernspalte
+//!   ([`NUMMERNSPALTE`]), die mitrollt und nicht bearbeitbar ist. Die
+//!   Tabellenspalte ist damit nicht das Feld der Datei, und die Umrechnung
+//!   steht an einer Stelle neben der von Stelle und Zeile:
+//!   [`Zeilen::feld_der_tabellenspalte`] und
+//!   [`Zeilen::tabellenspalte_des_feldes`]. **Nach aussen spricht die Ansicht
+//!   auch hier allein in Feldern**: [`Zelle::spalte`] ist in dieser Art das
+//!   Feld der Datei, und jede Spaltennummer von AppKit (`columnForView:`,
+//!   `clickedColumn`, `editColumn:row:`) geht durch die zwei Umrechnungen.
+//!   Fuer die vier anderen Arten sind beide die Gleichheit.
+//! - **Die Zeilen sind keine abgeleiteten Werte, sondern eine Sicht auf den
+//!   Index** ([`Trenntextsicht`]): Text und Satzindex hinter einem `Rc`, dazu
+//!   eine Generation, an der [`Eintragsansicht::zeilen_zeigen`] einen neuen
+//!   Stand erkennt, statt Zeilen zu vergleichen. Die Zellen kommen ueber
+//!   `makeViewWithIdentifier:owner:` wieder, und ein zerlegter Satz bleibt fuer
+//!   die Zellen derselben Zeile zwischengespeichert, damit eine Zeile mit
+//!   dreissig sichtbaren Zellen einmal zerlegt wird (E9).
+//! - **Die Tabelle rollt waagerecht** und richtet ihre Spaltenbreiten nicht
+//!   nach der Rolle, sondern nach dem Inhalt der ersten Saetze (E8); die
+//!   vier anderen Arten behalten `LastColumnOnly` ohne waagerechten
+//!   Rollbalken. Beides stellt [`spalten_einrichten`] je Art ein, an der einen
+//!   Stelle, an der es die Spalten einrichtet.
+//!
+//! Eine Zelle zeigt einen Zeilenumbruch als `⏎` und einen Tabulator als `⇥`
+//! ([`zellanzeige`]); bearbeitet wird der wirkliche Wert. **Darum ist ihr Feld
+//! nur waehrend einer Bearbeitung bearbeitbar**: [`Eintragsansicht::zelle_beginnen`]
+//! setzt den wirklichen Wert ein und schaltet das Feld bearbeitbar, das Ende
+//! der Zelle schaltet es zurueck. Ein einfacher Klick waehlt die Zeile und
+//! beginnt keine Bearbeitung, die sonst den gezeigten Ersatz als Text naehme.
+//!
 //! # Die mehrzeilige Notizzelle
 //!
 //! Gemessen in `messungen/260926-0818-mehrzeilige-zelle.txt` (Belege unter
@@ -285,6 +323,13 @@
 //!   (`:659`), alle ohne Angabe und damit seit 10.0
 //! - `NSTableViewStyle` samt `setStyle:` seit 11.0 (`NSTableView.h:77` und
 //!   `:377`) — die hoechste Untergrenze dieser Datei
+//! - fuer die Tabelle einer CSV `makeViewWithIdentifier:owner:` seit 10.7
+//!   (`NSTableView.h:488`) und das Protokoll
+//!   `NSUserInterfaceItemIdentification` samt `setIdentifier:` seit 10.7
+//!   (`NSUserInterfaceItemIdentification.h:14`); ohne Angabe und damit seit
+//!   10.0 `setHasHorizontalScroller:`, `hasHorizontalScroller`,
+//!   `setAllowsColumnReordering:`, `columnAutoresizingStyle`,
+//!   `scrollColumnToVisible:`, `numberOfColumns`, `title` und `pointSize`
 //!
 //! Keine von ihnen ist nach macOS 15 hinzugekommen, und keine Beruehrung in
 //! dieser Datei braucht deshalb eine Verfuegbarkeitspruefung zur Laufzeit.
@@ -302,7 +347,9 @@
 //! Ganzzahltyp (`objc/NSObjCRuntime.h:13`); alle uebrigen tragen im SDK keine
 //! eigene Verfuegbarkeitsangabe und stehen damit seit 10.0.
 
+use std::borrow::Cow;
 use std::cell::{Cell, RefCell};
+use std::rc::Rc;
 
 use objc2::rc::Retained;
 use objc2::runtime::{AnyObject, Bool, ProtocolObject, Sel};
@@ -314,7 +361,7 @@ use objc2_app_kit::{
     NSScrollView, NSTableCellView, NSTableColumn, NSTableColumnResizingOptions, NSTableHeaderView,
     NSTableRowView, NSTableView, NSTableViewColumnAutoresizingStyle, NSTableViewDataSource,
     NSTableViewDelegate, NSTableViewStyle, NSText, NSTextField, NSTextFieldDelegate, NSTextView,
-    NSView, NSWindow,
+    NSUserInterfaceItemIdentification, NSView, NSWindow,
 };
 use objc2_foundation::{
     MainThreadMarker, NSIndexSet, NSInteger, NSNotification, NSObject, NSObjectProtocol, NSPoint,
@@ -324,7 +371,10 @@ use objc2_foundation::{
 use krk_core::heimordner::eintraege::geheimnisse::{Feld, Geheimnisse};
 use krk_core::heimordner::eintraege::{Aufgaben, Notizen, Tag, aufgabenzeile, termine};
 use krk_core::sprache::{Text, text};
+use krk_core::trenntext::{self, Satzindex, Zellbereich};
 use krk_core::verzeichnis::Richtung;
+
+use crate::trenntextvorschau::spaltenbuchstabe;
 
 use super::{textautomatik, zwischenablage};
 
@@ -393,20 +443,215 @@ pub fn feld_der_spalte(spalte: usize) -> Option<Feld> {
 #[must_use]
 pub fn mehrzeilige_spalte(art: Eintragsart) -> Option<usize> {
     match art {
-        Eintragsart::Aufgaben => None,
+        // Eine Zelle einer CSV zeigt eine Zeile; ihr Umbruch erscheint als
+        // `⏎` ([`zellanzeige`]), und `opt+return` schreibt ihn beim Bearbeiten.
+        Eintragsart::Aufgaben | Eintragsart::Trenntext => None,
         Eintragsart::Notizen | Eintragsart::Termine => Some(NOTIZSPALTE),
         Eintragsart::Geheimnisse => Some(spalte_des_feldes(Feld::Notizen)),
     }
 }
 
-/// Wie viele Spalten die Tabelle dieser Art traegt.
+/// Wie viele Spalten die Tabelle dieser Art traegt, ohne eine Nummernspalte.
+///
+/// Die Tabelle einer CSV hat keine feste Zahl; hier steht ihre Mindestzahl
+/// (E7), und die wirkliche nennt [`Zeilen::spaltenzahl`].
 #[must_use]
 pub fn spaltenzahl(art: Eintragsart) -> usize {
     match art {
-        Eintragsart::Aufgaben => 1,
+        Eintragsart::Aufgaben | Eintragsart::Trenntext => 1,
         Eintragsart::Notizen | Eintragsart::Termine => 2,
         Eintragsart::Geheimnisse => Feld::ALLE.len(),
     }
+}
+
+/// Die Tabellenspalte, in der die Tabelle einer CSV die Nummer jeder Zeile
+/// zeigt (E8); das erste Feld der Datei steht in der Tabellenspalte danach.
+pub const NUMMERNSPALTE: usize = 0;
+
+/// Wie viele Zeichen des Textes der ersten Zeile ein Spaltenkopf der Tabelle
+/// einer CSV zeigt, bevor er in „…“ endet (E6).
+const KOPFZEICHEN: usize = 24;
+
+/// Aus wie vielen Saetzen die Anfangsbreite einer Spalte der Tabelle einer
+/// CSV entsteht (E8).
+const BREITENSAETZE: usize = 1000;
+
+/// Die schmalste und die breiteste Anfangsbreite einer Spalte der Tabelle
+/// einer CSV in Punkten (E8); ziehen laesst sich jede ueber beide hinaus.
+const BREITENGRENZEN: (f64, f64) = (48.0, 320.0);
+
+/// Der Anteil der Punktgroesse, den ein Zeichen der Tabellenschrift im Mittel
+/// breit ist.
+///
+/// **Eine Naeherung und keine Messung**, anders als E8 es vorschlug: die
+/// mittlere Breite der Systemschrift liefert `NSFont` nicht, und ein Messen
+/// jeder Zelle mit `sizeWithAttributes:` kostete bei tausend Saetzen und
+/// tausend Spalten mehr als das Oeffnen. Die Breite ist der Anfang; der Nutzer
+/// zieht sie am Kopf, wo sie nicht passt.
+const ZEICHENANTEIL: f64 = 0.55;
+
+/// Der Text, den eine Zelle der Tabelle einer CSV fuer diesen Wert zeigt: ein
+/// Zeilenumbruch (`\r\n`, `\n` oder ein einzelnes `\r`) als `⏎`, ein
+/// Tabulator als `⇥`, damit jede Zelle eine Zeile bleibt (E8). Zu langen Text
+/// kuerzt das Feld selbst mit „…“.
+#[must_use]
+pub fn zellanzeige(wert: &str) -> Cow<'_, str> {
+    if !wert.contains(['\n', '\r', '\t']) {
+        return Cow::Borrowed(wert);
+    }
+    Cow::Owned(
+        wert.replace("\r\n", "⏎")
+            .replace(['\n', '\r'], "⏎")
+            .replace('\t', "⇥"),
+    )
+}
+
+/// Der Titel des Kopfes ueber dem Feld `feld` der Tabelle einer CSV: sein
+/// Buchstabe und daneben der Text, den die erste Zeile in ihm traegt, nach
+/// [`KOPFZEICHEN`] Zeichen gekuerzt (E6). **Die erste Zeile bleibt dabei eine
+/// Zeile der Tabelle**; der Kopf zeigt ihren Text nur an.
+#[must_use]
+pub fn kopftitel(feld: usize, erste_zeile: Option<&str>) -> String {
+    let buchstabe = spaltenbuchstabe(feld);
+    let anzeige = zellanzeige(erste_zeile.unwrap_or_default());
+    let anzeige = anzeige.trim();
+    if anzeige.is_empty() {
+        return buchstabe;
+    }
+    let mut kurz: String = anzeige.chars().take(KOPFZEICHEN).collect();
+    if anzeige.chars().count() > KOPFZEICHEN {
+        kurz.push('…');
+    }
+    format!("{buchstabe}  {kurz}")
+}
+
+/// Die Anfangsbreite einer Spalte, deren laengster Text `zeichen` Zeichen
+/// traegt, bei der Punktgroesse `punkte` der Tabellenschrift (E8): die
+/// Zeichen mal ihre mittlere Breite samt Rand, begrenzt auf
+/// [`BREITENGRENZEN`].
+#[must_use]
+pub fn spaltenbreite(zeichen: usize, punkte: f64) -> f64 {
+    let (schmal, breit) = BREITENGRENZEN;
+    (zeichen as f64 * punkte * ZEICHENANTEIL + 2.0 * RAND).clamp(schmal, breit)
+}
+
+/// Die Sicht der Tabelle auf eine CSV- oder TSV-Datei (E9): der Text, sein
+/// Satzindex und die Generation, mit der beide entstanden sind.
+///
+/// **Text und Index gehoeren zusammen und entstehen nur zusammen**, in
+/// [`Self::neu`]: jeder Leser am Index fragt den Text, aus dem er entstand,
+/// und der Kern haelt an, wenn es ein anderer ist. Der Text ist eine
+/// Abschrift des Standes, den der Editor haelt, weil die Ansicht das Modell
+/// nicht kennt; sie entsteht je neuem Stand einmal.
+///
+/// **Zwei Sichten sind gleich, wenn ihre Generation gleich ist**, und nicht,
+/// wenn ihre Zeilen gleich sind: ein Vergleich von sechzehn Mebibyte je
+/// Nachzug waere der Preis, den der Index sparen soll. Die Generation zaehlt
+/// der Editorbereich, je neuem Index eins weiter.
+#[derive(Clone)]
+pub struct Trenntextsicht {
+    /// Der Text, aus dem der Index entstand.
+    text: Rc<str>,
+    /// Der Index dieses Textes.
+    index: Rc<Satzindex>,
+    /// Die Generation, mit der beide entstanden sind.
+    generation: u64,
+}
+
+impl Trenntextsicht {
+    /// Die Sicht auf `text` mit seinem Index `index`.
+    ///
+    /// # Panics
+    ///
+    /// Wenn `index` nicht aus `text` entstand (an der Laenge geprueft, wie im
+    /// Kern).
+    #[must_use]
+    pub fn neu(text: Rc<str>, index: Rc<Satzindex>, generation: u64) -> Self {
+        // Die Pruefung des Kerns, einmal hier statt bei jedem Leser: ein
+        // Feld, das an einem fremden Text gelesen wird, hielte erst beim
+        // Zeichnen an.
+        let _ = index.felder(&text, 0);
+        Self {
+            text,
+            index,
+            generation,
+        }
+    }
+
+    /// Der Text, aus dem der Index entstand.
+    #[must_use]
+    pub fn text(&self) -> &str {
+        &self.text
+    }
+
+    /// Der Index des Textes.
+    #[must_use]
+    pub fn index(&self) -> &Satzindex {
+        &self.index
+    }
+
+    /// Die Generation, mit der Text und Index entstanden sind.
+    #[must_use]
+    pub fn generation(&self) -> u64 {
+        self.generation
+    }
+
+    /// Die Werte der Felder des Satzes `satz`, leer jenseits des letzten.
+    #[must_use]
+    pub fn werte(&self, satz: usize) -> Vec<String> {
+        self.index
+            .felder(&self.text, satz)
+            .map(|felder| {
+                felder
+                    .into_iter()
+                    .map(|feld| feld.wert.into_owned())
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// Der Wert der Zelle in Zeile `satz` und Feld `feld`; leer hinter dem
+    /// letzten Feld des Satzes (E7) und jenseits des letzten Satzes.
+    #[must_use]
+    pub fn wert(&self, satz: usize, feld: usize) -> String {
+        self.werte(satz).into_iter().nth(feld).unwrap_or_default()
+    }
+}
+
+impl PartialEq for Trenntextsicht {
+    fn eq(&self, andere: &Self) -> bool {
+        self.generation == andere.generation
+    }
+}
+
+impl Eq for Trenntextsicht {}
+
+impl std::fmt::Debug for Trenntextsicht {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Trenntextsicht")
+            .field("generation", &self.generation)
+            .field("zeilen", &self.index.zeilenzahl())
+            .field("spalten", &self.index.spaltenzahl())
+            .finish()
+    }
+}
+
+impl From<Trenntextsicht> for Zeilen {
+    fn from(sicht: Trenntextsicht) -> Self {
+        Self::Trenntext(sicht)
+    }
+}
+
+/// Ein zerlegter Satz der Tabelle einer CSV, fuer die Zellen derselben Zeile
+/// (E9): AppKit fragt eine Zeile Zelle fuer Zelle ab, und ohne ihn zerlegte
+/// jede Zelle ihren Satz ein weiteres Mal.
+struct Satzspeicher {
+    /// Die Generation der Sicht, aus der er stammt.
+    generation: u64,
+    /// Die Zeile.
+    zeile: usize,
+    /// Die Werte ihrer Felder.
+    werte: Vec<String>,
 }
 
 /// Die Breite, mit der die Datumsspalte entsteht: schmaler als die
@@ -438,6 +683,10 @@ pub enum Eintragsart {
     /// `261016-0306_*_plan-secrets-mit-sechs-feldern-schluesselmerker-und-verbindungen.md`).
     /// Bis dahin zeigten sich die Geheimnisse als Notizen.
     Geheimnisse,
+    /// Eine CSV- oder TSV-Datei: so viele Spalten, wie die Datei traegt, davor
+    /// die Nummer jeder Zeile (Schritt 3 des Plans der CSV-Tabelle); der
+    /// Modulkopf sagt, was daran anders ist.
+    Trenntext,
 }
 
 /// Die abgeleiteten Zeilen, je Art in ihrer eigenen Gestalt.
@@ -456,6 +705,9 @@ pub enum Zeilen {
     Termine(Vec<Terminzeile>),
     /// Die Zeilen der Geheimnistabelle, in der Folge der Datei.
     Geheimnisse(Vec<Geheimniszeile>),
+    /// Die Sicht auf eine CSV- oder TSV-Datei, in der Folge der Datei; ihre
+    /// Zeilen entstehen beim Zeichnen aus dem Index (E9).
+    Trenntext(Trenntextsicht),
 }
 
 impl Zeilen {
@@ -467,6 +719,7 @@ impl Zeilen {
             Self::Notizen(_) => Eintragsart::Notizen,
             Self::Termine(_) => Eintragsart::Termine,
             Self::Geheimnisse(_) => Eintragsart::Geheimnisse,
+            Self::Trenntext(_) => Eintragsart::Trenntext,
         }
     }
 
@@ -478,6 +731,47 @@ impl Zeilen {
             Self::Notizen(zeilen) => zeilen.len(),
             Self::Termine(zeilen) => zeilen.len(),
             Self::Geheimnisse(zeilen) => zeilen.len(),
+            Self::Trenntext(sicht) => sicht.index().zeilenzahl(),
+        }
+    }
+
+    /// Wie viele Spalten der Datei diese Zeilen tragen, ohne eine
+    /// Nummernspalte: fuer die Tabelle einer CSV die groesste Feldzahl ihrer
+    /// Saetze (E7), sonst die feste Zahl der Art.
+    #[must_use]
+    pub fn spaltenzahl(&self) -> usize {
+        match self {
+            Self::Trenntext(sicht) => sicht.index().spaltenzahl(),
+            Self::Aufgaben(_) | Self::Notizen(_) | Self::Termine(_) | Self::Geheimnisse(_) => {
+                spaltenzahl(self.art())
+            }
+        }
+    }
+
+    /// Das Feld, das AppKits Tabellenspalte `spalte` zeigt; `None` fuer die
+    /// Nummernspalte und jenseits der letzten Spalte.
+    ///
+    /// **Eine der zwei Stellen dieser Umrechnung** (Modulkopf, „Die Tabelle
+    /// einer CSV- oder TSV-Datei"): in der Tabelle einer CSV steht davor die
+    /// Nummernspalte, in jeder anderen Art ist es die Gleichheit.
+    #[must_use]
+    pub fn feld_der_tabellenspalte(&self, spalte: usize) -> Option<usize> {
+        let feld = match self {
+            Self::Trenntext(_) => spalte.checked_sub(NUMMERNSPALTE + 1)?,
+            Self::Aufgaben(_) | Self::Notizen(_) | Self::Termine(_) | Self::Geheimnisse(_) => {
+                spalte
+            }
+        };
+        (feld < self.spaltenzahl()).then_some(feld)
+    }
+
+    /// Die Tabellenspalte, in der AppKit das Feld `feld` zeigt; die Umkehrung
+    /// von [`Self::feld_der_tabellenspalte`].
+    #[must_use]
+    pub fn tabellenspalte_des_feldes(&self, feld: usize) -> usize {
+        match self {
+            Self::Trenntext(_) => feld + NUMMERNSPALTE + 1,
+            Self::Aufgaben(_) | Self::Notizen(_) | Self::Termine(_) | Self::Geheimnisse(_) => feld,
         }
     }
 
@@ -493,7 +787,7 @@ impl Zeilen {
     #[must_use]
     pub fn stelle_der_zeile(&self, zeile: usize) -> Option<usize> {
         match self {
-            Self::Aufgaben(_) | Self::Notizen(_) | Self::Geheimnisse(_) => {
+            Self::Aufgaben(_) | Self::Notizen(_) | Self::Geheimnisse(_) | Self::Trenntext(_) => {
                 (zeile < self.len()).then_some(zeile)
             }
             Self::Termine(zeilen) => zeilen.get(zeile).map(|termin| termin.stelle),
@@ -509,7 +803,7 @@ impl Zeilen {
     #[must_use]
     pub fn zeile_der_stelle(&self, stelle: usize) -> Option<usize> {
         match self {
-            Self::Aufgaben(_) | Self::Notizen(_) | Self::Geheimnisse(_) => {
+            Self::Aufgaben(_) | Self::Notizen(_) | Self::Geheimnisse(_) | Self::Trenntext(_) => {
                 (stelle < self.len()).then_some(stelle)
             }
             Self::Termine(zeilen) => zeilen.iter().position(|termin| termin.stelle == stelle),
@@ -733,12 +1027,17 @@ pub enum Zellenbefehl {
 /// bisher. Die Termintabelle folgt der Notiztabelle: die Datumsspalte ist die
 /// Themenspalte, die Terminspalte die Notizspalte. Die Geheimnistabelle ebenso,
 /// mit fuenf einzeiligen Spalten und den Notizen als der einen mehrzeiligen
-/// ([`mehrzeilige_spalte`]).
+/// ([`mehrzeilige_spalte`]). Die Tabelle einer CSV hat keine mehrzeilige
+/// Spalte: `return` uebernimmt, `opt+return` schreibt den Umbruch ueber die
+/// Belegung des Feldeditors von AppKit, und `tab` geht durch die Felder (E16).
 #[must_use]
 pub fn zellenbefehl(art: Eintragsart, spalte: usize, befehl: Sel) -> Zellenbefehl {
     match art {
         Eintragsart::Aufgaben => Zellenbefehl::Appkit,
-        Eintragsart::Notizen | Eintragsart::Termine | Eintragsart::Geheimnisse => {
+        Eintragsart::Notizen
+        | Eintragsart::Termine
+        | Eintragsart::Geheimnisse
+        | Eintragsart::Trenntext => {
             if befehl == sel!(insertNewline:) && mehrzeilige_spalte(art) == Some(spalte) {
                 Zellenbefehl::Umbruch
             } else if befehl == sel!(insertTab:) {
@@ -757,14 +1056,15 @@ pub fn zellenbefehl(art: Eintragsart, spalte: usize, befehl: Sel) -> Zellenbefeh
 ///
 /// Zeilenweise, wie gelesen wird: Thema, Notiz, dann das Thema der
 /// **naechsten Zeile auf dem Schirm**; in der Geheimnistabelle ebenso durch
-/// alle sechs Spalten ([`spaltenzahl`]). Die Zelle kommt und geht als Stelle;
+/// alle sechs Spalten und in der Tabelle einer CSV durch jedes Feld
+/// ([`Zeilen::spaltenzahl`]). Die Zelle kommt und geht als Stelle;
 /// gezaehlt wird dazwischen in Zeilen, ueber die zwei Umrechnungen an
 /// [`Zeilen`] (Modulkopf, „Stelle und Zeile").
 #[must_use]
 pub fn naechste_zelle(zelle: Zelle, vorwaerts: bool, zeilen: &Zeilen) -> Option<Zelle> {
     let Zelle { stelle, spalte } = zelle;
     let zeile = zeilen.zeile_der_stelle(stelle)?;
-    let letzte = spaltenzahl(zeilen.art()).saturating_sub(1);
+    let letzte = zeilen.spaltenzahl().saturating_sub(1);
     let (ziel, spalte) = if vorwaerts {
         if spalte < letzte {
             (zeile, spalte + 1)
@@ -823,7 +1123,9 @@ pub struct Zelle {
     pub stelle: usize,
     /// Die Spalte: [`THEMENSPALTE`] oder [`NOTIZSPALTE`]; die Aufgabentabelle
     /// hat allein die erste, die Geheimnistabelle sechs
-    /// ([`spalte_des_feldes`]).
+    /// ([`spalte_des_feldes`]). In der Tabelle einer CSV das Feld der Datei
+    /// und **nie** AppKits Tabellenspalte, die die Nummernspalte mitzaehlt
+    /// ([`Zeilen::feld_der_tabellenspalte`]).
     pub spalte: usize,
 }
 
@@ -1227,6 +1529,9 @@ pub struct EintragsansichtIvars {
     /// gebraucht, weil die Spalten beim Wechsel der Art neu entstehen und ihr
     /// Pfeil dann neu zu setzen ist.
     terminrichtung: Cell<Richtung>,
+    /// Der zuletzt zerlegte Satz der Tabelle einer CSV, fuer die uebrigen
+    /// Zellen seiner Zeile (E9); siehe [`Satzspeicher`].
+    satzspeicher: RefCell<Option<Satzspeicher>>,
     /// Der Hauptfadenbeweis vom Aufbau.
     ///
     /// Gemerkt und nicht mit `mtm()` erfragt, weil `mtm()` den wirklichen
@@ -1445,9 +1750,16 @@ define_class!(
         fn zeile_doppelt(&self, _absender: Option<&AnyObject>) {
             let tabelle = &self.ivars().tabelle;
             let in_der_tabelle = self.ereignis_in_der_tabelle();
+            // Die Spalte als Feld, wie jede Spaltennummer von AppKit; die
+            // Nummernspalte einer CSV zaehlt wie keine Spalte, und der Klick
+            // oeffnet die erste Zelle der Zeile.
+            let feld = self
+                .feld_an(tabelle.clickedColumn())
+                .and_then(|feld| NSInteger::try_from(feld).ok())
+                .unwrap_or(-1);
             self.doppelklick_ausfuehren(doppelklick(
                 self.stelle_an(tabelle.clickedRow()),
-                tabelle.clickedColumn(),
+                feld,
                 in_der_tabelle,
             ));
         }
@@ -1505,13 +1817,15 @@ impl Eintragsansicht {
         );
         rolle.setHidden(true);
 
-        spalten_einrichten(mtm, &tabelle, &rolle, &kopfzeile, Eintragsart::Aufgaben);
+        let zeilen = Zeilen::Aufgaben(Vec::new());
+        spalten_einrichten(mtm, &tabelle, &rolle, &kopfzeile, &zeilen);
 
         let this = Self::alloc(mtm).set_ivars(EintragsansichtIvars {
             rolle,
             tabelle,
             kopfzeile,
-            zeilen: RefCell::new(Zeilen::Aufgaben(Vec::new())),
+            zeilen: RefCell::new(zeilen),
+            satzspeicher: RefCell::new(None),
             wege: RefCell::new(None),
             verwerfen: Cell::new(false),
             endet: Cell::new(false),
@@ -1636,16 +1950,21 @@ impl Eintragsansicht {
         // Die Ausleihe endet an ihrem Semikolon: `reloadData` fragt die Zeilen
         // gleich wieder ab.
         *self.ivars().zeilen.borrow_mut() = zeilen;
+        let ivars = self.ivars();
         if artwechsel {
-            let ivars = self.ivars();
             spalten_einrichten(
                 ivars.mtm,
                 &ivars.tabelle,
                 &ivars.rolle,
                 &ivars.kopfzeile,
-                art,
+                &ivars.zeilen.borrow(),
             );
             self.richtungspfeil_setzen();
+        } else if let Zeilen::Trenntext(sicht) = &*ivars.zeilen.borrow() {
+            // Dieselbe Art, ein neuer Stand: die Spalten der Datei koennen
+            // dazugekommen oder fortgefallen sein, und der Kopf zeigt den Text
+            // der ersten Zeile. Gezogene Breiten bleiben stehen.
+            trenntextspalten_angleichen(ivars.mtm, &ivars.tabelle, sicht, false);
         }
         self.ivars().tabelle.reloadData();
         // Die Regel rechnet eine Auswahl davor als Stelle weiter; ohne eine
@@ -1665,7 +1984,10 @@ impl Eintragsansicht {
     fn zeigt_heute(&self, zeile: usize) -> bool {
         match &*self.ivars().zeilen.borrow() {
             Zeilen::Termine(zeilen) => zeilen.get(zeile).is_some_and(|termin| termin.heute),
-            Zeilen::Aufgaben(_) | Zeilen::Notizen(_) | Zeilen::Geheimnisse(_) => false,
+            Zeilen::Aufgaben(_)
+            | Zeilen::Notizen(_)
+            | Zeilen::Geheimnisse(_)
+            | Zeilen::Trenntext(_) => false,
         }
     }
 
@@ -1811,6 +2133,17 @@ impl Eintragsansicht {
             Zeilen::Geheimnisse(zeilen) => zeilen.get(zeile).map(|geheimnis| {
                 text_oder(geheimnis.feld(Feld::Notizen), geheimnis.feld(Feld::Name))
             }),
+            // Von einer Zeile einer CSV die ganze Zeile als TSV, wie der
+            // Bereich, den Schritt 4 des Plans der CSV-Tabelle kopiert; ohne
+            // laufende Zelle ist die gewaehlte Zeile die Auswahl.
+            Zeilen::Trenntext(sicht) => Some(trenntext::bereich_als_tsv(
+                sicht.text(),
+                sicht.index(),
+                &Zellbereich {
+                    zeilen: zeile..zeile + 1,
+                    spalten: 0..sicht.index().spaltenzahl(),
+                },
+            )),
         }
     }
 
@@ -1847,8 +2180,17 @@ impl Eintragsansicht {
             return None;
         }
         let stelle = self.stelle_an(tabelle.rowForView(ansicht))?;
-        let spalte = usize::try_from(tabelle.columnForView(ansicht)).ok()?;
+        let spalte = self.feld_an(tabelle.columnForView(ansicht))?;
         Some(Zelle { stelle, spalte })
+    }
+
+    /// Das Feld, das AppKits Tabellenspalte `spalte` zeigt: die Umrechnung
+    /// jeder Spaltennummer, die von AppKit hereinkommt. -1, die Nummernspalte
+    /// der Tabelle einer CSV und eine Spalte jenseits der letzten ergeben
+    /// `None`.
+    fn feld_an(&self, spalte: NSInteger) -> Option<usize> {
+        let spalte = usize::try_from(spalte).ok()?;
+        self.ivars().zeilen.borrow().feld_der_tabellenspalte(spalte)
     }
 
     /// Setzt die erste Zelle des Eintrags an der genannten **Stelle** in
@@ -1876,13 +2218,43 @@ impl Eintragsansicht {
         };
         let tabelle = &self.ivars().tabelle;
         tabelle.scrollRowToVisible(zeile);
+        tabelle.scrollColumnToVisible(spalte);
+        self.trenntextfeld_oeffnen(zelle, zeile, spalte);
         tabelle.editColumn_row_withEvent_select(spalte, zeile, None, true);
         true
     }
 
+    /// Stellt in der Tabelle einer CSV das Feld der Zelle auf ihren
+    /// wirklichen Wert und schaltet es bearbeitbar, bevor AppKit den
+    /// Feldeditor hineinsetzt (E16, Modulkopf); in jeder anderen Art tut es
+    /// nichts. Zurueckgeschaltet wird in [`Self::zelle_geendet`].
+    fn trenntextfeld_oeffnen(&self, zelle: Zelle, zeile: NSInteger, spalte: NSInteger) {
+        let wert = match &*self.ivars().zeilen.borrow() {
+            Zeilen::Trenntext(sicht) => sicht.wert(zelle.stelle, zelle.spalte),
+            Zeilen::Aufgaben(_)
+            | Zeilen::Notizen(_)
+            | Zeilen::Termine(_)
+            | Zeilen::Geheimnisse(_) => {
+                return;
+            }
+        };
+        let feld = self
+            .ivars()
+            .tabelle
+            .viewAtColumn_row_makeIfNecessary(spalte, zeile, true)
+            .and_then(|zelle| zelle.downcast::<NSTableCellView>().ok())
+            // SAFETY: Ein Leser ohne Vorbedingung.
+            .and_then(|zelle| unsafe { zelle.textField() });
+        if let Some(feld) = feld {
+            feld.setStringValue(&NSString::from_str(&wert));
+            trenntextfeld_schalten(&feld, true);
+        }
+    }
+
     /// Zeile und Spalte, an denen AppKit die genannte Zelle zeigt: die Zeile
-    /// ueber [`Self::zeile_von`] aus der Stelle der Zelle. `None`, wenn es den
-    /// Eintrag oder die Spalte nicht gibt.
+    /// ueber [`Self::zeile_von`] aus der Stelle der Zelle, die Spalte ueber
+    /// [`Zeilen::tabellenspalte_des_feldes`] aus ihrem Feld. `None`, wenn es
+    /// den Eintrag oder die Spalte nicht gibt.
     ///
     /// `pub(super)` allein fuer die Proben in [`super::editor`]: der Beginn
     /// einer Bearbeitung braucht ein Fenster, das `libtest` nicht hergibt, und
@@ -1890,7 +2262,15 @@ impl Eintragsansicht {
     #[must_use]
     pub(super) fn ziel_der_zelle(&self, zelle: Zelle) -> Option<(NSInteger, NSInteger)> {
         let zeile = NSInteger::try_from(self.zeile_von(zelle.stelle)?).ok()?;
-        let spalte = NSInteger::try_from(zelle.spalte).ok()?;
+        if zelle.spalte >= self.ivars().zeilen.borrow().spaltenzahl() {
+            return None;
+        }
+        let spalte = self
+            .ivars()
+            .zeilen
+            .borrow()
+            .tabellenspalte_des_feldes(zelle.spalte);
+        let spalte = NSInteger::try_from(spalte).ok()?;
         (spalte < self.ivars().tabelle.numberOfColumns()).then_some((zeile, spalte))
     }
 
@@ -2002,6 +2382,13 @@ impl Eintragsansicht {
         {
             feld.setStringValue(&NSString::from_str(&text));
         }
+        // Das Feld einer Zelle der Tabelle einer CSV ist allein waehrend der
+        // Bearbeitung bearbeitbar (Modulkopf); nach einem Umbau steht es in
+        // keiner Zeile mehr und kommt ueber `makeViewWithIdentifier:owner:`
+        // wieder, wo es ebenso zurueckgeschaltet wird.
+        if self.art() == Eintragsart::Trenntext {
+            trenntextfeld_schalten(feld, false);
+        }
         feld.invalidateIntrinsicContentSize();
     }
 
@@ -2028,6 +2415,9 @@ impl Eintragsansicht {
             Zeilen::Geheimnisse(zeilen) => zeilen
                 .get(zeile)
                 .map(|geheimnis| geheimnis.wert(zelle.spalte).to_owned()),
+            Zeilen::Trenntext(sicht) => {
+                Some(zellanzeige(&sicht.wert(zeile, zelle.spalte)).into_owned())
+            }
         }
     }
 
@@ -2121,7 +2511,7 @@ impl Eintragsansicht {
         // Abgeschrieben und die Ausleihe beendet, bevor gebaut wird: der Bau
         // ruft nach AppKit hinaus.
         let zeilen = self.ivars().zeilen.borrow().clone();
-        match zeilen {
+        match &zeilen {
             Zeilen::Aufgaben(zeilen) => Some(self.aufgabenzelle(zeilen.get(zeile)?)),
             Zeilen::Notizen(zeilen) => {
                 let notiz = zeilen.get(zeile)?;
@@ -2148,7 +2538,108 @@ impl Eintragsansicht {
                 let geheimnis = zeilen.get(zeile)?;
                 Some(self.notizzelle(geheimnis.wert(spalte), spalte, Eintragsart::Geheimnisse))
             }
+            // Die Sicht ist ein `Rc` und kein Vektor; die Abschrift oben kostet
+            // hier nichts.
+            Zeilen::Trenntext(sicht) => {
+                if zeile >= sicht.index().zeilenzahl() {
+                    return None;
+                }
+                let inhalt = if spalte == NUMMERNSPALTE {
+                    (zeile + 1).to_string()
+                } else {
+                    let feld = zeilen.feld_der_tabellenspalte(spalte)?;
+                    zellanzeige(&self.satzwert(sicht, zeile, feld)).into_owned()
+                };
+                Some(self.trenntextzelle(&inhalt, spalte == NUMMERNSPALTE))
+            }
         }
+    }
+
+    /// Der Wert der Zelle in Zeile `zeile` und Feld `feld`, aus dem
+    /// zwischengespeicherten Satz, wenn er zu dieser Zeile und Sicht gehoert
+    /// (E9, [`Satzspeicher`]).
+    fn satzwert(&self, sicht: &Trenntextsicht, zeile: usize, feld: usize) -> String {
+        let mut speicher = self.ivars().satzspeicher.borrow_mut();
+        let passt = speicher.as_ref().is_some_and(|gespeichert| {
+            gespeichert.generation == sicht.generation() && gespeichert.zeile == zeile
+        });
+        if !passt {
+            *speicher = Some(Satzspeicher {
+                generation: sicht.generation(),
+                zeile,
+                werte: sicht.werte(zeile),
+            });
+        }
+        speicher
+            .as_ref()
+            .and_then(|gespeichert| gespeichert.werte.get(feld).cloned())
+            .unwrap_or_default()
+    }
+
+    /// Die Ansicht einer Zelle der Tabelle einer CSV mit dem genannten Text:
+    /// eine wiederverwendete, wenn AppKit eine hat, sonst eine neue (E9).
+    ///
+    /// **Das Feld ist nicht bearbeitbar**, auch das wiederverwendete nicht:
+    /// es wird es allein in [`Self::trenntextfeld_oeffnen`] (Modulkopf).
+    /// `nummer` nennt die Nummernspalte, die eine eigene Kennung traegt, damit
+    /// eine Zelle der Nummern nie als Zelle eines Feldes wiederkommt.
+    fn trenntextzelle(&self, inhalt: &str, nummer: bool) -> Retained<NSView> {
+        let kennung = if nummer {
+            ns_string!("trenntextnummer")
+        } else {
+            ns_string!("trenntextzelle")
+        };
+        let tabelle = &self.ivars().tabelle;
+        // SAFETY: Der Eigentuemer ist `None`; AppKit laedt dann kein Nib und
+        // spricht kein Objekt an.
+        let wieder = unsafe { tabelle.makeViewWithIdentifier_owner(kennung, None) }
+            .and_then(|ansicht| ansicht.downcast::<NSTableCellView>().ok());
+        let zelle = wieder.unwrap_or_else(|| self.trenntextzelle_bauen(kennung));
+        // SAFETY: Ein Leser ohne Vorbedingung.
+        if let Some(feld) = unsafe { zelle.textField() } {
+            feld.setStringValue(&NSString::from_str(inhalt));
+            trenntextfeld_schalten(&feld, false);
+        }
+        Retained::into_super(zelle)
+    }
+
+    /// Baut die Ansicht einer Zelle der Tabelle einer CSV: ein einzeiliges
+    /// Feld, das am Ende kuerzt, an den Kanten seiner `NSTableCellView`.
+    fn trenntextzelle_bauen(&self, kennung: &NSString) -> Retained<NSTableCellView> {
+        let mtm = self.ivars().mtm;
+        let feld = NSTextField::textFieldWithString(ns_string!(""), mtm);
+        feld.setFont(Some(&NSFont::systemFontOfSize(NSFont::systemFontSize())));
+        feld.setLineBreakMode(NSLineBreakMode::ByTruncatingTail);
+        feld.setBordered(false);
+        feld.setDrawsBackground(false);
+        trenntextfeld_schalten(&feld, false);
+        // Nicht einzeilig: `opt+return` schreibt beim Bearbeiten einen
+        // Zeilenumbruch in den Wert (E16); gezeigt wird er als `⏎`, und die
+        // Zelle bricht nicht um.
+        feld.setUsesSingleLineMode(false);
+        if let Some(zelle) = feld.cell() {
+            zelle.setWraps(false);
+            zelle.setScrollable(true);
+        }
+        feld.setFrame(NSRect::new(
+            NSPoint::new(RAND, 2.0),
+            NSSize::new(AUFBAUBREITE - 2.0 * RAND, ZEILENHOEHE - 4.0),
+        ));
+        feld.setAutoresizingMask(NSAutoresizingMaskOptions::ViewWidthSizable);
+        // SAFETY: wie in `aufgabenzelle`.
+        unsafe { feld.setDelegate(Some(ProtocolObject::from_ref(self))) };
+
+        let zelle = NSTableCellView::initWithFrame(
+            NSTableCellView::alloc(mtm),
+            NSRect::new(NSPoint::ZERO, NSSize::new(AUFBAUBREITE, ZEILENHOEHE)),
+        );
+        zelle.setAutoresizingMask(NSAutoresizingMaskOptions::ViewWidthSizable);
+        zelle.addSubview(&feld);
+        // SAFETY: Das Feld ist eine Unteransicht der Zelle und lebt so lange
+        // wie sie; die Eigenschaft ist `weak` (`NSTableCellView.h`).
+        unsafe { zelle.setTextField(Some(&feld)) };
+        zelle.setIdentifier(Some(kennung));
+        zelle
     }
 
     /// Die Zelle einer Notiz in der genannten Spalte: ein [`Notizfeld`] ueber
@@ -2330,17 +2821,35 @@ fn geheimnisspalte(feld: Feld) -> (&'static NSString, Text, f64) {
 /// Spalte in fester Zeilenhoehe und keine Kopfzeile, die Notiztabelle Thema und
 /// Notiz mit Kopfzeile und automatischer Zeilenhoehe, die Termintabelle Datum
 /// und Termin ebenso.
+///
+/// **Die Tabelle einer CSV** traegt die Nummernspalte und so viele Spalten,
+/// wie die Datei Felder hat, eine Kopfzeile, eine feste Zeilenhoehe und als
+/// einzige Art einen waagerechten Rollbalken ohne Anpassung der
+/// Spaltenbreiten an die Rolle (E8). Beides stellt diese Funktion fuer jede
+/// Art ein, damit ein Wechsel zurueck keine Einstellung der CSV stehen
+/// laesst; ihre Spalten zieht danach [`trenntextspalten_angleichen`] nach.
 fn spalten_einrichten(
     mtm: MainThreadMarker,
     tabelle: &NSTableView,
     rolle: &NSScrollView,
     kopfzeile: &NSTableHeaderView,
-    art: Eintragsart,
+    zeilen: &Zeilen,
 ) {
     let alte: Vec<_> = tabelle.tableColumns().iter().collect();
     for spalte in alte {
         tabelle.removeTableColumn(&spalte);
     }
+    let art = zeilen.art();
+    let waagerecht = rollt_waagerecht(art);
+    rolle.setHasHorizontalScroller(waagerecht);
+    tabelle.setColumnAutoresizingStyle(if waagerecht {
+        NSTableViewColumnAutoresizingStyle::NoColumnAutoresizing
+    } else {
+        NSTableViewColumnAutoresizingStyle::LastColumnOnlyAutoresizingStyle
+    });
+    // Die Spalten der Datei stehen in ihrer Folge; ein Vertauschen am Kopf
+    // truege die Nummer einer Tabellenspalte auf ein anderes Feld.
+    tabelle.setAllowsColumnReordering(!waagerecht);
     // Die Kennung ist ein Bezeichner und bleibt ein Literal; der Titel kommt
     // aus der Sprachtabelle.
     let spalte_bauen = |kennung: &NSString, titel: Text| {
@@ -2412,9 +2921,120 @@ fn spalten_einrichten(
             tabelle.setUsesAutomaticRowHeights(true);
             tabelle.setHeaderView(Some(kopfzeile));
         }
+        Eintragsart::Trenntext => {
+            if let Zeilen::Trenntext(sicht) = zeilen {
+                trenntextspalten_angleichen(mtm, tabelle, sicht, true);
+            }
+            tabelle.setUsesAutomaticRowHeights(false);
+            tabelle.setHeaderView(Some(kopfzeile));
+        }
     }
-    tabelle.sizeLastColumnToFit();
+    // Die Tabelle einer CSV ist so breit wie ihre Spalten; die letzte auf die
+    // Rolle zu strecken, nahme ihr den Sinn des waagerechten Rollens.
+    if !waagerecht {
+        tabelle.sizeLastColumnToFit();
+    }
     rolle.tile();
+}
+
+/// Schaltet das Feld einer Zelle der Tabelle einer CSV bearbeitbar oder
+/// zurueck (Modulkopf, „Die Tabelle einer CSV- oder TSV-Datei"): **die eine
+/// Stelle dieses Schalters**, damit der Beginn einer Bearbeitung, ihr Ende
+/// und das Wiederverwenden einer Zelle ihn gleich setzen.
+fn trenntextfeld_schalten(feld: &NSTextField, bearbeitbar: bool) {
+    feld.setEditable(bearbeitbar);
+}
+
+/// Ob die Tabelle dieser Art waagerecht rollt: allein die einer CSV (E8).
+#[must_use]
+pub fn rollt_waagerecht(art: Eintragsart) -> bool {
+    match art {
+        Eintragsart::Trenntext => true,
+        Eintragsart::Aufgaben
+        | Eintragsart::Notizen
+        | Eintragsart::Termine
+        | Eintragsart::Geheimnisse => false,
+    }
+}
+
+/// Bringt die Spalten der Tabelle einer CSV auf die Sicht: die Nummernspalte
+/// und je Feld eine Spalte, mit dem Kopf aus [`kopftitel`] (E6, E8).
+///
+/// **Gezogene Breiten bleiben stehen.** Eine Spalte bekommt ihre
+/// Anfangsbreite allein, wenn sie entsteht, aus den ersten
+/// [`BREITENSAETZE`] Saetzen; `neu` heisst, die Tabelle hat eben alle
+/// Spalten verloren, und dann entstehen alle. Ein Kopf wird nur neu gesetzt,
+/// wenn sein Titel sich geaendert hat, damit eine Zellaenderung in einer
+/// breiten Datei nicht jeden Kopf anfasst.
+fn trenntextspalten_angleichen(
+    mtm: MainThreadMarker,
+    tabelle: &NSTableView,
+    sicht: &Trenntextsicht,
+    neu: bool,
+) {
+    let punkte = NSFont::systemFontSize();
+    let spalten = sicht.index().spaltenzahl();
+    let soll = NSInteger::try_from(spalten + NUMMERNSPALTE + 1).unwrap_or(NSInteger::MAX);
+    if neu || tabelle.numberOfColumns() == 0 {
+        let nummer = NSTableColumn::initWithIdentifier(
+            NSTableColumn::alloc(mtm),
+            ns_string!("trenntextnummer"),
+        );
+        nummer.setTitle(ns_string!(""));
+        nummer.setResizingMask(NSTableColumnResizingOptions::UserResizingMask);
+        tabelle.addTableColumn(&nummer);
+    }
+    // Die Nummernspalte waechst mit der Zahl der Stellen der letzten Zeile.
+    if let Some(nummer) = tabelle.tableColumns().iter().next() {
+        let stellen = sicht.index().zeilenzahl().max(1).to_string().len();
+        let breite = spaltenbreite(stellen, punkte).min(BREITENGRENZEN.0 + 24.0);
+        if nummer.width() < breite {
+            nummer.setWidth(breite);
+        }
+    }
+    let alte = tabelle.tableColumns().iter().count();
+    for _ in usize::try_from(soll).unwrap_or(usize::MAX)..alte {
+        if let Some(letzte) = tabelle.tableColumns().iter().last() {
+            tabelle.removeTableColumn(&letzte);
+        }
+    }
+    let vorhandene = tabelle.tableColumns().iter().count().saturating_sub(1);
+    if vorhandene < spalten {
+        let breiten = zeichenzahlen(sicht, BREITENSAETZE);
+        for feld in vorhandene..spalten {
+            let kennung = NSString::from_str(&format!("feld{feld}"));
+            let spalte = NSTableColumn::initWithIdentifier(NSTableColumn::alloc(mtm), &kennung);
+            spalte.setResizingMask(NSTableColumnResizingOptions::UserResizingMask);
+            spalte.setWidth(spaltenbreite(
+                breiten.get(feld).copied().unwrap_or(0),
+                punkte,
+            ));
+            tabelle.addTableColumn(&spalte);
+        }
+    }
+    let erste = sicht.werte(0);
+    for (stelle, spalte) in tabelle.tableColumns().iter().enumerate().skip(1) {
+        let feld = stelle - (NUMMERNSPALTE + 1);
+        let titel = kopftitel(feld, erste.get(feld).map(String::as_str));
+        if spalte.title().to_string() != titel {
+            spalte.setTitle(&NSString::from_str(&titel));
+        }
+    }
+}
+
+/// Die groesste Zahl gezeigter Zeichen je Feld in den ersten `saetze` Saetzen,
+/// fuer die Anfangsbreite der Spalten (E8).
+#[must_use]
+fn zeichenzahlen(sicht: &Trenntextsicht, saetze: usize) -> Vec<usize> {
+    let mut zahlen = vec![0; sicht.index().spaltenzahl()];
+    for satz in 0..sicht.index().zeilenzahl().min(saetze) {
+        for (feld, wert) in sicht.werte(satz).iter().enumerate() {
+            if let Some(zahl) = zahlen.get_mut(feld) {
+                *zahl = (*zahl).max(zellanzeige(wert).chars().count());
+            }
+        }
+    }
+    zahlen
 }
 
 #[cfg(test)]

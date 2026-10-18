@@ -115,6 +115,7 @@ mod quellbaum;
 mod quicknote;
 mod spalten;
 mod tabs;
+mod trenntextvorschau;
 mod tresorweg;
 mod vorschaumodell;
 

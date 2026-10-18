@@ -317,6 +317,7 @@ use krk_core::heimordner::tresor::{self, Oeffnungsmittel, Pin, Schluessel, Treso
 use krk_core::heimordner::{Heimordner, Sonderdatei};
 use krk_core::sprache::{Text, satz, text};
 use krk_core::text::{Abweisung, Treffer, datei, suche};
+use krk_core::trenntext;
 
 use crate::heimgriff::{self, Heimgriff};
 use crate::tresorweg::{self, Chiffrat, GEHEIMNISGRENZE, gesperrt};
@@ -427,6 +428,23 @@ impl Dateityp {
         match endung {
             Some(endung) if MARKDOWNENDUNGEN.contains(&endung.as_str()) => Dateityp::Markdown,
             _ => Dateityp::Sonstiges,
+        }
+    }
+}
+
+/// Die Art Trenntext, die der Name dieser Datei meint (E1), am Namen und
+/// ohne Systemaufruf, ueber die eine Stelle `trenntext::Art::aus_namen`.
+///
+/// **Eine Eintragsdatei des Notizordners ist nie Trenntext**: sie wird zuerst
+/// erkannt, wie E1 es verlangt, und keiner ihrer Namen traegt heute eine
+/// dieser Endungen; die Regel steht trotzdem hier, damit ein spaeterer Name
+/// sie nicht unterlaeuft.
+#[must_use]
+pub fn trenntextart(pfad: &Path, typ: Dateityp) -> Option<trenntext::Art> {
+    match typ {
+        Dateityp::Eintraege(_) => None,
+        Dateityp::Markdown | Dateityp::Sonstiges => {
+            pfad.file_name().and_then(trenntext::Art::aus_namen)
         }
     }
 }
@@ -1193,6 +1211,16 @@ pub struct Editormodell {
     ansicht: Ansicht,
     /// Was der Pfad ueber die Datei sagt (C3).
     typ: Dateityp,
+    /// Ob die Datei nach ihrer Endung CSV oder TSV ist (E1 des Plans
+    /// `261018-0822_*_plan-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md`);
+    /// `None` fuer jede andere und fuer jede Eintragsdatei des Notizordners.
+    ///
+    /// **Ein Feld neben [`Self::typ`] und kein Wert von [`Dateityp`]**, anders
+    /// als der Plan es vorschlug: [`Dateityp`] fragt auch die Vorschau, und
+    /// ein weiterer Wert hielte deren vollstaendige Fallunterscheidungen an,
+    /// ohne dass sie fuer CSV etwas anderes taeten als heute. Gesetzt allein
+    /// zusammen mit dem Typ, in [`Self::uebernehmen`] und [`Self::schliessen`].
+    trenntext: Option<trenntext::Art>,
     /// Der laufende Suchlauf; `None`, solange keiner laeuft (C5).
     suchlauf: Option<Suchlauf>,
     /// Der Zustand der Datei beim Oeffnen oder beim letzten Sichern (C4).
@@ -1433,6 +1461,13 @@ impl Editormodell {
     #[must_use]
     pub fn typ(&self) -> Dateityp {
         self.typ
+    }
+
+    /// Ob die gehaltene Datei nach ihrer Endung CSV oder TSV ist (E1); siehe
+    /// das Feld gleichen Namens.
+    #[must_use]
+    pub fn trenntext(&self) -> Option<trenntext::Art> {
+        self.trenntext
     }
 
     /// Der laufende Suchlauf (C5).
@@ -1706,6 +1741,7 @@ impl Editormodell {
                 } else {
                     Dateityp::von_pfad(&pfad, heimgriff::lesen(&self.heim).as_ref())
                 };
+                self.trenntext = trenntextart(&pfad, self.typ);
                 self.pfad = Some(pfad);
                 self.stand = stand;
                 self.schutz = schutz;
@@ -2286,6 +2322,7 @@ impl Editormodell {
         self.schutz = Schutz::Klartext;
         self.abweichung = false;
         self.typ = Dateityp::default();
+        self.trenntext = None;
         self.suchlauf = None;
         self.stempel = None;
         self.ladevorgang = None;

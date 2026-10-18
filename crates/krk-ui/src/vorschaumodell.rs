@@ -133,7 +133,10 @@
 //! **Die eine Ausnahme ist eine Datei aus JSON-Zeilen**: sie geht ueber
 //! [`krk_core::text::datei::anlesen`], dieselbe Tuer mit einem Deckel statt
 //! einer Abweisung, und zeigt ueber der Grenze ihren Anfang
-//! ([`jsonzeilen_aus_bytes`]).
+//! ([`jsonzeilen_aus_bytes`]). **Eine CSV- oder TSV-Datei nimmt dieselbe
+//! Tuer** und zeigt ueber der Grenze ihre vollstaendigen Saetze
+//! ([`trenntext_aus_bytes`]); zerlegt und ausgerichtet wird sie auf diesem
+//! Faden und vor der Endbedingung von [`Vorschaumodell::laedt_noch`].
 //!
 //! **Eine Datei in einem lokalen Archiv liest derselbe Faden an**
 //! ([`archiveintrag_laden`]), ueber den `Archivleser` des Herauskopierens und
@@ -242,12 +245,14 @@ use krk_core::leseprofil::{Auskunft, Profile, Zusammenfassungszeile, zusammenfas
 use krk_core::ort::Archivort;
 use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
 use krk_core::text::datei::{anlesen, bis_zur_grenze_lesen};
+use krk_core::trenntext::{self, dialekt_erkennen, vollstaendig_bis};
 use krk_core::verzeichnis::Typ;
 
 use crate::editormodell::Dateityp;
 use crate::hervorhebung::{self, Darstellungsart, Tafel};
 use crate::jsonzeilen;
 use crate::markdown::{self, Gerendert, Lesart};
+use crate::trenntextvorschau;
 
 /// Bis zu welcher Groesse eine Textdatei als Inhalt erscheint (C6).
 pub const TEXTGRENZE: u64 = 1024 * 1024;
@@ -402,6 +407,16 @@ pub enum Inhalt {
     /// haengt, und `hervorhebung::art` entscheidet die Darstellung nach dem
     /// Pfad.
     Text(String),
+    /// Eine CSV- oder TSV-Datei als ausgerichteter Text mit Kopfzeile,
+    /// Spaltenbuchstaben und Zeilennummern (E17 des Plans
+    /// `261018-0822_*_plan-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md`).
+    ///
+    /// **Ein eigener Wert und kein [`Inhalt::Text`]**, weil die Ansicht ihn
+    /// anders stellt: ohne Umbruch, mit waagerechtem Rollbalken, ohne
+    /// Einfaerbung und ohne Nummernspalte, denn die Nummern stehen schon im
+    /// Text. Aufbereitet hat ihn [`trenntextvorschau::aufbereiten`] auf dem
+    /// Arbeitsfaden.
+    Trenntext(String),
     /// Gerendertes Markdown aus einer Datei: der Text ohne seine
     /// Auszeichnungszeichen und die Stellen, die eine Auszeichnung tragen
     /// (C4 der Runde 6).
@@ -733,6 +748,7 @@ impl Ladevorgang {
                     Inhalt::Bildfolge(folge) => Some(Arc::clone(&folge.verzeichnis)),
                     Inhalt::Leer
                     | Inhalt::Text(_)
+                    | Inhalt::Trenntext(_)
                     | Inhalt::Markdown(_)
                     | Inhalt::Bild { .. }
                     | Inhalt::Pdf { .. }
@@ -1026,6 +1042,7 @@ impl Tabstand<'_> {
             Inhalt::Metadaten { metadaten, .. } => metadaten.typ != Typ::Datei,
             Inhalt::Leer
             | Inhalt::Text(_)
+            | Inhalt::Trenntext(_)
             | Inhalt::Markdown(_)
             | Inhalt::Bild { .. }
             | Inhalt::Pdf { .. }
@@ -1346,6 +1363,7 @@ impl Vorschaumodell {
             Inhalt::Bildfolge(folge) => folge.foto().map(|foto| foto.pfad().to_path_buf()),
             Inhalt::Leer
             | Inhalt::Text(_)
+            | Inhalt::Trenntext(_)
             | Inhalt::Markdown(_)
             | Inhalt::Bild { .. }
             | Inhalt::Pdf { .. }
@@ -1367,6 +1385,7 @@ impl Vorschaumodell {
                 Inhalt::Hinweis(_) => None,
                 Inhalt::Leer
                 | Inhalt::Text(_)
+                | Inhalt::Trenntext(_)
                 | Inhalt::Markdown(_)
                 | Inhalt::Bild { .. }
                 | Inhalt::Pdf { .. }
@@ -1376,6 +1395,7 @@ impl Vorschaumodell {
             },
             Inhalt::Leer
             | Inhalt::Text(_)
+            | Inhalt::Trenntext(_)
             | Inhalt::Markdown(_)
             | Inhalt::Bild { .. }
             | Inhalt::Pdf { .. }
@@ -1412,6 +1432,7 @@ impl Vorschaumodell {
             Inhalt::Bildfolge(folge) => Some(folge.stand()),
             Inhalt::Leer
             | Inhalt::Text(_)
+            | Inhalt::Trenntext(_)
             | Inhalt::Markdown(_)
             | Inhalt::Bild { .. }
             | Inhalt::Pdf { .. }
@@ -1462,6 +1483,12 @@ impl Vorschaumodell {
     pub fn zeigt_dateitext(&self) -> bool {
         match self.aktiver_inhalt() {
             Inhalt::Text(_) => self.darstellungspfad().is_some(),
+            // **Ein Trenntext traegt seine Nummern selbst** (E17): links jeder
+            // Zeile steht die Nummer des Satzes, und die Zeilen der Anzeige
+            // sind nicht die Zeilen der Datei — ueber ihnen stehen Kopfzeile,
+            // Buchstaben und Trennlinie, und ein Satz mit einem Umbruch in
+            // Anfuehrungszeichen ist eine Zeile der Anzeige und zwei der Datei.
+            Inhalt::Trenntext(_) => false,
             // **Eine Zusammenfassung traegt keine Nummern**, aus demselben
             // Grund wie gerendertes Markdown darueber: die Zahlen zaehlten die
             // Zeilen der Zusammenfassung, und daneben steht keine Datei mit
@@ -1738,6 +1765,14 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile, heim: Option<&Heimordner>
             Some(text) => text_als_inhalt(pfad, text, Dateityp::von_pfad(pfad, heim), tafel),
             None => auf_die_metadaten(metadaten),
         },
+        // Angelesen wie JSON-Zeilen, siehe [`trenntext_aus_bytes`]; was dort
+        // keine Tabelle und kein Text wird, beschreiben die Metadaten.
+        Leseart::Trenntext(art) => match anlesen(pfad, TEXTGRENZE + 1).ok().and_then(|bytes| {
+            trenntext_aus_bytes(bytes, art, pfad, Dateityp::von_pfad(pfad, heim), tafel)
+        }) {
+            Some(inhalt) => inhalt,
+            None => auf_die_metadaten(metadaten),
+        },
     }
 }
 
@@ -1755,6 +1790,9 @@ enum Leseart {
     Pdf,
     /// Eine Datei aus JSON-Zeilen ([`jsonzeilen::ist_jsonzeilenpfad`]).
     Jsonzeilen,
+    /// Eine CSV- oder TSV-Datei ([`trenntext::Art::aus_namen`], E1); die
+    /// Endung entscheidet hier wie im Editor an derselben Stelle des Kerns.
+    Trenntext(trenntext::Art),
     /// Alles Uebrige: Text, wenn es UTF-8 unter [`TEXTGRENZE`] ist.
     Text,
 }
@@ -1767,6 +1805,8 @@ impl Leseart {
             Leseart::Pdf
         } else if jsonzeilen::ist_jsonzeilenpfad(pfad) {
             Leseart::Jsonzeilen
+        } else if let Some(art) = pfad.file_name().and_then(trenntext::Art::aus_namen) {
+            Leseart::Trenntext(art)
         } else {
             Leseart::Text
         }
@@ -1777,7 +1817,7 @@ impl Leseart {
     fn grenze(self) -> u64 {
         match self {
             Leseart::Bild | Leseart::Pdf => BILDGRENZE,
-            Leseart::Jsonzeilen | Leseart::Text => TEXTGRENZE,
+            Leseart::Jsonzeilen | Leseart::Trenntext(_) | Leseart::Text => TEXTGRENZE,
         }
     }
 }
@@ -1832,6 +1872,60 @@ fn jsonzeilen_aus_bytes(mut bytes: Vec<u8>) -> Option<String> {
         &text,
         gekuerzt.then_some(TEXTGRENZE / (1024 * 1024)),
     ))
+}
+
+/// Bereitet die angelesenen Bytes einer CSV- oder TSV-Datei als
+/// ausgerichteten Text auf ([`trenntextvorschau::aufbereiten`], E17), oder als
+/// den Text, der dasteht, wenn daraus keine Tabelle wird; `None`, wenn sie
+/// kein UTF-8 sind oder ueber der Grenze keine Tabelle ergeben.
+///
+/// **Ueber [`TEXTGRENZE`] wird angelesen und nicht abgewiesen**, wie bei
+/// [`jsonzeilen_aus_bytes`] und mit demselben einen Byte mehr als Auskunft,
+/// dass gekuerzt ist. Gekuerzt wird in drei Schritten: auf die Grenze, dann
+/// zurueck an die letzte Zeichengrenze davor (ein unvollstaendiges Zeichen am
+/// Ende ist der Schnitt, ein ungueltiges davor heisst „kein UTF-8“), dann an
+/// das Ende des letzten vollstaendigen Satzes ([`vollstaendig_bis`]), mit
+/// Ruecksicht auf Umbrueche in Anfuehrungszeichen. Das Trennzeichen waehlt
+/// [`dialekt_erkennen`] vor dem letzten Schritt, weil dieser es braucht.
+///
+/// **Keine Tabelle wird daraus** bei einem offenen Anfuehrungszeichen, mehr
+/// als [`trenntext::HOECHSTENS_SPALTEN`] Spalten oder keiner Zeile. Unter der
+/// Grenze erscheint die Datei dann als Text wie vor diesem Paket
+/// ([`text_als_inhalt`], eingefaerbt nach ihrer Endung); ueber ihr stuende ein
+/// angeschnittener Text da, und es bleibt bei den Metadaten wie fuer jede
+/// Textdatei ueber 1 MB.
+fn trenntext_aus_bytes(
+    mut bytes: Vec<u8>,
+    art: trenntext::Art,
+    pfad: &Path,
+    typ: Dateityp,
+    tafel: Tafel,
+) -> Option<Inhalt> {
+    if bytes.len() as u64 <= TEXTGRENZE {
+        let text = String::from_utf8(bytes).ok()?;
+        let dialekt = dialekt_erkennen(art, &text);
+        return Some(
+            match trenntextvorschau::aufbereiten(&text, &dialekt, None) {
+                Some(tabelle) => Inhalt::Trenntext(tabelle),
+                None => text_als_inhalt(pfad, text, typ, tafel),
+            },
+        );
+    }
+    bytes.truncate(TEXTGRENZE as usize);
+    let gueltig = match std::str::from_utf8(&bytes) {
+        Ok(_) => bytes.len(),
+        // Ein Zeichen, das der Schnitt zerteilt hat; was davor steht, gilt.
+        Err(fehler) if fehler.error_len().is_none() => fehler.valid_up_to(),
+        Err(_) => return None,
+    };
+    bytes.truncate(gueltig);
+    let angelesen = std::str::from_utf8(&bytes).ok()?;
+    let dialekt = dialekt_erkennen(art, angelesen);
+    let bis = vollstaendig_bis(angelesen.as_bytes(), dialekt.trennzeichen);
+    bytes.truncate(bis);
+    let text = String::from_utf8(bytes).ok()?;
+    trenntextvorschau::aufbereiten(&text, &dialekt, Some(TEXTGRENZE / (1024 * 1024)))
+        .map(Inhalt::Trenntext)
 }
 
 /// Liest den Anfang einer Datei in einem lokalen Archiv und bereitet ihn auf
@@ -1893,6 +1987,9 @@ fn archiveintrag_laden(
             metadaten: None,
         }),
         Leseart::Jsonzeilen => jsonzeilen_aus_bytes(bytes).map(Inhalt::Text),
+        Leseart::Trenntext(art) => {
+            trenntext_aus_bytes(bytes, art, &name, Dateityp::von_pfad(&name, None), tafel)
+        }
         Leseart::Text if !voll => String::from_utf8(bytes)
             .ok()
             .map(|text| text_als_inhalt(&name, text, Dateityp::von_pfad(&name, None), tafel)),
@@ -2786,6 +2883,213 @@ mod tests {
             *modell.aktiver_inhalt(),
             laden(&lokal, Tafel::Hell, &Profile::default(), None)
         );
+    }
+
+    /// Was die Vorschau fuer eine kleine CSV mit Semikolon und Umlauten zeigt:
+    /// den ausgerichteten Text aus [`trenntextvorschau::aufbereiten`], fuer
+    /// `.csv`, `.TSV` und `.tab`, und ohne Nummernspalte daneben.
+    #[test]
+    fn eine_csv_erscheint_auf_der_platte_als_ausgerichteter_text() {
+        let ordner = Pruefordner::neu("trenntext");
+        for (name, inhalt, art) in [
+            (
+                "preise.csv",
+                "Name;Preis\nÄpfel;1,50\n",
+                trenntext::Art::Csv,
+            ),
+            (
+                "PREISE.TSV",
+                "Name\tPreis\nÄpfel\t1,50\n",
+                trenntext::Art::Tsv,
+            ),
+            ("liste.tab", "a\tb\n", trenntext::Art::Tsv),
+        ] {
+            let pfad = ordner.pfad().join(name);
+            std::fs::write(&pfad, inhalt).expect("Probendatei");
+            let erwartet =
+                trenntextvorschau::aufbereiten(inhalt, &dialekt_erkennen(art, inhalt), None)
+                    .expect("eine Tabelle");
+            assert_eq!(
+                laden(&pfad, Tafel::Hell, &Profile::default(), None),
+                Inhalt::Trenntext(erwartet),
+                "{name}"
+            );
+        }
+    }
+
+    /// Ein offenes Anfuehrungszeichen, eine leere Datei und eine mit mehr
+    /// Spalten als [`trenntext::HOECHSTENS_SPALTEN`] erscheinen als Text wie
+    /// vor diesem Paket; eine CSV, die kein UTF-8 ist, beschreiben die
+    /// Metadaten.
+    #[test]
+    fn eine_unterminierte_eine_leere_und_eine_zu_breite_csv_erscheinen_als_text() {
+        let ordner = Pruefordner::neu("trenntext-text");
+        let breit = format!("{}\n", ",".repeat(trenntext::HOECHSTENS_SPALTEN));
+        for (name, inhalt) in [
+            ("offen.csv", "a,\"offen\nb,c\n".to_owned()),
+            ("leer.csv", String::new()),
+            ("breit.csv", breit),
+        ] {
+            let pfad = ordner.pfad().join(name);
+            std::fs::write(&pfad, &inhalt).expect("Probendatei");
+            assert_eq!(
+                laden(&pfad, Tafel::Hell, &Profile::default(), None),
+                Inhalt::Text(inhalt.clone()),
+                "{name} erscheint als Text"
+            );
+        }
+        let latin = ordner.pfad().join("latin.csv");
+        std::fs::write(&latin, b"Name;Preis\n\xc4pfel;1,50\n").expect("Probendatei");
+        assert!(
+            matches!(
+                laden(&latin, Tafel::Hell, &Profile::default(), None),
+                Inhalt::Metadaten { .. }
+            ),
+            "Windows-1252 ist kein UTF-8 (E4)"
+        );
+    }
+
+    /// Eine grosse CSV: jeder Satz traegt ein Feld mit einem Umbruch in
+    /// Anfuehrungszeichen und Umlaute, damit die Grenze mitten in einem
+    /// gequoteten Umbruch oder mitten in einem Zeichen liegen kann.
+    fn grosse_csv() -> String {
+        let satz = "Äpfel;\"zwei\nzeilen\";1,50\n";
+        satz.repeat(TEXTGRENZE as usize / satz.len() + 10)
+    }
+
+    /// Ueber der Lesegrenze zeigt eine CSV ihre vollstaendigen Saetze und sagt
+    /// in der Kopfzeile, dass gekuerzt ist; kein Satz erscheint angeschnitten.
+    #[test]
+    fn eine_csv_ueber_der_grenze_zeigt_ihre_vollstaendigen_saetze_und_sagt_es() {
+        let ordner = Pruefordner::neu("trenntext-gross");
+        let pfad = ordner.pfad().join("gross.csv");
+        let inhalt = grosse_csv();
+        std::fs::write(&pfad, &inhalt).expect("Probendatei");
+        let Inhalt::Trenntext(text) = laden(&pfad, Tafel::Hell, &Profile::default(), None) else {
+            panic!("eine grosse CSV erscheint gekuerzt als Tabelle");
+        };
+        let satzlaenge = "Äpfel;\"zwei\nzeilen\";1,50\n".len();
+        let ganze = TEXTGRENZE as usize / satzlaenge;
+        let kopf = satz(
+            Text::TrenntextKopfzeileGekuerzt,
+            &[
+                (
+                    "trennzeichen",
+                    &krk_core::sprache::text(Text::TrennzeichenSemikolon),
+                ),
+                (
+                    "zeilen",
+                    &anzahl(Zahlwort::TrenntextZeilen, ganze as u64, &[]),
+                ),
+                ("spalten", &anzahl(Zahlwort::TrenntextSpalten, 3, &[])),
+                ("grenze", &1),
+            ],
+        );
+        assert_eq!(text.lines().next(), Some(kopf.as_str()));
+        let letzte = text.lines().last().expect("eine letzte Zeile");
+        assert_eq!(letzte, format!("{ganze}│ Äpfel │ zwei⏎zeilen │ 1,50"));
+        assert_eq!(text.lines().count(), ganze + 3);
+
+        // Dieselbe Kuerzung, wenn die Grenze ein Zeichen zerteilt: der Rest
+        // vor der Grenze ist dann kein UTF-8 bis zum Ende, und trotzdem
+        // erscheint die Tabelle.
+        let versetzt = ordner.pfad().join("versetzt.csv");
+        let mut bytes = b"x\n".to_vec();
+        while bytes.len() < TEXTGRENZE as usize - 1 {
+            bytes.extend_from_slice(b"y\n");
+        }
+        bytes.truncate(TEXTGRENZE as usize - 1);
+        bytes.extend_from_slice("Ä\n".as_bytes());
+        std::fs::write(&versetzt, &bytes).expect("Probendatei");
+        assert!(matches!(
+            laden(&versetzt, Tafel::Hell, &Profile::default(), None),
+            Inhalt::Trenntext(_)
+        ));
+    }
+
+    /// Der Weg, den die Auswahl einer CSV in der Oberflaeche nimmt, ueber und
+    /// unter der Grenze: der Arbeitsfaden liefert, und danach traegt der Tab
+    /// den ausgerichteten Text ohne Nummernspalte.
+    #[test]
+    fn die_auswahl_einer_csv_zeigt_sie_ueber_den_arbeitsfaden() {
+        let ordner = Pruefordner::neu("trenntext-weg");
+        let gross = ordner.pfad().join("gross.csv");
+        std::fs::write(&gross, grosse_csv()).expect("Probendatei");
+        let klein = ordner.pfad().join("klein.tsv");
+        std::fs::write(&klein, "a\tb\n1\t2\n").expect("Probendatei");
+        for pfad in [&gross, &klein] {
+            let mut modell = Vorschaumodell::neu();
+            modell.datei_anzeigen(pfad, Tafel::Hell, Arc::default(), None);
+            assert!(modell.laedt_noch(), "gelesen wird auf dem Arbeitsfaden");
+            bis_geliefert(&mut modell);
+            assert!(matches!(modell.aktiver_inhalt(), Inhalt::Trenntext(_)));
+            assert_eq!(
+                *modell.aktiver_inhalt(),
+                laden(pfad, Tafel::Hell, &Profile::default(), None)
+            );
+            assert_eq!(modell.aktiver_pfad().as_deref(), Some(pfad.as_path()));
+            assert!(!modell.zeigt_dateitext(), "keine Nummernspalte daneben");
+        }
+    }
+
+    /// Eine CSV in einem Zip erscheint wie dieselbe Datei auf der Platte, ueber
+    /// und unter der Lesegrenze (E18).
+    #[test]
+    fn eine_csv_im_zip_erscheint_wie_auf_der_platte() {
+        let ordner = Pruefordner::neu("archiv-trenntext-zip");
+        let gross = grosse_csv();
+        let klein = "a;b\nÄ;ö\n";
+        let offen = "a,\"offen\n";
+        let archiv = zip_packen(
+            &ordner,
+            "tabellen.zip",
+            &[
+                ("gross.csv", gross.as_bytes()),
+                ("klein.csv", klein.as_bytes()),
+                ("offen.csv", offen.as_bytes()),
+            ],
+            None,
+        );
+        for (name, inhalt) in [
+            ("gross.csv", gross.as_str()),
+            ("klein.csv", klein),
+            ("offen.csv", offen),
+        ] {
+            let lokal = ordner.pfad().join(name);
+            std::fs::write(&lokal, inhalt).expect("Vergleichsdatei");
+            let modell = archiv_geladen(&archivdatei(
+                &archiv,
+                krk_core::archiv::Archivformat::Zip,
+                name,
+            ));
+            assert_eq!(
+                *modell.aktiver_inhalt(),
+                laden(&lokal, Tafel::Hell, &Profile::default(), None),
+                "{name} im Zip erscheint wie auf der Platte"
+            );
+            assert_eq!(modell.darstellungspfad(), Some(PathBuf::from(name)));
+        }
+    }
+
+    /// Misst Zerlegung und Aufbereitung einer CSV von 1 MiB kopflos, den
+    /// Lesegrenzen der Vorschau entsprechend (E21). Kein Teil von
+    /// `make check`:
+    /// `cargo test --release -p krk-ui -- --ignored --nocapture messung_trenntextvorschau`.
+    #[test]
+    #[ignore = "Messung, gefahren von Hand"]
+    fn messung_trenntextvorschau_an_einem_mib() {
+        let ordner = Pruefordner::neu("trenntext-messung");
+        let pfad = ordner.pfad().join("mess.csv");
+        std::fs::write(&pfad, grosse_csv()).expect("Probendatei");
+        let mut zeiten = Vec::new();
+        for _ in 0..5 {
+            let beginn = std::time::Instant::now();
+            let inhalt = laden(&pfad, Tafel::Hell, &Profile::default(), None);
+            zeiten.push(beginn.elapsed());
+            assert!(matches!(inhalt, Inhalt::Trenntext(_)));
+        }
+        zeiten.sort();
+        println!("trenntextvorschau 1 MiB, laden je Lauf: {zeiten:?}");
     }
 
     /// Teil 2: ein verschluesselter Eintrag zeigt die Angaben, ebenso eine
