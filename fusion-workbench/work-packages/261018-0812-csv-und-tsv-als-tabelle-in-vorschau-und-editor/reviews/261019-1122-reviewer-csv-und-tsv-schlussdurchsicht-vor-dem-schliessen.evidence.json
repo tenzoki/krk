@@ -1,0 +1,28 @@
+{
+  "schema": "fusion.evidence/v1",
+  "id": "9b47b0f5-a5b7-46cb-ae02-07a98130543f",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "subject": {
+    "git_tree": "8cbce3b7536a59e39fa4b74b7e3e79517d5fa174",
+    "git_range": null
+  },
+  "brief_revision": "sha256:b666a71a47681cfa31e6162e8f01b1a9b52643e08325bf97a653d62c96682ad4",
+  "plan_revision": "sha256:427ce1f73cea9df1d7cc66e3757504e239c8008beb38bc9009e6153566943074",
+  "role": {
+    "profile": "reviewer",
+    "version": "13.1.12"
+  },
+  "host": "claude-code",
+  "execution_policy": "claude-guided",
+  "verdict": "revise",
+  "uncertainties": [],
+  "checks": [],
+  "report": {
+    "path": "work-packages/261018-0812-csv-und-tsv-als-tabelle-in-vorschau-und-editor/reviews/261019-1122-reviewer-csv-und-tsv-schlussdurchsicht-vor-dem-schliessen.md",
+    "sha256": "sha256:ca74b7e4573e31c86093b09834eeba48b51e78f6c21825392c773e9fe6e954a5",
+    "kind": "review"
+  },
+  "predecessor": null,
+  "accepted_at": "2026-10-19T09:47:07Z",
+  "extensions": {}
+}

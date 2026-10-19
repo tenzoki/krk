@@ -1,0 +1,30 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "0dd82181-008d-49f6-b45d-6527c3e33709",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/261018-0812-csv-und-tsv-als-tabelle-in-vorschau-und-editor/decisions/261019-1122-gilt-der-stand-mit-den-zeilenenden-der-datei-als-antwort-auf-die-sicherungsform-einer-csv.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "implemented",
+    "answer_ref": {
+      "kind": "other",
+      "path": "work-packages/261018-0812-csv-und-tsv-als-tabelle-in-vorschau-und-editor/decisions/261019-1122-gilt-der-stand-mit-den-zeilenenden-der-datei-als-antwort-auf-die-sicherungsform-einer-csv.md",
+      "sha256": "sha256:e0e19d81c590df08d1e2652dad4348e3732b759154160131861ea998c5d42cbe"
+    },
+    "implementation_ref": "ff2d7b76",
+    "superseded_by": null,
+    "deferral": null
+  }
+}

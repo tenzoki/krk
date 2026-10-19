@@ -34,3 +34,5 @@ Möglichkeit 2. Der Unterschied zur Lage vom 260808 ist benannt: bei CSV trägt 
 
 ---
 Answered: 261018-0812-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md — Empfehlung des Plans angenommen („ja“); ruled by user, Kai Stalmann <kai@stalmann.org>
+
+Superseded: 261019 durch 261019-1122-gilt-der-stand-mit-den-zeilenenden-der-datei-als-antwort-auf-die-sicherungsform-einer-csv.md (Nutzer, Möglichkeit 1).

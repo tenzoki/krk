@@ -17,14 +17,17 @@
   },
   "extensions": {},
   "control": {
-    "state": "answered",
+    "state": "superseded",
     "answer_ref": {
       "kind": "other",
       "path": "work-packages/261018-0812-csv-und-tsv-als-tabelle-in-vorschau-und-editor/261018-0812-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md",
       "sha256": "sha256:b666a71a47681cfa31e6162e8f01b1a9b52643e08325bf97a653d62c96682ad4"
     },
     "implementation_ref": null,
-    "superseded_by": null,
+    "superseded_by": {
+      "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+      "record_id": "0dd82181-008d-49f6-b45d-6527c3e33709"
+    },
     "deferral": null
   }
 }

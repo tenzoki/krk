@@ -3,7 +3,7 @@
   "id": "b3613587-45ef-4515-9cc5-e9de657b768d",
   "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
   "domain": "code",
-  "status": "claimed",
+  "status": "done",
   "claim": {
     "checkout_id": "6c11b1f2",
     "person": "Kai Stalmann <kai@stalmann.org>",
@@ -44,7 +44,20 @@
   ],
   "references": [],
   "evidence": [],
-  "outcome": null,
+  "outcome": {
+    "class": "completed",
+    "reason": "CSV und TSV als Tabelle in Vorschau und Editor mit Einfuegen, Anhaengen, Loeschen, Kopieren und Einfuegen eines Bereichs und Rollen in beiden Richtungen (17c9ac81..733067ff), ausgeliefert mit 3.9.0 und 3.9.1; Nutzertest am Buendel: funktioniert; Spalte einfuegen an 16 MiB 127-130 ms bleibt als Defekt offen",
+    "evidence": [
+      {
+        "ref": {
+          "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+          "record_id": "9b47b0f5-a5b7-46cb-ae02-07a98130543f",
+          "revision": "sha256:b48ab86af56c00db8eba7189b1bf39452053fb2ac55869836b6365bc48e9d965"
+        },
+        "policy": "claude-guided"
+      }
+    ]
+  },
   "provenance": {
     "source": "created",
     "legacy_fields": {}
