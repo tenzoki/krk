@@ -1064,9 +1064,11 @@ pub enum Text {
     /// der Erlaeuterung, der sagt, dass der Ort keinen Papierkorb hat und das
     /// Loeschen nicht zurueckzunehmen ist; `{ordner}`.
     LoeschenEndgueltigAus,
-    /// `loeschwarnung::papierkorb_unbekannt`: ob das Ziel einen Papierkorb
-    /// fuehrt, liess sich nicht feststellen, und es wurde nichts geloescht.
-    LoeschenPapierkorbUnbekannt,
+    /// `loeschwarnung::endgueltig_frage_und_erlaeuterung` im unklaren Fall:
+    /// der erste Absatz der Erlaeuterung, der sagt, dass KRK nicht feststellen
+    /// konnte, ob der Ort einen Papierkorb hat, und dass endgueltig geloescht
+    /// wird; `{ordner}`.
+    LoeschenEndgueltigUngewissAus,
     /// `Warngrund::Unentscheidbar`: die Fuegung in der Loeschfrage und in der
     /// Erlaeuterung.
     WarngrundUnentscheidbar,
@@ -2284,7 +2286,7 @@ impl Text {
         Text::BelegungsdateiOhneAblageordner,
         Text::Markierungsstand,
         Text::LoeschenEndgueltigAus,
-        Text::LoeschenPapierkorbUnbekannt,
+        Text::LoeschenEndgueltigUngewissAus,
         Text::WarngrundUnentscheidbar,
         Text::WarngrundNetzlaufwerk,
         Text::WarngrundCloudort,

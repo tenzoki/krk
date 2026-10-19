@@ -557,6 +557,8 @@ fn gestattet(anspruch: Anspruch, lage: Lage) -> bool {
 /// ferner**: er hat keinen lokalen Pfad. [`Ortsbedarf::Beschreibbar`] sagt
 /// allein in einem Archiv nein, das KRK nicht beschreiben darf, und wirkt
 /// sonst wie [`Ortsbedarf::Ueberall`] (E14 des Plans der Archive).
+/// [`Ortsbedarf::NichtFern`] sagt allein an einem fernen Ort nein und im
+/// Archiv ja (Nutzerentscheid vom 261019 zu „Zur Zwischenablage springen“).
 ///
 /// **Sie fragt neben dem Ort den Fokus, und das ist eine Abweichung vom
 /// Plan der sftp-Ordner**, der allein den Ort nennt:
@@ -573,6 +575,8 @@ fn ort_passt(bedarf: Ortsbedarf, ort: Ortsart, fokus: Fokus) -> bool {
         }
         (Ortsbedarf::Beschreibbar, Ortsart::Fern) => true,
         (Ortsbedarf::Beschreibbar, Ortsart::Archiv { beschreibbar }) => beschreibbar,
+        (Ortsbedarf::NichtFern, Ortsart::Fern) => false,
+        (Ortsbedarf::NichtFern, Ortsart::Archiv { .. }) => true,
     }
 }
 
@@ -2859,7 +2863,7 @@ mod tests {
     /// `betroffene_oder_melden` beim Anwendungsdelegierten.
     #[test]
     fn an_einem_fernen_ort_sind_genau_diese_befehle_ausgegraut() {
-        const AUSGEGRAUT: [Kommando; 11] = [
+        const AUSGEGRAUT: [Kommando; 12] = [
             Kommando::TerminalOeffnen,
             Kommando::MitStandardprogrammOeffnen,
             Kommando::Teilen,
@@ -2874,6 +2878,10 @@ mod tests {
             // ausgewaehlten Eintrag im Editor, wie `Bearbeiten`; der Plan
             // nennt ihn nicht, der Bearbeiter hat ihn gefunden.
             Kommando::EditorRundweg,
+            // Seit dem 261019 (`Ortsbedarf::NichtFern`): der Pfad aus der
+            // Zwischenablage ist ein Pfad auf diesem Mac; im Archiv bleibt der
+            // Sprung zulaessig.
+            Kommando::ZwischenablageSpringen,
         ];
         let lagen = jede_lage();
         let mut gefunden = Vec::new();
@@ -2984,11 +2992,12 @@ mod tests {
     /// Jeder Ortsbedarf, fuer die Proben. Die Vollstaendigkeit haelt
     /// [`ort_passt`], das ueber ihn ohne Auffangzweig verzweigt; dass die
     /// Liste ihm folgt, haelt die Zahl hier mit der Zuordnung darunter.
-    const JEDER_ORTSBEDARF: [Ortsbedarf; 4] = [
+    const JEDER_ORTSBEDARF: [Ortsbedarf; 5] = [
         Ortsbedarf::Ueberall,
         Ortsbedarf::Lokal,
         Ortsbedarf::LokalImDateifenster,
         Ortsbedarf::Beschreibbar,
+        Ortsbedarf::NichtFern,
     ];
 
     /// An einem fernen Ort aendert der vierte Ortsbedarf nichts: jede
@@ -2998,7 +3007,9 @@ mod tests {
     /// Vor den Archiven trugen die fuenf Befehle mit
     /// [`Ortsbedarf::Beschreibbar`] den Wert [`Ortsbedarf::Ueberall`]; die
     /// erwartete Antwort steht deshalb fuer beide als ja da, und die zwei
-    /// lokalen Werte antworten wie unter `aktiv_fern = true`.
+    /// lokalen Werte antworten wie unter `aktiv_fern = true`. Der fuenfte Wert,
+    /// [`Ortsbedarf::NichtFern`], ist die eine bewusste Aenderung am fernen
+    /// Ort seitdem (261019) und steht als nein da.
     #[test]
     fn an_einem_fernen_ort_aendert_der_ortsbedarf_nichts() {
         for bedarf in JEDER_ORTSBEDARF {
@@ -3007,6 +3018,9 @@ mod tests {
                     Ortsbedarf::Ueberall | Ortsbedarf::Beschreibbar => true,
                     Ortsbedarf::Lokal => false,
                     Ortsbedarf::LokalImDateifenster => fokus != Fokus::Dateifenster,
+                    // Der fuenfte Wert kam am 261019 und graut bewusst aus:
+                    // „Zur Zwischenablage springen“ trug vorher `Ueberall`.
+                    Ortsbedarf::NichtFern => false,
                 };
                 assert_eq!(
                     ort_passt(bedarf, Ortsart::Fern, fokus),
@@ -3049,8 +3063,9 @@ mod tests {
     ///
     /// **Gemessen an der Regel und nicht am Ortsbedarf allein**, wie
     /// `an_einem_fernen_ort_sind_genau_diese_befehle_ausgegraut`. In einem
-    /// beschreibbaren Archiv ist es dieselbe Liste wie fern: was einen lokalen
-    /// Pfad braucht. In einer `.gz`-Datei kommen die fuenf dazu, die in den
+    /// beschreibbaren Archiv ist es die Liste von fern ohne „Zur
+    /// Zwischenablage springen“ (`Ortsbedarf::NichtFern`, 261019): was einen
+    /// lokalen Pfad braucht. In einer `.gz`-Datei kommen die fuenf dazu, die in den
     /// angezeigten Ordner schreiben oder aus ihm entfernen.
     ///
     /// **Was sie nicht sieht:** ob ein Befehl, der hier zulaessig bleibt, im

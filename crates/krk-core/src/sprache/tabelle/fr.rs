@@ -781,8 +781,8 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::LoeschenEndgueltigAus => {
             "Cet emplacement n’a pas de Corbeille\u{a0}: les entrées supprimées ne peuvent pas être récupérées. Suppression depuis {ordner}."
         }
-        Text::LoeschenPapierkorbUnbekannt => {
-            "impossible de déterminer si la destination a une Corbeille, rien n’a été supprimé\u{202f}; supprimer dans le Finder"
+        Text::LoeschenEndgueltigUngewissAus => {
+            "KRK n’a pas pu déterminer si cet emplacement a une Corbeille. Les entrées seront donc supprimées définitivement et ne pourront pas être récupérées. Suppression depuis {ordner}."
         }
         Text::WarngrundUnentscheidbar => "depuis une destination de nature inconnue",
         Text::WarngrundNetzlaufwerk => "depuis un volume réseau",

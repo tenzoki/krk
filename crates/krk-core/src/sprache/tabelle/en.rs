@@ -692,8 +692,8 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::LoeschenEndgueltigAus => {
             "This location has no Trash: deleted entries cannot be recovered. Deleting from {ordner}."
         }
-        Text::LoeschenPapierkorbUnbekannt => {
-            "could not determine whether the destination has a Trash, nothing was deleted; delete in the Finder"
+        Text::LoeschenEndgueltigUngewissAus => {
+            "KRK could not determine whether this location has a Trash. The entries will therefore be deleted permanently and cannot be recovered. Deleting from {ordner}."
         }
         Text::WarngrundUnentscheidbar => "from a destination of unknown kind",
         Text::WarngrundNetzlaufwerk => "from a network volume",

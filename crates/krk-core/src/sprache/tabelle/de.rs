@@ -728,8 +728,8 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::LoeschenEndgueltigAus => {
             "Dieser Ort hat keinen Papierkorb: gelöschte Einträge lassen sich nicht zurückholen. Gelöscht wird aus {ordner}."
         }
-        Text::LoeschenPapierkorbUnbekannt => {
-            "ob das Ziel einen Papierkorb führt, ließ sich nicht feststellen; es wurde nichts gelöscht; im Finder löschen"
+        Text::LoeschenEndgueltigUngewissAus => {
+            "KRK konnte nicht feststellen, ob dieser Ort einen Papierkorb hat. Die Einträge werden deshalb endgültig gelöscht und lassen sich nicht zurückholen. Gelöscht wird aus {ordner}."
         }
         Text::WarngrundUnentscheidbar => "von einem Ziel unbekannter Einordnung",
         Text::WarngrundNetzlaufwerk => "von einem Netzlaufwerk",

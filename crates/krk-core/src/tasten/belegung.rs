@@ -780,6 +780,14 @@ pub enum Seite {
 /// Ordner in einem Archiv ist weder lokal noch fern, und ob in ihn geschrieben
 /// werden darf, haengt am Format. Die zwei lokalen Werte sagen in einem
 /// Archiv nein wie an einem fernen Ort.
+///
+/// **Seit dem 261019 ein fuenfter Wert**, [`Ortsbedarf::NichtFern`]: „Zur
+/// Zwischenablage springen“ ist an einem fernen Ort ausgegraut (Nutzerentscheid
+/// zum Befund
+/// `261017-0004-zur-zwischenablage-springen-liest-in-einem-fernen-tab-einen-lokalen-pfad-als-serverpfad`
+/// im Paket `261016-1945-sftp-ordner-im-dateifenster-wie-lokal`), im Archiv
+/// aber nicht, wo der Sprung schon vorher wirkte. [`Ortsbedarf::Lokal`] graute
+/// ihn auch dort aus.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Ortsbedarf {
     /// Wirkt an jedem Ort, lokal wie fern.
@@ -800,6 +808,10 @@ pub enum Ortsbedarf {
     /// ob ein Archiv beschreibbar ist, entscheidet sein Format am Wert
     /// (`Archivformat::beschreibbar`), ohne Systemaufruf.
     Beschreibbar,
+    /// Wirkt lokal und in einem Archiv, nicht an einem fernen Ort: der Befehl
+    /// liest einen Pfad auf diesem Mac und haette in einem fernen Tab keinen
+    /// Ort, an dem er ihn anwenden duerfte.
+    NichtFern,
 }
 
 /// Was ein Tastendruck im Dateifenster ausloest.
@@ -2068,6 +2080,10 @@ impl Kommando {
             | Kommando::OrdnerAnlegen
             | Kommando::DateiAnlegen
             | Kommando::Umbenennen => Ortsbedarf::Beschreibbar,
+            // Der Pfad aus der Zwischenablage ist ein Pfad auf diesem Mac und
+            // nie einer auf dem Server; an einem fernen Ort ist der Sprung
+            // deshalb ausgegraut, im Archiv wirkt er wie vorher (261019).
+            Kommando::ZwischenablageSpringen => Ortsbedarf::NichtFern,
             Kommando::AuswahlHoch
             | Kommando::AuswahlRunter
             | Kommando::SeiteHoch
@@ -2092,7 +2108,6 @@ impl Kommando {
             | Kommando::SpalteGroesseUmschalten
             | Kommando::SpalteDatumUmschalten
             | Kommando::SpalteTypUmschalten
-            | Kommando::ZwischenablageSpringen
             | Kommando::ZwischenablageAnsehen
             | Kommando::TabNeu
             | Kommando::TabSchliessen

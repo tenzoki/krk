@@ -52,7 +52,8 @@
 //! Typ: [`Erlaubnisbefund::Ja`] ist die **Erlaubnis** und nicht der Warngrund,
 //! und allein sie fuehrt in den Papierkorb. [`Erlaubnisbefund::Nein`] fuehrt
 //! seit dem 261016 zur endgueltigen Rueckfrage, [`Erlaubnisbefund::Unentschieden`]
-//! zu einer Meldung ohne Loeschen; die Tafel dazu steht in
+//! seit dem 261019 ebenfalls, aber mit eigenem Text, der keinen Ort ohne
+//! Papierkorb behauptet; die Tafel dazu steht in
 //! `crate::kommandos::loeschwarnung::vor_der_rueckfrage`.
 //!
 //! **`ist_warnwuerdig` gibt es an diesem Typ nicht**, und das ist der Ertrag des
@@ -175,8 +176,10 @@ impl Papierkorb for Systempapierkorb {
 ///   ausspricht, und loescht allein auf ihre Bestaetigung hin endgueltig.
 /// - [`Erlaubnisbefund::Unentschieden`] — der Pfad ist kein gueltiges UTF-8 und laesst
 ///   sich nicht in ein `NSString` uebersetzen. Das ist keine Aussage ueber das
-///   Ziel, sondern eine ueber KRKs Kenntnis von ihm, und der Aufrufer loescht
-///   dann nicht, weder in einen Papierkorb noch endgueltig, sondern meldet es.
+///   Ziel, sondern eine ueber KRKs Kenntnis von ihm. Der Aufrufer raeumt dann
+///   nicht in einen Papierkorb, sondern zeigt seit dem 261019 die endgueltige
+///   Rueckfrage mit eigenem Text, der sagt, dass KRK es nicht feststellen
+///   konnte, und loescht allein auf ihre Bestaetigung hin endgueltig.
 ///
 /// Der Ordner kommt **aufgeloest** herein. Diese Funktion ruft weder
 /// `canonicalize` noch sonst etwas am Dateisystem: eine Verknuepfung wuerde

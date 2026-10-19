@@ -262,8 +262,11 @@ löschen“ und dass sich nichts zurückholen lässt, die Schaltfläche heißt
 nur, dass nichts gelöscht wurde. Ein Ort mit Papierkorb geht unverändert den
 Weg in den Papierkorb. **Kann KRK nicht feststellen, ob ein Ort einen
 Papierkorb führt**, etwa weil sich der angezeigte Ordner nicht auflösen lässt,
-bietet es kein endgültiges Löschen an: es löscht nichts und sagt das in der
-Statuszeile.
+erscheint dieselbe endgültige Rückfrage, mit eigenem Text: sie sagt, dass KRK
+es nicht feststellen konnte und deshalb endgültig gelöscht wird, und behauptet
+keinen Ort ohne Papierkorb. Schaltfläche und Vorbelegung sind dieselben, und
+`cmd+return` löscht endgültig. Bis zur Fassung vom 261019 löschte KRK in
+diesem Fall nichts und sagte das in der Statuszeile.
 
 **Die zwei Ankreuzfelder der Bereichsleiste am Fensterfuß gelten dem sichtbaren
 Tab, nicht dem Fenster.** „Deep" dehnt die Suche auf den Unterbaum aus und
@@ -2381,10 +2384,11 @@ verbunden wird nicht.
   denselben Ordner, „Ordner angleichen“ (`opt+cmd+s`) stellt das andere Fenster
   auf ihn. Die Pfadeingabe (`shift+cmd+g`) nimmt einen Pfad auf demselben
   Server, absolut oder mit `~/` vom Anmeldeverzeichnis aus. Zurück zu einem
-  lokalen Ordner geht es über ein Lesezeichen, die Geräteleiste, „Ordner
-  angleichen“ aus einem lokalen Fenster oder „Zur Zwischenablage springen“
-  (`opt+cmd+g`): **der Pfad in der Zwischenablage gilt immer als Pfad auf dem
-  Mac**, nie als Pfad auf dem Server, und der Tab wechselt dorthin.
+  lokalen Ordner geht es über ein Lesezeichen, die Geräteleiste oder „Ordner
+  angleichen“ aus einem lokalen Fenster. **„Zur Zwischenablage springen“
+  (`opt+cmd+g`) ist im Ordner auf dem Server ausgegraut**: der Pfad in der
+  Zwischenablage ist ein Pfad auf dem Mac und nie einer auf dem Server, und
+  KRK liest ihn dort deshalb gar nicht.
 - **Der Fenstertitel** nennt `konto@rechner:/pfad`, mit abweichendem Port
   `konto@rechner:port:/pfad`.
 - **Kopieren und Verschieben** in jede Richtung: vom Mac auf den Server, vom
@@ -2441,7 +2445,7 @@ verbunden wird nicht.
 - **Ausgegraut** sind dort „Terminal öffnen“, „Mit dem Standardprogramm
   öffnen“, beide Pfadkopien, „Bearbeiten“ und das Stapelumbenennen, dazu mit
   dem Fokus im Dateifenster „Teilen“, „Lesezeichen anlegen“ und der Rundweg
-  (`cmd+e`). Die Ankreuzfelder „Deep“ und „Content“ lassen sich nicht
+  (`cmd+e`), außerdem „Zur Zwischenablage springen“. Die Ankreuzfelder „Deep“ und „Content“ lassen sich nicht
   bedienen.
 - **Das Kontextmenü graut nichts aus**, sondern meldet: „Öffnen mit“, Zippen,
   Entpacken, Duplizieren, „Im Finder öffnen“, „Im Finder anzeigen“ und

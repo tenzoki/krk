@@ -17,6 +17,12 @@
 //! Vorbelegung bleiben dieselben, „Abbrechen“ liegt weiter auf der
 //! Eingabetaste. Den Wortlaut rechnet
 //! [`crate::kommandos::loeschwarnung::endgueltig_frage_und_erlaeuterung`].
+//! **Seit dem 261019 erscheint sie auch, wenn KRK nicht feststellen konnte,
+//! ob der Ort einen Papierkorb hat**; dann sagt der erste Satz der
+//! Erlaeuterung genau das statt „Dieser Ort hat keinen Papierkorb“
+//! ([`crate::kommandos::loeschwarnung::Endgueltiggrund`]). Fuer dieses Blatt
+//! aendert sich dabei nichts: der Text kommt fertig herein, Form,
+//! Schaltflaechen und Vorbelegung sind dieselben.
 //!
 //! Genau einmal je Vorgang, unabhaengig von der Zahl der betroffenen Eintraege
 //! und unabhaengig davon, welche der drei Tasten oder ob der Menueeintrag ihn

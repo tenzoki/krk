@@ -3518,10 +3518,12 @@ impl DateifensterQuelle {
     /// Pfadeingabe von Hand ist allein, woher der Wert kommt; die Pruefung und
     /// die Navigation dahinter sind dieselben.
     ///
-    /// **Bis auf einen fernen Tab**: der Pfad aus der Zwischenablage ist dort
-    /// ein Pfad auf diesem Mac und nicht auf dem Server, und
-    /// [`Self::lokalen_pfad_anspringen`] stellt den Tab auf den lokalen Ordner
-    /// (Modulkopf von `kommandos/pfadeingabe.rs`, „In einem fernen Tab“).
+    /// **Bis auf das Archiv**: der Pfad aus der Zwischenablage ist ein Pfad
+    /// auf diesem Mac, und [`Self::lokalen_pfad_anspringen`] liest ihn dort
+    /// gegen keinen angezeigten Ordner. **An einem fernen Ort ist der Befehl
+    /// seit dem 261019 ausgegraut** (`Ortsbedarf::NichtFern`, Nutzerentscheid
+    /// zum Befund
+    /// `261017-0004-zur-zwischenablage-springen-liest-in-einem-fernen-tab-einen-lokalen-pfad-als-serverpfad`).
     fn zwischenablage_springen(&self) {
         let Some(inhalt) = super::zwischenablage::lesen() else {
             self.befehlsantwort_zeigen(text(Text::TabelleZwischenablageLeer));
@@ -3564,17 +3566,24 @@ impl DateifensterQuelle {
         self.ergebnis_anwenden(pfadeingabe::pruefen(pfad, &angezeigt));
     }
 
-    /// Springt zu einem Pfad auf diesem Mac, auch aus einem fernen Tab: der
+    /// Springt zu einem Pfad auf diesem Mac, auch aus einem Archivtab: der
     /// Weg der Zwischenablage. Lokal ist es [`Self::pfad_anspringen`]; in
-    /// einem fernen Tab prueft [`pfadeingabe::pruefen_fuer_fernen_tab`] den
+    /// einem Archivtab prueft [`pfadeingabe::pruefen_fuer_archivtab`] den
     /// Pfad, und ein Wechsel stellt den Tab auf den lokalen Ordner.
+    ///
+    /// **An einem fernen Ort ist der Befehl ausgegraut** (`Ortsbedarf::NichtFern`,
+    /// 261019); kaeme er doch hierher, meldet der ferne Zweig das wie jeder
+    /// ausgegraute Befehl und springt nicht.
     fn lokalen_pfad_anspringen(&self, pfad: &Path) {
         match self.angezeigter_ort() {
             Ort::Lokal(_) => self.pfad_anspringen(pfad),
-            // Im Archiv wie fern: der Pfad verlaesst den Ort, und eine Datei
-            // fuehrt in ihren Ordner.
-            Ort::Archiv(_) | Ort::Fern(_) => {
-                self.ergebnis_anwenden(pfadeingabe::pruefen_fuer_fernen_tab(pfad));
+            // Im Archiv verlaesst der Pfad den Ort, und eine Datei fuehrt in
+            // ihren Ordner.
+            Ort::Archiv(_) => {
+                self.ergebnis_anwenden(pfadeingabe::pruefen_fuer_archivtab(pfad));
+            }
+            Ort::Fern(_) => {
+                self.befehlsantwort_zeigen(text(Text::AmFernenOrtNichtVerfuegbar));
             }
         }
     }

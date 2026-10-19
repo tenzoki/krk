@@ -215,9 +215,10 @@ pub enum Warnbefund {
 /// feststellen laesst, wird nicht in einen Papierkorb geraeumt. **Eine Frage
 /// an den Wert, die zwei der drei zusammenfasst, traegt der Typ seit dem
 /// 261017 nicht mehr**: `loeschwarnung::vor_der_rueckfrage` schreibt alle drei
-/// aus, weil `Nein` dort zur endgueltigen Rueckfrage fuehrt und
-/// `Unentschieden` zu einer Meldung, und eine Zusammenfassung von `Nein` und
-/// `Unentschieden` machte aus „wir wissen nichts“ ein endgueltiges Loeschen.
+/// aus, weil `Nein` und `Unentschieden` dort seit dem 261019 zwar beide zur
+/// endgueltigen Rueckfrage fuehren, aber mit verschiedenem Text, und eine
+/// Zusammenfassung von `Nein` und `Unentschieden` machte aus „wir wissen
+/// nichts“ die Behauptung, der Ort habe keinen Papierkorb.
 ///
 /// **Eine Verknuepfung wie [`Warnbefund::oder`] traegt dieser Typ nicht**, weil
 /// keine Stelle im Baum zwei Erlaubnisse zusammenfasst. Sie waere Vorrat, und
@@ -236,8 +237,9 @@ pub enum Erlaubnisbefund {
     /// „endgueltig“ ausspricht.
     Nein,
     /// Die Pruefung ist nicht dazu gekommen, die Frage zu beantworten. Das ist
-    /// keine Aussage ueber das Ziel, sondern eine ueber KRKs Kenntnis von ihm,
-    /// und es wird nicht geloescht, weder in einen Papierkorb noch endgueltig.
+    /// keine Aussage ueber das Ziel, sondern eine ueber KRKs Kenntnis von ihm:
+    /// in keinen Papierkorb; seit dem 261019 folgt die endgueltige Rueckfrage
+    /// mit eigenem Text, der sagt, dass KRK es nicht feststellen konnte.
     Unentschieden,
 }
 

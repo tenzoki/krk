@@ -319,7 +319,7 @@ use crate::kommandos::fokus::{self, Fokus};
 use crate::kommandos::kontextmenue::{
     self, Anwendung, Duplikatbefund, Entpackbefund, Kontextbefehl, Kontextwahl,
 };
-use crate::kommandos::loeschwarnung::{self, Loeschziel, Nachstufe, Vorstufe};
+use crate::kommandos::loeschwarnung::{self, Endgueltiggrund, Loeschziel, Nachstufe, Vorstufe};
 use crate::kommandos::operationen::{
     self, Anlegeart, Auswahl, Dateiablage, Konfliktform, Konfliktfrage, Namensabschluss,
     Vorgangsart, Vorgangszustand,
@@ -7713,9 +7713,10 @@ impl Anwendungsdelegierter {
     /// welches Blatt erscheint; danach gefragt, haette der Nutzer einem Raeumen
     /// zugestimmt, das nicht raeumen kann. Der angezeigte Ordner wird dafuer
     /// **einmal** aufgeloest, und ein Pfad, der sich nicht aufloesen laesst,
-    /// zaehlt als [`Erlaubnisbefund::Unentschieden`] und haelt damit mit einer
-    /// Meldung an: weder Raeumen noch endgueltiges Loeschen, weil KRK nicht
-    /// weiss, welches von beiden der Ort traegt.
+    /// zaehlt als [`Erlaubnisbefund::Unentschieden`] und fuehrt seit dem 261019
+    /// zur endgueltigen Rueckfrage mit eigenem Text: kein Raeumen, weil KRK
+    /// keinen Papierkorb belegen kann, und keine Behauptung, der Ort habe
+    /// keinen ([`Endgueltiggrund::PapierkorbUngewiss`]).
     ///
     /// **Die teuren Tatsachen fallen erst an, wenn die billigen Stufen durch
     /// sind.** Aufloesen und Papierkorbfrage kosten Zugriffe auf das
@@ -7843,25 +7844,26 @@ impl Anwendungsdelegierter {
                 self.antwort_zeigen(aktiv, text(Text::NichtsAusgewaehlt));
                 true
             }
-            // Ob das Ziel einen Papierkorb fuehrt, liess sich nicht
-            // feststellen: kein Blatt, kein Auftrag, und die Statuszeile sagt
-            // es. Ein ferner Gegenstand kommt nie hierher, er bekam nein.
-            Vorstufe::PapierkorbUnbekannt => {
-                self.antwort_zeigen(aktiv, loeschwarnung::papierkorb_unbekannt());
-                true
-            }
             // Ein ferner Gegenstand erreicht diesen Zweig nicht, weil die
             // Tafel fuer ihn nein bekam; kaeme er doch, ginge er den
             // endgueltigen Weg, denn einen anderen hat er nicht
-            // (`Loeschgegenstand::weg`).
+            // (`Loeschgegenstand::weg`), und sein Grund ist dann der sichere:
+            // ein Server und ein Archiv haben keinen Papierkorb.
             Vorstufe::Rueckfrage => self.loeschblatt_zeigen(
                 Loeschweg::Papierkorb,
+                Endgueltiggrund::KeinPapierkorb,
                 gegenstand,
                 aufgeloester_ordner,
                 schaltflaeche,
             ),
-            Vorstufe::EndgueltigeRueckfrage => self.loeschblatt_zeigen(
+            // Sicher kein Papierkorb, oder es liess sich nicht feststellen;
+            // der Grund reist aus der Tafel mit und waehlt allein den ersten
+            // Satz der Erlaeuterung (261019). Eine weitere Frage an die Platte
+            // entsteht dabei nicht: der Befund kam aus dem einen
+            // `lokaler_papierkorbbefund` darueber.
+            Vorstufe::EndgueltigeRueckfrage(grund) => self.loeschblatt_zeigen(
                 Loeschweg::Endgueltig,
+                grund,
                 gegenstand,
                 aufgeloester_ordner,
                 schaltflaeche,
@@ -7940,6 +7942,7 @@ impl Anwendungsdelegierter {
     fn loeschblatt_zeigen(
         &self,
         weg: Loeschweg,
+        grund: Endgueltiggrund,
         gegenstand: Loeschgegenstand,
         aufgeloester_ordner: Option<PathBuf>,
         papierkorbschaltflaeche: &str,
@@ -7965,7 +7968,7 @@ impl Anwendungsdelegierter {
             }
             (Loeschgegenstand::Lokal { auswahl, ordner }, Loeschweg::Endgueltig) => {
                 let (frage, erlaeuterung) =
-                    Self::endgueltige_loeschtexte(auswahl, ordner, aufgeloester_ordner);
+                    Self::endgueltige_loeschtexte(grund, auswahl, ordner, aufgeloester_ordner);
                 (frage, erlaeuterung, loeschbestaetigung::Form::Endgueltig)
             }
             (
@@ -8131,7 +8134,8 @@ impl Anwendungsdelegierter {
     }
 
     /// Die zwei Zeilen der endgueltigen Rueckfrage an einem lokalen Ort ohne
-    /// Papierkorb (Entscheidung 12).
+    /// Papierkorb (Entscheidung 12) oder an einem, ueber dessen Papierkorb KRK
+    /// nichts weiss (`grund`, Nutzerentscheid vom 261019).
     ///
     /// Dieselben fuenf Tatsachen und dieselben Warngruende wie
     /// [`Self::loeschtexte`], die lauten Warnungen der Runde 12 bleiben also
@@ -8140,12 +8144,14 @@ impl Anwendungsdelegierter {
     /// Rueckfrage immer, deshalb gibt es keinen dritten Wert.
     #[must_use = "die zwei Werte sind der ganze Inhalt der Rueckfrage; fallengelassen erscheint sie leer"]
     fn endgueltige_loeschtexte(
+        grund: Endgueltiggrund,
         auswahl: &Auswahl,
         quellordner: &Path,
         aufgeloester_ordner: Option<PathBuf>,
     ) -> (String, String) {
         let gruende = Self::loeschgruende(auswahl, aufgeloester_ordner);
         loeschwarnung::endgueltig_frage_und_erlaeuterung(
+            grund,
             auswahl.zahl(),
             auswahl.ordner,
             &operationen::pfadtext(quellordner),
@@ -8166,7 +8172,13 @@ impl Anwendungsdelegierter {
         zahl: usize,
         ordnerzahl: usize,
     ) -> (String, String) {
-        loeschwarnung::endgueltig_frage_und_erlaeuterung(zahl, ordnerzahl, &ordner.to_string(), &[])
+        loeschwarnung::endgueltig_frage_und_erlaeuterung(
+            Endgueltiggrund::KeinPapierkorb,
+            zahl,
+            ordnerzahl,
+            &ordner.to_string(),
+            &[],
+        )
     }
 
     /// Die zwei Zeilen der endgueltigen Rueckfrage in einem Archiv (E17 des
@@ -8183,7 +8195,13 @@ impl Anwendungsdelegierter {
         zahl: usize,
         ordnerzahl: usize,
     ) -> (String, String) {
-        loeschwarnung::endgueltig_frage_und_erlaeuterung(zahl, ordnerzahl, &ordner.to_string(), &[])
+        loeschwarnung::endgueltig_frage_und_erlaeuterung(
+            Endgueltiggrund::KeinPapierkorb,
+            zahl,
+            ordnerzahl,
+            &ordner.to_string(),
+            &[],
+        )
     }
 
     /// Stellt den bestaetigten Loeschauftrag, und zwar mit **der Auswahl, die

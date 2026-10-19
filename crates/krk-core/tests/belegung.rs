@@ -3737,6 +3737,8 @@ fn genau_diese_kommandos_brauchen_einen_lokalen_ort() {
         Kommando::DateiAnlegen,
         Kommando::Umbenennen,
     ];
+    // Seit dem 261019: an einem fernen Ort ausgegraut, im Archiv nicht.
+    const NICHT_FERN: [Kommando; 1] = [Kommando::ZwischenablageSpringen];
     for (kommando, _) in Kommando::KENNUNGEN {
         let erwartet = if LOKAL.contains(&kommando) {
             Ortsbedarf::Lokal
@@ -3744,6 +3746,8 @@ fn genau_diese_kommandos_brauchen_einen_lokalen_ort() {
             Ortsbedarf::LokalImDateifenster
         } else if BESCHREIBBAR.contains(&kommando) {
             Ortsbedarf::Beschreibbar
+        } else if NICHT_FERN.contains(&kommando) {
+            Ortsbedarf::NichtFern
         } else {
             Ortsbedarf::Ueberall
         };

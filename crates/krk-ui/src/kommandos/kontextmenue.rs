@@ -566,6 +566,10 @@ pub fn am_fernen_ort_meldet(befehl: Kontextbefehl, ort: Ortsart) -> bool {
         ) => true,
         (Ortsbedarf::Beschreibbar, Ortsart::Fern) => false,
         (Ortsbedarf::Beschreibbar, Ortsart::Archiv { beschreibbar }) => !beschreibbar,
+        // Traegt heute kein Eintrag dieses Menues; stuende einer darauf,
+        // meldete er allein an einem fernen Ort.
+        (Ortsbedarf::NichtFern, Ortsart::Fern) => true,
+        (Ortsbedarf::NichtFern, Ortsart::Archiv { .. }) => false,
     }
 }
 

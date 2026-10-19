@@ -21,16 +21,18 @@
 //! zerstoerend gekennzeichnet. Ein Ort mit Papierkorb geht unveraendert den Weg
 //! in den Papierkorb.
 //!
-//! **Allein ein sicheres Nein fuehrt dorthin.** Ein unentschiedener Befund,
-//! etwa weil der angezeigte Ordner sich nicht aufloesen laesst oder sein Pfad
-//! kein UTF-8 ist, haelt wie vor dem 261016 mit einer Meldung an
-//! ([`Vorstufe::PapierkorbUnbekannt`], [`papierkorb_unbekannt`]): die
-//! endgueltige Rueckfrage behauptet, der Ort habe keinen Papierkorb, und fuer
-//! diese Behauptung gibt es dann keine Messung. Der Entscheid vom 261016
-//! spricht von einem Ort ohne Papierkorb und nicht von einem, ueber den KRK
-//! nichts weiss
+//! **Auch ein unentschiedener Befund fuehrt dorthin, aber mit eigenem Text.**
+//! Laesst sich der angezeigte Ordner nicht aufloesen oder ist sein Pfad kein
+//! UTF-8, weiss KRK nicht, ob der Ort einen Papierkorb hat. Die Rueckfrage ist
+//! dann dieselbe endgueltige, mit „Endgueltig loeschen“ als zerstoerender
+//! Schaltflaeche und „Abbrechen“ als Vorgabe; allein der erste Satz der
+//! Erlaeuterung ist ein anderer: er sagt, dass KRK es nicht feststellen
+//! konnte, und behauptet keinen Ort ohne Papierkorb
+//! ([`Endgueltiggrund::PapierkorbUngewiss`]). So hat der Nutzer am 261019
+//! entschieden, „auch im unklaren Fall die endgueltige Rueckfrage zeigen, mit
+//! eigenem Text“
 //! (`issues/261017-0004-ein-unentschiedener-papierkorbbefund-bietet-endgueltiges-loeschen-an-…`
-//! im selben Paket, die vorsichtige der zwei Moeglichkeiten).
+//! im selben Paket); bis dahin hielt der unklare Fall mit einer Meldung an.
 //!
 //! **Ein ferner Ort hat keinen Papierkorb, und das steht am Wert**: der
 //! Rumpf, der die Tatsachen beschafft, beantwortet die dritte Frage fuer ihn
@@ -48,7 +50,7 @@
 //!  vorgang_laeuft ─┐
 //!  auswahl_leer ───┼──> vor_der_rueckfrage() ──> Vorstufe
 //!  || papierkorb ──┘                              ├─ Rueckfrage ──────────> das Blatt
-//!     (faul)                                      ├─ EndgueltigeRueckfrage ─> das Blatt, zweite Gestalt
+//!     (faul)                                      ├─ EndgueltigeRueckfrage(grund) ─> das Blatt, zweite Gestalt
 //!                                                 └─ sonst ──> eine Meldung
 //!
 //!  Loeschziel ──> warngruende() ──> [Warngrund], gerangt
@@ -129,11 +131,11 @@
 //! ihr ist `Ja` die **Erlaubnis** und nicht der Warngrund. Bis zum 261016
 //! gehoerte `Unentschieden` deshalb zu `Nein`, und die Regel fragte allein
 //! `Erlaubnisbefund::erlaubt`, das seit dem 261017 nicht mehr steht: beide
-//! hielten mit derselben Meldung an. Seit
-//! `Nein` zur endgueltigen Rueckfrage fuehrt, fuehren die zwei zu
-//! **verschiedenen** Ausgaengen, und die Tafel schreibt alle drei Werte aus;
-//! eine Zusammenfassung wuerde aus „wir wissen nichts" ein endgueltiges
-//! Loeschen machen. Seit dem 260907 traegt die Frage einen eigenen Typ,
+//! hielten mit derselben Meldung an. Seit dem 261019 fuehren beide zur
+//! endgueltigen Rueckfrage, aber mit **verschiedenem** ersten Satz
+//! ([`Endgueltiggrund`]), und die Tafel schreibt alle drei Werte aus; eine
+//! Zusammenfassung wuerde aus „wir wissen nichts" die Behauptung „dieser Ort
+//! hat keinen Papierkorb" machen. Seit dem 260907 traegt die Frage einen eigenen Typ,
 //! [`Erlaubnisbefund`]; [`Warnbefund::ist_warnwuerdig`] ist an einem Wert
 //! dieses Typs gar nicht zu rufen. **Diese Datei fuehrt damit beide Richtungen
 //! und kann sie nicht mehr verwechseln** — `Loeschziel::netzlaufwerk` und
@@ -326,14 +328,15 @@ use super::operationen::{Auswahl, ordner_text, pfadtext};
 /// Welche Stufe ein Loeschbefehl erreicht, bevor die Rueckfrage erscheint (C2,
 /// C4).
 ///
-/// Fuenf Ausgaenge und kein Wahrheitswert mit Beipackzettel: drei von ihnen
+/// Vier Ausgaenge und kein Wahrheitswert mit Beipackzettel: zwei von ihnen
 /// halten den Befehl an und nennen dem Nutzer den Grund, zwei zeigen das Blatt,
-/// jeder in seiner Gestalt. Sie stehen als Aufzaehlung da, weil die drei
+/// jeder in seiner Gestalt. Sie stehen als Aufzaehlung da, weil die zwei
 /// Meldungen **nicht dieselbe** sind und die zwei Blaetter nicht dasselbe
 /// fragen: „in den Papierkorb raeumen?" hat einen Rueckweg, „endgueltig
-/// loeschen?" keinen.
+/// loeschen?" keinen. Bis zum 261019 hielt ein dritter Ausgang mit einer
+/// Meldung an, wenn sich der Papierkorb nicht feststellen liess.
 ///
-/// Die Fallunterscheidungen darueber tragen keinen Auffangzweig. Eine fuenfte
+/// Die Fallunterscheidungen darueber tragen keinen Auffangzweig. Eine weitere
 /// Stufe haelt damit den Bau an und erzwingt eine bewusste Einordnung in die
 /// Reihenfolge, statt still in einen bestehenden Zweig zu fallen.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -345,20 +348,35 @@ pub enum Vorstufe {
     /// Es ist nichts ausgewaehlt. Kein Blatt, kein Auftrag; die Rueckfrage
     /// haette keinen Gegenstand.
     NichtsAusgewaehlt,
-    /// Das Ziel fuehrt sicher keinen Papierkorb: das Blatt erscheint in seiner
-    /// zweiten Gestalt, die „endgueltig“ ausspricht, mit „Abbrechen"
-    /// vorbelegt. Erst seine Bestaetigung stellt einen Auftrag, und der
-    /// loescht endgueltig. Bis zum 261016 endete diese Stufe in einer Meldung
-    /// ohne Blatt.
-    EndgueltigeRueckfrage,
-    /// Ob das Ziel einen Papierkorb fuehrt, liess sich nicht feststellen. Kein
-    /// Blatt, kein Auftrag, und die Meldung steht in [`papierkorb_unbekannt`]:
-    /// die endgueltige Rueckfrage behauptete einen Ort ohne Papierkorb, ohne
-    /// es zu wissen (Modulkopf).
-    PapierkorbUnbekannt,
+    /// Das Ziel fuehrt sicher keinen Papierkorb, oder es liess sich nicht
+    /// feststellen, ob es einen fuehrt: das Blatt erscheint in seiner zweiten
+    /// Gestalt, die „endgueltig“ ausspricht, mit „Abbrechen" vorbelegt. Erst
+    /// seine Bestaetigung stellt einen Auftrag, und der loescht endgueltig.
+    /// Welcher der zwei Faelle vorliegt, traegt der [`Endgueltiggrund`], und er
+    /// waehlt allein den ersten Satz der Erlaeuterung. Bis zum 261016 endete
+    /// diese Stufe in einer Meldung ohne Blatt, der unklare Fall bis zum 261019.
+    EndgueltigeRueckfrage(Endgueltiggrund),
     /// Alle drei Pruefungen sind bestanden: das Blatt erscheint, mit
     /// „Abbrechen" vorbelegt. Erst seine Bestaetigung stellt einen Auftrag.
     Rueckfrage,
+}
+
+/// Warum die Rueckfrage die endgueltige ist: weil der Ort sicher keinen
+/// Papierkorb hat, oder weil KRK es nicht feststellen konnte.
+///
+/// **Der Grund waehlt allein den ersten Satz der Erlaeuterung**; Frage,
+/// Schaltflaeche, Vorgabe und Auftrag sind in beiden Faellen dieselben. Ein
+/// eigener Wert und kein Wahrheitswert, damit ein ferner Ort und ein Archiv
+/// ihren Grund am Namen tragen und nicht an einem `false`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Endgueltiggrund {
+    /// Der Ort hat sicher keinen Papierkorb ([`Erlaubnisbefund::Nein`]); so
+    /// auch jeder ferne Ort und jedes Archiv.
+    KeinPapierkorb,
+    /// Ob der Ort einen Papierkorb hat, liess sich nicht feststellen
+    /// ([`Erlaubnisbefund::Unentschieden`]). Der Text sagt das und behauptet
+    /// keinen Ort ohne Papierkorb.
+    PapierkorbUngewiss,
 }
 
 /// Die eine Reihenfolge der Stufen vor der Rueckfrage (C2, C4).
@@ -370,8 +388,8 @@ pub enum Vorstufe {
 /// | ja | gleichgueltig | **ungefragt** | [`Vorstufe::VorgangLaeuft`] |
 /// | nein | ja | **ungefragt** | [`Vorstufe::NichtsAusgewaehlt`] |
 /// | nein | nein | [`Erlaubnisbefund::Ja`] | [`Vorstufe::Rueckfrage`] |
-/// | nein | nein | [`Erlaubnisbefund::Nein`] | [`Vorstufe::EndgueltigeRueckfrage`] |
-/// | nein | nein | [`Erlaubnisbefund::Unentschieden`] | [`Vorstufe::PapierkorbUnbekannt`] |
+/// | nein | nein | [`Erlaubnisbefund::Nein`] | [`Vorstufe::EndgueltigeRueckfrage`] mit [`Endgueltiggrund::KeinPapierkorb`] |
+/// | nein | nein | [`Erlaubnisbefund::Unentschieden`] | [`Vorstufe::EndgueltigeRueckfrage`] mit [`Endgueltiggrund::PapierkorbUngewiss`] |
 ///
 /// **Die fuenf Zeilen decken alle zwoelf Kombinationen ab** — zwei mal zwei mal
 /// drei —, und die Fallunterscheidung ist damit ueberschneidungsfrei und
@@ -407,13 +425,12 @@ pub enum Vorstufe {
 ///   gefragt, haette der Nutzer einem Raeumen zugestimmt, das nicht raeumen
 ///   kann, und der Vorgang haette endgueltig geloescht.
 ///
-/// Ein `papierkorb`, der [`Erlaubnisbefund::Unentschieden`] liefert, faellt
-/// **nicht** mit [`Erlaubnisbefund::Nein`] zusammen: das Nein fuehrt zur
-/// endgueltigen Rueckfrage, das Unentschieden haelt mit einer Meldung an. Der
-/// Aufrufer, der den Ordnerpfad nicht aufloesen kann, liefert
-/// `Unentschieden`, und dem Nutzer wird weder ein Raeumen in einen Papierkorb
-/// angeboten, den es vielleicht nicht gibt, noch ein endgueltiges Loeschen an
-/// einem Ort, der vielleicht einen hat.
+/// Ein `papierkorb`, der [`Erlaubnisbefund::Unentschieden`] liefert, fuehrt
+/// wie [`Erlaubnisbefund::Nein`] zur endgueltigen Rueckfrage, aber mit
+/// [`Endgueltiggrund::PapierkorbUngewiss`]: dem Nutzer wird kein Raeumen in
+/// einen Papierkorb angeboten, den es vielleicht nicht gibt, und das Blatt
+/// behauptet keinen Ort ohne Papierkorb, sondern sagt, dass KRK es nicht
+/// feststellen konnte (Nutzerentscheid vom 261019, Modulkopf).
 ///
 /// `#[must_use]`, weil das stille Fallenlassen des Rueckgabewerts unbemerkt
 /// bliebe: die Funktion ist rein, aendert also nichts, und wer ihre Antwort
@@ -440,32 +457,24 @@ pub fn vor_der_rueckfrage(
         //
         //
         // **Die drei Werte stehen ausgeschrieben und ohne Auffangzweig**, weil
-        // `Nein` und `Unentschieden` seit dem 261016 verschieden ausgehen
-        // (Modulkopf); ein vierter Wert haelt hier den Bau an.
+        // `Nein` und `Unentschieden` zwar denselben Weg nehmen, aber mit
+        // verschiedenem Text (Modulkopf); ein vierter Wert haelt hier den Bau
+        // an.
         (false, false) => match papierkorb() {
             // Erst jetzt steht fest, dass es einen Rueckweg gibt (C4).
             Erlaubnisbefund::Ja => Vorstufe::Rueckfrage,
             // Sicher kein Papierkorb: die Rueckfrage, die „endgueltig“
             // ausspricht (261016).
-            Erlaubnisbefund::Nein => Vorstufe::EndgueltigeRueckfrage,
-            // Keine Auskunft: anhalten wie vor dem 261016.
-            Erlaubnisbefund::Unentschieden => Vorstufe::PapierkorbUnbekannt,
+            Erlaubnisbefund::Nein => {
+                Vorstufe::EndgueltigeRueckfrage(Endgueltiggrund::KeinPapierkorb)
+            }
+            // Keine Auskunft: dieselbe Rueckfrage, deren Text sagt, dass KRK
+            // es nicht weiss (261019).
+            Erlaubnisbefund::Unentschieden => {
+                Vorstufe::EndgueltigeRueckfrage(Endgueltiggrund::PapierkorbUngewiss)
+            }
         },
     }
-}
-
-/// Die Zeile der Statuszeile, wenn sich nicht feststellen liess, ob das Ziel
-/// einen Papierkorb fuehrt ([`Vorstufe::PapierkorbUnbekannt`]).
-///
-/// Sie sagt, dass KRK es nicht weiss, und nicht, dass es keinen gibt: die
-/// zweite Aussage traegt allein ein sicheres Nein, und das fuehrt zur
-/// endgueltigen Rueckfrage.
-///
-/// `#[must_use]`, weil das stille Fallenlassen unbemerkt bliebe: verloren
-/// ginge die einzige Auskunft ueber einen Befehl, der nichts getan hat.
-#[must_use = "der Text ist die einzige Auskunft ueber einen Loeschbefehl, der nichts getan hat"]
-pub fn papierkorb_unbekannt() -> &'static str {
-    text(Text::LoeschenPapierkorbUnbekannt)
 }
 
 // ---------------------------------------------------------------------------
@@ -953,14 +962,16 @@ pub fn frage_und_erlaeuterung(
 }
 
 /// Die beiden Zeilen der endgueltigen Rueckfrage an einem Ort ohne Papierkorb
-/// (Entscheidung 12 des Plans der sftp-Ordner).
+/// oder an einem, ueber dessen Papierkorb KRK nichts weiss (Entscheidung 12
+/// des Plans der sftp-Ordner, Nutzerentscheid vom 261019).
 ///
 /// **Dieselbe Bauform wie [`frage_und_erlaeuterung`] und keine zweite**: die
 /// Frage nennt die Zahl und den ersten Warngrund, die Erlaeuterung den Ort und
 /// die uebrigen Gruende und die Zahl der Ordner. Anders sind allein die zwei
 /// Wortlaute: die Frage sagt „endgueltig loeschen“ statt „in den Papierkorb
-/// raeumen“, und der erste Satz der Erlaeuterung sagt, dass der Ort keinen
-/// Papierkorb hat und das Geloeschte nicht zurueckzuholen ist.
+/// raeumen“, und der erste Satz der Erlaeuterung sagt je nach `grund`, dass
+/// der Ort keinen Papierkorb hat, oder dass KRK es nicht feststellen konnte;
+/// beide sagen, dass das Geloeschte nicht zurueckzuholen ist.
 ///
 /// **Der Ort kommt als Text herein und nicht als Pfad**, weil ein ferner Ort
 /// keinen Pfad auf dieser Platte hat; der Rufer baut ihn lokal ueber
@@ -968,12 +979,13 @@ pub fn frage_und_erlaeuterung(
 /// Fenstertitels. Aus demselben Grund kommen Zahl und Ordnerzahl einzeln.
 #[must_use]
 pub fn endgueltig_frage_und_erlaeuterung(
+    grund: Endgueltiggrund,
     zahl: usize,
     ordnerzahl: usize,
     ort: &str,
     gruende: &[Warngrund],
 ) -> (String, String) {
-    texte_bauen(Gestalt::Endgueltig, zahl, ordnerzahl, ort, gruende)
+    texte_bauen(Gestalt::Endgueltig(grund), zahl, ordnerzahl, ort, gruende)
 }
 
 /// Welche der zwei Rueckfragen gebaut wird.
@@ -981,8 +993,8 @@ pub fn endgueltig_frage_und_erlaeuterung(
 enum Gestalt {
     /// In den Papierkorb raeumen.
     Papierkorb,
-    /// Endgueltig loeschen, an einem Ort ohne Papierkorb.
-    Endgueltig,
+    /// Endgueltig loeschen, mit dem Grund, der den ersten Satz waehlt.
+    Endgueltig(Endgueltiggrund),
 }
 
 /// Der eine Bau beider Rueckfragen; die zwei oeffentlichen Funktionen
@@ -996,7 +1008,13 @@ fn texte_bauen(
 ) -> (String, String) {
     let (frageform, erster_satz) = match gestalt {
         Gestalt::Papierkorb => (Zahlwort::LoeschfrageEintraege, Text::LoeschenGeraeumtAus),
-        Gestalt::Endgueltig => (Zahlwort::LoeschfrageEndgueltig, Text::LoeschenEndgueltigAus),
+        Gestalt::Endgueltig(Endgueltiggrund::KeinPapierkorb) => {
+            (Zahlwort::LoeschfrageEndgueltig, Text::LoeschenEndgueltigAus)
+        }
+        Gestalt::Endgueltig(Endgueltiggrund::PapierkorbUngewiss) => (
+            Zahlwort::LoeschfrageEndgueltig,
+            Text::LoeschenEndgueltigUngewissAus,
+        ),
     };
     // Der genannte Grund, mit dem Abstand dahinter, den er in der Frage
     // braucht. Ohne Grund bleibt die Fuegung leer, und die ruhige Frage steht
@@ -1142,7 +1160,11 @@ mod tests {
             (true, false, Vorstufe::VorgangLaeuft),
             (true, true, Vorstufe::VorgangLaeuft),
             (false, true, Vorstufe::NichtsAusgewaehlt),
-            (false, false, Vorstufe::EndgueltigeRueckfrage),
+            (
+                false,
+                false,
+                Vorstufe::EndgueltigeRueckfrage(Endgueltiggrund::KeinPapierkorb),
+            ),
         ] {
             let mut gefragt = false;
             let stufe = vor_der_rueckfrage(laeuft, leer, || {
@@ -1259,8 +1281,18 @@ mod tests {
             (false, true, Nein, Vorstufe::NichtsAusgewaehlt),
             (false, true, Unentschieden, Vorstufe::NichtsAusgewaehlt),
             (false, false, Ja, Vorstufe::Rueckfrage),
-            (false, false, Nein, Vorstufe::EndgueltigeRueckfrage),
-            (false, false, Unentschieden, Vorstufe::PapierkorbUnbekannt),
+            (
+                false,
+                false,
+                Nein,
+                Vorstufe::EndgueltigeRueckfrage(Endgueltiggrund::KeinPapierkorb),
+            ),
+            (
+                false,
+                false,
+                Unentschieden,
+                Vorstufe::EndgueltigeRueckfrage(Endgueltiggrund::PapierkorbUngewiss),
+            ),
         ];
 
         for (vorgang_laeuft, auswahl_leer, papierkorb, ausgang) in TAFEL {
@@ -1314,52 +1346,82 @@ mod tests {
         }
     }
 
-    /// Allein ein sicheres Nein fuehrt zur endgueltigen Rueckfrage; der
-    /// unentschiedene Befund haelt mit einer Meldung an (Entscheidung 12 des
-    /// Plans der sftp-Ordner, eingeengt durch den Befund
+    /// Ein sicheres Nein und ein unentschiedener Befund fuehren beide zur
+    /// endgueltigen Rueckfrage, aber mit verschiedenem Grund (Entscheidung 12
+    /// des Plans der sftp-Ordner und Nutzerentscheid vom 261019 zum Befund
     /// `261017-0004-ein-unentschiedener-papierkorbbefund-…`).
     ///
-    /// **Die zweite Zusicherung ist die eigentliche.** Bis zum 261017 fuehrte
-    /// auch das Unentschieden zur endgueltigen Rueckfrage, und das Blatt sagte
-    /// dabei „Dieser Ort hat keinen Papierkorb“, ohne es zu wissen. Wer
-    /// `Nein` und `Unentschieden` wieder zusammenfasst, macht diese Zeile rot.
-    /// Bis zum 261016 hiess diese Probe `ohne_papierkorb_erscheint_kein_blatt`.
+    /// **Die zweite Zusicherung ist die eigentliche.** Vom 261016 bis zum
+    /// 261017 fuehrte das Unentschieden zur endgueltigen Rueckfrage mit dem
+    /// Satz „Dieser Ort hat keinen Papierkorb“, ohne es zu wissen, danach bis
+    /// zum 261019 in eine Meldung. Wer `Nein` und `Unentschieden` wieder
+    /// zusammenfasst, macht diese Zeile rot. Bis zum 261016 hiess diese Probe
+    /// `ohne_papierkorb_erscheint_kein_blatt`, bis zum 261019
+    /// `allein_ein_sicheres_nein_fuehrt_zur_endgueltigen_rueckfrage`.
     #[test]
-    fn allein_ein_sicheres_nein_fuehrt_zur_endgueltigen_rueckfrage() {
+    fn nein_und_unentschieden_fuehren_mit_eigenem_grund_zur_endgueltigen_rueckfrage() {
         assert_eq!(
             vor_der_rueckfrage(false, false, || Erlaubnisbefund::Nein),
-            Vorstufe::EndgueltigeRueckfrage,
+            Vorstufe::EndgueltigeRueckfrage(Endgueltiggrund::KeinPapierkorb),
             "ein Ziel ohne Papierkorb fuehrt nicht zur endgueltigen Rueckfrage"
         );
         assert_eq!(
             vor_der_rueckfrage(false, false, || Erlaubnisbefund::Unentschieden),
-            Vorstufe::PapierkorbUnbekannt,
-            "ein unentschiedener Befund bietet endgueltiges Loeschen an"
+            Vorstufe::EndgueltigeRueckfrage(Endgueltiggrund::PapierkorbUngewiss),
+            "ein unentschiedener Befund fuehrt nicht mit eigenem Grund zur endgueltigen Rueckfrage"
         );
     }
 
-    /// Die Meldung zum unentschiedenen Befund sagt in jeder der drei Sprachen,
-    /// dass nichts geloescht wurde, und behauptet keinen Ort ohne Papierkorb:
-    /// sie ist nicht der erste Satz der endgueltigen Rueckfrage.
+    /// Der eigene Text des unklaren Falls sagt in jeder der drei Sprachen
+    /// „endgueltig“, nennt den Ort und den Papierkorb und behauptet keinen Ort
+    /// ohne Papierkorb: er ist nicht der erste Satz der sicheren Gestalt. Die
+    /// Rueckfrage, die er traegt, beginnt mit ihm und fragt sonst dasselbe.
+    ///
+    /// Bis zum 261019 hiess die Probe
+    /// `die_meldung_zum_unbekannten_papierkorb_behauptet_keinen_ort_ohne_papierkorb`
+    /// und hielt eine Meldung, nach der nichts geloescht war.
     #[test]
-    fn die_meldung_zum_unbekannten_papierkorb_behauptet_keinen_ort_ohne_papierkorb() {
-        for (sprache, nichts) in [
-            (Sprache::De, "nichts gelöscht"),
-            (Sprache::Fr, "rien n’a été supprimé"),
-            (Sprache::En, "nothing was deleted"),
+    fn der_unklare_fall_sagt_endgueltig_und_behauptet_keinen_ort_ohne_papierkorb() {
+        for (sprache, wort, papierkorb) in [
+            (Sprache::De, "endgültig", "Papierkorb"),
+            (Sprache::Fr, "définitivement", "Corbeille"),
+            (Sprache::En, "ermanent", "Trash"),
         ] {
-            let meldung = sprache.text(Text::LoeschenPapierkorbUnbekannt);
-            assert!(meldung.contains(nichts), "{sprache:?}: {meldung}");
-            let endgueltig = sprache.text(Text::LoeschenEndgueltigAus);
-            let erster_satz = endgueltig.split(':').next().unwrap_or(endgueltig);
+            let ungewiss = sprache.text(Text::LoeschenEndgueltigUngewissAus);
             assert!(
-                !meldung.contains(erster_satz.trim()),
-                "{sprache:?}: die Meldung behauptet einen Ort ohne Papierkorb: {meldung}"
+                ungewiss.to_lowercase().contains(wort),
+                "{sprache:?}: der Text des unklaren Falls sagt nicht {wort}: {ungewiss}"
+            );
+            assert!(
+                ungewiss.contains(papierkorb) && ungewiss.contains("{ordner}"),
+                "{sprache:?}: der Text des unklaren Falls nennt Papierkorb oder Ort nicht: \
+                 {ungewiss}"
+            );
+            let sicher = sprache.text(Text::LoeschenEndgueltigAus);
+            let erster_satz = sicher.split(':').next().unwrap_or(sicher);
+            assert!(
+                !ungewiss.contains(erster_satz.trim()),
+                "{sprache:?}: der Text des unklaren Falls behauptet einen Ort ohne Papierkorb: \
+                 {ungewiss}"
             );
         }
-        assert_eq!(
-            papierkorb_unbekannt(),
-            text(Text::LoeschenPapierkorbUnbekannt)
+
+        let (frage, erlaeuterung) = endgueltig_frage_und_erlaeuterung(
+            Endgueltiggrund::PapierkorbUngewiss,
+            2,
+            0,
+            "/Volumes/unklar",
+            &[],
+        );
+        assert_eq!(frage, "Diese 2 Einträge endgültig löschen?");
+        assert!(
+            erlaeuterung.starts_with("KRK konnte nicht feststellen"),
+            "{erlaeuterung}"
+        );
+        assert!(erlaeuterung.contains("/Volumes/unklar"), "{erlaeuterung}");
+        assert!(
+            !erlaeuterung.contains("Dieser Ort hat keinen Papierkorb"),
+            "{erlaeuterung}"
         );
     }
 
@@ -1479,6 +1541,7 @@ mod tests {
     #[test]
     fn die_endgueltige_rueckfrage_baut_sich_wie_die_des_papierkorbs() {
         let (frage, erlaeuterung) = endgueltig_frage_und_erlaeuterung(
+            Endgueltiggrund::KeinPapierkorb,
             3,
             1,
             "kai@rechner:/srv/daten",
@@ -1502,7 +1565,13 @@ mod tests {
         );
         assert!(erlaeuterung.contains("Darunter"), "{erlaeuterung}");
 
-        let (ruhig, _) = endgueltig_frage_und_erlaeuterung(1, 0, "/Volumes/freigabe", &[]);
+        let (ruhig, _) = endgueltig_frage_und_erlaeuterung(
+            Endgueltiggrund::KeinPapierkorb,
+            1,
+            0,
+            "/Volumes/freigabe",
+            &[],
+        );
         assert_eq!(ruhig, "Diesen Eintrag endgültig löschen?");
     }
 
