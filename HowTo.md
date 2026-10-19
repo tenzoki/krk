@@ -869,8 +869,10 @@ Eine Tabelle behält immer mindestens eine Spalte. „Eintrag hinzufügen“ wir
 auch in der Rohansicht: dort hängt es eine leere Zeile an, und die Schreibmarke
 steht an ihrem Anfang.
 
-Die Zeilenbefehle stehen im Menü „Home“ bei den Eintragsbefehlen, die
-Spaltenbefehle und „Trennzeichen wechseln“ im Menü „Editor“. Sie wirken nur,
+„Zeile darüber einfügen“, die Spaltenbefehle und „Trennzeichen wechseln“
+stehen im Menü „Editor“. Die Befehle für eine Zeile am Ende, das Verschieben
+und das Löschen von Zeilen teilt die Tabelle mit den Notizen, und sie stehen
+deshalb im Menü „Home“ bei den Eintragsbefehlen. Sie wirken nur,
 solange der Fokus im Editor steht und dieser die Tabelle einer CSV- oder
 TSV-Datei zeigt; sonst sind sie ausgegraut. „Aufgabe abhaken oder öffnen“
 bleibt in dieser Tabelle ausgegraut, und Suchen, Ersetzen und der Zeilensprung

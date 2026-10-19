@@ -1088,13 +1088,17 @@ tasten = ["ctrl+cmd+r"]
 # Einzelform auf shift+cmd, die Stapelform auf ctrl+cmd.
 
 # ── Die Tabelle einer CSV- oder TSV-Datei ────────────────────────────────────
-# Vier Funktionen aus E14 des Plans
+# Fuenf Funktionen aus E14 des Plans
 # `261018-0822_*_plan-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md`, die
 # allein in der Tabelle wirken, die die Formatansicht des Editors fuer eine
 # `.csv`, `.tsv` oder `.tab` zeigt; sonst sind sie ausgegraut, und die Taste
-# geht an AppKit. Die Spaltenbefehle stehen im Menue "Editor", der eine
-# Zeilenbefehl "trenntext_zeile_einfuegen" im Menue "Home" bei den
-# Eintragsbefehlen (Nutzerentscheid vom 261018).
+# geht an AppKit. Alle fuenf stehen im Menue "Editor" (Nutzerentscheid vom
+# 261019; bis dahin stand "trenntext_zeile_einfuegen" unter "Home"). Die
+# Eintragsbefehle, die auch auf Zeilen der CSV wirken (anhaengen, bearbeiten,
+# verschieben, loeschen), teilt die Tabelle mit den Notizen, und sie stehen
+# deshalb weiter im Menue "Home". Die Reihenfolge der Bloecke dieser Datei ist
+# die Reihenfolge im Menue; darum steht der Zeilenbefehl hier und nicht mehr
+# bei den Eintragsbefehlen.
 #
 # Die Spalte traegt ctrl vor der Familie von cmd+return: ctrl+cmd+return fuegt
 # links ein, ctrl+shift+cmd+return haengt an, wie shift+cmd+return eine Zeile
@@ -1105,6 +1109,17 @@ tasten = ["ctrl+cmd+r"]
 # und cmd+delete, mit return keine Kombination mit cmd. Sie tragen cmd und
 # wirken deshalb auch in einer laufenden Zelle
 # (`crates/krk-ui/src/kommandos/zellentaste.rs`).
+
+[[funktion]]
+id = "trenntext_zeile_einfuegen"
+tasten = ["opt+cmd+return"]
+# So viele leere Zeilen ueber der Auswahl, wie sie Zeilen umfasst. Die Familie
+# von cmd+return: die blanke Cmd-Ebene bearbeitet ("eintrag_bearbeiten"),
+# shift davor legt am Ende an ("eintrag_hinzufuegen"), opt davor fuegt an der
+# Auswahl ein. opt+cmd+return war am 261018 in keiner Tastenliste dieser Datei
+# vergeben, und `StandardKeyBinding.dict` belegt es nicht (was es mit der
+# Befehlstaste belegt, nennt der Kopf dieses Blocks darueber); im Feldeditor einer Zelle
+# wirkt es, weil es cmd traegt (`crates/krk-ui/src/kommandos/zellentaste.rs`).
 
 [[funktion]]
 id = "trenntext_spalte_einfuegen"
@@ -1408,22 +1423,6 @@ id = "eintrag_bearbeiten"
 tasten = ["cmd+return"]
 # Oeffnet die Zelle der gewaehlten Zeile; waehrend eine Zelle laeuft, uebernimmt
 # dieselbe Kombination sie, und ein zweites cmd+return oeffnet sie wieder.
-
-[[funktion]]
-id = "trenntext_zeile_einfuegen"
-tasten = ["opt+cmd+return"]
-# Allein in der Tabelle einer CSV- oder TSV-Datei: so viele leere Zeilen ueber
-# der Auswahl, wie sie Zeilen umfasst (E14 des Plans
-# `261018-0822_*_plan-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md`).
-# Die Familie von cmd+return: die blanke Cmd-Ebene bearbeitet, shift davor
-# legt am Ende an, opt davor fuegt an der Auswahl ein. Ein Zeilenbefehl und
-# darum hier im Menue "Home" bei den Eintragsbefehlen; die Spaltenbefehle
-# stehen im Menue "Editor" (Nutzerentscheid vom 261018). opt+cmd+return war am
-# 261018 in keiner Tastenliste dieser Datei vergeben, und
-# `StandardKeyBinding.dict` belegt es nicht (was es mit der Befehlstaste
-# belegt, nennt der Block der CSV-Tabelle weiter oben); im Feldeditor einer
-# Zelle wirkt es, weil es cmd traegt
-# (`crates/krk-ui/src/kommandos/zellentaste.rs`).
 
 [[funktion]]
 id = "eintrag_hoch"

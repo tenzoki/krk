@@ -509,10 +509,13 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::EditorRueckwaertsSuchen
         | Kommando::EditorErsetzen
         | Kommando::EditorAlleErsetzen
-        // Die Spaltenbefehle der Tabelle einer CSV und das Trennzeichen
-        // (E14 des Plans der CSV-Tabelle): sie arbeiten an der Datei im
-        // Editor und nicht an einem Eintrag des Notizordners, und der Nutzer
-        // hat sie unter "Editor" gewaehlt (Nutzerentscheid vom 261018).
+        // Die Tabellenbefehle der CSV (E14 des Plans der CSV-Tabelle): der
+        // Zeilenbefehl, die Spaltenbefehle und das Trennzeichen. Sie arbeiten
+        // an der Datei im Editor und nicht an einem Eintrag des Notizordners,
+        // und der Nutzer will alle unter "Editor" (Nutzerentscheid vom 261018
+        // fuer die Spalten, vom 261019 fuer den Zeilenbefehl, der bis dahin
+        // unter "Home" stand und dort nicht gefunden wurde).
+        | Kommando::TrenntextZeileEinfuegen
         | Kommando::TrenntextSpalteEinfuegen
         | Kommando::TrenntextSpalteAnhaengen
         | Kommando::TrenntextSpalteLoeschen
@@ -544,11 +547,11 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::EintragBearbeiten
         | Kommando::EintragHoch
         | Kommando::EintragRunter
+        // Die Eintragsbefehle wirken auch auf Zeilen der Tabelle einer CSV
+        // und bleiben trotzdem hier, weil sie zugleich die Tabellen des
+        // Notizordners bedienen; die eigenen Tabellenbefehle der CSV stehen
+        // unter "Editor" (Nutzerentscheid vom 261019).
         | Kommando::EintragLoeschen
-        // Der Zeilenbefehl der Tabelle einer CSV steht bei den
-        // Eintragsbefehlen, mit denen er die Zeilen teilt (Nutzerentscheid
-        // vom 261018); die Spaltenbefehle stehen unter "Editor".
-        | Kommando::TrenntextZeileEinfuegen
         | Kommando::AufgabeAbhaken
         | Kommando::PinAendern
         // Das Umkehren der Termintabelle steht unter „Home" bei den uebrigen
@@ -1529,7 +1532,7 @@ mod tests {
         // „Quicknote leeren" ist ab Werk unbelegt und steht deshalb auch in
         // `UNBELEGT_AB_WERK`, der einen Ausnahme von der Pruefung auf eine
         // Kombination.
-        const EDITORBEFEHLE: [&str; 20] = [
+        const EDITORBEFEHLE: [&str; 21] = [
             "bearbeiten",
             "editor_rundweg",
             "fokus_editor",
@@ -1543,8 +1546,10 @@ mod tests {
             "editor_rueckwaerts_suchen",
             "editor_ersetzen",
             "editor_alle_ersetzen",
-            // Die Spaltenbefehle der Tabelle einer CSV und das Trennzeichen
-            // (E14 des Plans der CSV-Tabelle, Nutzerentscheid vom 261018).
+            // Die Tabellenbefehle der CSV (E14 des Plans der CSV-Tabelle):
+            // die Spalten und das Trennzeichen seit dem Nutzerentscheid vom
+            // 261018, der Zeilenbefehl seit dem vom 261019.
+            "trenntext_zeile_einfuegen",
             "trenntext_spalte_einfuegen",
             "trenntext_spalte_anhaengen",
             "trenntext_spalte_loeschen",
@@ -1601,14 +1606,14 @@ mod tests {
     /// Probe des Editors darueber.
     #[test]
     fn der_bereich_home_fuehrt_genau_diese_befehle_in_dieser_folge() {
-        const HOMEBEFEHLE: [&str; 11] = [
+        // Der Zeilenbefehl der Tabelle einer CSV stand bis zum 261019 hier
+        // zwischen „Eintrag bearbeiten" und „Eintrag nach oben"; seitdem steht
+        // er unter „Editor" (Nutzerentscheid vom 261019).
+        const HOMEBEFEHLE: [&str; 10] = [
             "notizzettel",
             "ort_waehlen",
             "eintrag_hinzufuegen",
             "eintrag_bearbeiten",
-            // Der Zeilenbefehl der Tabelle einer CSV bei den Eintragsbefehlen
-            // (E14 des Plans der CSV-Tabelle, Nutzerentscheid vom 261018).
-            "trenntext_zeile_einfuegen",
             "eintrag_hoch",
             "eintrag_runter",
             "eintrag_loeschen",
