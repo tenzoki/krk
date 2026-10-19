@@ -35,7 +35,7 @@
 //! deshalb an Zeichengrenzen, und der Durchlauf ist eine lineare Folge von
 //! Bytevergleichen.
 
-use std::ops::Range;
+use std::ops::{ControlFlow, Range};
 
 use super::dialekt::{Dialekt, Trennzeichen};
 use super::feld::{Feld, Feldform, wert_von};
@@ -65,6 +65,30 @@ pub(crate) fn satz_abtasten(
     trenn: u8,
     mut je_feld: impl FnMut(Range<usize>, Feldform),
 ) -> Satzlauf {
+    satz_abtasten_bis(bytes, start, trenn, |roh, form| {
+        je_feld(roh, form);
+        ControlFlow::Continue(())
+    })
+}
+
+/// [`satz_abtasten`] mit Halt: antwortet `je_feld` mit
+/// [`ControlFlow::Break`], endet der Durchlauf hinter diesem Feld, und der
+/// zurueckgegebene [`Satzlauf`] sagt dann nichts ueber das Satzende.
+///
+/// Dieselbe Zerlegung und kein zweiter Leser: [`satz_abtasten`] ist diese
+/// Funktion ohne Halt. Den Halt brauchen die Spaltenhandlungen, die je Satz
+/// allein die Felder bis zu einer Spalte lesen (`Satzindex::feldbereiche_bis`).
+pub(crate) fn satz_abtasten_bis(
+    bytes: &[u8],
+    start: usize,
+    trenn: u8,
+    mut je_feld: impl FnMut(Range<usize>, Feldform) -> ControlFlow<()>,
+) -> Satzlauf {
+    let gehalten = |i: usize| Satzlauf {
+        inhalt_ende: i,
+        naechster: i,
+        offen: false,
+    };
     let mut i = start;
     loop {
         let feldanfang = i;
@@ -75,7 +99,7 @@ pub(crate) fn satz_abtasten(
             loop {
                 match bytes.get(i) {
                     None => {
-                        je_feld(feldanfang..i, Feldform::Nachsichtig);
+                        let _ = je_feld(feldanfang..i, Feldform::Nachsichtig);
                         return Satzlauf {
                             inhalt_ende: i,
                             naechster: i,
@@ -95,7 +119,7 @@ pub(crate) fn satz_abtasten(
         // was hinter dem schliessenden `"` steht.
         loop {
             let Some(&c) = bytes.get(i) else {
-                je_feld(feldanfang..i, form);
+                let _ = je_feld(feldanfang..i, form);
                 return Satzlauf {
                     inhalt_ende: i,
                     naechster: i,
@@ -103,12 +127,14 @@ pub(crate) fn satz_abtasten(
                 };
             };
             if c == trenn {
-                je_feld(feldanfang..i, form);
+                if je_feld(feldanfang..i, form).is_break() {
+                    return gehalten(i);
+                }
                 i += 1;
                 break;
             }
             if c == b'\n' {
-                je_feld(feldanfang..i, form);
+                let _ = je_feld(feldanfang..i, form);
                 return Satzlauf {
                     inhalt_ende: i,
                     naechster: i + 1,
@@ -116,7 +142,7 @@ pub(crate) fn satz_abtasten(
                 };
             }
             if c == b'\r' && bytes.get(i + 1) == Some(&b'\n') {
-                je_feld(feldanfang..i, form);
+                let _ = je_feld(feldanfang..i, form);
                 return Satzlauf {
                     inhalt_ende: i,
                     naechster: i + 2,
@@ -283,24 +309,43 @@ impl Satzindex {
         Some(felder)
     }
 
-    /// Die rohen Bereiche der Felder des Satzes `satz`, ohne ihre Werte zu
-    /// bilden; fuer die Handlungen, die allein Stellen brauchen.
-    pub(crate) fn feldbereiche(&self, text: &str, satz: usize) -> Vec<Range<usize>> {
-        self.pruefen(text);
+    /// Die rohen Bereiche hoechstens der ersten `hoechstens` Felder des Satzes
+    /// `satz`, geschrieben in `felder`, das vorher geleert wird.
+    ///
+    /// Fuer die Spaltenhandlungen, die je Satz allein wissen muessen, wo eine
+    /// Spalte beginnt und ob der Satz bis zu ihr reicht: der Durchlauf haelt
+    /// hinter dem letzten gebrauchten Feld, und der Puffer wird ueber alle
+    /// Saetze wiederverwendet, statt je Satz eine Liste anzulegen. Traegt
+    /// `felder` danach weniger als `hoechstens` Bereiche, ist das die Feldzahl
+    /// des Satzes.
+    pub(crate) fn feldbereiche_bis(
+        &self,
+        text: &str,
+        satz: usize,
+        hoechstens: usize,
+        felder: &mut Vec<Range<usize>>,
+    ) {
+        felder.clear();
         let Some(bereich) = self.saetze.get(satz) else {
-            return Vec::new();
+            return;
         };
-        let mut felder = Vec::new();
+        if hoechstens == 0 {
+            return;
+        }
         let ausschnitt = &text.as_bytes()[..bereich.end];
-        let _ = satz_abtasten(
+        let _ = satz_abtasten_bis(
             ausschnitt,
             bereich.start,
             self.trennzeichen.byte(),
             |roh, _| {
                 felder.push(roh);
+                if felder.len() < hoechstens {
+                    ControlFlow::Continue(())
+                } else {
+                    ControlFlow::Break(())
+                }
             },
         );
-        felder
     }
 
     /// Das Zeilenende hinter dem Satz `satz`: `\n`, `\r\n` oder leer am Ende

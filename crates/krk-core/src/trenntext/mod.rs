@@ -82,17 +82,78 @@ pub const HOECHSTENS_SPALTEN: usize = 256;
 /// (`261019-0037-vorschau-und-editor-zerlegen-eine-csv-mit-einzelnem-cr-verschieden.md`).
 /// Entschieden wird am Text und ohne Raten: ein Text mit einem einzigen `\n`
 /// faellt nicht darunter, und seine `\r` bleiben Zeichen der Felder.
+///
+/// **Gefragt wird an der ganzen Datei, auch wo allein ihr Anfang gelesen
+/// ist.** Der Editor liest die ganze Datei (bis zur Editorgrenze) und fragt
+/// diese Funktion. Die Vorschau liest von einer Datei ueber ihrer Lesegrenze
+/// allein den Anfang; traegt der kein `\n`, sammelt sie die [`Endzeichen`]
+/// der Datei bis zu derselben Grenze, die der Editor liest, und fragt
+/// [`Endzeichen::cr_als_satzende`] daran (`trenntext_aus_bytes` in
+/// `krk-ui/src/vorschaumodell.rs`). Bis zum 261019 fragte sie den Anfang
+/// allein, und eine Datei mit einem `\n` hinter dem ersten MiB zeigte die
+/// Vorschau als viele Saetze, der Editor als einen
+/// (`261019-1122-die-vorschau-entscheidet-cr-als-satzende-am-ersten-megabyte-der-editor-an-der-ganzen-datei.md`).
+/// Diese Funktion ist [`Endzeichen::cr_als_satzende`] ueber den ganzen Text.
 #[must_use]
 pub fn cr_als_satzende(text: &str) -> bool {
-    let bytes = text.as_bytes();
-    !bytes.contains(&b'\n') && bytes.contains(&b'\r')
+    Endzeichen::von(text.as_bytes()).cr_als_satzende()
+}
+
+/// Welche der zwei Zeichen `\n` und `\r` ein Text traegt: die ganze Eingabe
+/// der Regel [`cr_als_satzende`], und sie laesst sich Stueck fuer Stueck
+/// sammeln ([`Endzeichen::und`]), damit die Regel auch an einer Datei
+/// entscheidet, von der allein ein Anfang im Speicher steht.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Endzeichen {
+    lf: bool,
+    cr: bool,
+}
+
+impl Endzeichen {
+    /// Was `bytes` traegt.
+    #[must_use]
+    pub fn von(bytes: &[u8]) -> Self {
+        Self {
+            lf: bytes.contains(&b'\n'),
+            cr: bytes.contains(&b'\r'),
+        }
+    }
+
+    /// Was zwei Stuecke zusammen tragen.
+    #[must_use]
+    pub fn und(self, weitere: Self) -> Self {
+        Self {
+            lf: self.lf || weitere.lf,
+            cr: self.cr || weitere.cr,
+        }
+    }
+
+    /// Ob ein `\n` darunter ist; dann entscheidet kein weiteres Stueck die
+    /// Regel noch um.
+    #[must_use]
+    pub fn traegt_lf(self) -> bool {
+        self.lf
+    }
+
+    /// Die Regel aus [`cr_als_satzende`]: kein `\n`, aber ein `\r`.
+    #[must_use]
+    pub fn cr_als_satzende(self) -> bool {
+        !self.lf && self.cr
+    }
 }
 
 /// Der Text, den der Leser bekommt: unveraendert, oder bei
 /// [`cr_als_satzende`] mit jedem `\r` als `\n`.
 #[must_use]
 pub fn lesbar(text: &str) -> std::borrow::Cow<'_, str> {
-    if cr_als_satzende(text) {
+    lesbar_nach(text, Endzeichen::von(text.as_bytes()))
+}
+
+/// [`lesbar`] fuer einen Text, der der Anfang einer Datei ist: entschieden
+/// wird an den `endzeichen` der Datei und nicht an denen des Anfangs.
+#[must_use]
+pub fn lesbar_nach(text: &str, endzeichen: Endzeichen) -> std::borrow::Cow<'_, str> {
+    if endzeichen.cr_als_satzende() {
         std::borrow::Cow::Owned(text.replace('\r', "\n"))
     } else {
         std::borrow::Cow::Borrowed(text)

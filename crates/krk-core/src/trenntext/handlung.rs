@@ -35,16 +35,22 @@
 //! letzter Satz**: ohne Zeilenende waere er kein Satz mehr, und die Tabelle
 //! verloere eine Zeile. Er behaelt deshalb sein Zeilenende oder bekommt eins.
 //!
-//! Ein neues Zeilenende nimmt die Form des ersten im Text, `\r\n` oder `\n`;
-//! der gehaltene Stand des Editors traegt allein `\n`, die Vorschau rechnet
-//! keine Handlung, und so bleibt die Rechnung auch an Bytes mit `\r\n` richtig.
+//! Ein neues Zeilenende nimmt die Form des ersten im Text, `\r\n` oder `\n`.
+//! **Der gehaltene Stand des Editors traegt seit dem 261019 die Zeilenenden
+//! der Datei** (`krk_core::text::datei::trenntext_oeffnen`, seit `ff2d7b76`):
+//! eine Datei mit `\r\n` haelt er mit `\r\n`, und eine Handlung schreibt ihre
+//! neuen Zeilenenden in derselben Form. Allein eine Datei, die kein `\n` und
+//! ein `\r` traegt, haelt er mit `\n` ([`super::cr_als_satzende`]). Die
+//! Vorschau rechnet keine Handlung.
 //!
 //! **Was diese Regel nicht haelt:** endet der Text ohne Zeilenende auf ein
 //! einzelnes `\r`, das der Leser als Zeichen des letzten Feldes liest, und
 //! haengt eine Handlung einen Satz an, wird aus `\r` und dem neuen `\n` ein
-//! `\r\n`, und das Feld verliert sein letztes Zeichen. Der gehaltene Stand des
-//! Editors kommt so nur zustande, wenn jemand ein einzelnes `\r` ans Dateiende
-//! schreibt; eine Probe haelt den Fall nicht.
+//! `\r\n`, und das Feld verliert sein letztes Zeichen. Seit der Stand die
+//! Zeilenenden der Datei traegt, kommt ein solcher Text auch von der Platte,
+//! etwa `a;b\n1;2\r`: die Datei traegt ein `\n` und faellt deshalb nicht unter
+//! die Regel fuer `\r` als Satzende, und ihr letztes `\r` bleibt ein Zeichen
+//! des Feldes. Eine Probe haelt den Fall nicht.
 //!
 //! # Was eine Handlung abweist
 //!
@@ -71,21 +77,59 @@ pub struct LetzteSpalte;
 /// Eine Ersetzung am alten Text.
 type Ersetzung = (Range<usize>, String);
 
+/// Schreibt den neuen Text in einem Durchgang: was zwischen zwei Ersetzungen
+/// liegt, wird aus dem alten Text kopiert, und jede Ersetzung schreibt ihren
+/// Inhalt unmittelbar in den einen vorab bemessenen Puffer.
+///
+/// **Die eine Stelle, an der ein neuer Text entsteht.** [`spleissen`] fuettert
+/// sie mit einer Liste; die Spaltenhandlungen fuettern sie Satz fuer Satz,
+/// ohne je Satz eine Ersetzung samt eigenem `String` anzulegen, weil das an
+/// der Editorgrenze je Handlung Hunderttausende kleiner Anforderungen waren
+/// (`261019-0037-die-zelluebernahme-an-16-mib-ist-ohne-setstring-gemessen-und-die-100-ms-grenze-des-plans-ist-nicht-entschieden.md`).
+struct Spleiss<'t> {
+    alt: &'t str,
+    neu: String,
+    /// Bis wohin der alte Text verarbeitet ist.
+    stelle: usize,
+}
+
+impl<'t> Spleiss<'t> {
+    /// Ein Puffer fuer den alten Text und `zuwachs` Bytes dazu; eine zu
+    /// kleine Schaetzung kostet ein Wachsen und keinen Fehler.
+    fn neu(alt: &'t str, zuwachs: usize) -> Self {
+        Self {
+            alt,
+            neu: String::with_capacity(alt.len() + zuwachs),
+            stelle: 0,
+        }
+    }
+
+    /// Ersetzt `bereich` des alten Textes durch `inhalt`. Die Bereiche kommen
+    /// aufsteigend und ueberlappen nicht.
+    fn ersetzen(&mut self, bereich: Range<usize>, inhalt: &str) {
+        debug_assert!(bereich.start >= self.stelle, "Ersetzungen ueberlappen");
+        self.neu.push_str(&self.alt[self.stelle..bereich.start]);
+        self.neu.push_str(inhalt);
+        self.stelle = bereich.end;
+    }
+
+    /// Der neue Text, mit dem Rest des alten dahinter.
+    fn fertig(mut self) -> String {
+        self.neu.push_str(&self.alt[self.stelle..]);
+        self.neu
+    }
+}
+
 /// Setzt den neuen Text aus dem alten und den Ersetzungen zusammen. Die
-/// Ersetzungen stehen aufsteigend und ueberlappen nicht.
+/// Ersetzungen ueberlappen nicht.
 fn spleissen(text: &str, mut ersetzungen: Vec<Ersetzung>) -> String {
     ersetzungen.sort_by_key(|(bereich, _)| bereich.start);
     let zuwachs: usize = ersetzungen.iter().map(|(_, neu)| neu.len()).sum();
-    let mut neu = String::with_capacity(text.len() + zuwachs);
-    let mut stelle = 0;
-    for (bereich, inhalt) in ersetzungen {
-        debug_assert!(bereich.start >= stelle, "Ersetzungen ueberlappen");
-        neu.push_str(&text[stelle..bereich.start]);
-        neu.push_str(&inhalt);
-        stelle = bereich.end;
+    let mut spleiss = Spleiss::neu(text, zuwachs);
+    for (bereich, inhalt) in &ersetzungen {
+        spleiss.ersetzen(bereich.clone(), inhalt);
     }
-    neu.push_str(&text[stelle..]);
-    neu
+    spleiss.fertig()
 }
 
 /// Das Zeilenende, das eine Handlung neu schreibt: die Form des ersten im
@@ -121,11 +165,6 @@ fn braucht_abschluss(text: &str) -> bool {
 /// Ob der Satz `satz` ohne Zeilenende am Ende des Textes steht.
 fn ohne_zeilenende(index: &Satzindex, satz: usize) -> bool {
     index.zeilenende(satz).is_empty()
-}
-
-/// Der rohe Bereich jedes Feldes eines Satzes, ohne seinen Wert zu bilden.
-fn feldbereiche(text: &str, index: &Satzindex, satz: usize) -> Vec<Range<usize>> {
-    index.feldbereiche(text, satz)
 }
 
 /// Haelt an, wenn der Index nicht zum Text gehoert, und sagt, ob eine Handlung
@@ -432,21 +471,26 @@ pub fn spalte_einfuegen(
         return None;
     }
     let trennzeichen = (index.trennzeichen().byte() as char).to_string();
-    let mut ersetzungen = Vec::new();
+    // Ein Durchgang: je Satz die Felder bis zur Spalte `an`, und der neue Text
+    // waechst im selben Zug. Hoechstens ein Trennzeichen je Satz kommt dazu.
+    let mut spleiss = Spleiss::neu(text, index.zeilenzahl() * trennzeichen.len());
+    let mut felder = Vec::new();
+    let mut eingefuegt = false;
     for satz in 0..index.zeilenzahl() {
-        let felder = feldbereiche(text, index, satz);
+        index.feldbereiche_bis(text, satz, an + 1, &mut felder);
         let stelle = match felder.len() {
             n if n > an => felder[an].start,
             n if n == an => index.saetze()[satz].end,
             _ => continue,
         };
-        ersetzungen.push((stelle..stelle, trennzeichen.clone()));
+        spleiss.ersetzen(stelle..stelle, &trennzeichen);
+        eingefuegt = true;
     }
-    if ersetzungen.is_empty() {
+    if !eingefuegt {
         return None;
     }
     Some(Trenntextstand {
-        text: spleissen(text, ersetzungen),
+        text: spleiss.fertig(),
         auswahl: Zellbereich {
             zeilen: auswahl.zeilen.clone(),
             spalten: an..an + 1,
@@ -479,9 +523,15 @@ pub fn spalten_loeschen(
         return Err(LetzteSpalte);
     }
     let ende = zeilenende_des_textes(text, index);
-    let mut ersetzungen = Vec::new();
+    // Ein Durchgang wie beim Einfuegen: je Satz die Felder bis zur Spalte
+    // `bis`, und der neue Text entsteht im selben Zug.
+    let mut spleiss = Spleiss::neu(text, 0);
+    let mut felder = Vec::new();
+    let mut geloescht = false;
     for satz in 0..index.zeilenzahl() {
-        let felder = feldbereiche(text, index, satz);
+        // Bis zu `bis + 1` Felder: so viele braucht der Fall `bis < n`, und
+        // ein Satz mit weniger hat danach genau seine Feldzahl im Puffer.
+        index.feldbereiche_bis(text, satz, bis + 1, &mut felder);
         let n = felder.len();
         if n <= von {
             continue;
@@ -498,19 +548,20 @@ pub fn spalten_loeschen(
         // einem Zeilenende. Das trifft nicht nur das Loeschen jedes Feldes:
         // auch `,` verliert mit seinem ersten Feld seinen ganzen Inhalt.
         let bleibt = if weg.len() == satzbereich.len() && ohne_zeilenende(index, satz) {
-            ende.to_owned()
+            ende
         } else {
-            String::new()
+            ""
         };
-        ersetzungen.push((weg, bleibt));
+        spleiss.ersetzen(weg, bleibt);
+        geloescht = true;
     }
-    if ersetzungen.is_empty() {
+    if !geloescht {
         return Ok(None);
     }
     let neue_spaltenzahl = spaltenzahl - (bis - von);
     let gewaehlt = von.min(neue_spaltenzahl - 1);
     Ok(Some(Trenntextstand {
-        text: spleissen(text, ersetzungen),
+        text: spleiss.fertig(),
         auswahl: Zellbereich {
             zeilen: auswahl.zeilen.clone(),
             spalten: gewaehlt..gewaehlt + 1,

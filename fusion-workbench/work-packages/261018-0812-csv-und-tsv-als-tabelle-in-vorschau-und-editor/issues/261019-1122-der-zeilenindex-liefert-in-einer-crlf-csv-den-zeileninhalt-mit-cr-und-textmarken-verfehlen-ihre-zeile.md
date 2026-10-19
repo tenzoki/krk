@@ -21,3 +21,6 @@ Seit `ff2d7b76` trägt der Stand einer CSV oder TSV ihre Zeilenenden. `Zeilenind
 - Eine Probe in `crates/krk-core/src/text/zeilen.rs`: `inhalt_der_zeile("a\r\nb", 1)` ist `Some("a")`.
 - Eine Probe in `crates/krk-core/src/text/marke.rs`: `wiederfinden("x\r\nZiel\r\ny", 2, "Ziel")` ergibt `Fund::Getroffen`.
 - Die zwei Modulköpfe nennen den Stand einer CSV mit ihren Zeilenenden.
+
+---
+Resolved: `Zeilenindex::inhalt_der_zeile` (`crates/krk-core/src/text/zeilen.rs`) nimmt ein `\r` unmittelbar vor dem `\n` mit ab; ein `\r` ohne `\n` dahinter (letzte Zeile, mitten in der Zeile) bleibt Inhalt. Rufer sind allein `marke::wiederfinden` und `Editorbereich::schreibmarkenzeile`, beide wollen die Zeile ohne Zeilenende; außerhalb einer CSV oder TSV trägt der Stand kein `\r`, dort ändert sich nichts. Proben `ein_cr_vor_dem_umbruch_gehoert_zum_zeilenende` (`text/zeilen.rs`) und `eine_marke_trifft_ihre_zeile_in_einem_stand_mit_crlf` (`text/marke.rs`). Die Modulköpfe von `text/zeilen.rs` und `trenntext/handlung.rs` nennen den Stand einer CSV mit den Zeilenenden ihrer Datei, letzterer auch `a;b\n1;2\r` als Fall von der Platte.

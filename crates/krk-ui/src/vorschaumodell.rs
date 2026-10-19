@@ -1768,7 +1768,15 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile, heim: Option<&Heimordner>
         // Angelesen wie JSON-Zeilen, siehe [`trenntext_aus_bytes`]; was dort
         // keine Tabelle und kein Text wird, beschreiben die Metadaten.
         Leseart::Trenntext(art) => match anlesen(pfad, TEXTGRENZE + 1).ok().and_then(|bytes| {
-            trenntext_aus_bytes(bytes, art, pfad, Dateityp::von_pfad(pfad, heim), tafel)
+            let endzeichen = endzeichen_der_datei(pfad, &bytes);
+            trenntext_aus_bytes(
+                bytes,
+                endzeichen,
+                art,
+                pfad,
+                Dateityp::von_pfad(pfad, heim),
+                tafel,
+            )
         }) {
             Some(inhalt) => inhalt,
             None => auf_die_metadaten(metadaten),
@@ -1894,8 +1902,14 @@ fn jsonzeilen_aus_bytes(mut bytes: Vec<u8>) -> Option<String> {
 /// ([`text_als_inhalt`], eingefaerbt nach ihrer Endung); ueber ihr stuende ein
 /// angeschnittener Text da, und es bleibt bei den Metadaten wie fuer jede
 /// Textdatei ueber 1 MB.
+///
+/// **`endzeichen` sind die der Datei und nicht die der gelesenen Bytes**, also
+/// die Eingabe von [`trenntext::Endzeichen::cr_als_satzende`] an derselben
+/// Datei, an der der Editor sie fragt ([`endzeichen_der_datei`]); unter der
+/// Grenze sind beide dasselbe.
 fn trenntext_aus_bytes(
     mut bytes: Vec<u8>,
+    endzeichen: trenntext::Endzeichen,
     art: trenntext::Art,
     pfad: &Path,
     typ: Dateityp,
@@ -1905,7 +1919,7 @@ fn trenntext_aus_bytes(
         let text = String::from_utf8(bytes).ok()?;
         // Dieselbe Eingabe wie im Editor: ein Text mit `\r` als einzigem
         // Satzende bekommt es als `\n` (`trenntext::lesbar`).
-        let lesbar = trenntext::lesbar(&text);
+        let lesbar = trenntext::lesbar_nach(&text, endzeichen);
         let dialekt = dialekt_erkennen(art, &lesbar);
         let tabelle = trenntextvorschau::aufbereiten(&lesbar, &dialekt, None);
         return Some(match tabelle {
@@ -1921,12 +1935,41 @@ fn trenntext_aus_bytes(
         Err(_) => return None,
     };
     bytes.truncate(gueltig);
-    let mut angelesen = trenntext::lesbar(std::str::from_utf8(&bytes).ok()?).into_owned();
+    // An den Endzeichen der Datei und nicht an denen des Anfangs, damit ein
+    // `\n` hinter der Grenze dieselbe Antwort gibt wie im Editor.
+    let mut angelesen =
+        trenntext::lesbar_nach(std::str::from_utf8(&bytes).ok()?, endzeichen).into_owned();
     let dialekt = dialekt_erkennen(art, &angelesen);
     let bis = vollstaendig_bis(angelesen.as_bytes(), dialekt.trennzeichen);
     angelesen.truncate(bis);
     trenntextvorschau::aufbereiten(&angelesen, &dialekt, Some(TEXTGRENZE / (1024 * 1024)))
         .map(Inhalt::Trenntext)
+}
+
+/// Die Endzeichen einer Datei, von der `angelesen` der Anfang ist, gesammelt
+/// bis zu der Grenze, bis zu der der Editor liest; laeuft auf dem Faden der
+/// Vorschau.
+///
+/// **Eine Datei bis [`TEXTGRENZE`] ist ganz gelesen**, und ein `\n` im Anfang
+/// entscheidet die Regel endgueltig; in beiden Faellen bleibt es bei den
+/// gelesenen Bytes. Allein eine groessere Datei ohne `\n` im Anfang wird ein
+/// zweites Mal gelesen, bis zur Editorgrenze und durch dieselbe Tuer
+/// ([`anlesen`]): erst dann sagt die Regel dasselbe wie im Editor, der die
+/// ganze Datei fragt (`krk_core::text::datei::trenntext_oeffnen`). Eine Datei
+/// ueber der Editorgrenze oeffnet der Editor nicht; fuer sie entscheiden ihre
+/// ersten 16 MB. Scheitert das zweite Lesen, bleibt es beim Anfang.
+///
+/// Das zweite Lesen kostet bis zu 16 MB auf diesem Faden, aber allein fuer
+/// eine Datei ueber 1 MB, deren erstes MB kein `\n` traegt.
+fn endzeichen_der_datei(pfad: &Path, angelesen: &[u8]) -> trenntext::Endzeichen {
+    let anfang = trenntext::Endzeichen::von(angelesen);
+    if angelesen.len() as u64 <= TEXTGRENZE || anfang.traegt_lf() {
+        return anfang;
+    }
+    match anlesen(pfad, krk_core::text::datei::EDITORGRENZE) {
+        Ok(ganz) => trenntext::Endzeichen::von(&ganz),
+        Err(_) => anfang,
+    }
 }
 
 /// Liest den Anfang einer Datei in einem lokalen Archiv und bereitet ihn auf
@@ -1989,7 +2032,18 @@ fn archiveintrag_laden(
         }),
         Leseart::Jsonzeilen => jsonzeilen_aus_bytes(bytes).map(Inhalt::Text),
         Leseart::Trenntext(art) => {
-            trenntext_aus_bytes(bytes, art, &name, Dateityp::von_pfad(&name, None), tafel)
+            // Der Editor oeffnet keinen Eintrag eines Archivs, und es gibt keine
+            // zweite Antwort, mit der die Vorschau uebereinstimmen muesste:
+            // entschieden wird am gelesenen Anfang.
+            let endzeichen = trenntext::Endzeichen::von(&bytes);
+            trenntext_aus_bytes(
+                bytes,
+                endzeichen,
+                art,
+                &name,
+                Dateityp::von_pfad(&name, None),
+                tafel,
+            )
         }
         Leseart::Text if !voll => String::from_utf8(bytes)
             .ok()
@@ -2956,6 +3010,58 @@ mod tests {
             .stand;
         let index = trenntext::indexieren(&stand, &dialekt_erkennen(trenntext::Art::Csv, &stand));
         assert_eq!(index.zeilenzahl(), 2, "das \\r teilt im Editor keinen Satz");
+    }
+
+    /// Eine CSV ueber [`TEXTGRENZE`] mit `\r` als Satzende entscheidet die
+    /// Regel `trenntext::cr_als_satzende` in der Vorschau an derselben Datei
+    /// wie im Editor
+    /// (`261019-1122-die-vorschau-entscheidet-cr-als-satzende-am-ersten-megabyte-der-editor-an-der-ganzen-datei.md`).
+    ///
+    /// Mit einem `\n` hinter der Grenze ist der erste Satz des Editors laenger
+    /// als die Grenze, und die Vorschau zeigt keinen Satz; bis zum 261019
+    /// zeigte sie das erste MB als Zehntausende Saetze. Ohne `\n` zeigen beide
+    /// Tabellen, und die Vorschau eine mit den Saetzen des Editors.
+    #[test]
+    fn eine_cr_csv_ueber_der_lesegrenze_entscheidet_die_regel_wie_der_editor() {
+        let ordner = Pruefordner::neu("trenntext-cr-gross");
+        let mut inhalt = Vec::new();
+        let mut zeile = 0usize;
+        while (inhalt.len() as u64) <= TEXTGRENZE + 4096 {
+            inhalt.extend_from_slice(format!("zeile{zeile}\r").as_bytes());
+            zeile += 1;
+        }
+
+        let nur_cr = ordner.pfad().join("nur-cr.csv");
+        std::fs::write(&nur_cr, &inhalt).expect("Probendatei");
+        let stand = krk_core::text::datei::trenntext_oeffnen(&nur_cr)
+            .expect("der Editor oeffnet sie")
+            .stand;
+        let dialekt = dialekt_erkennen(trenntext::Art::Csv, &stand);
+        assert_eq!(trenntext::indexieren(&stand, &dialekt).zeilenzahl(), zeile);
+        let Inhalt::Trenntext(gezeigt) = laden(&nur_cr, Tafel::Hell, &Profile::default(), None)
+        else {
+            panic!("die Vorschau zeigt eine Tabelle");
+        };
+        assert!(gezeigt.contains("zeile0") && !gezeigt.contains('⏎'));
+
+        let spaet = ordner.pfad().join("spaetes-lf.csv");
+        let mut mit_lf = inhalt.clone();
+        mit_lf.extend_from_slice(b"\nletzte\n");
+        std::fs::write(&spaet, &mit_lf).expect("Probendatei");
+        let stand = krk_core::text::datei::trenntext_oeffnen(&spaet)
+            .expect("der Editor oeffnet sie")
+            .stand;
+        let dialekt = dialekt_erkennen(trenntext::Art::Csv, &stand);
+        let index = trenntext::indexieren(&stand, &dialekt);
+        assert_eq!(index.zeilenzahl(), 2, "der Editor haelt zwei Saetze");
+        assert!(index.saetze()[0].len() as u64 > TEXTGRENZE);
+        assert!(
+            !matches!(
+                laden(&spaet, Tafel::Hell, &Profile::default(), None),
+                Inhalt::Trenntext(_)
+            ),
+            "kein Satz des Editors schliesst im ersten MB, also zeigt die Vorschau keinen"
+        );
     }
 
     /// Ein offenes Anfuehrungszeichen, eine leere Datei und eine mit mehr

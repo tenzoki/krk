@@ -10,14 +10,25 @@
 //! der sie nicht kennte, wiese den Zeilensprung an das Ende der vorletzten
 //! Zeile. Der leere Text hat genau eine Zeile, naemlich die leere erste.
 //!
-//! # Nur `\n`, und das ist eine Zusage von anderswo
+//! # `\n` beendet eine Zeile, und ein `\r` davor gehoert zum Zeilenende
 //!
-//! Der Index kennt ein einziges Zeilenende. Er darf das, weil der gehaltene
-//! Stand des Editors keines anderen traegt: das Einlesen macht `\r\n` und
-//! einzelne `\r` zu `\n`, entschieden am 260808-0021
+//! Der Index zaehlt Zeilen allein an `\n`. Fuer jede Datei ausser einer CSV
+//! oder TSV ist das das einzige Zeilenende des gehaltenen Standes: das
+//! Einlesen macht `\r\n` und einzelne `\r` zu `\n`, entschieden am
+//! 260808-0021
 //! (`decisions/260808-0021_*_was-sagt-der-editor-beim-sichern-ueber-den-unveraenderten-teil-der-datei-zu.md`).
-//! Ein Index, der beide Formen selbst behandelte, waere die zweite Stelle mit
-//! einer Meinung darueber, was eine Zeile beendet.
+//!
+//! **Der Stand einer CSV oder TSV traegt seit dem 261019 die Zeilenenden
+//! ihrer Datei** (`crate::text::datei::trenntext_oeffnen`, Modulkopf von
+//! `crate::text::datei`), also in einer Datei mit `\r\n` je Zeile ein `\r`
+//! vor dem `\n`. Die Zaehlung bleibt dieselbe, denn auch dort beendet das
+//! `\n` die Zeile; [`Zeilenindex::inhalt_der_zeile`] nimmt ein `\r`
+//! unmittelbar vor dem `\n` aber mit ab, damit der Inhalt einer Zeile in
+//! beiden Formen derselbe ist und eine Textmarke, die eine Fassung vor 3.9.0
+//! auf einer solchen Zeile angelegt hat, ihre Zeile wiederfindet. Ein
+//! einzelnes `\r` mitten in einer Zeile ist kein Zeilenende und bleibt
+//! Inhalt. Ein Index, der weitere Formen selbst erkennte, waere die zweite
+//! Stelle mit einer Meinung darueber, was eine Zeile beendet.
 //!
 //! # Zeilennummern zaehlen ab 1
 //!
@@ -147,13 +158,19 @@ impl Zeilenindex {
         }
         let anfang = *self.anfaenge.get(nummer - 1)?;
         // Das Ende ist der Anfang der naechsten Zeile ohne deren `\n`; bei der
-        // letzten Zeile ist es das Textende. Genau ein Byte, weil der gehaltene
-        // Stand kein `\r\n` mehr traegt, siehe Modulkopf.
+        // letzten Zeile ist es das Textende. Ein `\r` unmittelbar vor dem `\n`
+        // gehoert zum Zeilenende: der Stand einer CSV oder TSV traegt die
+        // Zeilenenden ihrer Datei, siehe Modulkopf.
         let ende = match self.anfaenge.get(nummer) {
             Some(naechster) => naechster.saturating_sub(1),
             None => self.laenge,
         };
-        text.get(anfang..ende)
+        let zeile = text.get(anfang..ende)?;
+        if ende < self.laenge {
+            Some(zeile.strip_suffix('\r').unwrap_or(zeile))
+        } else {
+            Some(zeile)
+        }
     }
 
     /// Die Nummer der Zeile, in der `versatz` liegt, ab 1 gezaehlt.
@@ -219,6 +236,23 @@ mod tests {
         assert_eq!(index.inhalt_der_zeile(text, 3), Some("drei"));
         assert_eq!(index.inhalt_der_zeile(text, 0), None);
         assert_eq!(index.inhalt_der_zeile(text, 4), None);
+    }
+
+    /// Der Stand einer CSV mit `\r\n` traegt das `\r` (seit `ff2d7b76`); der
+    /// Inhalt einer Zeile kommt trotzdem ohne es, damit Textmarken ihre Zeile
+    /// in beiden Formen wiederfinden. Ein `\r` ohne `\n` dahinter bleibt.
+    #[test]
+    fn ein_cr_vor_dem_umbruch_gehoert_zum_zeilenende() {
+        let text = "a\r\nb";
+        let index = Zeilenindex::neu(text);
+        assert_eq!(index.inhalt_der_zeile(text, 1), Some("a"));
+        assert_eq!(index.inhalt_der_zeile(text, 2), Some("b"));
+        let text = "a;b\n1;2\r";
+        let index = Zeilenindex::neu(text);
+        assert_eq!(index.inhalt_der_zeile(text, 2), Some("1;2\r"));
+        let text = "x\ry\n";
+        let index = Zeilenindex::neu(text);
+        assert_eq!(index.inhalt_der_zeile(text, 1), Some("x\ry"));
     }
 
     #[test]

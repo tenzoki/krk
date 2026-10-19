@@ -2180,6 +2180,18 @@ impl Einsatz {
     }
 }
 
+/// Ob `bereich` in einen Text von `laenge` UTF-16-Einheiten passt: die eine
+/// Pruefung vor dem Teilersatz in [`Editorbereich::stand_einsetzen`].
+///
+/// Sie haelt allein die Grenzen, damit AppKit keine Ausnahme wirft, und sagt
+/// nichts darueber, ob der Text der erwartete ist; das steht dort.
+fn bereich_passt(bereich: NSRange, laenge: usize) -> bool {
+    bereich
+        .location
+        .checked_add(bereich.length)
+        .is_some_and(|ende| ende <= laenge)
+}
+
 /// Die Groesse, mit der die Flaeche entsteht, bevor die Aufteilung sie auslegt.
 ///
 /// Die Breite ist die Anfangsbreite des Bereichs aus
@@ -5282,10 +5294,30 @@ impl Editorbereich {
     /// **[`Einsatz::Bereich`] ersetzt allein den geaenderten Bereich** ueber
     /// `replaceCharactersInRange:withString:` am Textspeicher, der wie
     /// `setString:` an der Rueckgaengigverwaltung und an `textDidChange:`
-    /// vorbeischreibt. Reicht der Bereich ueber den Text der Flaeche hinaus,
-    /// traegt sie also nicht den Stand, gegen den er gebildet ist, oder gibt
-    /// sie keinen Textspeicher her, wird der ganze Stand geschrieben: eine
-    /// Objective-C-Ausnahme ist in Rust nicht zu fangen.
+    /// vorbeischreibt.
+    ///
+    /// **Die Vorbedingung ist eine Invariante und keine Pruefung: die Flaeche
+    /// traegt vor dem Umbau Zeichen fuer Zeichen den Stand des Modells, gegen
+    /// den der Bereich gebildet ist.** Gehalten wird sie von den Wegen, die die
+    /// Flaeche und den Stand aneinander binden: jedes Tippen schreibt ueber
+    /// `textDidChange:` und [`Self::text_zurueckschreiben`] synchron in das
+    /// Modell zurueck; jede andere Aenderung der Flaeche geht durch diese
+    /// Funktion; und jeder Umbau ruft vorher [`Self::zelle_uebernehmen`],
+    /// sodass keine laufende Zelle Text haelt, der nicht im Stand steht.
+    /// Rufer mit einem Bereich sind [`Self::umbau_anwenden`] und
+    /// [`Self::umkehren`].
+    ///
+    /// **Geprueft wird davon allein, dass der Bereich in den Text der Flaeche
+    /// passt** ([`bereich_passt`]), und das verhindert die Objective-C-Ausnahme
+    /// eines Bereichs hinter dem Textende, die in Rust nicht zu fangen ist; dann
+    /// und ohne Textspeicher wird der ganze Stand geschrieben. **Ob die Flaeche
+    /// den erwarteten Stand traegt, sagt diese Pruefung nicht**: eine
+    /// abweichende Flaeche, in die der Bereich passt, bekaeme ihn ersetzt, und
+    /// der Text darin waere falsch. Eine Pruefung der Zeichen kostete an der
+    /// Editorgrenze so viel wie das `setString:`, das der Teilersatz einspart,
+    /// und steht deshalb nicht hier; der Vergleich der Laengen danach ist ein
+    /// `debug_assert_eq!` und fehlt im Profil `release`
+    /// (`261019-1122-der-teilersatz-an-der-textflaeche-prueft-allein-die-laenge-und-der-doc-kommentar-sagt-mehr.md`).
     fn stand_einsetzen(&self, verlauf: Verlauf, einsatz: Einsatz) {
         let leeren_danach = match verlauf {
             Verlauf::Faellt => true,
@@ -5302,11 +5334,13 @@ impl Editorbereich {
         let flaeche = &self.ivars().text;
         let ersetzt = match einsatz {
             Einsatz::Bereich { bereich, ersatz }
-                if bereich.location + bereich.length <= flaeche.string().length() =>
+                if bereich_passt(bereich, flaeche.string().length()) =>
             {
                 // SAFETY: Den Textspeicher bringt die Flaeche selbst mit; er
                 // wird hier allein in einem Bereich beschrieben, der innerhalb
-                // seines Textes liegt (die Bedingung darueber).
+                // seines Textes liegt (die Bedingung darueber). Dass der Text
+                // der Stand ist, gegen den der Bereich gebildet ist, haelt die
+                // Invariante aus dem Doc-Kommentar und nicht diese Bedingung.
                 match unsafe { flaeche.textStorage() } {
                     Some(speicher) => {
                         speicher.replaceCharactersInRange_withString(
@@ -9577,6 +9611,51 @@ mod tests {
         assert_eq!(gleich_von_vorn(&lang, &lang[..5000]), 5000);
         assert_eq!(gleich_von_hinten(&lang, &lang[15_000..]), 5000);
         assert_eq!(gleich_von_vorn(b"", b"abc"), 0);
+    }
+
+    /// Die Pruefung vor dem Teilersatz haelt allein die Grenzen: eine Flaeche,
+    /// die nicht den erwarteten Stand traegt, laesst sie durch, sobald der
+    /// Bereich hineinpasst. Bis zum 261019 sagte der Doc-Kommentar von
+    /// `stand_einsetzen`, ein passender Bereich heisse, die Flaeche trage den
+    /// Stand
+    /// (`261019-1122-der-teilersatz-an-der-textflaeche-prueft-allein-die-laenge-und-der-doc-kommentar-sagt-mehr.md`);
+    /// diese Probe zeigt, dass das nicht folgt, und haelt die Grenzen fest.
+    #[test]
+    fn ein_passender_bereich_sagt_nichts_ueber_den_stand_der_flaeche() {
+        let vorher = "a;b\nc;d\n";
+        let nachher = "a;b\nc;x\n";
+        let punkt = Umkehrpunkt::zwischen(vorher, nachher, NSRange::new(0, 0));
+        let Einsatz::Bereich { bereich, .. } = Einsatz::aus_umkehrpunkt(&punkt, nachher) else {
+            panic!("ein Umbau ersetzt einen Bereich");
+        };
+        let abweichend = "z;z\nz;z\n";
+        assert_ne!(abweichend, vorher);
+        assert!(
+            bereich_passt(bereich, abweichend.encode_utf16().count()),
+            "eine gleich lange, abweichende Flaeche besteht die Pruefung"
+        );
+        assert!(!bereich_passt(
+            bereich,
+            bereich.location + bereich.length - 1
+        ));
+        assert!(!bereich_passt(NSRange::new(usize::MAX, 1), usize::MAX));
+
+        use super::super::anwendung::quelltextproben::rumpf;
+        let quelle = super::super::anwendung::quelltextproben::datei("krk-ui/src/appkit/editor.rs");
+        let kommentar_und_rumpf = {
+            let anfang = quelle
+                .find("/// **[`Einsatz::Bereich`] ersetzt allein den geaenderten Bereich**")
+                .expect("der Doc-Kommentar von stand_einsetzen");
+            &quelle[anfang..]
+        };
+        assert!(
+            !kommentar_und_rumpf[..kommentar_und_rumpf
+                .find("fn stand_einsetzen")
+                .expect("die Funktion")]
+                .contains("traegt sie also nicht den Stand"),
+            "der Doc-Kommentar schliesst nicht vom passenden Bereich auf den Stand"
+        );
+        assert!(rumpf(&quelle, "stand_einsetzen").contains("bereich_passt("));
     }
 
     #[test]

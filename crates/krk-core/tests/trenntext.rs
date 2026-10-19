@@ -1036,6 +1036,92 @@ fn jede_handlung_aendert_nur_die_bytes_der_beruehrten_saetze() {
     }
 }
 
+/// Die Spaltenhandlungen lesen je Satz allein die Felder bis zur Spalte, die
+/// sie brauchen, und schreiben den neuen Text in einem Durchgang
+/// (`261019-0037-die-zelluebernahme-an-16-mib-ist-ohne-setstring-gemessen-und-die-100-ms-grenze-des-plans-ist-nicht-entschieden.md`).
+/// Diese Probe haelt sie gegen eine Rechnung, die jeden Satz ganz ueber
+/// [`Satzindex::felder`] liest und den Text Stueck fuer Stueck zusammensetzt,
+/// an jeder Spalte und jedem Bereich der Zufallstabellen.
+#[test]
+fn die_spaltenhandlungen_im_einen_durchgang_rechnen_wie_satz_fuer_satz() {
+    let erwartet_einfuegen = |text: &str, index: &Satzindex, an: usize| -> Option<String> {
+        let mut neu = String::new();
+        let mut stelle = 0;
+        let mut eingefuegt = false;
+        for satz in 0..index.zeilenzahl() {
+            let felder = index.felder(text, satz).expect("der Satz steht im Index");
+            let ort = match felder.len() {
+                n if n > an => felder[an].roh.start,
+                n if n == an => index.saetze()[satz].end,
+                _ => continue,
+            };
+            neu.push_str(&text[stelle..ort]);
+            neu.push(',');
+            stelle = ort;
+            eingefuegt = true;
+        }
+        eingefuegt.then(|| {
+            neu.push_str(&text[stelle..]);
+            neu
+        })
+    };
+    let mut zufall = Zufall(0x5eed_5ba1_7e00_2610);
+    let mut gerechnet = 0;
+    for _ in 0..400 {
+        let text = zufallstabelle(&mut zufall);
+        let index = indexieren(&text, &komma());
+        if index.unterminiert().is_some() {
+            continue;
+        }
+        let spalten = index.spaltenzahl();
+        for an in 0..=spalten {
+            let neu = spalte_einfuegen(&text, &index, an, &Zellbereich::zelle(0, an));
+            assert_eq!(
+                neu.map(|stand| stand.text),
+                erwartet_einfuegen(&text, &index, an),
+                "Spalte {an} in {text:?}"
+            );
+            gerechnet += 1;
+        }
+        for von in 0..spalten {
+            for bis in von + 1..=spalten {
+                let auswahl = Zellbereich {
+                    zeilen: 0..1,
+                    spalten: von..bis,
+                };
+                let Ok(Some(neu)) = spalten_loeschen(&text, &index, &auswahl) else {
+                    continue;
+                };
+                // Was bleibt, sind dieselben Saetze ohne diese Felder, und jedes
+                // Zeilenende steht, wo es stand.
+                let danach = indexieren(&neu.text, &komma());
+                assert_eq!(
+                    danach.zeilenzahl(),
+                    index.zeilenzahl(),
+                    "{text:?} {von}..{bis}"
+                );
+                for satz in 0..index.zeilenzahl() {
+                    let vorher = roh_felder(&text, &index, satz);
+                    let mut bleibt = vorher.clone();
+                    if vorher.len() > von {
+                        bleibt.drain(von..bis.min(vorher.len()));
+                    }
+                    if bleibt.is_empty() {
+                        bleibt.push(String::new());
+                    }
+                    assert_eq!(
+                        roh_felder(&neu.text, &danach, satz),
+                        bleibt,
+                        "Satz {satz} in {text:?} ohne {von}..{bis}"
+                    );
+                }
+                gerechnet += 1;
+            }
+        }
+    }
+    assert!(gerechnet > 1000, "die Zufallstabellen tragen genug Faelle");
+}
+
 #[test]
 fn eine_zelle_aendert_nur_ihr_feld_auch_mit_marke_und_crlf() {
     let text = "\u{feff}sep=;\r\nName;Notiz\r\n\"Äpfel\";\"rot\r\nund grün\"\r\nBirnen;x\r\n";

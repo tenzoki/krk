@@ -189,6 +189,16 @@ mod tests {
         format!("{kopf}{text}")
     }
 
+    /// Eine Marke auf einer Zeile einer CSV mit `\r\n`, angelegt vor 3.9.0
+    /// ohne `\r` im Inhalt, trifft im Stand, der die Zeilenenden der Datei
+    /// traegt.
+    #[test]
+    fn eine_marke_trifft_ihre_zeile_in_einem_stand_mit_crlf() {
+        let ergebnis = wiederfinden("x\r\nZiel\r\ny", 2, "Ziel");
+        assert_eq!(ergebnis.fund, Fund::Getroffen);
+        assert_eq!(ergebnis.zeile, 2);
+    }
+
     #[test]
     fn eine_unveraenderte_datei_trifft_sofort() {
         let text = text_mit(200);
