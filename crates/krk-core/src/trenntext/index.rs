@@ -22,8 +22,10 @@
 //! eine Bytefolgenmarke am Anfang und, wenn der Dialekt es sagt, eine Zeile
 //! `sep=X` samt ihrem Zeilenende. Beide bleiben Byte fuer Byte stehen, weil
 //! keine Handlung in den Vorspann schreibt. Die Vorschau zerlegt die Bytes der
-//! Datei samt Marke und `\r\n`, der Editor seinen gehaltenen Stand ohne Marke
-//! und mit `\n`; es ist derselbe Leser.
+//! Datei samt Marke, der Editor seinen gehaltenen Stand ohne Marke; beide mit
+//! den Zeilenenden der Datei, und beide bekommen einen Text, der allein `\r`
+//! als Satzende traegt, ueber dieselbe Regel [`super::lesbar`] mit `\n`.
+//! Es ist derselbe Leser auf derselben Eingabe.
 //!
 //! # Warum Bytes und kein Zeichendurchlauf
 //!

@@ -112,13 +112,20 @@
 //! `261018-0822-behaelt-eine-csv-oder-tsv-datei-beim-sichern-ihre-bytefolgenmarke-und-ihre-zeilenenden.md`
 //! im Arbeitspaket `261018-0812-csv-und-tsv-als-tabelle-in-vorschau-und-editor`,
 //! Moeglichkeit 2): bei einer CSV traegt die Marke fuer Excel die Kodierung,
-//! und `\r\n` ist die Norm des Formats. Eine solche Datei behaelt beim Sichern
-//! Marke und Zeilenende, und zwar **allein am Schreibweg**: [`oeffnen`]
-//! erhebt die [`Dateiform`] an den Bytes, der gehaltene Stand bleibt ohne
-//! Marke und mit `\n`, und [`sichern`] stellt beides ueber [`in_dateiform`]
-//! wieder her. Welche Datei eine CSV ist, entscheidet der Editor und nicht
-//! dieser Kern; fuer jede andere reicht er [`Dateiform::GEHALTEN`], und fuer
-//! sie gilt der Absatz darueber unveraendert.
+//! und `\r\n` ist die Norm des Formats. Eine solche Datei oeffnet der Editor
+//! ueber [`trenntext_oeffnen`] und nicht ueber [`oeffnen`], und **fuer sie gilt
+//! die Zusage dieses Kopfes zur Haelfte**: der Stand traegt keine Marke, wohl
+//! aber die Zeilenenden, wie sie in der Datei stehen. [`sichern`] schreibt
+//! dann die Marke und danach den Stand Byte fuer Byte ([`in_dateiform`]).
+//! Bis zum 261019 hielt auch eine CSV ihren Stand mit `\n` und bekam beim
+//! Sichern das **erste** Zeilenende der Datei an jedes `\n`; ein Umbruch in
+//! einer Excel-Zelle (`\n` in einer `\r\n`-Datei) wurde dabei zu `\r\n`, in
+//! jeder Zelle der Datei, auch in einer unberuehrten
+//! (`261019-0037-ein-umbruch-in-einer-zelle-einer-crlf-csv-wird-bei-jedem-sichern-zu-crlf-auch-in-unberuehrten-zeilen.md`).
+//! Welche Datei eine CSV ist, entscheidet der Editor und nicht dieser Kern;
+//! fuer jede andere gilt der Absatz darueber unveraendert. Eine Datei, die
+//! allein `\r` als Zeilenende traegt, ist der eine Fall, in dem auch der Stand
+//! einer CSV gewandelt wird; die Regel steht an [`trenntext_oeffnen`].
 //!
 //! **Eine Folge, die der Rohansicht gilt:** weil die Wandlung beim Einlesen
 //! geschieht, zeigt auch die Rohansicht aus C3 keine Wagenrucklaufzeichen
@@ -515,15 +522,32 @@ pub fn lesen(pfad: &Path) -> Textstand {
 /// jeden Befund ausser [`Textstand::Text`] ist sie [`Dateiform::GEHALTEN`]:
 /// was nicht geoeffnet wird, wird auch nicht gesichert.
 fn lesen_mit_form(pfad: &Path) -> (Textstand, Dateiform) {
+    lesen_als(pfad, |bytes| {
+        let marke = bytes.starts_with("\u{feff}".as_bytes());
+        einlesen(bytes).map(|stand| {
+            (
+                stand,
+                Dateiform {
+                    marke,
+                    zeilenenden: Zeilenenden::Gewandelt,
+                },
+            )
+        })
+    })
+}
+
+/// [`lesen_mit_form`] mit einer hereingereichten Wandlung der Bytes in Stand
+/// und Form; `None` heisst kein Text.
+fn lesen_als(
+    pfad: &Path,
+    wandlung: impl FnOnce(Vec<u8>) -> Option<(String, Dateiform)>,
+) -> (Textstand, Dateiform) {
     match bytes_lesen(pfad) {
         Err(befund) => (befund, Dateiform::GEHALTEN),
-        Ok((datei, bytes)) => {
-            let form = Dateiform::der_bytes(&bytes);
-            match einlesen(bytes) {
-                Some(text) => (Textstand::Text(text), form),
-                None => (unlesbar(datei, Unlesbarkeit::KeinText), Dateiform::GEHALTEN),
-            }
-        }
+        Ok((datei, bytes)) => match wandlung(bytes) {
+            Some((text, form)) => (Textstand::Text(text), form),
+            None => (unlesbar(datei, Unlesbarkeit::KeinText), Dateiform::GEHALTEN),
+        },
     }
 }
 
@@ -638,7 +662,52 @@ pub struct Geoeffnet {
 /// den Bytes vor der Wandlung; ob der Rufer sie beim Sichern wieder herstellt,
 /// entscheidet er und nicht diese Stelle (siehe [`Dateiform`]).
 pub fn oeffnen(pfad: &Path) -> Result<Geoeffnet, Abweisung> {
-    match lesen_mit_form(pfad) {
+    geoeffnet_oder_abgewiesen(pfad, lesen_mit_form(pfad))
+}
+
+/// [`oeffnen`] fuer eine CSV- oder TSV-Datei: **der Stand behaelt die
+/// Zeilenenden der Datei**, und allein eine fuehrende Bytefolgenmarke wird
+/// abgeschnitten und in der [`Dateiform`] vermerkt.
+///
+/// Dieselbe Pruefung, dieselbe Grenze und derselbe Leseweg wie [`oeffnen`];
+/// verschieden ist allein, was aus den Bytes wird. Der Stand ist damit die
+/// Datei ohne ihre Marke, und [`sichern`] schreibt ihn mit der Marke Byte fuer
+/// Byte zurueck: ein `\n` in einer Zelle einer `\r\n`-Datei bleibt `\n`, eine
+/// Datei ohne abschliessendes Zeilenende bleibt ohne, und was der Nutzer nicht
+/// anfasst, kommt unveraendert zurueck
+/// (`261019-0037-ein-umbruch-in-einer-zelle-einer-crlf-csv-wird-bei-jedem-sichern-zu-crlf-auch-in-unberuehrten-zeilen.md`).
+/// Der Leser des Trenntexts rechnet ohnehin auf `\n` und `\r\n`.
+///
+/// **Die eine Ausnahme: eine Datei, die kein `\n` und ein `\r` traegt**
+/// ([`crate::trenntext::cr_als_satzende`], Excel „CSV (Macintosh)“). Ihr Stand
+/// traegt jedes `\r` als `\n`, die Form vermerkt [`Zeilenenden::NurCr`], und
+/// [`sichern`] schreibt jedes `\n` wieder als `\r`. Weil die Datei kein `\n`
+/// trug, kommt sie auch dabei Byte fuer Byte zurueck. Dieselbe Regel gibt die
+/// Vorschau ihrem Leser, damit beide dieselbe Tabelle zeigen.
+pub fn trenntext_oeffnen(pfad: &Path) -> Result<Geoeffnet, Abweisung> {
+    let gelesen = lesen_als(pfad, |bytes| {
+        let mut text = String::from_utf8(bytes).ok()?;
+        let marke = text.starts_with(BYTEFOLGENMARKE);
+        if marke {
+            text.drain(..BYTEFOLGENMARKE.len_utf8());
+        }
+        let (stand, zeilenenden) = if crate::trenntext::cr_als_satzende(&text) {
+            (text.replace('\r', "\n"), Zeilenenden::NurCr)
+        } else {
+            (text, Zeilenenden::WieGelesen)
+        };
+        Some((stand, Dateiform { marke, zeilenenden }))
+    });
+    geoeffnet_oder_abgewiesen(pfad, gelesen)
+}
+
+/// Die Uebersetzung eines Befundes samt Form in die Antwort von [`oeffnen`]
+/// und [`trenntext_oeffnen`].
+fn geoeffnet_oder_abgewiesen(
+    pfad: &Path,
+    gelesen: (Textstand, Dateiform),
+) -> Result<Geoeffnet, Abweisung> {
+    match gelesen {
         (Textstand::Text(stand), form) => Ok(Geoeffnet { stand, form }),
         (
             Textstand::Unlesbar {
@@ -1045,8 +1114,8 @@ pub fn sicherungsform(stand: &str) -> Cow<'_, str> {
 
 /// Bytefolgenmarke und Zeilenende einer Datei, wie sie auf der Platte stand.
 ///
-/// **Der gehaltene Stand traegt beides nie** (Modulkopf); diese Angabe haelt
-/// fest, was [`einlesen`] dabei abgelegt hat, damit [`sichern`] es fuer die
+/// **Der gehaltene Stand traegt die Marke nie** (Modulkopf); diese Angabe haelt
+/// fest, was das Einlesen dabei abgelegt hat, damit [`sichern`] es fuer die
 /// Dateien wiederherstellen kann, bei denen der Nutzer das so entschieden hat.
 /// Das sind allein CSV und TSV (Entscheid
 /// `261018-0822-behaelt-eine-csv-oder-tsv-datei-beim-sichern-ihre-bytefolgenmarke-und-ihre-zeilenenden.md`,
@@ -1054,17 +1123,35 @@ pub fn sicherungsform(stand: &str) -> Cow<'_, str> {
 /// fragt es auch nicht: der Editor reicht fuer jede andere Datei
 /// [`Dateiform::GEHALTEN`], und dann gilt die Regel vom 260808 unveraendert.
 ///
-/// **Erhoben wird an zwei Stellen der Bytes, und das ist der Preis:** die
-/// Marke am Anfang und das **erste** Zeilenende. Eine Datei mit gemischten
-/// Zeilenenden kommt einheitlich in der Form ihrer ersten Zeile zurueck, und
-/// ein `\n` in einem gequoteten Feld einer `\r\n`-Datei, wie Excel es fuer
-/// einen Umbruch in einer Zelle schreibt, kommt als `\r\n` zurueck.
+/// **Seit dem 261019 traegt der Stand einer CSV ihre Zeilenenden selbst**
+/// ([`trenntext_oeffnen`], [`Zeilenenden::WieGelesen`]), und die Form haelt
+/// allein die Marke und die Art, wie der Stand die Zeilenenden traegt. Bis
+/// dahin hielt sie das **erste** Zeilenende der Datei und schrieb es beim
+/// Sichern an jedes `\n`; das machte aus einem Umbruch in einer Excel-Zelle
+/// ein `\r\n` in jeder Zelle der Datei
+/// (`261019-0037-ein-umbruch-in-einer-zelle-einer-crlf-csv-wird-bei-jedem-sichern-zu-crlf-auch-in-unberuehrten-zeilen.md`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct Dateiform {
     /// Ob die Datei mit einer Bytefolgenmarke begann.
     pub marke: bool,
-    /// Ob ihr erstes Zeilenende `\r\n` war.
-    pub crlf: bool,
+    /// Wie der Stand die Zeilenenden der Datei traegt.
+    pub zeilenenden: Zeilenenden,
+}
+
+/// Wie ein Stand die Zeilenenden seiner Datei traegt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Zeilenenden {
+    /// In die gehaltene Form gewandelt, `\n` als einziges Zeilenende (der
+    /// Modulkopf); gesichert wird die [`sicherungsform`]. So jede Datei, die
+    /// ueber [`oeffnen`] kommt.
+    #[default]
+    Gewandelt,
+    /// So, wie sie in der Datei stehen; gesichert wird der Stand Byte fuer
+    /// Byte. So eine CSV oder TSV aus [`trenntext_oeffnen`].
+    WieGelesen,
+    /// Die Datei trug allein `\r` als Zeilenende; der Stand traegt dafuer
+    /// `\n`, und gesichert wird jedes `\n` als `\r` ([`trenntext_oeffnen`]).
+    NurCr,
 }
 
 impl Dateiform {
@@ -1072,51 +1159,63 @@ impl Dateiform {
     /// sichert wie vor dem CSV-Paket.
     pub const GEHALTEN: Self = Self {
         marke: false,
-        crlf: false,
+        zeilenenden: Zeilenenden::Gewandelt,
     };
 
-    /// Die Form, die diese Bytes tragen; liest nichts als die Marke und die
-    /// Bytes bis zum ersten `\n`.
+    /// Ob ein Stand dieser Form die Zeilenenden der Datei selbst traegt und
+    /// deshalb nicht in die gehaltene Form gebracht werden darf.
     #[must_use]
-    pub fn der_bytes(bytes: &[u8]) -> Self {
-        const MARKE: &[u8] = "\u{feff}".as_bytes();
-        let marke = bytes.starts_with(MARKE);
-        let crlf = bytes
-            .iter()
-            .position(|&byte| byte == b'\n')
-            .is_some_and(|stelle| stelle > 0 && bytes[stelle - 1] == b'\r');
-        Self { marke, crlf }
+    pub fn traegt_zeilenenden(self) -> bool {
+        self.zeilenenden == Zeilenenden::WieGelesen
+    }
+}
+
+/// Ob [`in_stand_form`] diesen Text wandeln wuerde; die Frage, die
+/// [`ist_in_gehaltener_form`] fuer jede Form stellt.
+#[must_use]
+pub fn ist_in_stand_form(text: &str, form: Dateiform) -> bool {
+    form.traegt_zeilenenden() || ist_in_gehaltener_form(text)
+}
+
+/// Bringt einen Text in die Form, die der Stand einer Datei dieser Form
+/// haelt: **unveraendert**, wenn der Stand die Zeilenenden der Datei traegt
+/// ([`Zeilenenden::WieGelesen`]), sonst ueber [`in_gehaltene_form`].
+///
+/// Der Eingang fuer fremden Text in einen Stand, der vielleicht der einer CSV
+/// ist; die Regeln der Wandlung stehen weiter allein in [`gehaltene_form`].
+#[must_use]
+pub fn in_stand_form(text: String, form: Dateiform) -> String {
+    if form.traegt_zeilenenden() {
+        text
+    } else {
+        in_gehaltene_form(text)
     }
 }
 
 /// Was von einem Stand in einer [`Dateiform`] auf die Platte geht.
 ///
-/// Erst [`sicherungsform`], unveraendert und fuer jede Datei, dann allein, was
-/// die Form verlangt: jedes `\n` wird `\r\n`, und vorn steht die Marke. **Die
-/// Marke steht auch vor einem leeren Stand**, damit eine Datei, die nur aus ihr
-/// bestand, Byte fuer Byte zurueckkommt. Mit [`Dateiform::GEHALTEN`] ist das
-/// Ergebnis die [`sicherungsform`] selbst und geliehen.
+/// - [`Zeilenenden::Gewandelt`]: die [`sicherungsform`]; mit
+///   [`Dateiform::GEHALTEN`] ist das Ergebnis sie selbst und geliehen.
+/// - [`Zeilenenden::WieGelesen`]: der Stand Byte fuer Byte, ohne angehaengtes
+///   Zeilenende; er traegt die Zeilenenden der Datei schon.
+/// - [`Zeilenenden::NurCr`]: der Stand mit jedem `\n` als `\r`.
+///
+/// Vorn steht die Marke, wenn die Form sie verlangt. **Die Marke steht auch
+/// vor einem leeren Stand**, damit eine Datei, die nur aus ihr bestand, Byte
+/// fuer Byte zurueckkommt.
 #[must_use]
 pub fn in_dateiform(stand: &str, form: Dateiform) -> Cow<'_, str> {
-    let gesichert = sicherungsform(stand);
-    if form == Dateiform::GEHALTEN {
-        return gesichert;
+    let rumpf: Cow<'_, str> = match form.zeilenenden {
+        Zeilenenden::Gewandelt => sicherungsform(stand),
+        Zeilenenden::WieGelesen => Cow::Borrowed(stand),
+        Zeilenenden::NurCr => Cow::Owned(stand.replace('\n', "\r")),
+    };
+    if !form.marke {
+        return rumpf;
     }
-    let mut ausgabe = String::with_capacity(gesichert.len() + gesichert.len() / 16 + 3);
-    if form.marke {
-        ausgabe.push(BYTEFOLGENMARKE);
-    }
-    if form.crlf {
-        let mut rest: &str = &gesichert;
-        while let Some(stelle) = rest.find('\n') {
-            ausgabe.push_str(&rest[..stelle]);
-            ausgabe.push_str("\r\n");
-            rest = &rest[stelle + 1..];
-        }
-        ausgabe.push_str(rest);
-    } else {
-        ausgabe.push_str(&gesichert);
-    }
+    let mut ausgabe = String::with_capacity(rumpf.len() + BYTEFOLGENMARKE.len_utf8());
+    ausgabe.push(BYTEFOLGENMARKE);
+    ausgabe.push_str(&rumpf);
     Cow::Owned(ausgabe)
 }
 
@@ -1128,9 +1227,10 @@ pub fn in_dateiform(stand: &str, form: Dateiform) -> Cow<'_, str> {
 /// `rename`. Ein Absturz mittendrin laesst die alte Datei stehen, wie sie war,
 /// und ein zweiter Schreibweg im Programm entsteht nicht.
 ///
-/// Eine Bytefolgenmarke und `\r\n` schreibt diese Stelle allein, wenn `form`
-/// sie verlangt ([`in_dateiform`]); mit [`Dateiform::GEHALTEN`] schreibt sie
-/// keine Marke und `\n`, wie vor dem CSV-Paket. Sie stellt eine Marke auch
+/// Eine Bytefolgenmarke und andere Zeilenenden als `\n` schreibt diese Stelle
+/// allein, wenn `form` sie verlangt ([`in_dateiform`]); mit
+/// [`Dateiform::GEHALTEN`] schreibt sie keine Marke und `\n`, wie vor dem
+/// CSV-Paket. Sie stellt eine Marke auch
 /// nicht ab: was am Anfang des Standes steht, ist Text des Nutzers, und der
 /// Stand traegt dort keine Marke, weil [`einlesen`] sie abgeschnitten hat.
 pub fn sichern(ziel: &Path, stand: &str, form: Dateiform) -> io::Result<()> {

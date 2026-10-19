@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "14522a84-b4bb-476f-8c51-5e290fb0f809",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261018-0812-csv-und-tsv-als-tabelle-in-vorschau-und-editor/issues/261019-0037-die-zelluebernahme-an-16-mib-ist-ohne-setstring-gemessen-und-die-100-ms-grenze-des-plans-ist-nicht-entschieden.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

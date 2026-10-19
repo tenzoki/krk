@@ -81,6 +81,34 @@ pub fn in_utf16(text: &str, byteversaetze: &[usize]) -> Vec<usize> {
     umgerechnet
 }
 
+/// Wie viele UTF-16-Einheiten `text` traegt, also seine Laenge in AppKits
+/// Koordinate.
+///
+/// **Ein Durchgang ueber die Bytes und keiner ueber die Zeichen**: jedes Byte,
+/// das ein Zeichen beginnt, zaehlt eine Einheit, und ein Vierbytezeichen, das
+/// in UTF-16 ein Ersatzzeichenpaar ist, eine zweite. Gebraucht vom Umbauweg
+/// des Editors, der die Stelle eines geaenderten Bereichs in einer Datei bis
+/// zur Editorgrenze bestimmt; dieselbe Zahl wie die letzte von [`in_utf16`]
+/// am Textende, nur ohne den Zeichendurchlauf.
+#[must_use]
+pub fn einheiten(text: &str) -> usize {
+    // Ein Block aus ASCII zaehlt seine Laenge; `is_ascii` ist der schnelle
+    // Weg der Standardbibliothek und der Regelfall einer CSV.
+    text.as_bytes()
+        .chunks(4096)
+        .map(|block| {
+            if block.is_ascii() {
+                block.len()
+            } else {
+                block
+                    .iter()
+                    .map(|&byte| usize::from(byte & 0xC0 != 0x80) + usize::from(byte >= 0xF0))
+                    .sum()
+            }
+        })
+        .sum()
+}
+
 /// Der Byteversatz zu einer Stelle in AppKits Koordinate.
 ///
 /// Liegt die Stelle hinter dem Text, ist die Antwort das Textende. Liegt sie
@@ -168,6 +196,16 @@ mod tests {
         for versatz in (0..=text.len()).filter(|stelle| text.is_char_boundary(*stelle)) {
             let hin = in_utf16(text, &[versatz]);
             assert_eq!(in_bytes(text, hin[0]), versatz);
+        }
+    }
+
+    /// Die Laenge in Einheiten ist dieselbe wie die von `encode_utf16`, auch
+    /// mit Umlauten, `\r\n` und einem Bildzeichen ausserhalb der Grundebene.
+    #[test]
+    fn die_einheiten_sind_die_laenge_in_utf16() {
+        for text in ["", "abc", "Äpfel;süß\r\n", "a😀b", "\u{feff}x\ny", "€😀😀"] {
+            assert_eq!(einheiten(text), text.encode_utf16().count(), "{text:?}");
+            assert_eq!(einheiten(text), in_utf16(text, &[text.len()])[0]);
         }
     }
 }

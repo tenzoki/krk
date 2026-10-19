@@ -1903,13 +1903,15 @@ fn trenntext_aus_bytes(
 ) -> Option<Inhalt> {
     if bytes.len() as u64 <= TEXTGRENZE {
         let text = String::from_utf8(bytes).ok()?;
-        let dialekt = dialekt_erkennen(art, &text);
-        return Some(
-            match trenntextvorschau::aufbereiten(&text, &dialekt, None) {
-                Some(tabelle) => Inhalt::Trenntext(tabelle),
-                None => text_als_inhalt(pfad, text, typ, tafel),
-            },
-        );
+        // Dieselbe Eingabe wie im Editor: ein Text mit `\r` als einzigem
+        // Satzende bekommt es als `\n` (`trenntext::lesbar`).
+        let lesbar = trenntext::lesbar(&text);
+        let dialekt = dialekt_erkennen(art, &lesbar);
+        let tabelle = trenntextvorschau::aufbereiten(&lesbar, &dialekt, None);
+        return Some(match tabelle {
+            Some(tabelle) => Inhalt::Trenntext(tabelle),
+            None => text_als_inhalt(pfad, text, typ, tafel),
+        });
     }
     bytes.truncate(TEXTGRENZE as usize);
     let gueltig = match std::str::from_utf8(&bytes) {
@@ -1919,12 +1921,11 @@ fn trenntext_aus_bytes(
         Err(_) => return None,
     };
     bytes.truncate(gueltig);
-    let angelesen = std::str::from_utf8(&bytes).ok()?;
-    let dialekt = dialekt_erkennen(art, angelesen);
+    let mut angelesen = trenntext::lesbar(std::str::from_utf8(&bytes).ok()?).into_owned();
+    let dialekt = dialekt_erkennen(art, &angelesen);
     let bis = vollstaendig_bis(angelesen.as_bytes(), dialekt.trennzeichen);
-    bytes.truncate(bis);
-    let text = String::from_utf8(bytes).ok()?;
-    trenntextvorschau::aufbereiten(&text, &dialekt, Some(TEXTGRENZE / (1024 * 1024)))
+    angelesen.truncate(bis);
+    trenntextvorschau::aufbereiten(&angelesen, &dialekt, Some(TEXTGRENZE / (1024 * 1024)))
         .map(Inhalt::Trenntext)
 }
 
@@ -2915,6 +2916,46 @@ mod tests {
                 "{name}"
             );
         }
+    }
+
+    /// Eine CSV mit `\r` als einzigem Zeilenende zeigt die Vorschau mit zwei
+    /// Zeilen, wie der Editor sie zeigt: beide geben dem Leser dieselbe
+    /// Eingabe ueber `trenntext::lesbar`
+    /// (`261019-0037-vorschau-und-editor-zerlegen-eine-csv-mit-einzelnem-cr-verschieden.md`).
+    /// Ein einzelnes `\r` in einer Datei mit `\n` bleibt in beiden ein
+    /// Zeichen des Feldes.
+    #[test]
+    fn eine_csv_mit_cr_als_zeilenende_zeigt_die_vorschau_wie_der_editor() {
+        let ordner = Pruefordner::neu("trenntext-cr");
+        let pfad = ordner.pfad().join("mac.csv");
+        std::fs::write(&pfad, b"a;b\r1;2\r").expect("Probendatei");
+        let stand = krk_core::text::datei::trenntext_oeffnen(&pfad)
+            .expect("der Editor oeffnet sie")
+            .stand;
+        assert_eq!(stand, "a;b\n1;2\n", "der Editor haelt zwei Saetze");
+        let erwartet = trenntextvorschau::aufbereiten(
+            &stand,
+            &dialekt_erkennen(trenntext::Art::Csv, &stand),
+            None,
+        )
+        .expect("eine Tabelle");
+        let Inhalt::Trenntext(gezeigt) = laden(&pfad, Tafel::Hell, &Profile::default(), None)
+        else {
+            panic!("die Vorschau zeigt eine Tabelle");
+        };
+        assert_eq!(gezeigt, erwartet);
+        assert!(
+            !gezeigt.contains('⏎'),
+            "kein Satz traegt die Zeilenenden als Zeichen"
+        );
+
+        let gemischt = ordner.pfad().join("gemischt.csv");
+        std::fs::write(&gemischt, b"a;b\nx\ry;2\n").expect("Probendatei");
+        let stand = krk_core::text::datei::trenntext_oeffnen(&gemischt)
+            .expect("der Editor oeffnet sie")
+            .stand;
+        let index = trenntext::indexieren(&stand, &dialekt_erkennen(trenntext::Art::Csv, &stand));
+        assert_eq!(index.zeilenzahl(), 2, "das \\r teilt im Editor keinen Satz");
     }
 
     /// Ein offenes Anfuehrungszeichen, eine leere Datei und eine mit mehr

@@ -1055,6 +1055,21 @@ struct Trenntextlage {
     /// Die zuletzt gebildete Sicht, falls es eine gibt. Sie gehoert zu dem
     /// Stand, dessen Abschrift sie traegt, und zu keinem anderen.
     sicht: Option<Trenntextsicht>,
+    /// Ob sich diese Datei in der Formatansicht nicht als Tabelle zeigen
+    /// laesst (E3, E9) und deshalb als Text steht.
+    ///
+    /// **Ein Feld der Datei und keine Wahl der Ansicht**: bis zum 261019
+    /// stellte der Rueckfall die Ansicht des Modells auf Roh, und weil die
+    /// Ansicht nach C3 ueber jeden Dateiwechsel stehen bleibt, sah jede
+    /// folgende Markdown- oder Eintragsdatei danach Rohtext
+    /// (`261019-0037-eine-csv-die-keine-tabelle-ergibt-schaltet-die-ansicht-fuer-jede-folgende-datei-auf-roh.md`).
+    /// Gesetzt allein in [`Editorbereich::tabellenform_pruefen`], geloescht mit
+    /// jeder neuen Lage, mit dem Ansichtswechsel und mit „Trennzeichen
+    /// wechseln“, die beide neu pruefen. **Der Ansichtswechsel stellt dabei
+    /// die Ansicht nicht um**, solange das Feld steht: `ctrl+cmd+e` versucht
+    /// nach einer Berichtigung im Text die Tabelle erneut, wie es `HowTo.md`
+    /// zusagt.
+    verweigert: bool,
 }
 
 impl Trenntextlage {
@@ -1069,7 +1084,32 @@ impl Trenntextlage {
     fn trennzeichen_weiter(&mut self) -> Dialekt {
         self.dialekt = self.dialekt.gewechselt();
         self.sicht = None;
+        self.verweigert = false;
         self.dialekt
+    }
+}
+
+/// Der Dialekt einer eben eingetroffenen CSV- oder TSV-Datei (E2).
+///
+/// **Ein Neuladen derselben Datei behaelt ein gewechseltes Trennzeichen**:
+/// der Wechsel gilt nach E2 fuer die geoeffnete Datei, und ein Neuladen nach
+/// einer Aenderung von aussen ist dieselbe geoeffnete Datei. Bis zum 261019
+/// waehlte KRK dabei still wieder nach der Regel
+/// (`261019-0037-ein-neuladen-derselben-csv-nimmt-das-gewechselte-trennzeichen-still-zurueck.md`).
+/// Jede andere Lage — eine andere Datei, ein nicht gewechselter Dialekt —
+/// waehlt nach der Regel des Kerns. Rein und ohne Fenster pruefbar.
+#[must_use]
+fn dialekt_beim_eintreffen(
+    art: trenntext::Art,
+    stand: &str,
+    dieselbe_datei: bool,
+    bisher: Option<Dialekt>,
+) -> Dialekt {
+    match bisher {
+        Some(dialekt) if dieselbe_datei && dialekt.herkunft == trenntext::Herkunft::Gewechselt => {
+            dialekt
+        }
+        _ => trenntext::dialekt_erkennen(art, stand),
     }
 }
 
@@ -1935,12 +1975,7 @@ fn verlauf_fuer_umbau(punkt: Umkehrpunkt, gehalten: usize) -> Verlauf {
 /// hat.
 #[must_use]
 fn gemeinsamer_anfang(vorher: &str, nachher: &str) -> usize {
-    let mut anfang = vorher
-        .as_bytes()
-        .iter()
-        .zip(nachher.as_bytes())
-        .take_while(|(links, rechts)| links == rechts)
-        .count();
+    let mut anfang = gleich_von_vorn(vorher.as_bytes(), nachher.as_bytes());
     while anfang > 0 && !(vorher.is_char_boundary(anfang) && nachher.is_char_boundary(anfang)) {
         anfang -= 1;
     }
@@ -1955,12 +1990,7 @@ fn gemeinsamer_anfang(vorher: &str, nachher: &str) -> usize {
 /// Bereich haette eine negative Laenge.
 #[must_use]
 fn gemeinsamer_schwanz(vorher: &str, nachher: &str, ab: usize) -> usize {
-    let mut schwanz = vorher.as_bytes()[ab..]
-        .iter()
-        .rev()
-        .zip(nachher.as_bytes()[ab..].iter().rev())
-        .take_while(|(links, rechts)| links == rechts)
-        .count();
+    let mut schwanz = gleich_von_hinten(&vorher.as_bytes()[ab..], &nachher.as_bytes()[ab..]);
     while schwanz > 0
         && !(vorher.is_char_boundary(vorher.len() - schwanz)
             && nachher.is_char_boundary(nachher.len() - schwanz))
@@ -1968,6 +1998,55 @@ fn gemeinsamer_schwanz(vorher: &str, nachher: &str, ab: usize) -> usize {
         schwanz -= 1;
     }
     schwanz
+}
+
+/// Wie viele Bytes am Anfang von `links` und `rechts` gleich sind.
+///
+/// **Blockweise und dann Byte fuer Byte**: ein Vergleich zweier Bloecke ist
+/// ein `memcmp`, und an der Editorgrenze von 16 MB kostete der Durchgang
+/// Byte fuer Byte gemessene 15 ms je Umbau
+/// (`261019-0037-die-zelluebernahme-an-16-mib-ist-ohne-setstring-gemessen-und-die-100-ms-grenze-des-plans-ist-nicht-entschieden.md`).
+/// Dasselbe Ergebnis wie der Durchgang, nur schneller.
+#[must_use]
+fn gleich_von_vorn(links: &[u8], rechts: &[u8]) -> usize {
+    const BLOCK: usize = 4096;
+    let laenge = links.len().min(rechts.len());
+    let mut gleich = 0;
+    while gleich + BLOCK <= laenge
+        && links[gleich..gleich + BLOCK] == rechts[gleich..gleich + BLOCK]
+    {
+        gleich += BLOCK;
+    }
+    gleich
+        + links[gleich..laenge]
+            .iter()
+            .zip(&rechts[gleich..laenge])
+            .take_while(|(l, r)| l == r)
+            .count()
+}
+
+/// Wie viele Bytes am Ende von `links` und `rechts` gleich sind; das
+/// Gegenstueck zu [`gleich_von_vorn`].
+#[must_use]
+fn gleich_von_hinten(links: &[u8], rechts: &[u8]) -> usize {
+    const BLOCK: usize = 4096;
+    let laenge = links.len().min(rechts.len());
+    let ende_l = links.len();
+    let ende_r = rechts.len();
+    let mut gleich = 0;
+    while gleich + BLOCK <= laenge
+        && links[ende_l - gleich - BLOCK..ende_l - gleich]
+            == rechts[ende_r - gleich - BLOCK..ende_r - gleich]
+    {
+        gleich += BLOCK;
+    }
+    gleich
+        + links[..ende_l - gleich]
+            .iter()
+            .rev()
+            .zip(rechts[..ende_r - gleich].iter().rev())
+            .take_while(|(l, r)| l == r)
+            .count()
 }
 
 /// Der naechste Byteversatz bei oder vor `versatz`, an dem `text` ein Zeichen
@@ -2053,6 +2132,52 @@ enum Verlauf {
     /// Der Verlauf faellt, und die genannte Handlung ist danach die einzige, die
     /// darin steht.
     TraegtNurDiese(Umkehrpunkt),
+}
+
+/// Was [`Editorbereich::stand_einsetzen`] an der Textflaeche ersetzt: den
+/// ganzen Text oder allein den Bereich, in dem sich der Stand geaendert hat.
+///
+/// **Der Bereich ist der Weg der Umbauten und ihres Rueckgaengig**
+/// ([`Editorbereich::umbau_anwenden`], [`Editorbereich::umkehren`]): vor ihnen
+/// traegt die Flaeche Zeichen fuer Zeichen den Stand des Modells, und der
+/// [`Umkehrpunkt`] kennt die eine Stelle, an der der neue Stand abweicht. Bis
+/// zum 261019 schrieb jede Zellaenderung einer CSV den ganzen Stand ueber
+/// `setString:` in die verborgene Flaeche, an der Editorgrenze also 16 MB je
+/// Zelle
+/// (`261019-0037-die-zelluebernahme-an-16-mib-ist-ohne-setstring-gemessen-und-die-100-ms-grenze-des-plans-ist-nicht-entschieden.md`).
+/// Jeder andere Anlass schreibt weiter den ganzen Stand.
+enum Einsatz {
+    /// Der ganze Stand ueber `setString:`.
+    Ganz,
+    /// Allein `bereich` der Flaeche (in AppKits Koordinate, gegen den Text vor
+    /// dem Umbau) wird durch `ersatz` ersetzt.
+    Bereich {
+        /// Der Bereich in UTF-16-Einheiten.
+        bereich: NSRange,
+        /// Die Zeichen, die dort danach stehen.
+        ersatz: String,
+    },
+}
+
+impl Einsatz {
+    /// Der Bereich, den der Umbau zu `nachher` an einer Flaeche aendert, die
+    /// den Stand davor traegt; `punkt` ist der Umkehrpunkt, der `nachher`
+    /// wieder zum Stand davor macht.
+    ///
+    /// Rein und ohne Fenster pruefbar; gezaehlt wird ueber
+    /// [`koordinaten::einheiten`], ein Durchgang ueber die Bytes bis zur Stelle.
+    #[must_use]
+    fn aus_umkehrpunkt(punkt: &Umkehrpunkt, nachher: &str) -> Self {
+        let anfang = bis_zur_zeichengrenze(nachher, punkt.anfang);
+        let ende = bis_zur_zeichengrenze(nachher, punkt.anfang + punkt.eingefuegt);
+        Self::Bereich {
+            bereich: NSRange::new(
+                koordinaten::einheiten(&nachher[..anfang]),
+                koordinaten::einheiten(&punkt.entfernt),
+            ),
+            ersatz: nachher[anfang..ende].to_owned(),
+        }
+    }
 }
 
 /// Die Groesse, mit der die Flaeche entsteht, bevor die Aufteilung sie auslegt.
@@ -2367,18 +2492,32 @@ fn eintragsart_der_datei(typ: Dateityp, trenntext: Option<trenntext::Art>) -> Op
 ///
 /// **Rein, wie [`editorform`]**, und die eine Stelle, an der die Art
 /// Trenntext zur Form wird; [`Editorbereich::form`] fragt hier.
+///
+/// **`verweigert` sagt, dass sich diese Datei nicht als Tabelle zeigen
+/// laesst** (Feld gleichen Namens an [`Trenntextlage`]): dann steht sie in
+/// der Formatansicht als Text, und die Ansicht selbst bleibt die Wahl des
+/// Nutzers fuer jede folgende Datei.
 #[must_use]
 fn editorform_der_datei(
     ansicht: Ansicht,
     typ: Dateityp,
     trenntext: Option<trenntext::Art>,
+    verweigert: bool,
 ) -> Editorform {
     match (ansicht, trenntext) {
+        (Ansicht::Format, Some(_)) if verweigert => editorform(Ansicht::Roh, typ),
         (Ansicht::Format, Some(_)) => Editorform::Trenntext,
         (Ansicht::Format | Ansicht::Roh, None) | (Ansicht::Roh, Some(_)) => {
             editorform(ansicht, typ)
         }
     }
+}
+
+/// Die Ansicht, in der die Textflaeche dargestellt wird: die gewaehlte, oder
+/// die Rohansicht fuer eine CSV, die sich nicht als Tabelle zeigen laesst.
+#[must_use]
+fn dargestellte_ansicht(ansicht: Ansicht, verweigert: bool) -> Ansicht {
+    if verweigert { Ansicht::Roh } else { ansicht }
 }
 
 /// Wo die Schreibmarke steht, nachdem die Rohansicht einen leeren Eintrag
@@ -3091,7 +3230,7 @@ impl Editorbereich {
         // `Faellt` ist hier ohne Wirkung und trotzdem die richtige Antwort: die
         // Flaeche haengt noch in keinem Fenster, hat also keinen Verwalter, und
         // es gibt keinen Umbau, den ein `cmd+z` zuruecknehmen koennte.
-        this.stand_erneuern(Verlauf::Faellt);
+        this.stand_erneuern(Verlauf::Faellt, Einsatz::Ganz);
         this
     }
 
@@ -3172,7 +3311,29 @@ impl Editorbereich {
             return Editorform::Quicknote;
         }
         let modell = self.ivars().modell.borrow();
-        editorform_der_datei(modell.ansicht(), modell.typ(), modell.trenntext())
+        editorform_der_datei(
+            modell.ansicht(),
+            modell.typ(),
+            modell.trenntext(),
+            self.tabellenform_verweigert(),
+        )
+    }
+
+    /// Ob die gehaltene CSV sich nicht als Tabelle zeigen laesst; das Feld
+    /// `verweigert` ihrer [`Trenntextlage`], fuer jede andere Datei `false`.
+    fn tabellenform_verweigert(&self) -> bool {
+        self.ivars()
+            .trenntext
+            .borrow()
+            .as_ref()
+            .is_some_and(|lage| lage.verweigert)
+    }
+
+    /// Die Ansicht, in der die Textflaeche dargestellt wird
+    /// ([`dargestellte_ansicht`]).
+    fn dargestellte_ansicht(&self) -> Ansicht {
+        let gewaehlt = self.ivars().modell.borrow().ansicht();
+        dargestellte_ansicht(gewaehlt, self.tabellenform_verweigert())
     }
 
     // ------------------------------------------------------------------
@@ -3320,17 +3481,31 @@ impl Editorbereich {
     /// Die Antwort von [`Editormodell::bearbeiten`] faellt: der Umkehrpunkt
     /// entsteht gegen den Stand, den das Modell danach haelt, und passt deshalb
     /// auch dann, wenn die Wandlung in die gehaltene Form zugegriffen hat.
+    ///
+    /// **Eine Abschrift des alten Standes entsteht allein, wenn die Wandlung
+    /// zugreift** ([`Editormodell::wandelt`]); sonst entsteht der Umkehrpunkt
+    /// vor dem Ruf an [`Editormodell::bearbeiten`] gegen den neuen Text, den das
+    /// Modell danach unveraendert haelt. In die Flaeche geht allein der
+    /// geaenderte Bereich ([`Einsatz::aus_umkehrpunkt`]).
     pub fn umbau_anwenden(&self, neustand: Neustand) {
         let Neustand { text, auswahl } = neustand;
         let schreibmarke = self.ivars().text.selectedRange();
-        let punkt = {
+        let (punkt, einsatz) = {
             let mut modell = self.ivars().modell.borrow_mut();
-            let vorher = modell.stand().to_owned();
-            let _ = modell.bearbeiten(text);
-            Umkehrpunkt::zwischen(&vorher, modell.stand(), schreibmarke)
+            let punkt = if modell.wandelt(&text) {
+                let vorher = modell.stand().to_owned();
+                let _ = modell.bearbeiten(text);
+                Umkehrpunkt::zwischen(&vorher, modell.stand(), schreibmarke)
+            } else {
+                let punkt = Umkehrpunkt::zwischen(modell.stand(), &text, schreibmarke);
+                let _ = modell.bearbeiten(text);
+                punkt
+            };
+            let einsatz = Einsatz::aus_umkehrpunkt(&punkt, modell.stand());
+            (punkt, einsatz)
         };
         let verlauf = self.verlauf_fuer_umbau(punkt);
-        self.stand_erneuern(verlauf);
+        self.stand_erneuern(verlauf, einsatz);
         self.ivars().eintraege.auswahl_setzen(auswahl);
     }
 
@@ -3999,11 +4174,19 @@ impl Editorbereich {
     /// Antwort ist `None`.
     #[must_use = "die Antwort ist der Satz der Statuszeile ueber die geoeffnete CSV"]
     fn trenntext_vorbereiten(&self) -> Option<Editormeldung> {
+        let pfad = self.ivars().modell.borrow().pfad().map(Path::to_path_buf);
+        let dieselbe_datei = *self.ivars().trenntextpfad.borrow() == pfad;
+        let bisher = self
+            .ivars()
+            .trenntext
+            .borrow()
+            .as_ref()
+            .map(|lage| lage.dialekt);
         let dialekt = {
             let modell = self.ivars().modell.borrow();
             modell
                 .trenntext()
-                .map(|art| trenntext::dialekt_erkennen(art, modell.stand()))
+                .map(|art| dialekt_beim_eintreffen(art, modell.stand(), dieselbe_datei, bisher))
         };
         let Some(dialekt) = dialekt else {
             *self.ivars().trenntext.borrow_mut() = None;
@@ -4012,15 +4195,16 @@ impl Editorbereich {
         };
         // Eine andere Datei ist eine neue, auch wenn die Tabelle eben eine
         // andere CSV zeigte: ihre Spalten entstehen mit Anfangsbreiten, und die
-        // Auswahl beginnt bei A1. Ein Neuladen derselben Datei behaelt beides.
-        let pfad = self.ivars().modell.borrow().pfad().map(Path::to_path_buf);
-        if *self.ivars().trenntextpfad.borrow() != pfad {
+        // Auswahl beginnt bei A1. Ein Neuladen derselben Datei behaelt beides,
+        // und ein gewechseltes Trennzeichen dazu (`dialekt_beim_eintreffen`).
+        if !dieselbe_datei {
             self.ivars().eintraege.neue_datei();
             *self.ivars().trenntextpfad.borrow_mut() = pfad;
         }
         *self.ivars().trenntext.borrow_mut() = Some(Trenntextlage {
             dialekt,
             sicht: None,
+            verweigert: false,
         });
         Some(
             self.tabellenform_pruefen()
@@ -4028,9 +4212,14 @@ impl Editorbereich {
         )
     }
 
-    /// Stellt die Ansicht auf Roh, wenn der Editor die Tabelle einer CSV
-    /// zeigen soll und sie sich nicht zeigen laesst, und nennt den Grund (E3,
-    /// E9); in jeder anderen Lage tut sie nichts.
+    /// Zeigt die gehaltene CSV als Text, wenn der Editor ihre Tabelle zeigen
+    /// soll und sie sich nicht zeigen laesst, und nennt den Grund (E3, E9); in
+    /// jeder anderen Lage tut sie nichts.
+    ///
+    /// **Die Ansicht des Modells bleibt dabei stehen**: gesetzt wird allein
+    /// das Feld `verweigert` der [`Trenntextlage`], das zur Datei gehoert, und
+    /// [`editorform_der_datei`] macht daraus die Textform. Die naechste Datei
+    /// steht wieder in der Ansicht, die der Nutzer gewaehlt hat.
     ///
     /// Gerufen, wenn eine Datei eintrifft, und nach dem Ansichtswechsel, also
     /// in beiden Faellen, bevor Darstellung und Flaeche nachziehen. Die
@@ -4041,7 +4230,9 @@ impl Editorbereich {
             return None;
         }
         let verweigerung = tabellenform_verweigert(self.trenntextsicht()?.index())?;
-        let _ = self.ivars().modell.borrow_mut().ansicht_umschalten();
+        if let Some(lage) = self.ivars().trenntext.borrow_mut().as_mut() {
+            lage.verweigert = true;
+        }
         Some(Editormeldung::TabellenformVerweigert(verweigerung))
     }
 
@@ -4714,7 +4905,7 @@ impl Editorbereich {
             // Einsetzen.
             trenntext = self.trenntext_vorbereiten();
             // Ein Dateiwechsel: der Verlauf gehoerte der vorigen Datei.
-            self.stand_erneuern(Verlauf::Faellt);
+            self.stand_erneuern(Verlauf::Faellt, Einsatz::Ganz);
             self.flaeche_waehlen();
         }
         self.schluessel_weiterreichen();
@@ -4757,7 +4948,7 @@ impl Editorbereich {
         // besonders: ohne Datei gibt es keine Sprache und nichts einzufaerben,
         // und `darstellung_nachziehen` raeumt die gesetzten Merkmale ab und
         // laesst einen laufenden Einfaerbungsfaden fallen.
-        self.stand_erneuern(Verlauf::Faellt);
+        self.stand_erneuern(Verlauf::Faellt, Einsatz::Ganz);
         self.flaeche_waehlen();
     }
 
@@ -4839,7 +5030,7 @@ impl Editorbereich {
             // haengen am Dateityp und an der Sprache, die die Kiste kennt.
             // `Faellt`, weil der Verlauf auf den Text der vorigen Datei zeigte.
             // Die Flaeche danach: die neue Datei kann eine andere verlangen.
-            self.stand_erneuern(Verlauf::Faellt);
+            self.stand_erneuern(Verlauf::Faellt, Einsatz::Ganz);
             self.flaeche_waehlen();
         }
         self.schluessel_weiterreichen();
@@ -4921,9 +5112,10 @@ impl Editorbereich {
     /// wenn sie bevorsteht.** Der Umkehrpunkt braucht den Stand, den das Modell
     /// **vor** dem Einfuegen hielt; danach ist der fort, und `260810-1044` fuehrte
     /// genau das als den Grund, aus dem ein eingefuegtes `\r\n` nicht
-    /// zuruecknehmbar war. Gefragt wird mit
-    /// `krk_core::text::datei::ist_in_gehaltener_form`, derselben Bedingung, an
-    /// der [`Editormodell::bearbeiten`] seine Wandlung entscheidet, und die
+    /// zuruecknehmbar war. Gefragt wird mit [`Editormodell::wandelt`],
+    /// derselben Bedingung, an der [`Editormodell::bearbeiten`] seine Wandlung
+    /// entscheidet (fuer eine CSV oder TSV nie, ihr Stand traegt die
+    /// Zeilenenden der Datei), und die
     /// Abschrift entsteht deshalb **nicht** je Tastendruck, sondern nur auf dem
     /// Weg, der die Flaeche ohnehin neu beschreibt. Das ist der Unterschied zu der
     /// Kette, die `260810-0424` als zu teuer fuehrt.
@@ -4988,8 +5180,7 @@ impl Editorbereich {
             // Die Abschrift entsteht allein auf dem Wandlungsweg und faellt am
             // Ende dieses Blocks; in den Stapel geht nur der Unterschied, den
             // `Umkehrpunkt::zwischen` daraus bildet.
-            let alter_stand =
-                (!datei::ist_in_gehaltener_form(&stand)).then(|| modell.stand().to_owned());
+            let alter_stand = modell.wandelt(&stand).then(|| modell.stand().to_owned());
             let gewandelt = modell.bearbeiten(stand);
             debug_assert_eq!(
                 gewandelt,
@@ -5087,7 +5278,15 @@ impl Editorbereich {
     /// Die beiden aelteren Anlaesse behalten ihre Reihenfolge Zeile fuer Zeile:
     /// [`Verlauf::Faellt`] leert **nach** dem Schreiben, [`Verlauf::Traegt`]
     /// meldet **vor** ihm an und leert nicht.
-    fn stand_einsetzen(&self, verlauf: Verlauf) {
+    ///
+    /// **[`Einsatz::Bereich`] ersetzt allein den geaenderten Bereich** ueber
+    /// `replaceCharactersInRange:withString:` am Textspeicher, der wie
+    /// `setString:` an der Rueckgaengigverwaltung und an `textDidChange:`
+    /// vorbeischreibt. Reicht der Bereich ueber den Text der Flaeche hinaus,
+    /// traegt sie also nicht den Stand, gegen den er gebildet ist, oder gibt
+    /// sie keinen Textspeicher her, wird der ganze Stand geschrieben: eine
+    /// Objective-C-Ausnahme ist in Rust nicht zu fangen.
+    fn stand_einsetzen(&self, verlauf: Verlauf, einsatz: Einsatz) {
         let leeren_danach = match verlauf {
             Verlauf::Faellt => true,
             Verlauf::Traegt(punkt) => {
@@ -5100,11 +5299,39 @@ impl Editorbereich {
                 false
             }
         };
-        let stand = {
-            let modell = self.ivars().modell.borrow();
-            NSString::from_str(modell.stand())
+        let flaeche = &self.ivars().text;
+        let ersetzt = match einsatz {
+            Einsatz::Bereich { bereich, ersatz }
+                if bereich.location + bereich.length <= flaeche.string().length() =>
+            {
+                // SAFETY: Den Textspeicher bringt die Flaeche selbst mit; er
+                // wird hier allein in einem Bereich beschrieben, der innerhalb
+                // seines Textes liegt (die Bedingung darueber).
+                match unsafe { flaeche.textStorage() } {
+                    Some(speicher) => {
+                        speicher.replaceCharactersInRange_withString(
+                            bereich,
+                            &NSString::from_str(&ersatz),
+                        );
+                        true
+                    }
+                    None => false,
+                }
+            }
+            Einsatz::Bereich { .. } | Einsatz::Ganz => false,
         };
-        self.ivars().text.setString(&stand);
+        if !ersetzt {
+            let stand = {
+                let modell = self.ivars().modell.borrow();
+                NSString::from_str(modell.stand())
+            };
+            flaeche.setString(&stand);
+        }
+        debug_assert_eq!(
+            flaeche.string().length(),
+            koordinaten::einheiten(self.ivars().modell.borrow().stand()),
+            "die Flaeche traegt nach dem Einsetzen den Stand des Modells"
+        );
         if leeren_danach {
             rueckgaengigstapel_leeren(self.ivars().text.undoManager().as_deref());
         }
@@ -5227,7 +5454,7 @@ impl Editorbereich {
     /// [`Verlauf`].
     fn umkehren(&self, punkt: &Umkehrpunkt) {
         let auswahl = self.ivars().text.selectedRange();
-        let gegenweg = {
+        let (gegenweg, einsatz) = {
             let mut modell = self.ivars().modell.borrow_mut();
             let wiederhergestellt = punkt.angewandt_auf(modell.stand());
             let gegenweg = Umkehrpunkt::zwischen(modell.stand(), &wiederhergestellt, auswahl);
@@ -5241,9 +5468,10 @@ impl Editorbereich {
                 let ab_versatz = koordinaten::in_bytes(modell.stand(), punkt.auswahl.location);
                 let _ = modell.suche_starten(&gesucht, ab_versatz);
             }
-            gegenweg
+            let einsatz = Einsatz::aus_umkehrpunkt(&gegenweg, modell.stand());
+            (gegenweg, einsatz)
         };
-        self.stand_erneuern(Verlauf::Traegt(gegenweg));
+        self.stand_erneuern(Verlauf::Traegt(gegenweg), einsatz);
         self.auswahl_setzen(punkt.auswahl);
     }
 
@@ -5290,10 +5518,20 @@ impl Editorbereich {
     /// Was aus dem Rueckgaengigverlauf wird, entscheidet der Aufrufer; die
     /// Antwort geht unveraendert an [`Self::stand_einsetzen`] weiter, und
     /// welchen Anlass welche Antwort verlangt, steht an [`Verlauf`].
-    fn stand_erneuern(&self, verlauf: Verlauf) {
-        self.stand_einsetzen(verlauf);
+    ///
+    /// **Mit [`Einsatz::Bereich`] zieht sie die Darstellung allein nach, wenn
+    /// die Textflaeche zu sehen ist.** Hinter einer Tabelle stuende sonst je
+    /// Zellaenderung die Grundschrift und jedes Merkmal des ganzen Textes neu;
+    /// beim Wechsel in die Textflaeche zieht ein Ansichts- oder Dateiwechsel die
+    /// Darstellung ohnehin nach ([`Self::ansicht_umschalten`],
+    /// [`Self::trennzeichen_wechseln`], das Oeffnen ueber [`Einsatz::Ganz`]).
+    fn stand_erneuern(&self, verlauf: Verlauf, einsatz: Einsatz) {
+        let ganz = matches!(einsatz, Einsatz::Ganz);
+        self.stand_einsetzen(verlauf, einsatz);
         self.kopf_nachziehen();
-        self.darstellung_nachziehen();
+        if ganz || flaeche_der_form(self.form()) == Flaeche::Textflaeche {
+            self.darstellung_nachziehen();
+        }
         self.tabelle_nachziehen();
     }
 
@@ -5364,7 +5602,7 @@ impl Editorbereich {
             let modell = self.ivars().modell.borrow();
             datei::versatz_nach_der_wandlung(&vorher, schreibmarke, modell.stand())
         };
-        self.stand_erneuern(Verlauf::TraegtNurDiese(punkt));
+        self.stand_erneuern(Verlauf::TraegtNurDiese(punkt), Einsatz::Ganz);
         self.stelle_zeigen(versatz, versatz);
     }
 
@@ -5756,7 +5994,7 @@ impl Editorbereich {
             (treffer, punkt)
         };
         let verlauf = self.verlauf_fuer_umbau(punkt);
-        self.stand_erneuern(verlauf);
+        self.stand_erneuern(verlauf, Einsatz::Ganz);
         self.treffer_zeigen(treffer);
         self.suchmeldung()
     }
@@ -5848,7 +6086,7 @@ impl Editorbereich {
         // ins Leere hin.
         if zahl > 0 {
             let verlauf = self.verlauf_fuer_umbau(punkt);
-            self.stand_erneuern(verlauf);
+            self.stand_erneuern(verlauf, Einsatz::Ganz);
         }
         Editormeldung::Ersetzt { zahl }
     }
@@ -5910,9 +6148,21 @@ impl Editorbereich {
         // `darstellung_nachziehen` gleich darunter selbst aus dem Modell. Ein
         // zweiter Weg dorthin waere die Gelegenheit, beide auseinanderlaufen zu
         // lassen.
-        let _ = self.ivars().modell.borrow_mut().ansicht_umschalten();
-        // Eine CSV, die sich nicht als Tabelle zeigen laesst, bleibt in der
-        // Rohansicht, und der Grund geht als Antwort nach oben (E3, E9).
+        // Steht eine CSV als Text, weil sie keine Tabelle ergab, versucht der
+        // Wechsel die Tabelle erneut, statt die Ansicht umzustellen: der
+        // Nutzer sieht schon den Text, und die Ansicht bleibt seine Wahl fuer
+        // jede folgende Datei. Sonst wechselt die Ansicht.
+        let erneut = self
+            .ivars()
+            .trenntext
+            .borrow_mut()
+            .as_mut()
+            .is_some_and(|lage| std::mem::replace(&mut lage.verweigert, false));
+        if !erneut {
+            let _ = self.ivars().modell.borrow_mut().ansicht_umschalten();
+        }
+        // Eine CSV, die sich nicht als Tabelle zeigen laesst, steht als Text,
+        // und der Grund geht als Antwort nach oben (E3, E9).
         let verweigert = self.tabellenform_pruefen();
         self.darstellung_nachziehen();
         // Die Tabelle einer CSV ist in der Rohansicht nicht nachgezogen
@@ -5952,12 +6202,10 @@ impl Editorbereich {
     /// der Grundfarbe da — dieselbe Spanne, die schon beim Lesen einer grossen
     /// Datei vergeht, und aus demselben Grund.
     fn darstellung_nachziehen(&self) {
-        let (ansicht, art) = {
+        let ansicht = self.dargestellte_ansicht();
+        let art = {
             let modell = self.ivars().modell.borrow();
-            (
-                modell.ansicht(),
-                crate::hervorhebung::art(modell.pfad(), modell.typ()),
-            )
+            crate::hervorhebung::art(modell.pfad(), modell.typ())
         };
 
         self.grundschrift_setzen(ansicht, art);
@@ -6204,12 +6452,10 @@ impl Editorbereich {
     /// [`super::textmerkmale::anwenden`] die Lieferung abgewiesen, ist an der
     /// Flaeche nichts geschehen und nichts nachzuziehen.
     fn formatierung_anwenden(&self, formatierung: &Formatierung) {
-        let (ansicht, art) = {
+        let ansicht = self.dargestellte_ansicht();
+        let art = {
             let modell = self.ivars().modell.borrow();
-            (
-                modell.ansicht(),
-                crate::hervorhebung::art(modell.pfad(), modell.typ()),
-            )
+            crate::hervorhebung::art(modell.pfad(), modell.typ())
         };
         if textmerkmale::anwenden(&self.ivars().text, formatierung, art, ansicht) {
             self.nummernspalte_nachziehen();
@@ -9306,6 +9552,78 @@ mod tests {
         }
     }
 
+    /// Der Bereich, den ein Umbau an der Flaeche ersetzt, macht aus dem Stand
+    /// davor den Stand danach, in AppKits Koordinate gerechnet; auch mit
+    /// Umlauten, `\r\n` und einem Bildzeichen vor der Stelle
+    /// (`261019-0037-die-zelluebernahme-an-16-mib-ist-ohne-setstring-gemessen-und-die-100-ms-grenze-des-plans-ist-nicht-entschieden.md`).
+    /// Und der Umbau wie das Umkehren reichen ihn an `stand_erneuern`, die
+    /// uebrigen Anlaesse den ganzen Stand.
+    #[test]
+    fn der_blockweise_vergleich_zaehlt_wie_der_bytevergleich() {
+        let lang: Vec<u8> = (0..20_000u32).map(|i| (i % 251) as u8).collect();
+        for stelle in [0, 1, 4095, 4096, 4097, 12_288, 19_999] {
+            let mut anders = lang.clone();
+            anders[stelle] ^= 0xff;
+            let vorn = lang.iter().zip(&anders).take_while(|(l, r)| l == r).count();
+            let hinten = lang
+                .iter()
+                .rev()
+                .zip(anders.iter().rev())
+                .take_while(|(l, r)| l == r)
+                .count();
+            assert_eq!(gleich_von_vorn(&lang, &anders), vorn, "{stelle}");
+            assert_eq!(gleich_von_hinten(&lang, &anders), hinten, "{stelle}");
+        }
+        assert_eq!(gleich_von_vorn(&lang, &lang[..5000]), 5000);
+        assert_eq!(gleich_von_hinten(&lang, &lang[15_000..]), 5000);
+        assert_eq!(gleich_von_vorn(b"", b"abc"), 0);
+    }
+
+    #[test]
+    fn ein_umbau_ersetzt_an_der_flaeche_allein_den_geaenderten_bereich() {
+        let ersetzt = |vorher: &str, nachher: &str| -> String {
+            let punkt = Umkehrpunkt::zwischen(vorher, nachher, NSRange::new(0, 0));
+            let Einsatz::Bereich { bereich, ersatz } = Einsatz::aus_umkehrpunkt(&punkt, nachher)
+            else {
+                panic!("ein Umbau ersetzt einen Bereich");
+            };
+            let mut einheiten: Vec<u16> = vorher.encode_utf16().collect();
+            let hinein: Vec<u16> = ersatz.encode_utf16().collect();
+            einheiten.splice(bereich.location..bereich.location + bereich.length, hinein);
+            String::from_utf16(&einheiten).expect("gueltiges UTF-16")
+        };
+        for (vorher, nachher) in [
+            ("a;b\r\nc;d\r\n", "a;b\r\nc;x\r\n"),
+            (
+                "😀Äpfel;1,50\r\nB;\"x\ny\"\r\n",
+                "😀Äpfel;1,75\r\nB;\"x\ny\"\r\n",
+            ),
+            ("a,b\n", "a,b\n,\n"),
+            ("a,b\nc,d\n", "c,d\n"),
+            ("", "x\n"),
+            ("gleich", "gleich"),
+        ] {
+            assert_eq!(
+                ersetzt(vorher, nachher),
+                nachher,
+                "{vorher:?} -> {nachher:?}"
+            );
+        }
+
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        for name in ["umbau_anwenden", "umkehren"] {
+            assert!(
+                rumpf(&quelle, name).contains(concat!("Einsatz::aus_", "umkehrpunkt(")),
+                "{name} reicht den Bereich nicht"
+            );
+        }
+        assert!(
+            rumpf(&quelle, "stand_einsetzen")
+                .contains(concat!("replaceCharactersInRange_", "withString("))
+        );
+    }
+
     /// `umbau_anwenden` geht den Weg von `treffer_ersetzen` und keinen
     /// zweiten: Abschrift, `bearbeiten`, Umkehrpunkt, Budget, `stand_erneuern`.
     /// Er leert keinen Verlauf und laesst keinen fallen.
@@ -11837,7 +12155,7 @@ mod tests {
         );
         let csv = Some(trenntext::Art::Csv);
         assert_eq!(
-            editorform_der_datei(Ansicht::Format, Dateityp::Sonstiges, csv),
+            editorform_der_datei(Ansicht::Format, Dateityp::Sonstiges, csv, false),
             Editorform::Trenntext
         );
         assert_eq!(flaeche_der_form(Editorform::Trenntext), Flaeche::Tabelle);
@@ -11846,13 +12164,13 @@ mod tests {
             Some(Eintragsart::Trenntext)
         );
         assert_eq!(
-            editorform_der_datei(Ansicht::Roh, Dateityp::Sonstiges, csv),
+            editorform_der_datei(Ansicht::Roh, Dateityp::Sonstiges, csv, false),
             Editorform::Text
         );
         for ansicht in [Ansicht::Format, Ansicht::Roh] {
             for typ in [Dateityp::Markdown, Dateityp::Sonstiges] {
                 assert_eq!(
-                    editorform_der_datei(ansicht, typ, None),
+                    editorform_der_datei(ansicht, typ, None, false),
                     editorform(ansicht, typ),
                     "ohne Trenntext gilt die Form der Datei"
                 );
@@ -11974,6 +12292,7 @@ mod tests {
         let mut lage = Trenntextlage {
             dialekt: trenntext::dialekt_erkennen(trenntext::Art::Csv, CSV),
             sicht: None,
+            verweigert: false,
         };
         let generation = Cell::new(0);
         let sicht = trenntextsicht_fuer(CSV, &mut lage, &generation);
@@ -11994,6 +12313,104 @@ mod tests {
         ] {
             assert!(!umschalten.contains(nadel), "der Wechsel ruft {nadel}");
         }
+    }
+
+    /// Eine CSV, die keine Tabelle ergibt, steht als Text, **ohne die Ansicht
+    /// des Modells umzustellen**: die naechste Datei, etwa eine `.md`, steht in
+    /// der Formatansicht wie vorher
+    /// (`261019-0037-eine-csv-die-keine-tabelle-ergibt-schaltet-die-ansicht-fuer-jede-folgende-datei-auf-roh.md`).
+    /// Am Modell gerechnet und an der reinen Form: das Modell haelt die
+    /// Formatansicht ueber beide Dateien, die verweigerte CSV zeigt Text und
+    /// ihre Flaeche in der Rohdarstellung, die `.md` danach ihre Formatform.
+    #[test]
+    fn eine_verweigerte_csv_laesst_die_ansicht_fuer_die_naechste_datei_stehen() {
+        use crate::editormodell::{Editormodell, Ladeausgang};
+        fn modell_laden(modell: &mut Editormodell, pfad: &Path) {
+            assert_eq!(modell.oeffnen(pfad, None), None);
+            for _ in 0..2000 {
+                if let Some(ausgang) = modell.einziehen() {
+                    assert_eq!(ausgang, Ladeausgang::Geoeffnet);
+                    return;
+                }
+                std::thread::sleep(std::time::Duration::from_millis(1));
+            }
+            panic!("der Arbeitsfaden hat nichts geliefert");
+        }
+        let ordner = crate::pruefordner::Pruefordner::neu("verweigerte-csv");
+        let csv = ordner.datei("offen.csv", "a,b\nc,\"d\ne,f\n");
+        let md = ordner.datei("lies.md", "# Titel\n");
+        let mut modell = Editormodell::neu(crate::heimgriff::ungelesen());
+        assert_eq!(modell.ansicht(), Ansicht::Format);
+        modell_laden(&mut modell, &csv);
+        let csv_art = modell.trenntext();
+        assert_eq!(csv_art, Some(trenntext::Art::Csv));
+        let dialekt = trenntext::dialekt_erkennen(trenntext::Art::Csv, modell.stand());
+        let verweigert =
+            tabellenform_verweigert(&trenntext::indexieren(modell.stand(), &dialekt)).is_some();
+        assert!(
+            verweigert,
+            "das offene Anfuehrungszeichen verweigert die Tabelle"
+        );
+        assert_eq!(
+            editorform_der_datei(modell.ansicht(), modell.typ(), csv_art, verweigert),
+            Editorform::Text,
+            "die CSV steht als Text"
+        );
+        assert_eq!(
+            dargestellte_ansicht(modell.ansicht(), verweigert),
+            Ansicht::Roh
+        );
+        assert_eq!(modell.ansicht(), Ansicht::Format, "die Wahl bleibt stehen");
+
+        modell_laden(&mut modell, &md);
+        assert_eq!(modell.ansicht(), Ansicht::Format);
+        assert_eq!(
+            editorform_der_datei(modell.ansicht(), modell.typ(), modell.trenntext(), false),
+            editorform(Ansicht::Format, Dateityp::Markdown),
+            "die .md steht in der Formatansicht"
+        );
+        assert_eq!(
+            dargestellte_ansicht(Ansicht::Format, false),
+            Ansicht::Format
+        );
+    }
+
+    /// Ein Neuladen derselben CSV behaelt ein gewechseltes Trennzeichen; eine
+    /// andere Datei und ein nicht gewechselter Dialekt waehlen nach der Regel
+    /// (`261019-0037-ein-neuladen-derselben-csv-nimmt-das-gewechselte-trennzeichen-still-zurueck.md`).
+    #[test]
+    fn ein_neuladen_derselben_csv_behaelt_das_gewechselte_trennzeichen() {
+        let stand = "a;b;c\n1;2;3\n";
+        let erkannt = trenntext::dialekt_erkennen(trenntext::Art::Csv, stand);
+        assert_eq!(erkannt.trennzeichen, trenntext::Trennzeichen::Semikolon);
+        let gewechselt = erkannt.gewechselt();
+        assert_eq!(gewechselt.herkunft, trenntext::Herkunft::Gewechselt);
+
+        assert_eq!(
+            dialekt_beim_eintreffen(trenntext::Art::Csv, stand, true, Some(gewechselt)),
+            gewechselt,
+            "dieselbe Datei, neu geladen: die Wahl des Nutzers bleibt"
+        );
+        assert_eq!(
+            dialekt_beim_eintreffen(trenntext::Art::Csv, stand, false, Some(gewechselt)),
+            erkannt,
+            "eine andere Datei beginnt mit der Regel"
+        );
+        assert_eq!(
+            dialekt_beim_eintreffen(trenntext::Art::Csv, stand, true, Some(erkannt)),
+            erkannt,
+            "ohne Wechsel gilt die Regel auch beim Neuladen"
+        );
+        assert_eq!(
+            dialekt_beim_eintreffen(trenntext::Art::Csv, stand, true, None),
+            erkannt
+        );
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        assert!(
+            rumpf(&quelle, "trenntext_vorbereiten")
+                .contains(concat!("dialekt_beim_", "eintreffen("))
+        );
     }
 
     /// Eine CSV mit einem Anfuehrungszeichen, das nicht schliesst, und eine
@@ -12051,7 +12468,11 @@ mod tests {
         let quelle = datei("krk-ui/src/appkit/editor.rs");
         let pruefen = rumpf(&quelle, "tabellenform_pruefen");
         assert!(pruefen.contains(concat!("tabellenform_", "verweigert(")));
-        assert!(pruefen.contains(concat!(".ansicht_", "umschalten()")));
+        assert!(
+            !pruefen.contains(concat!(".ansicht_", "umschalten()")),
+            "der Rueckfall gehoert der Datei und nicht der Ansicht"
+        );
+        assert!(pruefen.contains(concat!("lage.verweigert ", "= true")));
         assert!(
             rumpf(&quelle, "trenntext_vorbereiten")
                 .contains(concat!("self.tabellenform_", "pruefen()"))
@@ -12150,6 +12571,7 @@ mod tests {
         let mut lage = Trenntextlage {
             dialekt: trenntext::dialekt_erkennen(trenntext::Art::Csv, CSV),
             sicht: None,
+            verweigert: false,
         };
         let generation = Cell::new(0);
         let vorher = zerlegungen();
@@ -12417,6 +12839,27 @@ mod tests {
         let start = Instant::now();
         let fuer_die_flaeche = NSString::from_str(&neu.text);
         let abschrift = start.elapsed();
+        // Der Weg seit dem 261019: der Bereich statt des ganzen Standes, die
+        // Frage nach der Wandlung statt der Abschrift, und der Vergleich der
+        // Sicht, den `trenntextsicht_fuer` vor dem neuen Index stellt.
+        let start = Instant::now();
+        let wandelt = !krk_core::text::datei::ist_in_stand_form(
+            &neu.text,
+            krk_core::text::datei::Dateiform {
+                marke: false,
+                zeilenenden: krk_core::text::datei::Zeilenenden::WieGelesen,
+            },
+        );
+        let einsatz = Einsatz::aus_umkehrpunkt(&punkt, &neu.text);
+        let Einsatz::Bereich { ersatz, .. } = &einsatz else {
+            panic!("ein Bereich");
+        };
+        let fuer_den_bereich = NSString::from_str(ersatz);
+        let bereich = start.elapsed();
+        let start = Instant::now();
+        let gleich = sicht.text() == neu.text.as_str();
+        let verglichen = start.elapsed();
+        assert!(!wandelt && !gleich && fuer_den_bereich.length() > 0);
 
         let start = Instant::now();
         let spalte = trenntext::spalte_einfuegen(
@@ -12447,6 +12890,63 @@ mod tests {
         println!(
             "Spalte einfuegen (Kern)       {:8.2} ms",
             ms(spalte_eingefuegt)
+        );
+
+        // Die Spalteneinfuegung auf demselben Weg wie die Zelle.
+        let start = Instant::now();
+        let spaltenpunkt =
+            Umkehrpunkt::zwischen(neue_sicht.text(), &spalte.text, NSRange::new(0, 0));
+        let spaltenbereich = Einsatz::aus_umkehrpunkt(&spaltenpunkt, &spalte.text);
+        let spaltenindex = zerlegen(&spalte.text, &dialekt);
+        let _spaltensicht =
+            Trenntextsicht::neu(Rc::from(spalte.text.as_str()), Rc::new(spaltenindex), 3);
+        let spalte_nachgezogen = start.elapsed();
+        let Einsatz::Bereich {
+            ersatz: spaltenersatz,
+            ..
+        } = &spaltenbereich
+        else {
+            panic!("ein Bereich");
+        };
+
+        // Der Textspeicher allein, ohne Flaeche: eine `NSTextView` laesst sich
+        // unter `libtest` nicht beschreiben, ein nackter Speicher vielleicht.
+        let (im_speicher, ganz_im_speicher) = an_einer_flaeche(|mtm| {
+            let _ = mtm;
+            let speicher = objc2_app_kit::NSTextStorage::new();
+            speicher.replaceCharactersInRange_withString(
+                NSRange::new(0, 0),
+                &NSString::from_str(&text),
+            );
+            let start = Instant::now();
+            if let Einsatz::Bereich { bereich, ersatz } = &einsatz {
+                speicher.replaceCharactersInRange_withString(*bereich, &NSString::from_str(ersatz));
+            }
+            let im_speicher = start.elapsed();
+            let start = Instant::now();
+            speicher.replaceCharactersInRange_withString(
+                NSRange::new(0, speicher.length()),
+                &NSString::from_str(&neu.text),
+            );
+            (im_speicher, start.elapsed())
+        });
+
+        println!("--- seit 261019 ---");
+        println!("Bereich und NSString dafuer   {:8.2} ms", ms(bereich));
+        println!("Vergleich der Sicht           {:8.2} ms", ms(verglichen));
+        println!("Bereich im Textspeicher       {:8.2} ms", ms(im_speicher));
+        println!(
+            "ganzer Text im Textspeicher   {:8.2} ms",
+            ms(ganz_im_speicher)
+        );
+        println!(
+            "Zellübernahme, Rechenweg:     {:8.2} ms",
+            ms(gerechnet + umkehrpunkt + bereich + verglichen + nachgezogen + im_speicher)
+        );
+        println!(
+            "Spalte einfuegen, Rechenweg:  {:8.2} ms  (Bereich {} Bytes)",
+            ms(spalte_eingefuegt + spalte_nachgezogen + verglichen),
+            spaltenersatz.len()
         );
         assert_eq!(punkt.angewandt_auf(&neu.text), text);
         assert!(fuer_die_flaeche.length() > 0);
@@ -13038,6 +13538,7 @@ mod tests {
         let mut lage = Trenntextlage {
             dialekt: trenntext::dialekt_erkennen(trenntext::Art::Csv, stand),
             sicht: None,
+            verweigert: false,
         };
         let generation = Cell::new(0);
         let anfang = lage.dialekt.trennzeichen;

@@ -67,7 +67,7 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, mpsc};
 use std::time::Duration;
 
-use krk_core::text::datei::{Dateiform, Lesehindernis, Textstand, Unlesbarkeit};
+use krk_core::text::datei::{Dateiform, Lesehindernis, Textstand, Unlesbarkeit, Zeilenenden};
 use krk_core::text::{Abweisung, Zeilenindex, Zeilenlage, Zeilensprung, datei, suche};
 
 mod gemeinsam;
@@ -1508,44 +1508,48 @@ fn excel_csv() -> Vec<u8> {
 }
 
 /// Oeffnen und unveraendert sichern: die Bytes sind dieselben, Marke und
-/// `\r\n` eingeschlossen.
+/// `\r\n` eingeschlossen. Der Stand einer CSV traegt ihre Zeilenenden.
 #[test]
 fn eine_csv_mit_marke_und_crlf_kommt_unveraendert_byte_fuer_byte_zurueck() {
     let ordner = Pruefordner::neu("dateiform-rundreise");
     let roh = excel_csv();
     let pfad = ordner.datei("excel.csv", &roh);
 
-    let geoeffnet = datei::oeffnen(&pfad).expect("die Datei ist Text");
+    let geoeffnet = datei::trenntext_oeffnen(&pfad).expect("die Datei ist Text");
     assert_eq!(
         geoeffnet.form,
         Dateiform {
             marke: true,
-            crlf: true
+            zeilenenden: Zeilenenden::WieGelesen
         }
     );
+    assert!(!geoeffnet.stand.starts_with('\u{feff}'));
+    assert!(geoeffnet.stand.contains("\r\n"));
     datei::sichern(&pfad, &geoeffnet.stand, geoeffnet.form).expect("das Sichern scheitert nicht");
     assert_eq!(bytes_von(&pfad), roh);
 
     // Ohne Marke, mit `\r\n`, und ohne abschliessenden Umbruch: das Sichern
-    // haengt genau den einen an, in der Form der Datei.
+    // schreibt den Stand, wie er ist, und haengt nichts an.
     let ohne_marke = ordner.datei("ohne.csv", b"a,b\r\nc,d");
-    let geoeffnet = datei::oeffnen(&ohne_marke).expect("die Datei ist Text");
-    assert_eq!(
-        geoeffnet.form,
-        Dateiform {
-            marke: false,
-            crlf: true
-        }
-    );
+    let geoeffnet = datei::trenntext_oeffnen(&ohne_marke).expect("die Datei ist Text");
+    assert!(!geoeffnet.form.marke);
     datei::sichern(&ohne_marke, &geoeffnet.stand, geoeffnet.form).expect("gesichert");
-    assert_eq!(bytes_von(&ohne_marke), b"a,b\r\nc,d\r\n");
+    assert_eq!(bytes_von(&ohne_marke), b"a,b\r\nc,d");
 
     // Eine Datei, die nur aus der Marke besteht, behaelt sie.
     let nur_marke = ordner.datei("nur-marke.csv", "\u{feff}".as_bytes());
-    let geoeffnet = datei::oeffnen(&nur_marke).expect("die Datei ist Text");
+    let geoeffnet = datei::trenntext_oeffnen(&nur_marke).expect("die Datei ist Text");
     assert_eq!(geoeffnet.stand, "");
     datei::sichern(&nur_marke, &geoeffnet.stand, geoeffnet.form).expect("gesichert");
     assert_eq!(bytes_von(&nur_marke), "\u{feff}".as_bytes());
+
+    // Gemischte Zeilenenden und ein `\n` in einem gequoteten Feld kommen
+    // unveraendert zurueck.
+    let gemischt_roh = b"a;\"x\ny\"\r\nb;c\nd;e\r\n";
+    let gemischt = ordner.datei("gemischt.csv", gemischt_roh);
+    let geoeffnet = datei::trenntext_oeffnen(&gemischt).expect("die Datei ist Text");
+    datei::sichern(&gemischt, &geoeffnet.stand, geoeffnet.form).expect("gesichert");
+    assert_eq!(bytes_von(&gemischt), gemischt_roh);
 }
 
 /// Eine Zellaenderung ueber die Handlung des Kerns, gesichert in der Form der
@@ -1558,7 +1562,7 @@ fn eine_geaenderte_zelle_aendert_in_der_gesicherten_datei_nur_ihre_bytes() {
     let roh = excel_csv();
     let pfad = ordner.datei("excel.csv", &roh);
 
-    let geoeffnet = datei::oeffnen(&pfad).expect("die Datei ist Text");
+    let geoeffnet = datei::trenntext_oeffnen(&pfad).expect("die Datei ist Text");
     let dialekt = dialekt_erkennen(Art::Csv, &geoeffnet.stand);
     let index = indexieren(&geoeffnet.stand, &dialekt);
     let neu = zelle_setzen(&geoeffnet.stand, &index, 2, 1, "2,25")
@@ -1591,8 +1595,9 @@ fn jede_andere_datei_sichert_wie_vorher() {
     let pfad = ordner.datei("lies.md", &roh);
 
     let geoeffnet = datei::oeffnen(&pfad).expect("die Datei ist Text");
-    // Erhoben wird die Form an jeder Datei; ob sie gilt, entscheidet der Rufer.
-    assert!(geoeffnet.form.marke && geoeffnet.form.crlf);
+    // Die Marke wird an jeder Datei erhoben; ob sie gilt, entscheidet der Rufer.
+    assert!(geoeffnet.form.marke);
+    assert_eq!(geoeffnet.form.zeilenenden, Zeilenenden::Gewandelt);
     datei::sichern(&pfad, &geoeffnet.stand, Dateiform::GEHALTEN).expect("gesichert");
     assert_eq!(bytes_von(&pfad), b"# Titel\n\nText\n");
 
@@ -1610,8 +1615,11 @@ fn jede_andere_datei_sichert_wie_vorher() {
     assert_eq!(Dateiform::default(), Dateiform::GEHALTEN);
 }
 
-/// Die Zusage des gehaltenen Standes gilt auch fuer eine CSV mit Marke und
-/// `\r\n`: der Stand traegt weder das eine noch das andere.
+/// Die Zusage des gehaltenen Standes gilt fuer jede Datei, die ueber
+/// `oeffnen` kommt, auch fuer eine CSV mit Marke und `\r\n`: der Stand traegt
+/// weder das eine noch das andere. `trenntext_oeffnen` haelt dagegen die
+/// Zeilenenden, und allein eine Datei mit `\r` als einzigem Zeilenende bekommt
+/// ihre `\r` als `\n` und schreibt sie als `\r` zurueck.
 #[test]
 fn der_gehaltene_stand_traegt_weiter_keine_marke_und_kein_cr() {
     let ordner = Pruefordner::neu("dateiform-stand");
@@ -1626,21 +1634,30 @@ fn der_gehaltene_stand_traegt_weiter_keine_marke_und_kein_cr() {
         "Name;Preis;Notiz\nÄpfel;1,50;\"rot;süß\"\nBirnen;2,00;\n"
     );
 
-    // Die Form der Bytes, einzeln: die Marke vorn, das erste Zeilenende.
-    assert_eq!(Dateiform::der_bytes(b""), Dateiform::GEHALTEN);
-    assert_eq!(Dateiform::der_bytes(b"a\nb\r\n"), Dateiform::GEHALTEN);
+    let mac = ordner.datei("mac.csv", b"a;b\r1;2\r");
+    let geoeffnet = datei::trenntext_oeffnen(&mac).expect("die Datei ist Text");
+    assert_eq!(geoeffnet.stand, "a;b\n1;2\n");
     assert_eq!(
-        Dateiform::der_bytes(b"\r\n"),
+        geoeffnet.form,
         Dateiform {
             marke: false,
-            crlf: true
+            zeilenenden: Zeilenenden::NurCr
         }
     );
+    datei::sichern(&mac, &geoeffnet.stand, geoeffnet.form).expect("gesichert");
+    assert_eq!(bytes_von(&mac), b"a;b\r1;2\r");
+
+    // Die Stand-Form: ein Stand mit den Zeilenenden der Datei wird nie
+    // gewandelt, jeder andere wie vorher.
+    let roh_form = Dateiform {
+        marke: true,
+        zeilenenden: Zeilenenden::WieGelesen,
+    };
+    assert!(datei::ist_in_stand_form("a\r\n", roh_form));
+    assert_eq!(datei::in_stand_form("a\r\n".to_owned(), roh_form), "a\r\n");
+    assert!(!datei::ist_in_stand_form("a\r\n", Dateiform::GEHALTEN));
     assert_eq!(
-        Dateiform::der_bytes("\u{feff}ohne Umbruch".as_bytes()),
-        Dateiform {
-            marke: true,
-            crlf: false
-        }
+        datei::in_stand_form("a\r\n".to_owned(), Dateiform::GEHALTEN),
+        "a\n"
     );
 }

@@ -751,7 +751,8 @@ der Statuszeile, dort samt der Regel, die es gewählt hat. **Hat die Regel
 falsch gewählt, hilft „Trennzeichen wechseln“** im Menü „Editor“. Der Befehl
 geht reihum Komma, Semikolon, Tabulator und ändert dabei kein Byte der Datei,
 nur ihre Deutung. KRK merkt sich die Wahl nicht: beim nächsten Öffnen wählt
-die Regel neu. Ab Werk liegt der Befehl auf keiner Taste; wer eine will, weist
+die Regel neu. Lädt der Editor dieselbe Datei nach einer Änderung von außen
+neu, bleibt das gewechselte Zeichen stehen. Ab Werk liegt der Befehl auf keiner Taste; wer eine will, weist
 sie mit **F1** und `cmd+t` zu. Für eine `.tsv` ist er ausgegraut.
 
 **Gelesen wird allein UTF-8.** Eine CSV, die ein älteres Excel als
@@ -809,12 +810,13 @@ waagerecht und senkrecht. Die Breite einer Spalte lässt sich an ihrer Kante im
 Kopf ziehen. Eine Zelle zeigt einen Zeilenumbruch als `⏎` und einen Tabulator
 als `⇥`; bearbeitet wird der wirkliche Text.
 
-**Die Tabelle bleibt in zwei Fällen in der Rohansicht**, und die Statuszeile
-nennt den Grund: wenn ein Anführungszeichen bis zum Dateiende nicht schließt,
-denn dann würde der ganze Rest der Datei eine einzige Zelle, und wenn die Datei
-mehr Spalten trägt, als die Tabelle zeigt (derzeit 256; die Meldung nennt
-beide Zahlen). Nach einer Berichtigung in der Rohansicht versucht
-`ctrl+cmd+e` die Tabelle erneut.
+**Die Datei steht in zwei Fällen als Text statt als Tabelle**, und die
+Statuszeile nennt den Grund: wenn ein Anführungszeichen bis zum Dateiende nicht
+schließt, denn dann würde der ganze Rest der Datei eine einzige Zelle, und wenn
+die Datei mehr Spalten trägt, als die Tabelle zeigt (derzeit 256; die Meldung
+nennt beide Zahlen). Nach einer Berichtigung im Text versucht `ctrl+cmd+e` die
+Tabelle erneut. Das gilt allein für diese Datei: die nächste Datei, etwa eine
+Markdown-Datei, öffnet in der Ansicht, die man zuletzt gewählt hat.
 
 **Die Auswahl ist immer ein Rechteck aus Zellen**, nach dem Öffnen die Zelle A1.
 
@@ -885,7 +887,8 @@ der Zelle oben links in der Auswahl ein. Reicht er über das Ende der Tabelle,
 hängt KRK Zeilen an oder füllt Zeilen auf. Danach ist der eingefügte Bereich
 gewählt, und ein einziges `cmd+z` nimmt ihn ganz zurück. Gelesen wird allein
 Text: ein im Finder kopierter Eintrag kommt mit seinem Namen und nicht als
-Pfad.
+Pfad. Trägt die Zwischenablage gar keinen Text, etwa nur ein Bild, ändert
+`cmd+v` nichts, und die Statuszeile sagt es.
 
 **Rückgängig ist ein Verlauf für Tabelle und Rohansicht zusammen.** `cmd+z`
 nimmt Tabellenhandlungen und Getipptes der Rohansicht in der Reihenfolge
@@ -896,18 +899,26 @@ lassen.
 
 **Jede Handlung ändert zuerst nur den Stand im Editor.** Auf die Platte kommt
 sie mit `cmd+s`. Dabei ändert KRK allein die Bytes der Zellen, Zeilen und
-Spalten, die man angefasst hat; jede andere Zeile kommt Zeichen für Zeichen
-zurück, mit ihren Anführungszeichen. Der Editor öffnet Dateien bis 16 MB.
+Spalten, die man angefasst hat; jede andere Zeile kommt Byte für Byte zurück,
+mit ihren Anführungszeichen und ihren Zeilenenden. Der Editor öffnet Dateien
+bis 16 MB.
 
-**Eine CSV- oder TSV-Datei behält beim Sichern ihre Bytefolgenmarke und ihre
-Zeilenenden.** Eine Datei, die Excel als „CSV UTF-8“ geschrieben hat, beginnt
-mit einer unsichtbaren Marke, an der Excel die Kodierung erkennt, und trennt
-ihre Zeilen mit `\r\n`; nach dem Sichern in KRK tut sie beides weiter, und
-Umlaute erscheinen in Excel richtig. Maßgeblich ist das Ende der ersten Zeile:
-eine Datei mit gemischten Zeilenenden kommt einheitlich in dieser Form zurück,
-und ein Zeilenumbruch innerhalb einer Zelle einer solchen Datei kommt als
-`\r\n` zurück. **Für jede andere Datei bleibt es bei der bisherigen Regel**:
-KRK sichert sie ohne Marke und mit `\n`.
+**Eine CSV- oder TSV-Datei behält beim Sichern ihre Bytefolgenmarke und jedes
+ihrer Zeilenenden.** Eine Datei, die Excel als „CSV UTF-8“ geschrieben hat,
+beginnt mit einer unsichtbaren Marke, an der Excel die Kodierung erkennt, und
+trennt ihre Zeilen mit `\r\n`; nach dem Sichern in KRK tut sie beides weiter,
+und Umlaute erscheinen in Excel richtig. Ein Zeilenumbruch innerhalb einer
+Zelle, den Excel als `\n` schreibt, bleibt `\n`; eine Datei mit gemischten
+Zeilenenden behält jedes, wie es war, und eine Datei ohne Zeilenende am Schluss
+bleibt ohne. Neu entsteht ein Zeilenende allein dort, wo man etwas hinzufügt:
+eine neue Zeile endet wie die erste Zeile der Datei, und ein Umbruch, den man
+mit `opt+return` in eine Zelle schreibt, ist ein `\n` wie bei Excel. Die
+Rohansicht zeigt die Zeilenenden, wie sie in der Datei stehen; eine Zeile, die
+man dort mit `return` beginnt, endet auf `\n`. **Eine Datei, deren Zeilen
+allein mit `\r` enden**, wie Excel sie als „CSV (Macintosh)“ schreibt, zeigen
+Vorschau und Editor ebenso als Tabelle, und beim Sichern behält sie ihre `\r`.
+**Für jede andere Datei bleibt es bei der bisherigen Regel**: KRK sichert sie
+ohne Marke und mit `\n`.
 
 ---
 

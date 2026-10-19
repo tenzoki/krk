@@ -41,7 +41,13 @@
 //! zweites Mal her. Sie lautet: gueltiges UTF-8 ohne Bytefolgenmarke, `\n` als
 //! einziges Zeilenende. `krk_core::text::datei` stellt sie beim Einlesen her,
 //! und alles hier rechnet darauf. Wer Text von anderswo hereingibt, fuehrt ihn
-//! durch `krk_core::text::datei::in_gehaltene_form`.
+//! durch `krk_core::text::datei::in_gehaltene_form`. **Seit dem 261019 gilt
+//! ihre zweite Haelfte fuer eine CSV oder TSV nicht**: deren Stand traegt die
+//! Zeilenenden der Datei (`datei::trenntext_oeffnen`), und der groessere
+//! Eingang, [`Editormodell::bearbeiten`], fuehrt ihn durch
+//! `datei::in_stand_form`, das ihn dann nicht wandelt. Der Ersatztext des
+//! Ersetzens kommt weiter gewandelt an; ein `\n` darin ist auch in einer CSV
+//! ein gueltiges Zeilenende.
 //!
 //! # Die zwei Eingaenge fuer fremden Text
 //!
@@ -817,8 +823,25 @@ pub fn keine_textmarke_in_geheimnissen() -> &'static str {
 
 /// Liest eine gewoehnliche Textdatei; die eine Stelle, die dafuer
 /// `krk_core::text::datei::oeffnen` ruft.
+///
+/// **Eine CSV oder TSV liest sie ueber `datei::trenntext_oeffnen`**, dessen
+/// Stand die Zeilenenden der Datei behaelt (Entscheid zur Sicherungsform,
+/// `261019-0037-ein-umbruch-in-einer-zelle-einer-crlf-csv-wird-bei-jedem-sichern-zu-crlf-auch-in-unberuehrten-zeilen.md`).
+/// Entschieden wird am Namen wie in [`trenntextart`]; dessen zweite Haelfte,
+/// dass eine Eintragsdatei nie Trenntext ist, kann hier nicht abweichen, weil
+/// keine Eintragsdatei eine dieser Endungen traegt, und [`Editormodell::uebernehmen`]
+/// faengt den Fall trotzdem ab.
 fn text_lesen(pfad: &Path) -> Result<Gelesen, Abweisung> {
-    datei::oeffnen(pfad).map(|geoeffnet| Gelesen {
+    let trenntext = pfad
+        .file_name()
+        .and_then(trenntext::Art::aus_namen)
+        .is_some();
+    let geoeffnet = if trenntext {
+        datei::trenntext_oeffnen(pfad)
+    } else {
+        datei::oeffnen(pfad)
+    };
+    geoeffnet.map(|geoeffnet| Gelesen {
         stand: geoeffnet.stand,
         form: geoeffnet.form,
         schutz: Schutz::Klartext,
@@ -1766,6 +1789,13 @@ impl Editormodell {
                     Dateityp::von_pfad(&pfad, heimgriff::lesen(&self.heim).as_ref())
                 };
                 self.trenntext = trenntextart(&pfad, self.typ);
+                // Eine Datei, die als Trenntext gelesen wurde und keiner ist,
+                // kommt in die gehaltene Form, damit ihr Stand die Zusage aus
+                // `krk_core::text::datei` traegt; siehe `text_lesen`.
+                let stand = match self.trenntext {
+                    Some(_) => stand,
+                    None => datei::in_gehaltene_form(stand),
+                };
                 self.dateiform = match self.trenntext {
                     Some(_) => form,
                     None => Dateiform::GEHALTEN,
@@ -1967,13 +1997,32 @@ impl Editormodell {
     /// ansehen —, schreibt `let _ =` davor und sagt damit ausdruecklich, dass er
     /// sie nicht braucht. Der Datensatz ist
     /// `issues/260810-0423_*_der-rueckgabewert-von-bearbeiten-laesst-sich-still-fallenlassen.md`.
+    ///
+    /// # Eine CSV oder TSV wird nicht gewandelt
+    ///
+    /// Ihr Stand traegt die Zeilenenden der Datei
+    /// (`krk_core::text::datei::Zeilenenden::WieGelesen`), und ein `\r\n` aus
+    /// der Flaeche ist dort ein Zeichen des Standes und keines, das zu wandeln
+    /// waere. Gefragt wird `datei::in_stand_form` mit der Form der gehaltenen
+    /// Datei, und [`Self::wandelt`] stellt dieselbe Frage im Voraus.
     #[must_use = "wandelte das Bearbeiten, ist die Textflaeche nachzuziehen"]
     pub fn bearbeiten(&mut self, neuer_stand: String) -> bool {
-        let war_gehalten = datei::ist_in_gehaltener_form(&neuer_stand);
-        self.stand = datei::in_gehaltene_form(neuer_stand);
+        let wandelt = self.wandelt(&neuer_stand);
+        self.stand = datei::in_stand_form(neuer_stand, self.dateiform);
         self.abweichung = true;
         self.suchlauf = None;
-        !war_gehalten
+        wandelt
+    }
+
+    /// Ob [`Self::bearbeiten`] diesen Text wandeln wuerde.
+    ///
+    /// **Die Frage vor der Wandlung**, gestellt von der Flaeche, die vorher
+    /// eine Abschrift des alten Standes braucht; dieselbe Bedingung, an der
+    /// [`Self::bearbeiten`] entscheidet (`datei::ist_in_stand_form`). Fuer eine
+    /// CSV oder TSV ist sie immer `false`, auch wenn der Text `\r` traegt.
+    #[must_use]
+    pub fn wandelt(&self, text: &str) -> bool {
+        !datei::ist_in_stand_form(text, self.dateiform)
     }
 
     /// Schreibt den Stand in die gehaltene Datei (C4).
@@ -2694,8 +2743,9 @@ mod tests {
     /// Schritt 6 des CSV-Plans am Modell: eine Excel-CSV mit Marke und
     /// `\r\n` kommt nach einer Zellaenderung Byte fuer Byte zurueck, bis auf
     /// die Bytes der Zelle; eine Textdatei derselben Form bekommt beim Sichern
-    /// wie vorher `\n` und keine Marke. Das Modell haelt in beiden Faellen
-    /// einen Stand ohne Marke und ohne `\r`.
+    /// wie vorher `\n` und keine Marke. **Seit dem 261019 haelt das Modell den
+    /// Stand einer CSV mit ihren Zeilenenden** und ohne Marke, den einer
+    /// Textdatei weiter ohne `\r`.
     #[test]
     fn eine_excel_csv_behaelt_marke_und_zeilenenden_und_jede_andere_datei_nicht() {
         use krk_core::trenntext::{Art, dialekt_erkennen, indexieren, zelle_setzen};
@@ -2705,9 +2755,16 @@ mod tests {
 
         let csv = ordner.datei("excel.csv", &roh);
         let mut modell = geoeffnet(&csv);
-        assert_eq!(modell.stand(), "Name;Preis\nÄpfel;1,50\nBirnen;2,00\n");
+        assert_eq!(
+            modell.stand(),
+            "Name;Preis\r\nÄpfel;1,50\r\nBirnen;2,00\r\n"
+        );
         // Unveraendert gesichert: dieselben Bytes.
-        let _ = modell.bearbeiten(modell.stand().to_owned());
+        assert!(
+            !modell.wandelt(modell.stand()),
+            "der Stand einer CSV wird nie gewandelt"
+        );
+        assert!(!modell.bearbeiten(modell.stand().to_owned()));
         assert_eq!(modell.sichern(), Sicherungsausgang::Gesichert(csv.clone()));
         assert_eq!(std::fs::read(&csv).expect("lesbar"), roh);
 
@@ -2719,15 +2776,101 @@ mod tests {
         let mut erwartet = Vec::from("\u{feff}".as_bytes());
         erwartet.extend_from_slice("Name;Preis\r\nÄpfel;1,75\r\nBirnen;2,00\r\n".as_bytes());
         assert_eq!(std::fs::read(&csv).expect("lesbar"), erwartet);
-        assert!(!modell.stand().contains('\r'));
 
         let text = ordner.datei("excel.txt", &roh);
         let mut modell = geoeffnet(&text);
+        assert!(!modell.stand().contains('\r'));
+        assert!(modell.wandelt("a\r\n"), "eine Textdatei wandelt weiter");
         let _ = modell.bearbeiten(modell.stand().to_owned());
         assert_eq!(modell.sichern(), Sicherungsausgang::Gesichert(text.clone()));
         assert_eq!(
             std::fs::read_to_string(&text).expect("lesbar"),
             "Name;Preis\nÄpfel;1,50\nBirnen;2,00\n"
+        );
+    }
+
+    /// Oeffnet `bytes` als CSV, setzt die Zelle `zeile`/`spalte` ueber den
+    /// Kern und sichert; zurueck kommen die Bytes der Platte.
+    fn csv_zelle_sichern(
+        name: &str,
+        bytes: &[u8],
+        zeile: usize,
+        spalte: usize,
+        wert: &str,
+    ) -> Vec<u8> {
+        use krk_core::trenntext::{Art, dialekt_erkennen, indexieren, zelle_setzen};
+        let ordner = Pruefordner::neu(name);
+        let pfad = ordner.datei("excel.csv", bytes);
+        let mut modell = geoeffnet(&pfad);
+        let dialekt = dialekt_erkennen(Art::Csv, modell.stand());
+        let index = indexieren(modell.stand(), &dialekt);
+        let neu =
+            zelle_setzen(modell.stand(), &index, zeile, spalte, wert).expect("die Zelle steht");
+        assert!(!modell.bearbeiten(neu.text));
+        assert_eq!(modell.sichern(), Sicherungsausgang::Gesichert(pfad.clone()));
+        std::fs::read(&pfad).expect("lesbar")
+    }
+
+    /// Ein Umbruch in einer Excel-Zelle (`\n` in einer `\r\n`-Datei) bleibt
+    /// beim Sichern `\n`, wenn eine andere Zelle geaendert wird, und jedes
+    /// Satzende bleibt `\r\n`
+    /// (`261019-0037-ein-umbruch-in-einer-zelle-einer-crlf-csv-wird-bei-jedem-sichern-zu-crlf-auch-in-unberuehrten-zeilen.md`).
+    /// Ebenso, wenn der erste Umbruch der Datei in einer gequoteten Kopfzelle
+    /// steht; bis zum 261019 verlor dann jede Satzgrenze ihr `\r`.
+    #[test]
+    fn ein_umbruch_in_einer_excel_zelle_bleibt_beim_sichern_einer_anderen_zelle_stehen() {
+        assert_eq!(
+            csv_zelle_sichern(
+                "zellumbruch",
+                "\u{feff}Name;Notiz\r\nA;\"x\ny\"\r\nB;z\r\n".as_bytes(),
+                2,
+                1,
+                "w"
+            ),
+            "\u{feff}Name;Notiz\r\nA;\"x\ny\"\r\nB;w\r\n".as_bytes()
+        );
+        assert_eq!(
+            csv_zelle_sichern("kopfumbruch", b"\"a\nb\";c\r\n1;2\r\n", 1, 1, "3"),
+            b"\"a\nb\";c\r\n1;3\r\n"
+        );
+        // Ein Umbruch, den der Nutzer in eine Zelle tippt (`opt+return`), geht
+        // als `\n` hinaus wie bei Excel, und das Satzende bleibt `\r\n`.
+        assert_eq!(
+            csv_zelle_sichern("neuer-umbruch", b"a;b\r\n1;2\r\n", 1, 0, "p\nq"),
+            b"a;b\r\n\"p\nq\";2\r\n"
+        );
+        // Eine Datei ohne abschliessendes Zeilenende bleibt ohne.
+        assert_eq!(
+            csv_zelle_sichern("ohne-ende", b"a;b\r\n1;2", 1, 1, "3"),
+            b"a;b\r\n1;3"
+        );
+    }
+
+    /// Eine Datei mit `\r` als einzigem Zeilenende haelt der Editor mit `\n`
+    /// und schreibt sie mit `\r` zurueck; unveraendert Byte fuer Byte
+    /// (`261019-0037-vorschau-und-editor-zerlegen-eine-csv-mit-einzelnem-cr-verschieden.md`).
+    /// Ein einzelnes `\r` in einer Datei mit `\n` bleibt dagegen ein Zeichen
+    /// des Feldes und teilt keinen Satz.
+    #[test]
+    fn eine_csv_mit_cr_als_zeilenende_kommt_byte_fuer_byte_zurueck() {
+        let ordner = Pruefordner::neu("nur-cr");
+        let pfad = ordner.datei("mac.csv", b"a;b\r1;2\r");
+        let mut modell = geoeffnet(&pfad);
+        assert_eq!(modell.stand(), "a;b\n1;2\n");
+        let _ = modell.bearbeiten(modell.stand().to_owned());
+        assert_eq!(modell.sichern(), Sicherungsausgang::Gesichert(pfad.clone()));
+        assert_eq!(std::fs::read(&pfad).expect("lesbar"), b"a;b\r1;2\r");
+        assert_eq!(
+            csv_zelle_sichern("nur-cr-zelle", b"a;b\r1;2\r", 1, 1, "3"),
+            b"a;b\r1;3\r"
+        );
+
+        let gemischt = ordner.datei("gemischt.csv", b"a;b\nx\ry;2\n");
+        let modell = geoeffnet(&gemischt);
+        assert_eq!(
+            modell.stand(),
+            "a;b\nx\ry;2\n",
+            "das \\r bleibt Feldzeichen"
         );
     }
 

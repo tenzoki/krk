@@ -69,6 +69,36 @@ pub use index::{Satzindex, indexieren};
 /// in [`Satzindex::spaltenzahl`].
 pub const HOECHSTENS_SPALTEN: usize = 256;
 
+/// Ob ein Trenntext `\r` als Satzende traegt: **er traegt kein `\n`, aber ein
+/// `\r`** (Excel „CSV (Macintosh)“ und aeltere Mac-Programme).
+///
+/// **Die eine Regel fuer diesen Fall**, und Vorschau wie Editor fragen sie:
+/// der Leser selbst kennt als Satzende allein `\n` und `\r\n` und liest ein
+/// einzelnes `\r` als Zeichen des Feldes (E3). Ein solcher Text bekommt deshalb
+/// vor dem Lesen jedes `\r` als `\n` ([`lesbar`]); der Editor haelt ihn so und
+/// schreibt beim Sichern jedes `\n` wieder als `\r`
+/// (`krk_core::text::datei::trenntext_oeffnen`). Bis zum 261019 zeigte die
+/// Vorschau einen solchen Text als eine Zeile, der Editor als Tabelle
+/// (`261019-0037-vorschau-und-editor-zerlegen-eine-csv-mit-einzelnem-cr-verschieden.md`).
+/// Entschieden wird am Text und ohne Raten: ein Text mit einem einzigen `\n`
+/// faellt nicht darunter, und seine `\r` bleiben Zeichen der Felder.
+#[must_use]
+pub fn cr_als_satzende(text: &str) -> bool {
+    let bytes = text.as_bytes();
+    !bytes.contains(&b'\n') && bytes.contains(&b'\r')
+}
+
+/// Der Text, den der Leser bekommt: unveraendert, oder bei
+/// [`cr_als_satzende`] mit jedem `\r` als `\n`.
+#[must_use]
+pub fn lesbar(text: &str) -> std::borrow::Cow<'_, str> {
+    if cr_als_satzende(text) {
+        std::borrow::Cow::Owned(text.replace('\r', "\n"))
+    } else {
+        std::borrow::Cow::Borrowed(text)
+    }
+}
+
 /// Welche Art Trenntext ein Name meint (E1).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Art {

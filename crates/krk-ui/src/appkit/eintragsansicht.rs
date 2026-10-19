@@ -1579,9 +1579,11 @@ define_class!(
                 self.weiterreichen(sel!(paste:), absender);
                 return;
             }
-            let Some(text) = zwischenablage::nur_text_lesen() else {
-                return;
-            };
+            // Ohne Text geht ein leerer Text weiter und nicht nichts: der
+            // Editor antwortet darauf mit `Trenntextantwort::AblageOhneText`
+            // in der Statuszeile, statt dass `cmd+v` stumm bleibt
+            // (`261019-0037-cmd-v-in-der-csv-tabelle-ohne-text-in-der-ablage-bleibt-stumm.md`).
+            let text = zwischenablage::nur_text_lesen().unwrap_or_default();
             let _ = self.mit_ansicht(|ansicht| ansicht.bereich_einfuegen(&text));
         }
 
@@ -4301,6 +4303,38 @@ mod tests {
             .map(Zellauswahl::bereich),
             Some(Zellbereich::zelle(1, 1)),
             "ein leerer Bereich meint seine erste Zelle"
+        );
+    }
+
+    /// `cmd+v` in der Tabelle einer CSV ohne Text in der Ablage reicht einen
+    /// leeren Text an den Editor weiter, statt stumm zurueckzukehren, und der
+    /// antwortet darauf mit `Trenntextantwort::AblageOhneText`
+    /// (`261019-0037-cmd-v-in-der-csv-tabelle-ohne-text-in-der-ablage-bleibt-stumm.md`).
+    /// Den Rechenweg haelt `cmd_v_setzt_einen_tsv_block_ab_der_zelle_und_ein_cmd_z_nimmt_ihn_ganz_zurueck` in
+    /// `appkit/editor.rs`. **Was sie nicht sieht:** ob AppKit `paste:` bei
+    /// einer Ablage ohne Text ueberhaupt an die Tabelle schickt; das zeigt allein
+    /// das laufende Buendel.
+    #[test]
+    fn das_einfuegen_ohne_text_in_der_ablage_erreicht_den_editor() {
+        use super::super::anwendung::quelltextproben::datei;
+        let quelle = datei("krk-ui/src/appkit/eintragsansicht.rs");
+        let (_, ab) = quelle
+            .split_once(concat!("fn einfu", "egen(&self, absender"))
+            .expect("die Methode paste: steht in der Datei");
+        let (rumpf, _) = ab
+            .split_once(concat!("fn alles_", "waehlen("))
+            .expect("die Methode selectAll: steht dahinter");
+        let code: String = rumpf
+            .lines()
+            .filter(|zeile| !zeile.trim_start().starts_with("//"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(code.contains(concat!("nur_text_lesen().", "unwrap_or_default()")));
+        assert!(code.contains(concat!("bereich_", "einfuegen(&text)")));
+        assert_eq!(
+            code.matches(concat!("re", "turn;")).count(),
+            1,
+            "allein die fremde Art kehrt vor dem Editor zurueck"
         );
     }
 }
