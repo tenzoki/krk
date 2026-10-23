@@ -10,6 +10,7 @@
 //!  Tar, Tgz: Lesezeiger, der nur vorwaerts laeuft; ein Eintrag hinter dem
 //!            Zeiger beginnt den Strom neu (gezaehlt in `neustarts`)
 //!  Gz:       der ganze Strom
+//!  Sqlite:   eine Abfrage je Tabelle oder Sicht (`archiv::sqlite`)
 //! ```
 //!
 //! **Ein Durchlauf fuer einen Baum aus einem tar.gz.** Ein gepackter tar-Strom
@@ -25,7 +26,9 @@
 //! Jedes Oeffnen der Datei fragt Geraet, Inode, Groesse und Aenderungszeit am
 //! Deskriptor und vergleicht sie mit der Kennung, aus der das Verzeichnis
 //! gelesen ist; weichen sie ab, stimmen Fundstellen und Groessen nicht mehr,
-//! und das Lesen endet mit [`Lesefehler::VonAussenVeraendert`]. Was ein
+//! und das Lesen endet mit [`Lesefehler::VonAussenVeraendert`]. Eine
+//! Datenbank oeffnet die Bibliothek am Pfad; ihre Kennung, Hauptdatei und
+//! `-wal`, wird vor und nach dem Lesen am Pfad gefragt. Was ein
 //! Schreiber an derselben Datei aendert, solange sie offen ist, sieht die
 //! Frage nicht; ein Zip faengt das an der Pruefsumme, ein tar nicht.
 //!
@@ -64,6 +67,7 @@ use crate::verzeichnis::sys::ohne_warten_oeffnen;
 
 use super::HOECHSTENS_EINTRAEGE;
 use super::innenpfad::Innenpfad;
+use super::sqlite;
 use super::verzeichnis::{
     Archiveintrag, Bewacht, Fundstelle, Inhaltsverzeichnis, Kopfwache, Lesbarkeit,
     Verzeichnisfehler,
@@ -418,11 +422,44 @@ impl Archivleser {
                 durchreichen(&mut strom, &mut empfang)
             }
             Fundstelle::Erschlossen => Err(Lesefehler::KeineDaten),
-            // Tabelle und Sicht liest erst Schritt 4 des Plans
-            // `261023-1507-plan-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau.md`;
-            // bis dahin steht der Eintrag im Verzeichnis, und seine Daten
-            // kommen nicht heraus.
-            Fundstelle::SqliteTabelle { .. } | Fundstelle::SqliteSicht => Err(Lesefehler::Fehlt),
+            Fundstelle::SqliteTabelle { .. } => {
+                self.datenbank_lesen(innen, |datei, name, abbruch| {
+                    sqlite::tabelle_lesen(pfand, datei, name, abbruch, &mut empfang)
+                })
+            }
+            Fundstelle::SqliteSicht => self.datenbank_lesen(innen, |datei, name, abbruch| {
+                sqlite::sicht_lesen(pfand, datei, name, abbruch, &mut empfang)
+            }),
+        }
+    }
+
+    /// Liest eine Tabelle oder Sicht der Datenbank ueber `lesen`, und zwar
+    /// allein, wenn die Kennung vorher und nachher die des Verzeichnisses ist.
+    ///
+    /// Die Kennung umfasst Hauptdatei und `-wal` (`archiv::sqlite`,
+    /// Modulkopf); ein Schreiber, der waehrend des Lesens uebergibt, aendert
+    /// sie, und was gelesen ist, endet dann als
+    /// [`Lesefehler::VonAussenVeraendert`]. Ein Abbruch geht vor.
+    fn datenbank_lesen(
+        &self,
+        innen: &Innenpfad,
+        lesen: impl FnOnce(&Path, &str, &AtomicBool) -> Result<u64, Lesefehler>,
+    ) -> Result<u64, Lesefehler> {
+        let name = innen.name().ok_or(Lesefehler::Fehlt)?;
+        let datei = self.zugang.datei();
+        self.datenbankkennung_pruefen()?;
+        let gelesen = lesen(datei, name, &self.abbruch)?;
+        self.datenbankkennung_pruefen()?;
+        Ok(gelesen)
+    }
+
+    /// Ob die Datenbank am Pfad die Kennung des Verzeichnisses traegt.
+    fn datenbankkennung_pruefen(&self) -> Result<(), Lesefehler> {
+        let kennung = sqlite::kennung(self.zugang.datei()).map_err(Lesefehler::Lesen)?;
+        if kennung == self.verzeichnis.kennung() {
+            Ok(())
+        } else {
+            Err(Lesefehler::VonAussenVeraendert)
         }
     }
 

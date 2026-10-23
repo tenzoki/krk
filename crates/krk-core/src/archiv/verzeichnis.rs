@@ -183,7 +183,8 @@ pub struct Archiveintrag {
     /// Die entpackte Groesse in Bytes; bei einem Ordner null. **In einer
     /// SQLite-Datenbank die Zeilenzahl einer Tabelle** (0, wenn sie unbekannt
     /// ist) und 0 fuer eine Sicht: die Zahl der Spalte „Groesse“ (Entscheid
-    /// `261023-1340-was-zeigt-die-spalte-groesse-einer-tabelle.md`).
+    /// `261023-1340-was-zeigt-die-spalte-groesse-einer-tabelle.md`). Wer Bytes
+    /// braucht, fragt [`Archiveintrag::datenlaenge`].
     pub groesse: u64,
     /// Das Aenderungsdatum. Ein Zip-Eintrag ohne Zeitfeld traegt die
     /// Unix-Epoche, wie ein ferner Eintrag ohne Angabe; das MS-DOS-Feld wird
@@ -202,6 +203,44 @@ impl Archiveintrag {
     #[must_use]
     pub fn ist_erschlossen(&self) -> bool {
         self.fundstelle == Fundstelle::Erschlossen
+    }
+
+    /// Wie viele Bytes die Daten des Eintrags haben, oder `None`, wenn das vor
+    /// dem Lesen nicht feststeht.
+    ///
+    /// **Jede Frage nach Bytes stellt diese Methode und nicht
+    /// [`Archiveintrag::groesse`]**: in einer SQLite-Datenbank ist `groesse`
+    /// die Zeilenzahl einer Tabelle, und die Laenge ihrer TSV steht erst nach
+    /// der Ausfuhr fest. Eine Sicht liefert ihren SQL-Text, dessen Laenge das
+    /// Verzeichnis ebenso nicht kennt. Fuer Zip, tar und gz ist es `groesse`.
+    #[must_use]
+    pub fn datenlaenge(&self) -> Option<u64> {
+        match self.fundstelle {
+            Fundstelle::Zip(_)
+            | Fundstelle::Tar { .. }
+            | Fundstelle::GzGanz
+            | Fundstelle::Erschlossen => Some(self.groesse),
+            Fundstelle::SqliteTabelle { .. } | Fundstelle::SqliteSicht => None,
+        }
+    }
+
+    /// Der Name, unter dem der Eintrag ausserhalb des Archivs ankommt, oder
+    /// `None` an der Wurzel.
+    ///
+    /// Die eine Stelle, an der dieser Name entsteht (E-Ausfuhr): eine Tabelle
+    /// kommt als `<name>.tsv`, eine Sicht als `<name>.sql` mit ihrem SQL-Text,
+    /// jeder andere Eintrag unter seinem Namen, wie er steht.
+    #[must_use]
+    pub fn ausfuhrname(&self) -> Option<String> {
+        let name = self.innen.name()?;
+        Some(match self.fundstelle {
+            Fundstelle::SqliteTabelle { .. } => format!("{name}.tsv"),
+            Fundstelle::SqliteSicht => format!("{name}.sql"),
+            Fundstelle::Zip(_)
+            | Fundstelle::Tar { .. }
+            | Fundstelle::GzGanz
+            | Fundstelle::Erschlossen => name.to_owned(),
+        })
     }
 }
 

@@ -289,6 +289,13 @@ pub enum Text {
     /// `archiv::sqlite`: ein anderes Programm haelt die Sperre der Datenbank
     /// ueber die Wartezeit hinaus (`Verzeichnisfehler::Belegt`).
     DatenbankWirdGeschrieben,
+    /// `archiv::sqlite`: eine Zelle mit `NULL` in der TSV einer Tabelle, die
+    /// Vorschau und Ausfuhr teilen (Entscheid
+    /// `261023-1507-wie-stehen-null-und-blob-in-der-tsv-einer-sqlite-tabelle.md`).
+    /// Der Wortlaut ist das Schluesselwort von SQL und steht in jeder Sprache
+    /// gleich; er steht in der Tabelle, weil ein Mensch ihn in der Vorschau
+    /// liest.
+    SqliteNull,
     /// `archiv::umbau`: die Archivdatei ist schreibgeschuetzt.
     ArchivSchreibgeschuetzt,
     /// `archiv::umbau::abschluss_nach_ersetzen`: ein Abbruch kam erst, nachdem
@@ -1855,7 +1862,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 765] = [
+    pub const ALLE: [Text; 766] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1967,6 +1974,7 @@ impl Text {
         Text::DatenbankNurLesbar,
         Text::SqliteKeineDatenbank,
         Text::DatenbankWirdGeschrieben,
+        Text::SqliteNull,
         Text::ArchivSchreibgeschuetzt,
         Text::ArchivAbbruchNachDemErsetzen,
         Text::ArchivZipUngewoehnlicheForm,
@@ -2745,11 +2753,16 @@ pub enum Zahlwort {
     TrenntextZeilenEingefuegt,
     /// `Trenntextantwort::SpaltenGeloescht`: so viele Spalten sind fort.
     TrenntextSpaltenGeloescht,
+    /// `archiv::sqlite`: eine Zelle mit einem BLOB in der TSV einer Tabelle,
+    /// als Platzhalter mit seiner Laenge in Bytes; Vorschau und Ausfuhr teilen
+    /// ihn (Entscheid
+    /// `261023-1507-wie-stehen-null-und-blob-in-der-tsv-einer-sqlite-tabelle.md`).
+    SqliteBlob,
 }
 
 impl Zahlwort {
     /// Alle Zahlwoerter, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Zahlwort; 40] = [
+    pub const ALLE: [Zahlwort; 41] = [
         Zahlwort::Byte,
         Zahlwort::NeuerungenEintraegeIn,
         Zahlwort::HeimZettelUebernommen,
@@ -2790,5 +2803,6 @@ impl Zahlwort {
         Zahlwort::TrenntextSpalten,
         Zahlwort::TrenntextZeilenEingefuegt,
         Zahlwort::TrenntextSpaltenGeloescht,
+        Zahlwort::SqliteBlob,
     ];
 }

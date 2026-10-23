@@ -1,5 +1,6 @@
-//! Abnahme von `Archivformat::Sqlite` und dem Inhaltsverzeichnis einer
-//! Datenbank, Schritt 3 des Plans
+//! Abnahme von `Archivformat::Sqlite`, dem Inhaltsverzeichnis einer
+//! Datenbank und dem Lesen einer Tabelle als TSV und einer Sicht als SQL-Text,
+//! Schritte 3 und 4 des Plans
 //! `261023-1507-plan-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau.md`
 //! im Arbeitspaket
 //! `261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen`.
@@ -15,6 +16,7 @@ mod gemeinsam;
 use std::ffi::OsStr;
 use std::fs;
 use std::io::Write;
+use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, Command, Stdio};
 use std::sync::Arc;
@@ -24,13 +26,14 @@ use std::time::{Duration, Instant};
 use gemeinsam::Pruefordner;
 use krk_core::archiv::umbau::Umbaufehler;
 use krk_core::archiv::{
-    Archivformat, Archivzugang, Fundstelle, Inhaltsverzeichnis, Innenpfad, Lesbarkeit,
-    Verzeichnisfehler,
+    Archivformat, Archivleser, Archivzugang, Fundstelle, Inhaltsverzeichnis, Innenpfad, Lesbarkeit,
+    Lesefehler, Verzeichnisfehler,
 };
 use krk_core::fern::faden;
 use krk_core::operation::{Bericht, Fernauftrag, Meldung, OhnePapierkorb, starten};
 use krk_core::ort::{Archivort, Ort, nicht_verfuegbar_text};
-use krk_core::sprache::{Text, text};
+use krk_core::sprache::{Sprache, Text, Zahlwort, text};
+use krk_core::trenntext::{Dialekt, indexieren};
 use krk_core::verzeichnis::Typ;
 
 /// Legt mit `/usr/bin/sqlite3` eine Datenbank unter `pfad` an und fuehrt `sql`
@@ -547,4 +550,223 @@ fn in_einer_datenbank_meldet_jeder_melder_den_text_der_datenbank() {
     assert_eq!(fs::read(&datei).unwrap(), vorher, "die Datenbank bleibt");
     assert!(quelle.exists());
     assert_eq!(fs::read_dir(&ziel).unwrap().count(), 0);
+}
+
+// ---------------------------------------------------------------------------
+// Schritt 4: eine Tabelle als TSV, eine Sicht als SQL-Text
+// ---------------------------------------------------------------------------
+
+/// Liest den Eintrag `name` der Datenbank hinter `zugang` ueber den
+/// `Archivleser`, auf einem Faden mit Pfand, und reicht jeden Block an
+/// `empfang`; zurueck kommen das Ergebnis von `lesen` und die gesammelten
+/// Bytes.
+fn eintrag_lesen_mit(
+    zugang: &Arc<Archivzugang>,
+    name: &str,
+    mut empfang: impl FnMut(&[u8]) -> ControlFlow<()> + Send + 'static,
+) -> (Result<u64, Lesefehler>, Vec<u8>) {
+    let zugang = Arc::clone(zugang);
+    let innen = innen(name);
+    faden("krk-sqliteprobe-lesen".into(), move |pfand| {
+        let mut leser = Archivleser::oeffnen(pfand, zugang, Arc::new(AtomicBool::new(false)))
+            .expect("das Verzeichnis entsteht");
+        let mut daten = Vec::new();
+        let ergebnis = leser.lesen(pfand, &innen, |block| {
+            daten.extend_from_slice(block);
+            empfang(block)
+        });
+        (ergebnis, daten)
+    })
+    .expect("ein Faden laesst sich starten")
+    .join()
+    .expect("der Lesefaden geraet nicht in Panik")
+}
+
+/// Die Daten des Eintrags `name`, ganz gelesen.
+fn eintrag_lesen(datei: &Path, name: &str) -> Vec<u8> {
+    let (ergebnis, daten) = eintrag_lesen_mit(&zugang(datei), name, |_| ControlFlow::Continue(()));
+    let gelesen = ergebnis.expect("der Eintrag wird gelesen");
+    assert_eq!(gelesen, daten.len() as u64, "die gemeldete Zahl der Bytes");
+    daten
+}
+
+/// Die Tabelle der Bindungsprobe `eine_datenbank_wird_nur_lesend_geoeffnet_und_liest_jede_wertart`
+/// (`tests/sqlite_bindung.rs`), um Zeilen mit Tabulator, `"` und
+/// Zeilenumbruch in einem Text, einem leeren Text, einem leeren, einem
+/// einbytigen und einem BLOB ueber tausend Bytes erweitert, und eine Zeile,
+/// deren Text woertlich `NULL` lautet.
+const WERTE: &str = "CREATE TABLE t(leer, ganz, komma, text, roh);
+     INSERT INTO t VALUES (NULL, 42, 3.5, 'Grüße', x'00ff10');
+     INSERT INTO t VALUES ('', -7, 0.25, 'Tab' || char(9) || 'und \"Zitat\"' || char(10) || 'neue Zeile', x'');
+     INSERT INTO t VALUES ('NULL', 0, -1.5, NULL, x'01');
+     INSERT INTO t VALUES (NULL, 1, 2.0, 'x', zeroblob(1234));";
+
+/// Die Bytes, die der Entscheid
+/// `261023-1507-wie-stehen-null-und-blob-in-der-tsv-einer-sqlite-tabelle.md`
+/// fuer [`WERTE`] verlangt, in der Sprache der Proben (Deutsch): `NULL` als
+/// `NULL`, ein BLOB als Platzhalter mit seiner Laenge, Felder nach
+/// `trenntext::feld_kodieren`, Satzende `\n`.
+const WERTE_ALS_TSV: &str = "leer\tganz\tkomma\ttext\troh\n\
+     NULL\t42\t3.5\tGrüße\t[BLOB, 3 Bytes]\n\
+     \t-7\t0.25\t\"Tab\tund \"\"Zitat\"\"\nneue Zeile\"\t[BLOB, 0 Bytes]\n\
+     NULL\t0\t-1.5\tNULL\t[BLOB, 1 Byte]\n\
+     NULL\t1\t2.0\tx\t[BLOB, 1.234 Bytes]\n";
+
+#[test]
+fn eine_tabelle_kommt_als_tsv_mit_spaltennamen_und_jeder_zeile() {
+    let ordner = Pruefordner::neu("sqlite-tsv");
+    let datei = ordner.unter("werte.db");
+    anlegen(&datei, WERTE);
+
+    let daten = eintrag_lesen(&datei, "t");
+    let tsv = String::from_utf8(daten).expect("die TSV ist UTF-8");
+    assert_eq!(tsv, WERTE_ALS_TSV);
+
+    // Die Platzhalter stehen in jeder Sprache in der Tabelle.
+    for sprache in [Sprache::De, Sprache::Fr, Sprache::En] {
+        assert_eq!(sprache.text(Text::SqliteNull), "NULL", "{sprache:?}");
+    }
+    assert_eq!(
+        Sprache::Fr.anzahl(Zahlwort::SqliteBlob, 1234, &[]),
+        "[BLOB, 1\u{202F}234 octets]"
+    );
+    assert_eq!(
+        Sprache::En.anzahl(Zahlwort::SqliteBlob, 1, &[]),
+        "[BLOB, 1 byte]"
+    );
+
+    // Zurueckgelesen ueber den einen Leser fuer CSV und TSV ergeben sich
+    // dieselben Zellen.
+    let index = indexieren(&tsv, &Dialekt::tsv());
+    let zellen: Vec<Vec<String>> = (0..index.zeilenzahl())
+        .map(|satz| {
+            index
+                .felder(&tsv, satz)
+                .expect("ein Satz")
+                .into_iter()
+                .map(|feld| feld.wert.into_owned())
+                .collect()
+        })
+        .collect();
+    let blob = |n: &str| format!("[BLOB, {n}]");
+    assert_eq!(
+        zellen,
+        [
+            vec!["leer", "ganz", "komma", "text", "roh"]
+                .into_iter()
+                .map(str::to_owned)
+                .collect::<Vec<_>>(),
+            vec![
+                "NULL".to_owned(),
+                "42".to_owned(),
+                "3.5".to_owned(),
+                "Grüße".to_owned(),
+                blob("3 Bytes"),
+            ],
+            vec![
+                String::new(),
+                "-7".to_owned(),
+                "0.25".to_owned(),
+                "Tab\tund \"Zitat\"\nneue Zeile".to_owned(),
+                blob("0 Bytes"),
+            ],
+            vec![
+                "NULL".to_owned(),
+                "0".to_owned(),
+                "-1.5".to_owned(),
+                "NULL".to_owned(),
+                blob("1 Byte"),
+            ],
+            vec![
+                "NULL".to_owned(),
+                "1".to_owned(),
+                "2.0".to_owned(),
+                "x".to_owned(),
+                blob("1.234 Bytes"),
+            ],
+        ]
+    );
+}
+
+/// Eine Tabelle, deren TSV mehrere Bloecke und mehr als eine Lesegrenze der
+/// Vorschau (1 MiB) fuellt: `zeilen` Zeilen mit je hundert Zeichen Text.
+fn grosse_tabelle(datei: &Path, zeilen: u32) {
+    anlegen(
+        datei,
+        &format!(
+            "CREATE TABLE gross(n INTEGER, text TEXT);
+             WITH RECURSIVE z(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM z WHERE i < {zeilen})
+               INSERT INTO gross SELECT i, printf('%0100d', i) FROM z;"
+        ),
+    );
+}
+
+#[test]
+fn ein_abbruch_im_rueckruf_beendet_die_anweisung() {
+    let ordner = Pruefordner::neu("sqlite-abbruch");
+    let datei = ordner.unter("gross.db");
+    grosse_tabelle(&datei, 40_000);
+
+    let mut bloecke = 0u32;
+    let (ergebnis, daten) = eintrag_lesen_mit(&zugang(&datei), "gross", move |_| {
+        bloecke += 1;
+        assert_eq!(bloecke, 1, "nach dem Abbruch kommt kein weiterer Block");
+        ControlFlow::Break(())
+    });
+    assert!(
+        matches!(ergebnis, Err(Lesefehler::Abgebrochen)),
+        "erwartet abgebrochen, gelesen {ergebnis:?}"
+    );
+    assert!(!daten.is_empty(), "der erste Block ist angekommen");
+    assert!(
+        (daten.len() as u64) < 1 << 20,
+        "der erste Block reicht nicht ueber die Lesegrenze: {}",
+        daten.len()
+    );
+
+    // Ganz gelesen ist dieselbe Tabelle groesser als die Lesegrenze.
+    assert!(eintrag_lesen(&datei, "gross").len() > 1 << 20);
+}
+
+#[test]
+fn eine_sicht_kommt_als_ihr_sql_text_und_wird_nicht_ausgefuehrt() {
+    let ordner = Pruefordner::neu("sqlite-sicht");
+    let datei = ordner.unter("sicht.db");
+    let sicht = "CREATE VIEW kaputt AS SELECT abs(-9223372036854775808) AS ueberlauf";
+    anlegen(&datei, &format!("CREATE TABLE t(x); {sicht};"));
+    // Ausgefuehrt scheitert die Sicht.
+    let ausgefuehrt = Command::new("/usr/bin/sqlite3")
+        .arg(&datei)
+        .arg("SELECT * FROM kaputt")
+        .output()
+        .expect("/usr/bin/sqlite3 laesst sich nicht starten");
+    assert!(
+        !ausgefuehrt.status.success(),
+        "die Sicht scheitert ausgefuehrt"
+    );
+
+    assert_eq!(eintrag_lesen(&datei, "kaputt"), sicht.as_bytes());
+}
+
+#[test]
+fn ein_tabellenname_mit_anfuehrungszeichen_wird_als_bezeichner_gelesen() {
+    let ordner = Pruefordner::neu("sqlite-bezeichner");
+    let datei = ordner.unter("namen.db");
+    anlegen(
+        &datei,
+        "CREATE TABLE \"a\"\"b\"(x);
+         INSERT INTO \"a\"\"b\" VALUES (7);
+         CREATE TABLE a(x);
+         INSERT INTO a VALUES (1);
+         CREATE TABLE \"x\"\"; SELECT 1; --\"(y);
+         INSERT INTO \"x\"\"; SELECT 1; --\" VALUES ('drin');
+         CREATE VIEW \"s'q\"\"\" AS SELECT 2;",
+    );
+    assert_eq!(eintrag_lesen(&datei, "a\"b"), b"x\n7\n");
+    assert_eq!(eintrag_lesen(&datei, "a"), b"x\n1\n");
+    assert_eq!(eintrag_lesen(&datei, "x\"; SELECT 1; --"), b"y\ndrin\n");
+    assert_eq!(
+        eintrag_lesen(&datei, "s'q\""),
+        b"CREATE VIEW \"s'q\"\"\" AS SELECT 2"
+    );
 }

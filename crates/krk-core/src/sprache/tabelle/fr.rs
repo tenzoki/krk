@@ -207,6 +207,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::DatenbankNurLesbar => "cette base de données est en lecture seule",
         Text::SqliteKeineDatenbank => "pas une base de données SQLite",
         Text::DatenbankWirdGeschrieben => "la base de données est en cours d’écriture",
+        Text::SqliteNull => "NULL",
         Text::ArchivSchreibgeschuetzt => "le fichier de l’archive est protégé en écriture",
         Text::ArchivAbbruchNachDemErsetzen => {
             "l’annulation est arrivée après le remplacement\u{202f}; l’archive est modifiée"
@@ -1426,6 +1427,7 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
             "une colonne supprimée\u{202f}; cmd+z la rétablit",
             "{n} colonnes supprimées\u{202f}; cmd+z les rétablit",
         ),
+        Zahlwort::SqliteBlob => ("[BLOB, {n} octet]", "[BLOB, {n} octets]"),
     }
 }
 

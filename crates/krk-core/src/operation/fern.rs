@@ -2502,12 +2502,16 @@ impl Angaben {
     /// herauskommt, sagt [`Quelle::kommt_nicht_heraus`] vor dem Anlegen. Eine
     /// Zugriffszeit fuehrt kein Archiv, also gilt die Aenderungszeit fuer
     /// beide, wie bei einer Quelle ohne Zugriffszeit.
+    ///
+    /// Die Groesse ist die in Bytes, `Archiveintrag::datenlaenge`, und nicht
+    /// `groesse`, das in einer Datenbank Zeilen zaehlt; steht sie vor dem
+    /// Lesen nicht fest, wie bei einer Tabelle, ist sie 0.
     fn aus_archiveintrag(eintrag: &Archiveintrag) -> Self {
         Angaben {
             typ: eintrag.typ,
             gewoehnlich: eintrag.lesbarkeit != Lesbarkeit::Sonderdatei,
             groesse: if eintrag.typ == Typ::Datei {
-                eintrag.groesse
+                eintrag.datenlaenge().unwrap_or(0)
             } else {
                 0
             },
@@ -3182,17 +3186,22 @@ impl Quelle {
         }
     }
 
-    /// Der letzte Namensteil, oder der Schluessel des Grundes, warum es
-    /// keinen gibt. Im Archiv ist er eine einzelne Komponente nach der einen
-    /// Namensregel (`Innenpfad::aus_archivname`); ein Name mit `..` oder `/`
-    /// kommt also nie bis ans Ziel.
+    /// Der Name am Ziel, oder der Schluessel des Grundes, warum es keinen
+    /// gibt. Eine Stelle bringt ihren letzten Namensteil mit; ein Eintrag im
+    /// Archiv seinen `Archiveintrag::ausfuhrname`, die eine Stelle, an der
+    /// eine Tabelle zu `<name>.tsv` und eine Sicht zu `<name>.sql` wird. Der
+    /// Name darin ist eine einzelne Komponente nach der einen Namensregel
+    /// (`Innenpfad::aus_archivname`); ein Name mit `..` oder `/` kommt also
+    /// nie bis ans Ziel.
     fn name(&self) -> Result<String, Text> {
         match self {
             Quelle::Stelle(stelle) => stelle.name(),
             Quelle::Archiv(stelle) => stelle
-                .innen
-                .name()
-                .map(str::to_owned)
+                .leser
+                .borrow()
+                .verzeichnis()
+                .eintrag(&stelle.innen)
+                .and_then(Archiveintrag::ausfuhrname)
                 .ok_or(Text::VorgangPfadBenenntKeinenEintrag),
         }
     }

@@ -189,6 +189,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::DatenbankNurLesbar => "diese Datenbank ist allein lesbar",
         Text::SqliteKeineDatenbank => "keine SQLite-Datenbank",
         Text::DatenbankWirdGeschrieben => "die Datenbank wird gerade geschrieben",
+        Text::SqliteNull => "NULL",
         Text::ArchivSchreibgeschuetzt => "die Archivdatei ist schreibgeschützt",
         Text::ArchivAbbruchNachDemErsetzen => {
             "der Abbruch kam erst nach dem Ersetzen; das Archiv ist geändert"
@@ -1340,6 +1341,7 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
             "eine Spalte gelöscht; cmd+z holt sie zurück",
             "{n} Spalten gelöscht; cmd+z holt sie zurück",
         ),
+        Zahlwort::SqliteBlob => ("[BLOB, {n} Byte]", "[BLOB, {n} Bytes]"),
     }
 }
 

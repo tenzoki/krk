@@ -179,6 +179,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::DatenbankNurLesbar => "this database is read-only",
         Text::SqliteKeineDatenbank => "not an SQLite database",
         Text::DatenbankWirdGeschrieben => "the database is being written to",
+        Text::SqliteNull => "NULL",
         Text::ArchivSchreibgeschuetzt => "the archive file is write-protected",
         Text::ArchivAbbruchNachDemErsetzen => {
             "the cancellation came after the archive was replaced; the archive is changed"
@@ -1276,6 +1277,7 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
             "one column deleted; cmd+z brings it back",
             "{n} columns deleted; cmd+z brings them back",
         ),
+        Zahlwort::SqliteBlob => ("[BLOB, {n} byte]", "[BLOB, {n} bytes]"),
     }
 }
 

@@ -93,6 +93,29 @@
 //! Wettlauf und kein gewoehnlicher Weg, und er haelt allein den Arbeitsfaden
 //! an, nicht den Hauptfaden.
 //!
+//! # Eine Tabelle als TSV, eine Sicht als SQL-Text
+//!
+//! **Ein Leser fuer Vorschau und Ausfuhr, ohne Schalter** (P1 des Plans):
+//! [`tabelle_lesen`] und [`sicht_lesen`] erreicht jeder Rufer allein ueber
+//! `Archivleser::lesen`, und Vorschau wie Kopieren bekommen dieselben Bytes.
+//! Eine Tabelle kommt als `SELECT * FROM "<name>"` ohne `ORDER BY`, der Name
+//! als Bezeichner und nie als SQL-Text (P3). Die erste Zeile traegt die
+//! Spaltennamen, jede weitere eine Zeile der Tabelle; jedes Feld geht ueber
+//! `trenntext::feld_kodieren` mit dem Tabulator, das Satzende ist `\n` (P2).
+//! Ganzzahl und Kommazahl stehen in der Textform der Bibliothek, Text, der
+//! kein UTF-8 ist, mit U+FFFD. **`NULL` steht als `NULL`, ein BLOB als
+//! Platzhalter mit seiner Laenge in Bytes**, beide aus der Sprachtabelle
+//! (`Text::SqliteNull`, `Zahlwort::SqliteBlob`), in Vorschau und Ausfuhr
+//! gleich (Entscheid
+//! `261023-1507-wie-stehen-null-und-blob-in-der-tsv-einer-sqlite-tabelle.md`,
+//! Moeglichkeit b): die Ausfuhr verliert damit jeden BLOB, ihr Platzhalter
+//! wechselt mit der Sprache der Oberflaeche, und eine Zelle mit dem Text
+//! `NULL` ist von einem echten `NULL` nicht zu unterscheiden. Gereicht wird
+//! in Bloecken von [`BLOCK`] Bytes; zwischen zwei Zeilen fragt der Leser die
+//! Abbruchmarke selbst, waehrend einer Anweisung fragt sie der
+//! Fortschrittsrueckruf der Bindung (P7). Eine Sicht liefert den Text der
+//! Spalte `sql` aus `sqlite_master` und wird nie ausgefuehrt.
+//!
 //! # Fehler
 //!
 //! [`fehler_zuordnen`] macht aus einem Fehler der Bibliothek einen
@@ -102,14 +125,17 @@
 //! Ein- oder Ausgabefehler und ein gescheitertes Oeffnen mit einem Fehler des
 //! Systems `Lesen`, jeder andere `Ungueltig` mit dem Wortlaut der Bibliothek.
 
+use std::borrow::Cow;
 use std::fs::{self, Metadata};
 use std::io::{self, Read};
+use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, UNIX_EPOCH};
 
 use crate::fern::Fernfaden;
-use crate::sprache::{Text, text};
+use crate::sprache::{Text, Zahlwort, anzahl, text};
+use crate::trenntext::{Trennzeichen, feld_kodieren};
 use crate::verzeichnis::Typ;
 use crate::verzeichnis::sys::{
     Datenbank, SQLITE_BUSY, SQLITE_CANTOPEN, SQLITE_INTERRUPT, SQLITE_NOTADB, Sqlitefehler, Wert,
@@ -117,9 +143,11 @@ use crate::verzeichnis::sys::{
 };
 
 use super::innenpfad::Innenpfad;
+use super::lesen::Lesefehler;
 use super::verzeichnis::{
     Archiveintrag, Fundstelle, Lesbarkeit, Sammler, Verzeichnisfehler, abbruch_fragen,
 };
+use super::zugang::Dateikennung;
 
 /// Wie lange eine Anweisung auf die Sperre eines Schreibers wartet, bevor sie
 /// aufgibt und der Ort „wird gerade geschrieben“ meldet (P8 des Plans). Kurz,
@@ -143,6 +171,13 @@ const SCHEMA: &str = "SELECT type, name FROM sqlite_master WHERE type IN ('table
 /// Die erste Anweisung nach dem Oeffnen: sie liest das Schema und laesst
 /// dabei ein `SQLITE_CANTOPEN` oder `SQLITE_NOTADB` hervortreten.
 const SCHEMAPROBE: &str = "SELECT 1 FROM sqlite_master LIMIT 1";
+
+/// Der SQL-Text einer Sicht, ihr Name als gebundener Parameter (P3).
+const SICHTTEXT: &str = "SELECT sql FROM sqlite_master WHERE type = 'view' AND name = ?1";
+
+/// Ab wie vielen Bytes der TSV ein Block an den Rufer geht; so gross wie der
+/// Puffer, in dem `archiv::lesen` die Daten der anderen Formate reicht.
+const BLOCK: usize = 256 * 1024;
 
 /// Oeffnet die Datenbank `datei` nach der einen Oeffnungsregel (Modulkopf).
 ///
@@ -296,6 +331,155 @@ fn zeilen_zaehlen(
             | Verzeichnisfehler::Ungueltig(_)
             | Verzeichnisfehler::ZuGross => Ok(None),
         },
+    }
+}
+
+/// Die Kennung der Datenbank `datei` am Pfad: die Hauptdatei und, falls es
+/// steht, `-wal` (Modulkopf). Dieselbe Rechnung wie die des Zugangs, am Pfad
+/// statt am Deskriptor, weil die Bibliothek die Datei am Pfad oeffnet.
+///
+/// # Errors
+///
+/// Jeder Fehler von `stat(2)` an der Hauptdatei, und an `-wal` jeder ausser
+/// „nicht vorhanden“.
+pub(crate) fn kennung(datei: &Path) -> io::Result<Dateikennung> {
+    let angaben = fs::metadata(datei)?;
+    let wal = wal_angaben(datei)?;
+    Ok(Dateikennung::aus_angaben(&angaben).mit_wal(wal.as_ref()))
+}
+
+/// Liest die Tabelle `name` als TSV und reicht sie in Bloecken an `empfang`
+/// (Modulkopf, „Eine Tabelle als TSV“); `Break` dort beendet die Anweisung.
+/// Gibt die Zahl der Bytes zurueck.
+///
+/// # Errors
+///
+/// [`Lesefehler::Abgebrochen`] nach einer gesetzten Marke oder einem `Break`,
+/// sonst der Fehler der Bibliothek nach [`fehler_zuordnen`].
+pub(crate) fn tabelle_lesen(
+    pfand: &Fernfaden,
+    datei: &Path,
+    name: &str,
+    abbruch: &AtomicBool,
+    empfang: &mut dyn FnMut(&[u8]) -> ControlFlow<()>,
+) -> Result<u64, Lesefehler> {
+    let zuordnen = |fehler| lesefehler(fehler_zuordnen(fehler, abbruch));
+    let datenbank = oeffnen(pfand, datei, abbruch).map_err(zuordnen)?;
+    let mut abfrage = datenbank
+        .vorbereiten(&format!("SELECT * FROM {}", bezeichner(name)))
+        .map_err(zuordnen)?;
+
+    let mut block = Vec::with_capacity(BLOCK);
+    let mut geliefert: u64 = 0;
+    let kopf: Vec<Wert> = abfrage
+        .spaltennamen()
+        .map_err(zuordnen)?
+        .into_iter()
+        .map(Wert::Text)
+        .collect();
+    satz_anhaengen(&mut block, &kopf);
+    loop {
+        if abbruch.load(Ordering::Acquire) {
+            return Err(Lesefehler::Abgebrochen);
+        }
+        let Some(zeile) = abfrage.naechste_zeile().map_err(zuordnen)? else {
+            break;
+        };
+        satz_anhaengen(&mut block, &zeile);
+        if block.len() >= BLOCK {
+            geliefert += reichen(&mut block, empfang)?;
+        }
+    }
+    geliefert += reichen(&mut block, empfang)?;
+    Ok(geliefert)
+}
+
+/// Liest den SQL-Text der Sicht `name` aus `sqlite_master` und reicht ihn an
+/// `empfang`. Die Sicht wird nicht ausgefuehrt (Entscheid
+/// `261023-1340-zeigt-krk-sichten-einer-sqlite-datenbank-oder-nur-ihren-sql-text.md`),
+/// und ihr Name geht als gebundener Parameter in die Abfrage (P3).
+///
+/// # Errors
+///
+/// Wie [`tabelle_lesen`], und [`Lesefehler::Fehlt`], wenn keine Sicht dieses
+/// Namens steht.
+pub(crate) fn sicht_lesen(
+    pfand: &Fernfaden,
+    datei: &Path,
+    name: &str,
+    abbruch: &AtomicBool,
+    empfang: &mut dyn FnMut(&[u8]) -> ControlFlow<()>,
+) -> Result<u64, Lesefehler> {
+    let zuordnen = |fehler| lesefehler(fehler_zuordnen(fehler, abbruch));
+    let datenbank = oeffnen(pfand, datei, abbruch).map_err(zuordnen)?;
+    let mut abfrage = datenbank.vorbereiten(SICHTTEXT).map_err(zuordnen)?;
+    abfrage.text_binden(1, name).map_err(zuordnen)?;
+    // Die Spalte `sql` einer Sicht ist immer ein Text; ein anderer Wert hiesse
+    // ein von Hand veraendertes Schema und kommt als „fehlt“ zurueck.
+    let Some(Wert::Text(sql)) = abfrage
+        .naechste_zeile()
+        .map_err(zuordnen)?
+        .and_then(|zeile| zeile.into_iter().next())
+    else {
+        return Err(Lesefehler::Fehlt);
+    };
+    let mut block = sql.into_bytes();
+    reichen(&mut block, empfang)
+}
+
+/// Haengt einen Satz der TSV an `block`: jedes Feld ueber
+/// `trenntext::feld_kodieren` mit dem Tabulator, das Satzende `\n` (P2).
+fn satz_anhaengen(block: &mut Vec<u8>, werte: &[Wert]) {
+    for (stelle, wert) in werte.iter().enumerate() {
+        if stelle > 0 {
+            block.push(b'\t');
+        }
+        let feld = feldtext(wert);
+        block.extend_from_slice(feld_kodieren(&feld, Trennzeichen::Tabulator).as_bytes());
+    }
+    block.push(b'\n');
+}
+
+/// Der Text einer Zelle vor dem Kodieren: Zahlen in der Textform der
+/// Bibliothek, `NULL` und ein BLOB als Platzhalter aus der Sprachtabelle
+/// (Entscheid
+/// `261023-1507-wie-stehen-null-und-blob-in-der-tsv-einer-sqlite-tabelle.md`).
+fn feldtext(wert: &Wert) -> Cow<'_, str> {
+    match wert {
+        Wert::Null => Cow::Borrowed(text(Text::SqliteNull)),
+        Wert::Ganzzahl(zahl) | Wert::Kommazahl(zahl) => Cow::Borrowed(zahl),
+        Wert::Text(inhalt) => Cow::Borrowed(inhalt),
+        Wert::Blob(bytes) => Cow::Owned(anzahl(Zahlwort::SqliteBlob, bytes.len() as u64, &[])),
+    }
+}
+
+/// Reicht `block` an `empfang`, wenn er nicht leer ist, und leert ihn; gibt
+/// die Zahl der gereichten Bytes zurueck.
+fn reichen(
+    block: &mut Vec<u8>,
+    empfang: &mut dyn FnMut(&[u8]) -> ControlFlow<()>,
+) -> Result<u64, Lesefehler> {
+    if block.is_empty() {
+        return Ok(0);
+    }
+    let laenge = block.len() as u64;
+    if empfang(block).is_break() {
+        return Err(Lesefehler::Abgebrochen);
+    }
+    block.clear();
+    Ok(laenge)
+}
+
+/// Ein Fehler beim Oeffnen oder Lesen der Datenbank als [`Lesefehler`].
+/// Vollstaendig ueber [`Verzeichnisfehler`] und ohne Auffangzweig.
+fn lesefehler(fehler: Verzeichnisfehler) -> Lesefehler {
+    match fehler {
+        Verzeichnisfehler::Abgebrochen => Lesefehler::Abgebrochen,
+        Verzeichnisfehler::Lesen(fehler) => Lesefehler::Lesen(fehler),
+        Verzeichnisfehler::Ungueltig(wortlaut) => Lesefehler::Ungueltig(wortlaut),
+        andere @ (Verzeichnisfehler::KeineDatei
+        | Verzeichnisfehler::ZuGross
+        | Verzeichnisfehler::Belegt) => Lesefehler::Verzeichnis(andere),
     }
 }
 
