@@ -1,0 +1,30 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "a8db647f-e716-4ade-a2c2-14bc23744785",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261023-1340-was-zeigt-die-spalte-groesse-einer-tabelle.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": {
+      "kind": "other",
+      "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261023-1340-was-zeigt-die-spalte-groesse-einer-tabelle.md",
+      "sha256": "sha256:105f21d5c871872c9a6ad06bf9f87e240d3be526ca4b46282556e1d5e582117c"
+    },
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

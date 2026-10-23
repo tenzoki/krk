@@ -1,0 +1,30 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "168762c3-a3d5-4019-a4ed-c7a727a28db6",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261023-1340-schuldet-das-sqlite-paket-einen-abnahmelauf-gegen-die-zehn-zusagen.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": {
+      "kind": "other",
+      "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261023-1340-schuldet-das-sqlite-paket-einen-abnahmelauf-gegen-die-zehn-zusagen.md",
+      "sha256": "sha256:37e94187f12bfefc09a808f522106f1a73ec837d5d4e41653429e6dad890fd57"
+    },
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}
