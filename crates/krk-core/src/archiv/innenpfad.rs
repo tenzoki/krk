@@ -6,7 +6,7 @@
 //! letzte Komponente fallen, Eintreten haengt einen Namen an. Die Wurzel ist
 //! der leere Pfad, und kein Pfad beginnt oder endet mit `/`.
 //!
-//! # Die eine Namensregel fuer alle drei Formate
+//! # Die eine Namensregel fuer alle Formate
 //!
 //! [`Innenpfad::aus_archivname`] entscheidet fuer Zip, tar und gz, welcher
 //! Eintragsname ins Inhaltsverzeichnis kommt. Ein Name, den sie abweist, steht
@@ -16,7 +16,10 @@
 //! versperrt (`../x`, `a/../../x`); der zweite, ueber eine Verknuepfung im
 //! selben Archiv, ist eine Frage an alle Eintraege zugleich und steht deshalb
 //! im Sammler des Inhaltsverzeichnisses (E4 des Plans
-//! `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`).
+//! `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`). Eine
+//! SQLite-Datenbank geht mit dem Namen einer Tabelle oder Sicht ueber
+//! [`Innenpfad::aus_einzelnamen`], das allein einen `/` vorher abweist und
+//! dann dieselbe Regel fragt.
 
 use std::fmt;
 
@@ -60,6 +63,24 @@ impl Innenpfad {
         } else {
             None
         }
+    }
+
+    /// Der Pfad zu einem Namen, der eine einzelne Komponente sein soll und
+    /// kein Pfad, wie der Name einer Tabelle in einer SQLite-Datenbank; `None`,
+    /// wenn er unsicher ist.
+    ///
+    /// Ein Name mit `/` ist abgewiesen, statt als Pfad gelesen zu werden;
+    /// jeder andere geht an [`Innenpfad::aus_archivname`], die eine
+    /// Namensregel. Ein Name, der dort die Wurzel ergaebe (leer, `.`), ist hier
+    /// ebenfalls abgewiesen: er nennt keinen Ordner, sondern einen Eintrag, und
+    /// der Sammler soll ihn zaehlen statt still auszulassen (P4 des Plans
+    /// `261023-1507-plan-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau.md`).
+    #[must_use]
+    pub fn aus_einzelnamen(name: &str) -> Option<Self> {
+        if name.contains('/') {
+            return None;
+        }
+        Self::aus_archivname(name).filter(|innen| !innen.ist_wurzel())
     }
 
     /// Der Pfad mit `name` darunter, oder `None`, wenn `name` keine einzelne

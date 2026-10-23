@@ -176,6 +176,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "the archive contains entries hidden from the list, such as two with the same name, and is not changed"
         }
         Text::ArchivNurLesbar => "this archive is read-only",
+        Text::DatenbankNurLesbar => "this database is read-only",
+        Text::SqliteKeineDatenbank => "not an SQLite database",
+        Text::DatenbankWirdGeschrieben => "the database is being written to",
         Text::ArchivSchreibgeschuetzt => "the archive file is write-protected",
         Text::ArchivAbbruchNachDemErsetzen => {
             "the cancellation came after the archive was replaced; the archive is changed"
@@ -1108,6 +1111,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::AmFernenOrtNichtVerfuegbar => "This is not possible in a folder on a server.",
         Text::ImArchivNichtVerfuegbar => "This is not possible inside an archive.",
+        Text::InDatenbankNichtVerfuegbar => "This is not possible inside a database.",
         Text::ArchivAmFernenOrt => {
             "An archive on a server cannot be opened as a folder; copy it here first."
         }

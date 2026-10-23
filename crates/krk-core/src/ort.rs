@@ -111,14 +111,16 @@ impl Ort {
 ///
 /// **Eine Fallunterscheidung ersetzt den festen Text** an jedem Rufer, der
 /// fuer einen nicht lokalen Ort `None` aus `lokaler_ordner()` bekommt: fern
-/// wie bisher [`Text::AmFernenOrtNichtVerfuegbar`], im Archiv
-/// [`Text::ImArchivNichtVerfuegbar`] (E2 des Plans).
+/// wie bisher [`Text::AmFernenOrtNichtVerfuegbar`], im Archiv der Text, den
+/// sein Format nennt ([`Archivformat::nicht_verfuegbar_text`]): fuer Zip, tar
+/// und gz [`Text::ImArchivNichtVerfuegbar`] (E2 des Plans), in einer
+/// SQLite-Datenbank [`Text::InDatenbankNichtVerfuegbar`].
 #[must_use]
 pub fn nicht_verfuegbar_text(ort: &Ort) -> Option<Text> {
     match ort {
         Ort::Lokal(_) => None,
         Ort::Fern(_) => Some(Text::AmFernenOrtNichtVerfuegbar),
-        Ort::Archiv(_) => Some(Text::ImArchivNichtVerfuegbar),
+        Ort::Archiv(archivort) => Some(archivort.format().nicht_verfuegbar_text()),
     }
 }
 

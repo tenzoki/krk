@@ -280,6 +280,15 @@ pub enum Text {
     ArchivVerdecktNurLesbar,
     /// `archiv::umbau`: ein Format, das allein lesbar ist (gz).
     ArchivNurLesbar,
+    /// Wie `ArchivNurLesbar`, fuer eine SQLite-Datenbank
+    /// (`Archivformat::nur_lesbar_text`).
+    DatenbankNurLesbar,
+    /// `archiv::sqlite`: eine Datei mit der Endung einer Datenbank, die keine
+    /// SQLite-Datenbank ist; der Grund in `ArchivUngueltig`.
+    SqliteKeineDatenbank,
+    /// `archiv::sqlite`: ein anderes Programm haelt die Sperre der Datenbank
+    /// ueber die Wartezeit hinaus (`Verzeichnisfehler::Belegt`).
+    DatenbankWirdGeschrieben,
     /// `archiv::umbau`: die Archivdatei ist schreibgeschuetzt.
     ArchivSchreibgeschuetzt,
     /// `archiv::umbau::abschluss_nach_ersetzen`: ein Abbruch kam erst, nachdem
@@ -1750,6 +1759,9 @@ pub enum Text {
     /// Ein Befehl, der allein an einem lokalen Ordner wirkt, in einem Archiv
     /// (`ort::nicht_verfuegbar_text`).
     ImArchivNichtVerfuegbar,
+    /// Wie `ImArchivNichtVerfuegbar`, in einer SQLite-Datenbank
+    /// (`Archivformat::nicht_verfuegbar_text`).
+    InDatenbankNichtVerfuegbar,
     /// Der Einstieg in ein Archiv, das auf einem Server liegt (E15 des Plans
     /// der Archive).
     ArchivAmFernenOrt,
@@ -1843,7 +1855,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 761] = [
+    pub const ALLE: [Text; 765] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1952,6 +1964,9 @@ impl Text {
         Text::ArchivVerschluesseltNurLesbar,
         Text::ArchivVerdecktNurLesbar,
         Text::ArchivNurLesbar,
+        Text::DatenbankNurLesbar,
+        Text::SqliteKeineDatenbank,
+        Text::DatenbankWirdGeschrieben,
         Text::ArchivSchreibgeschuetzt,
         Text::ArchivAbbruchNachDemErsetzen,
         Text::ArchivZipUngewoehnlicheForm,
@@ -2570,6 +2585,7 @@ impl Text {
         Text::FernStartordnerFehlt,
         Text::AmFernenOrtNichtVerfuegbar,
         Text::ImArchivNichtVerfuegbar,
+        Text::InDatenbankNichtVerfuegbar,
         Text::ArchivAmFernenOrt,
         Text::ArchivImArchiv,
         Text::ArchivUngueltig,

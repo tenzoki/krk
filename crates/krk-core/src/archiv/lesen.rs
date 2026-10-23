@@ -149,6 +149,7 @@ fn verzeichnisgrund(fehler: &Verzeichnisfehler) -> String {
         Verzeichnisfehler::Lesen(fehler) => crate::operation::grund(fehler),
         Verzeichnisfehler::KeineDatei => text(Text::VorgangKeineGewoehnlicheDatei).to_owned(),
         Verzeichnisfehler::Ungueltig(wortlaut) => wortlaut.clone(),
+        Verzeichnisfehler::Belegt => text(Text::DatenbankWirdGeschrieben).to_owned(),
         Verzeichnisfehler::ZuGross => satz(
             Text::ArchivUmbauZuGross,
             &[("grenze", &zahl(HOECHSTENS_EINTRAEGE))],
@@ -346,12 +347,15 @@ impl Archivleser {
     }
 
     /// Ob das Archiv ein tar-Strom ist, gepackt oder nicht, der sich allein
-    /// vorwaerts lesen laesst; dann lohnt die [`Archivleser::lesefolge`].
+    /// vorwaerts lesen laesst; dann lohnt die [`Archivleser::lesefolge`]. Eine
+    /// Datenbank liest jede Tabelle mit einer eigenen Abfrage und ist keiner.
     #[must_use]
     pub fn liest_strom(&self) -> bool {
         match self.zugang.format() {
             super::Archivformat::Tar | super::Archivformat::TarGz => true,
-            super::Archivformat::Zip | super::Archivformat::Gz => false,
+            super::Archivformat::Zip | super::Archivformat::Gz | super::Archivformat::Sqlite => {
+                false
+            }
         }
     }
 
@@ -414,6 +418,11 @@ impl Archivleser {
                 durchreichen(&mut strom, &mut empfang)
             }
             Fundstelle::Erschlossen => Err(Lesefehler::KeineDaten),
+            // Tabelle und Sicht liest erst Schritt 4 des Plans
+            // `261023-1507-plan-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau.md`;
+            // bis dahin steht der Eintrag im Verzeichnis, und seine Daten
+            // kommen nicht heraus.
+            Fundstelle::SqliteTabelle { .. } | Fundstelle::SqliteSicht => Err(Lesefehler::Fehlt),
         }
     }
 
@@ -462,7 +471,10 @@ impl Archivleser {
                     .map(|verweis| verweis.into_owned())
                     .unwrap_or_default())
             }),
-            Fundstelle::GzGanz | Fundstelle::Erschlossen => Err(Lesefehler::Fehlt),
+            Fundstelle::GzGanz
+            | Fundstelle::Erschlossen
+            | Fundstelle::SqliteTabelle { .. }
+            | Fundstelle::SqliteSicht => Err(Lesefehler::Fehlt),
         }
     }
 
@@ -603,7 +615,7 @@ fn fundstellenschluessel(fundstelle: Fundstelle) -> u64 {
     match fundstelle {
         Fundstelle::Zip(stelle) => stelle as u64,
         Fundstelle::Tar { versatz } => versatz,
-        Fundstelle::GzGanz => 0,
+        Fundstelle::GzGanz | Fundstelle::SqliteTabelle { .. } | Fundstelle::SqliteSicht => 0,
         Fundstelle::Erschlossen => u64::MAX,
     }
 }

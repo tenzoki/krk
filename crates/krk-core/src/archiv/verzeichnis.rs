@@ -100,6 +100,11 @@ pub enum Verzeichnisfehler {
     Ungueltig(String),
     /// Das Archiv fuehrt mehr als [`HOECHSTENS_EINTRAEGE`] Eintraege.
     ZuGross,
+    /// Ein anderes Programm haelt die Sperre einer SQLite-Datenbank ueber die
+    /// Wartezeit hinaus (`SQLITE_BUSY`, `SQLITE_LOCKED`); gemeldet als „wird
+    /// gerade geschrieben“ (P8 des Plans
+    /// `261023-1507-plan-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau.md`).
+    Belegt,
 }
 
 impl Verzeichnisfehler {
@@ -139,6 +144,17 @@ pub enum Fundstelle {
     /// Er hat keine Daten und keinen Kopf; der Umbau braucht das Kennzeichen,
     /// um ihn stehen zu lassen, wenn sein letzter Eintrag wegfaellt.
     Erschlossen,
+    /// Eine Tabelle einer SQLite-Datenbank, mit ihrer Zeilenzahl beim Aufbau
+    /// des Verzeichnisses; `None`, wenn das Zaehlen scheiterte, etwa an einer
+    /// virtuellen Tabelle, deren Modul die Bibliothek nicht kennt
+    /// (`archiv::sqlite`).
+    SqliteTabelle {
+        /// Die Zeilen nach `SELECT count(*)`, oder `None`.
+        zeilen: Option<u64>,
+    },
+    /// Eine Sicht einer SQLite-Datenbank. Sie wird nicht ausgefuehrt und hat
+    /// keine Zeilenzahl.
+    SqliteSicht,
 }
 
 /// Ob ein Eintrag beim Herauskopieren herauskommt, und wenn nicht, warum.
@@ -164,7 +180,10 @@ pub struct Archiveintrag {
     pub innen: Innenpfad,
     /// Ordner, Datei oder Verknuepfung.
     pub typ: Typ,
-    /// Die entpackte Groesse in Bytes; bei einem Ordner null.
+    /// Die entpackte Groesse in Bytes; bei einem Ordner null. **In einer
+    /// SQLite-Datenbank die Zeilenzahl einer Tabelle** (0, wenn sie unbekannt
+    /// ist) und 0 fuer eine Sicht: die Zahl der Spalte „Groesse“ (Entscheid
+    /// `261023-1340-was-zeigt-die-spalte-groesse-einer-tabelle.md`).
     pub groesse: u64,
     /// Das Aenderungsdatum. Ein Zip-Eintrag ohne Zeitfeld traegt die
     /// Unix-Epoche, wie ein ferner Eintrag ohne Angabe; das MS-DOS-Feld wird
@@ -251,6 +270,21 @@ impl Inhaltsverzeichnis {
     #[must_use]
     pub fn verschluesselt(&self) -> bool {
         self.verschluesselt
+    }
+
+    /// Die Zeilenzahl der Tabelle unter `innen`, oder `None` fuer jeden
+    /// anderen Eintrag, fuer eine Tabelle, deren Zaehlen scheiterte, und fuer
+    /// einen Pfad, der keinen Eintrag benennt. Stellt keinen Systemaufruf.
+    #[must_use]
+    pub fn zeilen(&self, innen: &Innenpfad) -> Option<u64> {
+        match self.eintrag(innen)?.fundstelle {
+            Fundstelle::SqliteTabelle { zeilen } => zeilen,
+            Fundstelle::Zip(_)
+            | Fundstelle::Tar { .. }
+            | Fundstelle::GzGanz
+            | Fundstelle::Erschlossen
+            | Fundstelle::SqliteSicht => None,
+        }
     }
 }
 

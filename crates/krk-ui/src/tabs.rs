@@ -2432,6 +2432,13 @@ fn archivfehlertext(ort: &Tabort, fehler: &Archivfehler) -> Option<String> {
             Text::ArchivUngueltig,
             &[("datei", &datei), ("format", &format), ("grund", grund)],
         ),
+        Archivfehler::Verzeichnis(Verzeichnisfehler::Belegt) => satz(
+            Text::TabNichtVollstaendigGelesen,
+            &[
+                ("ordner", &datei),
+                ("fehler", &text(Text::DatenbankWirdGeschrieben)),
+            ],
+        ),
         Archivfehler::Verzeichnis(Verzeichnisfehler::ZuGross) => satz(
             Text::ArchivZuGross,
             &[("datei", &datei), ("grenze", &HOECHSTENS_EINTRAEGE)],
@@ -2541,6 +2548,7 @@ fn archivformatname(format: Archivformat) -> &'static str {
         Archivformat::Tar => "tar",
         Archivformat::TarGz => "tar.gz",
         Archivformat::Gz => "gz",
+        Archivformat::Sqlite => "sqlite",
     }
 }
 

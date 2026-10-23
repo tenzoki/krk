@@ -453,7 +453,8 @@ pub(crate) fn starten(auftrag: Fernauftrag) -> Lauf {
 /// ```
 ///
 /// Aus einem Archiv, das KRK allein lesen darf, verschiebt sie nichts: die
-/// Quelle meldet `Text::ArchivNurLesbar`, bevor am Ziel etwas entsteht.
+/// Quelle meldet den Text ihres Formats (`Archivformat::nur_lesbar_text`),
+/// bevor am Ziel etwas entsteht.
 fn ausfuehren(pfand: &Fernfaden, auftrag: &Fernauftrag, steuerung: &mut Steuerung) -> Abschluss {
     let verschieben = match &auftrag.art {
         Fernart::Kopieren { ziel } | Fernart::Verschieben { ziel } => {
@@ -488,7 +489,7 @@ fn ausfuehren(pfand: &Fernfaden, auftrag: &Fernauftrag, steuerung: &mut Steuerun
                 continue;
             }
             Ort::Archiv(archivort) if verschieben && !archivort.format().beschreibbar() => {
-                Err(text(Text::ArchivNurLesbar).to_owned())
+                Err(text(archivort.format().nur_lesbar_text()).to_owned())
             }
             Ort::Archiv(archivort) => {
                 match archivzugriff(pfand, &mut leser, archivort, steuerung) {
@@ -625,7 +626,8 @@ fn in_lesefolge_bringen(quellen: &mut [(PathBuf, Result<Quelle, String>)]) {
 /// Umbenennen, Anlegen und Loeschen schreiben an der Quelle selbst und nehmen
 /// deshalb allein eine [`Stelle`]; eine Quelle im Archiv kommt dafuer nicht
 /// hierher, sondern an `archiv::im_archiv_abarbeiten` ([`ausfuehren`]). Kaeme
-/// sie doch, meldete sie `Text::ImArchivNichtVerfuegbar`.
+/// sie doch, meldete sie den Text ihres Formats
+/// (`Archivformat::nicht_verfuegbar_text`).
 ///
 /// `nachher` sammelt die Eintraege aus Archiven, die ein Verschieben
 /// vollstaendig kopiert hat und die erst danach entfernt werden.
@@ -641,9 +643,18 @@ fn einen_abarbeiten(
         Fernart::Kopieren { .. } => false,
         Fernart::Verschieben { .. } => true,
         Fernart::Umbenennen { .. } | Fernart::Anlegen { .. } | Fernart::Loeschen => {
-            let Some(stelle) = quelle.als_stelle() else {
-                steuerung.ueberspringen(&quelle.bezeichnung(), text(Text::ImArchivNichtVerfuegbar));
-                return Ablauf::Weiter;
+            let stelle = match quelle {
+                Quelle::Stelle(stelle) => stelle,
+                Quelle::Archiv(archivstelle) => {
+                    let grund = archivstelle
+                        .leser
+                        .borrow()
+                        .zugang()
+                        .format()
+                        .nicht_verfuegbar_text();
+                    steuerung.ueberspringen(&quelle.bezeichnung(), text(grund));
+                    return Ablauf::Weiter;
+                }
             };
             return an_der_stelle_abarbeiten(pfand, art, stelle, steuerung);
         }

@@ -5,7 +5,7 @@
 //!  Umbauplan (Wert: Entfernen, Umhaengen, Hinzufuegen)
 //!    │ umbauen(&Fernfaden, &Archivzugang, plan, &mut Steuerung)
 //!    v
-//!  1. Format beschreibbar?        Gz: NurLesbar, vor jedem Zugriff
+//!  1. Format beschreibbar?        Gz, Sqlite: NurLesbar, vor jedem Zugriff
 //!  2. oeffnen, fstat, Verzeichnis zur Kennung; verschluesselt, verdeckt,
 //!     harte Verweise? abweisen
 //!  3. Aufstellung: jede Konfliktfrage am Verzeichnis     <- kein Byte
@@ -452,8 +452,9 @@ pub enum Unumschreibbar {
 pub enum Umbaufehler {
     /// Der Nutzer hat abgebrochen, in einer Konfliktfrage oder beim Schreiben.
     Abgebrochen,
-    /// Das Format ist allein lesbar (gz).
-    NurLesbar,
+    /// Das Format ist allein lesbar (gz, SQLite); der Grund folgt dem Format
+    /// ([`Archivformat::nur_lesbar_text`]).
+    NurLesbar(Archivformat),
     /// Die Archivdatei ist schreibgeschuetzt: dieser Prozess darf sie nicht
     /// beschreiben, auch wenn er ihren Ordner beschreiben duerfte (Modulkopf).
     Schreibgeschuetzt,
@@ -485,7 +486,7 @@ impl Umbaufehler {
     pub fn grund(&self) -> String {
         match self {
             Umbaufehler::Abgebrochen => text(Text::ArchivUnveraendertNachAbbruch).to_owned(),
-            Umbaufehler::NurLesbar => text(Text::ArchivNurLesbar).to_owned(),
+            Umbaufehler::NurLesbar(format) => text(format.nur_lesbar_text()).to_owned(),
             Umbaufehler::Schreibgeschuetzt => text(Text::ArchivSchreibgeschuetzt).to_owned(),
             Umbaufehler::Verschluesselt => text(Text::ArchivVerschluesseltNurLesbar).to_owned(),
             Umbaufehler::Verdeckt => text(Text::ArchivVerdecktNurLesbar).to_owned(),
@@ -506,6 +507,7 @@ impl Umbaufehler {
                     text(Text::VorgangKeineGewoehnlicheDatei).to_owned()
                 }
                 Verzeichnisfehler::Ungueltig(wortlaut) => wortlaut.clone(),
+                Verzeichnisfehler::Belegt => text(Text::DatenbankWirdGeschrieben).to_owned(),
                 Verzeichnisfehler::ZuGross => satz(
                     Text::ArchivUmbauZuGross,
                     &[("grenze", &zahl(HOECHSTENS_EINTRAEGE))],
@@ -554,7 +556,7 @@ impl Schreibform {
             Archivformat::Zip => Some(Schreibform::Zip),
             Archivformat::Tar => Some(Schreibform::Tar),
             Archivformat::TarGz => Some(Schreibform::TarGz),
-            Archivformat::Gz => None,
+            Archivformat::Gz | Archivformat::Sqlite => None,
         }
     }
 }
@@ -609,7 +611,7 @@ fn umbauen_mit(
     steuerung: &mut Steuerung,
     grenze: Option<u64>,
 ) -> Result<Umgebaut, Umbaufehler> {
-    let form = Schreibform::zu(zugang.format()).ok_or(Umbaufehler::NurLesbar)?;
+    let form = Schreibform::zu(zugang.format()).ok_or(Umbaufehler::NurLesbar(zugang.format()))?;
     let abbruch = steuerung.abbruchkennzeichen();
 
     // Eine Verknuepfung auf das Archiv bleibt eine Verknuepfung: geschrieben
@@ -1958,7 +1960,11 @@ impl Tarstrom<'_> {
             .enumerate()
             .filter_map(|(stelle, eintrag)| match eintrag.fundstelle {
                 Fundstelle::Tar { versatz } => Some((versatz, stelle)),
-                Fundstelle::Zip(_) | Fundstelle::GzGanz | Fundstelle::Erschlossen => None,
+                Fundstelle::Zip(_)
+                | Fundstelle::GzGanz
+                | Fundstelle::Erschlossen
+                | Fundstelle::SqliteTabelle { .. }
+                | Fundstelle::SqliteSicht => None,
             })
             .collect();
 

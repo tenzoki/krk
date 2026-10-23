@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "397d9cbb-5a95-4301-9c55-b7bcd19d3500",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/issues/261023-2035-in-einer-sqlite-datenbank-sagt-die-statuszeile-weiter-archiv.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

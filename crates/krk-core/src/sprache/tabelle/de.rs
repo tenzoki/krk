@@ -186,6 +186,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "das Archiv trägt Einträge, die die Liste verdeckt, etwa zwei gleichen Namens, und wird nicht geändert"
         }
         Text::ArchivNurLesbar => "dieses Archiv ist allein lesbar",
+        Text::DatenbankNurLesbar => "diese Datenbank ist allein lesbar",
+        Text::SqliteKeineDatenbank => "keine SQLite-Datenbank",
+        Text::DatenbankWirdGeschrieben => "die Datenbank wird gerade geschrieben",
         Text::ArchivSchreibgeschuetzt => "die Archivdatei ist schreibgeschützt",
         Text::ArchivAbbruchNachDemErsetzen => {
             "der Abbruch kam erst nach dem Ersetzen; das Archiv ist geändert"
@@ -1158,6 +1161,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::AmFernenOrtNichtVerfuegbar => "Das geht an einem Ort auf einem Server nicht.",
         Text::ImArchivNichtVerfuegbar => "Das geht in einem Archiv nicht.",
+        Text::InDatenbankNichtVerfuegbar => "Das geht in einer Datenbank nicht.",
         Text::ArchivAmFernenOrt => {
             "Ein Archiv auf einem Server lässt sich nicht betreten; erst herunterkopieren."
         }

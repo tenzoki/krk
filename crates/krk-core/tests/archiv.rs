@@ -109,6 +109,12 @@ fn jede_endung_aus_der_tafel_ergibt_ihr_format_und_keine_andere_ein_archiv() {
         ("bericht.txt.gz", Some(Archivformat::Gz)),
         ("a.Gz", Some(Archivformat::Gz)),
         (".gz", Some(Archivformat::Gz)),
+        ("a.sqlite", Some(Archivformat::Sqlite)),
+        ("a.SQLite3", Some(Archivformat::Sqlite)),
+        ("a.db", Some(Archivformat::Sqlite)),
+        ("a.DB3", Some(Archivformat::Sqlite)),
+        ("a.db.gz", Some(Archivformat::Gz)),
+        ("a.db-wal", None),
         ("a.jar", None),
         ("a.docx", None),
         ("a.epub", None),
@@ -132,6 +138,7 @@ fn jede_endung_aus_der_tafel_ergibt_ihr_format_und_keine_andere_ein_archiv() {
     assert!(Archivformat::Tar.beschreibbar());
     assert!(Archivformat::TarGz.beschreibbar());
     assert!(!Archivformat::Gz.beschreibbar());
+    assert!(!Archivformat::Sqlite.beschreibbar());
 }
 
 #[test]

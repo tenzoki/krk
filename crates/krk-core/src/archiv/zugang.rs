@@ -25,6 +25,13 @@
 //! Aenderungszeit auf die Nanosekunde wiederherstellt, ohne den Inode zu
 //! wechseln. Dafuer muesste ein Programm die Zeit ausdruecklich zuruecksetzen.
 //!
+//! **Eine SQLite-Datenbank hat eine Kennung ueber zwei Dateien**: neben der
+//! Hauptdatei Geraet, Inode, Groesse und Aenderungszeit von `<datei>-wal`,
+//! falls es steht, denn ein Schreiber im WAL-Betrieb uebergibt dorthin und
+//! laesst die Hauptdatei bis zum Checkpoint stehen. Fuer jedes andere Format
+//! bleibt dieser Teil leer, und jeder Vergleich antwortet wie vorher
+//! (`archiv::sqlite`, Modulkopf).
+//!
 //! Gebaut wird ohne gehaltene Sperre: zwei Faeden, die zugleich ein
 //! veraltetes Verzeichnis finden, bauen es beide, und der spaetere ersetzt das
 //! fruehere. Eine Sperre ueber den Aufbau liesse den zweiten Faden auf einen
@@ -41,6 +48,7 @@ use crate::fern::Fernfaden;
 use crate::verzeichnis::sys::ohne_warten_oeffnen;
 
 use super::format::Archivformat;
+use super::sqlite;
 use super::verzeichnis::{
     Inhaltsverzeichnis, Sammler, Verzeichnisfehler, abbruch_fragen, gz_lesen, tar_gz_lesen,
     tar_lesen,
@@ -50,10 +58,31 @@ use super::zipform;
 /// Was eine Archivdatei ausmacht, solange niemand sie aendert.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Dateikennung {
+    datei: Stand,
+    /// Der Stand von `<datei>-wal` einer SQLite-Datenbank, wenn es steht;
+    /// fuer jedes andere Format immer `None` (Modulkopf).
+    wal: Option<Stand>,
+}
+
+/// Geraet, Inode, Groesse und Aenderungszeit in Nanosekunden einer Datei.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+struct Stand {
     geraet: u64,
     inode: u64,
     groesse: u64,
     geaendert_ns: i128,
+}
+
+impl Stand {
+    fn aus_angaben(angaben: &Metadata) -> Self {
+        Stand {
+            geraet: angaben.dev(),
+            inode: angaben.ino(),
+            groesse: angaben.size(),
+            geaendert_ns: i128::from(angaben.mtime()) * 1_000_000_000
+                + i128::from(angaben.mtime_nsec()),
+        }
+    }
 }
 
 impl Dateikennung {
@@ -62,11 +91,18 @@ impl Dateikennung {
     #[must_use]
     pub fn aus_angaben(angaben: &Metadata) -> Self {
         Dateikennung {
-            geraet: angaben.dev(),
-            inode: angaben.ino(),
-            groesse: angaben.size(),
-            geaendert_ns: i128::from(angaben.mtime()) * 1_000_000_000
-                + i128::from(angaben.mtime_nsec()),
+            datei: Stand::aus_angaben(angaben),
+            wal: None,
+        }
+    }
+
+    /// Dieselbe Kennung mit dem Stand von `<datei>-wal` einer
+    /// SQLite-Datenbank, oder ohne, wenn keines steht.
+    #[must_use]
+    pub(crate) fn mit_wal(self, wal: Option<&Metadata>) -> Self {
+        Dateikennung {
+            wal: wal.map(Stand::aus_angaben),
+            ..self
         }
     }
 }
@@ -152,12 +188,12 @@ impl Archivzugang {
     /// Datei, kein Archiv des Formats oder zu viele Eintraege.
     pub fn verzeichnis(
         &self,
-        _pfand: &Fernfaden,
+        pfand: &Fernfaden,
         abbruch: &AtomicBool,
     ) -> Result<Arc<Inhaltsverzeichnis>, Verzeichnisfehler> {
         abbruch_fragen(abbruch)?;
         let vorher = fs::metadata(&self.datei).map_err(Verzeichnisfehler::Lesen)?;
-        if let Some(gespeichert) = self.gespeichert(Dateikennung::aus_angaben(&vorher)) {
+        if let Some(gespeichert) = self.gespeichert(self.kennung_zu(&vorher)?) {
             return Ok(gespeichert);
         }
 
@@ -169,7 +205,7 @@ impl Archivzugang {
         if !angaben.is_file() {
             return Err(Verzeichnisfehler::KeineDatei);
         }
-        let kennung = Dateikennung::aus_angaben(&angaben);
+        let kennung = self.kennung_zu(&angaben)?;
         if let Some(gespeichert) = self.gespeichert(kennung) {
             return Ok(gespeichert);
         }
@@ -187,6 +223,13 @@ impl Archivzugang {
                     .unwrap_or_default();
                 gz_lesen(datei, dateiname, &angaben, &mut sammler, abbruch)?;
             }
+            Archivformat::Sqlite => {
+                // Die Bibliothek oeffnet die Datei selbst, am Pfad; der
+                // Deskriptor hat seine Frage nach einer gewoehnlichen Datei
+                // beantwortet und wird vorher geschlossen.
+                drop(datei);
+                sqlite::verzeichnis_lesen(pfand, &self.datei, &angaben, &mut sammler, abbruch)?;
+            }
         }
         abbruch_fragen(abbruch)?;
         // Erschlossene Ordner tragen die Zeit der Archivdatei, gefragt am
@@ -195,6 +238,23 @@ impl Archivzugang {
         let verzeichnis = Arc::new(sammler.abschliessen(kennung, archivzeit));
         *self.sperre() = Some(Arc::clone(&verzeichnis));
         Ok(verzeichnis)
+    }
+
+    /// Die Kennung der Datei mit den Angaben `angaben` der Hauptdatei: fuer
+    /// eine SQLite-Datenbank dazu der Stand von `<datei>-wal`, gefragt mit
+    /// einem weiteren `stat` (Modulkopf), fuer jedes andere Format allein die
+    /// Angaben.
+    fn kennung_zu(&self, angaben: &Metadata) -> Result<Dateikennung, Verzeichnisfehler> {
+        let kennung = Dateikennung::aus_angaben(angaben);
+        match self.format {
+            Archivformat::Zip | Archivformat::Tar | Archivformat::TarGz | Archivformat::Gz => {
+                Ok(kennung)
+            }
+            Archivformat::Sqlite => {
+                let wal = sqlite::wal_angaben(&self.datei).map_err(Verzeichnisfehler::Lesen)?;
+                Ok(kennung.mit_wal(wal.as_ref()))
+            }
+        }
     }
 
     /// Das zuletzt gelesene Verzeichnis, ohne die Kennung zu fragen, oder

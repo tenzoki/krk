@@ -280,7 +280,7 @@ pub(super) fn hinein(
 ) -> Abschluss {
     if !ziel.format().beschreibbar() {
         for ort in quellen {
-            steuerung.ueberspringen(&bezeichnung(ort), text(Text::ArchivNurLesbar));
+            steuerung.ueberspringen(&bezeichnung(ort), text(ziel.format().nur_lesbar_text()));
         }
         return Abschluss::Fertig;
     }
@@ -923,7 +923,7 @@ fn im_einen_archiv(
         for ort in orte {
             steuerung.ueberspringen(
                 &archivbezeichnung(ort.datei(), &ort.innen),
-                text(Text::ArchivNurLesbar),
+                text(zugang.format().nur_lesbar_text()),
             );
         }
         return None;

@@ -204,6 +204,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "l’archive contient des entrées masquées dans la liste, par exemple deux du même nom, et n’est pas modifiée"
         }
         Text::ArchivNurLesbar => "cette archive est en lecture seule",
+        Text::DatenbankNurLesbar => "cette base de données est en lecture seule",
+        Text::SqliteKeineDatenbank => "pas une base de données SQLite",
+        Text::DatenbankWirdGeschrieben => "la base de données est en cours d’écriture",
         Text::ArchivSchreibgeschuetzt => "le fichier de l’archive est protégé en écriture",
         Text::ArchivAbbruchNachDemErsetzen => {
             "l’annulation est arrivée après le remplacement\u{202f}; l’archive est modifiée"
@@ -1243,6 +1246,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "Ce n’est pas possible dans un dossier situé sur un serveur."
         }
         Text::ImArchivNichtVerfuegbar => "Ce n’est pas possible dans une archive.",
+        Text::InDatenbankNichtVerfuegbar => "Ce n’est pas possible dans une base de données.",
         Text::ArchivAmFernenOrt => {
             "Une archive sur un serveur ne s’ouvre pas comme un dossier\u{202f}; copiez-la d’abord ici."
         }
