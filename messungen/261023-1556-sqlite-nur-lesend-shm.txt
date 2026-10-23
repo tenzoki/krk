@@ -1,0 +1,483 @@
+Messung: was eine nur lesende SQLite-Verbindung neben der Datenbankdatei schreibt
+Arbeitspaket 261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen, Plan 261023-1507, Schritt 1
+Grundlage: Bericht 261023-1324-sqlite-datenbanken-durchsehen-machbarkeit-und-zuschnitt.md, Abschnitt 3
+Gefahren: 261023-1554 auf diesem Geraet (Darwin 24.6.0), SQLite 3.43.2 des Systems
+
+Gemessen wurde ausschliesslich an Datenbanken, die das Skript selbst in einem frischen
+Wegwerfordner unter dem Scratchpad der Sitzung anlegt und am Ende loescht; jede Datenbank
+liegt in einem eigenen Ordner, in dem sonst nichts steht, damit "Ordner:" jede neu
+entstandene Datei zeigt. wordstore.db und der Baum sind nicht beruehrt.
+
+Abweichung vom Plan, in (a) begruendet: /usr/bin/sqlite3 laedt /usr/lib/libsqlite3.dylib
+NICHT (otool -L fuehrt sie nicht; das Programm traegt SQLite statisch). Damit die Messung
+trotzdem die Bibliothek trifft, die Schritt 2 bindet, faehrt das Skript (b) bis (e) zweimal:
+mit /usr/bin/sqlite3 ("cli") und mit einem Wegwerf-Leser in C ("lib", leser.c unten),
+gelinkt gegen /usr/lib/libsqlite3.dylib und geoeffnet mit
+sqlite3_open_v2(uri, SQLITE_OPEN_READONLY | SQLITE_OPEN_URI), also dem Weg aus Schritt 2.
+Beide melden dieselbe Fassung und dieselbe sqlite3_sourceid; beide Laeufe ergeben dasselbe.
+
+Weitere Abweichungen:
+- (c): der Schreiber endet mit kill -9, ohne zu schliessen. Ein sauber schliessender
+  letzter Schreiber faehrt selbst einen Checkpoint; -wal mit einer nicht zurueckgeschriebenen
+  Zeile bleibt nur nach einem Abbruch stehen, und genau den Fall verlangt (c).
+- (d): das System-SQLite laesst nach dem sauberen Schliessen einer WAL-Datenbank ein leeres
+  -wal (0 Bytes) und ein -shm stehen. Fuer "ohne -wal und -shm" entfernt das Skript beide
+  nach dem Anlegen; das ist der Zustand einer kopierten oder heruntergeladenen Datei.
+- Jede Messung "vor" steht neben einer Kontrollmessung ohne Leser im Abstand von 1 s, damit
+  eine Aenderung dem Leser und nicht dem ruhenden Schreiber zugerechnet wird.
+- %m in stat zaehlt ganze Sekunden; entscheidend ist die Pruefsumme. Ein kurzlebiges
+  -journal, das waehrend des Lesens entstuende und wieder verschwaende, sieht die Messung
+  nach dem Lesen nicht; sie sieht nur, dass danach keins steht und die Hauptdatei gleich ist.
+
+==================================================================== Skript: messen.sh
+#!/bin/bash
+# Misst, was eine nur lesende SQLite-Verbindung neben einer Datenbankdatei schreibt.
+# Jede Datenbank legt dieses Skript selbst an, jede in einem eigenen frischen Ordner,
+# in dem sonst nichts liegt. Gelesen wird mit zwei Lesern:
+#   cli = /usr/bin/sqlite3 mit file:...?<parameter>
+#   lib = ein Wegwerf-Leser (leser.c), gelinkt gegen /usr/lib/libsqlite3.dylib,
+#         sqlite3_open_v2(SQLITE_OPEN_READONLY|SQLITE_OPEN_URI), count(*), sqlite3_close_v2
+set -u
+SQ=/usr/bin/sqlite3
+HIER=$(cd "$(dirname "$0")" && pwd)
+W=$(mktemp -d "${TMPDIR:-/tmp}/krk-shm.XXXXXX")
+H=$(mktemp -d "${TMPDIR:-/tmp}/krk-shm-hilfe.XXXXXX")   # Hilfsdateien, nie neben einer Datenbank
+cc -o "$H/leser" "$HIER/leser.c" -lsqlite3 || exit 1
+echo "Wegwerfordner: $W"
+
+zustand() { # $1 = Beschriftung, $2 = Datenbankpfad
+  echo "--- $1"
+  for s in "" -wal -shm -journal; do
+    f="$2$s"
+    if [ -e "$f" ]; then
+      printf '%-8s %s  stat=%s\n' "${s:-haupt}" "$(shasum -a 256 "$f" | cut -c1-64)" "$(stat -f '%i %z %m' "$f")"
+    else
+      printf '%-8s fehlt\n' "${s:-haupt}"
+    fi
+  done
+  echo "Ordner: $(ls -1A "$(dirname "$2")" | tr '\n' ' ')"
+}
+vergleich() { # $1 $2 = zwei Zustandsdateien
+  if diff <(tail -n +2 "$1") <(tail -n +2 "$2") >/dev/null; then echo "  => identisch"
+  else echo "  => verschieden:"; diff <(tail -n +2 "$1") <(tail -n +2 "$2") | sed 's/^/     /'; fi
+}
+lesen() { # $1 = cli|lib, $2 = URI-Parameter, $3 = Pfad
+  if [ "$1" = cli ]; then out=$($SQ "file:$3?$2" 'select count(*) from t;' 2>&1); rc=$?
+  else out=$("$H/leser" "file:$3?$2" 2>&1); rc=$?; fi
+  echo "Leser $1 ($2): Ausgabe=[$out] exit=$rc"
+}
+
+echo "=== (a) Bibliothek"
+echo "\$ otool -L $SQ"; otool -L $SQ
+echo "\$ $SQ --version"; $SQ --version
+echo "\$ otool -L leser"; otool -L "$H/leser"
+echo "\$ leser --version (sqlite3_libversion, sqlite3_sourceid aus /usr/lib/libsqlite3.dylib)"; "$H/leser" --version
+
+for L in cli lib; do
+echo
+echo "################ Leser: $L"
+echo
+echo "=== (b/$L) WAL-Datenbank, Schreiber laeuft und haelt eine Zeile in -wal"
+D=$W/b-$L; mkdir "$D"; DB=$D/x.db
+$SQ "$DB" "pragma journal_mode=wal; create table t(x); insert into t values(1),(2),(3);" >/dev/null
+FIFO=$H/fifo-$L; mkfifo "$FIFO"; LOG=$H/schreiber-$L.log
+$SQ "$DB" < "$FIFO" > "$LOG" 2>&1 &
+SPID=$!
+exec 3> "$FIFO"
+printf '%s\n' "pragma wal_autocheckpoint=0;" "insert into t values(4);" ".print BEREIT" >&3
+for i in $(seq 1 50); do grep -q BEREIT "$LOG" && break; sleep 0.1; done
+echo "Schreiber pid=$SPID, Protokoll: $(tr '\n' ' ' < "$LOG")"
+sleep 1.1; zustand "b/$L: Kontrolle 1, ohne Leser" "$DB" > $H/b0; cat $H/b0
+sleep 1.1; zustand "b/$L: Kontrolle 2, ohne Leser, 1 s spaeter" "$DB" > $H/b1; cat $H/b1
+echo "Kontrolle 1 gegen Kontrolle 2 (der ruhende Schreiber allein):"; vergleich $H/b0 $H/b1
+sleep 1.1; lesen $L "mode=ro" "$DB"
+zustand "b/$L: nach dem Leser (Leser geschlossen, Schreiber offen)" "$DB" > $H/b2; cat $H/b2
+echo "Kontrolle 2 gegen nach dem Leser:"; vergleich $H/b1 $H/b2
+sleep 1.1; lesen $L "mode=ro" "$DB"; lesen $L "mode=ro" "$DB"
+zustand "b/$L: nach zwei weiteren Lesern" "$DB" > $H/b3; cat $H/b3
+echo "nach dem ersten Leser gegen nach zwei weiteren:"; vergleich $H/b2 $H/b3
+
+echo
+echo "=== (c/$L) dieselbe Datenbank nach dem Ende des Schreibers (kill -9, ohne Schliessen; -wal und -shm bleiben)"
+kill -9 $SPID; wait $SPID 2>/dev/null; exec 3>&-
+sleep 1.1; zustand "c/$L: Schreiber beendet, Kontrolle 1" "$DB" > $H/c0; cat $H/c0
+sleep 1.1; zustand "c/$L: Kontrolle 2, 1 s spaeter" "$DB" > $H/c1; cat $H/c1
+echo "Kontrolle 1 gegen Kontrolle 2:"; vergleich $H/c0 $H/c1
+sleep 1.1; lesen $L "mode=ro" "$DB"
+zustand "c/$L: nach dem Leser (er war die einzige und damit letzte Verbindung)" "$DB" > $H/c2; cat $H/c2
+echo "Kontrolle 2 gegen nach dem Leser:"; vergleich $H/c1 $H/c2
+sleep 1.1; lesen $L "mode=ro" "$DB"
+zustand "c/$L: nach einem zweiten Leser" "$DB" > $H/c3; cat $H/c3
+echo "nach dem ersten Leser gegen nach dem zweiten:"; vergleich $H/c2 $H/c3
+
+echo
+echo "=== (d/$L) WAL-Datenbank ohne -wal und -shm"
+D=$W/d-$L; mkdir "$D"; DB=$D/x.db
+$SQ "$DB" "pragma journal_mode=wal; create table t(x); insert into t values(1),(2),(3);" >/dev/null
+echo "Nach dem sauberen Schliessen des Anlegers: $(ls -1A "$D" | tr '\n' ' ')(Groesse -wal: $(stat -f %z "$DB-wal" 2>/dev/null || echo fehlt))"
+echo "-wal und -shm werden entfernt (die Datenbank ist zurueckgeschrieben, -wal ist leer)."
+rm -f "$DB-wal" "$DB-shm"
+echo "Kopfbytes 18/19 (02 02 = WAL): $(xxd -s 18 -l 2 -p "$DB")"
+sleep 1.1; zustand "d/$L: vor den Lesern" "$DB" > $H/d1; cat $H/d1
+lesen $L "mode=ro" "$DB"
+zustand "d/$L: nach mode=ro" "$DB" > $H/d2; cat $H/d2
+echo "vor gegen nach mode=ro:"; vergleich $H/d1 $H/d2
+lesen $L "mode=ro&immutable=1" "$DB"
+zustand "d/$L: nach immutable=1" "$DB" > $H/d3; cat $H/d3
+echo "vor gegen nach immutable=1:"; vergleich $H/d1 $H/d3
+
+echo
+echo "=== (e/$L) Rollback-Datenbank mit mode=ro"
+D=$W/e-$L; mkdir "$D"; DB=$D/x.db
+$SQ "$DB" "pragma journal_mode=delete; create table t(x); insert into t values(1),(2),(3);" >/dev/null
+echo "Kopfbytes 18/19 (01 01 = Rollback): $(xxd -s 18 -l 2 -p "$DB")"
+sleep 1.1; zustand "e/$L: vor dem Leser" "$DB" > $H/e1; cat $H/e1
+lesen $L "mode=ro" "$DB"
+zustand "e/$L: nach dem Leser" "$DB" > $H/e2; cat $H/e2
+echo "vor gegen nach:"; vergleich $H/e1 $H/e2
+done
+
+rm -rf "$W" "$H"
+
+==================================================================== Wegwerf-Leser: leser.c
+/* Wegwerf-Leser: oeffnet eine URI nur lesend ueber /usr/lib/libsqlite3.dylib,
+   liest count(*) aus t und schliesst. Mit "--version" nur die Bibliotheksfassung. */
+#include <stdio.h>
+#include <string.h>
+#include <sqlite3.h>
+int main(int argc, char **argv) {
+  if (argc == 2 && strcmp(argv[1], "--version") == 0) {
+    printf("%s %s\n", sqlite3_libversion(), sqlite3_sourceid());
+    return 0;
+  }
+  sqlite3 *db = NULL;
+  int rc = sqlite3_open_v2(argv[1], &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_URI, NULL);
+  if (rc != SQLITE_OK) { printf("open: %d %s\n", sqlite3_extended_errcode(db), sqlite3_errmsg(db)); sqlite3_close_v2(db); return 1; }
+  sqlite3_stmt *st = NULL;
+  rc = sqlite3_prepare_v2(db, "select count(*) from t", -1, &st, NULL);
+  if (rc != SQLITE_OK) { printf("prepare: %d %s\n", sqlite3_extended_errcode(db), sqlite3_errmsg(db)); sqlite3_close_v2(db); return 1; }
+  rc = sqlite3_step(st);
+  if (rc == SQLITE_ROW) printf("%lld\n", sqlite3_column_int64(st, 0));
+  else printf("step: %d %s\n", sqlite3_extended_errcode(db), sqlite3_errmsg(db));
+  sqlite3_finalize(st);
+  int c = sqlite3_close_v2(db);
+  if (c != SQLITE_OK) { printf("close: %d\n", c); return 1; }
+  return rc == SQLITE_ROW ? 0 : 1;
+}
+
+==================================================================== Aufruf
+TMPDIR=<scratchpad>/shm ./messen.sh > ausgabe.txt 2>&1   (exit 0)
+
+==================================================================== rohe Ausgabe
+Wegwerfordner: /private/tmp/claude-502/-Users-k1-Projects-productive-krk/0b36ed58-9d42-4cf6-9218-f110f4816f97/scratchpad/shm/krk-shm.TuhWIH
+=== (a) Bibliothek
+$ otool -L /usr/bin/sqlite3
+/usr/bin/sqlite3:
+	/usr/lib/libz.1.dylib (compatibility version 1.0.0, current version 1.2.12)
+	/usr/lib/libncurses.5.4.dylib (compatibility version 5.4.0, current version 5.4.0)
+	/usr/lib/libedit.3.dylib (compatibility version 2.0.0, current version 3.0.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1351.0.0)
+$ /usr/bin/sqlite3 --version
+3.43.2 2023-10-10 13:08:14 1b37c146ee9ebb7acd0160c0ab1fd11017a419fa8a3187386ed8cb32b709aapl (64-bit)
+$ otool -L leser
+/private/tmp/claude-502/-Users-k1-Projects-productive-krk/0b36ed58-9d42-4cf6-9218-f110f4816f97/scratchpad/shm/krk-shm-hilfe.zhPIaK/leser:
+	/usr/lib/libsqlite3.dylib (compatibility version 9.0.0, current version 380.0.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+$ leser --version (sqlite3_libversion, sqlite3_sourceid aus /usr/lib/libsqlite3.dylib)
+3.43.2 2023-10-10 13:08:14 1b37c146ee9ebb7acd0160c0ab1fd11017a419fa8a3187386ed8cb32b709aapl
+
+################ Leser: cli
+
+=== (b/cli) WAL-Datenbank, Schreiber laeuft und haelt eine Zeile in -wal
+Schreiber pid=55210, Protokoll: 0 BEREIT 
+--- b/cli: Kontrolle 1, ohne Leser
+haupt    6ed19015ce62154153ddc50075e40c7bc3196b82df18611e7be5ab5ff1da7d7d  stat=256398005 8192 1792763784
+-wal     ec63c18de3982de70b63dd882b94d5a124f5abc675b1b696332f574f61327972  stat=256398009 4152 1792763784
+-shm     df0acafac6fa2dc1548451122d641012fa9a2f02b399d9237152415ecf8bdae2  stat=256398010 32768 1792763784
+-journal fehlt
+Ordner: x.db x.db-shm x.db-wal 
+--- b/cli: Kontrolle 2, ohne Leser, 1 s spaeter
+haupt    6ed19015ce62154153ddc50075e40c7bc3196b82df18611e7be5ab5ff1da7d7d  stat=256398005 8192 1792763784
+-wal     ec63c18de3982de70b63dd882b94d5a124f5abc675b1b696332f574f61327972  stat=256398009 4152 1792763784
+-shm     df0acafac6fa2dc1548451122d641012fa9a2f02b399d9237152415ecf8bdae2  stat=256398010 32768 1792763784
+-journal fehlt
+Ordner: x.db x.db-shm x.db-wal 
+Kontrolle 1 gegen Kontrolle 2 (der ruhende Schreiber allein):
+  => identisch
+Leser cli (mode=ro): Ausgabe=[4] exit=0
+--- b/cli: nach dem Leser (Leser geschlossen, Schreiber offen)
+haupt    6ed19015ce62154153ddc50075e40c7bc3196b82df18611e7be5ab5ff1da7d7d  stat=256398005 8192 1792763784
+-wal     ec63c18de3982de70b63dd882b94d5a124f5abc675b1b696332f574f61327972  stat=256398009 4152 1792763784
+-shm     695d685e325f3643b90fa636fb1639dfcaee206076ae681a00d5772e3235ea6b  stat=256398010 32768 1792763784
+-journal fehlt
+Ordner: x.db x.db-shm x.db-wal 
+Kontrolle 2 gegen nach dem Leser:
+  => verschieden:
+     3c3
+     < -shm     df0acafac6fa2dc1548451122d641012fa9a2f02b399d9237152415ecf8bdae2  stat=256398010 32768 1792763784
+     ---
+     > -shm     695d685e325f3643b90fa636fb1639dfcaee206076ae681a00d5772e3235ea6b  stat=256398010 32768 1792763784
+Leser cli (mode=ro): Ausgabe=[4] exit=0
+Leser cli (mode=ro): Ausgabe=[4] exit=0
+--- b/cli: nach zwei weiteren Lesern
+haupt    6ed19015ce62154153ddc50075e40c7bc3196b82df18611e7be5ab5ff1da7d7d  stat=256398005 8192 1792763784
+-wal     ec63c18de3982de70b63dd882b94d5a124f5abc675b1b696332f574f61327972  stat=256398009 4152 1792763784
+-shm     695d685e325f3643b90fa636fb1639dfcaee206076ae681a00d5772e3235ea6b  stat=256398010 32768 1792763784
+-journal fehlt
+Ordner: x.db x.db-shm x.db-wal 
+nach dem ersten Leser gegen nach zwei weiteren:
+  => identisch
+
+=== (c/cli) dieselbe Datenbank nach dem Ende des Schreibers (kill -9, ohne Schliessen; -wal und -shm bleiben)
+--- c/cli: Schreiber beendet, Kontrolle 1
+haupt    6ed19015ce62154153ddc50075e40c7bc3196b82df18611e7be5ab5ff1da7d7d  stat=256398005 8192 1792763784
+-wal     ec63c18de3982de70b63dd882b94d5a124f5abc675b1b696332f574f61327972  stat=256398009 4152 1792763784
+-shm     695d685e325f3643b90fa636fb1639dfcaee206076ae681a00d5772e3235ea6b  stat=256398010 32768 1792763784
+-journal fehlt
+Ordner: x.db x.db-shm x.db-wal 
+--- c/cli: Kontrolle 2, 1 s spaeter
+haupt    6ed19015ce62154153ddc50075e40c7bc3196b82df18611e7be5ab5ff1da7d7d  stat=256398005 8192 1792763784
+-wal     ec63c18de3982de70b63dd882b94d5a124f5abc675b1b696332f574f61327972  stat=256398009 4152 1792763784
+-shm     695d685e325f3643b90fa636fb1639dfcaee206076ae681a00d5772e3235ea6b  stat=256398010 32768 1792763784
+-journal fehlt
+Ordner: x.db x.db-shm x.db-wal 
+Kontrolle 1 gegen Kontrolle 2:
+  => identisch
+Leser cli (mode=ro): Ausgabe=[4] exit=0
+--- c/cli: nach dem Leser (er war die einzige und damit letzte Verbindung)
+haupt    6ed19015ce62154153ddc50075e40c7bc3196b82df18611e7be5ab5ff1da7d7d  stat=256398005 8192 1792763784
+-wal     ec63c18de3982de70b63dd882b94d5a124f5abc675b1b696332f574f61327972  stat=256398009 4152 1792763784
+-shm     b9830db3fb31c972cd67b5833f0d3bb67353f2e55b0870d23d607ac7256b46b9  stat=256398010 32768 1792763792
+-journal fehlt
+Ordner: x.db x.db-shm x.db-wal 
+Kontrolle 2 gegen nach dem Leser:
+  => verschieden:
+     3c3
+     < -shm     695d685e325f3643b90fa636fb1639dfcaee206076ae681a00d5772e3235ea6b  stat=256398010 32768 1792763784
+     ---
+     > -shm     b9830db3fb31c972cd67b5833f0d3bb67353f2e55b0870d23d607ac7256b46b9  stat=256398010 32768 1792763792
+Leser cli (mode=ro): Ausgabe=[4] exit=0
+--- c/cli: nach einem zweiten Leser
+haupt    6ed19015ce62154153ddc50075e40c7bc3196b82df18611e7be5ab5ff1da7d7d  stat=256398005 8192 1792763784
+-wal     ec63c18de3982de70b63dd882b94d5a124f5abc675b1b696332f574f61327972  stat=256398009 4152 1792763784
+-shm     b9830db3fb31c972cd67b5833f0d3bb67353f2e55b0870d23d607ac7256b46b9  stat=256398010 32768 1792763793
+-journal fehlt
+Ordner: x.db x.db-shm x.db-wal 
+nach dem ersten Leser gegen nach dem zweiten:
+  => verschieden:
+     3c3
+     < -shm     b9830db3fb31c972cd67b5833f0d3bb67353f2e55b0870d23d607ac7256b46b9  stat=256398010 32768 1792763792
+     ---
+     > -shm     b9830db3fb31c972cd67b5833f0d3bb67353f2e55b0870d23d607ac7256b46b9  stat=256398010 32768 1792763793
+
+=== (d/cli) WAL-Datenbank ohne -wal und -shm
+Nach dem sauberen Schliessen des Anlegers: x.db x.db-shm x.db-wal (Groesse -wal: 0)
+-wal und -shm werden entfernt (die Datenbank ist zurueckgeschrieben, -wal ist leer).
+Kopfbytes 18/19 (02 02 = WAL): 0202
+--- d/cli: vor den Lesern
+haupt    6ed19015ce62154153ddc50075e40c7bc3196b82df18611e7be5ab5ff1da7d7d  stat=256402235 8192 1792763794
+-wal     fehlt
+-shm     fehlt
+-journal fehlt
+Ordner: x.db 
+Leser cli (mode=ro): Ausgabe=[Error: in prepare, unable to open database file (14)] exit=14
+--- d/cli: nach mode=ro
+haupt    6ed19015ce62154153ddc50075e40c7bc3196b82df18611e7be5ab5ff1da7d7d  stat=256402235 8192 1792763794
+-wal     fehlt
+-shm     fehlt
+-journal fehlt
+Ordner: x.db 
+vor gegen nach mode=ro:
+  => identisch
+Leser cli (mode=ro&immutable=1): Ausgabe=[3] exit=0
+--- d/cli: nach immutable=1
+haupt    6ed19015ce62154153ddc50075e40c7bc3196b82df18611e7be5ab5ff1da7d7d  stat=256402235 8192 1792763794
+-wal     fehlt
+-shm     fehlt
+-journal fehlt
+Ordner: x.db 
+vor gegen nach immutable=1:
+  => identisch
+
+=== (e/cli) Rollback-Datenbank mit mode=ro
+Kopfbytes 18/19 (01 01 = Rollback): 0101
+--- e/cli: vor dem Leser
+haupt    ae30a14a5b6df71b50486799c189623462e59bf8290cb9ac885fe4511ecbcca4  stat=256403802 8192 1792763795
+-wal     fehlt
+-shm     fehlt
+-journal fehlt
+Ordner: x.db 
+Leser cli (mode=ro): Ausgabe=[3] exit=0
+--- e/cli: nach dem Leser
+haupt    ae30a14a5b6df71b50486799c189623462e59bf8290cb9ac885fe4511ecbcca4  stat=256403802 8192 1792763795
+-wal     fehlt
+-shm     fehlt
+-journal fehlt
+Ordner: x.db 
+vor gegen nach:
+  => identisch
+
+################ Leser: lib
+
+=== (b/lib) WAL-Datenbank, Schreiber laeuft und haelt eine Zeile in -wal
+Schreiber pid=55556, Protokoll: 0 BEREIT 
+--- b/lib: Kontrolle 1, ohne Leser
+haupt    6ed19015ce62154153ddc50075e40c7bc3196b82df18611e7be5ab5ff1da7d7d  stat=256405122 8192 1792763796
+-wal     4ee3f1d71fb225ae7f8b113dcdf8183e38e1ea1a1c8ca618e236b27cfca10c11  stat=256405124 4152 1792763796
+-shm     3f9f630ae09be8c8d6728d3c887f70bfd53708cdee9efb7ec928cff7d46084d2  stat=256405125 32768 1792763796
+-journal fehlt
+Ordner: x.db x.db-shm x.db-wal 
+--- b/lib: Kontrolle 2, ohne Leser, 1 s spaeter
+haupt    6ed19015ce62154153ddc50075e40c7bc3196b82df18611e7be5ab5ff1da7d7d  stat=256405122 8192 1792763796
+-wal     4ee3f1d71fb225ae7f8b113dcdf8183e38e1ea1a1c8ca618e236b27cfca10c11  stat=256405124 4152 1792763796
+-shm     3f9f630ae09be8c8d6728d3c887f70bfd53708cdee9efb7ec928cff7d46084d2  stat=256405125 32768 1792763796
+-journal fehlt
+Ordner: x.db x.db-shm x.db-wal 
+Kontrolle 1 gegen Kontrolle 2 (der ruhende Schreiber allein):
+  => identisch
+Leser lib (mode=ro): Ausgabe=[4] exit=0
+--- b/lib: nach dem Leser (Leser geschlossen, Schreiber offen)
+haupt    6ed19015ce62154153ddc50075e40c7bc3196b82df18611e7be5ab5ff1da7d7d  stat=256405122 8192 1792763796
+-wal     4ee3f1d71fb225ae7f8b113dcdf8183e38e1ea1a1c8ca618e236b27cfca10c11  stat=256405124 4152 1792763796
+-shm     60d7f9d2178680f37a14e4025ca6fa745405bae0e490fc9ce71c88f682b7c355  stat=256405125 32768 1792763796
+-journal fehlt
+Ordner: x.db x.db-shm x.db-wal 
+Kontrolle 2 gegen nach dem Leser:
+  => verschieden:
+     3c3
+     < -shm     3f9f630ae09be8c8d6728d3c887f70bfd53708cdee9efb7ec928cff7d46084d2  stat=256405125 32768 1792763796
+     ---
+     > -shm     60d7f9d2178680f37a14e4025ca6fa745405bae0e490fc9ce71c88f682b7c355  stat=256405125 32768 1792763796
+Leser lib (mode=ro): Ausgabe=[4] exit=0
+Leser lib (mode=ro): Ausgabe=[4] exit=0
+--- b/lib: nach zwei weiteren Lesern
+haupt    6ed19015ce62154153ddc50075e40c7bc3196b82df18611e7be5ab5ff1da7d7d  stat=256405122 8192 1792763796
+-wal     4ee3f1d71fb225ae7f8b113dcdf8183e38e1ea1a1c8ca618e236b27cfca10c11  stat=256405124 4152 1792763796
+-shm     60d7f9d2178680f37a14e4025ca6fa745405bae0e490fc9ce71c88f682b7c355  stat=256405125 32768 1792763796
+-journal fehlt
+Ordner: x.db x.db-shm x.db-wal 
+nach dem ersten Leser gegen nach zwei weiteren:
+  => identisch
+
+=== (c/lib) dieselbe Datenbank nach dem Ende des Schreibers (kill -9, ohne Schliessen; -wal und -shm bleiben)
+--- c/lib: Schreiber beendet, Kontrolle 1
+haupt    6ed19015ce62154153ddc50075e40c7bc3196b82df18611e7be5ab5ff1da7d7d  stat=256405122 8192 1792763796
+-wal     4ee3f1d71fb225ae7f8b113dcdf8183e38e1ea1a1c8ca618e236b27cfca10c11  stat=256405124 4152 1792763796
+-shm     60d7f9d2178680f37a14e4025ca6fa745405bae0e490fc9ce71c88f682b7c355  stat=256405125 32768 1792763796
+-journal fehlt
+Ordner: x.db x.db-shm x.db-wal 
+--- c/lib: Kontrolle 2, 1 s spaeter
+haupt    6ed19015ce62154153ddc50075e40c7bc3196b82df18611e7be5ab5ff1da7d7d  stat=256405122 8192 1792763796
+-wal     4ee3f1d71fb225ae7f8b113dcdf8183e38e1ea1a1c8ca618e236b27cfca10c11  stat=256405124 4152 1792763796
+-shm     60d7f9d2178680f37a14e4025ca6fa745405bae0e490fc9ce71c88f682b7c355  stat=256405125 32768 1792763796
+-journal fehlt
+Ordner: x.db x.db-shm x.db-wal 
+Kontrolle 1 gegen Kontrolle 2:
+  => identisch
+Leser lib (mode=ro): Ausgabe=[4] exit=0
+--- c/lib: nach dem Leser (er war die einzige und damit letzte Verbindung)
+haupt    6ed19015ce62154153ddc50075e40c7bc3196b82df18611e7be5ab5ff1da7d7d  stat=256405122 8192 1792763796
+-wal     4ee3f1d71fb225ae7f8b113dcdf8183e38e1ea1a1c8ca618e236b27cfca10c11  stat=256405124 4152 1792763796
+-shm     3f556b5606a6605540f07284b5dc18b37a28a8e3bf2ab27c7b22aee1760053f2  stat=256405125 32768 1792763805
+-journal fehlt
+Ordner: x.db x.db-shm x.db-wal 
+Kontrolle 2 gegen nach dem Leser:
+  => verschieden:
+     3c3
+     < -shm     60d7f9d2178680f37a14e4025ca6fa745405bae0e490fc9ce71c88f682b7c355  stat=256405125 32768 1792763796
+     ---
+     > -shm     3f556b5606a6605540f07284b5dc18b37a28a8e3bf2ab27c7b22aee1760053f2  stat=256405125 32768 1792763805
+Leser lib (mode=ro): Ausgabe=[4] exit=0
+--- c/lib: nach einem zweiten Leser
+haupt    6ed19015ce62154153ddc50075e40c7bc3196b82df18611e7be5ab5ff1da7d7d  stat=256405122 8192 1792763796
+-wal     4ee3f1d71fb225ae7f8b113dcdf8183e38e1ea1a1c8ca618e236b27cfca10c11  stat=256405124 4152 1792763796
+-shm     3f556b5606a6605540f07284b5dc18b37a28a8e3bf2ab27c7b22aee1760053f2  stat=256405125 32768 1792763806
+-journal fehlt
+Ordner: x.db x.db-shm x.db-wal 
+nach dem ersten Leser gegen nach dem zweiten:
+  => verschieden:
+     3c3
+     < -shm     3f556b5606a6605540f07284b5dc18b37a28a8e3bf2ab27c7b22aee1760053f2  stat=256405125 32768 1792763805
+     ---
+     > -shm     3f556b5606a6605540f07284b5dc18b37a28a8e3bf2ab27c7b22aee1760053f2  stat=256405125 32768 1792763806
+
+=== (d/lib) WAL-Datenbank ohne -wal und -shm
+Nach dem sauberen Schliessen des Anlegers: x.db x.db-shm x.db-wal (Groesse -wal: 0)
+-wal und -shm werden entfernt (die Datenbank ist zurueckgeschrieben, -wal ist leer).
+Kopfbytes 18/19 (02 02 = WAL): 0202
+--- d/lib: vor den Lesern
+haupt    6ed19015ce62154153ddc50075e40c7bc3196b82df18611e7be5ab5ff1da7d7d  stat=256416002 8192 1792763806
+-wal     fehlt
+-shm     fehlt
+-journal fehlt
+Ordner: x.db 
+Leser lib (mode=ro): Ausgabe=[prepare: 14 unable to open database file] exit=1
+--- d/lib: nach mode=ro
+haupt    6ed19015ce62154153ddc50075e40c7bc3196b82df18611e7be5ab5ff1da7d7d  stat=256416002 8192 1792763806
+-wal     fehlt
+-shm     fehlt
+-journal fehlt
+Ordner: x.db 
+vor gegen nach mode=ro:
+  => identisch
+Leser lib (mode=ro&immutable=1): Ausgabe=[3] exit=0
+--- d/lib: nach immutable=1
+haupt    6ed19015ce62154153ddc50075e40c7bc3196b82df18611e7be5ab5ff1da7d7d  stat=256416002 8192 1792763806
+-wal     fehlt
+-shm     fehlt
+-journal fehlt
+Ordner: x.db 
+vor gegen nach immutable=1:
+  => identisch
+
+=== (e/lib) Rollback-Datenbank mit mode=ro
+Kopfbytes 18/19 (01 01 = Rollback): 0101
+--- e/lib: vor dem Leser
+haupt    ae30a14a5b6df71b50486799c189623462e59bf8290cb9ac885fe4511ecbcca4  stat=256417397 8192 1792763807
+-wal     fehlt
+-shm     fehlt
+-journal fehlt
+Ordner: x.db 
+Leser lib (mode=ro): Ausgabe=[3] exit=0
+--- e/lib: nach dem Leser
+haupt    ae30a14a5b6df71b50486799c189623462e59bf8290cb9ac885fe4511ecbcca4  stat=256417397 8192 1792763807
+-wal     fehlt
+-shm     fehlt
+-journal fehlt
+Ordner: x.db 
+vor gegen nach:
+  => identisch
+
+==================================================================== Urteile je Versuch
+
+(a) /usr/bin/sqlite3 laedt /usr/lib/libsqlite3.dylib nicht (statisch gebaut); der gegen
+    -lsqlite3 gelinkte Leser laedt sie. Beide: 3.43.2, sourceid 2023-10-10 13:08:14
+    1b37c146...aapl, also derselbe Quelltext. Gemessen ist deshalb mit beiden Lesern.
+(b) Laufender WAL-Schreiber, Leser mode=ro (cli und lib): liest 4 Zeilen (die Zeile in -wal
+    ist sichtbar). Hauptdatei unveraendert, -wal unveraendert, -shm VERAENDERT (Pruefsumme
+    neu, Inode und Groesse gleich; die Kontrolle ohne Leser war identisch). Weitere Leser
+    aendern -shm danach nicht mehr. Keine Datei neu.
+(c) Schreiber per kill -9 beendet, -wal und -shm stehen, Leser mode=ro als einzige
+    Verbindung (cli und lib): liest 4 Zeilen. Hauptdatei unveraendert, -wal unveraendert,
+    -shm VERAENDERT (Inhalt und Aenderungszeit; der Leser baut den Index neu auf). Ein
+    zweiter Leser laesst den Inhalt gleich, setzt aber die Aenderungszeit von -shm neu.
+    Keine Datei neu.
+(d) WAL-Datenbank ohne -wal und -shm (cli und lib): mode=ro scheitert mit
+    SQLITE_CANTOPEN (14, "unable to open database file") beim ersten Zugriff,
+    mode=ro&immutable=1 liest 3 Zeilen. Danach Hauptdatei unveraendert, kein -wal, kein
+    -shm, keine Datei neu. Bestaetigt den Bericht, Abschnitt 3.
+(e) Rollback-Datenbank, mode=ro (cli und lib): liest 3 Zeilen; Hauptdatei unveraendert,
+    kein -journal, keine Datei neu.
+(f) Das Schliessen der nur lesenden Verbindung faehrt keinen Checkpoint und entfernt -wal
+    nicht: weder in (b) mit offenem Schreiber noch in (c), wo der Leser die letzte
+    Verbindung war, aendern sich Hauptdatei oder -wal, und -wal bleibt stehen.
+
+Folge fuer die Zusage: "KRK veraendert die Datenbank nicht" haelt fuer Hauptdatei und -wal.
+"KRK veraendert neben der Datenbank kein Byte" haelt NICHT, sobald ein -shm daneben steht:
+die nur lesende Verbindung schreibt in die vorhandene -shm (Lesemarke bzw. Neuaufbau des
+Index). Sie legt keine -shm an, wo keine steht. Nach Plan, Schritt 1, Akzeptanz: Vorbedingung
+fuer die Nutzerfrage vor Schritt 3 (## Open Questions).
+
+Urteil: Hauptdatei unverändert
+Urteil: -wal unverändert
+Urteil: -shm verändert
