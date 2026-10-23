@@ -1,5 +1,5 @@
-//! Die Systemschicht des Kerns: die zehn Schnittstellen, die KRK braucht, und
-//! die vierzehn Funktionen, die sie binden.
+//! Die Systemschicht des Kerns: die elf Schnittstellen, die KRK braucht, und
+//! die einunddreissig Funktionen, die sie binden.
 //!
 //! Dies ist das einzige Modul in `krk-core`, das die Regel `deny(unsafe_code)`
 //! aus `lib.rs` oeffnet. Die Regel lautet dort `deny` und nicht `forbid`, damit
@@ -29,11 +29,16 @@
 //!                                                 heimordner::schluesselmerker
 //! statfs(2)          ──> auf_lokalem_...      ──> operation::fern
 //! access(2)          ──> schreiben_erlaubt    ──> archiv::umbau
+//! libsqlite3         ──> Datenbank, Abfrage,  ──> archiv::sqlite (ab Schritt 3
+//!   17 Funktionen        Wert, Sqlitefehler,      des Plans 261023-1507)
+//!                        sqlite_uri
 //! ```
 //!
-//! **Zehn ist die Zahl der Schnittstellen und nicht die der Bindungen: es sind
-//! zehn Schnittstellen und vierzehn gebundene Funktionen, denn `copyfile(3)`
-//! braucht seine vier `copyfile_state_*`-Helfer.** Ohne sie liesse sich der
+//! **Elf ist die Zahl der Schnittstellen und nicht die der Bindungen: es sind
+//! elf Schnittstellen und einunddreissig gebundene Funktionen, denn
+//! `copyfile(3)` braucht seine vier `copyfile_state_*`-Helfer und
+//! `libsqlite3` ist eine Schnittstelle aus siebzehn Funktionen.** Ohne die
+//! Helfer liesse sich der
 //! Fortschrittsrueckruf nicht setzen und die Zahl der kopierten Bytes nicht
 //! abfragen; eine eigene Schnittstelle sind sie deshalb nicht, aber vier weitere
 //! Aufrufe ueber die Sprachgrenze schon, und die Reichweite der Ausnahme oben
@@ -46,9 +51,26 @@
 //! `secrets.txt` vom 261016 (siehe [`wachzeit`]) und die neunte, `statfs(2)`,
 //! der Befund vom 261017 zum Ueberschreiben auf einem Netzlaufwerk (siehe
 //! [`auf_lokalem_dateisystem`]) und die zehnte, `access(2)`, der Befund vom
-//! 261017 zu einem schreibgeschuetzten Archiv (siehe [`schreiben_erlaubt`]).
-//! Gebunden sind alle vierzehn in den acht `unsafe extern "C"`-Bloecken dieses
-//! Moduls; `fsync` steht im Block von `fcntl`, weil es dessen Rueckfall ist.
+//! 261017 zu einem schreibgeschuetzten Archiv (siehe [`schreiben_erlaubt`]),
+//! und die elfte, `libsqlite3`, das Arbeitspaket vom 261023 zu den
+//! SQLite-Datenbanken im Dateifenster (siehe [`Datenbank`]). Gebunden sind alle
+//! einunddreissig in den neun `unsafe extern "C"`-Bloecken dieses Moduls;
+//! `fsync` steht im Block von `fcntl`, weil es dessen Rueckfall ist.
+//!
+//! **`libsqlite3` ist die erste Schnittstelle, die keine des Kerns oder der
+//! Systembibliothek `libSystem` ist, sondern eine eigene Bibliothek des
+//! Systems**, gebunden mit `#[link(name = "sqlite3")]` am Block, wie NetFS in
+//! `krk-ui/src/appkit/verbinden.rs`. Das Modul bleibt dabei das einzige des
+//! Kerns mit `allow(unsafe_code)`: eine eigene Datei fuer die Bindung waere
+//! die dritte Ausnahme gewesen
+//! (`work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261023-1340-wie-bindet-krk-sqlite-an-ohne-die-c-freiheits-zusage-zu-brechen.md`,
+//! Moeglichkeit 1). Die Zusage zur C-Freiheit haelt dabei in ihrem Wortlaut:
+//! kein Paket mit einem Namen auf `-sys` und kein `cc` kommt dafuer in den
+//! Baum, und gebaut wird kein C-Code. **Fremder C-Code laeuft trotzdem im
+//! Prozess**, naemlich SQLite selbst, in der Fassung, die macOS mitbringt;
+//! das ist der Preis der Wahl und keine Luecke der Zusage. Nach aussen gibt
+//! der Abschnitt allein sichere Typen, und eine Verbindung oeffnet allein nur
+//! lesend.
 //!
 //! **`flock(2)` ist die fuenfte, und sie ist die erste, die keine Datei liest
 //! oder schreibt, sondern eine Absprache zwischen zwei Prozessen traegt.** An
@@ -166,13 +188,16 @@
 #![allow(unsafe_code)]
 
 use std::borrow::Cow;
-use std::ffi::{CString, c_char, c_int, c_long, c_uint, c_void};
+use std::ffi::{CStr, CString, c_char, c_int, c_long, c_uint, c_void};
+use std::fmt::Write as _;
 use std::fs::{File, OpenOptions};
 use std::io;
+use std::marker::PhantomData;
 use std::os::fd::AsRawFd;
 use std::os::unix::ffi::OsStrExt;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crate::sprache::{Text, satz};
@@ -1552,6 +1577,602 @@ pub fn schreiben_erlaubt(pfad: &Path) -> io::Result<bool> {
         Err(fehler) if matches!(fehler.raw_os_error(), Some(EPERM | EACCES | EROFS)) => Ok(false),
         Err(fehler) => Err(fehler),
     }
+}
+
+// ---------------------------------------------------------------------------
+// libsqlite3: eine Datenbank nur lesend durchsehen
+// ---------------------------------------------------------------------------
+
+/// `SQLITE_OK` aus `sqlite3.h`.
+const SQLITE_OK: c_int = 0;
+
+/// `SQLITE_BUSY`: ein anderer Prozess haelt die Sperre, auch nach der
+/// Wartezeit aus [`Datenbank::wartezeit_setzen`].
+pub const SQLITE_BUSY: i32 = 5;
+
+/// `SQLITE_NOMEM`: der Bibliothek ging der Speicher aus.
+pub const SQLITE_NOMEM: i32 = 7;
+
+/// `SQLITE_READONLY`: ein Schreibversuch ueber eine nur lesende Verbindung.
+pub const SQLITE_READONLY: i32 = 8;
+
+/// `SQLITE_INTERRUPT`: der Fortschrittsrueckruf hat die Anweisung abgebrochen,
+/// weil die Abbruchmarke gesetzt war.
+pub const SQLITE_INTERRUPT: i32 = 9;
+
+/// `SQLITE_CANTOPEN`: die Datei laesst sich nicht oeffnen. Gemessen auch fuer
+/// eine WAL-Datenbank ohne `-wal` daneben, geoeffnet mit `mode=ro`
+/// (`messungen/261023-1556-sqlite-nur-lesend-shm.txt`, Versuch d).
+pub const SQLITE_CANTOPEN: i32 = 14;
+
+/// `SQLITE_MISUSE`: die Schnittstelle wurde falsch benutzt. Hier allein fuer
+/// einen SQL-Text ohne Anweisung.
+pub const SQLITE_MISUSE: i32 = 21;
+
+/// `SQLITE_NOTADB`: die Datei ist keine Datenbank.
+pub const SQLITE_NOTADB: i32 = 26;
+
+/// `SQLITE_ROW` und `SQLITE_DONE`: die zwei Antworten von `sqlite3_step`, die
+/// kein Fehler sind.
+const SQLITE_ROW: c_int = 100;
+const SQLITE_DONE: c_int = 101;
+
+/// Die Kennzeichen von `sqlite3_open_v2`. **Es gibt keinen Weg, eine
+/// Datenbank anders als nur lesend zu oeffnen**: die Kennzeichen stehen fest,
+/// und [`Datenbank::oeffnen`] nimmt keine.
+const SQLITE_OPEN_READONLY: c_int = 0x0000_0001;
+const SQLITE_OPEN_URI: c_int = 0x0000_0040;
+
+/// Die Spaltentypen aus `sqlite3_column_type`.
+const SQLITE_INTEGER: c_int = 1;
+const SQLITE_FLOAT: c_int = 2;
+const SQLITE_TEXT: c_int = 3;
+const SQLITE_BLOB: c_int = 4;
+
+/// Nach wie vielen Befehlen der virtuellen Maschine die Bibliothek den
+/// Fortschrittsrueckruf fragt. Eine Zeile einer gewoehnlichen Tabelle kostet
+/// eine Handvoll Befehle; tausend sind deshalb ein Bruchteil einer
+/// Millisekunde und fallen beim Lesen nicht ins Gewicht.
+const FORTSCHRITT_JE_BEFEHLE: c_int = 1000;
+
+/// Der undurchsichtige Griff `sqlite3` einer Verbindung.
+#[repr(C)]
+struct Sqlite3 {
+    _privat: [u8; 0],
+}
+
+/// Der undurchsichtige Griff `sqlite3_stmt` einer vorbereiteten Anweisung.
+#[repr(C)]
+struct Sqlite3Stmt {
+    _privat: [u8; 0],
+}
+
+/// Der Typ des Fortschrittsrueckrufs aus `sqlite3_progress_handler`.
+type Fortschrittsrueckruf = extern "C" fn(kontext: *mut c_void) -> c_int;
+
+// Jede Funktion dieses Blocks steht in der SQLite-Fassung, die macOS 15
+// mitbringt (3.43.2 auf dem Referenzgeraet, gemessen am 261023 in
+// `messungen/261023-1556-sqlite-nur-lesend-shm.txt`), und schon lange davor:
+// die juengste ist `sqlite3_system_errno` aus SQLite 3.12.0 (2016), danach
+// `sqlite3_close_v2` aus 3.7.14 (2012); die uebrigen stehen seit 3.6 oder
+// frueher.
+#[link(name = "sqlite3")]
+unsafe extern "C" {
+    /// `int sqlite3_open_v2(const char *, sqlite3 **, int, const char *)`
+    fn sqlite3_open_v2(
+        dateiname: *const c_char,
+        griff: *mut *mut Sqlite3,
+        kennzeichen: c_int,
+        vfs: *const c_char,
+    ) -> c_int;
+
+    /// `int sqlite3_close_v2(sqlite3 *)`
+    fn sqlite3_close_v2(griff: *mut Sqlite3) -> c_int;
+
+    /// `int sqlite3_prepare_v2(sqlite3 *, const char *, int, sqlite3_stmt **, const char **)`
+    fn sqlite3_prepare_v2(
+        griff: *mut Sqlite3,
+        sql: *const c_char,
+        laenge: c_int,
+        anweisung: *mut *mut Sqlite3Stmt,
+        rest: *mut *const c_char,
+    ) -> c_int;
+
+    /// `int sqlite3_step(sqlite3_stmt *)`
+    fn sqlite3_step(anweisung: *mut Sqlite3Stmt) -> c_int;
+
+    /// `int sqlite3_finalize(sqlite3_stmt *)`
+    fn sqlite3_finalize(anweisung: *mut Sqlite3Stmt) -> c_int;
+
+    /// `int sqlite3_bind_text(sqlite3_stmt *, int, const char *, int, void (*)(void *))`
+    ///
+    /// Der letzte Parameter ist hier ein Zeiger und keine Funktion, weil allein
+    /// der Sonderwert `SQLITE_TRANSIENT`, also `-1`, hineingeht.
+    fn sqlite3_bind_text(
+        anweisung: *mut Sqlite3Stmt,
+        stelle: c_int,
+        text: *const c_char,
+        laenge: c_int,
+        freigabe: *mut c_void,
+    ) -> c_int;
+
+    /// `int sqlite3_column_count(sqlite3_stmt *)`
+    fn sqlite3_column_count(anweisung: *mut Sqlite3Stmt) -> c_int;
+
+    /// `const char *sqlite3_column_name(sqlite3_stmt *, int)`
+    fn sqlite3_column_name(anweisung: *mut Sqlite3Stmt, spalte: c_int) -> *const c_char;
+
+    /// `int sqlite3_column_type(sqlite3_stmt *, int)`
+    fn sqlite3_column_type(anweisung: *mut Sqlite3Stmt, spalte: c_int) -> c_int;
+
+    /// `const unsigned char *sqlite3_column_text(sqlite3_stmt *, int)`
+    fn sqlite3_column_text(anweisung: *mut Sqlite3Stmt, spalte: c_int) -> *const u8;
+
+    /// `const void *sqlite3_column_blob(sqlite3_stmt *, int)`
+    fn sqlite3_column_blob(anweisung: *mut Sqlite3Stmt, spalte: c_int) -> *const c_void;
+
+    /// `int sqlite3_column_bytes(sqlite3_stmt *, int)`
+    fn sqlite3_column_bytes(anweisung: *mut Sqlite3Stmt, spalte: c_int) -> c_int;
+
+    /// `const char *sqlite3_errmsg(sqlite3 *)`
+    fn sqlite3_errmsg(griff: *mut Sqlite3) -> *const c_char;
+
+    /// `int sqlite3_extended_errcode(sqlite3 *)`
+    fn sqlite3_extended_errcode(griff: *mut Sqlite3) -> c_int;
+
+    /// `int sqlite3_system_errno(sqlite3 *)`
+    fn sqlite3_system_errno(griff: *mut Sqlite3) -> c_int;
+
+    /// `int sqlite3_busy_timeout(sqlite3 *, int)`
+    fn sqlite3_busy_timeout(griff: *mut Sqlite3, millisekunden: c_int) -> c_int;
+
+    /// `void sqlite3_progress_handler(sqlite3 *, int, int (*)(void *), void *)`
+    fn sqlite3_progress_handler(
+        griff: *mut Sqlite3,
+        befehle: c_int,
+        rueckruf: Option<Fortschrittsrueckruf>,
+        kontext: *mut c_void,
+    );
+}
+
+/// Ein Fehler der Bibliothek, wie sie ihn an der Verbindung meldet.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Sqlitefehler {
+    /// Der erweiterte Code (`sqlite3_extended_errcode`); den Grundcode liefert
+    /// [`Sqlitefehler::grundcode`].
+    pub code: i32,
+    /// Der Wortlaut der Bibliothek (`sqlite3_errmsg`), englisch.
+    pub wortlaut: String,
+    /// Der Fehler des Betriebssystems hinter dem Fehler, wenn es einen gab
+    /// (`sqlite3_system_errno`).
+    pub systemfehler: Option<i32>,
+}
+
+impl Sqlitefehler {
+    /// Der Grundcode, also die unteren acht Bit des erweiterten Codes; mit ihm
+    /// vergleicht man gegen [`SQLITE_READONLY`], [`SQLITE_NOTADB`] und die
+    /// uebrigen Konstanten dieses Moduls.
+    #[must_use]
+    pub fn grundcode(&self) -> i32 {
+        self.code & 0xff
+    }
+}
+
+impl std::fmt::Display for Sqlitefehler {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} (SQLite {})", self.wortlaut, self.code)
+    }
+}
+
+impl std::error::Error for Sqlitefehler {}
+
+/// Ein Wert einer Spalte, so wie die Bibliothek ihn liefert.
+///
+/// Ganzzahl und Kommazahl tragen die Textform, die `sqlite3_column_text` fuer
+/// sie liefert, und keine Zahl: was der Leser zeigt, ist dann der Wortlaut der
+/// Bibliothek und keine zweite Formatierung daneben.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Wert {
+    /// `NULL`.
+    Null,
+    /// Eine Ganzzahl in der Textform der Bibliothek.
+    Ganzzahl(String),
+    /// Eine Kommazahl in der Textform der Bibliothek.
+    Kommazahl(String),
+    /// Ein Text; Bytes, die kein UTF-8 sind, stehen als U+FFFD.
+    Text(String),
+    /// Ein BLOB, Byte fuer Byte.
+    Blob(Vec<u8>),
+}
+
+/// Der Fortschrittsrueckruf: bricht die laufende Anweisung ab, sobald die
+/// Abbruchmarke gesetzt ist.
+///
+/// Er darf nicht in Panik geraten, aus demselben Grund wie
+/// [`statusrueckruf`]; er liest allein eine atomare Marke.
+extern "C" fn fortschrittsrueckruf(kontext: *mut c_void) -> c_int {
+    if kontext.is_null() {
+        return 0;
+    }
+    // SICHERHEIT: `kontext` ist der Zeiger, den `Datenbank::oeffnen` aus einem
+    // `&'a AtomicBool` gebildet hat, und die Verbindung lebt nicht laenger als
+    // `'a`. Gelesen wird ueber einen geteilten Verweis; `AtomicBool` erlaubt
+    // das von jedem Faden.
+    let marke = unsafe { &*kontext.cast_const().cast::<AtomicBool>() };
+    c_int::from(marke.load(Ordering::Relaxed))
+}
+
+/// Eine Verbindung zu einer Datenbank, **allein nur lesend**.
+///
+/// Geoeffnet wird mit `SQLITE_OPEN_READONLY | SQLITE_OPEN_URI` ueber eine URI
+/// aus [`sqlite_uri`]; einen anderen Weg gibt es nicht. Die Verbindung traegt
+/// einen Verweis auf die Abbruchmarke des Rufers, die der Fortschrittsrueckruf
+/// alle [`FORTSCHRITT_JE_BEFEHLE`] Befehle fragt, und schliesst in `Drop`.
+///
+/// Sie ist weder `Send` noch `Sync` (der rohe Griff haelt das fest): eine
+/// Verbindung bleibt auf dem Faden, der sie geoeffnet hat, und
+/// `sqlite3_interrupt` von einem zweiten Faden wird nicht gebraucht.
+pub struct Datenbank<'a> {
+    griff: *mut Sqlite3,
+    _abbruch: PhantomData<&'a AtomicBool>,
+}
+
+impl<'a> Datenbank<'a> {
+    /// Oeffnet die Datenbank hinter `uri` nur lesend und setzt den
+    /// Fortschrittsrueckruf auf `abbruch`.
+    ///
+    /// Eine Datei, die keine Datenbank ist, oeffnet ohne Fehler; das meldet
+    /// erst die erste Anweisung mit [`SQLITE_NOTADB`].
+    ///
+    /// # Errors
+    ///
+    /// Jeder Fehler von `sqlite3_open_v2`, etwa [`SQLITE_CANTOPEN`].
+    pub fn oeffnen(uri: &CStr, abbruch: &'a AtomicBool) -> Result<Self, Sqlitefehler> {
+        let mut griff: *mut Sqlite3 = std::ptr::null_mut();
+        // SICHERHEIT: `uri` ist nullterminiert und lebt bis nach dem Aufruf;
+        // `griff` ist ein gueltiger Ort fuer den Zeiger, den die Bibliothek
+        // schreibt; ein Nullzeiger fuer `vfs` waehlt das voreingestellte.
+        let rueck = unsafe {
+            sqlite3_open_v2(
+                uri.as_ptr(),
+                &raw mut griff,
+                SQLITE_OPEN_READONLY | SQLITE_OPEN_URI,
+                std::ptr::null(),
+            )
+        };
+        if griff.is_null() {
+            return Err(Sqlitefehler {
+                code: SQLITE_NOMEM,
+                wortlaut: "out of memory".to_owned(),
+                systemfehler: None,
+            });
+        }
+        // Ab hier schliesst `Drop` den Griff auf jedem Weg, auch nach einem
+        // gescheiterten Oeffnen, wie `sqlite3.h` es verlangt.
+        let datenbank = Datenbank {
+            griff,
+            _abbruch: PhantomData,
+        };
+        if rueck != SQLITE_OK {
+            return Err(datenbank.fehler());
+        }
+        let rueckruf: Fortschrittsrueckruf = fortschrittsrueckruf;
+        // SICHERHEIT: `griff` ist eine offene Verbindung. Der Kontext ist ein
+        // Verweis auf `abbruch`, der laenger lebt als die Verbindung (`'a`);
+        // der Rueckruf liest ihn allein.
+        unsafe {
+            sqlite3_progress_handler(
+                datenbank.griff,
+                FORTSCHRITT_JE_BEFEHLE,
+                Some(rueckruf),
+                std::ptr::from_ref(abbruch).cast_mut().cast::<c_void>(),
+            );
+        }
+        Ok(datenbank)
+    }
+
+    /// Wie lange eine Anweisung auf die Sperre eines Schreibers wartet, bevor
+    /// sie mit [`SQLITE_BUSY`] aufgibt (`sqlite3_busy_timeout`).
+    ///
+    /// # Errors
+    ///
+    /// Jeder Fehler von `sqlite3_busy_timeout`.
+    pub fn wartezeit_setzen(&self, wartezeit: Duration) -> Result<(), Sqlitefehler> {
+        let millisekunden = c_int::try_from(wartezeit.as_millis()).unwrap_or(c_int::MAX);
+        // SICHERHEIT: `griff` ist eine offene Verbindung.
+        let rueck = unsafe { sqlite3_busy_timeout(self.griff, millisekunden) };
+        if rueck == SQLITE_OK {
+            Ok(())
+        } else {
+            Err(self.fehler())
+        }
+    }
+
+    /// Bereitet die erste Anweisung in `sql` vor; was danach steht, bleibt
+    /// unbeachtet.
+    ///
+    /// # Errors
+    ///
+    /// Jeder Fehler von `sqlite3_prepare_v2`, darunter [`SQLITE_NOTADB`], wenn
+    /// die Datei keine Datenbank ist, und [`SQLITE_MISUSE`] fuer einen Text
+    /// ohne Anweisung.
+    pub fn vorbereiten(&self, sql: &str) -> Result<Abfrage<'_, 'a>, Sqlitefehler> {
+        let laenge = c_int::try_from(sql.len()).map_err(|_| Sqlitefehler {
+            code: SQLITE_MISUSE,
+            wortlaut: "statement too long".to_owned(),
+            systemfehler: None,
+        })?;
+        let mut anweisung: *mut Sqlite3Stmt = std::ptr::null_mut();
+        // SICHERHEIT: `griff` ist offen; `sql` gilt fuer `laenge` Bytes und
+        // muss deshalb nicht nullterminiert sein; `anweisung` ist ein
+        // gueltiger Ort fuer den Zeiger, und den Rest lassen wir unbeachtet.
+        let rueck = unsafe {
+            sqlite3_prepare_v2(
+                self.griff,
+                sql.as_ptr().cast::<c_char>(),
+                laenge,
+                &raw mut anweisung,
+                std::ptr::null_mut(),
+            )
+        };
+        if rueck != SQLITE_OK {
+            return Err(self.fehler());
+        }
+        if anweisung.is_null() {
+            return Err(Sqlitefehler {
+                code: SQLITE_MISUSE,
+                wortlaut: "no statement".to_owned(),
+                systemfehler: None,
+            });
+        }
+        Ok(Abfrage {
+            anweisung,
+            datenbank: self,
+        })
+    }
+
+    /// Der letzte Fehler dieser Verbindung.
+    fn fehler(&self) -> Sqlitefehler {
+        // SICHERHEIT: `griff` ist eine Verbindung, offen oder nach einem
+        // gescheiterten Oeffnen noch nicht geschlossen; alle drei Fragen lesen
+        // allein ihren Zustand. Der Wortlaut gehoert der Bibliothek und wird
+        // sofort kopiert.
+        unsafe {
+            let wortlaut = sqlite3_errmsg(self.griff);
+            let wortlaut = if wortlaut.is_null() {
+                String::new()
+            } else {
+                CStr::from_ptr(wortlaut).to_string_lossy().into_owned()
+            };
+            let systemfehler = sqlite3_system_errno(self.griff);
+            Sqlitefehler {
+                code: sqlite3_extended_errcode(self.griff),
+                wortlaut,
+                systemfehler: (systemfehler != 0).then_some(systemfehler),
+            }
+        }
+    }
+}
+
+impl Drop for Datenbank<'_> {
+    fn drop(&mut self) {
+        // SICHERHEIT: `griff` stammt aus `sqlite3_open_v2` und wird hier genau
+        // einmal geschlossen. Jede `Abfrage` leiht sich die Verbindung und ist
+        // deshalb schon finalisiert. Die Antwort bleibt unbeachtet: eine nur
+        // lesende Verbindung ohne offene Anweisung hat beim Schliessen nichts
+        // zu verlieren.
+        unsafe {
+            sqlite3_close_v2(self.griff);
+        }
+    }
+}
+
+/// Eine vorbereitete Anweisung, die Zeile fuer Zeile liefert und in `Drop`
+/// finalisiert.
+pub struct Abfrage<'d, 'a> {
+    anweisung: *mut Sqlite3Stmt,
+    datenbank: &'d Datenbank<'a>,
+}
+
+impl Abfrage<'_, '_> {
+    /// Bindet `text` an den Parameter an der Stelle `stelle` (ab 1); die
+    /// Bibliothek kopiert den Text (`SQLITE_TRANSIENT`).
+    ///
+    /// # Errors
+    ///
+    /// Jeder Fehler von `sqlite3_bind_text`, etwa eine Stelle, die die
+    /// Anweisung nicht hat.
+    pub fn text_binden(&mut self, stelle: i32, text: &str) -> Result<(), Sqlitefehler> {
+        let laenge = c_int::try_from(text.len()).map_err(|_| Sqlitefehler {
+            code: SQLITE_MISUSE,
+            wortlaut: "text too long".to_owned(),
+            systemfehler: None,
+        })?;
+        // SICHERHEIT: `anweisung` ist vorbereitet; `text` gilt fuer `laenge`
+        // Bytes, und `SQLITE_TRANSIENT` laesst die Bibliothek sie vor der
+        // Rueckkehr kopieren, sodass der Verweis danach nicht mehr gebraucht
+        // wird.
+        let rueck = unsafe {
+            sqlite3_bind_text(
+                self.anweisung,
+                stelle,
+                text.as_ptr().cast::<c_char>(),
+                laenge,
+                std::ptr::without_provenance_mut::<c_void>(usize::MAX),
+            )
+        };
+        if rueck == SQLITE_OK {
+            Ok(())
+        } else {
+            Err(self.datenbank.fehler())
+        }
+    }
+
+    /// Die Namen der Spalten, in ihrer Reihenfolge.
+    ///
+    /// # Errors
+    ///
+    /// [`SQLITE_NOMEM`], wenn die Bibliothek einen Namen nicht liefern kann.
+    pub fn spaltennamen(&self) -> Result<Vec<String>, Sqlitefehler> {
+        // SICHERHEIT: `anweisung` ist vorbereitet.
+        let zahl = unsafe { sqlite3_column_count(self.anweisung) };
+        (0..zahl)
+            .map(|spalte| {
+                // SICHERHEIT: `spalte` liegt unter `sqlite3_column_count`; der
+                // Name gehoert der Bibliothek und wird sofort kopiert.
+                let name = unsafe { sqlite3_column_name(self.anweisung, spalte) };
+                if name.is_null() {
+                    return Err(Sqlitefehler {
+                        code: SQLITE_NOMEM,
+                        wortlaut: "out of memory".to_owned(),
+                        systemfehler: None,
+                    });
+                }
+                // SICHERHEIT: nicht null und nullterminiert nach `sqlite3.h`.
+                Ok(unsafe { CStr::from_ptr(name) }
+                    .to_string_lossy()
+                    .into_owned())
+            })
+            .collect()
+    }
+
+    /// Die naechste Zeile, oder `None`, wenn die Anweisung fertig ist.
+    ///
+    /// # Errors
+    ///
+    /// Jeder Fehler von `sqlite3_step`, darunter [`SQLITE_INTERRUPT`] nach
+    /// einer gesetzten Abbruchmarke, [`SQLITE_READONLY`] fuer einen
+    /// Schreibversuch und [`SQLITE_BUSY`] nach der Wartezeit.
+    pub fn naechste_zeile(&mut self) -> Result<Option<Vec<Wert>>, Sqlitefehler> {
+        // SICHERHEIT: `anweisung` ist vorbereitet und gehoert dieser Abfrage.
+        match unsafe { sqlite3_step(self.anweisung) } {
+            SQLITE_ROW => {}
+            SQLITE_DONE => return Ok(None),
+            _ => return Err(self.datenbank.fehler()),
+        }
+        // SICHERHEIT: wie oben.
+        let zahl = unsafe { sqlite3_column_count(self.anweisung) };
+        (0..zahl)
+            .map(|spalte| self.wert(spalte))
+            .collect::<Result<Vec<_>, _>>()
+            .map(Some)
+    }
+
+    /// Der Wert einer Spalte der laufenden Zeile.
+    fn wert(&self, spalte: c_int) -> Result<Wert, Sqlitefehler> {
+        // SICHERHEIT: die Anweisung steht auf einer Zeile (`SQLITE_ROW`), und
+        // `spalte` liegt unter `sqlite3_column_count`.
+        let art = unsafe { sqlite3_column_type(self.anweisung, spalte) };
+        let wert = match art {
+            SQLITE_INTEGER => Wert::Ganzzahl(self.textbytes(spalte)?),
+            SQLITE_FLOAT => Wert::Kommazahl(self.textbytes(spalte)?),
+            SQLITE_TEXT => Wert::Text(self.textbytes(spalte)?),
+            SQLITE_BLOB => Wert::Blob(self.blobbytes(spalte)?),
+            // `SQLITE_NULL`, und jeder Wert, den eine kuenftige Fassung der
+            // Bibliothek hinzufuegte: `sqlite3.h` kennt fuenf Typen.
+            _ => Wert::Null,
+        };
+        Ok(wert)
+    }
+
+    /// Der Text einer Spalte, Bytes ausser UTF-8 als U+FFFD.
+    fn textbytes(&self, spalte: c_int) -> Result<String, Sqlitefehler> {
+        // SICHERHEIT: erst der Zeiger, dann die Laenge, in der Reihenfolge, die
+        // `sqlite3.h` vorschreibt; beide gelten bis zum naechsten Schritt, und
+        // die Bytes werden vorher kopiert.
+        let (zeiger, laenge) = unsafe {
+            let zeiger = sqlite3_column_text(self.anweisung, spalte);
+            (zeiger, sqlite3_column_bytes(self.anweisung, spalte))
+        };
+        let bytes = self.bytes_lesen(zeiger, laenge)?;
+        Ok(String::from_utf8_lossy(bytes).into_owned())
+    }
+
+    /// Die Bytes eines BLOB.
+    fn blobbytes(&self, spalte: c_int) -> Result<Vec<u8>, Sqlitefehler> {
+        // SICHERHEIT: wie bei `textbytes`.
+        let (zeiger, laenge) = unsafe {
+            let zeiger = sqlite3_column_blob(self.anweisung, spalte);
+            (
+                zeiger.cast::<u8>(),
+                sqlite3_column_bytes(self.anweisung, spalte),
+            )
+        };
+        Ok(self.bytes_lesen(zeiger, laenge)?.to_vec())
+    }
+
+    /// Macht aus Zeiger und Laenge einer Spalte einen Ausschnitt.
+    ///
+    /// Ein Nullzeiger heisst bei einem leeren Wert „leer“ und sonst, dass der
+    /// Bibliothek der Speicher ausging; `sqlite3.h` unterscheidet die beiden
+    /// allein ueber den Fehlercode.
+    fn bytes_lesen(&self, zeiger: *const u8, laenge: c_int) -> Result<&[u8], Sqlitefehler> {
+        if zeiger.is_null() {
+            let fehler = self.datenbank.fehler();
+            if fehler.grundcode() == SQLITE_NOMEM {
+                return Err(fehler);
+            }
+            return Ok(&[]);
+        }
+        let laenge = usize::try_from(laenge).unwrap_or(0);
+        // SICHERHEIT: `zeiger` ist nicht null und zeigt nach `sqlite3.h` auf
+        // `laenge` Bytes, die bis zum naechsten Schritt dieser Anweisung
+        // gelten; der Ausschnitt leiht sich `self` und lebt nicht laenger als
+        // der Aufruf, der ihn kopiert.
+        Ok(unsafe { std::slice::from_raw_parts(zeiger, laenge) })
+    }
+}
+
+impl Drop for Abfrage<'_, '_> {
+    fn drop(&mut self) {
+        // SICHERHEIT: `anweisung` stammt aus `sqlite3_prepare_v2`, ist nicht
+        // null und wird hier genau einmal finalisiert. Die Antwort wiederholt
+        // allein den letzten Fehler eines Schritts, und den hat der Rufer schon
+        // bekommen.
+        unsafe {
+            sqlite3_finalize(self.anweisung);
+        }
+    }
+}
+
+/// Die URI, ueber die [`Datenbank::oeffnen`] eine Datei nur lesend oeffnet:
+/// `file:` und der Pfad, **Byte fuer Byte** in Prozentform, dann `?mode=ro`
+/// und, wenn `unveraenderlich`, `&immutable=1`.
+///
+/// Unveraendert bleiben allein die Buchstaben und Ziffern aus ASCII, `-`, `.`,
+/// `_`, `~` und `/`; jedes andere Byte, auch eines, das kein UTF-8 ist, wird
+/// `%XX`. Damit kann kein `?` und kein `#` im Pfad den Abfrageteil beginnen
+/// und kein `%` als Fluchtzeichen gelesen werden. Ein absoluter Pfad bekommt
+/// `file://` mit leerer Autoritaet davor, damit ein Pfad, der mit `//`
+/// beginnt, nicht als Rechnername gelesen wird.
+///
+/// `immutable=1` heisst fuer die Bibliothek: die Datei aendert sich nicht,
+/// also keine Sperre und kein Blick auf `-wal`. Wann das zulaessig ist,
+/// entscheidet die Oeffnungsregel des Rufers und nicht diese Funktion.
+#[must_use]
+pub fn sqlite_uri(pfad: &Path, unveraenderlich: bool) -> CString {
+    let bytes = pfad.as_os_str().as_bytes();
+    let mut uri = String::with_capacity(bytes.len() + 32);
+    uri.push_str(if bytes.first() == Some(&b'/') {
+        "file://"
+    } else {
+        "file:"
+    });
+    for &byte in bytes {
+        if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.' | b'_' | b'~' | b'/') {
+            uri.push(char::from(byte));
+        } else {
+            // Das Schreiben in einen `String` scheitert nicht.
+            let _ = write!(uri, "%{byte:02X}");
+        }
+    }
+    uri.push_str("?mode=ro");
+    if unveraenderlich {
+        uri.push_str("&immutable=1");
+    }
+    // Jedes Zeichen ist ASCII und keines ist null: ein Nullbyte im Pfad steht
+    // als `%00` da, das die Bibliothek beim Oeffnen abweist.
+    CString::new(uri).unwrap_or_default()
 }
 
 /// Macht aus einem Pfad eine nullterminierte Zeichenkette fuer die C-Aufrufe.

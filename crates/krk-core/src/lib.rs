@@ -72,17 +72,20 @@
 //! Die Regel oben lautet `deny` und nicht `forbid`, und der Unterschied ist
 //! Absicht: das Modul `verzeichnis::sys` bindet die Systemaufrufe
 //! `getattrlistbulk`, `copyfile`, `renamex_np`, `fcntl`, `flock`,
-//! `localtime_r`, `fsync`, `clock_gettime_nsec_np`, `statfs` und `access` und
-//! traegt dafuer `#[allow(unsafe_code)]`. Das sind zehn
-//! Schnittstellen und vierzehn gebundene Funktionen, denn `copyfile(3)` braucht
-//! seine vier `copyfile_state_*`-Helfer. `forbid` liesse sich an dieser Stelle
+//! `localtime_r`, `fsync`, `clock_gettime_nsec_np`, `statfs` und `access`,
+//! dazu die Bibliothek `libsqlite3` des Systems, und traegt dafuer
+//! `#[allow(unsafe_code)]`. Das sind elf Schnittstellen und einunddreissig
+//! gebundene Funktionen, denn `copyfile(3)` braucht seine vier
+//! `copyfile_state_*`-Helfer und `libsqlite3` ist eine Schnittstelle aus
+//! siebzehn Funktionen. `forbid` liesse sich an dieser Stelle
 //! nicht oeffnen, das ist gerade sein Zweck. Es ist das einzige Modul mit
 //! dieser Ausnahme, und es ist das geblieben, als Schritt 15 `copyfile` und
 //! `renamex_np`, der Defekt `260809-1652` `fcntl`, die Runde 7 `flock`, die
 //! Runde 18 `localtime_r`, der Defekt vom 261004 `fsync`, der gemerkte
 //! Schluessel von `secrets.txt` am 261016 `clock_gettime_nsec_np` und der
-//! Befund zum Ueberschreiben auf einem Netzlaufwerk am 261017 `statfs` und der
-//! Befund zu einem schreibgeschuetzten Archiv am 261017 `access` hinzugebracht
+//! Befund zum Ueberschreiben auf einem Netzlaufwerk am 261017 `statfs`, der
+//! Befund zu einem schreibgeschuetzten Archiv am 261017 `access` und die
+//! SQLite-Datenbanken im Dateifenster am 261023 `libsqlite3` hinzugebracht
 //! haben.
 
 pub mod ablage;

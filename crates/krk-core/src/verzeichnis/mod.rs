@@ -35,9 +35,12 @@
 //! fuer die Wachzeit, an der die zehn Minuten eines gemerkten Schluessels
 //! gemessen werden, und seit dem 261017 `statfs(2)` fuer die Frage, ob ein
 //! Pfad auf einem Netzlaufwerk liegt, und `access(2)` fuer die Frage, ob ein
-//! Archiv schreibgeschuetzt ist. Das sind zehn Schnittstellen
-//! und vierzehn gebundene Funktionen, denn `copyfile(3)` braucht seine vier
-//! `copyfile_state_*`-Helfer. [`leser`] macht aus der ersten der zehn
+//! Archiv schreibgeschuetzt ist, und seit dem 261023 die Bibliothek
+//! `libsqlite3` des Systems, die eine Datenbank nur lesend durchsieht. Das sind
+//! elf Schnittstellen und einunddreissig gebundene Funktionen, denn
+//! `copyfile(3)` braucht seine vier `copyfile_state_*`-Helfer und
+//! `libsqlite3` ist eine Schnittstelle aus siebzehn Funktionen. [`leser`]
+//! macht aus der ersten der elf
 //! Schnittstellen den gestueckelten Lesevorgang auf einem Arbeitsfaden. [`eintrag`] beschreibt, was ein Eintrag traegt, und
 //! laesst sich von [`kollation`] die beiden Sortierschluessel bauen.
 //! [`modell`] haelt Eintraege und Sichtreihenfolge getrennt, und [`sortierung`]
