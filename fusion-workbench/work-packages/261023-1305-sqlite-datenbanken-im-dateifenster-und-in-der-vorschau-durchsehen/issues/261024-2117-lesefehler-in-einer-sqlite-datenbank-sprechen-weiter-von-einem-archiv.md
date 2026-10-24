@@ -23,3 +23,5 @@ Diese Gründe folgen dem Format des Lesers, wie `Archivformat::nur_lesbar_text` 
 ## Abnahme
 
 Eine Probe kopiert eine Tabelle aus einer Datenbank, deren Kennung zwischen Verzeichnis und Lesen wechselt, und findet in der Abschlussliste keinen Satz mit „Archiv“.
+
+**Resolved:** 261024, code-implementer. `Lesefehler::Fehlt` und `Lesefehler::VonAussenVeraendert` tragen das Format des Lesers, und `grund` fragt `Archivformat::eintrag_fehlt_text` und `Archivformat::beim_lesen_veraendert_text` (neu `Text::DatenbankEintragFehlt`, `Text::DatenbankBeimLesenVeraendert`); die zwei festen `Text::ArchivEintragFehlt` in `operation/archiv.rs` und `operation/fern.rs` fragen ebenso das Format. Proben: `eine_waehrend_des_kopierens_geaenderte_datenbank_nennt_im_bericht_kein_archiv` (`tests/archiv_operation.rs`) und die erweiterte Formattafel in `tests/archiv_sqlite.rs`.

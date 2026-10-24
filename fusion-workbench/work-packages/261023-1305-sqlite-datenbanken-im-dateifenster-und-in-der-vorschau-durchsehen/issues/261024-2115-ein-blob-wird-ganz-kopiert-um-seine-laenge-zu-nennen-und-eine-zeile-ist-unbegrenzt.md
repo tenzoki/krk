@@ -25,3 +25,5 @@ Für den Platzhalter `[BLOB, n Bytes]` braucht die TSV allein die Länge. `Abfra
 ## Abnahme
 
 Eine Probe liest eine Tabelle mit einem BLOB von einigen hundert MB über `tabelle_lesen` in der Vorschau-Grenze und hält den Speicherhöchststand im Kind fest (`/usr/bin/time -l`), wie `ein_langer_name_ueber_der_grenze_macht_das_tar_ungueltig_ohne_ihn_zu_lesen` in `crates/krk-core/tests/archiv.rs`.
+
+**Resolved:** 261024, code-implementer. Allein der BLOB-Teil: `Wert::Blob` trägt die Länge (`u64`), `Abfrage::bloblaenge` fragt allein `sqlite3_column_bytes`, und `sqlite3_column_blob` ist aus der Bindung gefallen (sechzehn statt siebzehn Funktionen). Probe `ein_blob_wird_beim_lesen_einer_tabelle_nicht_kopiert` (`tests/archiv_sqlite.rs`, Höchststand im Kind über `/usr/bin/time -l`): 172 MB statt 603 MB mit dem Kopieren. Die Grenze je Zelle oder Zeile (`sqlite3_limit`, Abschneiden in der Ausfuhr) ist nicht gebaut und bleibt als Nutzerfrage offen; einen gespeicherten BLOB und einen langen Text hält die Bibliothek für die laufende Zeile weiter ganz.

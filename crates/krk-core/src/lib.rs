@@ -74,10 +74,10 @@
 //! `getattrlistbulk`, `copyfile`, `renamex_np`, `fcntl`, `flock`,
 //! `localtime_r`, `fsync`, `clock_gettime_nsec_np`, `statfs` und `access`,
 //! dazu die Bibliothek `libsqlite3` des Systems, und traegt dafuer
-//! `#[allow(unsafe_code)]`. Das sind elf Schnittstellen und einunddreissig
+//! `#[allow(unsafe_code)]`. Das sind elf Schnittstellen und dreissig
 //! gebundene Funktionen, denn `copyfile(3)` braucht seine vier
 //! `copyfile_state_*`-Helfer und `libsqlite3` ist eine Schnittstelle aus
-//! siebzehn Funktionen. `forbid` liesse sich an dieser Stelle
+//! sechzehn Funktionen. `forbid` liesse sich an dieser Stelle
 //! nicht oeffnen, das ist gerade sein Zweck. Es ist das einzige Modul mit
 //! dieser Ausnahme, und es ist das geblieben, als Schritt 15 `copyfile` und
 //! `renamex_np`, der Defekt `260809-1652` `fcntl`, die Runde 7 `flock`, die

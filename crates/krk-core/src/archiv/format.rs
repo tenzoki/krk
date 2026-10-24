@@ -141,6 +141,33 @@ impl Archivformat {
         }
     }
 
+    /// Der Grund in der Abschlussliste, wenn sich die Datei seit dem Lesen
+    /// ihres Inhaltsverzeichnisses geaendert hat (`Lesefehler::VonAussenVeraendert`),
+    /// in einer Datenbank etwa, weil ein Schreiber waehrend des Lesens
+    /// uebergeben hat.
+    #[must_use]
+    pub fn beim_lesen_veraendert_text(self) -> Text {
+        match self {
+            Archivformat::Zip | Archivformat::Tar | Archivformat::TarGz | Archivformat::Gz => {
+                Text::ArchivBeimLesenVeraendert
+            }
+            Archivformat::Sqlite => Text::DatenbankBeimLesenVeraendert,
+        }
+    }
+
+    /// Der Grund in der Abschlussliste, wenn ein Eintrag nicht mehr dort
+    /// steht, wo das Inhaltsverzeichnis ihn nennt (`Lesefehler::Fehlt`), in
+    /// einer Datenbank also eine Tabelle oder Sicht, die es nicht mehr gibt.
+    #[must_use]
+    pub fn eintrag_fehlt_text(self) -> Text {
+        match self {
+            Archivformat::Zip | Archivformat::Tar | Archivformat::TarGz | Archivformat::Gz => {
+                Text::ArchivEintragFehlt
+            }
+            Archivformat::Sqlite => Text::DatenbankEintragFehlt,
+        }
+    }
+
     /// Die Meldung, wenn der Leser des Formats die Datei nicht lesen kann,
     /// etwa eine `.db`, die keine SQLite-Datenbank ist. Die Vorlage des
     /// Archivs nennt `{datei}`, `{format}` und `{grund}`, die der Datenbank

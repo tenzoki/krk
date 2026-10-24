@@ -2009,3 +2009,43 @@ fn verschieben_aus_einer_datenbank_meldet_den_text_der_datenbank_und_laesst_die_
     let steht = inhalt(&datenbank);
     assert!(steht.contains_key("t") && steht.contains_key("v"));
 }
+
+/// Aendert sich die Datenbank zwischen dem Lesen ihrer Tabellen und dem
+/// Lesen einer Tabelle, nennt die Abschlussliste die Datenbank und kein
+/// Archiv (Issue
+/// `261024-2117-lesefehler-in-einer-sqlite-datenbank-sprechen-weiter-von-einem-archiv.md`).
+/// Die Konfliktfrage ueber das vorhandene `t.tsv` haelt den Lauf an, nachdem
+/// er das Verzeichnis gelesen hat und bevor er die Tabelle liest; in dieser
+/// Spanne schreibt `/usr/bin/sqlite3` eine Zeile.
+#[test]
+fn eine_waehrend_des_kopierens_geaenderte_datenbank_nennt_im_bericht_kein_archiv() {
+    let ordner = Pruefordner::neu("sqlite-kopieren-veraendert");
+    let datenbank = kleine_datenbank(&ordner);
+    let ziel = ordner.ordner("ziel");
+    fs::write(ziel.join("t.tsv"), b"am Ziel").expect("t.tsv am Ziel");
+
+    let bericht = fahren_mit(
+        Fernauftrag::kopieren(im_archiv(&datenbank, &["t"]), Ort::Lokal(ziel.clone())),
+        || {
+            datenbank_anlegen(&datenbank, "INSERT INTO t VALUES (2, 'zwei');");
+            Konfliktantwort::Ueberschreiben
+        },
+    );
+    let gruende: Vec<&str> = bericht
+        .uebersprungen
+        .iter()
+        .map(|eintrag| eintrag.grund.as_str())
+        .collect();
+    assert!(
+        gruende.contains(&text(Text::DatenbankBeimLesenVeraendert)),
+        "{gruende:?}"
+    );
+    for grund in &gruende {
+        assert!(!grund.contains("Archiv"), "{grund}");
+    }
+    assert_eq!(
+        fs::read(ziel.join("t.tsv")).expect("t.tsv"),
+        b"am Ziel",
+        "das Ziel bleibt stehen"
+    );
+}

@@ -1937,7 +1937,8 @@ fn quellkinder_lesen(
         Quelle::Archiv(stelle) => match stelle.kinder() {
             Some(kinder) => Ok(kinder),
             None => {
-                steuerung.ueberspringen(&stelle.bezeichnung(), text(Text::ArchivEintragFehlt));
+                let format = stelle.leser.borrow().zugang().format();
+                steuerung.ueberspringen(&stelle.bezeichnung(), text(format.eintrag_fehlt_text()));
                 Err(Ablauf::Weiter)
             }
         },
@@ -3220,7 +3221,9 @@ impl Quelle {
                     .verzeichnis()
                     .eintrag(&stelle.innen)
                     .map(Angaben::aus_archiveintrag)
-                    .ok_or(Fehlschlag::Archiv(Lesefehler::Fehlt))
+                    .ok_or(Fehlschlag::Archiv(Lesefehler::Fehlt(
+                        leser.zugang().format(),
+                    )))
             }
         }
     }

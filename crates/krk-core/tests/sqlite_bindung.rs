@@ -49,7 +49,7 @@ fn alle_zeilen(
     sql: &str,
     abbruch: &AtomicBool,
 ) -> Result<Vec<Vec<Wert>>, Sqlitefehler> {
-    let uri = sqlite_uri(pfad, false);
+    let uri = sqlite_uri(pfad, false).expect("Pfad ohne Nullbyte");
     let datenbank = Datenbank::oeffnen(&uri, abbruch)?;
     let mut abfrage = datenbank.vorbereiten(sql)?;
     let mut zeilen = Vec::new();
@@ -85,7 +85,7 @@ fn eine_datenbank_wird_nur_lesend_geoeffnet_und_liest_jede_wertart() {
     let vorher = ordnerstand(ordner.pfad());
 
     let abbruch = AtomicBool::new(false);
-    let uri = sqlite_uri(&pfad, false);
+    let uri = sqlite_uri(&pfad, false).expect("Pfad ohne Nullbyte");
     let datenbank = Datenbank::oeffnen(&uri, &abbruch).expect("oeffnet");
     let mut abfrage = datenbank
         .vorbereiten("SELECT * FROM t")
@@ -105,7 +105,7 @@ fn eine_datenbank_wird_nur_lesend_geoeffnet_und_liest_jede_wertart() {
             Wert::Ganzzahl("42".to_owned()),
             Wert::Kommazahl("3.5".to_owned()),
             Wert::Text("Grüße".to_owned()),
-            Wert::Blob(vec![0x00, 0xff, 0x10]),
+            Wert::Blob(3),
         ]
     );
     assert_eq!(abfrage.naechste_zeile().expect("liest"), None);
@@ -157,7 +157,7 @@ fn eine_gesetzte_abbruchmarke_bricht_eine_laufende_anweisung_ab() {
     );
 
     let abbruch = AtomicBool::new(false);
-    let uri = sqlite_uri(&pfad, false);
+    let uri = sqlite_uri(&pfad, false).expect("Pfad ohne Nullbyte");
     let datenbank = Datenbank::oeffnen(&uri, &abbruch).expect("oeffnet");
     let mut abfrage = datenbank.vorbereiten(sql).expect("bereitet vor");
     abbruch.store(true, Ordering::Relaxed);
@@ -213,11 +213,15 @@ fn die_uri_traegt_jeden_pfad_unveraendert() {
 fn die_uri_bringt_jedes_byte_ausser_den_unreservierten_in_prozentform() {
     let pfad = Path::new(OsStr::from_bytes(b"/a b/%?#/Gr\xc3\xbc\xff-._~"));
     assert_eq!(
-        sqlite_uri(pfad, false).to_str().expect("ASCII"),
+        sqlite_uri(pfad, false)
+            .expect("Pfad ohne Nullbyte")
+            .to_str()
+            .expect("ASCII"),
         "file:///a%20b/%25%3F%23/Gr%C3%BC%FF-._~?mode=ro"
     );
     assert_eq!(
         sqlite_uri(Path::new("rel/x.db"), true)
+            .expect("Pfad ohne Nullbyte")
             .to_str()
             .expect("ASCII"),
         "file:rel/x.db?mode=ro&immutable=1"
@@ -226,9 +230,36 @@ fn die_uri_bringt_jedes_byte_ausser_den_unreservierten_in_prozentform() {
     // Rechnernamen.
     assert_eq!(
         sqlite_uri(Path::new("//srv/x.db"), false)
+            .expect("Pfad ohne Nullbyte")
             .to_str()
             .expect("ASCII"),
         "file:////srv/x.db?mode=ro"
+    );
+}
+
+/// Ein Pfad mit einem Nullbyte wird abgewiesen und nicht als `%00` kodiert:
+/// die Bibliothek laese ihn sonst bis vor `%00` und oeffnete `x.db`
+/// (Issue `261024-2116-sqlite-uri-schreibt-ein-nullbyte-als-prozent-00-und-sqlite-kuerzt-dort-den-pfad.md`).
+#[test]
+fn ein_pfad_mit_nullbyte_wird_abgewiesen_statt_gekuerzt_geoeffnet() {
+    let ordner = Pruefordner::neu("sqlite-nullbyte");
+    let pfad = ordner.unter("x.db");
+    anlegen(&pfad, "CREATE TABLE t(n); INSERT INTO t VALUES (7);");
+    let mut mit_null = pfad.as_os_str().as_bytes().to_vec();
+    mit_null.extend_from_slice(b"\0rest");
+    let mit_null = Path::new(OsStr::from_bytes(&mit_null));
+
+    for unveraenderlich in [false, true] {
+        let fehler = sqlite_uri(mit_null, unveraenderlich)
+            .expect_err("ein Pfad mit Nullbyte muss abgewiesen werden");
+        assert_eq!(fehler.kind(), std::io::ErrorKind::InvalidInput, "{fehler}");
+    }
+    // Derselbe Pfad ohne den Rest oeffnet `x.db`: abgewiesen wird das
+    // Nullbyte und nicht die Datei.
+    let abbruch = AtomicBool::new(false);
+    assert_eq!(
+        alle_zeilen(&pfad, "SELECT n FROM t", &abbruch).expect("liest"),
+        vec![vec![Wert::Ganzzahl("7".to_owned())]]
     );
 }
 

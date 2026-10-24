@@ -205,6 +205,8 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "the archive has changed since its table of contents was read"
         }
         Text::ArchivEintragFehlt => "the entry is no longer where the archive lists it",
+        Text::DatenbankBeimLesenVeraendert => "the database has changed since its tables were read",
+        Text::DatenbankEintragFehlt => "the table or view is no longer in the database",
         Text::StapelKeinStartwert => "“{text}” is not a starting value for the numbering",
         Text::StapelKeineStellenzahl => {
             "“{text}” is not a number of digits between 1 and {hoechste}"

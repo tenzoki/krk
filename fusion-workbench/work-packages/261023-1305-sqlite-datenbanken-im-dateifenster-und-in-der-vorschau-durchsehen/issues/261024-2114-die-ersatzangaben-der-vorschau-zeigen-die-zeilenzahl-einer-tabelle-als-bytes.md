@@ -26,3 +26,5 @@ Die Ersatzangaben eines Eintrags einer Datenbank nennen die Zeilen mit `Zahlwort
 ## Abnahme
 
 Eine Probe baut die Ersatzangaben für eine Tabelle und eine Sicht einer Datenbank und prüft, dass keine Byteangabe aus der Zeilenzahl entsteht. Dazu eine Erhebung aller Leser von `Eintrag::groesse` in `crates/krk-ui/src` in einem Archivtab, mit Einordnung jedes Treffers in der Regeldatei.
+
+**Resolved:** 261024, code-implementer. `Fernangaben::groesse` trägt die Einheit am Wert (`Groessenangabe::Bytes`/`Zeilen`, `crates/krk-ui/src/vorschaumodell.rs`); `archivangaben_des_eintrags` nennt in einer Datenbank die Zeilen einer Tabelle aus dem gespeicherten Verzeichnis (`datenbankzeilen_am`, dieselbe Quelle wie die Größenspalte) und für eine Sicht keine Größe, `angabenzeilen` schreibt Zeilen mit `Zahlwort::SqliteZeilen`. Probe `die_ersatzangaben_einer_tabelle_nennen_zeilen_und_einer_sicht_keine_groesse` (`appkit/tabelle.rs`). Die Erhebung der Leser von `Eintrag::groesse` in `crates/krk-ui/src` steht im Bericht des Laufs; die Einordnung in der Regeldatei `.claude/rules/coding-was-man-nicht-sieht.md` ist nicht geschrieben.

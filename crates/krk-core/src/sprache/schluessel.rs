@@ -329,6 +329,13 @@ pub enum Text {
     /// `archiv::lesen`: der Eintrag steht nicht an der Fundstelle, die das
     /// Inhaltsverzeichnis nennt.
     ArchivEintragFehlt,
+    /// `Archivformat::beim_lesen_veraendert_text` fuer eine Datenbank: die
+    /// Kennung aus Hauptdatei und `-wal` hat sich seit dem Lesen der
+    /// Tabellenliste geaendert.
+    DatenbankBeimLesenVeraendert,
+    /// `Archivformat::eintrag_fehlt_text` fuer eine Datenbank: die Tabelle
+    /// oder Sicht steht nicht mehr in der Datenbank.
+    DatenbankEintragFehlt,
     /// `Regelfehler::Startwert` in der Hinweiszeile des Stapelumbenennens;
     /// `{text}` ist die Eingabe.
     StapelKeinStartwert,
@@ -1877,7 +1884,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 770] = [
+    pub const ALLE: [Text; 772] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -2003,6 +2010,8 @@ impl Text {
         Text::ArchivHarterVerweis,
         Text::ArchivBeimLesenVeraendert,
         Text::ArchivEintragFehlt,
+        Text::DatenbankBeimLesenVeraendert,
+        Text::DatenbankEintragFehlt,
         Text::StapelKeinStartwert,
         Text::StapelKeineStellenzahl,
         Text::EditorKeinFreierDateizugriff,

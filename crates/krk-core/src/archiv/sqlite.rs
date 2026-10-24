@@ -138,10 +138,11 @@ use crate::sprache::{Text, Zahlwort, anzahl, text};
 use crate::trenntext::{Trennzeichen, feld_kodieren};
 use crate::verzeichnis::Typ;
 use crate::verzeichnis::sys::{
-    Datenbank, SQLITE_BUSY, SQLITE_CANTOPEN, SQLITE_INTERRUPT, SQLITE_NOTADB, Sqlitefehler, Wert,
-    ohne_warten_oeffnen, sqlite_uri,
+    Datenbank, SQLITE_BUSY, SQLITE_CANTOPEN, SQLITE_INTERRUPT, SQLITE_MISUSE, SQLITE_NOTADB,
+    Sqlitefehler, Wert, ohne_warten_oeffnen, sqlite_uri,
 };
 
+use super::format::Archivformat;
 use super::innenpfad::Innenpfad;
 use super::lesen::Lesefehler;
 use super::verzeichnis::{
@@ -208,7 +209,16 @@ fn nur_lesend_oeffnen<'a>(
     unveraenderlich: bool,
     abbruch: &'a AtomicBool,
 ) -> Result<Datenbank<'a>, Sqlitefehler> {
-    let datenbank = Datenbank::oeffnen(&sqlite_uri(datei, unveraenderlich), abbruch)?;
+    // Ein Pfad mit Nullbyte kommt aus keinem Dateisystem; weist `sqlite_uri`
+    // ihn trotzdem ab, geht er als Fehlbenutzung weiter, die keine zweite
+    // Oeffnung mit `immutable=1` ausloest und `fehler_zuordnen` als ungueltig
+    // meldet.
+    let uri = sqlite_uri(datei, unveraenderlich).map_err(|fehler| Sqlitefehler {
+        code: SQLITE_MISUSE,
+        wortlaut: fehler.to_string(),
+        systemfehler: None,
+    })?;
+    let datenbank = Datenbank::oeffnen(&uri, abbruch)?;
     datenbank.wartezeit_setzen(WARTEZEIT)?;
     datenbank.vorbereiten(SCHEMAPROBE)?.naechste_zeile()?;
     Ok(datenbank)
@@ -421,7 +431,7 @@ pub(crate) fn sicht_lesen(
         .map_err(zuordnen)?
         .and_then(|zeile| zeile.into_iter().next())
     else {
-        return Err(Lesefehler::Fehlt);
+        return Err(Lesefehler::Fehlt(Archivformat::Sqlite));
     };
     let mut block = sql.into_bytes();
     reichen(&mut block, empfang)
@@ -449,7 +459,7 @@ fn feldtext(wert: &Wert) -> Cow<'_, str> {
         Wert::Null => Cow::Borrowed(text(Text::SqliteNull)),
         Wert::Ganzzahl(zahl) | Wert::Kommazahl(zahl) => Cow::Borrowed(zahl),
         Wert::Text(inhalt) => Cow::Borrowed(inhalt),
-        Wert::Blob(bytes) => Cow::Owned(anzahl(Zahlwort::SqliteBlob, bytes.len() as u64, &[])),
+        Wert::Blob(laenge) => Cow::Owned(anzahl(Zahlwort::SqliteBlob, *laenge, &[])),
     }
 }
 

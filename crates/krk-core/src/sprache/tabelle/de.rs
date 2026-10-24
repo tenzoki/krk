@@ -215,6 +215,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "das Archiv hat sich seit dem Lesen seines Inhaltsverzeichnisses geändert"
         }
         Text::ArchivEintragFehlt => "der Eintrag steht nicht mehr an seiner Stelle im Archiv",
+        Text::DatenbankBeimLesenVeraendert => {
+            "die Datenbank hat sich seit dem Lesen ihrer Tabellen geändert"
+        }
+        Text::DatenbankEintragFehlt => "die Tabelle oder Sicht steht nicht mehr in der Datenbank",
         Text::StapelKeinStartwert => "„{text}“ ist kein Startwert für die Nummerierung",
         Text::StapelKeineStellenzahl => "„{text}“ ist keine Stellenzahl zwischen 1 und {hoechste}",
         Text::EditorKeinFreierDateizugriff => {

@@ -330,7 +330,7 @@ use objc2_foundation::{
 
 use krk_core::heimordner::Heimordner;
 use krk_core::leseprofil::{Profile, Zusammenfassungszeile, zeilen_als_text};
-use krk_core::sprache::{Text, satz, text};
+use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::Typ;
 
@@ -341,8 +341,8 @@ use crate::hervorhebung::{
 };
 use crate::markdown::Quellbezug;
 use crate::vorschaumodell::{
-    Archivangaben, Blaetterrichtung, Fernangaben, Inhalt, Metadaten, Tabstand, Vorschaumodell,
-    Zwischenablageinhalt, rechte_text,
+    Archivangaben, Blaetterrichtung, Fernangaben, Groessenangabe, Inhalt, Metadaten, Tabstand,
+    Vorschaumodell, Zwischenablageinhalt, rechte_text,
 };
 
 use super::betrachter::{Deutung, Pdfbetrachter, Zoom};
@@ -1353,7 +1353,10 @@ impl Vorschaufenster {
             satz(Text::MetadatenPfad, &[("pfad", &angaben.ort)]),
         ];
         if let Some(groesse) = angaben.groesse {
-            let groesse = self.groesse_text(angaben.typ, groesse);
+            let groesse = match groesse {
+                Groessenangabe::Bytes(bytes) => self.groesse_text(angaben.typ, bytes),
+                Groessenangabe::Zeilen(zeilen) => anzahl(Zahlwort::SqliteZeilen, zeilen, &[]),
+            };
             zeilen.push(satz(Text::MetadatenGroesse, &[("groesse", &groesse)]));
         }
         if let Some(geaendert) = angaben.geaendert {

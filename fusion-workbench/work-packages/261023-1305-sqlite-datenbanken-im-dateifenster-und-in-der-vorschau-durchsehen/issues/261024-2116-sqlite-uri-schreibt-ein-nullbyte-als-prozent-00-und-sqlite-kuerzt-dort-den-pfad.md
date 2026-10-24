@@ -23,3 +23,5 @@ Der Kommentar in `sqlite_uri` sagt, die Bibliothek weise `%00` beim Öffnen ab. 
 ## Abnahme
 
 Eine Probe in `crates/krk-core/tests/sqlite_bindung.rs` reicht einen Pfad `…/x.db\0rest` herein und bekommt einen Fehler statt der Zeilen von `x.db`.
+
+**Resolved:** 261024, code-implementer. `sqlite_uri` gibt `io::Result<CString>` zurück und weist einen Pfad mit Nullbyte mit `Text::LesenPfadMitNullbyte` ab wie `als_c_pfad` (gemeinsamer `nullbyte_fehler`); `archiv::sqlite::nur_lesend_oeffnen` reicht die Abweisung als `SQLITE_MISUSE` weiter, das keine zweite Öffnung mit `immutable=1` auslöst. Kommentar korrigiert. Probe `ein_pfad_mit_nullbyte_wird_abgewiesen_statt_gekuerzt_geoeffnet` (`tests/sqlite_bindung.rs`).

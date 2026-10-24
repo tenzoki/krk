@@ -514,6 +514,29 @@ fn in_einer_datenbank_meldet_jeder_melder_den_text_der_datenbank() {
         };
         assert_eq!(format.allein_lesbar_satz(), allein_lesbar, "{format:?}");
         assert_eq!(format.ungueltig_text(), ungueltig, "{format:?}");
+        // Die Gruende von `Lesefehler::VonAussenVeraendert` und
+        // `Lesefehler::Fehlt` ebenso (Issue
+        // `261024-2117-lesefehler-in-einer-sqlite-datenbank-sprechen-weiter-von-einem-archiv.md`).
+        let (veraendert, fehlt) = if format == Archivformat::Sqlite {
+            (
+                Text::DatenbankBeimLesenVeraendert,
+                Text::DatenbankEintragFehlt,
+            )
+        } else {
+            (Text::ArchivBeimLesenVeraendert, Text::ArchivEintragFehlt)
+        };
+        assert_eq!(
+            format.beim_lesen_veraendert_text(),
+            veraendert,
+            "{format:?}"
+        );
+        assert_eq!(format.eintrag_fehlt_text(), fehlt, "{format:?}");
+        assert_eq!(
+            Lesefehler::VonAussenVeraendert(format).grund(),
+            text(veraendert),
+            "{format:?}"
+        );
+        assert_eq!(Lesefehler::Fehlt(format).grund(), text(fehlt), "{format:?}");
         assert_eq!(
             Umbaufehler::NurLesbar(format).grund(),
             text(nur_lesbar),
@@ -1115,4 +1138,115 @@ fn die_lesemarke_ist_die_einzige_aenderung_an_shm() {
         namen_vorher,
         "keine weitere Datei, Schreiber fort"
     );
+}
+
+/// Wie gross der BLOB ist, den die Bibliothek beim Lesen erzeugt (eine
+/// erzeugte Spalte mit `zeroblob`, also ohne Bytes auf der Platte).
+const ERZEUGTER_BLOB: u64 = 300_000_000;
+
+/// Wie gross der BLOB ist, der auf der Platte steht.
+const GESPEICHERTER_BLOB: u64 = 160_000_000;
+
+/// Ein BLOB wird zum Lesen einer Tabelle nicht kopiert, um seine Laenge zu
+/// nennen (Issue
+/// `261024-2115-ein-blob-wird-ganz-kopiert-um-seine-laenge-zu-nennen-und-eine-zeile-ist-unbegrenzt.md`,
+/// allein der BLOB-Teil).
+///
+/// Gemessen wird der hoechste Stand des Speichers im Kind ueber
+/// `/usr/bin/time -l`, wie bei
+/// `ein_langer_name_ueber_der_grenze_macht_das_tar_ungueltig_ohne_ihn_zu_lesen`
+/// (`tests/archiv.rs`). Das Kind liest zwei Tabellen ueber den
+/// `Archivleser` und bricht wie die Vorschau nach 1 MiB ab:
+///
+/// - `erzeugt` traegt in einer erzeugten Spalte einen BLOB aus
+///   `zeroblob(300000000)`. Die Bibliothek haelt ihn als blosse Zahl von
+///   Nullbytes und legt ihn erst an, wenn jemand seine Bytes verlangt
+///   (`sqlite3_column_blob`); mit dem Kopieren belegte das Lesen dafuer zweimal
+///   300 MB, ohne es nichts.
+/// - `gespeichert` traegt einen BLOB von 160 MB auf Ueberlaufseiten. Den holt
+///   die Bibliothek fuer die Zeile auch dann ganz in den Speicher, wenn allein
+///   seine Laenge gefragt ist; gespart ist die zweite Kopie, und die Grenze
+///   unten liegt deshalb unter dem Doppelten des BLOB und ueber dem Einfachen.
+///
+/// Was die Probe nicht haelt, ist eine Grenze je Zelle oder Zeile: einen
+/// gespeicherten BLOB oder einen langen Text haelt die Bibliothek fuer die
+/// laufende Zeile weiter ganz, und ob das begrenzt wird, ist eine offene
+/// Nutzerfrage im selben Issue.
+#[test]
+fn ein_blob_wird_beim_lesen_einer_tabelle_nicht_kopiert() {
+    let ordner = Pruefordner::neu("sqlite-blob-speicher");
+    let datei = ordner.unter("blob.db");
+    anlegen(
+        &datei,
+        &format!(
+            "CREATE TABLE erzeugt(n, roh GENERATED ALWAYS AS (zeroblob({ERZEUGTER_BLOB})) VIRTUAL);
+             INSERT INTO erzeugt(n) VALUES (1), (2);
+             CREATE TABLE gespeichert(n, roh);
+             INSERT INTO gespeichert VALUES (1, zeroblob({GESPEICHERTER_BLOB}));"
+        ),
+    );
+
+    let selbst = std::env::current_exe().expect("die Testdatei kennt ihren Pfad nicht");
+    let name = "kind_liest_die_blobtabellen";
+    let ergebnis = Command::new("/usr/bin/time")
+        .arg("-l")
+        .arg(&selbst)
+        .args([
+            "--exact",
+            "--ignored",
+            "--nocapture",
+            "--test-threads",
+            "1",
+            name,
+        ])
+        .env(gemeinsam::KINDAUFTRAG, ordner.pfad())
+        .output()
+        .expect("das Kind laesst sich starten");
+    let stdout = String::from_utf8_lossy(&ergebnis.stdout);
+    let stderr = String::from_utf8_lossy(&ergebnis.stderr);
+    assert!(
+        ergebnis.status.success() && stdout.contains("test result: ok. 1 passed;"),
+        "das Kind `{name}` ist nicht als genau ein Kind gelaufen\n{stdout}\n{stderr}"
+    );
+    let spitze: u64 = stderr
+        .lines()
+        .find(|zeile| zeile.contains("maximum resident set size"))
+        .and_then(|zeile| zeile.split_whitespace().next())
+        .and_then(|zahl| zahl.parse().ok())
+        .unwrap_or_else(|| panic!("`time -l` nennt keinen Hoechststand:\n{stderr}"));
+    assert!(
+        spitze < GESPEICHERTER_BLOB * 3 / 2,
+        "das Lesen der zwei Tabellen belegte {spitze} Bytes"
+    );
+}
+
+#[test]
+#[ignore = "Kindprobe, vom Elternteil ueber KRK_KINDPROBE_AUFTRAG gestartet"]
+fn kind_liest_die_blobtabellen() {
+    let Some(ordner) = gemeinsam::kindauftrag() else {
+        return;
+    };
+    let zugang = zugang(&ordner.join("blob.db"));
+    for (tabelle, laenge, zeilen) in [
+        ("erzeugt", ERZEUGTER_BLOB, 2),
+        ("gespeichert", GESPEICHERTER_BLOB, 1),
+    ] {
+        // Wie die Vorschau: nach 1 MiB ist Schluss.
+        let mut gereicht = 0usize;
+        let (ergebnis, daten) = eintrag_lesen_mit(&zugang, tabelle, move |block| {
+            gereicht += block.len();
+            if gereicht >= 1 << 20 {
+                ControlFlow::Break(())
+            } else {
+                ControlFlow::Continue(())
+            }
+        });
+        let gelesen = ergebnis.unwrap_or_else(|fehler| panic!("{tabelle}: {fehler:?}"));
+        let platzhalter = Sprache::De.anzahl(Zahlwort::SqliteBlob, laenge, &[]);
+        let erwartet: String = std::iter::once("n\troh\n".to_owned())
+            .chain((1..=zeilen).map(|n| format!("{n}\t{platzhalter}\n")))
+            .collect();
+        assert_eq!(String::from_utf8_lossy(&daten), erwartet, "{tabelle}");
+        assert_eq!(gelesen, daten.len() as u64, "{tabelle}");
+    }
 }

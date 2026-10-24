@@ -1,5 +1,5 @@
 //! Die Systemschicht des Kerns: die elf Schnittstellen, die KRK braucht, und
-//! die einunddreissig Funktionen, die sie binden.
+//! die dreissig Funktionen, die sie binden.
 //!
 //! Dies ist das einzige Modul in `krk-core`, das die Regel `deny(unsafe_code)`
 //! aus `lib.rs` oeffnet. Die Regel lautet dort `deny` und nicht `forbid`, damit
@@ -30,14 +30,14 @@
 //! statfs(2)          ──> auf_lokalem_...      ──> operation::fern
 //! access(2)          ──> schreiben_erlaubt    ──> archiv::umbau
 //! libsqlite3         ──> Datenbank, Abfrage,  ──> archiv::sqlite (ab Schritt 3
-//!   17 Funktionen        Wert, Sqlitefehler,      des Plans 261023-1507)
+//!   16 Funktionen        Wert, Sqlitefehler,      des Plans 261023-1507)
 //!                        sqlite_uri
 //! ```
 //!
 //! **Elf ist die Zahl der Schnittstellen und nicht die der Bindungen: es sind
-//! elf Schnittstellen und einunddreissig gebundene Funktionen, denn
+//! elf Schnittstellen und dreissig gebundene Funktionen, denn
 //! `copyfile(3)` braucht seine vier `copyfile_state_*`-Helfer und
-//! `libsqlite3` ist eine Schnittstelle aus siebzehn Funktionen.** Ohne die
+//! `libsqlite3` ist eine Schnittstelle aus sechzehn Funktionen.** Ohne die
 //! Helfer liesse sich der
 //! Fortschrittsrueckruf nicht setzen und die Zahl der kopierten Bytes nicht
 //! abfragen; eine eigene Schnittstelle sind sie deshalb nicht, aber vier weitere
@@ -54,7 +54,7 @@
 //! 261017 zu einem schreibgeschuetzten Archiv (siehe [`schreiben_erlaubt`]),
 //! und die elfte, `libsqlite3`, das Arbeitspaket vom 261023 zu den
 //! SQLite-Datenbanken im Dateifenster (siehe [`Datenbank`]). Gebunden sind alle
-//! einunddreissig in den neun `unsafe extern "C"`-Bloecken dieses Moduls;
+//! dreissig in den neun `unsafe extern "C"`-Bloecken dieses Moduls;
 //! `fsync` steht im Block von `fcntl`, weil es dessen Rueckfall ist.
 //!
 //! **`libsqlite3` ist die erste Schnittstelle, die keine des Kerns oder der
@@ -1605,8 +1605,10 @@ pub const SQLITE_INTERRUPT: i32 = 9;
 /// (`messungen/261023-1556-sqlite-nur-lesend-shm.txt`, Versuch d).
 pub const SQLITE_CANTOPEN: i32 = 14;
 
-/// `SQLITE_MISUSE`: die Schnittstelle wurde falsch benutzt. Hier allein fuer
-/// einen SQL-Text ohne Anweisung.
+/// `SQLITE_MISUSE`: die Schnittstelle wurde falsch benutzt. Hier fuer einen
+/// SQL-Text ohne Anweisung oder ueber `c_int` hinaus, und in
+/// `archiv::sqlite` fuer einen Pfad mit Nullbyte, den [`sqlite_uri`] abweist;
+/// dort traegt `wortlaut` ausnahmsweise den Satz der Sprachtabelle.
 pub const SQLITE_MISUSE: i32 = 21;
 
 /// `SQLITE_NOTADB`: die Datei ist keine Datenbank.
@@ -1708,9 +1710,6 @@ unsafe extern "C" {
     /// `const unsigned char *sqlite3_column_text(sqlite3_stmt *, int)`
     fn sqlite3_column_text(anweisung: *mut Sqlite3Stmt, spalte: c_int) -> *const u8;
 
-    /// `const void *sqlite3_column_blob(sqlite3_stmt *, int)`
-    fn sqlite3_column_blob(anweisung: *mut Sqlite3Stmt, spalte: c_int) -> *const c_void;
-
     /// `int sqlite3_column_bytes(sqlite3_stmt *, int)`
     fn sqlite3_column_bytes(anweisung: *mut Sqlite3Stmt, spalte: c_int) -> c_int;
 
@@ -1781,8 +1780,11 @@ pub enum Wert {
     Kommazahl(String),
     /// Ein Text; Bytes, die kein UTF-8 sind, stehen als U+FFFD.
     Text(String),
-    /// Ein BLOB, Byte fuer Byte.
-    Blob(Vec<u8>),
+    /// Ein BLOB, allein seine Laenge in Bytes: der Leser nennt ihn als
+    /// Platzhalter `[BLOB, n Bytes]` und braucht seinen Inhalt nicht, also
+    /// kopiert die Bindung ihn nicht (`sqlite3_column_bytes` ohne
+    /// `sqlite3_column_blob`).
+    Blob(u64),
 }
 
 /// Der Fortschrittsrueckruf: bricht die laufende Anweisung ab, sobald die
@@ -2067,7 +2069,7 @@ impl Abfrage<'_, '_> {
             SQLITE_INTEGER => Wert::Ganzzahl(self.textbytes(spalte)?),
             SQLITE_FLOAT => Wert::Kommazahl(self.textbytes(spalte)?),
             SQLITE_TEXT => Wert::Text(self.textbytes(spalte)?),
-            SQLITE_BLOB => Wert::Blob(self.blobbytes(spalte)?),
+            SQLITE_BLOB => Wert::Blob(self.bloblaenge(spalte)),
             // `SQLITE_NULL`, und jeder Wert, den eine kuenftige Fassung der
             // Bibliothek hinzufuegte: `sqlite3.h` kennt fuenf Typen.
             _ => Wert::Null,
@@ -2088,17 +2090,18 @@ impl Abfrage<'_, '_> {
         Ok(String::from_utf8_lossy(bytes).into_owned())
     }
 
-    /// Die Bytes eines BLOB.
-    fn blobbytes(&self, spalte: c_int) -> Result<Vec<u8>, Sqlitefehler> {
-        // SICHERHEIT: wie bei `textbytes`.
-        let (zeiger, laenge) = unsafe {
-            let zeiger = sqlite3_column_blob(self.anweisung, spalte);
-            (
-                zeiger.cast::<u8>(),
-                sqlite3_column_bytes(self.anweisung, spalte),
-            )
-        };
-        Ok(self.bytes_lesen(zeiger, laenge)?.to_vec())
+    /// Die Laenge eines BLOB in Bytes, ohne seine Bytes zu kopieren.
+    ///
+    /// `sqlite3_column_bytes` wandelt einen Wert vom Typ `SQLITE_BLOB` nicht
+    /// um und braucht deshalb keinen vorherigen Zeiger. Den Wert selbst haelt
+    /// die Bibliothek fuer die laufende Zeile trotzdem im Speicher, wenn er auf
+    /// Ueberlaufseiten steht; gespart ist allein die zweite Kopie auf dieser
+    /// Seite.
+    fn bloblaenge(&self, spalte: c_int) -> u64 {
+        // SICHERHEIT: die Anweisung steht auf einer Zeile, `spalte` liegt unter
+        // `sqlite3_column_count`, und der Typ ist `SQLITE_BLOB`.
+        let laenge = unsafe { sqlite3_column_bytes(self.anweisung, spalte) };
+        u64::try_from(laenge).unwrap_or(0)
     }
 
     /// Macht aus Zeiger und Laenge einer Spalte einen Ausschnitt.
@@ -2149,9 +2152,17 @@ impl Drop for Abfrage<'_, '_> {
 /// `immutable=1` heisst fuer die Bibliothek: die Datei aendert sich nicht,
 /// also keine Sperre und kein Blick auf `-wal`. Wann das zulaessig ist,
 /// entscheidet die Oeffnungsregel des Rufers und nicht diese Funktion.
-#[must_use]
-pub fn sqlite_uri(pfad: &Path, unveraenderlich: bool) -> CString {
+///
+/// # Errors
+///
+/// Ein Pfad mit einem Nullbyte kommt als Fehler zurueck wie bei
+/// [`als_c_pfad`]. Als `%00` kodiert weist die Bibliothek ihn nicht ab,
+/// sondern liest den Pfad bis vor `%00` und oeffnet diese Datei.
+pub fn sqlite_uri(pfad: &Path, unveraenderlich: bool) -> io::Result<CString> {
     let bytes = pfad.as_os_str().as_bytes();
+    if bytes.contains(&0) {
+        return Err(nullbyte_fehler(pfad));
+    }
     let mut uri = String::with_capacity(bytes.len() + 32);
     uri.push_str(if bytes.first() == Some(&b'/') {
         "file://"
@@ -2170,9 +2181,17 @@ pub fn sqlite_uri(pfad: &Path, unveraenderlich: bool) -> CString {
     if unveraenderlich {
         uri.push_str("&immutable=1");
     }
-    // Jedes Zeichen ist ASCII und keines ist null: ein Nullbyte im Pfad steht
-    // als `%00` da, das die Bibliothek beim Oeffnen abweist.
-    CString::new(uri).unwrap_or_default()
+    // Jedes Zeichen ist ASCII, und ein Nullbyte ist oben abgewiesen; auch
+    // `%00` steht deshalb nicht in der URI.
+    CString::new(uri).map_err(|_| nullbyte_fehler(pfad))
+}
+
+/// Der Fehler fuer einen Pfad mit einem Nullbyte darin.
+fn nullbyte_fehler(pfad: &Path) -> io::Error {
+    io::Error::new(
+        io::ErrorKind::InvalidInput,
+        satz(Text::LesenPfadMitNullbyte, &[("pfad", &pfad.display())]),
+    )
 }
 
 /// Macht aus einem Pfad eine nullterminierte Zeichenkette fuer die C-Aufrufe.
@@ -2180,12 +2199,7 @@ pub fn sqlite_uri(pfad: &Path, unveraenderlich: bool) -> CString {
 /// Ein Pfad mit einem Nullbyte darin kann im Dateisystem nicht vorkommen; er
 /// kommt hier als Fehler zurueck, statt abgeschnitten weitergereicht zu werden.
 fn als_c_pfad(pfad: &Path) -> io::Result<CString> {
-    CString::new(pfad.as_os_str().as_bytes()).map_err(|_| {
-        io::Error::new(
-            io::ErrorKind::InvalidInput,
-            satz(Text::LesenPfadMitNullbyte, &[("pfad", &pfad.display())]),
-        )
-    })
+    CString::new(pfad.as_os_str().as_bytes()).map_err(|_| nullbyte_fehler(pfad))
 }
 
 #[cfg(test)]

@@ -231,6 +231,12 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::ArchivHarterVerweis => "un lien physique de l’archive ne peut pas être extrait",
         Text::ArchivBeimLesenVeraendert => "l’archive a changé depuis la lecture de son sommaire",
         Text::ArchivEintragFehlt => "l’entrée ne se trouve plus à sa place dans l’archive",
+        Text::DatenbankBeimLesenVeraendert => {
+            "la base de données a changé depuis la lecture de ses tables"
+        }
+        Text::DatenbankEintragFehlt => {
+            "la table ou la vue ne se trouve plus dans la base de données"
+        }
         Text::StapelKeinStartwert => {
             "«\u{a0}{text}\u{a0}» n’est pas une valeur de départ pour la numérotation"
         }

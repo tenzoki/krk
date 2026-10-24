@@ -566,7 +566,7 @@ fn aus_einem_archiv(
         .unwrap_or_else(PoisonError::into_inner)
         .geteiltes_verzeichnis();
     let Some(eintrag) = verzeichnis.eintrag(&quelle.innen) else {
-        steuerung.ueberspringen(&wo, text(Text::ArchivEintragFehlt));
+        steuerung.ueberspringen(&wo, text(quelle.zugang.format().eintrag_fehlt_text()));
         return Ok(None);
     };
     let neu = archiveintrag_bauen(

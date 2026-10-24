@@ -371,7 +371,7 @@ use crate::kommandos::operationen::{self, Dateiablage, Umbenennungswunsch};
 use crate::kommandos::pfadeingabe::{self, Ergebnis, FernErgebnis};
 use crate::spalten::Spalte;
 use crate::tabs::{Auswahlversuch, Tabliste, Tabort, Vormerkung};
-use crate::vorschaumodell::{Archivangaben, Beschreibung, Fernangaben};
+use crate::vorschaumodell::{Archivangaben, Beschreibung, Fernangaben, Groessenangabe};
 
 use super::abwurf;
 use super::blaetter;
@@ -641,7 +641,7 @@ fn fernangaben_des_eintrags(ort: &FernerOrt, eintrag: &Eintrag) -> Fernangaben {
     Fernangaben {
         name: eintrag.name.clone(),
         ort: pfad,
-        groesse: Some(eintrag.groesse),
+        groesse: Some(Groessenangabe::Bytes(eintrag.groesse)),
         geaendert: Some(eintrag.geaendert),
         typ: eintrag.typ,
     }
@@ -666,6 +666,13 @@ fn fernangaben_des_ordners(ort: &FernerOrt) -> Fernangaben {
 /// `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`). Fuer eine
 /// Datei sind sie seit dem 261018 der Rueckfall, wenn ihr Inhalt nichts
 /// Lesbares hergibt ([`archivbeschreibung_des_eintrags`]).
+///
+/// **In einer Datenbank traegt `eintrag.groesse` die Zeilenzahl** (Modulkopf
+/// von `krk_core::archiv::sqlite`); die Angaben nennen dann die Zeilen einer
+/// Tabelle aus dem gespeicherten Verzeichnis des Zugangs, wie die
+/// Groessenspalte ([`datenbankzeilen_am`]), und fuer eine Sicht, eine
+/// ungezaehlte Tabelle oder ohne gespeichertes Verzeichnis keine Groesse.
+/// Entschieden wird am Format des Orts, ohne Systemaufruf.
 fn archivangaben_des_eintrags(ort: &Archivort, eintrag: &Eintrag) -> Fernangaben {
     let pfad = match ort.kind(&eintrag.name) {
         Some(kind) => kind.to_string(),
@@ -673,13 +680,32 @@ fn archivangaben_des_eintrags(ort: &Archivort, eintrag: &Eintrag) -> Fernangaben
         // und der Ordner ist dann die ehrlichste Ortsangabe.
         None => ort.to_string(),
     };
+    let groesse = if ort.zugang.format() == Archivformat::Sqlite {
+        datenbankzeilen_am(ort, &eintrag.name).map(Groessenangabe::Zeilen)
+    } else {
+        Some(Groessenangabe::Bytes(eintrag.groesse))
+    };
     Fernangaben {
         name: eintrag.name.clone(),
         ort: pfad,
-        groesse: Some(eintrag.groesse),
+        groesse,
         geaendert: Some(eintrag.geaendert),
         typ: eintrag.typ,
     }
+}
+
+/// Die Zeilenzahl des Eintrags `name` im Ordner `ort` einer Datenbank, aus
+/// dem gespeicherten Verzeichnis des Zugangs; `None` fuer eine Sicht, eine
+/// ungezaehlte Tabelle und ein noch nicht gespeichertes Verzeichnis.
+///
+/// **Gefragt wird [`krk_core::archiv::Archivzugang::gespeichertes`] und nie
+/// `Archivzugang::verzeichnis`**: das zweite fragt die Kennung der Datei und
+/// verlangt dafuer das Pfand eines Arbeitsfadens; das erste antwortet aus dem
+/// Zwischenspeicher, den der Lesevorgang des Tabs gefuellt hat, und stellt
+/// keinen Systemaufruf.
+fn datenbankzeilen_am(ort: &Archivort, name: &str) -> Option<u64> {
+    let innen = ort.innen.verbinden(name)?;
+    ort.zugang.gespeichertes()?.zeilen(&innen)
 }
 
 /// Was die Vorschau ueber einen Eintrag in einem Archiv beschreibt: eine
@@ -4618,23 +4644,12 @@ impl DateifensterQuelle {
     /// Die Zeilenzahl des Eintrags `name` im sichtbaren Tab, wenn er in einer
     /// Datenbank steht: `None` ausserhalb einer Datenbank, `Some(None)` fuer
     /// eine Sicht, eine ungezaehlte Tabelle und ein noch nicht gespeichertes
-    /// Verzeichnis.
-    ///
-    /// **Gefragt wird [`krk_core::archiv::Archivzugang::gespeichertes`] und nie
-    /// `Archivzugang::verzeichnis`**: das zweite fragt die Kennung der Datei
-    /// und verlangt dafuer das Pfand eines Arbeitsfadens; das erste antwortet
-    /// aus dem Zwischenspeicher, den der Lesevorgang des Tabs eben gefuellt
-    /// hat, und stellt keinen Systemaufruf.
+    /// Verzeichnis. Gefragt wird ueber [`datenbankzeilen_am`], also ohne
+    /// Systemaufruf.
     fn datenbankzeilen(&self, name: &str) -> Option<Option<u64>> {
         let tabs = self.ivars().tabs.borrow();
         let ort = datenbankort(tabs.aktiver().tabort())?;
-        let innen = ort.innen.verbinden(name);
-        Some(
-            ort.zugang
-                .gespeichertes()
-                .zip(innen)
-                .and_then(|(verzeichnis, innen)| verzeichnis.zeilen(&innen)),
-        )
+        Some(datenbankzeilen_am(ort, name))
     }
 
     /// Eine Menge in der Einheit des Tabs: Bytes in der Schreibweise des
@@ -7091,6 +7106,19 @@ mod tests {
     /// im Rumpf einer Methode nicht, weil er tiefer steht. Eine Zerlegung des
     /// Quelltexts waere die genaue Antwort und fuer eine Reihenfolgeprobe die
     /// unangemessene.
+    /// Der Rumpf der freien Funktion `name`, bis zur schliessenden Klammer
+    /// auf Dateiebene.
+    fn freie_funktion<'a>(code: &'a str, name: &str) -> &'a str {
+        let kopf = format!("\nfn {name}(");
+        let beginn = code
+            .find(&kopf)
+            .unwrap_or_else(|| panic!("{DIESE_DATEI} erklaert {name} nicht"));
+        let rest = &code[beginn..];
+        &rest[..rest
+            .find("\n}\n")
+            .unwrap_or_else(|| panic!("{name} endet nicht auf Dateiebene"))]
+    }
+
     fn rumpf_von<'a>(code: &'a str, name: &str) -> &'a str {
         let kopf = format!("fn {name}(");
         let beginn = code
@@ -7716,6 +7744,75 @@ mod tests {
         assert_eq!(groessenzelle_von(&quelle, "sicht"), "--");
     }
 
+    /// Die Ersatzangaben der Vorschau fuer eine Tabelle nennen ihre Zeilen und
+    /// fuer eine Sicht keine Groesse; keine Byteangabe entsteht aus der
+    /// Zeilenzahl (Issue
+    /// `261024-2114-die-ersatzangaben-der-vorschau-zeigen-die-zeilenzahl-einer-tabelle-als-bytes.md`).
+    /// Ein Eintrag eines Zip bleibt bei Bytes. Gebaut werden die Angaben
+    /// ueber denselben Weg wie die Auswahlmeldung
+    /// ([`archivbeschreibung_des_eintrags`]), am Eintrag des gelesenen Tabs.
+    ///
+    /// **Was sie nicht sieht:** die Zeile, die `Vorschaufenster::angabenzeilen`
+    /// daraus schreibt; der Arm fuer `Groessenangabe::Zeilen` dort nimmt das
+    /// Zahlwort und nie den Byteformatierer, und das haelt der Typ.
+    #[test]
+    fn die_ersatzangaben_einer_tabelle_nennen_zeilen_und_einer_sicht_keine_groesse() {
+        let ordner = crate::pruefordner::Pruefordner::neu("db-ersatzangaben");
+        datenbank_anlegen(&ordner, "daten.db", DATENBANK);
+        ordner.ordner("inhalt");
+        ordner.datei("inhalt/zwoelf.txt", "zwoelf Bytes");
+        ordner.zip_packen("paket.zip", "inhalt");
+        let quelle = gelesene_quelle(ordner.pfad());
+        datenbank_betreten(&quelle, "daten.db");
+
+        let angaben_von = |quelle: &DateifensterQuelle, name: &str| {
+            let tabs = quelle.ivars().tabs.borrow();
+            let Tabort::Archiv { ort, .. } = tabs.aktiver().tabort() else {
+                panic!("der Tab steht in keinem Archiv");
+            };
+            let ort = ort.clone();
+            drop(tabs);
+            quelle
+                .mit_zeile(
+                    zeile_von(quelle, name),
+                    |eintrag| match archivbeschreibung_des_eintrags(&ort, eintrag) {
+                        Beschreibung::Archiv(archiv) => archiv.angaben,
+                        Beschreibung::Fern(angaben) => angaben,
+                        anders => panic!("{name}: {anders:?}"),
+                    },
+                )
+                .expect("die Zeile steht")
+        };
+        assert_eq!(
+            angaben_von(&quelle, "gross").groesse,
+            Some(Groessenangabe::Zeilen(1234))
+        );
+        assert_eq!(
+            angaben_von(&quelle, "leer").groesse,
+            Some(Groessenangabe::Zeilen(0))
+        );
+        assert_eq!(angaben_von(&quelle, "sicht").groesse, None);
+
+        // In einem Zip bleiben es Bytes.
+        let quelle = gelesene_quelle(ordner.pfad());
+        let zeile = zeile_von(&quelle, "paket.zip");
+        assert_eq!(
+            quelle.in_zeile_einsteigen(zeile, false),
+            Einstieg::Eingestiegen
+        );
+        fertig_lesen(&quelle);
+        let zeile = zeile_von(&quelle, "inhalt");
+        assert_eq!(
+            quelle.in_zeile_einsteigen(zeile, false),
+            Einstieg::Eingestiegen
+        );
+        fertig_lesen(&quelle);
+        assert_eq!(
+            angaben_von(&quelle, "zwoelf.txt").groesse,
+            Some(Groessenangabe::Bytes(12))
+        );
+    }
+
     /// Der Markierungsstand einer Datenbank summiert die Zeilen der
     /// markierten Tabellen und sagt Zeilen; die Sicht zaehlt als Eintrag mit
     /// und traegt keine Zeile bei. Ueber den Tastenbefehl „Alles markieren“
@@ -7796,7 +7893,9 @@ mod tests {
     /// Gelesen werden die Rumpfe von [`DateifensterQuelle::groessenzelle`],
     /// [`DateifensterQuelle::datenbankzeilen`],
     /// [`DateifensterQuelle::masseinheit`],
-    /// [`DateifensterQuelle::groesse_beschriften`] und [`datenbankort`].
+    /// [`DateifensterQuelle::groesse_beschriften`], [`datenbankort`] und
+    /// [`datenbankzeilen_am`], das seit dem 261024 auch die Ersatzangaben der
+    /// Vorschau fragen ([`archivangaben_des_eintrags`]).
     ///
     /// **Was sie nicht sieht:** einen Systemaufruf in einer tiefer gerufenen
     /// Funktion einer anderen Datei; `Inhaltsverzeichnis::zeilen` und
@@ -7815,13 +7914,11 @@ mod tests {
                 "groesse_beschriften",
                 rumpf_von(&code, "groesse_beschriften"),
             ),
-            ("datenbankort", {
-                let beginn = code
-                    .find("fn datenbankort(")
-                    .expect("datenbankort steht da");
-                let rest = &code[beginn..];
-                &rest[..rest.find("\n}\n").expect("datenbankort endet")]
-            }),
+            ("datenbankort", freie_funktion(&code, "datenbankort")),
+            (
+                "datenbankzeilen_am",
+                freie_funktion(&code, "datenbankzeilen_am"),
+            ),
         ];
         for (name, rumpf) in rumpfe {
             for nadel in [
@@ -7843,7 +7940,11 @@ mod tests {
             }
         }
         assert!(
-            rumpf_von(&code, "datenbankzeilen").contains(".gespeichertes()"),
+            rumpf_von(&code, "datenbankzeilen").contains("datenbankzeilen_am(ort, name)"),
+            "die Zeilenzahl der Spalte kommt aus datenbankzeilen_am"
+        );
+        assert!(
+            freie_funktion(&code, "datenbankzeilen_am").contains(".gespeichertes()"),
             "die Zeilenzahl kommt aus dem gespeicherten Verzeichnis"
         );
         assert!(

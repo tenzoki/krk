@@ -361,12 +361,27 @@ pub struct Fernangaben {
     /// Der Ort als `konto@rechner:/pfad`, in einem Archiv als
     /// `/pfad/zum/archiv.zip:/innen`.
     pub ort: String,
-    /// Die Groesse in Bytes, falls bekannt.
-    pub groesse: Option<u64>,
+    /// Die Groesse in ihrer Einheit, falls bekannt.
+    pub groesse: Option<Groessenangabe>,
     /// Die Aenderungszeit, falls bekannt.
     pub geaendert: Option<SystemTime>,
     /// Ordner, Datei oder Verknuepfung.
     pub typ: Typ,
+}
+
+/// Die Groesse in den [`Fernangaben`], mit ihrer Einheit.
+///
+/// **Die Einheit steht am Wert und nicht beim Leser**, weil
+/// `Eintrag::groesse` in einer SQLite-Datenbank die Zeilenzahl traegt und ein
+/// nackter `u64` sie als Bytes formatieren liesse, ohne dass der Uebersetzer
+/// etwas meldet (Issue
+/// `261024-2114-die-ersatzangaben-der-vorschau-zeigen-die-zeilenzahl-einer-tabelle-als-bytes.md`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Groessenangabe {
+    /// Bytes: eine lokale, ferne oder Archivdatei ausser in einer Datenbank.
+    Bytes(u64),
+    /// Die Zeilen einer Tabelle in einer SQLite-Datenbank.
+    Zeilen(u64),
 }
 
 /// Die Metadaten eines Eintrags, wie C6 sie fuer alles Uebrige verlangt.
