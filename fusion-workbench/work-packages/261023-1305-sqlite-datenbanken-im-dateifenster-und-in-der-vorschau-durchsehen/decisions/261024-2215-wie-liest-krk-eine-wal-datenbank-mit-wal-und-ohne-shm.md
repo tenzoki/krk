@@ -29,3 +29,5 @@ Steht neben einer WAL-Datenbank ein `-wal`, aber keine `-shm`, legt die nur lese
 Möglichkeit 4, für den Rest Möglichkeit 1.
 
 Answered: 261024-2215, orchestrator im Auftrag des Nutzers („you can go on in automode from here and invlove the consultant as sparring partner“, Paketnarrativ, Abschnitt „Nutzerwort 261024“), nach Analyse 261024-2133 und Gegenprüfung durch den Consultant. Möglichkeit 4, Rest nach Möglichkeit 1.
+
+Implemented: a1fec2b7 — leeres `-wal` ohne `-shm` mit `immutable=1`, Rest nach Möglichkeit 1; Proben in `crates/krk-core/tests/archiv_sqlite.rs`.

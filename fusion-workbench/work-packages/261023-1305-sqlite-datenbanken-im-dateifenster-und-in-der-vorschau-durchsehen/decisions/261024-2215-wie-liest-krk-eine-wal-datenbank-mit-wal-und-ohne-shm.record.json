@@ -17,13 +17,13 @@
   },
   "extensions": {},
   "control": {
-    "state": "answered",
+    "state": "implemented",
     "answer_ref": {
       "kind": "other",
       "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261024-2215-wie-liest-krk-eine-wal-datenbank-mit-wal-und-ohne-shm.md",
       "sha256": "sha256:b4c0db3da186fdc543b927ce536692e1bdfb7ff28206111ea6ce5a4e8da4fd43"
     },
-    "implementation_ref": null,
+    "implementation_ref": "a1fec2b72fd0af5a8549f46bf2a173bfcf8163e9",
     "superseded_by": null,
     "deferral": null
   }
