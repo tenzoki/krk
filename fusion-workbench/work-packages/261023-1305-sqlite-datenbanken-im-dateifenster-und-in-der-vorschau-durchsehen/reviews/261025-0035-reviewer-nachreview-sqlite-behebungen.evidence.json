@@ -1,0 +1,28 @@
+{
+  "schema": "fusion.evidence/v1",
+  "id": "37e74c69-e052-403f-9598-8ac639183f16",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "subject": {
+    "git_tree": "4faffac9f984479f97e7dc8f6efa7e8da328bab9",
+    "git_range": null
+  },
+  "brief_revision": "sha256:259c58d09edb35810f6863032f0fc97c0333272cef224a7cf624043b82a44c0d",
+  "plan_revision": "sha256:d89ac4011da78a506e923a51c86d292ebe73e79a125fb2d7516e56d7349ce880",
+  "role": {
+    "profile": "reviewer",
+    "version": "13.3.5"
+  },
+  "host": "claude-code",
+  "execution_policy": "claude-guided",
+  "verdict": "revise",
+  "uncertainties": [],
+  "checks": [],
+  "report": {
+    "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/reviews/261025-0035-reviewer-nachreview-sqlite-behebungen.md",
+    "sha256": "sha256:f7b75f50f057c1ef99fbd939b1491254093ff67ea68c0e0673ecc02977517dba",
+    "kind": "review"
+  },
+  "predecessor": null,
+  "accepted_at": "2026-10-24T22:32:45Z",
+  "extensions": {}
+}

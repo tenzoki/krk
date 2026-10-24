@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "c19bd0c4-b9fe-4106-97c5-91e358594d99",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/issues/261025-0032-der-doc-kommentar-von-rumpf-von-haengt-seit-dem-einschub-von-freie-funktion-an-der-falschen-funktion.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}
