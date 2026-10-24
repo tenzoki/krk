@@ -1517,6 +1517,14 @@ pub enum Text {
     /// am letzten vollstaendigen Satz gekuerzt erscheint; dazu `{grenze}` in
     /// MB.
     TrenntextKopfzeileGekuerzt,
+    /// `trenntextvorschau::aufbereiten_aus`: die Kopfzeile ueber einer Tabelle
+    /// einer SQLite-Datenbank in der Vorschau; `{zeilen}` sind die gezeigten
+    /// (und, weichen sie ab, die gesamten) Zeilen, `{spalten}` die Spalten.
+    SqliteTabelleKopfzeile,
+    /// Dieselbe Kopfzeile, wenn die TSV der Tabelle groesser ist als die
+    /// Lesegrenze und am letzten vollstaendigen Satz gekuerzt erscheint; dazu
+    /// `{grenze}` in MB.
+    SqliteTabelleKopfzeileGekuerzt,
     /// Der Name des Trennzeichens Komma einer CSV-Datei.
     TrennzeichenKomma,
     /// Der Name des Trennzeichens Semikolon.
@@ -1862,7 +1870,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 766] = [
+    pub const ALLE: [Text; 768] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -2498,6 +2506,8 @@ impl Text {
         Text::VorschauJsonzeilenGekuerzt,
         Text::TrenntextKopfzeile,
         Text::TrenntextKopfzeileGekuerzt,
+        Text::SqliteTabelleKopfzeile,
+        Text::SqliteTabelleKopfzeileGekuerzt,
         Text::TrennzeichenKomma,
         Text::TrennzeichenSemikolon,
         Text::TrennzeichenTabulator,
@@ -2765,11 +2775,15 @@ pub enum Zahlwort {
     /// `TrenntextZeilen`, weil dessen Einzahl das Zahlwort ausschreibt und
     /// eine Spalte mit Zahlen eine Ziffer braucht.
     SqliteZeilen,
+    /// `trenntextvorschau::aufbereiten_aus`: die gezeigten von den gesamten
+    /// Zeilen einer gekuerzten Tabelle in der Kopfzeile; `{n}` ist die
+    /// gesamte Zahl aus dem Inhaltsverzeichnis, `{gezeigt}` die gezeigte.
+    SqliteZeilenVon,
 }
 
 impl Zahlwort {
     /// Alle Zahlwoerter, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Zahlwort; 42] = [
+    pub const ALLE: [Zahlwort; 43] = [
         Zahlwort::Byte,
         Zahlwort::NeuerungenEintraegeIn,
         Zahlwort::HeimZettelUebernommen,
@@ -2812,5 +2826,6 @@ impl Zahlwort {
         Zahlwort::TrenntextSpaltenGeloescht,
         Zahlwort::SqliteBlob,
         Zahlwort::SqliteZeilen,
+        Zahlwort::SqliteZeilenVon,
     ];
 }

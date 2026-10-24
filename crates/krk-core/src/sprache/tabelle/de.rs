@@ -991,6 +991,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::TrenntextKopfzeileGekuerzt => {
             "{trennzeichen} · {zeilen} · {spalten} · gekürzt: Die Datei ist größer als {grenze} MB, gezeigt sind die vollständigen Zeilen ihres Anfangs."
         }
+        Text::SqliteTabelleKopfzeile => "Tabelle · {zeilen} · {spalten}",
+        Text::SqliteTabelleKopfzeileGekuerzt => {
+            "Tabelle · {zeilen} · {spalten} · gekürzt: Die Tabelle ergibt mehr als {grenze} MB Text, gezeigt sind ihre ersten vollständigen Zeilen."
+        }
         Text::TrennzeichenKomma => "Komma",
         Text::TrennzeichenSemikolon => "Semikolon",
         Text::TrennzeichenTabulator => "Tabulator",
@@ -1343,6 +1347,7 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         ),
         Zahlwort::SqliteBlob => ("[BLOB, {n} Byte]", "[BLOB, {n} Bytes]"),
         Zahlwort::SqliteZeilen => ("{n} Zeile", "{n} Zeilen"),
+        Zahlwort::SqliteZeilenVon => ("{gezeigt} von einer Zeile", "{gezeigt} von {n} Zeilen"),
     }
 }
 

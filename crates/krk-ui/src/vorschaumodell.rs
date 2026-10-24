@@ -235,7 +235,7 @@ use std::sync::mpsc::{Receiver, Sender, SyncSender, channel, sync_channel};
 use std::thread;
 use std::time::SystemTime;
 
-use krk_core::archiv::{Archivleser, Lesefehler};
+use krk_core::archiv::{Archivformat, Archivleser, Fundstelle, Lesefehler};
 use krk_core::bild::Aufnahmezeit;
 use krk_core::fern::Fernfaden;
 use krk_core::heimordner::eintraege::termine;
@@ -414,7 +414,7 @@ pub enum Inhalt {
     /// **Ein eigener Wert und kein [`Inhalt::Text`]**, weil die Ansicht ihn
     /// anders stellt: ohne Umbruch, mit waagerechtem Rollbalken, ohne
     /// Einfaerbung und ohne Nummernspalte, denn die Nummern stehen schon im
-    /// Text. Aufbereitet hat ihn [`trenntextvorschau::aufbereiten`] auf dem
+    /// Text. Aufbereitet hat ihn [`trenntextvorschau::aufbereiten_aus`] auf dem
     /// Arbeitsfaden.
     Trenntext(String),
     /// Gerendertes Markdown aus einer Datei: der Text ohne seine
@@ -682,6 +682,11 @@ struct Geladen {
     inhalt: Inhalt,
     /// Bei einer Bildfolge der Kanal, ueber den ihre Gruppen nachkommen.
     nachlieferung: Option<Receiver<Gruppenmeldung>>,
+    /// Bei einem Eintrag in einem Archiv der Name, nach dem der Tab ihn
+    /// darstellt, wenn es nicht der Name des Eintrags ist: fuer eine Sicht
+    /// einer SQLite-Datenbank `<name>.sql`, damit die Einfaerbung SQL
+    /// erkennt ([`archiveintrag_laden`]). Sonst `None`.
+    archivname: Option<PathBuf>,
 }
 
 /// Ein laufendes Laden einer Vorschaudatei.
@@ -762,6 +767,7 @@ impl Ladevorgang {
                         Geladen {
                             inhalt,
                             nachlieferung: None,
+                            archivname: None,
                         },
                     );
                     return;
@@ -772,6 +778,7 @@ impl Ladevorgang {
                     Geladen {
                         inhalt,
                         nachlieferung: Some(nachempfaenger),
+                        archivname: None,
                     },
                 );
                 if gesendet.is_ok() {
@@ -814,12 +821,14 @@ impl Ladevorgang {
         let marke_im_faden = Arc::clone(&marke);
         let ort = eintrag.ort.clone();
         let ergebnis = krk_core::fern::faden("krk-vorschau".to_owned(), move |pfand| {
-            let inhalt = archiveintrag_laden(pfand, &ort, tafel, ersatz, marke_im_faden);
+            let (inhalt, archivname) =
+                archiveintrag_laden(pfand, &ort, tafel, ersatz, marke_im_faden);
             let _ = SyncSender::send(
                 &sender,
                 Geladen {
                     inhalt,
                     nachlieferung: None,
+                    archivname,
                 },
             );
         });
@@ -1537,7 +1546,7 @@ impl Vorschaumodell {
                         tab.inhalt = geladen.inhalt;
                         if vorgang.im_archiv {
                             tab.pfad = None;
-                            tab.archivname = Some(geladener_pfad);
+                            tab.archivname = Some(geladen.archivname.unwrap_or(geladener_pfad));
                         } else {
                             tab.pfad = Some(geladener_pfad);
                             tab.archivname = None;
@@ -1883,7 +1892,7 @@ fn jsonzeilen_aus_bytes(mut bytes: Vec<u8>) -> Option<String> {
 }
 
 /// Bereitet die angelesenen Bytes einer CSV- oder TSV-Datei als
-/// ausgerichteten Text auf ([`trenntextvorschau::aufbereiten`], E17), oder als
+/// ausgerichteten Text auf ([`trenntextvorschau::aufbereiten_aus`], E17), oder als
 /// den Text, der dasteht, wenn daraus keine Tabelle wird; `None`, wenn sie
 /// kein UTF-8 sind oder ueber der Grenze keine Tabelle ergeben.
 ///
@@ -1908,9 +1917,33 @@ fn jsonzeilen_aus_bytes(mut bytes: Vec<u8>) -> Option<String> {
 /// Datei, an der der Editor sie fragt ([`endzeichen_der_datei`]); unter der
 /// Grenze sind beide dasselbe.
 fn trenntext_aus_bytes(
+    bytes: Vec<u8>,
+    endzeichen: trenntext::Endzeichen,
+    art: trenntext::Art,
+    pfad: &Path,
+    typ: Dateityp,
+    tafel: Tafel,
+) -> Option<Inhalt> {
+    trenntext_aus_bytes_von(
+        bytes,
+        endzeichen,
+        art,
+        trenntextvorschau::Herkunft::Datei,
+        pfad,
+        typ,
+        tafel,
+    )
+}
+
+/// [`trenntext_aus_bytes`] mit der Herkunft der Zeilen als Wert: eine Datei
+/// wie dort, oder eine Tabelle einer SQLite-Datenbank, deren Kopfzeile
+/// „Tabelle“ und ihre Zeilen sagt ([`trenntextvorschau::aufbereiten_aus`]).
+/// Gelesen, gekuerzt und zerlegt wird fuer beide auf demselben Weg.
+fn trenntext_aus_bytes_von(
     mut bytes: Vec<u8>,
     endzeichen: trenntext::Endzeichen,
     art: trenntext::Art,
+    herkunft: trenntextvorschau::Herkunft,
     pfad: &Path,
     typ: Dateityp,
     tafel: Tafel,
@@ -1921,7 +1954,7 @@ fn trenntext_aus_bytes(
         // Satzende bekommt es als `\n` (`trenntext::lesbar`).
         let lesbar = trenntext::lesbar_nach(&text, endzeichen);
         let dialekt = dialekt_erkennen(art, &lesbar);
-        let tabelle = trenntextvorschau::aufbereiten(&lesbar, &dialekt, None);
+        let tabelle = trenntextvorschau::aufbereiten_aus(&lesbar, &dialekt, herkunft, None);
         return Some(match tabelle {
             Some(tabelle) => Inhalt::Trenntext(tabelle),
             None => text_als_inhalt(pfad, text, typ, tafel),
@@ -1942,8 +1975,13 @@ fn trenntext_aus_bytes(
     let dialekt = dialekt_erkennen(art, &angelesen);
     let bis = vollstaendig_bis(angelesen.as_bytes(), dialekt.trennzeichen);
     angelesen.truncate(bis);
-    trenntextvorschau::aufbereiten(&angelesen, &dialekt, Some(TEXTGRENZE / (1024 * 1024)))
-        .map(Inhalt::Trenntext)
+    trenntextvorschau::aufbereiten_aus(
+        &angelesen,
+        &dialekt,
+        herkunft,
+        Some(TEXTGRENZE / (1024 * 1024)),
+    )
+    .map(Inhalt::Trenntext)
 }
 
 /// Die Endzeichen einer Datei, von der `angelesen` der Anfang ist, gesammelt
@@ -1988,22 +2026,54 @@ fn endzeichen_der_datei(pfad: &Path, angelesen: &[u8]) -> trenntext::Endzeichen 
 /// Rechte und den Pfad, die sie tragen, hat eine Datei im Archiv nicht. Ein
 /// Bild geht ohne Metadaten in die Ansicht, wie ein Bild aus der
 /// Zwischenablage.
+///
+/// **In einer SQLite-Datenbank entscheidet nicht der Name, sondern die
+/// Fundstelle** im Verzeichnis des geoeffneten [`Archivleser`]s
+/// ([`leseart_in_der_datenbank`]): eine Tabelle heisst nicht `.tsv` und kann
+/// `bild.png` heissen. Fuer jedes andere Format bleibt es bei
+/// [`Leseart::von`] am Namen, vor dem Oeffnen, sodass ein PDF wie bisher kein
+/// Verzeichnis lesen laesst.
+///
+/// Neben dem Inhalt kommt der Name zurueck, nach dem der Tab den Eintrag
+/// darstellt, wenn er nicht der des Eintrags ist (`Geladen::archivname`).
 fn archiveintrag_laden(
     pfand: &Fernfaden,
     ort: &Archivort,
     tafel: Tafel,
     ersatz: String,
     abbruch: Arc<AtomicBool>,
-) -> Inhalt {
+) -> (Inhalt, Option<PathBuf>) {
     let name = PathBuf::from(ort.innen.name().unwrap_or_default());
-    let art = Leseart::von(&name);
-    if art == Leseart::Pdf {
-        return Inhalt::Hinweis(ersatz);
-    }
-    let grenze = art.grenze();
-    let Ok(mut leser) = Archivleser::oeffnen(pfand, Arc::clone(&ort.zugang), abbruch) else {
-        return Inhalt::Hinweis(ersatz);
+    let datenbank = match ort.zugang.format() {
+        Archivformat::Sqlite => true,
+        Archivformat::Zip | Archivformat::Tar | Archivformat::TarGz | Archivformat::Gz => false,
     };
+    if !datenbank && Leseart::von(&name) == Leseart::Pdf {
+        return (Inhalt::Hinweis(ersatz), None);
+    }
+    let Ok(mut leser) = Archivleser::oeffnen(pfand, Arc::clone(&ort.zugang), abbruch) else {
+        return (Inhalt::Hinweis(ersatz), None);
+    };
+    let (art, herkunft, darstellung) = if datenbank {
+        let fundstelle = leser
+            .verzeichnis()
+            .eintrag(&ort.innen)
+            .map(|eintrag| eintrag.fundstelle);
+        leseart_in_der_datenbank(fundstelle, &name)
+    } else {
+        (
+            Leseart::von(&name),
+            trenntextvorschau::Herkunft::Datei,
+            None,
+        )
+    };
+    if art == Leseart::Pdf {
+        return (Inhalt::Hinweis(ersatz), None);
+    }
+    // Eingefaerbt und benannt wird nach dem Darstellungsnamen, also eine
+    // Sicht als `<name>.sql`.
+    let anzeigename = darstellung.clone().unwrap_or_else(|| name.clone());
+    let grenze = art.grenze();
     let mut bytes = Vec::new();
     let mut voll = false;
     let ergebnis = leser.lesen(pfand, &ort.innen, |block| {
@@ -2023,7 +2093,7 @@ fn archiveintrag_laden(
         // Den Abbruch hat der Empfang selbst ausgeloest, weil die Grenze
         // erreicht ist; jeder andere Abbruch kommt von der Marke.
         Err(Lesefehler::Abgebrochen) if voll => {}
-        Err(_) => return Inhalt::Hinweis(ersatz),
+        Err(_) => return (Inhalt::Hinweis(ersatz), None),
     }
     let inhalt = match art {
         Leseart::Bild if !voll => Some(Inhalt::Bild {
@@ -2036,21 +2106,70 @@ fn archiveintrag_laden(
             // zweite Antwort, mit der die Vorschau uebereinstimmen muesste:
             // entschieden wird am gelesenen Anfang.
             let endzeichen = trenntext::Endzeichen::von(&bytes);
-            trenntext_aus_bytes(
+            trenntext_aus_bytes_von(
                 bytes,
                 endzeichen,
                 art,
-                &name,
-                Dateityp::von_pfad(&name, None),
+                herkunft,
+                &anzeigename,
+                Dateityp::von_pfad(&anzeigename, None),
                 tafel,
             )
         }
-        Leseart::Text if !voll => String::from_utf8(bytes)
-            .ok()
-            .map(|text| text_als_inhalt(&name, text, Dateityp::von_pfad(&name, None), tafel)),
+        Leseart::Text if !voll => String::from_utf8(bytes).ok().map(|text| {
+            text_als_inhalt(
+                &anzeigename,
+                text,
+                Dateityp::von_pfad(&anzeigename, None),
+                tafel,
+            )
+        }),
         Leseart::Bild | Leseart::Pdf | Leseart::Text => None,
     };
-    inhalt.unwrap_or(Inhalt::Hinweis(ersatz))
+    match inhalt {
+        Some(inhalt) => (inhalt, darstellung),
+        None => (Inhalt::Hinweis(ersatz), None),
+    }
+}
+
+/// Wie die Vorschau einen Eintrag einer SQLite-Datenbank liest, an seiner
+/// Fundstelle (Schritt 7 des Plans
+/// `261023-1507-plan-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau.md`):
+/// eine Tabelle als TSV mit ihrer Zeilenzahl aus dem Verzeichnis, eine Sicht
+/// als Text mit dem Dateityp von `<name>.sql`, denn sie wird nicht ausgefuehrt
+/// und liefert ihren SQL-Text (Entscheid
+/// `261023-1340-zeigt-krk-sichten-einer-sqlite-datenbank-oder-nur-ihren-sql-text.md`).
+///
+/// Die Fundstellen der anderen Formate kommen in einer Datenbank nicht vor;
+/// fuer sie und fuer einen Eintrag, den das Verzeichnis nicht mehr fuehrt,
+/// bleibt es beim Namen, und das Lesen meldet dann, was fehlt.
+fn leseart_in_der_datenbank(
+    fundstelle: Option<Fundstelle>,
+    name: &Path,
+) -> (Leseart, trenntextvorschau::Herkunft, Option<PathBuf>) {
+    match fundstelle {
+        Some(Fundstelle::SqliteTabelle { zeilen }) => (
+            Leseart::Trenntext(trenntext::Art::Tsv),
+            trenntextvorschau::Herkunft::Tabelle { zeilen },
+            None,
+        ),
+        Some(Fundstelle::SqliteSicht) => {
+            let mut sql = name.as_os_str().to_owned();
+            sql.push(".sql");
+            (
+                Leseart::Text,
+                trenntextvorschau::Herkunft::Datei,
+                Some(PathBuf::from(sql)),
+            )
+        }
+        Some(
+            Fundstelle::Zip(_)
+            | Fundstelle::Tar { .. }
+            | Fundstelle::GzGanz
+            | Fundstelle::Erschlossen,
+        )
+        | None => (Leseart::von(name), trenntextvorschau::Herkunft::Datei, None),
+    }
 }
 
 /// Der Text, den die Vorschau rendert: fuer `appointments.md` im erkannten
@@ -3216,6 +3335,141 @@ mod tests {
             );
             assert_eq!(modell.darstellungspfad(), Some(PathBuf::from(name)));
         }
+    }
+
+    /// Legt mit `/usr/bin/sqlite3` die Datenbank `name` im Pruefordner an und
+    /// fuehrt `sql` darin aus; das Programm ist allein der Schreiber der
+    /// Pruefdaten, gelesen wird ueber KRKs eigene Bindung.
+    fn datenbank_anlegen(ordner: &Pruefordner, name: &str, sql: &str) -> PathBuf {
+        let pfad = ordner.unter(name);
+        let ausgabe = std::process::Command::new("/usr/bin/sqlite3")
+            .arg(&pfad)
+            .arg(sql)
+            .output()
+            .expect("/usr/bin/sqlite3 laesst sich starten");
+        assert!(
+            ausgabe.status.success(),
+            "sqlite3 scheitert an {}: {}",
+            pfad.display(),
+            String::from_utf8_lossy(&ausgabe.stderr)
+        );
+        pfad
+    }
+
+    /// Schritt 7 des Plans der SQLite-Datenbanken: eine kleine Tabelle mit
+    /// Umlauten und einem `NULL` erscheint als ausgerichteter Text, dessen
+    /// erste Zeile „Tabelle“, ihre Zeilen ohne die Spaltennamen und ihre
+    /// Spalten sagt; darunter die Zeile der Spaltennamen als erster Satz.
+    #[test]
+    fn eine_tabelle_erscheint_mit_kopfzeile_tabelle_und_ihren_zeilen() {
+        let ordner = Pruefordner::neu("sqlite-tabelle-klein");
+        let datenbank = datenbank_anlegen(
+            &ordner,
+            "laden.db",
+            "CREATE TABLE obst (name TEXT, preis REAL, menge INTEGER);\
+             INSERT INTO obst VALUES ('Äpfel', 1.5, 3), ('Möhren', NULL, 12);",
+        );
+        let modell = archiv_geladen(&archivdatei(&datenbank, Archivformat::Sqlite, "obst"));
+        let erwartet = "Tabelle · 2 Zeilen · 3 Spalten\n \
+             │ A      │ B     │ C\n\
+             ─┼────────┼───────┼──────\n\
+             1│ name   │ preis │ menge\n\
+             2│ Äpfel  │ 1.5   │ 3\n\
+             3│ Möhren │ NULL  │ 12\n";
+        assert_eq!(
+            *modell.aktiver_inhalt(),
+            Inhalt::Trenntext(erwartet.to_owned())
+        );
+        assert_eq!(modell.darstellungspfad(), Some(PathBuf::from("obst")));
+        assert!(!modell.zeigt_dateitext(), "die Nummern stehen im Text");
+    }
+
+    /// Eine Tabelle, deren TSV ueber der Lesegrenze liegt, zeigt ihre ersten
+    /// vollstaendigen Zeilen, und die Kopfzeile nennt die gezeigten und die
+    /// gesamten Zeilen aus dem Verzeichnis.
+    #[test]
+    fn eine_grosse_tabelle_zeigt_die_gezeigten_und_die_gesamten_zeilen() {
+        let ordner = Pruefordner::neu("sqlite-tabelle-gross");
+        let datenbank = datenbank_anlegen(
+            &ordner,
+            "gross.db",
+            "CREATE TABLE zahlen (n INTEGER, text TEXT);\
+             WITH RECURSIVE z(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM z WHERE n < 40000)\
+               INSERT INTO zahlen SELECT n, printf('%030d', n) FROM z;",
+        );
+        let modell = archiv_geladen(&archivdatei(&datenbank, Archivformat::Sqlite, "zahlen"));
+        let Inhalt::Trenntext(text) = modell.aktiver_inhalt() else {
+            panic!("eine grosse Tabelle erscheint gekuerzt als Tabelle");
+        };
+        let zeilen: Vec<&str> = text.lines().collect();
+        // Kopfzeile, Buchstaben, Trennlinie und die Zeile der Spaltennamen.
+        let gezeigt = zeilen.len() - 4;
+        assert!(gezeigt > 0 && gezeigt < 40_000, "gekuerzt: {gezeigt}");
+        let von = anzahl(
+            Zahlwort::SqliteZeilenVon,
+            40_000,
+            &[("gezeigt", &krk_core::sprache::zahl(gezeigt))],
+        );
+        assert!(von.ends_with(" von 40.000 Zeilen"), "{von}");
+        let kopf = satz(
+            Text::SqliteTabelleKopfzeileGekuerzt,
+            &[
+                ("zeilen", &von),
+                ("spalten", &anzahl(Zahlwort::TrenntextSpalten, 2, &[])),
+                ("grenze", &(TEXTGRENZE / (1024 * 1024))),
+            ],
+        );
+        assert_eq!(zeilen[0], kopf);
+        assert!(kopf.starts_with("Tabelle · "), "{kopf}");
+        assert!(kopf.contains("gekürzt"), "{kopf}");
+        let letzte = zeilen.last().expect("eine Zeile");
+        assert!(
+            letzte.ends_with(&format!("│ {gezeigt:>5} │ {gezeigt:030}")),
+            "die letzte gezeigte Zeile ist vollstaendig: {letzte}"
+        );
+    }
+
+    /// Eine Sicht wird nicht ausgefuehrt: die Vorschau zeigt ihren SQL-Text,
+    /// und der Tab stellt sie als `<name>.sql` dar, damit die Einfaerbung SQL
+    /// erkennt (Entscheid
+    /// `261023-1340-zeigt-krk-sichten-einer-sqlite-datenbank-oder-nur-ihren-sql-text.md`).
+    #[test]
+    fn eine_sicht_erscheint_als_ihr_sql_text() {
+        let ordner = Pruefordner::neu("sqlite-sicht");
+        let sql = "CREATE VIEW grün AS SELECT a FROM t WHERE a > 1";
+        let datenbank = datenbank_anlegen(
+            &ordner,
+            "sicht.db",
+            &format!("CREATE TABLE t (a INTEGER); INSERT INTO t VALUES (1), (2); {sql};"),
+        );
+        let modell = archiv_geladen(&archivdatei(&datenbank, Archivformat::Sqlite, "grün"));
+        assert_eq!(*modell.aktiver_inhalt(), Inhalt::Text(sql.to_owned()));
+        assert_eq!(modell.darstellungspfad(), Some(PathBuf::from("grün.sql")));
+        assert_eq!(
+            Dateityp::von_pfad(Path::new("grün.sql"), None),
+            Dateityp::von_pfad(Path::new("abfrage.sql"), None),
+            "eingefaerbt wird wie jede .sql-Datei"
+        );
+    }
+
+    /// Der lokale Weg ist unveraendert: eine `.db` im lokalen Ordner liest
+    /// [`laden`] wie vor dem Paket, und ihre Bytes sind kein Text der
+    /// Vorschau; sie zeigt ihre Metadaten.
+    #[test]
+    fn eine_lokale_db_datei_zeigt_weiter_ihre_metadaten() {
+        let ordner = Pruefordner::neu("sqlite-lokal");
+        let datenbank = datenbank_anlegen(
+            &ordner,
+            "lokal.db",
+            "CREATE TABLE obst (name TEXT); INSERT INTO obst VALUES ('Äpfel');",
+        );
+        let Inhalt::Metadaten { metadaten, .. } =
+            laden(&datenbank, Tafel::Hell, &Profile::default(), None)
+        else {
+            panic!("eine lokale Datenbank zeigt ihre Metadaten");
+        };
+        assert_eq!(metadaten.pfad, datenbank);
+        assert_eq!(metadaten.typ, Typ::Datei);
     }
 
     /// Misst Zerlegung und Aufbereitung einer CSV von 1 MiB kopflos, den

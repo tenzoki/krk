@@ -38,8 +38,23 @@
 //! Ein Zeilenumbruch in einer Zelle erscheint als `⏎` (`\r\n` als eines), ein
 //! Tabulator als `⇥`, damit jede Zeile der Datei genau eine Zeile der Anzeige
 //! bleibt.
+//!
+//! # Woher die Zeilen kommen
+//!
+//! Seit dem Paket
+//! `261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen`
+//! (Schritt 7 des Plans
+//! `261023-1507-plan-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau.md`)
+//! richtet dieselbe Aufbereitung auch die TSV einer Tabelle aus einer
+//! SQLite-Datenbank aus, und allein die erste Zeile unterscheidet die zwei
+//! [`Herkunft`]en: eine Datei nennt ihr Trennzeichen und zaehlt jeden Satz,
+//! eine Tabelle sagt „Tabelle“ und zaehlt ihre Zeilen ohne die Zeile mit den
+//! Spaltennamen, und ist sie gekuerzt, nennt sie die gezeigten und die
+//! gesamten Zeilen. Die gesamte Zahl ist die aus dem Inhaltsverzeichnis
+//! (`Inhaltsverzeichnis::zeilen`), gezaehlt beim Aufbau; Ausrichtung,
+//! Buchstaben, Trennlinie und Nummern sind fuer beide dieselben.
 
-use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
+use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text, zahl};
 use krk_core::trenntext::{self, Dialekt, Satzindex, Trennzeichen};
 
 /// Die groesste Anzeigebreite einer Spalte; eine laengere Zelle wird gekuerzt.
@@ -92,8 +107,47 @@ pub fn zeichenbreite(zeichen: char) -> usize {
 /// Datei ist; dann sagt es die Kopfzeile. Dass `quelle` am Ende eines
 /// vollstaendigen Satzes aufhoert, sorgt der Rufer
 /// ([`trenntext::vollstaendig_bis`]).
+///
+/// **Die Form fuer eine Datei, und allein die Proben rufen sie**: der
+/// Betriebscode nennt die Herkunft ausdruecklich ueber [`aufbereiten_aus`],
+/// und die vorhandenen Proben zu einer CSV behalten so ihren Wortlaut.
+#[cfg(test)]
 #[must_use]
 pub fn aufbereiten(quelle: &str, dialekt: &Dialekt, gekuerzt_bei: Option<u64>) -> Option<String> {
+    aufbereiten_aus(quelle, dialekt, Herkunft::Datei, gekuerzt_bei)
+}
+
+/// Woher die Zeilen kommen, die [`aufbereiten_aus`] ausrichtet; allein die
+/// Kopfzeile haengt daran (Modulkopf, „Woher die Zeilen kommen“).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Herkunft {
+    /// Eine CSV- oder TSV-Datei, auf der Platte oder in einem Archiv.
+    Datei,
+    /// Eine Tabelle einer SQLite-Datenbank als TSV, deren erste Zeile die
+    /// Spaltennamen traegt.
+    Tabelle {
+        /// Ihre Zeilen laut Inhaltsverzeichnis, oder `None`, wenn das Zaehlen
+        /// scheiterte.
+        zeilen: Option<u64>,
+    },
+}
+
+/// Bereitet `quelle` im `dialekt` als ausgerichteten Text auf, mit einer
+/// Kopfzeile nach der [`Herkunft`] der Zeilen, oder `None`, wenn sie als Text
+/// erscheinen soll (E17): ein Anfuehrungszeichen schliesst nicht, sie traegt
+/// mehr als [`trenntext::HOECHSTENS_SPALTEN`] Spalten, oder sie hat keine
+/// einzige Zeile.
+///
+/// `gekuerzt_bei` ist die Lesegrenze in MB, wenn `quelle` nur der Anfang ist;
+/// dann sagt es die Kopfzeile. Dass `quelle` am Ende eines vollstaendigen
+/// Satzes aufhoert, sorgt der Rufer ([`trenntext::vollstaendig_bis`]).
+#[must_use]
+pub fn aufbereiten_aus(
+    quelle: &str,
+    dialekt: &Dialekt,
+    herkunft: Herkunft,
+    gekuerzt_bei: Option<u64>,
+) -> Option<String> {
     let index = trenntext::indexieren(quelle, dialekt);
     if index.unterminiert().is_some()
         || index.spaltenzahl() > trenntext::HOECHSTENS_SPALTEN
@@ -101,7 +155,7 @@ pub fn aufbereiten(quelle: &str, dialekt: &Dialekt, gekuerzt_bei: Option<u64>) -
     {
         return None;
     }
-    Some(ausrichten(quelle, &index, gekuerzt_bei))
+    Some(ausrichten(quelle, &index, herkunft, gekuerzt_bei))
 }
 
 /// Eine Zelle, wie sie dasteht: ihr Text und dessen Anzeigebreite.
@@ -111,7 +165,12 @@ struct Anzeigezelle {
 }
 
 /// Baut den ausgerichteten Text aus einem gueltigen Index.
-fn ausrichten(quelle: &str, index: &Satzindex, gekuerzt_bei: Option<u64>) -> String {
+fn ausrichten(
+    quelle: &str,
+    index: &Satzindex,
+    herkunft: Herkunft,
+    gekuerzt_bei: Option<u64>,
+) -> String {
     let spalten = index.spaltenzahl();
     let buchstaben: Vec<String> = (0..spalten).map(spaltenbuchstabe).collect();
     let mut breiten: Vec<usize> = buchstaben.iter().map(|b| b.chars().count()).collect();
@@ -136,7 +195,10 @@ fn ausrichten(quelle: &str, index: &Satzindex, gekuerzt_bei: Option<u64>) -> Str
 
     let nummernbreite = index.zeilenzahl().to_string().len();
     let mut aus = String::with_capacity(quelle.len() * 2);
-    aus.push_str(&kopfzeile(index, gekuerzt_bei));
+    aus.push_str(&match herkunft {
+        Herkunft::Datei => kopfzeile(index, gekuerzt_bei),
+        Herkunft::Tabelle { zeilen } => tabellenkopfzeile(index, zeilen, gekuerzt_bei),
+    });
     aus.push('\n');
 
     let kopf: Vec<Anzeigezelle> = buchstaben
@@ -215,6 +277,40 @@ fn kopfzeile(index: &Satzindex, gekuerzt_bei: Option<u64>) -> String {
             Text::TrenntextKopfzeileGekuerzt,
             &[
                 ("trennzeichen", &trennzeichen),
+                ("zeilen", &zeilen),
+                ("spalten", &spalten),
+                ("grenze", &grenze),
+            ],
+        ),
+    }
+}
+
+/// Die erste Zeile ueber einer Tabelle einer Datenbank: „Tabelle“, die
+/// Zeilen und die Spalten, bei Kuerzung mit dem Hinweis.
+///
+/// Gezeigt sind die Saetze ohne den ersten, der die Spaltennamen traegt.
+/// Weicht die Zahl aus dem Verzeichnis davon ab, und das tut sie bei einer
+/// gekuerzten Tabelle, nennt die Zeile beide; ist sie unbekannt, allein die
+/// gezeigten.
+fn tabellenkopfzeile(index: &Satzindex, gesamt: Option<u64>, gekuerzt_bei: Option<u64>) -> String {
+    let gezeigt = index.zeilenzahl().saturating_sub(1);
+    let zeilen = match gesamt {
+        Some(gesamt) if gesamt != gezeigt as u64 => anzahl(
+            Zahlwort::SqliteZeilenVon,
+            gesamt,
+            &[("gezeigt", &zahl(gezeigt))],
+        ),
+        Some(_) | None => anzahl(Zahlwort::TrenntextZeilen, gezeigt as u64, &[]),
+    };
+    let spalten = anzahl(Zahlwort::TrenntextSpalten, index.spaltenzahl() as u64, &[]);
+    match gekuerzt_bei {
+        None => satz(
+            Text::SqliteTabelleKopfzeile,
+            &[("zeilen", &zeilen), ("spalten", &spalten)],
+        ),
+        Some(grenze) => satz(
+            Text::SqliteTabelleKopfzeileGekuerzt,
+            &[
                 ("zeilen", &zeilen),
                 ("spalten", &spalten),
                 ("grenze", &grenze),

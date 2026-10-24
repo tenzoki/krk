@@ -1058,6 +1058,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::TrenntextKopfzeileGekuerzt => {
             "{trennzeichen} · {zeilen} · {spalten} · tronqué\u{a0}: le fichier dépasse {grenze} Mo, seules les lignes complètes de son début sont affichées."
         }
+        Text::SqliteTabelleKopfzeile => "Table · {zeilen} · {spalten}",
+        Text::SqliteTabelleKopfzeileGekuerzt => {
+            "Table · {zeilen} · {spalten} · tronqué\u{a0}: la table donne plus de {grenze} Mo de texte, seules ses premières lignes complètes sont affichées."
+        }
         Text::TrennzeichenKomma => "Virgule",
         Text::TrennzeichenSemikolon => "Point-virgule",
         Text::TrennzeichenTabulator => "Tabulation",
@@ -1429,6 +1433,7 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         ),
         Zahlwort::SqliteBlob => ("[BLOB, {n} octet]", "[BLOB, {n} octets]"),
         Zahlwort::SqliteZeilen => ("{n} ligne", "{n} lignes"),
+        Zahlwort::SqliteZeilenVon => ("{gezeigt} sur une ligne", "{gezeigt} sur {n} lignes"),
     }
 }
 
