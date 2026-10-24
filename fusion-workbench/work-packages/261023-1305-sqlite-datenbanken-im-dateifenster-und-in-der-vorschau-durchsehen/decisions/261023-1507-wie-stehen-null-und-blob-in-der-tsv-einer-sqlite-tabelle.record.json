@@ -17,13 +17,13 @@
   },
   "extensions": {},
   "control": {
-    "state": "answered",
+    "state": "implemented",
     "answer_ref": {
       "kind": "other",
       "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261023-1507-wie-stehen-null-und-blob-in-der-tsv-einer-sqlite-tabelle.md",
       "sha256": "sha256:0f38335c729e804e20894e96437a4a1913068485db496ad4d64d6854346653f9"
     },
-    "implementation_ref": null,
+    "implementation_ref": "e5d2c38735a14ca86ff1b27934343747d0e07891",
     "superseded_by": null,
     "deferral": null
   }

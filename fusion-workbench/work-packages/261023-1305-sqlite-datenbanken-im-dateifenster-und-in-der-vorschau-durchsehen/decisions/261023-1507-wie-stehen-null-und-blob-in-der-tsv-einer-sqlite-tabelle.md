@@ -45,3 +45,5 @@ Nicht im Chat genannt und deshalb hier festgehalten: der BLOB-Platzhalter ist ei
 
 ---
 Answered: Möglichkeit b) aus dem Chat — NULL als Platzhalter `NULL`, BLOB als Platzhalter mit Länge, in Vorschau und TSV-Ausfuhr gleich, verlustbehaftet; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+Implemented: e5d2c387 — NULL als `NULL`, BLOB als `[BLOB, n Bytes]` aus der Sprachtabelle (Schritt 4)
