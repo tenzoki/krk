@@ -121,7 +121,7 @@
 //! [`fehler_zuordnen`] macht aus einem Fehler der Bibliothek einen
 //! [`Verzeichnisfehler`]: eine gesetzte Abbruchmarke und `SQLITE_INTERRUPT`
 //! werden `Abgebrochen`, `SQLITE_BUSY` und `SQLITE_LOCKED` `Belegt` (P8),
-//! `SQLITE_NOTADB` `Ungueltig` mit dem Text „keine SQLite-Datenbank“, ein
+//! `SQLITE_NOTADB` `Ungueltig` mit dem Grund `Text::SqliteKeineDatenbank`, ein
 //! Ein- oder Ausgabefehler und ein gescheitertes Oeffnen mit einem Fehler des
 //! Systems `Lesen`, jeder andere `Ungueltig` mit dem Wortlaut der Bibliothek.
 

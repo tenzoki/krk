@@ -284,7 +284,7 @@ pub enum Text {
     /// (`Archivformat::nur_lesbar_text`).
     DatenbankNurLesbar,
     /// `archiv::sqlite`: eine Datei mit der Endung einer Datenbank, die keine
-    /// SQLite-Datenbank ist; der Grund in `ArchivUngueltig`.
+    /// SQLite-Datenbank ist; der Grund in `DatenbankUngueltig`.
     SqliteKeineDatenbank,
     /// `archiv::sqlite`: ein anderes Programm haelt die Sperre der Datenbank
     /// ueber die Wartezeit hinaus (`Verzeichnisfehler::Belegt`).
@@ -1786,6 +1786,10 @@ pub enum Text {
     /// Formats ihrer Endung; `{datei}`, `{format}`, `{grund}` (der Wortlaut
     /// des Lesers).
     ArchivUngueltig,
+    /// Wie `ArchivUngueltig`, fuer eine Datei mit der Endung einer
+    /// SQLite-Datenbank (`Archivformat::ungueltig_text`); `{datei}`,
+    /// `{grund}`.
+    DatenbankUngueltig,
     /// Der Lesevorgang eines Archivtabs: unter dem Namen steht keine
     /// gewoehnliche Datei; `{datei}`.
     ArchivKeineDatei,
@@ -1803,6 +1807,9 @@ pub enum Text {
     /// allein lesen darf (der ganze Satz; `ArchivNurLesbar` ist der Grund in
     /// der Abschlussliste).
     ArchivAlleinLesbar,
+    /// Wie `ArchivAlleinLesbar`, in einer SQLite-Datenbank
+    /// (`Archivformat::allein_lesbar_satz`).
+    DatenbankAlleinLesbar,
     /// Der Lesevorgang eines fernen Tabs scheitert, weil die Verbindung
     /// getrennt ist; `{name}` (die Verbindung in `secrets.txt`).
     FernVerbindungGetrennt,
@@ -1870,7 +1877,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 768] = [
+    pub const ALLE: [Text; 770] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -2607,11 +2614,13 @@ impl Text {
         Text::ArchivAmFernenOrt,
         Text::ArchivImArchiv,
         Text::ArchivUngueltig,
+        Text::DatenbankUngueltig,
         Text::ArchivKeineDatei,
         Text::ArchivZuGross,
         Text::ArchivOrdnerFehlt,
         Text::ArchivDateiFehlt,
         Text::ArchivAlleinLesbar,
+        Text::DatenbankAlleinLesbar,
         Text::FernVerbindungGetrennt,
         Text::VerbindenErstSichern,
         Text::VerbindenPinNochNichtGesichert,

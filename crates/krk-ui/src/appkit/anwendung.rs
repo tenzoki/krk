@@ -7461,8 +7461,8 @@ impl Anwendungsdelegierter {
     /// auf den Server, in ein Archiv hinein baut sie das Zielarchiv in einem
     /// Umbau neu, und ein Verschieben aus einem Archiv entfernt die Eintraege
     /// dort erst nach dem Kopieren. Ein Archiv als Ziel, das KRK allein lesen
-    /// darf, meldet `Text::ArchivAlleinLesbar` vor dem Start (E14), am Wert und
-    /// ohne Systemaufruf.
+    /// darf, meldet den Satz seines Formats (`Archivformat::allein_lesbar_satz`)
+    /// vor dem Start (E14), am Wert und ohne Systemaufruf.
     fn uebertragen(&self, kommando: Kommando) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
         let verschieben = kommando == Kommando::Verschieben;
@@ -7470,7 +7470,7 @@ impl Anwendungsdelegierter {
         let ziel = self.dateifenster(aktiv.andere()).quelle().angezeigter_ort();
         match (quelle, ziel) {
             (_, Dateiort::Archiv(ziel)) if !ziel.format().beschreibbar() => {
-                self.antwort_zeigen(aktiv, text(Text::ArchivAlleinLesbar));
+                self.antwort_zeigen(aktiv, text(ziel.format().allein_lesbar_satz()));
                 true
             }
             (quelle @ Dateiort::Archiv(_), ziel) | (quelle, ziel @ Dateiort::Archiv(_)) => {
@@ -7792,10 +7792,13 @@ impl Anwendungsdelegierter {
         // Was geloescht wuerde, am Wert des Tabs und ohne Systemaufruf: lokal
         // die Auswahl mit ihren Pfaden, fern und im Archiv die Namen unter dem
         // angezeigten Ort. Ein Archiv, das KRK allein lesen darf, loescht
-        // nichts (E14 des Plans der Archive).
-        let Some(gegenstand) = self.loeschgegenstand(aktiv) else {
-            self.antwort_zeigen(aktiv, text(Text::ArchivAlleinLesbar));
-            return true;
+        // nichts (E14 des Plans der Archive) und meldet den Satz seines Formats.
+        let gegenstand = match self.loeschgegenstand(aktiv) {
+            Ok(gegenstand) => gegenstand,
+            Err(format) => {
+                self.antwort_zeigen(aktiv, text(format.allein_lesbar_satz()));
+                return true;
+            }
         };
 
         // Die beiden billigen Tatsachen der Regel, jede aus genau einer Quelle.
@@ -7877,12 +7880,18 @@ impl Anwendungsdelegierter {
     /// Lokal die Auswahl aus [`crate::kommandos::operationen::betroffene`] mit
     /// ihren Pfaden; fern die Namen derselben Regel und die Zahl der Ordner
     /// darunter, aus dem Ordnermodell, das der ferne Leser gefuellt hat; im
-    /// Archiv ebenso aus dem Ordnermodell. `None` in einem Archiv, das KRK
-    /// allein lesen darf: dort gibt es keinen Loeschweg.
-    fn loeschgegenstand(&self, seite: Fensterseite) -> Option<Loeschgegenstand> {
+    /// Archiv ebenso aus dem Ordnermodell. In einem Archiv, das KRK allein
+    /// lesen darf, gibt es keinen Loeschweg, und die Antwort ist sein Format,
+    /// damit der Rufer dessen Satz meldet (`Archivformat::allein_lesbar_satz`).
+    fn loeschgegenstand(
+        &self,
+        seite: Fensterseite,
+    ) -> Result<Loeschgegenstand, krk_core::archiv::Archivformat> {
         let quelle = self.dateifenster(seite).quelle();
-        Some(match quelle.angezeigter_ort() {
-            Dateiort::Archiv(ordner) if !ordner.format().beschreibbar() => return None,
+        Ok(match quelle.angezeigter_ort() {
+            Dateiort::Archiv(ordner) if !ordner.format().beschreibbar() => {
+                return Err(ordner.format());
+            }
             Dateiort::Archiv(ordner) => {
                 let (namen, ordnerzahl) = quelle.betroffene_namen_und_ordnerzahl();
                 Loeschgegenstand::Archiv {
@@ -9071,7 +9080,7 @@ impl Anwendungsdelegierter {
             // Abwurfregel hat ihn schon abgewiesen, und die Zeile steht, damit
             // auch ein anderer Weg hierher nichts startet.
             Dateiort::Archiv(archiv) if !archiv.format().beschreibbar() => {
-                self.antwort_zeigen(seite, text(Text::ArchivAlleinLesbar));
+                self.antwort_zeigen(seite, text(archiv.format().allein_lesbar_satz()));
             }
             // Ein Abwurf auf ein fernes Fenster oder ein Archivfenster ist ein
             // Kopieren oder Verschieben dorthin, ueber dieselbe Maschine wie
@@ -17406,5 +17415,66 @@ mod archivloeschproben {
                 );
             }
         }
+    }
+}
+
+/// Der Satz „allein lesbar“ der Statuszeile folgt dem Format des Ortes (Defekt
+/// `261023-2035-in-einer-sqlite-datenbank-sagt-die-statuszeile-weiter-archiv.md`).
+#[cfg(test)]
+mod alleinlesbarproben {
+    use std::sync::Arc;
+
+    use krk_core::archiv::{Archivformat, Archivzugang};
+    use krk_core::ort::Archivort;
+    use krk_core::sprache::text;
+
+    use super::quelltextproben::{diese_datei, rumpf};
+
+    /// Die drei Stellen, an denen ein Befehl in einen allein lesbaren Ort
+    /// schreiben soll (Kopieren und Verschieben, Loeschen, Abwurf), fragen
+    /// das Format des Ortes und nennen `Text::ArchivAlleinLesbar` nicht fest;
+    /// am Wert eines Ortes heisst das fuer eine Datenbank der Satz der
+    /// Datenbank und fuer ein Zip weiter der des Archivs.
+    ///
+    /// **Was sie nicht sieht:** ob die Antwort an jeder der drei Stellen
+    /// wirklich aus dem betroffenen Ort kommt und nicht aus einem anderen;
+    /// das sagen die Musterzweige, an denen das Format haengt, und keine
+    /// Nadel. Und eine vierte Stelle, die den Satz fest nennt, ausserhalb der
+    /// drei Ruempfe.
+    #[test]
+    fn der_satz_allein_lesbar_folgt_dem_format_des_ortes() {
+        let datei = diese_datei();
+        for name in [
+            "uebertragen",
+            "loeschen_nach_rueckfrage",
+            "abwurf_ausfuehren",
+        ] {
+            let rumpf = rumpf(&datei, name);
+            assert!(
+                rumpf.contains(".allein_lesbar_satz()"),
+                "{name} fragt das Format nicht nach seinem Satz"
+            );
+            assert!(
+                !rumpf.contains(concat!("Text::Archiv", "AlleinLesbar")),
+                "{name} nennt den Satz des Archivs fest"
+            );
+        }
+
+        let ort = |pfad: &str, format| {
+            Archivort::wurzel(Arc::new(Archivzugang::neu(
+                std::path::PathBuf::from(pfad),
+                format,
+            )))
+        };
+        let datenbank = ort("/gibt/es/nicht/probe.db", Archivformat::Sqlite);
+        assert_eq!(
+            text(datenbank.format().allein_lesbar_satz()),
+            "Diese Datenbank ist allein lesbar."
+        );
+        let zip = ort("/gibt/es/nicht/probe.zip", Archivformat::Zip);
+        assert_eq!(
+            text(zip.format().allein_lesbar_satz()),
+            "Dieses Archiv ist allein lesbar."
+        );
     }
 }

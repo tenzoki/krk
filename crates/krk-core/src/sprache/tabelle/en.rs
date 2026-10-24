@@ -177,7 +177,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::ArchivNurLesbar => "this archive is read-only",
         Text::DatenbankNurLesbar => "this database is read-only",
-        Text::SqliteKeineDatenbank => "not an SQLite database",
+        Text::SqliteKeineDatenbank => "the file is not in SQLite format",
         Text::DatenbankWirdGeschrieben => "the database is being written to",
         Text::SqliteNull => "NULL",
         Text::ArchivSchreibgeschuetzt => "the archive file is write-protected",
@@ -1126,6 +1126,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::ArchivUngueltig => {
             "{datei} is not a readable archive in the {format} format: {grund}"
         }
+        Text::DatenbankUngueltig => "{datei} is not a readable SQLite database: {grund}",
         Text::ArchivKeineDatei => "{datei} is not a regular file.",
         Text::ArchivZuGross => "{datei} holds more than {grenze} entries and is not shown.",
         Text::ArchivOrdnerFehlt => {
@@ -1133,6 +1134,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::ArchivDateiFehlt => "The archive {datei} no longer exists; showing {ordner}.",
         Text::ArchivAlleinLesbar => "This archive is read-only.",
+        Text::DatenbankAlleinLesbar => "This database is read-only.",
         Text::FernVerbindungGetrennt => {
             "The connection “{name}” is closed; clicking the connection reconnects."
         }

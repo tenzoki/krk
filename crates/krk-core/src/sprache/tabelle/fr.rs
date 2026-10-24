@@ -205,7 +205,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::ArchivNurLesbar => "cette archive est en lecture seule",
         Text::DatenbankNurLesbar => "cette base de données est en lecture seule",
-        Text::SqliteKeineDatenbank => "pas une base de données SQLite",
+        Text::SqliteKeineDatenbank => "le fichier n’est pas au format SQLite",
         Text::DatenbankWirdGeschrieben => "la base de données est en cours d’écriture",
         Text::SqliteNull => "NULL",
         Text::ArchivSchreibgeschuetzt => "le fichier de l’archive est protégé en écriture",
@@ -1261,6 +1261,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::ArchivUngueltig => {
             "{datei} n’est pas une archive lisible au format {format}\u{a0}: {grund}"
         }
+        Text::DatenbankUngueltig => {
+            "{datei} n’est pas une base de données SQLite lisible\u{a0}: {grund}"
+        }
         Text::ArchivKeineDatei => "{datei} n’est pas un fichier ordinaire.",
         Text::ArchivZuGross => "{datei} contient plus de {grenze} entrées et n’est pas affichée.",
         Text::ArchivOrdnerFehlt => {
@@ -1268,6 +1271,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::ArchivDateiFehlt => "L’archive {datei} n’existe plus\u{202f}; affichage de {ordner}.",
         Text::ArchivAlleinLesbar => "Cette archive est en lecture seule.",
+        Text::DatenbankAlleinLesbar => "Cette base de données est en lecture seule.",
         Text::FernVerbindungGetrennt => {
             "La connexion «\u{a0}{name}\u{a0}» est interrompue\u{202f}; un clic sur la connexion la rétablit."
         }

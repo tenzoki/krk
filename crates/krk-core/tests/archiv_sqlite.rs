@@ -505,6 +505,15 @@ fn in_einer_datenbank_meldet_jeder_melder_den_text_der_datenbank() {
             "{format:?}"
         );
         assert_eq!(format.nur_lesbar_text(), nur_lesbar, "{format:?}");
+        // Der ganze Satz der Statuszeile und die Meldung eines Lesers, der
+        // die Datei nicht lesen kann, folgen demselben Format.
+        let (allein_lesbar, ungueltig) = if format == Archivformat::Sqlite {
+            (Text::DatenbankAlleinLesbar, Text::DatenbankUngueltig)
+        } else {
+            (Text::ArchivAlleinLesbar, Text::ArchivUngueltig)
+        };
+        assert_eq!(format.allein_lesbar_satz(), allein_lesbar, "{format:?}");
+        assert_eq!(format.ungueltig_text(), ungueltig, "{format:?}");
         assert_eq!(
             Umbaufehler::NurLesbar(format).grund(),
             text(nur_lesbar),

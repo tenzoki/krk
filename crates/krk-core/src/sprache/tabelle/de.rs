@@ -187,7 +187,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::ArchivNurLesbar => "dieses Archiv ist allein lesbar",
         Text::DatenbankNurLesbar => "diese Datenbank ist allein lesbar",
-        Text::SqliteKeineDatenbank => "keine SQLite-Datenbank",
+        Text::SqliteKeineDatenbank => "die Datei hat nicht das Format von SQLite",
         Text::DatenbankWirdGeschrieben => "die Datenbank wird gerade geschrieben",
         Text::SqliteNull => "NULL",
         Text::ArchivSchreibgeschuetzt => "die Archivdatei ist schreibgeschützt",
@@ -1174,6 +1174,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "Ein Archiv in einem Archiv lässt sich nicht betreten; erst herauskopieren."
         }
         Text::ArchivUngueltig => "{datei} ist kein lesbares Archiv im Format {format}: {grund}",
+        Text::DatenbankUngueltig => "{datei} ist keine lesbare SQLite-Datenbank: {grund}",
         Text::ArchivKeineDatei => "Unter {datei} steht keine gewöhnliche Datei.",
         Text::ArchivZuGross => "{datei} führt mehr als {grenze} Einträge und wird nicht gezeigt.",
         Text::ArchivOrdnerFehlt => {
@@ -1181,6 +1182,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::ArchivDateiFehlt => "Das Archiv {datei} gibt es nicht mehr; gezeigt wird {ordner}.",
         Text::ArchivAlleinLesbar => "Dieses Archiv ist allein lesbar.",
+        Text::DatenbankAlleinLesbar => "Diese Datenbank ist allein lesbar.",
         Text::FernVerbindungGetrennt => {
             "Die Verbindung „{name}“ ist getrennt; ein Klick auf die Verbindung verbindet neu."
         }

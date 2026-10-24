@@ -2415,9 +2415,14 @@ fn archivfehlertext(ort: &Tabort, fehler: &Archivfehler) -> Option<String> {
         Tabort::Archiv { ort, .. } => ort.datei().display().to_string(),
         Tabort::Lokal(_) | Tabort::Fern { .. } => ort.anzeige(),
     };
-    let format = match ort {
-        Tabort::Archiv { ort, .. } => archivformatname(ort.format()),
-        Tabort::Lokal(_) | Tabort::Fern { .. } => "",
+    // Der Satz zu einer Datei, die der Leser nicht lesen kann, folgt dem
+    // Format: eine Datenbank nennt sich als Datenbank und nicht als Archiv.
+    let (format, ungueltig) = match ort {
+        Tabort::Archiv { ort, .. } => (
+            archivformatname(ort.format()),
+            ort.format().ungueltig_text(),
+        ),
+        Tabort::Lokal(_) | Tabort::Fern { .. } => ("", Text::ArchivUngueltig),
     };
     Some(match fehler {
         Archivfehler::Verzeichnis(Verzeichnisfehler::Abgebrochen) => return None,
@@ -2429,7 +2434,7 @@ fn archivfehlertext(ort: &Tabort, fehler: &Archivfehler) -> Option<String> {
             satz(Text::ArchivKeineDatei, &[("datei", &datei)])
         }
         Archivfehler::Verzeichnis(Verzeichnisfehler::Ungueltig(grund)) => satz(
-            Text::ArchivUngueltig,
+            ungueltig,
             &[("datei", &datei), ("format", &format), ("grund", grund)],
         ),
         Archivfehler::Verzeichnis(Verzeichnisfehler::Belegt) => satz(
@@ -4912,6 +4917,46 @@ mod tests {
         let meldung = liste.aktiver().meldung().expect("eine Meldung");
         assert!(meldung.contains("kaputt.zip"), "{meldung}");
         assert!(meldung.contains("zip"), "{meldung}");
+    }
+
+    /// Eine `.db`, die keine SQLite-Datenbank ist, nennt sich in der Meldung
+    /// als Datenbank und nicht als Archiv im Format sqlite; ein kaputtes Zip
+    /// meldet sich daneben unveraendert als Archiv (Defekt
+    /// `261023-2035-in-einer-sqlite-datenbank-sagt-die-statuszeile-weiter-archiv.md`).
+    /// Beide Dateien legt die Probe selbst an und liest sie ueber den
+    /// Lesevorgang des Tabs.
+    #[test]
+    fn eine_db_ohne_sqlite_inhalt_meldet_sich_als_datenbank_und_ein_zip_als_archiv() {
+        let ordner = Pruefordner::neu("tab-datenbank-ungueltig");
+        let db = ordner.pfad().join("Thumbs.db");
+        std::fs::write(
+            &db,
+            b"das ist keine Datenbank, sondern ein Satz. ".repeat(100),
+        )
+        .expect("Datei");
+        let mut liste = liste(&[&ordner.pfad().display().to_string()]);
+        let zugang = crate::archivregister::zugang(&db, Archivformat::Sqlite);
+        liste.archiv_setzen(Archivort::wurzel(zugang), ordner.pfad().to_path_buf(), None);
+        fertig_lesen(&mut liste);
+        assert_eq!(
+            liste.aktiver().meldung().expect("eine Meldung"),
+            format!(
+                "{} ist keine lesbare SQLite-Datenbank: die Datei hat nicht das Format von SQLite",
+                db.display()
+            )
+        );
+
+        let zip = ordner.pfad().join("kaputt.zip");
+        std::fs::write(&zip, b"kein zip").expect("Datei");
+        let zugang = crate::archivregister::zugang(&zip, Archivformat::Zip);
+        liste.archiv_setzen(Archivort::wurzel(zugang), ordner.pfad().to_path_buf(), None);
+        fertig_lesen(&mut liste);
+        let meldung = liste.aktiver().meldung().expect("eine Meldung");
+        let anfang = format!("{} ist kein lesbares Archiv im Format zip: ", zip.display());
+        assert!(
+            meldung.starts_with(&anfang) && meldung.len() > anfang.len(),
+            "{meldung}"
+        );
     }
 
     /// Die Sitzung nennt kein Archiv: ein Archivtab schreibt seinen

@@ -22,3 +22,5 @@ In einer SQLite-Datenbank nennen beide Meldungen die Datenbank, wie es die Melde
 ## Herkunft
 
 Bericht des Code-Implementers zu Schritt 3, Abweichung 6.
+
+**Resolved:** 261024, code-implementer. `Archivformat::allein_lesbar_satz` (neu `Text::DatenbankAlleinLesbar`) an den drei Stellen in `anwendung.rs`, `Archivformat::ungueltig_text` (neu `Text::DatenbankUngueltig`) in `tabs.rs::archivfehlertext`; Grund `SqliteKeineDatenbank` umformuliert; HowTo nachgezogen. Proben `der_satz_allein_lesbar_folgt_dem_format_des_ortes`, `eine_db_ohne_sqlite_inhalt_meldet_sich_als_datenbank_und_ein_zip_als_archiv`. `make check` grün.

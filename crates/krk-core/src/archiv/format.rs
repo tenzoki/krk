@@ -22,13 +22,17 @@
 //! im Arbeitspaket
 //! `261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen`).
 //! Auch hier entscheidet allein die Endung: eine `.db`, die keine Datenbank
-//! ist (`Thumbs.db`, Berkeley DB), wird betreten und meldet dort „keine
-//! SQLite-Datenbank“.
+//! ist (`Thumbs.db`, Berkeley DB), wird betreten und meldet dort, dass sie
+//! keine lesbare SQLite-Datenbank ist (`Text::DatenbankUngueltig` mit dem
+//! Grund `Text::SqliteKeineDatenbank`).
 //!
 //! **Welche Meldung ein Befehl bekommt, der im Format nicht wirkt, folgt dem
 //! Format und nicht dem Rufer**: [`Archivformat::nicht_verfuegbar_text`] und
 //! [`Archivformat::nur_lesbar_text`] antworten je ohne Auffangzweig, und jeder
-//! Melder fragt sie, statt einen Text fuer „Archiv“ fest zu nennen.
+//! Melder fragt sie, statt einen Text fuer „Archiv“ fest zu nennen. Dasselbe
+//! gilt fuer den ganzen Satz der Statuszeile
+//! ([`Archivformat::allein_lesbar_satz`]) und fuer die Meldung eines Lesers,
+//! der die Datei nicht lesen kann ([`Archivformat::ungueltig_text`]).
 
 use std::ffi::OsStr;
 
@@ -118,6 +122,36 @@ impl Archivformat {
                 Text::ArchivNurLesbar
             }
             Archivformat::Sqlite => Text::DatenbankNurLesbar,
+        }
+    }
+
+    /// Der ganze Satz der Statuszeile, wenn ein Befehl in einen Ort dieses
+    /// Formats schreiben soll, den KRK allein lesen darf; gross begonnen und
+    /// mit Punkt. [`nur_lesbar_text`](Self::nur_lesbar_text) ist dagegen der
+    /// Grund derselben Lage in der Abschlussliste, ein Satzteil. Fuer ein
+    /// beschreibbares Format antwortet die Funktion mit dem Satz des Archivs,
+    /// aus dem Grund von `nur_lesbar_text`.
+    #[must_use]
+    pub fn allein_lesbar_satz(self) -> Text {
+        match self {
+            Archivformat::Zip | Archivformat::Tar | Archivformat::TarGz | Archivformat::Gz => {
+                Text::ArchivAlleinLesbar
+            }
+            Archivformat::Sqlite => Text::DatenbankAlleinLesbar,
+        }
+    }
+
+    /// Die Meldung, wenn der Leser des Formats die Datei nicht lesen kann,
+    /// etwa eine `.db`, die keine SQLite-Datenbank ist. Die Vorlage des
+    /// Archivs nennt `{datei}`, `{format}` und `{grund}`, die der Datenbank
+    /// allein `{datei}` und `{grund}`; der Rufer reicht alle drei.
+    #[must_use]
+    pub fn ungueltig_text(self) -> Text {
+        match self {
+            Archivformat::Zip | Archivformat::Tar | Archivformat::TarGz | Archivformat::Gz => {
+                Text::ArchivUngueltig
+            }
+            Archivformat::Sqlite => Text::DatenbankUngueltig,
         }
     }
 }

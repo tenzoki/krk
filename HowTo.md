@@ -545,8 +545,8 @@ allein zum Durchsehen.** Betreten werden Dateien mit den Endungen `.sqlite`,
 `.sqlite3`, `.db` und `.db3`, ohne Rücksicht auf Groß- und Kleinschreibung.
 Auch hier entscheidet allein die Endung: eine `.db`, die keine
 SQLite-Datenbank ist, etwa ein `Thumbs.db` von Windows, betritt KRK trotzdem,
-und die Statuszeile sagt, dass die Datei kein lesbares Archiv ist, mit dem
-Grund „keine SQLite-Datenbank“.
+und die Statuszeile sagt „Thumbs.db ist keine lesbare SQLite-Datenbank: die
+Datei hat nicht das Format von SQLite“, vor dem Namen der volle Pfad.
 
 **Hinein mit Pfeil rechts oder einem Doppelklick, hinaus mit Pfeil links**,
 wie bei einem Archiv. **`return` öffnet die Datenbank weiter mit dem
@@ -593,8 +593,9 @@ Tabelle dauert dort also doppelt so lange.
 **KRK schreibt nichts in eine Datenbank.** Hineinkopieren, Verschieben,
 Umbenennen, Anlegen und Löschen gehen dort nicht. Die Befehle sind
 ausgegraut, das Kontextmenü sagt „Das geht in einer Datenbank nicht.“, und
-ein Kopieren aus dem anderen Fenster in eine Datenbank weist KRK ab; die
-Statuszeile sagt dabei zurzeit noch „Dieses Archiv ist allein lesbar.“.
+ein Kopieren aus dem anderen Fenster, ein Abwurf oder ein Löschen in einer
+Datenbank weist KRK ab; die Statuszeile sagt dabei „Diese Datenbank ist
+allein lesbar.“.
 
 **Was beim Lesen an der Datei geschieht.** KRK öffnet eine Datenbank allein
 lesend. Die Datenbankdatei selbst und ein danebenstehendes `-wal` bleiben

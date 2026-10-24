@@ -425,16 +425,21 @@ fn die_franzoesische_abbruchmeldung_braucht_keine_angleichung() {
 #[test]
 fn die_statuszeile_sagt_allein_lesbar_als_ganzen_satz() {
     for sprache in [Sprache::De, Sprache::Fr, Sprache::En] {
-        let satz = sprache.text(Text::ArchivAlleinLesbar);
-        assert!(
-            satz.chars().next().is_some_and(char::is_uppercase) && satz.ends_with('.'),
-            "{sprache:?}: {satz}"
-        );
-        let grund = sprache.text(Text::ArchivNurLesbar);
-        assert!(
-            grund.chars().next().is_some_and(char::is_lowercase) && !grund.ends_with('.'),
-            "{sprache:?}: {grund}"
-        );
+        for (satz, grund) in [
+            (Text::ArchivAlleinLesbar, Text::ArchivNurLesbar),
+            (Text::DatenbankAlleinLesbar, Text::DatenbankNurLesbar),
+        ] {
+            let satz = sprache.text(satz);
+            assert!(
+                satz.chars().next().is_some_and(char::is_uppercase) && satz.ends_with('.'),
+                "{sprache:?}: {satz}"
+            );
+            let grund = sprache.text(grund);
+            assert!(
+                grund.chars().next().is_some_and(char::is_lowercase) && !grund.ends_with('.'),
+                "{sprache:?}: {grund}"
+            );
+        }
     }
 }
 
