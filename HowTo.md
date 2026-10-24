@@ -599,12 +599,16 @@ allein lesbar.“.
 
 **Was beim Lesen an der Datei geschieht.** KRK öffnet eine Datenbank allein
 lesend. Die Datenbankdatei selbst und ein danebenstehendes `-wal` bleiben
-dabei Byte für Byte, wie sie sind, und KRK legt neben der Datenbank keine
-Datei an, weder `-wal` noch `-shm` noch `-journal`. **Die eine Ausnahme ist
-ein schon vorhandenes `-shm`**: steht neben einer Datenbank im WAL-Betrieb
-eine `-shm`-Datei, setzt SQLite beim Lesen darin eine Lesemarke oder baut,
-wenn KRK als einziges Programm liest, ihren Index neu auf. Die Daten der
-Datenbank berührt das nicht. Liest KRK, während ein anderes Programm in die
+dabei Byte für Byte, wie sie sind, und KRK legt neben der Datenbank weder
+`-wal` noch `-journal` an. **Ein leeres `-wal` ohne `-shm` liest KRK
+unveränderlich und legt nichts an; ein nicht leeres `-wal` ohne `-shm`
+(Absturz, Kopie) lässt SQLite eine `-shm` anlegen.** Das leere `-wal` ohne
+`-shm` ist häufig, etwa bei Firefox und manchen anderen Programmen, die nie
+eine `-shm` anlegen; das nicht leere bleibt nach einem Absturz des
+schreibenden Programms oder in einer Kopie ohne `-shm` zurück, und die neue
+`-shm` bleibt dann stehen. **Steht schon ein `-shm`**, setzt SQLite beim
+Lesen darin eine Lesemarke oder baut, wenn KRK als einziges Programm liest,
+ihren Index neu auf. Die Daten der Datenbank berührt das nicht. Liest KRK, während ein anderes Programm in die
 Datenbank schreibt, sieht es den neuesten übergebenen Stand; hält das andere
 Programm die Datenbank länger gesperrt, sagt die Statuszeile „die Datenbank
 wird gerade geschrieben“. Eine kopierte WAL-Datenbank ohne ihre

@@ -1140,6 +1140,158 @@ fn die_lesemarke_ist_die_einzige_aenderung_an_shm() {
     );
 }
 
+// ---------------------------------------------------------------------------
+// `-wal` ohne `-shm`, und `-shm` ohne `-wal` (Issue
+// `261024-2112-mode-ro-legt-neben-einer-wal-datenbank-mit-wal-und-ohne-shm-eine-neue-shm-an.md`,
+// Entscheid `261024-2215-wie-liest-krk-eine-wal-datenbank-mit-wal-und-ohne-shm.md`)
+// ---------------------------------------------------------------------------
+
+/// Eine WAL-Datenbank mit Tabelle `t` und Sicht `v`, angelegt wie von einem
+/// Programm im Sperrmodus `exclusive`: der Schreiber legt nie eine `-shm` an,
+/// und nach `wal_checkpoint(TRUNCATE)` und dem Schliessen steht neben der
+/// Hauptdatei ein leeres `-wal` (gemessen am 261024 mit dem `/usr/bin/sqlite3`
+/// von macOS; Analyse
+/// `261024-2133-shm-neben-wal-ohne-shm-zusage-korrigieren-oder-anlegen-verhindern.md`,
+/// Abschnitt 2).
+fn exklusiv_angelegt(ordner: &Pruefordner) -> PathBuf {
+    let datei = ordner.ordner("db").join("exklusiv.db");
+    anlegen(
+        &datei,
+        "PRAGMA locking_mode = EXCLUSIVE;
+         PRAGMA journal_mode = WAL;
+         CREATE TABLE t(a, b);
+         INSERT INTO t VALUES (1, 'eins'), (2, 'zwei');
+         CREATE VIEW v AS SELECT a FROM t;
+         PRAGMA wal_checkpoint(TRUNCATE);",
+    );
+    let kopf = fs::read(&datei).unwrap();
+    assert_eq!(
+        (kopf[18], kopf[19]),
+        (2, 2),
+        "der Kopf traegt die WAL-Kennung"
+    );
+    datei
+}
+
+/// (a) Ein leeres `-wal` ohne `-shm`: Verzeichnis, Tabelle, Sicht und Kopieren
+/// lesen den vollen Stand, und danach steht neben der Datenbank genau, was
+/// vorher stand; Hauptdatei und `-wal` bleiben Byte fuer Byte. Ohne die Regel
+/// legte `mode=ro` hier eine `-shm` an (Analyse, Abschnitt 1, Zeile „leeres
+/// `-wal`“).
+#[test]
+fn ein_leeres_wal_ohne_shm_wird_unveraenderlich_gelesen_und_nichts_entsteht() {
+    let ordner = Pruefordner::neu("sqlite-leeres-wal-ohne-shm");
+    let ziel = ordner.ordner("ziel");
+    let datei = exklusiv_angelegt(&ordner);
+    let wal = neben(&datei, "-wal");
+    let db_ordner = datei
+        .parent()
+        .expect("der Ordner der Datenbank")
+        .to_path_buf();
+    let namen_vorher = ordnernamen(&db_ordner);
+    assert_eq!(
+        namen_vorher,
+        ["exklusiv.db", "exklusiv.db-wal"],
+        "die Vorlage: ein -wal und keine -shm"
+    );
+    assert_eq!(fs::metadata(&wal).unwrap().len(), 0, "das -wal ist leer");
+    let haupt_vorher = abdruck(&datei);
+    let wal_vorher = abdruck(&wal);
+
+    let tabelle = alle_wege_fahren(&datei, &ziel);
+    assert_eq!(tabelle, b"a\tb\n1\teins\n2\tzwei\n", "der volle Stand");
+    let verzeichnis = lesen(&datei).expect("das Verzeichnis entsteht");
+    assert_eq!(verzeichnis.zeilen(&innen("t")), Some(2));
+
+    assert_eq!(
+        ordnernamen(&db_ordner),
+        namen_vorher,
+        "neben der Datenbank entsteht nichts, auch keine -shm"
+    );
+    assert_eq!(abdruck(&datei), haupt_vorher, "die Hauptdatei bleibt");
+    assert_eq!(abdruck(&wal), wal_vorher, "das -wal bleibt");
+}
+
+/// (b) Ein nicht leeres `-wal` ohne `-shm`, wie es ein abgestuerzter
+/// Schreiber hinterlaesst, dessen `-shm` danach fehlt: die allein im `-wal`
+/// stehende Zeile wird gelesen, danach steht genau eine neue Datei daneben,
+/// die `-shm`, und Hauptdatei und `-wal` bleiben Byte fuer Byte (Entscheid,
+/// fuer den Rest Moeglichkeit 1).
+#[test]
+fn ein_nicht_leeres_wal_ohne_shm_liest_die_zeile_im_wal_und_legt_genau_eine_shm_an() {
+    let ordner = Pruefordner::neu("sqlite-volles-wal-ohne-shm");
+    let ziel = ordner.ordner("ziel");
+    let (datei, mut schreiber) = wal_mit_schreiber(&ordner);
+    // `kill -9`: kein Checkpoint, `-wal` behaelt die Zeile des Schreibers.
+    schreiber.abbrechen();
+    drop(schreiber);
+    let wal = neben(&datei, "-wal");
+    let shm = neben(&datei, "-shm");
+    fs::remove_file(&shm).expect("-shm geht fort");
+    let db_ordner = datei
+        .parent()
+        .expect("der Ordner der Datenbank")
+        .to_path_buf();
+    assert_eq!(ordnernamen(&db_ordner), ["wal.db", "wal.db-wal"]);
+    assert!(
+        fs::metadata(&wal).unwrap().len() > 0,
+        "das -wal ist nicht leer"
+    );
+    let haupt_vorher = abdruck(&datei);
+    let wal_vorher = abdruck(&wal);
+
+    let tabelle = alle_wege_fahren(&datei, &ziel);
+    assert_eq!(
+        tabelle, b"a\tb\n1\teins\n2\tzwei\n3\taus dem wal\n",
+        "die Zeile im -wal wird gelesen"
+    );
+
+    assert_eq!(
+        ordnernamen(&db_ordner),
+        ["wal.db", "wal.db-shm", "wal.db-wal"],
+        "genau eine neue Datei: die -shm"
+    );
+    assert_eq!(abdruck(&datei), haupt_vorher, "die Hauptdatei bleibt");
+    assert_eq!(abdruck(&wal), wal_vorher, "das -wal bleibt");
+}
+
+/// (d) `-shm` steht, `-wal` fehlt: `mode=ro` scheitert dort mit
+/// `SQLITE_CANTOPEN` (gemessen am 261024), und die Rueckfallstufe liest
+/// unveraenderlich. Haelt, dass sie keine Bedingung „`-shm` fehlt“ traegt:
+/// gelesen wird, nichts entsteht, und Hauptdatei und `-shm` bleiben Byte fuer
+/// Byte.
+#[test]
+fn eine_wal_datenbank_mit_shm_und_ohne_wal_wird_unveraenderlich_gelesen() {
+    let ordner = Pruefordner::neu("sqlite-shm-ohne-wal");
+    let datei = ordner.unter("ohne-wal.db");
+    anlegen(
+        &datei,
+        "PRAGMA journal_mode = WAL;
+         CREATE TABLE t(x);
+         INSERT INTO t VALUES (1), (2), (3);
+         PRAGMA wal_checkpoint(TRUNCATE);",
+    );
+    let shm = neben(&datei, "-shm");
+    assert!(
+        shm.exists(),
+        "das /usr/bin/sqlite3 von macOS laesst -shm stehen"
+    );
+    fs::remove_file(neben(&datei, "-wal")).expect("-wal geht fort");
+    let namen_vorher = ordnernamen(ordner.pfad());
+    assert_eq!(namen_vorher, ["ohne-wal.db", "ohne-wal.db-shm"]);
+    let haupt_vorher = abdruck(&datei);
+    let shm_vorher = abdruck(&shm);
+
+    let verzeichnis = lesen(&datei).expect("die Datenbank wird gelesen");
+    assert_eq!(namen(&verzeichnis), ["t"]);
+    assert_eq!(verzeichnis.zeilen(&innen("t")), Some(3));
+    assert_eq!(eintrag_lesen(&datei, "t"), b"x\n1\n2\n3\n");
+
+    assert_eq!(ordnernamen(ordner.pfad()), namen_vorher, "nichts entsteht");
+    assert_eq!(abdruck(&datei), haupt_vorher, "die Hauptdatei bleibt");
+    assert_eq!(abdruck(&shm), shm_vorher, "die -shm bleibt");
+}
+
 /// Wie gross der BLOB ist, den die Bibliothek beim Lesen erzeugt (eine
 /// erzeugte Spalte mit `zeroblob`, also ohne Bytes auf der Platte).
 const ERZEUGTER_BLOB: u64 = 300_000_000;

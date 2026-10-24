@@ -17,7 +17,10 @@
   },
   "extensions": {},
   "control": {
-    "state": "in_progress",
-    "disposition": null
+    "state": "closed",
+    "disposition": {
+      "kind": "fixed",
+      "reason_ref": null
+    }
   }
 }

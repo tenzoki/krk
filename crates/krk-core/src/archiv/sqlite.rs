@@ -33,22 +33,45 @@
 //!
 //! # Die Oeffnungsregel
 //!
-//! **Ein Fall und keine Kette**, und [`oeffnen`] ist die einzige Stelle, die
-//! eine Datenbank oeffnet. Geoeffnet wird ueber die URI
+//! **Zwei Faelle, je an einer Frage entschieden**, und [`oeffnen`] ist die
+//! einzige Stelle, die eine Datenbank oeffnet. Geoeffnet wird ueber die URI
 //! `file:<pfad>?mode=ro` mit `SQLITE_OPEN_READONLY | SQLITE_OPEN_URI`
 //! (`verzeichnis::sys::sqlite_uri`, `Datenbank::oeffnen`), mit einer
 //! Wartezeit von [`WARTEZEIT`] auf die Sperre eines Schreibers, und sofort
-//! danach liest eine erste Anweisung das Schema. Scheitert das Oeffnen oder
-//! dieses erste Lesen mit `SQLITE_CANTOPEN`, **und** traegt der Dateikopf in
-//! den Bytes 18 und 19 die WAL-Kennung (je `2`), **und** steht kein
-//! `<datei>-wal` daneben, wird dieselbe URI mit `&immutable=1` geoeffnet. In
-//! jedem anderen Fall geht der Fehler an den Rufer. Das ist die ruhende
-//! WAL-Datenbank, etwa eine Kopie ohne ihre Begleitdateien: `mode=ro` kann
-//! dort den Index in `-shm` nicht anlegen und scheitert, `immutable=1` liest
-//! (gemessen, Bericht Abschnitt 3, und
-//! `messungen/261023-1556-sqlite-nur-lesend-shm.txt`, Versuch d). Die drei
-//! Bedingungen ueberlappen nicht: entweder liest `mode=ro`, oder genau dieser
-//! eine Fall liest unveraenderlich, oder es gibt eine Meldung.
+//! danach liest eine erste Anweisung das Schema. Davon gibt es zwei
+//! Ausnahmen, beide mit derselben URI und `&immutable=1`, und beide allein
+//! fuer einen Dateikopf, der in den Bytes 18 und 19 die WAL-Kennung traegt
+//! (je `2`):
+//!
+//! - **Vor dem ersten Oeffnen:** steht daneben ein `<datei>-wal` mit 0 Bytes
+//!   **und** keine `<datei>-shm`, wird sofort unveraenderlich geoeffnet. Ein
+//!   leeres `-wal` traegt nichts Neueres als die Hauptdatei, also liest
+//!   `immutable=1` den vollen Stand, und `mode=ro` legte hier eine `-shm` an
+//!   (gemessen in der Analyse
+//!   `261024-2133-shm-neben-wal-ohne-shm-zusage-korrigieren-oder-anlegen-verhindern.md`,
+//!   Abschnitt 1; Entscheid
+//!   `261024-2215-wie-liest-krk-eine-wal-datenbank-mit-wal-und-ohne-shm.md`,
+//!   Moeglichkeit 4). So stehen etwa die Datenbanken von Programmen im
+//!   Sperrmodus `exclusive` da, die nie eine `-shm` anlegen.
+//! - **Nach einem gescheiterten ersten Oeffnen:** scheitert `mode=ro` oder
+//!   das erste Lesen mit `SQLITE_CANTOPEN`, **und** steht kein `<datei>-wal`
+//!   daneben, wird unveraenderlich geoeffnet, gleich ob eine `-shm` steht.
+//!   Das ist die ruhende WAL-Datenbank, etwa eine Kopie ohne ihre
+//!   Begleitdateien: `mode=ro` kann dort den Index nicht anlegen oder nicht
+//!   nutzen und scheitert, `immutable=1` liest (gemessen, Bericht Abschnitt 3,
+//!   und `messungen/261023-1556-sqlite-nur-lesend-shm.txt`, Versuch d; dass
+//!   `mode=ro` bei stehender `-shm` und fehlendem `-wal` ebenso mit
+//!   `SQLITE_CANTOPEN` scheitert, gemessen am 261024).
+//!
+//! In jedem anderen Fall geht der Fehler an den Rufer. Die Faelle
+//! ueberlappen nicht: die erste Ausnahme verlangt ein stehendes `-wal`, die
+//! zweite ein fehlendes. **Ein nicht leeres `-wal` ohne `-shm`**, etwa nach
+//! einem Absturz des letzten Schreibers oder in einer Kopie, oeffnet
+//! `mode=ro` wie jede andere Datenbank, und dann legt die Bibliothek eine
+//! `-shm` an (Entscheid
+//! `261024-2215-wie-liest-krk-eine-wal-datenbank-mit-wal-und-ohne-shm.md`,
+//! fuer den Rest Moeglichkeit 1): `immutable=1` laese dort die Zeilen im
+//! `-wal` nicht.
 //!
 //! # Die Kennung ueber zwei Dateien
 //!
@@ -66,19 +89,22 @@
 //! # Nur lesen
 //!
 //! **KRK veraendert weder die Hauptdatei noch ihr `-wal`, und es legt neben
-//! der Datenbank keine Datei an**, weder `-wal` noch `-shm` noch `-journal`.
-//! **Steht neben einer WAL-Datenbank schon ein `-shm`, darf die Bibliothek
-//! dort eine Lesemarke setzen** oder, ist KRK die einzige Verbindung, den
-//! Index darin neu aufbauen; das ist die eine Aenderung, die ein Lesen
-//! hinterlaesst, und sie trifft allein `-shm`. So gemessen in
+//! der Datenbank weder `-wal` noch `-journal` an.** **Ein leeres `-wal` ohne
+//! `-shm` liest KRK unveraenderlich und legt nichts an; ein nicht leeres
+//! `-wal` ohne `-shm` (Absturz, Kopie) laesst SQLite eine `-shm` anlegen**
+//! (Oeffnungsregel oben). **Steht neben einer WAL-Datenbank schon ein
+//! `-shm`, darf die Bibliothek dort eine Lesemarke setzen** oder, ist KRK die
+//! einzige Verbindung, den Index darin neu aufbauen; das ist die eine
+//! Aenderung, die ein Lesen an einer stehenden Datei hinterlaesst, und sie
+//! trifft allein `-shm`. So gemessen in
 //! `messungen/261023-1556-sqlite-nur-lesend-shm.txt` (Urteile: Hauptdatei
 //! unveraendert, `-wal` unveraendert, `-shm` veraendert; das Schliessen der
 //! Verbindung faehrt keinen Checkpoint und entfernt `-wal` nicht) und vom
 //! Nutzer so angenommen (Entscheid
 //! `261023-1605-darf-krk-eine-lesemarke-in-die-shm-setzen-waehrend-ein-anderes-programm-schreibt.md`):
 //! bei laufendem Schreiber liest KRK den neuesten Stand mit `mode=ro`, und
-//! `immutable=1` bleibt allein der ruhenden WAL-Datenbank ohne `-wal`
-//! vorbehalten, wo es nichts Neueres zu lesen gibt.
+//! `immutable=1` bleibt den zwei Faellen der Oeffnungsregel vorbehalten, in
+//! denen es nichts Neueres zu lesen gibt.
 //!
 //! Was die Bindung zusaetzlich zusagt, steht an `Datenbank`: es gibt keinen
 //! Weg, eine Datenbank anders als nur lesend zu oeffnen, und Erweiterungen
@@ -192,6 +218,9 @@ pub(crate) fn oeffnen<'a>(
     datei: &Path,
     abbruch: &'a AtomicBool,
 ) -> Result<Datenbank<'a>, Sqlitefehler> {
+    if wal_kopf(datei) && leeres_wal_ohne_shm(datei) {
+        return nur_lesend_oeffnen(datei, true, abbruch);
+    }
     match nur_lesend_oeffnen(datei, false, abbruch) {
         Err(fehler)
             if fehler.grundcode() == SQLITE_CANTOPEN && ruhende_wal_datenbank_ohne_wal(datei) =>
@@ -224,24 +253,50 @@ fn nur_lesend_oeffnen<'a>(
     Ok(datenbank)
 }
 
-/// Ob der Kopf von `datei` die WAL-Kennung traegt (Bytes 18 und 19 je `2`)
-/// und kein `<datei>-wal` daneben steht. Im Zweifel, also wenn sich der Kopf
-/// nicht lesen oder `-wal` nicht befragen laesst, nein: dann bleibt es beim
-/// Fehler des ersten Oeffnens.
-fn ruhende_wal_datenbank_ohne_wal(datei: &Path) -> bool {
+/// Ob der Kopf von `datei` die WAL-Kennung traegt (Bytes 18 und 19 je `2`).
+/// Laesst sich der Kopf nicht lesen, nein.
+fn wal_kopf(datei: &Path) -> bool {
     let mut kopf = [0u8; 20];
     let kopf_gelesen = ohne_warten_oeffnen(datei)
         .and_then(|mut offen| offen.read_exact(&mut kopf))
         .is_ok();
-    kopf_gelesen && kopf[18] == 2 && kopf[19] == 2 && matches!(wal_angaben(datei), Ok(None))
+    kopf_gelesen && kopf[18] == 2 && kopf[19] == 2
+}
+
+/// Ob die Datenbank `datei` mit WAL-Kopf ruht und kein `<datei>-wal` daneben
+/// steht (Modulkopf, die Rueckfallstufe). Im Zweifel, also wenn sich der Kopf
+/// nicht lesen oder `-wal` nicht befragen laesst, nein: dann bleibt es beim
+/// Fehler des ersten Oeffnens. Ob `-shm` steht, fragt sie nicht: steht `-shm`
+/// und fehlt `-wal`, scheitert `mode=ro` ebenso mit `SQLITE_CANTOPEN`, und
+/// diese Stufe muss greifen.
+fn ruhende_wal_datenbank_ohne_wal(datei: &Path) -> bool {
+    wal_kopf(datei) && matches!(wal_angaben(datei), Ok(None))
+}
+
+/// Ob neben `datei` ein leeres `-wal` (0 Bytes) und keine `-shm` steht
+/// (Modulkopf, der Fall vor dem ersten Oeffnen). Im Zweifel, also wenn sich
+/// eine der zwei Dateien nicht befragen laesst, nein: dann oeffnet `mode=ro`.
+fn leeres_wal_ohne_shm(datei: &Path) -> bool {
+    let wal_leer = matches!(wal_angaben(datei), Ok(Some(angaben)) if angaben.len() == 0);
+    wal_leer
+        && matches!(
+            fs::symlink_metadata(begleitpfad(datei, "-shm")),
+            Err(fehler) if fehler.kind() == io::ErrorKind::NotFound
+        )
+}
+
+/// Der Pfad einer Begleitdatei (`-wal`, `-shm`) neben der aufgeloesten Datei
+/// (Modulkopf).
+fn begleitpfad(datei: &Path, endung: &str) -> PathBuf {
+    let aufgeloest = fs::canonicalize(datei).unwrap_or_else(|_| datei.to_path_buf());
+    let mut name = aufgeloest.into_os_string();
+    name.push(endung);
+    PathBuf::from(name)
 }
 
 /// Der Pfad von `-wal` neben der aufgeloesten Datei (Modulkopf).
 fn wal_pfad(datei: &Path) -> PathBuf {
-    let aufgeloest = fs::canonicalize(datei).unwrap_or_else(|_| datei.to_path_buf());
-    let mut name = aufgeloest.into_os_string();
-    name.push("-wal");
-    PathBuf::from(name)
+    begleitpfad(datei, "-wal")
 }
 
 /// Die Angaben von `<datei>-wal`, oder `None`, wenn es nicht steht. Fuer die

@@ -235,7 +235,7 @@ use std::sync::mpsc::{Receiver, Sender, SyncSender, channel, sync_channel};
 use std::thread;
 use std::time::SystemTime;
 
-use krk_core::archiv::{Archivformat, Archivleser, Fundstelle, Lesefehler};
+use krk_core::archiv::{Archivformat, Archivleser, Dateikennung, Fundstelle, Lesefehler};
 use krk_core::bild::Aufnahmezeit;
 use krk_core::fern::Fernfaden;
 use krk_core::heimordner::eintraege::termine;
@@ -704,6 +704,38 @@ struct Geladen {
     archivname: Option<PathBuf>,
 }
 
+/// Ein Eintrag in einem Archiv zusammen mit der Kennung des Archivs, deren
+/// Verzeichnis beim Auftrag im Zugang stand (Issue
+/// `261024-2113-die-vorschau-einer-wal-tabelle-loest-ueber-die-shm-ihre-eigene-auffrischung-aus.md`).
+///
+/// **Gleich heisst: derselbe Eintrag im unveraenderten Archiv**, und dann
+/// laedt [`Vorschaumodell::archiv_anzeigen`] nicht neu. Die Kennung kommt
+/// aus `Archivzugang::gespeichertes`, also ohne Systemaufruf; sie ist die,
+/// unter der das Dateifenster den Ordner zuletzt gelesen hat. Aendert ein
+/// anderes Programm die Hauptdatei oder, bei einer SQLite-Datenbank, ihr
+/// `-wal`, liest die Auffrischung des Tabs ein neues Verzeichnis mit neuer
+/// Kennung, und die naechste Meldung der Auswahl laedt neu. Eine Aenderung
+/// allein an `-shm` steht nicht in der Kennung und laedt nicht neu; genau
+/// die setzt jedes Lesen ueber `mode=ro` selbst.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Archivquelle {
+    ort: Archivort,
+    kennung: Dateikennung,
+}
+
+impl Archivquelle {
+    /// Die Quelle des Eintrags `ort` im Stand, den sein Zugang gerade haelt,
+    /// oder `None`, wenn der Zugang noch kein Verzeichnis gelesen hat; dann
+    /// gleicht sie keiner, und es wird geladen. Stellt keinen Systemaufruf.
+    fn von(ort: &Archivort) -> Option<Self> {
+        let kennung = ort.zugang.gespeichertes()?.kennung();
+        Some(Archivquelle {
+            ort: ort.clone(),
+            kennung,
+        })
+    }
+}
+
 /// Ein laufendes Laden einer Vorschaudatei.
 ///
 /// Faellt der Vorgang, faellt sein Empfaenger, und das `send` des Fadens
@@ -720,6 +752,11 @@ pub struct Ladevorgang {
     /// auf der Platte, und kein lokaler Weg darf ihn lesen, teilen oder neu
     /// laden.
     im_archiv: bool,
+    /// Welcher Archiveintrag in welchem Stand des Archivs geladen wird, falls
+    /// der Stand beim Auftrag bekannt war ([`Archivquelle`]); bei einer
+    /// Datei auf der Platte immer `None`. Beim Eintreffen der Meldung wird
+    /// sie zur [`Vorschautab::archivquelle`].
+    archivquelle: Option<Archivquelle>,
     /// Die Marke des Fadens. Kommt eine Bildfolge, wandert sie in den
     /// [`Folgebetrieb`]; sonst faellt sie mit dem Vorgang.
     abbruch: Option<Abbruchmarke>,
@@ -811,6 +848,7 @@ impl Ladevorgang {
             empfaenger,
             pfad,
             im_archiv: false,
+            archivquelle: None,
             abbruch: Some(Abbruchmarke(marke)),
             tafel,
         }
@@ -855,6 +893,7 @@ impl Ladevorgang {
             empfaenger,
             pfad: PathBuf::from(&eintrag.angaben.name),
             im_archiv: true,
+            archivquelle: Archivquelle::von(&eintrag.ort),
             abbruch: Some(Abbruchmarke(marke)),
             tafel,
         }
@@ -916,6 +955,11 @@ struct Vorschautab {
     /// fuer die Frage, wie ihr Text dargestellt wird (Endung), und fuer die
     /// Nummernspalte ([`Vorschaumodell::darstellungspfad`]).
     archivname: Option<PathBuf>,
+    /// Welcher Archiveintrag in welchem Stand des Archivs den
+    /// [`Vorschautab::inhalt`] geliefert hat ([`Archivquelle`]); `None` fuer
+    /// alles andere und fuer einen Eintrag, dessen Stand beim Auftrag nicht
+    /// bekannt war. Wechselt wie der Pfad erst mit der Lieferung.
+    archivquelle: Option<Archivquelle>,
     /// Das laufende Laden, falls eines laeuft.
     ladevorgang: Option<Ladevorgang>,
     /// Der Betrieb einer stehenden Bildfolge, falls der Tab eine zeigt und
@@ -930,6 +974,7 @@ impl Vorschautab {
             inhalt: Inhalt::Leer,
             pfad: None,
             archivname: None,
+            archivquelle: None,
             ladevorgang: None,
             folge: None,
         }
@@ -941,6 +986,16 @@ impl Vorschautab {
         self.ladevorgang.is_none()
             && self.pfad.as_deref() == Some(pfad)
             && matches!(self.inhalt, Inhalt::Bildfolge(_))
+    }
+
+    /// Ob der Tab den Eintrag `quelle` im selben Stand des Archivs zeigt oder
+    /// gerade laedt ([`Archivquelle`]). Ein laufender Auftrag geht vor: er
+    /// ersetzt, was steht.
+    fn zeigt_archiveintrag(&self, quelle: &Archivquelle) -> bool {
+        match self.ladevorgang.as_ref() {
+            Some(vorgang) => vorgang.archivquelle.as_ref() == Some(quelle),
+            None => self.archivquelle.as_ref() == Some(quelle),
+        }
     }
 
     /// Holt ab, was die Bildfolge des Tabs nachliefert, und startet das
@@ -1305,6 +1360,7 @@ impl Vorschaumodell {
         tab.folge = None;
         tab.pfad = None;
         tab.archivname = None;
+        tab.archivquelle = None;
         tab.inhalt = Inhalt::Hinweis(angaben);
     }
 
@@ -1315,8 +1371,20 @@ impl Vorschaumodell {
     /// und Inhalt des Tabs bleiben bis zur Lieferung stehen. `ersatz` ist der
     /// Text der Angaben, den der Faden zeigt, wenn der Eintrag nichts
     /// Lesbares hergibt.
+    ///
+    /// **Derselbe Eintrag im unveraenderten Archiv laedt nicht neu**
+    /// ([`Archivquelle`]): eine Auffrischung des Archivtabs meldet die Auswahl
+    /// erneut, und ohne diese Regel loeste das Lesen einer Tabelle in einer
+    /// WAL-Datenbank ueber die `-shm`, die es selbst beruehrt, die naechste
+    /// Auffrischung aus (Issue
+    /// `261024-2113-die-vorschau-einer-wal-tabelle-loest-ueber-die-shm-ihre-eigene-auffrischung-aus.md`).
+    /// Dasselbe Muster wie die stehende Bildfolge in
+    /// [`Vorschaumodell::datei_anzeigen`].
     pub fn archiv_anzeigen(&mut self, eintrag: &Archivangaben, ersatz: String, tafel: Tafel) {
         let tab = &mut self.tabs[self.aktiv];
+        if Archivquelle::von(&eintrag.ort).is_some_and(|quelle| tab.zeigt_archiveintrag(&quelle)) {
+            return;
+        }
         tab.titel = eintrag.angaben.name.clone();
         tab.folge = None;
         tab.ladevorgang = Some(Ladevorgang::archiv_starten(eintrag, ersatz, tafel));
@@ -1334,6 +1402,7 @@ impl Vorschaumodell {
         tab.folge = None;
         tab.pfad = None;
         tab.archivname = None;
+        tab.archivquelle = None;
         tab.inhalt = match inhalt {
             Zwischenablageinhalt::Text(text) => Inhalt::Text(text),
             Zwischenablageinhalt::Bild(daten) => Inhalt::Bild {
@@ -1559,6 +1628,7 @@ impl Vorschaumodell {
                             tafel: vorgang.tafel,
                         });
                         tab.inhalt = geladen.inhalt;
+                        tab.archivquelle = vorgang.archivquelle.take();
                         if vorgang.im_archiv {
                             tab.pfad = None;
                             tab.archivname = Some(geladen.archivname.unwrap_or(geladener_pfad));
@@ -3572,6 +3642,116 @@ mod tests {
         );
     }
 
+    /// Liest das Verzeichnis hinter `zugang` auf einem Faden mit Pfand, wie
+    /// es der Lesevorgang eines Archivtabs bei jeder Auffrischung tut.
+    fn archivverzeichnis_lesen(
+        zugang: &Arc<krk_core::archiv::Archivzugang>,
+    ) -> Arc<krk_core::archiv::Inhaltsverzeichnis> {
+        let zugang = Arc::clone(zugang);
+        krk_core::fern::faden("krk-vorschauprobe".to_owned(), move |pfand| {
+            zugang.verzeichnis(pfand, &AtomicBool::new(false))
+        })
+        .expect("ein Faden laesst sich starten")
+        .join()
+        .expect("der Lesefaden geraet nicht in Panik")
+        .expect("das Verzeichnis entsteht")
+    }
+
+    /// Eine WAL-Datenbank mit stehender `-shm` und einer Tabelle `t`, deren
+    /// Verzeichnis der Zugang des zurueckgegebenen Eintrags schon gelesen hat,
+    /// wie nach dem Einstieg in den Archivtab; dazu das Modell, das den
+    /// Eintrag geladen hat.
+    fn wal_tabelle_geladen(
+        ordner: &Pruefordner,
+    ) -> (
+        PathBuf,
+        Archivangaben,
+        Arc<krk_core::archiv::Inhaltsverzeichnis>,
+        Vorschaumodell,
+    ) {
+        let datenbank = datenbank_anlegen(
+            ordner,
+            "wal.db",
+            "PRAGMA journal_mode = WAL; CREATE TABLE t (a TEXT); INSERT INTO t VALUES ('zeile-alt');",
+        );
+        let mut shm = datenbank.clone().into_os_string();
+        shm.push("-shm");
+        assert!(
+            Path::new(&shm).exists(),
+            "das /usr/bin/sqlite3 von macOS laesst -shm stehen"
+        );
+        let eintrag = archivdatei(&datenbank, Archivformat::Sqlite, "t");
+        let verzeichnis = archivverzeichnis_lesen(&eintrag.ort.zugang);
+        let modell = archiv_geladen(&eintrag);
+        (datenbank, eintrag, verzeichnis, modell)
+    }
+
+    /// Die Abnahme des Issues
+    /// `261024-2113-die-vorschau-einer-wal-tabelle-loest-ueber-die-shm-ihre-eigene-auffrischung-aus.md`:
+    /// nach dem Laden einer Tabelle aus einer WAL-Datenbank mit `-shm` faehrt
+    /// eine Auffrischung des Tabs (das Verzeichnis wird neu gefragt, die
+    /// Auswahl ein zweites Mal gemeldet), und fuer denselben Eintrag startet
+    /// kein zweiter Ladevorgang. Das Laden hat die `-shm` beruehrt; die
+    /// Kennung des Archivs sieht das nicht, also ist es dasselbe Verzeichnis.
+    #[test]
+    fn eine_auffrischung_laedt_einen_unveraenderten_archiveintrag_nicht_neu() {
+        let ordner = Pruefordner::neu("archiv-auffrischung-unveraendert");
+        let (_datenbank, eintrag, verzeichnis, mut modell) = wal_tabelle_geladen(&ordner);
+        let gezeigt = modell.aktiver_inhalt().clone();
+        assert!(
+            format!("{gezeigt:?}").contains("zeile-alt"),
+            "die Tabelle steht: {gezeigt:?}"
+        );
+
+        let aufgefrischt = archivverzeichnis_lesen(&eintrag.ort.zugang);
+        assert!(
+            Arc::ptr_eq(&verzeichnis, &aufgefrischt),
+            "das Lesen der Tabelle aendert die Kennung des Archivs nicht"
+        );
+        modell.archiv_anzeigen(&eintrag.clone(), "ANGABEN".to_owned(), Tafel::Hell);
+        assert!(
+            !modell.laedt_noch(),
+            "derselbe Eintrag im unveraenderten Archiv startet keinen zweiten Ladevorgang"
+        );
+        assert_eq!(*modell.aktiver_inhalt(), gezeigt);
+    }
+
+    /// Die Gegenprobe: schreibt ein anderes Programm in die Datenbank, liest
+    /// die Auffrischung ein neues Verzeichnis, und die erneute Meldung
+    /// derselben Auswahl laedt neu und zeigt die neue Zeile. Ein anderer
+    /// Eintrag desselben Archivs laedt ohnehin.
+    #[test]
+    fn nach_einer_echten_aenderung_wird_derselbe_archiveintrag_neu_geladen() {
+        let ordner = Pruefordner::neu("archiv-auffrischung-geaendert");
+        let (datenbank, eintrag, verzeichnis, mut modell) = wal_tabelle_geladen(&ordner);
+
+        let _ = datenbank_anlegen(&ordner, "wal.db", "INSERT INTO t VALUES ('zeile-neu');");
+        let aufgefrischt = archivverzeichnis_lesen(&eintrag.ort.zugang);
+        assert!(
+            !Arc::ptr_eq(&verzeichnis, &aufgefrischt),
+            "das Schreiben aendert die Kennung, {}",
+            datenbank.display()
+        );
+        modell.archiv_anzeigen(&eintrag, "ANGABEN".to_owned(), Tafel::Hell);
+        assert!(modell.laedt_noch(), "nach der Aenderung wird neu geladen");
+        bis_geliefert(&mut modell);
+        let gezeigt = format!("{:?}", modell.aktiver_inhalt());
+        assert!(
+            gezeigt.contains("zeile-neu"),
+            "die neue Zeile steht: {gezeigt}"
+        );
+
+        // Ein Wechsel auf einen anderen Inhalt und zurueck laedt ebenso neu:
+        // die Quelle wechselt mit dem, was der Tab zeigt.
+        modell.fern_anzeigen("x".to_owned(), "ANGABEN".to_owned());
+        modell.archiv_anzeigen(&eintrag, "ANGABEN".to_owned(), Tafel::Hell);
+        assert!(
+            modell.laedt_noch(),
+            "nach einem anderen Inhalt wird geladen"
+        );
+        bis_geliefert(&mut modell);
+    }
+
     #[test]
     fn ein_ordner_erscheint_als_metadaten() {
         let ordner = Pruefordner::neu("ordner");
@@ -3890,6 +4070,7 @@ mod tests {
             inhalt,
             pfad: Some(pfad.to_path_buf()),
             archivname: None,
+            archivquelle: None,
             ladevorgang: None,
             folge: None,
         }
