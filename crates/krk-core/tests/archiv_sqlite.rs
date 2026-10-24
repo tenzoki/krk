@@ -1,6 +1,7 @@
 //! Abnahme von `Archivformat::Sqlite`, dem Inhaltsverzeichnis einer
 //! Datenbank und dem Lesen einer Tabelle als TSV und einer Sicht als SQL-Text,
-//! Schritte 3 und 4 des Plans
+//! Schritte 3 und 4 des Plans, und der Zusage „nur lesen“ neben einem
+//! laufenden Schreiber, Schritt 5 desselben Plans
 //! `261023-1507-plan-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau.md`
 //! im Arbeitspaket
 //! `261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen`.
@@ -768,5 +769,341 @@ fn ein_tabellenname_mit_anfuehrungszeichen_wird_als_bezeichner_gelesen() {
     assert_eq!(
         eintrag_lesen(&datei, "s'q\""),
         b"CREATE VIEW \"s'q\"\"\" AS SELECT 2"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Schritt 5: die Zusage „nur lesen“ neben einem laufenden Schreiber
+// ---------------------------------------------------------------------------
+
+/// Ein `/usr/bin/sqlite3` als Schreiber, der erst zurueckkehrt, wenn er seine
+/// Befehle ausgefuehrt hat: nach `sql` druckt er `BEREIT`, und `.bail on`
+/// beendet ihn bei einem Fehler, sodass das Warten dann am Ende seiner
+/// Ausgabe scheitert statt ewig zu dauern. Danach bleibt er offen, bis die
+/// Probe ihn abbricht oder der `Drop` von [`Schreiber`] ihn beendet, auch
+/// nach einer Panik.
+fn schreiber_bereit(pfad: &Path, sql: &str) -> Schreiber {
+    let mut kind = Command::new("/usr/bin/sqlite3")
+        .arg(pfad)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .expect("/usr/bin/sqlite3 laesst sich nicht starten");
+    let ausgabe = kind.stdout.take().expect("Standardausgabe");
+    let mut schreiber = Schreiber {
+        eingabe: kind.stdin.take(),
+        kind,
+    };
+    let eingabe = schreiber.eingabe.as_mut().expect("Standardeingabe");
+    eingabe
+        .write_all(format!(".bail on\n{sql}\n.print BEREIT\n").as_bytes())
+        .expect("schreiben");
+    eingabe.flush().expect("leeren");
+    let mut zeilen = std::io::BufReader::new(ausgabe);
+    loop {
+        let mut zeile = String::new();
+        let gelesen = std::io::BufRead::read_line(&mut zeilen, &mut zeile).expect("lesen");
+        assert!(gelesen > 0, "der Schreiber endet, bevor er bereit ist");
+        if zeile.trim_end() == "BEREIT" {
+            break;
+        }
+    }
+    schreiber
+}
+
+impl Schreiber {
+    /// Beendet den Schreiber mit `SIGKILL`, ohne dass er schliesst: kein
+    /// Checkpoint, `-wal` und `-shm` bleiben stehen (Versuch c der Messung
+    /// `messungen/261023-1556-sqlite-nur-lesend-shm.txt`).
+    fn abbrechen(&mut self) {
+        self.kind.kill().expect("der Schreiber laesst sich beenden");
+        self.kind.wait().expect("auf den Schreiber warten");
+    }
+}
+
+/// Was von einer Datei vor und nach dem Lesen verglichen wird: SHA-256 des
+/// Inhalts, Inode und Aenderungszeit in Nanosekunden; `None`, wenn sie nicht
+/// steht.
+#[derive(Debug, PartialEq, Eq)]
+struct Abdruck {
+    sha256: String,
+    inode: u64,
+    geaendert: (i64, i64),
+}
+
+fn abdruck(pfad: &Path) -> Option<Abdruck> {
+    use std::os::unix::fs::MetadataExt;
+    let angaben = match fs::symlink_metadata(pfad) {
+        Ok(angaben) => angaben,
+        Err(fehler) if fehler.kind() == std::io::ErrorKind::NotFound => return None,
+        Err(fehler) => panic!("{}: {fehler}", pfad.display()),
+    };
+    let ausgabe = Command::new("/usr/bin/shasum")
+        .args(["-a", "256"])
+        .arg(pfad)
+        .output()
+        .expect("/usr/bin/shasum laesst sich nicht starten");
+    assert!(
+        ausgabe.status.success(),
+        "shasum scheitert an {}",
+        pfad.display()
+    );
+    let sha256 = String::from_utf8_lossy(&ausgabe.stdout)
+        .split_whitespace()
+        .next()
+        .expect("eine Pruefsumme")
+        .to_owned();
+    Some(Abdruck {
+        sha256,
+        inode: angaben.ino(),
+        geaendert: (angaben.mtime(), angaben.mtime_nsec()),
+    })
+}
+
+/// Die Namen eines Ordners, geordnet.
+fn ordnernamen(ordner: &Path) -> Vec<String> {
+    let mut namen: Vec<String> = fs::read_dir(ordner)
+        .unwrap()
+        .map(|eintrag| eintrag.unwrap().file_name().to_string_lossy().into_owned())
+        .collect();
+    namen.sort();
+    namen
+}
+
+/// Faehrt die vier Wege des Kerns an der Datenbank `datei`, jeden mit einem
+/// frischen Zugang, damit kein gespeichertes Verzeichnis antwortet:
+/// Verzeichnisaufbau, Lesen der Tabelle `t`, Lesen der Sicht `v` und Kopieren
+/// der Tabelle `t` in den Ordner `ziel`. Liefert die gelesene TSV der
+/// Tabelle.
+fn alle_wege_fahren(datei: &Path, ziel: &Path) -> Vec<u8> {
+    let verzeichnis = lesen(datei).expect("das Verzeichnis entsteht neben dem Schreiber");
+    assert_eq!(namen(&verzeichnis), ["t", "v"]);
+
+    let tabelle = eintrag_lesen(datei, "t");
+    assert_eq!(
+        eintrag_lesen(datei, "v"),
+        b"CREATE VIEW v AS SELECT a FROM t"
+    );
+
+    let wurzel = Archivort::wurzel(zugang(datei));
+    let bericht = fahren(Fernauftrag::kopieren(
+        vec![Ort::Archiv(wurzel.kind("t").expect("ein einzelner Name"))],
+        Ort::Lokal(ziel.to_path_buf()),
+    ));
+    assert!(
+        bericht.uebersprungen.is_empty(),
+        "kopieren: {:?}",
+        gruende(&bericht)
+    );
+    let kopie = ziel.join("t.tsv");
+    assert_eq!(fs::read(&kopie).expect("t.tsv"), tabelle);
+    fs::remove_file(&kopie).expect("die Kopie geht wieder weg");
+    tabelle
+}
+
+/// Eine WAL-Datenbank mit Tabelle `t` und Sicht `v` im Ordner `db` und ein
+/// Schreiber, der eine weitere Zeile allein nach `-wal` uebergeben hat und
+/// offen bleibt. Das `/usr/bin/sqlite3` des Anlegens schliesst sauber, faehrt
+/// dabei den Checkpoint und laesst ein leeres `-wal` und ein `-shm` stehen;
+/// der Schreiber schreibt danach mit abgeschaltetem Checkpoint.
+fn wal_mit_schreiber(ordner: &Pruefordner) -> (PathBuf, Schreiber) {
+    let datei = ordner.ordner("db").join("wal.db");
+    anlegen(
+        &datei,
+        "PRAGMA journal_mode = WAL;
+         CREATE TABLE t(a, b);
+         INSERT INTO t VALUES (1, 'eins'), (2, 'zwei');
+         CREATE VIEW v AS SELECT a FROM t;",
+    );
+    let schreiber = schreiber_bereit(
+        &datei,
+        "PRAGMA wal_autocheckpoint = 0;\nINSERT INTO t VALUES (3, 'aus dem wal');",
+    );
+    let wal = neben(&datei, "-wal");
+    assert!(
+        fs::metadata(&wal).expect("-wal steht").len() > 0,
+        "die Zeile des Schreibers steht in -wal"
+    );
+    assert!(neben(&datei, "-shm").exists(), "-shm steht");
+    (datei, schreiber)
+}
+
+#[test]
+fn verzeichnis_lesen_und_kopieren_lassen_hauptdatei_und_wal_byte_fuer_byte_stehen() {
+    let ordner = Pruefordner::neu("sqlite-nur-lesen-wal");
+    let ziel = ordner.ordner("ziel");
+    let (datei, mut schreiber) = wal_mit_schreiber(&ordner);
+    let wal = neben(&datei, "-wal");
+    let db_ordner = datei
+        .parent()
+        .expect("der Ordner der Datenbank")
+        .to_path_buf();
+    let namen_vorher = ordnernamen(&db_ordner);
+    assert_eq!(namen_vorher, ["wal.db", "wal.db-shm", "wal.db-wal"]);
+    let haupt_vorher = abdruck(&datei);
+    let wal_vorher = abdruck(&wal);
+
+    // Bei laufendem Schreiber: die Zeile aus -wal ist zu lesen, und weder
+    // die Hauptdatei noch -wal aendern sich.
+    let tabelle = alle_wege_fahren(&datei, &ziel);
+    assert_eq!(tabelle, b"a\tb\n1\teins\n2\tzwei\n3\taus dem wal\n");
+    assert_eq!(abdruck(&datei), haupt_vorher, "Hauptdatei, Schreiber offen");
+    assert_eq!(abdruck(&wal), wal_vorher, "-wal, Schreiber offen");
+    assert_eq!(ordnernamen(&db_ordner), namen_vorher, "Schreiber offen");
+
+    // Nach dem Abbruch des Schreibers ohne Checkpoint ist KRK die einzige
+    // Verbindung; ihr Schliessen faehrt keinen Checkpoint und entfernt -wal
+    // nicht (Urteil f der Messung).
+    schreiber.abbrechen();
+    assert_eq!(abdruck(&datei), haupt_vorher, "der Abbruch schreibt nichts");
+    assert_eq!(abdruck(&wal), wal_vorher, "der Abbruch schreibt nichts");
+    let tabelle = alle_wege_fahren(&datei, &ziel);
+    assert_eq!(tabelle, b"a\tb\n1\teins\n2\tzwei\n3\taus dem wal\n");
+    assert_eq!(abdruck(&datei), haupt_vorher, "Hauptdatei, Schreiber fort");
+    assert_eq!(abdruck(&wal), wal_vorher, "-wal, Schreiber fort");
+    assert_eq!(ordnernamen(&db_ordner), namen_vorher, "Schreiber fort");
+}
+
+#[test]
+fn neben_einer_rollback_datenbank_entsteht_keine_datei() {
+    let ordner = Pruefordner::neu("sqlite-nur-lesen-rollback");
+    let ziel = ordner.ordner("ziel");
+    let datei = ordner.ordner("db").join("rollback.db");
+    anlegen(
+        &datei,
+        "PRAGMA journal_mode = DELETE;
+         CREATE TABLE t(a, b);
+         INSERT INTO t VALUES (1, 'eins');
+         CREATE VIEW v AS SELECT a FROM t;",
+    );
+    let kopf = fs::read(&datei).unwrap();
+    assert_eq!(
+        (kopf[18], kopf[19]),
+        (1, 1),
+        "der Kopf traegt die Rollback-Kennung"
+    );
+    let _schreiber = schreiber_bereit(
+        &datei,
+        "BEGIN;\nINSERT INTO t VALUES (2, 'uebergeben');\nCOMMIT;",
+    );
+    let db_ordner = datei
+        .parent()
+        .expect("der Ordner der Datenbank")
+        .to_path_buf();
+    let namen_vorher = ordnernamen(&db_ordner);
+    assert_eq!(
+        namen_vorher,
+        ["rollback.db"],
+        "nach dem Uebergeben steht kein -journal"
+    );
+    let haupt_vorher = abdruck(&datei);
+
+    let tabelle = alle_wege_fahren(&datei, &ziel);
+    assert_eq!(tabelle, b"a\tb\n1\teins\n2\tuebergeben\n");
+
+    assert_eq!(
+        ordnernamen(&db_ordner),
+        namen_vorher,
+        "neben der Datenbank entsteht nichts"
+    );
+    assert_eq!(abdruck(&datei), haupt_vorher, "die Hauptdatei bleibt");
+    assert_eq!(ordnernamen(&ziel), Vec::<String>::new());
+}
+
+/// Die Stellen, an denen sich zwei gleich lange Bytefolgen unterscheiden.
+fn abweichende_stellen(vorher: &[u8], nachher: &[u8]) -> Vec<usize> {
+    assert_eq!(vorher.len(), nachher.len(), "-shm behaelt seine Laenge");
+    (0..vorher.len())
+        .filter(|&stelle| vorher[stelle] != nachher[stelle])
+        .collect()
+}
+
+/// Die fuenf Lesemarken `aReadMark[0..5]` in `-shm`, je vier Bytes. Nach dem
+/// Aufbau des Wal-Index in `wal.c` der Bibliothek stehen am Anfang zwei
+/// Kopien des Kopfs `WalIndexHdr` zu je 48 Bytes (0 bis 96), danach
+/// `WalCkptInfo`: `nBackfill` (96), die Lesemarken (100 bis 120), `aLock`
+/// (120 bis 128, nur fuer Sperren mit `fcntl`, nie beschrieben),
+/// `nBackfillAttempted` (128) und ein freies Wort (132); ab 136 folgen die
+/// Hashtabellen des Index.
+const LESEMARKEN: std::ops::Range<usize> = 100..120;
+
+/// Kopf und Checkpoint-Angaben von `-shm`, alles vor den Hashtabellen
+/// (siehe [`LESEMARKEN`]).
+const INDEXKOPF: std::ops::Range<usize> = 0..136;
+
+/// Haelt, was sich an `-shm` belegbar halten laesst
+/// (`messungen/261023-1556-sqlite-nur-lesend-shm.txt`, Versuche b und c;
+/// Entscheid `261023-1605-darf-krk-eine-lesemarke-in-die-shm-setzen-waehrend-ein-anderes-programm-schreibt.md`):
+/// `-shm` darf sich aendern, steht danach aber unter demselben Inode und mit
+/// derselben Laenge da, Hauptdatei und `-wal` bleiben Byte fuer Byte, und
+/// keine weitere Datei entsteht. Darueber hinaus haelt die Probe, welche
+/// Bytes sich aendern duerfen: **solange ein anderes Programm die Datenbank
+/// offen haelt, allein die Lesemarken.** Ist KRK nach dem Abbruch des
+/// Schreibers die einzige Verbindung, baut die Bibliothek den Index neu auf;
+/// dann aendern sich Kopf und Checkpoint-Angaben, die Hashtabellen nicht
+/// (gemessen bei einem Rahmen in `-wal`; ob ein laengeres `-wal` beim
+/// Neuaufbau auch die Hashtabellen neu schreibt, haelt die Probe nicht). Ob
+/// sich ueberhaupt ein Byte aendert, haelt sie nicht: erlaubt ist die
+/// Aenderung, verlangt ist sie nicht.
+#[test]
+fn die_lesemarke_ist_die_einzige_aenderung_an_shm() {
+    let ordner = Pruefordner::neu("sqlite-nur-lesen-shm");
+    let ziel = ordner.ordner("ziel");
+    let (datei, mut schreiber) = wal_mit_schreiber(&ordner);
+    let wal = neben(&datei, "-wal");
+    let shm = neben(&datei, "-shm");
+    let db_ordner = datei
+        .parent()
+        .expect("der Ordner der Datenbank")
+        .to_path_buf();
+    let namen_vorher = ordnernamen(&db_ordner);
+    let haupt_vorher = abdruck(&datei);
+    let wal_vorher = abdruck(&wal);
+    let shm_inode = abdruck(&shm).expect("-shm steht").inode;
+
+    // Der Schreiber haelt die Datenbank offen.
+    let vorher = fs::read(&shm).unwrap();
+    let _ = alle_wege_fahren(&datei, &ziel);
+    let nachher = fs::read(&shm).expect("-shm steht nach dem Lesen noch");
+    let stellen = abweichende_stellen(&vorher, &nachher);
+    assert!(
+        stellen.iter().all(|stelle| LESEMARKEN.contains(stelle)),
+        "neben dem Schreiber aendern sich allein die Lesemarken, geaendert: {stellen:?}"
+    );
+    assert_eq!(
+        abdruck(&shm).expect("-shm").inode,
+        shm_inode,
+        "-shm ist nicht ersetzt"
+    );
+    assert_eq!(abdruck(&datei), haupt_vorher, "Hauptdatei, Schreiber offen");
+    assert_eq!(abdruck(&wal), wal_vorher, "-wal, Schreiber offen");
+    assert_eq!(
+        ordnernamen(&db_ordner),
+        namen_vorher,
+        "keine weitere Datei, Schreiber offen"
+    );
+
+    // Der Schreiber ist ohne Checkpoint fort, KRK die einzige Verbindung.
+    schreiber.abbrechen();
+    let vorher = fs::read(&shm).unwrap();
+    let _ = alle_wege_fahren(&datei, &ziel);
+    let nachher = fs::read(&shm).expect("-shm steht nach dem Lesen noch");
+    let stellen = abweichende_stellen(&vorher, &nachher);
+    assert!(
+        stellen.iter().all(|stelle| INDEXKOPF.contains(stelle)),
+        "der Neuaufbau aendert allein Kopf und Checkpoint-Angaben, geaendert: {stellen:?}"
+    );
+    assert_eq!(
+        abdruck(&shm).expect("-shm").inode,
+        shm_inode,
+        "-shm ist nicht ersetzt"
+    );
+    assert_eq!(abdruck(&datei), haupt_vorher, "Hauptdatei, Schreiber fort");
+    assert_eq!(abdruck(&wal), wal_vorher, "-wal, Schreiber fort");
+    assert_eq!(
+        ordnernamen(&db_ordner),
+        namen_vorher,
+        "keine weitere Datei, Schreiber fort"
     );
 }
