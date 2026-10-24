@@ -538,6 +538,84 @@ dem Mac und verlässt damit das Archiv; vorbelegt ist der Pfad der Archivdatei.
 
 ---
 
+## SQLite-Datenbanken im Dateifenster
+
+**Eine SQLite-Datenbank lässt sich im Dateifenster betreten wie ein Archiv,
+allein zum Durchsehen.** Betreten werden Dateien mit den Endungen `.sqlite`,
+`.sqlite3`, `.db` und `.db3`, ohne Rücksicht auf Groß- und Kleinschreibung.
+Auch hier entscheidet allein die Endung: eine `.db`, die keine
+SQLite-Datenbank ist, etwa ein `Thumbs.db` von Windows, betritt KRK trotzdem,
+und die Statuszeile sagt, dass die Datei kein lesbares Archiv ist, mit dem
+Grund „keine SQLite-Datenbank“.
+
+**Hinein mit Pfeil rechts oder einem Doppelklick, hinaus mit Pfeil links**,
+wie bei einem Archiv. **`return` öffnet die Datenbank weiter mit dem
+Standardprogramm.** Der Fenstertitel nennt sie als
+`/pfad/zur/datei.db:/name`.
+
+**Was das Fenster zeigt:**
+
+- Jede **Tabelle** und jede **Sicht** der Datenbank steht als Eintrag an der
+  obersten Ebene, auch die inneren Tabellen, deren Name mit `sqlite_` beginnt.
+  Indizes und Trigger stehen nicht da, Unterordner gibt es keine. Ein Name
+  mit `/` oder `..` erscheint nicht; die Statuszeile nennt die Zahl.
+- **Die Spalte „Größe“ zählt Zeilen und nicht Bytes**: für eine Tabelle steht
+  dort „3 Zeilen“, für eine Sicht `--`, ebenso für eine Tabelle, deren Zeilen
+  KRK nicht zählen kann, etwa eine virtuelle Tabelle. Auch der
+  Markierungsstand unten zählt in einer Datenbank Zeilen.
+- **Die Vorschau zeigt eine Tabelle als Tabelle**, so wie eine TSV-Datei,
+  mit einer Kopfzeile „Tabelle · 3 Zeilen · 2 Spalten“ und den Spaltennamen
+  in der ersten Zeile. Ergibt die Tabelle mehr als 1 MB Text, zeigt sie die
+  vollständigen Zeilen dieses ersten MB, und die Kopfzeile sagt, wie viele
+  von wie vielen Zeilen gezeigt sind.
+- **Eine Sicht zeigt die Vorschau als ihren SQL-Text**, eingefärbt. KRK führt
+  eine Sicht nie aus, auch nicht für die Vorschau.
+- Eine Datenbank-Datei, die nicht betreten ist, zeigt in der Vorschau wie
+  bisher ihre Angaben.
+
+**Herauskopieren** (`f5`) ins andere Dateifenster, auf den Mac, auf einen
+Server oder in ein Zip oder tar, legt eine Datei an:
+
+| Eintrag | Datei am Ziel | Inhalt |
+|---|---|---|
+| Tabelle `kunden` | `kunden.tsv` | eine Zeile mit den Spaltennamen, dann jede Zeile, getrennt mit Tabulator |
+| Sicht `offen` | `offen.sql` | der SQL-Text der Sicht |
+
+Die Zeilen kommen in der Reihenfolge, in der die Datenbank sie liefert.
+**Die Ausfuhr ist nicht verlustfrei**: ein leerer Wert (`NULL`) steht als
+`NULL` da und ist von einer Zelle mit dem Text `NULL` nicht zu unterscheiden,
+und ein Binärwert (BLOB) steht als Platzhalter wie `[BLOB, 512 Bytes]`, ohne
+seinen Inhalt. Beide Wörter folgen der Sprache der Oberfläche. Beim Kopieren
+in ein Zip oder tar liest KRK eine Tabelle zweimal, einmal, um die Länge zu
+zählen, die das Archiv vorab braucht, und einmal zum Schreiben; eine große
+Tabelle dauert dort also doppelt so lange.
+
+**KRK schreibt nichts in eine Datenbank.** Hineinkopieren, Verschieben,
+Umbenennen, Anlegen und Löschen gehen dort nicht. Die Befehle sind
+ausgegraut, das Kontextmenü sagt „Das geht in einer Datenbank nicht.“, und
+ein Kopieren aus dem anderen Fenster in eine Datenbank weist KRK ab; die
+Statuszeile sagt dabei zurzeit noch „Dieses Archiv ist allein lesbar.“.
+
+**Was beim Lesen an der Datei geschieht.** KRK öffnet eine Datenbank allein
+lesend. Die Datenbankdatei selbst und ein danebenstehendes `-wal` bleiben
+dabei Byte für Byte, wie sie sind, und KRK legt neben der Datenbank keine
+Datei an, weder `-wal` noch `-shm` noch `-journal`. **Die eine Ausnahme ist
+ein schon vorhandenes `-shm`**: steht neben einer Datenbank im WAL-Betrieb
+eine `-shm`-Datei, setzt SQLite beim Lesen darin eine Lesemarke oder baut,
+wenn KRK als einziges Programm liest, ihren Index neu auf. Die Daten der
+Datenbank berührt das nicht. Liest KRK, während ein anderes Programm in die
+Datenbank schreibt, sieht es den neuesten übergebenen Stand; hält das andere
+Programm die Datenbank länger gesperrt, sagt die Statuszeile „die Datenbank
+wird gerade geschrieben“. Eine kopierte WAL-Datenbank ohne ihre
+Begleitdateien liest KRK ebenso, ohne dabei etwas anzulegen.
+
+**Änderungen von außen erscheinen von selbst**, wie bei einem Archiv: legt
+ein anderes Programm eine Tabelle an oder schreibt Zeilen, liest KRK das
+Verzeichnis neu. Nach einem Neustart steht ein Tab, der eine Datenbank
+zeigte, im Ordner der Datenbankdatei.
+
+---
+
 ## Einen Datenträger auswerfen
 
 **Auch dieser Eintrag steht allein im Menü der rechten Maustaste über der
