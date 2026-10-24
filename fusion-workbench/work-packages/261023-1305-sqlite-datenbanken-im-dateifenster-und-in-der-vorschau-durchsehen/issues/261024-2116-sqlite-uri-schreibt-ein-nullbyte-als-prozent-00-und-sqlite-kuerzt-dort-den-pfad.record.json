@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "8ab99170-9a5e-4d9d-b1f3-ef363c5a99f6",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/issues/261024-2116-sqlite-uri-schreibt-ein-nullbyte-als-prozent-00-und-sqlite-kuerzt-dort-den-pfad.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}
