@@ -1342,6 +1342,7 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
             "{n} Spalten gelöscht; cmd+z holt sie zurück",
         ),
         Zahlwort::SqliteBlob => ("[BLOB, {n} Byte]", "[BLOB, {n} Bytes]"),
+        Zahlwort::SqliteZeilen => ("{n} Zeile", "{n} Zeilen"),
     }
 }
 

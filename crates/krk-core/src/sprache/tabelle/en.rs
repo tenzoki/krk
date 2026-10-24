@@ -1278,6 +1278,7 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
             "{n} columns deleted; cmd+z brings them back",
         ),
         Zahlwort::SqliteBlob => ("[BLOB, {n} byte]", "[BLOB, {n} bytes]"),
+        Zahlwort::SqliteZeilen => ("{n} row", "{n} rows"),
     }
 }
 

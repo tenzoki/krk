@@ -348,7 +348,7 @@ use krk_core::fern::Fernzugang;
 use krk_core::git::Marke;
 use krk_core::heimordner::Heimordner;
 use krk_core::ort::{Archivort, FernerOrt, Ort, Ortsart};
-use krk_core::sprache::{Text, satz, text};
+use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::filter::traegt_ein_dateiname;
 use krk_core::verzeichnis::verweisziel::{self, Verweisziel};
@@ -726,6 +726,27 @@ fn archivordner(ort: &Archivort) -> PathBuf {
     ort.datei()
         .parent()
         .map_or_else(|| PathBuf::from("/"), Path::to_path_buf)
+}
+
+/// Was die Groessenspalte und der Markierungsstand eines Tabs zaehlen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Masseinheit {
+    /// Bytes, in jedem lokalen, fernen und Archivtab ausser einer Datenbank.
+    Bytes,
+    /// Die Zeilen einer Tabelle, in einer SQLite-Datenbank (Entscheid
+    /// `261023-1340-was-zeigt-die-spalte-groesse-einer-tabelle.md`,
+    /// Moeglichkeit 3).
+    Zeilen,
+}
+
+/// Der Ort im Archiv, wenn `tabort` in einer SQLite-Datenbank liegt; sonst
+/// `None`. Entschieden am Format des Zugangs, also an der Endung und ohne
+/// Systemaufruf.
+fn datenbankort(tabort: &Tabort) -> Option<&Archivort> {
+    match tabort {
+        Tabort::Archiv { ort, .. } if ort.zugang.format() == Archivformat::Sqlite => Some(ort),
+        Tabort::Lokal(_) | Tabort::Fern { .. } | Tabort::Archiv { .. } => None,
+    }
 }
 
 /// Was zu geschehen hat, wenn der Nutzer dieses Dateifenster angefasst hat:
@@ -4547,23 +4568,95 @@ impl DateifensterQuelle {
     /// braucht ihn auch der Rang darueber, der Filterstand, und beide nehmen
     /// ihn aus [`Self::gerechnete_raenge`]; zwei Erhebungen je Schreiben der
     /// Zeile waeren zweimal derselbe Durchlauf ueber den ganzen Bestand.
+    ///
+    /// **In einer Datenbank summiert er Zeilen und sagt Zeilen** (Schritt 6
+    /// des Plans der SQLite-Datenbanken). Die Summe rechnet das Ordnermodell
+    /// wie ueberall aus `Eintrag::groesse`, und die ist fuer einen Eintrag
+    /// einer Datenbank schon die Zeilenzahl der Tabelle, fuer eine Sicht und
+    /// eine ungezaehlte Tabelle null (`Archiveintrag::groesse`); hier wechselt
+    /// allein die Einheit, mit der die Summe beschriftet wird.
     fn markierungsstand_text(&self, stand: Markierungsstand) -> Option<String> {
-        auswahl::markierungsstand_text(stand, &self.groesse_beschriften(stand.groesse))
+        // Die Ausleihe der Tabliste endet in `masseinheit`, bevor
+        // `groesse_beschriften` Objective-C ruft.
+        let einheit = self.masseinheit();
+        auswahl::markierungsstand_text(stand, &self.groesse_beschriften(einheit, stand.groesse))
     }
 
-    /// Eine Byte-Zahl in der Schreibweise des Systems.
+    /// Was die Groessenspalte und der Markierungsstand des sichtbaren Tabs
+    /// zaehlen: in einer Datenbank Zeilen, sonst Bytes. Gefragt wird allein
+    /// der Ort des Tabs, also kein Systemaufruf.
+    fn masseinheit(&self) -> Masseinheit {
+        let tabs = self.ivars().tabs.borrow();
+        if datenbankort(tabs.aktiver().tabort()).is_some() {
+            Masseinheit::Zeilen
+        } else {
+            Masseinheit::Bytes
+        }
+    }
+
+    /// Die Zelle der Spalte `Groesse` fuer `eintrag` im sichtbaren Tab.
     ///
-    /// Zwei Aufrufer, ein Formatierer: die Groessenspalte ueber den
-    /// Delegierten und der Markierungsstand oben.
-    fn groesse_beschriften(&self, bytes: u64) -> String {
-        // `stringFromByteCount:` nimmt eine vorzeichenbehaftete Zahl. Eine
-        // Datei jenseits von acht Exabyte gibt es nicht; die Saettigung ist
-        // trotzdem ehrlicher als ein Ueberlauf ins Negative.
-        let bytes = i64::try_from(bytes).unwrap_or(i64::MAX);
-        self.ivars()
-            .groessenformat
-            .stringFromByteCount(bytes)
-            .to_string()
+    /// Ein Ordner zeigt `--`, wie bisher. In einer Datenbank zeigt eine
+    /// Tabelle ihre Zeilenzahl und eine Sicht oder eine Tabelle, deren
+    /// Zaehlen scheiterte, `--` wie ein Ordner; in jedem anderen Tab steht
+    /// die Byte-Zahl wie vor den Datenbanken. Die Zeilenzahl kommt aus dem
+    /// gespeicherten Verzeichnis des Zugangs ([`Self::datenbankzeilen`]),
+    /// denn die Zelle wird auf dem Hauptfaden je Zeile und Bildlauf gefragt.
+    fn groessenzelle(&self, eintrag: &Eintrag) -> String {
+        if eintrag.ist_ordner() {
+            // Ein Ordner hat keine eigene Groesse, und die seines Inhalts zu
+            // summieren hiesse, ihn zu durchlaufen.
+            return "--".to_owned();
+        }
+        match self.datenbankzeilen(&eintrag.name) {
+            None => self.groesse_beschriften(Masseinheit::Bytes, eintrag.groesse),
+            Some(Some(zeilen)) => self.groesse_beschriften(Masseinheit::Zeilen, zeilen),
+            Some(None) => "--".to_owned(),
+        }
+    }
+
+    /// Die Zeilenzahl des Eintrags `name` im sichtbaren Tab, wenn er in einer
+    /// Datenbank steht: `None` ausserhalb einer Datenbank, `Some(None)` fuer
+    /// eine Sicht, eine ungezaehlte Tabelle und ein noch nicht gespeichertes
+    /// Verzeichnis.
+    ///
+    /// **Gefragt wird [`krk_core::archiv::Archivzugang::gespeichertes`] und nie
+    /// `Archivzugang::verzeichnis`**: das zweite fragt die Kennung der Datei
+    /// und verlangt dafuer das Pfand eines Arbeitsfadens; das erste antwortet
+    /// aus dem Zwischenspeicher, den der Lesevorgang des Tabs eben gefuellt
+    /// hat, und stellt keinen Systemaufruf.
+    fn datenbankzeilen(&self, name: &str) -> Option<Option<u64>> {
+        let tabs = self.ivars().tabs.borrow();
+        let ort = datenbankort(tabs.aktiver().tabort())?;
+        let innen = ort.innen.verbinden(name);
+        Some(
+            ort.zugang
+                .gespeichertes()
+                .zip(innen)
+                .and_then(|(verzeichnis, innen)| verzeichnis.zeilen(&innen)),
+        )
+    }
+
+    /// Eine Menge in der Einheit des Tabs: Bytes in der Schreibweise des
+    /// Systems, Zeilen als Zahlwort der Sprachtabelle.
+    ///
+    /// Zwei Aufrufer, ein Formatierer: die Groessenspalte ueber
+    /// [`Self::groessenzelle`] und der Markierungsstand oben.
+    fn groesse_beschriften(&self, einheit: Masseinheit, menge: u64) -> String {
+        match einheit {
+            Masseinheit::Bytes => {
+                // `stringFromByteCount:` nimmt eine vorzeichenbehaftete Zahl.
+                // Eine Datei jenseits von acht Exabyte gibt es nicht; die
+                // Saettigung ist trotzdem ehrlicher als ein Ueberlauf ins
+                // Negative.
+                let bytes = i64::try_from(menge).unwrap_or(i64::MAX);
+                self.ivars()
+                    .groessenformat
+                    .stringFromByteCount(bytes)
+                    .to_string()
+            }
+            Masseinheit::Zeilen => anzahl(Zahlwort::SqliteZeilen, menge, &[]),
+        }
     }
 
     /// Loescht die Meldung des Fensters, falls eine steht.
@@ -5586,15 +5679,9 @@ impl DateifensterDelegierter {
             // die Anzeigeform entsteht und warum sie nie ein Name ist, steht
             // bei [`namensform`].
             Spalte::Name => namensform(eintrag),
-            Spalte::Groesse => {
-                if eintrag.ist_ordner() {
-                    // Ein Ordner hat keine eigene Groesse, und die seines
-                    // Inhalts zu summieren hiesse, ihn zu durchlaufen.
-                    "--".to_owned()
-                } else {
-                    self.quelle().groesse_beschriften(eintrag.groesse)
-                }
-            }
+            // Bytes, in einer Datenbank Zeilen, fuer Ordner und Sichten `--`;
+            // die Regel steht bei [`DateifensterQuelle::groessenzelle`].
+            Spalte::Groesse => self.quelle().groessenzelle(eintrag),
             Spalte::Geaendert => self.datum_beschriften(eintrag.geaendert),
             // Die Endung, nicht die Eintragsart: sie ist derselbe Wert, aus
             // dem die Sortierung nach Typ ihren Schluessel bildet, damit
@@ -7541,6 +7628,227 @@ mod tests {
             funde.is_empty(),
             "ein Pruefausdruck haelt die Tabliste geliehen, waehrend sein Zweig \
              sie mit borrow_mut verlangen kann: {funde:?}"
+        );
+    }
+
+    // ------------------------------------------------------------------
+    // Zeilen in der Groessenspalte einer Datenbank (Schritt 6 des Plans der
+    // SQLite-Datenbanken)
+    // ------------------------------------------------------------------
+
+    /// Legt mit `/usr/bin/sqlite3` die Datenbank `name` im Pruefordner an und
+    /// fuehrt `sql` darin aus. Das Programm dient hier allein als Schreiber
+    /// der Pruefdaten; KRK liest ueber die eigene Bindung.
+    fn datenbank_anlegen(ordner: &crate::pruefordner::Pruefordner, name: &str, sql: &str) {
+        let pfad = ordner.unter(name);
+        let ausgabe = std::process::Command::new("/usr/bin/sqlite3")
+            .arg(&pfad)
+            .arg(sql)
+            .output()
+            .expect("/usr/bin/sqlite3 laesst sich starten");
+        assert!(
+            ausgabe.status.success(),
+            "sqlite3 scheitert an {}: {}",
+            pfad.display(),
+            String::from_utf8_lossy(&ausgabe.stderr)
+        );
+    }
+
+    /// Eine Datenbank mit vier Tabellen (1234, eine, null und drei Zeilen)
+    /// und einer Sicht.
+    const DATENBANK: &str = "\
+        CREATE TABLE gross (n INTEGER);\
+        WITH RECURSIVE z(n) AS (SELECT 1 UNION ALL SELECT n + 1 FROM z WHERE n < 1234)\
+          INSERT INTO gross SELECT n FROM z;\
+        CREATE TABLE eine (n INTEGER); INSERT INTO eine VALUES (1);\
+        CREATE TABLE leer (n INTEGER);\
+        CREATE TABLE drei (t TEXT); INSERT INTO drei VALUES ('a'), ('b'), ('c');\
+        CREATE VIEW sicht AS SELECT t FROM drei;";
+
+    /// Betritt die Datenbank `name` im Ordner der Datenquelle und liest sie.
+    fn datenbank_betreten(quelle: &DateifensterQuelle, name: &str) {
+        let zeile = zeile_von(quelle, name);
+        assert_eq!(
+            quelle.in_zeile_einsteigen(zeile, false),
+            Einstieg::Eingestiegen
+        );
+        fertig_lesen(quelle);
+        assert_eq!(
+            innenpfad(quelle).as_deref(),
+            Some(""),
+            "der Tab steht in der Datenbank"
+        );
+    }
+
+    /// Die Zelle der Spalte `Groesse` fuer den Eintrag `name`, ueber denselben
+    /// Weg wie der Delegierte.
+    fn groessenzelle_von(quelle: &DateifensterQuelle, name: &str) -> String {
+        quelle
+            .mit_zeile(zeile_von(quelle, name), |eintrag| {
+                quelle.groessenzelle(eintrag)
+            })
+            .expect("die Zeile steht")
+    }
+
+    /// In einer Datenbank zeigt die Groessenspalte die Zeilenzahl einer
+    /// Tabelle als Zahlwort mit Ziffer, auch fuer eine leere Tabelle, und
+    /// fuer eine Sicht `--` wie fuer einen Ordner (Entscheid
+    /// `261023-1340-was-zeigt-die-spalte-groesse-einer-tabelle.md`,
+    /// Moeglichkeit 3). An der gebauten Datenquelle, nach dem echten
+    /// Lesevorgang, damit das gespeicherte Verzeichnis des Zugangs dasselbe
+    /// ist, das die Zelle im Betrieb fragt.
+    ///
+    /// **Was sie nicht sieht:** eine Tabelle mit unbekannter Zeilenzahl; sie
+    /// nimmt im Rumpf denselben Arm wie die Sicht (`Some(None)`), und eine
+    /// solche Datei baut `/usr/bin/sqlite3` nicht ohne fremdes Modul.
+    #[test]
+    fn in_einer_datenbank_zeigt_die_groessenspalte_zeilen_und_fuer_eine_sicht_striche() {
+        let ordner = crate::pruefordner::Pruefordner::neu("db-groessenspalte");
+        datenbank_anlegen(&ordner, "daten.db", DATENBANK);
+        let quelle = gelesene_quelle(ordner.pfad());
+        datenbank_betreten(&quelle, "daten.db");
+
+        assert_eq!(quelle.masseinheit(), Masseinheit::Zeilen);
+        assert_eq!(groessenzelle_von(&quelle, "gross"), "1.234 Zeilen");
+        assert_eq!(groessenzelle_von(&quelle, "eine"), "1 Zeile");
+        assert_eq!(groessenzelle_von(&quelle, "leer"), "0 Zeilen");
+        assert_eq!(groessenzelle_von(&quelle, "drei"), "3 Zeilen");
+        assert_eq!(groessenzelle_von(&quelle, "sicht"), "--");
+    }
+
+    /// Der Markierungsstand einer Datenbank summiert die Zeilen der
+    /// markierten Tabellen und sagt Zeilen; die Sicht zaehlt als Eintrag mit
+    /// und traegt keine Zeile bei. Ueber den Tastenbefehl „Alles markieren“
+    /// und den Weg, auf dem die Statuszeile ihn liest.
+    #[test]
+    fn der_markierungsstand_einer_datenbank_zaehlt_zeilen() {
+        let ordner = crate::pruefordner::Pruefordner::neu("db-markierungsstand");
+        datenbank_anlegen(&ordner, "daten.sqlite", DATENBANK);
+        let quelle = gelesene_quelle(ordner.pfad());
+        datenbank_betreten(&quelle, "daten.sqlite");
+
+        assert!(quelle.kommando_ausfuehren(Kommando::AlleMarkieren));
+        assert_eq!(
+            quelle.meldungsquellen().markierungsstand.as_deref(),
+            Some("5 markiert, davon 0 Ordner, 1.238 Zeilen"),
+        );
+    }
+
+    /// Ein lokaler Ordner und ein Zip bleiben bei Bytes, Zelle fuer Zelle und
+    /// im Markierungsstand, und ein Ordner zeigt in beiden `--`. Die Erwartung
+    /// ist die Antwort desselben `NSByteCountFormatter`, den die Spalte vor
+    /// den Datenbanken fragte, und kein festgeschriebener Text, damit die
+    /// Probe nicht von der Spracheinstellung des Systems abhaengt.
+    #[test]
+    fn die_groessenspalte_eines_zip_und_eines_ordners_bleibt_bei_bytes() {
+        let ordner = crate::pruefordner::Pruefordner::neu("db-bytes");
+        ordner.datei("zwoelf.txt", "zwoelf Bytes");
+        ordner.ordner("inhalt/unter");
+        ordner.datei("inhalt/fuenf.txt", "fuenf");
+        ordner.zip_packen("paket.zip", "inhalt");
+        let quelle = gelesene_quelle(ordner.pfad());
+        let bytes = |menge: i64| {
+            quelle
+                .ivars()
+                .groessenformat
+                .stringFromByteCount(menge)
+                .to_string()
+        };
+
+        assert_eq!(quelle.masseinheit(), Masseinheit::Bytes);
+        assert_eq!(groessenzelle_von(&quelle, "zwoelf.txt"), bytes(12));
+        assert_eq!(groessenzelle_von(&quelle, "inhalt"), "--");
+        let zeile = zeile_von(&quelle, "zwoelf.txt");
+        {
+            let mut tabs = quelle.ivars().tabs.borrow_mut();
+            let modell = tabs.aktiver_mut().modell_mut();
+            let index = modell
+                .eintragsindex(zeile)
+                .expect("die Zeile hat einen Eintrag");
+            modell.markierung_umschalten(index);
+        }
+        assert_eq!(
+            quelle.meldungsquellen().markierungsstand,
+            Some(format!("1 markiert, davon 0 Ordner, {}", bytes(12))),
+        );
+
+        let zeile = zeile_von(&quelle, "paket.zip");
+        assert_eq!(
+            quelle.in_zeile_einsteigen(zeile, false),
+            Einstieg::Eingestiegen
+        );
+        fertig_lesen(&quelle);
+        let zeile = zeile_von(&quelle, "inhalt");
+        assert_eq!(
+            quelle.in_zeile_einsteigen(zeile, false),
+            Einstieg::Eingestiegen
+        );
+        fertig_lesen(&quelle);
+        assert_eq!(quelle.masseinheit(), Masseinheit::Bytes);
+        assert_eq!(groessenzelle_von(&quelle, "fuenf.txt"), bytes(5));
+        assert_eq!(groessenzelle_von(&quelle, "unter"), "--");
+    }
+
+    /// Der Rumpf der Groessenzelle stellt auf dem Hauptfaden keinen
+    /// Systemaufruf und fragt das Verzeichnis nicht ueber
+    /// `Archivzugang::verzeichnis`, sondern ueber das gespeicherte; gebaut
+    /// nach `der_archiveinstieg_stellt_auf_dem_hauptfaden_keinen_systemaufruf`.
+    /// Gelesen werden die Rumpfe von [`DateifensterQuelle::groessenzelle`],
+    /// [`DateifensterQuelle::datenbankzeilen`],
+    /// [`DateifensterQuelle::masseinheit`],
+    /// [`DateifensterQuelle::groesse_beschriften`] und [`datenbankort`].
+    ///
+    /// **Was sie nicht sieht:** einen Systemaufruf in einer tiefer gerufenen
+    /// Funktion einer anderen Datei; `Inhaltsverzeichnis::zeilen` und
+    /// `Archivzugang::gespeichertes` sagen ihn in ihren Doc-Kommentaren ab.
+    #[test]
+    fn die_groessenzelle_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
+        let datei = diese_datei();
+        let code: String = code_zeilen(vor_dem_pruefmodul(&datei))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let rumpfe = [
+            ("groessenzelle", rumpf_von(&code, "groessenzelle")),
+            ("datenbankzeilen", rumpf_von(&code, "datenbankzeilen")),
+            ("masseinheit", rumpf_von(&code, "masseinheit")),
+            (
+                "groesse_beschriften",
+                rumpf_von(&code, "groesse_beschriften"),
+            ),
+            ("datenbankort", {
+                let beginn = code
+                    .find("fn datenbankort(")
+                    .expect("datenbankort steht da");
+                let rest = &code[beginn..];
+                &rest[..rest.find("\n}\n").expect("datenbankort endet")]
+            }),
+        ];
+        for (name, rumpf) in rumpfe {
+            for nadel in [
+                "fs::",
+                "metadata(",
+                "File::",
+                "canonicalize(",
+                "read_dir(",
+                "symlink_metadata(",
+                "read_link(",
+                ".verzeichnis(",
+                "Archivzugang::verzeichnis",
+                "fern::faden",
+            ] {
+                assert!(
+                    !rumpf.contains(nadel),
+                    "{name} stellt auf dem Hauptfaden einen Systemaufruf: {nadel}"
+                );
+            }
+        }
+        assert!(
+            rumpf_von(&code, "datenbankzeilen").contains(".gespeichertes()"),
+            "die Zeilenzahl kommt aus dem gespeicherten Verzeichnis"
+        );
+        assert!(
+            rumpf_von(&code, "beschriften").contains("self.quelle().groessenzelle(eintrag)"),
+            "die Zelle der Spalte Groesse geht durch groessenzelle"
         );
     }
 }

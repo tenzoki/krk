@@ -2758,11 +2758,18 @@ pub enum Zahlwort {
     /// ihn (Entscheid
     /// `261023-1507-wie-stehen-null-und-blob-in-der-tsv-einer-sqlite-tabelle.md`).
     SqliteBlob,
+    /// `appkit::tabelle`: die Zeilenzahl einer Tabelle in der Spalte
+    /// „Groesse“ eines Tabs in einer SQLite-Datenbank und die Summe im
+    /// Markierungsstand (Entscheid
+    /// `261023-1340-was-zeigt-die-spalte-groesse-einer-tabelle.md`). Nicht
+    /// `TrenntextZeilen`, weil dessen Einzahl das Zahlwort ausschreibt und
+    /// eine Spalte mit Zahlen eine Ziffer braucht.
+    SqliteZeilen,
 }
 
 impl Zahlwort {
     /// Alle Zahlwoerter, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Zahlwort; 41] = [
+    pub const ALLE: [Zahlwort; 42] = [
         Zahlwort::Byte,
         Zahlwort::NeuerungenEintraegeIn,
         Zahlwort::HeimZettelUebernommen,
@@ -2804,5 +2811,6 @@ impl Zahlwort {
         Zahlwort::TrenntextZeilenEingefuegt,
         Zahlwort::TrenntextSpaltenGeloescht,
         Zahlwort::SqliteBlob,
+        Zahlwort::SqliteZeilen,
     ];
 }
