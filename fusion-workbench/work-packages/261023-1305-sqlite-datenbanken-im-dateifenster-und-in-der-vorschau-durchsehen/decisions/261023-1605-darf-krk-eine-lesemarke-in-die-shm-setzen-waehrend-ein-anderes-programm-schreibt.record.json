@@ -17,13 +17,13 @@
   },
   "extensions": {},
   "control": {
-    "state": "answered",
+    "state": "implemented",
     "answer_ref": {
       "kind": "other",
       "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261023-1605-darf-krk-eine-lesemarke-in-die-shm-setzen-waehrend-ein-anderes-programm-schreibt.md",
       "sha256": "sha256:18363df49f043c08fbc9c22577a8d1b8bb607b6eb975f095e6fdb81408919af8"
     },
-    "implementation_ref": null,
+    "implementation_ref": "ee49bf79692cbfd489b86729d95a7fc45beedbe6",
     "superseded_by": null,
     "deferral": null
   }

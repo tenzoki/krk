@@ -24,3 +24,5 @@ Folgen je Möglichkeit: Analysebericht 261023-1324-sqlite-datenbanken-durchsehen
 
 ---
 Answered: 261023-1340-zeigt-krk-sichten-einer-sqlite-datenbank-oder-nur-ihren-sql-text.md — Möglichkeit 2: Sichten werden gelistet, die Vorschau zeigt ihren SQL-Text; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+Implemented: 6e8fe5de — Sicht erscheint als SQL-Text, nie ausgefuehrt.

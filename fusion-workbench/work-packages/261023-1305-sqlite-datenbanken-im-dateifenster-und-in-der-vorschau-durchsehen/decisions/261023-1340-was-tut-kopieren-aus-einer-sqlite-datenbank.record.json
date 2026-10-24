@@ -17,13 +17,13 @@
   },
   "extensions": {},
   "control": {
-    "state": "answered",
+    "state": "implemented",
     "answer_ref": {
       "kind": "other",
       "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261023-1340-was-tut-kopieren-aus-einer-sqlite-datenbank.md",
       "sha256": "sha256:c2879b3c710908fdc2fc9dfc9bca7e75b957cf0f48344de0186dfab6888f8f41"
     },
-    "implementation_ref": null,
+    "implementation_ref": "e5d2c38735a14ca86ff1b27934343747d0e07891",
     "superseded_by": null,
     "deferral": null
   }

@@ -24,3 +24,5 @@ Folgen je Möglichkeit: Analysebericht 261023-1324-sqlite-datenbanken-durchsehen
 
 ---
 Answered: 261023-1340-betritt-der-doppelklick-eine-sqlite-datenbank-und-oeffnet-return-sie-weiter-extern.md — Möglichkeit 1 bestätigt; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+Implemented: 148f84dd — Archivformat::Sqlite, Betreten wie ein Archiv (Pfeil rechts, Doppelklick), return weiter extern.

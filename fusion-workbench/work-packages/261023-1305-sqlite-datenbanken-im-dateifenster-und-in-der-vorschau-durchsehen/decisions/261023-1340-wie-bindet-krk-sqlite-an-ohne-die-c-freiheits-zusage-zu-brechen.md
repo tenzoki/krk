@@ -26,3 +26,5 @@ Folgen je Möglichkeit: Analysebericht 261023-1324-sqlite-datenbanken-durchsehen
 
 ---
 Answered: 261023-1340-wie-bindet-krk-sqlite-an-ohne-die-c-freiheits-zusage-zu-brechen.md — Möglichkeit 1 (a): System-libsqlite3 von Hand in verzeichnis/sys.rs; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+Implemented: a74f7809 — System-libsqlite3 von Hand in verzeichnis/sys.rs.

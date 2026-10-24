@@ -17,13 +17,13 @@
   },
   "extensions": {},
   "control": {
-    "state": "answered",
+    "state": "implemented",
     "answer_ref": {
       "kind": "other",
       "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261023-1340-betritt-der-doppelklick-eine-sqlite-datenbank-und-oeffnet-return-sie-weiter-extern.md",
       "sha256": "sha256:8761d6b341d9768192e42638d282e6fb0201e0e0196ca73cac7cbe597b795866"
     },
-    "implementation_ref": null,
+    "implementation_ref": "148f84ddb59d05ad5b4770296270ec7041ddd1a6",
     "superseded_by": null,
     "deferral": null
   }

@@ -17,13 +17,13 @@
   },
   "extensions": {},
   "control": {
-    "state": "answered",
+    "state": "implemented",
     "answer_ref": {
       "kind": "other",
       "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261023-1340-zeigt-krk-sichten-einer-sqlite-datenbank-oder-nur-ihren-sql-text.md",
       "sha256": "sha256:73e8789fed5395a3b50b6b5feb5cef16604520ef4e0350a72501d64f7fa931bc"
     },
-    "implementation_ref": null,
+    "implementation_ref": "6e8fe5def22a7a284443c6b5fd65e148320a7068",
     "superseded_by": null,
     "deferral": null
   }

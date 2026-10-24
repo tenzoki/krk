@@ -25,3 +25,5 @@ Folgen je Möglichkeit: Analysebericht 261023-1324-sqlite-datenbanken-durchsehen
 
 ---
 Answered: 261023-1340-welche-dateien-gelten-als-sqlite-datenbank.md — Möglichkeit 2: alle Endungen direkt, `.db` eingeschlossen, ohne Vorabprüfung der Bytes; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+Implemented: 148f84dd — Endungen in archiv/format.rs.

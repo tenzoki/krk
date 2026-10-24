@@ -25,3 +25,5 @@ Folgen je Möglichkeit: Analysebericht 261023-1324-sqlite-datenbanken-durchsehen
 
 ---
 Answered: 261023-1340-was-zeigt-die-spalte-groesse-einer-tabelle.md — Möglichkeit 3: die Zeilenzahl der Tabelle; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+Implemented: 69b80d1c — Groessenspalte und Markierungsstand zaehlen Zeilen.

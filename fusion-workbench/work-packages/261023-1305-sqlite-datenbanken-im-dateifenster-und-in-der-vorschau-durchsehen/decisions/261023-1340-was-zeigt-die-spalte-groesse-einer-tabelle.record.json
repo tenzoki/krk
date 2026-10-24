@@ -17,13 +17,13 @@
   },
   "extensions": {},
   "control": {
-    "state": "answered",
+    "state": "implemented",
     "answer_ref": {
       "kind": "other",
       "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261023-1340-was-zeigt-die-spalte-groesse-einer-tabelle.md",
       "sha256": "sha256:105f21d5c871872c9a6ad06bf9f87e240d3be526ca4b46282556e1d5e582117c"
     },
-    "implementation_ref": null,
+    "implementation_ref": "69b80d1c416e07b8368e073a423a8d0fa5f5c0df",
     "superseded_by": null,
     "deferral": null
   }

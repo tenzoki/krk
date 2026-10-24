@@ -28,3 +28,5 @@ Möglichkeit 1 (implementation-planner).
 Answered: Möglichkeit 1 — KRK darf die Lesemarke in die `-shm` setzen; geöffnet wird `mode=ro`, `immutable=1` allein ohne `-wal` neben einer WAL-Datenbank; ruled by user, Kai Stalmann <kai@stalmann.org>
 
 Nachtrag 261024: Die Prämisse „Eine neue Datei legt sie nie an“ gilt nicht für eine WAL-Datenbank mit `-wal` und ohne `-shm` (Issue `261024-2112-mode-ro-legt-neben-einer-wal-datenbank-mit-wal-und-ohne-shm-eine-neue-shm-an.md`). Nach dem Entscheid `261024-2215-wie-liest-krk-eine-wal-datenbank-mit-wal-und-ohne-shm.md` (Möglichkeit 4, Rest nach Möglichkeit 1) gilt seitdem: ein leeres `-wal` ohne `-shm` liest KRK unveränderlich und legt nichts an; ein nicht leeres `-wal` ohne `-shm` (Absturz, Kopie) lässt SQLite eine `-shm` anlegen. `immutable=1` gilt damit in zwei Fällen, ohne `-wal` und bei leerem `-wal` ohne `-shm`; die Antwort oben bleibt im Übrigen stehen. Umgesetzt in `crates/krk-core/src/archiv/sqlite.rs` (`oeffnen`, Modulkopf `# Die Oeffnungsregel` und `# Nur lesen`), code-implementer.
+
+Implemented: ee49bf79 — mode=ro mit Lesemarke in der -shm, Proben in archiv_sqlite.rs; Nachtrag 261024 in a1fec2b7.

@@ -24,3 +24,5 @@ Folgen je Möglichkeit: Analysebericht 261023-1324-sqlite-datenbanken-durchsehen
 
 ---
 Answered: 261023-1340-was-tut-kopieren-aus-einer-sqlite-datenbank.md — Möglichkeit 2: Kopieren exportiert die Tabelle als TSV-Datei; ruled by user, Kai Stalmann <kai@stalmann.org>
+
+Implemented: e5d2c387 — Kopieren legt <name>.tsv bzw. <name>.sql an.
