@@ -13,16 +13,25 @@
 //!         ├── Err(ZuGross) ───────────────────────────────────────────> ZuGross
 //!         ├── Err(KeineDatei) ────────────────────────────────────────> TraegtNicht
 //!         ├── Err(Fehler) ────────────────────────────────────────────> TraegtNicht
+//!         ├── Err(Platzhalter) ───────────────────────────────────────> NurInDerCloud
 //!         ├── Err(Deskriptormangel) ──────────────────────────────────> Unentschieden
-//!         ├── Err(Platzhalter) ───────────────────────────────────────> Unentschieden
 //!         └── Err(Abgebrochen) ───────────────────────────────────────> Unentschieden
 //! ```
 //!
-//! Die letzten zwei Zweige sind heute unerreichbar: gelesen wird mit
-//! [`Platzhalterregel::Laden`] und
-//! einem `weiter`, das nie nein sagt. Sie stehen, weil die Uebersetzung ohne
-//! Auffangzweig ist, und `Unentschieden` ist der Wert, der ueber die Datei
-//! nichts behauptet.
+//! # Eine Datei, die nur in der Cloud liegt, wird nicht geoeffnet
+//!
+//! Gelesen wird mit [`Platzhalterregel::Meiden`]: eine Datei mit dem
+//! Kennzeichen `SF_DATALESS` oeffnet die Huelle gar nicht, weil schon das
+//! Lesen sie vom Cloudlaufwerk herunterholte, und der Inhaltsfilter ist ein
+//! Hintergrundleser, der das nicht darf (Entscheid
+//! `261025-1444-welche-leser-duerfen-eine-platzhalterdatei-herunterladen.md`,
+//! Moeglichkeit 1). Der Befund dafuer ist [`Inhaltsbefund::NurInDerCloud`],
+//! derselben Art wie [`Inhaltsbefund::ZuGross`]: ungelesen, eine Zahl fuer die
+//! Statuszeile und kein Nichttreffer.
+//!
+//! Der letzte Zweig ist heute unerreichbar: gelesen wird mit einem `weiter`,
+//! das nie nein sagt. Er steht, weil die Uebersetzung ohne Auffangzweig ist,
+//! und `Unentschieden` ist der Wert, der ueber die Datei nichts behauptet.
 //!
 //! Das Bild ist die ganze Datei. Sie fuegt dem Leseweg nichts hinzu, was sie
 //! nicht abbildet: [`super::filter::traegt_die_folge`] ist derselbe Vergleich,
@@ -85,17 +94,19 @@ use super::filter::{Muster, traegt_die_folge};
 
 /// Was das Lesen einer Datei ueber den Filtertext ergeben hat.
 ///
-/// **Vier Werte, ueberschneidungsfrei und vollstaendig, ohne Auffangzweig**;
+/// **Fuenf Werte, ueberschneidungsfrei und vollstaendig, ohne Auffangzweig**;
 /// jeder Wert von [`Lesehindernis`] ist in [`traegt_der_inhalt`] einem von
 /// ihnen zugeordnet. Ein weiterer Wert dort haelt jede Uebersetzung hier an,
 /// und das ist der Zweck der fehlenden Auffangzweige.
 ///
-/// **Die drei Ausgaenge sind nicht zwei.** [`ZuGross`](Self::ZuGross) und
+/// **Die vier Ausgaenge sind nicht zwei.** [`ZuGross`](Self::ZuGross),
+/// [`NurInDerCloud`](Self::NurInDerCloud) und
 /// [`Unentschieden`](Self::Unentschieden) sind kein
-/// [`TraegtNicht`](Self::TraegtNicht), und beide Male aus demselben Grund: sie
-/// sagen etwas ueber den **Lauf** und nichts ueber die Datei. Ueber einer
-/// Groessengrenze wurde gar nicht gelesen, und bei `EMFILE` oder `ENFILE` ist
-/// dem Prozess der Deskriptor ausgegangen. Wer die drei zusammenzoege,
+/// [`TraegtNicht`](Self::TraegtNicht), und alle drei Male aus demselben Grund:
+/// sie sagen etwas ueber den **Lauf** und nichts ueber die Datei. Ueber einer
+/// Groessengrenze und an einer Datei, die nur in der Cloud liegt, wurde gar
+/// nicht gelesen, und bei `EMFILE` oder `ENFILE` ist dem Prozess der
+/// Deskriptor ausgegangen. Wer sie zusammenzoege,
 /// entschiede negativ, wo nichts entschieden ist — derselbe Fehlgriff, den der
 /// Durchlauf ueber den Unterbaum seit der Runde 10 vermeidet.
 ///
@@ -115,6 +126,11 @@ pub enum Inhaltsbefund {
     /// Ueber der uebergebenen Grenze, also ungelesen. Kein Befund ueber die
     /// Datei, sondern eine Zahl fuer die Statuszeile.
     ZuGross,
+    /// Die Datei liegt nur in der Cloud (`SF_DATALESS`) und wurde nicht
+    /// geoeffnet, weil das Oeffnen sie herunterholte. Wie
+    /// [`ZuGross`](Self::ZuGross) ungelesen und kein Befund ueber die Datei,
+    /// sondern eine eigene Zahl fuer die Statuszeile.
+    NurInDerCloud,
     /// Der Vorrat an Deskriptoren ist erschoepft. Eine Lage des Prozesses und
     /// kein Befund ueber die Datei.
     Unentschieden,
@@ -129,7 +145,9 @@ pub enum Inhaltsbefund {
 ///
 /// `grenze` ist die groesste Zahl Bytes, die gelesen werden darf. Eine Datei
 /// darueber wird nicht gelesen und liefert [`Inhaltsbefund::ZuGross`]; sie gilt
-/// ausdruecklich **nicht** als Nichttreffer.
+/// ausdruecklich **nicht** als Nichttreffer. Eine Datei, die nur in der Cloud
+/// liegt, wird gleich welcher Groesse nicht geoeffnet und liefert
+/// [`Inhaltsbefund::NurInDerCloud`]; warum, steht im Modulkopf.
 ///
 /// **Dieselbe Folge gibt am Namen und am Inhalt dieselbe Antwort**, weil beide
 /// Wege durch [`traegt_die_folge`] laufen: Teilzeichenfolge an jeder Stelle,
@@ -142,7 +160,7 @@ pub enum Inhaltsbefund {
 /// fallen laesst, hat eine Datei umsonst gelesen, und still.
 #[must_use]
 pub fn traegt_der_inhalt(pfad: &Path, muster: &Muster, grenze: u64) -> Inhaltsbefund {
-    match bis_zur_grenze_lesen(pfad, grenze, Platzhalterregel::Laden, &|| true) {
+    match bis_zur_grenze_lesen(pfad, grenze, Platzhalterregel::Meiden, &|| true) {
         Ok(bytes) => match String::from_utf8(bytes) {
             // Gueltiges UTF-8: die Datei ist Text, und der eine Vergleich
             // entscheidet.
@@ -159,12 +177,11 @@ pub fn traegt_der_inhalt(pfad: &Path, muster: &Muster, grenze: u64) -> Inhaltsbe
         },
         Err(Lesehindernis::ZuGross) => Inhaltsbefund::ZuGross,
         Err(Lesehindernis::KeineDatei | Lesehindernis::Fehler) => Inhaltsbefund::TraegtNicht,
-        // `Platzhalter` und `Abgebrochen` sind unter `Laden` und einem `weiter`,
-        // das nie nein sagt, unerreichbar; beide sagen ueber die Datei nichts.
-        Err(
-            Lesehindernis::Deskriptormangel
-            | Lesehindernis::Platzhalter
-            | Lesehindernis::Abgebrochen,
-        ) => Inhaltsbefund::Unentschieden,
+        Err(Lesehindernis::Platzhalter) => Inhaltsbefund::NurInDerCloud,
+        // `Abgebrochen` ist unter einem `weiter`, das nie nein sagt,
+        // unerreichbar; es sagt ueber die Datei nichts.
+        Err(Lesehindernis::Deskriptormangel | Lesehindernis::Abgebrochen) => {
+            Inhaltsbefund::Unentschieden
+        }
     }
 }

@@ -656,7 +656,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::TabelleNichtInDerListe => "{name} ne figure pas dans la liste",
         Text::FenstertitelQuicknote => "Quicknote",
         Text::StatuszeileFilterstand => {
-            "Filtre «\u{a0}{filtertext}\u{a0}»\u{a0}: {gezeigt} sur {vorhanden} affichés{liest}{zu_gross}{ausgeblendet}"
+            "Filtre «\u{a0}{filtertext}\u{a0}»\u{a0}: {gezeigt} sur {vorhanden} affichés{liest}{zu_gross}{nur_in_der_cloud}{ausgeblendet}"
         }
         Text::StatuszeileInhaltWirdGelesen => ", contenu en cours de lecture",
         Text::StatuszeileSeiteVon => "Page {aktuell} sur {gesamt}",
@@ -1359,6 +1359,10 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::StatuszeileDateienZuGross => (
             ", un fichier trop volumineux",
             ", {n} fichiers trop volumineux",
+        ),
+        Zahlwort::StatuszeileDateienNurInDerCloud => (
+            ", un fichier uniquement dans le cloud",
+            ", {n} fichiers uniquement dans le cloud",
         ),
         Zahlwort::StatuszeileMarkierungenAusgeblendet => {
             (", une marque masquée", ", {n} marques masquées")

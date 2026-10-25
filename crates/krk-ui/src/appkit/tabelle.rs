@@ -4560,6 +4560,7 @@ impl DateifensterQuelle {
             ersetzt_beim_naechsten_stapel: modell.ersetzt_beim_naechsten_stapel(),
             liest_inhalt: tab.liest_inhalt(),
             zu_gross: tab.zu_gross(),
+            nur_in_der_cloud: tab.nur_in_der_cloud(),
         };
         (markierung, modell.filtertext().to_owned(), filterstand)
     }

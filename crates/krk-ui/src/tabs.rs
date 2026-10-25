@@ -238,6 +238,12 @@ pub struct Tabinhalt {
     /// und `Tabliste::durchlauf_nachziehen_an` setzen sie auf null, wo ein
     /// Lauf faellt oder beginnt.
     zu_gross: u64,
+    /// Wie viele Dateien der letzte Durchlauf **nicht** gelesen hat, weil sie
+    /// nur in der Cloud liegen.
+    ///
+    /// Aus demselben Grund ein Feld am Tab wie [`Self::zu_gross`], mit
+    /// derselben Lebensdauer und an denselben Stellen auf null gesetzt.
+    nur_in_der_cloud: u64,
     /// Der Name, auf den die Auswahl springt, sobald der Ordner gelesen ist.
     ///
     /// Er kommt aus `session.toml` und lebt genau bis zum Abschluss des
@@ -352,6 +358,7 @@ impl Tabinhalt {
             lesevorgang: None,
             durchlauf: None,
             zu_gross: 0,
+            nur_in_der_cloud: 0,
             wunschauswahl: zustand.auswahl.clone(),
             wunsch_melden: false,
             bildlauf: zustand.bildlauf,
@@ -529,6 +536,16 @@ impl Tabinhalt {
     #[must_use]
     pub fn zu_gross(&self) -> u64 {
         self.zu_gross
+    }
+
+    /// Wie viele Dateien der letzte Durchlauf **nicht** gelesen hat, weil sie
+    /// nur in der Cloud liegen.
+    ///
+    /// Gebaut wie [`Self::zu_gross`]; sein einer Ableser ist der Satzteil
+    /// `appkit::statuszeile::Filterstand::nur_in_der_cloud`.
+    #[must_use]
+    pub fn nur_in_der_cloud(&self) -> u64 {
+        self.nur_in_der_cloud
     }
 
     /// Ob gerade ein Durchlauf laeuft, der Dateiinhalte liest.
@@ -1707,6 +1724,7 @@ impl Tabliste {
     fn durchlauf_nachziehen_an(&mut self, stelle: usize) -> bool {
         self.tabs[stelle].durchlauf = None;
         self.tabs[stelle].zu_gross = 0;
+        self.tabs[stelle].nur_in_der_cloud = 0;
         if stelle != self.aktiv {
             return false;
         }
@@ -2054,6 +2072,7 @@ impl Tabliste {
         // Und mit ihm seine Zahl der ungelesenen Dateien: sie gehoert dem Lauf
         // und nicht dem Tab, und der neue Bestand hat noch keinen.
         tab.zu_gross = 0;
+        tab.nur_in_der_cloud = 0;
         tab.modell.lesevorgang_beginnen(generation);
         // Nach dem Beginn und nicht davor: mit vorgemerktem Ersatz rechnet der
         // Setzer den alten Bestand nicht nach, der dem vorigen Ordner gehoert.
@@ -2271,6 +2290,7 @@ fn befunde_einziehen(tab: &mut Tabinhalt) -> bool {
     // darunter faellt; danach traegt ihn allein der Tab, und die Statuszeile
     // findet die Zahl auch bei einem Ordner, dessen Lauf laengst durch ist.
     tab.zu_gross = durchlauf.zu_gross();
+    tab.nur_in_der_cloud = durchlauf.nur_in_der_cloud();
     if kanal_zu {
         tab.durchlauf = None;
     }

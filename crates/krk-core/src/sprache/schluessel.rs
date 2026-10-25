@@ -890,8 +890,9 @@ pub enum Text {
     /// Kopf des Editorbereichs ueber ihr.
     FenstertitelQuicknote,
     /// `statuszeile::filterstand_text`: der Satz des Filterstands;
-    /// `{filtertext}`, `{gezeigt}`, `{vorhanden}` und die drei Satzteile
-    /// `{liest}`, `{zu_gross}`, `{ausgeblendet}`, die leer bleiben duerfen.
+    /// `{filtertext}`, `{gezeigt}`, `{vorhanden}` und die vier Satzteile
+    /// `{liest}`, `{zu_gross}`, `{nur_in_der_cloud}`, `{ausgeblendet}`, die
+    /// leer bleiben duerfen.
     StatuszeileFilterstand,
     /// `filterstand_text`: der Satzteil `{liest}`, solange der Inhalt gelesen
     /// wird; er beginnt mit dem Komma, das ihn anhaengt.
@@ -2690,6 +2691,10 @@ pub enum Zahlwort {
     /// Dateien ueber der Lesegrenze; beide Formen beginnen mit dem Komma, das
     /// sie anhaengt, und die Einzahl laesst `{n}` aus.
     StatuszeileDateienZuGross,
+    /// `filterstand_text`: der Satzteil `{nur_in_der_cloud}` zu den Dateien,
+    /// die der Inhaltsfilter nicht geoeffnet hat, weil sie nur in der Cloud
+    /// liegen; gebaut wie `StatuszeileDateienZuGross`.
+    StatuszeileDateienNurInDerCloud,
     /// `filterstand_text`: der Satzteil `{ausgeblendet}` zu den Markierungen,
     /// die der Filter ausblendet; ebenso gebaut.
     StatuszeileMarkierungenAusgeblendet,
@@ -2801,7 +2806,7 @@ pub enum Zahlwort {
 
 impl Zahlwort {
     /// Alle Zahlwoerter, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Zahlwort; 43] = [
+    pub const ALLE: [Zahlwort; 44] = [
         Zahlwort::Byte,
         Zahlwort::NeuerungenEintraegeIn,
         Zahlwort::HeimZettelUebernommen,
@@ -2811,6 +2816,7 @@ impl Zahlwort {
         Zahlwort::MarkeKonflikt,
         Zahlwort::MarkeUmbenannt,
         Zahlwort::StatuszeileDateienZuGross,
+        Zahlwort::StatuszeileDateienNurInDerCloud,
         Zahlwort::StatuszeileMarkierungenAusgeblendet,
         Zahlwort::BildfolgeGrenzeFotos,
         Zahlwort::BildfolgeGrenzeOrdner,

@@ -588,7 +588,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::TabelleNichtInDerListe => "{name} is not in the list",
         Text::FenstertitelQuicknote => "Quicknote",
         Text::StatuszeileFilterstand => {
-            "Filter “{filtertext}”: {gezeigt} of {vorhanden} shown{liest}{zu_gross}{ausgeblendet}"
+            "Filter “{filtertext}”: {gezeigt} of {vorhanden} shown{liest}{zu_gross}{nur_in_der_cloud}{ausgeblendet}"
         }
         Text::StatuszeileInhaltWirdGelesen => ", reading content",
         Text::StatuszeileSeiteVon => "Page {aktuell} of {gesamt}",
@@ -1208,6 +1208,10 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::MarkeKonflikt => ("{n} in conflict", "{n} in conflict"),
         Zahlwort::MarkeUmbenannt => ("{n} renamed", "{n} renamed"),
         Zahlwort::StatuszeileDateienZuGross => (", one file too large", ", {n} files too large"),
+        Zahlwort::StatuszeileDateienNurInDerCloud => (
+            ", one file only in the cloud",
+            ", {n} files only in the cloud",
+        ),
         Zahlwort::StatuszeileMarkierungenAusgeblendet => {
             (", one mark hidden", ", {n} marks hidden")
         }

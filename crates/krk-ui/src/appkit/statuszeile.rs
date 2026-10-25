@@ -453,6 +453,13 @@ pub struct Filterstand {
     /// dem Ende des Laufs noch; bei einem kleinen Ordner ist der Lauf durch,
     /// bevor die Zeile das naechste Mal rechnet.
     pub zu_gross: u64,
+    /// Wie viele Dateien der Durchlauf **nicht** gelesen hat, weil sie nur in
+    /// der Cloud liegen und ihr Oeffnen sie herunterholte.
+    ///
+    /// Null heisst: keine, und dann steht der Teil des Satzes, der sie nennt,
+    /// nicht da. Kommt aus `Tabinhalt::nur_in_der_cloud`, aus demselben Grund
+    /// am Tab gehalten wie [`Self::zu_gross`].
+    pub nur_in_der_cloud: u64,
 }
 
 /// Der fuenfte Rang der Statuszeile: der stehende Filtertext und was er von der
@@ -473,7 +480,7 @@ pub struct Filterstand {
 /// ([`crate::filteranzeige::anzeigetext`]). Die Rangfolge bleibt dabei, wie
 /// sie ist: die Zeile traegt weiter die Zahlen, die das Etikett nicht nennt.
 ///
-/// **Der Satz hat einen Kern und drei Zusaetze, und jeder Zusatz steht nur
+/// **Der Satz hat einen Kern und vier Zusaetze, und jeder Zusatz steht nur
 /// unter seiner Bedingung.** Der Kern nennt den Filtertext, die Zahl der
 /// gezeigten Zeilen und die Zahl der Eintraege des angezeigten Ordners (C4.3
 /// der Runde 10). Danach folgen, in dieser Reihenfolge:
@@ -482,6 +489,7 @@ pub struct Filterstand {
 /// Filter „notiz“: 38 von 4.812 angezeigt        Kern, immer
 /// , Inhalt wird gelesen                         solange ein Inhaltsdurchlauf laeuft
 /// , 12 Dateien zu groß                          wenn der Lauf Dateien uebergangen hat
+/// , 4 Dateien nur in der Cloud                  wenn er Platzhalterdateien nicht geoeffnet hat
 /// , 3 Markierungen ausgeblendet                 wenn der Filter Markierungen verdeckt
 /// ```
 ///
@@ -492,6 +500,15 @@ pub struct Filterstand {
 /// und die beiden zu trennen hiesse, die Einschraenkung von der Aussage zu
 /// loesen. Gekuerzt wird von hinten, also faellt im schmalen Fenster der
 /// Markierungshinweis zuerst und der Lesehinweis zuletzt.
+///
+/// **Der Cloudhinweis steht unmittelbar hinter dem Groessenhinweis**, weil er
+/// dieselbe Art Aussage traegt: Dateien, die der Lauf nicht angesehen hat, und
+/// ein Grund dafuer. Er ist der Rest des Entscheids, dass der Inhaltsfilter
+/// keine Datei herunterlaedt
+/// (`work-packages/261025-1435-vorschau-laedt-cloud-dateien-verzoegert-einzeln-und-abbrechbar/decisions/261025-1444-welche-leser-duerfen-eine-platzhalterdatei-herunterladen.md`,
+/// Moeglichkeit 1): ohne ihn hielte der Nutzer eine nicht gefundene Datei auf
+/// dem Cloudlaufwerk fuer nicht vorhanden, dieselbe Verwechslung wie bei der
+/// Groesse.
 ///
 /// **Der Satz der Runde 10 aendert sich dadurch an keiner Stelle.** Beide
 /// neuen Teile entstehen allein bei gesetztem "Content", und ohne sie steht
@@ -552,6 +569,10 @@ pub fn filterstand_text(filtertext: &str, stand: Filterstand) -> Option<String> 
         0 => String::new(),
         mehrere => anzahl(Zahlwort::StatuszeileDateienZuGross, mehrere, &[]),
     };
+    let nur_in_der_cloud = match stand.nur_in_der_cloud {
+        0 => String::new(),
+        mehrere => anzahl(Zahlwort::StatuszeileDateienNurInDerCloud, mehrere, &[]),
+    };
     let ausgeblendet = match stand.ausgeblendete_markierungen {
         0 => String::new(),
         mehrere => anzahl(
@@ -568,6 +589,7 @@ pub fn filterstand_text(filtertext: &str, stand: Filterstand) -> Option<String> 
             ("vorhanden", &zahl(stand.vorhanden)),
             ("liest", &liest),
             ("zu_gross", &zu_gross),
+            ("nur_in_der_cloud", &nur_in_der_cloud),
             ("ausgeblendet", &ausgeblendet),
         ],
     ))
@@ -1312,6 +1334,7 @@ mod tests {
             ersetzt_beim_naechsten_stapel: false,
             liest_inhalt: false,
             zu_gross: 0,
+            nur_in_der_cloud: 0,
         }
     }
 
@@ -1540,6 +1563,43 @@ mod tests {
         assert_eq!(
             satz(voll(false, 2_500, 0)),
             format!("{KERN}, 2.500 Dateien zu groß")
+        );
+    }
+
+    /// Der Cloudhinweis trennt eine Datei von mehreren, traegt den
+    /// Tausenderpunkt und steht zwischen Groessen- und Markierungshinweis; bei
+    /// null steht er nicht da.
+    ///
+    /// Die Saetze stehen ausgeschrieben da, aus dem Grund, den
+    /// [`jede_kombination_der_vier_satzteile_steht_in_der_festgelegten_reihenfolge`]
+    /// nennt.
+    #[test]
+    fn der_cloudhinweis_trennt_eine_datei_von_mehreren_und_steht_hinter_der_groesse() {
+        let mit_cloud = |zu_gross, nur_in_der_cloud, ausgeblendet| Filterstand {
+            nur_in_der_cloud,
+            ..voll(true, zu_gross, ausgeblendet)
+        };
+        assert_eq!(
+            satz(mit_cloud(0, 1, 0)),
+            format!("{KERN}, Inhalt wird gelesen, eine Datei nur in der Cloud")
+        );
+        assert_eq!(
+            satz(mit_cloud(0, 4, 0)),
+            format!("{KERN}, Inhalt wird gelesen, 4 Dateien nur in der Cloud")
+        );
+        assert_eq!(
+            satz(mit_cloud(0, 2_500, 0)),
+            format!("{KERN}, Inhalt wird gelesen, 2.500 Dateien nur in der Cloud")
+        );
+        assert_eq!(
+            satz(mit_cloud(12, 4, 3)),
+            format!(
+                "{KERN}, Inhalt wird gelesen, 12 Dateien zu groß, 4 Dateien nur in der Cloud, 3 Markierungen ausgeblendet"
+            )
+        );
+        assert!(
+            !satz(mit_cloud(12, 0, 3)).contains("Cloud"),
+            "kein Cloudhinweis bei null Dateien nur in der Cloud"
         );
     }
 
