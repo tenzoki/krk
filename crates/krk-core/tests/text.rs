@@ -67,7 +67,9 @@ use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, mpsc};
 use std::time::Duration;
 
-use krk_core::text::datei::{Dateiform, Lesehindernis, Textstand, Unlesbarkeit, Zeilenenden};
+use krk_core::text::datei::{
+    Dateiform, LESESTUECK, Lesehindernis, Platzhalterregel, Textstand, Unlesbarkeit, Zeilenenden,
+};
 use krk_core::text::{Abweisung, Zeilenindex, Zeilenlage, Zeilensprung, datei, suche};
 
 mod gemeinsam;
@@ -1219,7 +1221,7 @@ fn bis_zur_grenze_mit_zeitschranke(
 ) -> Result<Vec<u8>, Lesehindernis> {
     let pfad = pfad.to_path_buf();
     mit_zeitschranke("bis_zur_grenze_lesen", schranke, move || {
-        datei::bis_zur_grenze_lesen(&pfad, grenze)
+        datei::bis_zur_grenze_lesen(&pfad, grenze, Platzhalterregel::Laden, &|| true)
     })
 }
 
@@ -1234,18 +1236,21 @@ fn die_huelle_liefert_die_bytes_und_haelt_ihre_grenze() {
     let ordner = Pruefordner::neu("huelle-grenze");
 
     let klein = ordner.datei("klein.txt", b"drei");
-    assert_eq!(datei::bis_zur_grenze_lesen(&klein, 8), Ok(b"drei".to_vec()));
+    assert_eq!(
+        datei::bis_zur_grenze_lesen(&klein, 8, Platzhalterregel::Laden, &|| true),
+        Ok(b"drei".to_vec())
+    );
 
     let genau = ordner.datei("genau.txt", b"achtbyte");
     assert_eq!(
-        datei::bis_zur_grenze_lesen(&genau, 8),
+        datei::bis_zur_grenze_lesen(&genau, 8, Platzhalterregel::Laden, &|| true),
         Ok(b"achtbyte".to_vec()),
         "genau auf der Grenze wird angenommen"
     );
 
     let darueber = ordner.datei("darueber.txt", b"achtbytes");
     assert_eq!(
-        datei::bis_zur_grenze_lesen(&darueber, 8),
+        datei::bis_zur_grenze_lesen(&darueber, 8, Platzhalterregel::Laden, &|| true),
         Err(Lesehindernis::ZuGross),
         "ein Byte ueber der Grenze wird abgewiesen"
     );
@@ -1261,7 +1266,7 @@ fn ein_ordner_ist_fuer_die_huelle_keine_datei() {
     let unterordner = ordner.ordner("ein-ordner");
 
     assert_eq!(
-        datei::bis_zur_grenze_lesen(&unterordner, 1024),
+        datei::bis_zur_grenze_lesen(&unterordner, 1024, Platzhalterregel::Laden, &|| true),
         Err(Lesehindernis::KeineDatei)
     );
 }
@@ -1299,7 +1304,12 @@ fn ein_fehler_beim_oeffnen_ist_kein_deskriptormangel() {
     let ordner = Pruefordner::neu("huelle-fehler");
 
     assert_eq!(
-        datei::bis_zur_grenze_lesen(&ordner.unter("gibt-es-nicht.txt"), 1024),
+        datei::bis_zur_grenze_lesen(
+            &ordner.unter("gibt-es-nicht.txt"),
+            1024,
+            Platzhalterregel::Laden,
+            &|| true
+        ),
         Err(Lesehindernis::Fehler),
         "der fehlende Pfad gilt nicht als Fehler"
     );
@@ -1313,9 +1323,114 @@ fn ein_fehler_beim_oeffnen_ist_kein_deskriptormangel() {
     );
 
     assert_eq!(
-        datei::bis_zur_grenze_lesen(&gesperrt, 1024),
+        datei::bis_zur_grenze_lesen(&gesperrt, 1024, Platzhalterregel::Laden, &|| true),
         Err(Lesehindernis::Fehler),
         "das fehlende Leserecht gilt nicht als Fehler"
+    );
+}
+
+/// Eine Datei ueber der Grenze wird abgewiesen, ohne geoeffnet zu werden.
+///
+/// Die Abnahmeprobe des Defekts
+/// `261025-1109-bis-zur-grenze-lesen-oeffnet-die-datei-vor-der-groessenpruefung-und-holt-auf-einem-cloudlaufwerk-jede-zu-grosse-datei-herunter.md`.
+/// Ein Oeffnen ist von aussen nicht zu beobachten, ein gescheitertes Oeffnen
+/// aber schon: ohne Leserecht scheitert `open(2)` mit `EACCES`, waehrend
+/// `stat(2)` die Groesse weiter liefert. Kommt `ZuGross` und nicht `Fehler`,
+/// stand die Groessenfrage vor dem Oeffnen. Auf einem Cloudlaufwerk ist das
+/// der Unterschied zwischen einer abgewiesenen und einer heruntergeladenen
+/// Datei.
+#[test]
+fn eine_zu_grosse_datei_wird_vor_dem_oeffnen_abgewiesen() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let ordner = Pruefordner::neu("huelle-vor-dem-oeffnen");
+    let gesperrt = ordner.datei("zu-gross-und-verschlossen.txt", b"neun bytes");
+    fs::set_permissions(&gesperrt, fs::Permissions::from_mode(0o000))
+        .expect("Rechte lassen sich nicht setzen");
+    rechtesperre_haelt_oder_abbruch(
+        "eine zu grosse Datei wird vor dem Oeffnen abgewiesen",
+        fs::read(&gesperrt).is_err(),
+    );
+
+    assert_eq!(
+        datei::bis_zur_grenze_lesen(&gesperrt, 8, Platzhalterregel::Laden, &|| true),
+        Err(Lesehindernis::ZuGross),
+        "die Groessenfrage steht nicht vor dem Oeffnen"
+    );
+    assert_eq!(
+        datei::bis_zur_grenze_lesen(&gesperrt, 8, Platzhalterregel::Meiden, &|| true),
+        Err(Lesehindernis::ZuGross),
+        "unter `Meiden` steht die Groessenfrage nicht vor dem Oeffnen"
+    );
+    // Unter der Grenze geht es weiter zum Oeffnen, und das scheitert.
+    assert_eq!(
+        datei::bis_zur_grenze_lesen(&gesperrt, 1024, Platzhalterregel::Laden, &|| true),
+        Err(Lesehindernis::Fehler)
+    );
+}
+
+/// Eine Datei ueber einem [`LESESTUECK`] kommt aus beiden Schleusen ganz, und
+/// eine Datei ohne `SF_DATALESS` liest auch `Meiden`.
+///
+/// Das stueckweise Lesen darf an der Naht zwischen zwei Stuecken kein Byte
+/// verlieren und keines doppeln; die Bytes tragen deshalb ihre Stelle.
+#[test]
+fn eine_datei_ueber_einem_lesestueck_kommt_ganz() {
+    let ordner = Pruefordner::neu("huelle-stuecke");
+    let laenge = LESESTUECK as usize + 10;
+    let inhalt: Vec<u8> = (0..laenge).map(|stelle| (stelle % 251) as u8).collect();
+    let gross = ordner.datei("gross.bin", inhalt.clone());
+
+    for regel in [Platzhalterregel::Laden, Platzhalterregel::Meiden] {
+        assert_eq!(
+            datei::bis_zur_grenze_lesen(&gross, 2 * LESESTUECK, regel, &|| true).as_deref(),
+            Ok(inhalt.as_slice()),
+            "bis_zur_grenze_lesen unter {regel:?}"
+        );
+        assert_eq!(
+            datei::anlesen(&gross, 2 * LESESTUECK, regel, &|| true).as_deref(),
+            Ok(inhalt.as_slice()),
+            "anlesen unter {regel:?}"
+        );
+    }
+    assert_eq!(
+        datei::anlesen(&gross, LESESTUECK + 3, Platzhalterregel::Laden, &|| true).as_deref(),
+        Ok(&inhalt[..LESESTUECK as usize + 3]),
+        "der Deckel gilt auch ueber ein Stueck hinweg"
+    );
+}
+
+/// Sagt `weiter` nach dem ersten Stueck nein, antworten beide Schleusen mit
+/// [`Lesehindernis::Abgebrochen`].
+///
+/// Gezaehlt wird, wie oft `weiter` gefragt wurde: einmal vor dem ersten Stueck
+/// (ja) und einmal vor dem zweiten (nein), und danach nicht mehr.
+#[test]
+fn ein_nein_nach_dem_ersten_stueck_bricht_beide_schleusen_ab() {
+    let ordner = Pruefordner::neu("huelle-abbruch");
+    let gross = ordner.datei("gross.bin", vec![b'x'; LESESTUECK as usize + 10]);
+
+    let gefragt = AtomicU64::new(0);
+    let nur_einmal = || gefragt.fetch_add(1, Ordering::SeqCst) == 0;
+    assert_eq!(
+        datei::bis_zur_grenze_lesen(&gross, 2 * LESESTUECK, Platzhalterregel::Laden, &nur_einmal),
+        Err(Lesehindernis::Abgebrochen)
+    );
+    assert_eq!(gefragt.load(Ordering::SeqCst), 2);
+
+    gefragt.store(0, Ordering::SeqCst);
+    assert_eq!(
+        datei::anlesen(&gross, 2 * LESESTUECK, Platzhalterregel::Laden, &nur_einmal),
+        Err(Lesehindernis::Abgebrochen)
+    );
+    assert_eq!(gefragt.load(Ordering::SeqCst), 2);
+
+    // Ein Nein vor dem ersten Stueck bricht ebenso ab, auch an einer kleinen
+    // Datei.
+    let klein = ordner.datei("klein.txt", b"drei");
+    assert_eq!(
+        datei::anlesen(&klein, 1024, Platzhalterregel::Laden, &|| false),
+        Err(Lesehindernis::Abgebrochen)
     );
 }
 
@@ -1331,7 +1446,7 @@ fn anlesen_mit_zeitschranke(
 ) -> Result<Vec<u8>, Lesehindernis> {
     let pfad = pfad.to_path_buf();
     mit_zeitschranke("anlesen", schranke, move || {
-        datei::anlesen(&pfad, hoechstens)
+        datei::anlesen(&pfad, hoechstens, Platzhalterregel::Laden, &|| true)
     })
 }
 
@@ -1351,17 +1466,17 @@ fn anlesen_liefert_den_anfang_wo_die_grenze_abweist() {
     let hundert = ordner.datei("hundert.txt", vec![b'x'; 100]);
 
     assert_eq!(
-        datei::anlesen(&hundert, 10),
+        datei::anlesen(&hundert, 10, Platzhalterregel::Laden, &|| true),
         Ok(vec![b'x'; 10]),
         "die dritte Huelle liest den Anfang nicht an"
     );
     assert_eq!(
-        datei::bis_zur_grenze_lesen(&hundert, 10),
+        datei::bis_zur_grenze_lesen(&hundert, 10, Platzhalterregel::Laden, &|| true),
         Err(Lesehindernis::ZuGross),
         "die zweite Huelle weist dieselbe Datei nicht mehr ab"
     );
     assert_eq!(
-        datei::anlesen(&hundert, 1_000),
+        datei::anlesen(&hundert, 1_000, Platzhalterregel::Laden, &|| true),
         Ok(vec![b'x'; 100]),
         "unter dem Deckel kommt die Datei nicht ganz"
     );
@@ -1378,7 +1493,7 @@ fn ein_ordner_ist_fuer_das_anlesen_keine_datei() {
     let unterordner = ordner.ordner("ein-ordner");
 
     assert_eq!(
-        datei::anlesen(&unterordner, 1024),
+        datei::anlesen(&unterordner, 1024, Platzhalterregel::Laden, &|| true),
         Err(Lesehindernis::KeineDatei)
     );
 }

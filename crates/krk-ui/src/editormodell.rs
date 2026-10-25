@@ -2365,8 +2365,13 @@ impl Editormodell {
         if self.fremd_geaendert() {
             return Err(mit_name(Text::PinFremdGeaendert));
         }
-        let bytes = datei::bis_zur_grenze_lesen(pfad, GEHEIMNISGRENZE)
-            .map_err(|_| mit_name(Text::PinNichtLesbar))?;
+        let bytes = datei::bis_zur_grenze_lesen(
+            pfad,
+            GEHEIMNISGRENZE,
+            datei::Platzhalterregel::Laden,
+            &|| true,
+        )
+        .map_err(|_| mit_name(Text::PinNichtLesbar))?;
         let klartext =
             tresor::oeffnen_mit(&bytes, gehalten).map_err(|fehler| mit_grund(fehler.meldung()))?;
         let stand =
@@ -5095,9 +5100,12 @@ mod tests {
         // `geheimnisse_laden`.
         let weg = code_vor_den_proben("krk-ui/src/tresorweg.rs");
         assert!(!weg.contains(lesen), "der Tresorweg liest nie im Klartext");
-        assert!(weg.contains(concat!(
-            "datei::bis_zur_grenze_lesen(pfad, ",
-            "GEHEIMNISGRENZE)"
+        // Verglichen ohne Leerraum, weil `rustfmt` den Ruf mit seinen vier
+        // Argumenten ueber Zeilen verteilt; der Wortlaut bleibt gehalten.
+        let weg_ohne_leerraum: String = weg.split_whitespace().collect();
+        assert!(weg_ohne_leerraum.contains(concat!(
+            "datei::bis_zur_grenze_lesen(pfad,",
+            "GEHEIMNISGRENZE,datei::Platzhalterregel::Laden,&||true,)"
         )));
         assert!(weg.contains(concat!("tresor::oeffnen_", "mittels(&bytes, mittel)")));
         let starten = rumpf_von(

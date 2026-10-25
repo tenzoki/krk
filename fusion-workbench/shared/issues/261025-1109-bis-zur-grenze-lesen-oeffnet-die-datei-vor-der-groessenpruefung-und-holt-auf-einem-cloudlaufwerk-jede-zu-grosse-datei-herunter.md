@@ -15,3 +15,5 @@
 ## Abnahme
 
 Für eine Datei, deren schon bekannte Größe über der Grenze liegt, ruft weder die Vorschau noch der Inhaltsfilter `open(2)`. Eine Probe hält das fest, etwa mit einer Datei über der Grenze ohne Leserecht: das Ergebnis ist `ZuGross` und nicht `Fehler`.
+
+Resolved: Schritt 2 des Plans `261025-1444-plan-vorschau-laedt-cloud-dateien-verzoegert-einzeln-und-abbrechbar.md` stellt in `bis_zur_grenze_lesen` und `anlesen` ein `stat(2)` vor das Öffnen (Größe über der Grenze ergibt `ZuGross`, ein Platzhalter unter `Platzhalterregel::Meiden` `Platzhalter`, beides ohne `open(2)`); die Abnahmeprobe `eine_zu_grosse_datei_wird_vor_dem_oeffnen_abgewiesen` in `crates/krk-core/tests/text.rs` hält es mit einer Datei ohne Leserecht fest.

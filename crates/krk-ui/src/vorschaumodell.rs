@@ -130,6 +130,13 @@
 //! sind der eine Unterschied zwischen Ansehen und Bearbeiten (siehe
 //! [`TEXTGRENZE`]).
 //!
+//! **Die Reihenfolge ist seit dem 261025: erst der Pfad nach Groesse und
+//! Kennzeichen, dann der Deskriptor nach Typ und Groesse.** Die Huelle fragt
+//! vor dem Oeffnen `stat(2)`, sodass eine Datei ueber der Grenze nicht
+//! geoeffnet wird (und auf einem Cloudlaufwerk nicht heruntergeladen), und
+//! liest danach in Stuecken zu `LESESTUECK`. Die Vorschau ruft sie heute mit
+//! `Platzhalterregel::Laden` und einem `weiter`, das nie nein sagt.
+//!
 //! **Die eine Ausnahme ist eine Datei aus JSON-Zeilen**: sie geht ueber
 //! [`krk_core::text::datei::anlesen`], dieselbe Tuer mit einem Deckel statt
 //! einer Abweisung, und zeigt ueber der Grenze ihren Anfang
@@ -149,8 +156,8 @@
 //! Stelle, die der Inhaltsfilter der Dateiliste nicht erreicht; der Rumpf ist
 //! unveraendert umgezogen. Die Vorschau uebersetzt jedes
 //! [`Lesehindernis`](krk_core::text::datei::Lesehindernis) in ihre
-//! Metadatenanzeige — vier Gruende, eine Antwort, siehe [`laden`] — und ist
-//! damit der eine Aufrufer, den die Unterscheidung der vier Gruende nichts
+//! Metadatenanzeige — jeder Grund, eine Antwort, siehe [`laden`] — und ist
+//! damit der eine Aufrufer, den die Unterscheidung der Gruende nichts
 //! angeht.
 //!
 //! **Zwei Fragen stehen hier nebeneinander, und sie sind verschieden.** Wer sie
@@ -246,7 +253,7 @@ use krk_core::leseprofil::bildfolge::{Bildverzeichnis, Foto, Kuerzung};
 use krk_core::leseprofil::{Auskunft, Profile, Zusammenfassungszeile, zusammenfassen};
 use krk_core::ort::Archivort;
 use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
-use krk_core::text::datei::{anlesen, bis_zur_grenze_lesen};
+use krk_core::text::datei::{Platzhalterregel, anlesen, bis_zur_grenze_lesen};
 use krk_core::trenntext::{self, dialekt_erkennen, vollstaendig_bis};
 use krk_core::verzeichnis::Typ;
 
@@ -1865,62 +1872,74 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile, heim: Option<&Heimordner>
     match Leseart::von(pfad) {
         // Ueber der Bildgrenze wird nicht gelesen, sondern beschrieben;
         // dieselbe Antwort wie beim Text und aus demselben Grund. Jeder der
-        // vier Gruende endet in den Metadaten; welcher es war, fragt die
+        // Gruende von `Lesehindernis` endet in den Metadaten; welcher es war, fragt die
         // Vorschau nicht.
-        Leseart::Bild => match bis_zur_grenze_lesen(pfad, BILDGRENZE) {
-            Ok(daten) => Inhalt::Bild {
-                daten: Arc::new(daten),
-                metadaten: Some(metadaten),
-            },
-            Err(_) => auf_die_metadaten(metadaten),
-        },
+        Leseart::Bild => {
+            match bis_zur_grenze_lesen(pfad, BILDGRENZE, Platzhalterregel::Laden, &|| true) {
+                Ok(daten) => Inhalt::Bild {
+                    daten: Arc::new(daten),
+                    metadaten: Some(metadaten),
+                },
+                Err(_) => auf_die_metadaten(metadaten),
+            }
+        }
         // Dieselbe Grenze und dieselbe Huelle wie beim Bild, und keine zweite
         // Zahl daneben (C2.1, C2.7 der Runde 20): ueber `BILDGRENZE` wird
         // nicht gelesen, sondern beschrieben, und unter ihr reisen die Bytes
         // ungedeutet in die Ansicht.
-        Leseart::Pdf => match bis_zur_grenze_lesen(pfad, BILDGRENZE) {
-            Ok(daten) => Inhalt::Pdf {
-                daten: Arc::new(daten),
-                metadaten,
-            },
-            Err(_) => auf_die_metadaten(metadaten),
-        },
+        Leseart::Pdf => {
+            match bis_zur_grenze_lesen(pfad, BILDGRENZE, Platzhalterregel::Laden, &|| true) {
+                Ok(daten) => Inhalt::Pdf {
+                    daten: Arc::new(daten),
+                    metadaten,
+                },
+                Err(_) => auf_die_metadaten(metadaten),
+            }
+        }
         // Ueber der Grenze angelesen statt abgewiesen, siehe
         // [`jsonzeilen_aus_bytes`]. Nicht lesbar, keine gewoehnliche Datei
         // oder kein UTF-8: dieselbe Antwort wie bei jeder Textdatei.
-        Leseart::Jsonzeilen => match anlesen(pfad, TEXTGRENZE + 1)
-            .ok()
-            .and_then(jsonzeilen_aus_bytes)
-        {
-            Some(text) => Inhalt::Text(text),
-            None => auf_die_metadaten(metadaten),
-        },
+        Leseart::Jsonzeilen => {
+            match anlesen(pfad, TEXTGRENZE + 1, Platzhalterregel::Laden, &|| true)
+                .ok()
+                .and_then(jsonzeilen_aus_bytes)
+            {
+                Some(text) => Inhalt::Text(text),
+                None => auf_die_metadaten(metadaten),
+            }
+        }
         // Eine Textdatei ueber 1 MB faellt auf die Metadaten, siehe den
         // Modulkopf; ebenso eine, die nicht lesbar, keine gewoehnliche Datei
         // oder kein UTF-8 ist, also keine Textdatei im Sinne von C6.
-        Leseart::Text => match bis_zur_grenze_lesen(pfad, TEXTGRENZE)
-            .ok()
-            .and_then(|bytes| String::from_utf8(bytes).ok())
-        {
-            Some(text) => text_als_inhalt(pfad, text, Dateityp::von_pfad(pfad, heim), tafel),
-            None => auf_die_metadaten(metadaten),
-        },
+        Leseart::Text => {
+            match bis_zur_grenze_lesen(pfad, TEXTGRENZE, Platzhalterregel::Laden, &|| true)
+                .ok()
+                .and_then(|bytes| String::from_utf8(bytes).ok())
+            {
+                Some(text) => text_als_inhalt(pfad, text, Dateityp::von_pfad(pfad, heim), tafel),
+                None => auf_die_metadaten(metadaten),
+            }
+        }
         // Angelesen wie JSON-Zeilen, siehe [`trenntext_aus_bytes`]; was dort
         // keine Tabelle und kein Text wird, beschreiben die Metadaten.
-        Leseart::Trenntext(art) => match anlesen(pfad, TEXTGRENZE + 1).ok().and_then(|bytes| {
-            let endzeichen = endzeichen_der_datei(pfad, &bytes);
-            trenntext_aus_bytes(
-                bytes,
-                endzeichen,
-                art,
-                pfad,
-                Dateityp::von_pfad(pfad, heim),
-                tafel,
-            )
-        }) {
-            Some(inhalt) => inhalt,
-            None => auf_die_metadaten(metadaten),
-        },
+        Leseart::Trenntext(art) => {
+            match anlesen(pfad, TEXTGRENZE + 1, Platzhalterregel::Laden, &|| true)
+                .ok()
+                .and_then(|bytes| {
+                    let endzeichen = endzeichen_der_datei(pfad, &bytes);
+                    trenntext_aus_bytes(
+                        bytes,
+                        endzeichen,
+                        art,
+                        pfad,
+                        Dateityp::von_pfad(pfad, heim),
+                        tafel,
+                    )
+                }) {
+                Some(inhalt) => inhalt,
+                None => auf_die_metadaten(metadaten),
+            }
+        }
     }
 }
 
@@ -2135,7 +2154,12 @@ fn endzeichen_der_datei(pfad: &Path, angelesen: &[u8]) -> trenntext::Endzeichen 
     if angelesen.len() as u64 <= TEXTGRENZE || anfang.traegt_lf() {
         return anfang;
     }
-    match anlesen(pfad, krk_core::text::datei::EDITORGRENZE) {
+    match anlesen(
+        pfad,
+        krk_core::text::datei::EDITORGRENZE,
+        Platzhalterregel::Laden,
+        &|| true,
+    ) {
         Ok(ganz) => trenntext::Endzeichen::von(&ganz),
         Err(_) => anfang,
     }

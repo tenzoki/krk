@@ -4,8 +4,8 @@
 //! Pfad, Filtertext, Grenze
 //!         │
 //!         v
-//! text::datei::bis_zur_grenze_lesen
-//!         │
+//! text::datei::bis_zur_grenze_lesen   (erst stat am Pfad: Groesse, Kennzeichen;
+//!         │                            dann fstat am Deskriptor: Typ, Groesse)
 //!         ├── Ok(bytes) ──> String::from_utf8 ─ gelingt ─> filter::traegt_die_folge
 //!         │                        │                         │ ja  ─> Traegt
 //!         │                        │                         └ nein ─> TraegtNicht
@@ -13,8 +13,16 @@
 //!         ├── Err(ZuGross) ───────────────────────────────────────────> ZuGross
 //!         ├── Err(KeineDatei) ────────────────────────────────────────> TraegtNicht
 //!         ├── Err(Fehler) ────────────────────────────────────────────> TraegtNicht
-//!         └── Err(Deskriptormangel) ──────────────────────────────────> Unentschieden
+//!         ├── Err(Deskriptormangel) ──────────────────────────────────> Unentschieden
+//!         ├── Err(Platzhalter) ───────────────────────────────────────> Unentschieden
+//!         └── Err(Abgebrochen) ───────────────────────────────────────> Unentschieden
 //! ```
+//!
+//! Die letzten zwei Zweige sind heute unerreichbar: gelesen wird mit
+//! [`Platzhalterregel::Laden`] und
+//! einem `weiter`, das nie nein sagt. Sie stehen, weil die Uebersetzung ohne
+//! Auffangzweig ist, und `Unentschieden` ist der Wert, der ueber die Datei
+//! nichts behauptet.
 //!
 //! Das Bild ist die ganze Datei. Sie fuegt dem Leseweg nichts hinzu, was sie
 //! nicht abbildet: [`super::filter::traegt_die_folge`] ist derselbe Vergleich,
@@ -55,7 +63,9 @@
 //!
 //! `krk-core` kennt die 1 MB der Vorschau nicht und soll sie nicht kennen. Sie
 //! wohnt in `krk-ui` und kommt von dort herein, wie bei jedem Rufer von
-//! [`crate::text::datei::bis_zur_grenze_lesen`].
+//! [`crate::text::datei::bis_zur_grenze_lesen`]. Die Huelle prueft sie am Pfad
+//! (`stat`), bevor sie oeffnet, und danach ein zweites Mal am Deskriptor; eine
+//! Datei ueber der Grenze wird also gar nicht geoeffnet.
 //!
 //! # Die Kistenrichtung, ausgeschrieben
 //!
@@ -69,16 +79,16 @@
 
 use std::path::Path;
 
-use crate::text::datei::{Lesehindernis, bis_zur_grenze_lesen};
+use crate::text::datei::{Lesehindernis, Platzhalterregel, bis_zur_grenze_lesen};
 
 use super::filter::{Muster, traegt_die_folge};
 
 /// Was das Lesen einer Datei ueber den Filtertext ergeben hat.
 ///
-/// **Vier Werte, ueberschneidungsfrei und vollstaendig, ohne Auffangzweig**, in
-/// Entsprechung zu den vier Werten von [`Lesehindernis`]. Ein fuenfter dort
-/// haelt jede Uebersetzung hier an, und das ist der Zweck der fehlenden
-/// Auffangzweige.
+/// **Vier Werte, ueberschneidungsfrei und vollstaendig, ohne Auffangzweig**;
+/// jeder Wert von [`Lesehindernis`] ist in [`traegt_der_inhalt`] einem von
+/// ihnen zugeordnet. Ein weiterer Wert dort haelt jede Uebersetzung hier an,
+/// und das ist der Zweck der fehlenden Auffangzweige.
 ///
 /// **Die drei Ausgaenge sind nicht zwei.** [`ZuGross`](Self::ZuGross) und
 /// [`Unentschieden`](Self::Unentschieden) sind kein
@@ -132,7 +142,7 @@ pub enum Inhaltsbefund {
 /// fallen laesst, hat eine Datei umsonst gelesen, und still.
 #[must_use]
 pub fn traegt_der_inhalt(pfad: &Path, muster: &Muster, grenze: u64) -> Inhaltsbefund {
-    match bis_zur_grenze_lesen(pfad, grenze) {
+    match bis_zur_grenze_lesen(pfad, grenze, Platzhalterregel::Laden, &|| true) {
         Ok(bytes) => match String::from_utf8(bytes) {
             // Gueltiges UTF-8: die Datei ist Text, und der eine Vergleich
             // entscheidet.
@@ -149,6 +159,12 @@ pub fn traegt_der_inhalt(pfad: &Path, muster: &Muster, grenze: u64) -> Inhaltsbe
         },
         Err(Lesehindernis::ZuGross) => Inhaltsbefund::ZuGross,
         Err(Lesehindernis::KeineDatei | Lesehindernis::Fehler) => Inhaltsbefund::TraegtNicht,
-        Err(Lesehindernis::Deskriptormangel) => Inhaltsbefund::Unentschieden,
+        // `Platzhalter` und `Abgebrochen` sind unter `Laden` und einem `weiter`,
+        // das nie nein sagt, unerreichbar; beide sagen ueber die Datei nichts.
+        Err(
+            Lesehindernis::Deskriptormangel
+            | Lesehindernis::Platzhalter
+            | Lesehindernis::Abgebrochen,
+        ) => Inhaltsbefund::Unentschieden,
     }
 }

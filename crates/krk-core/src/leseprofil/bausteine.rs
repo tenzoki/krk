@@ -242,7 +242,7 @@ use std::time::SystemTime;
 
 use regex::Regex;
 
-use crate::text::datei::anlesen;
+use crate::text::datei::{Platzhalterregel, anlesen};
 use crate::verzeichnis::leser::{self, Lesestand};
 use crate::verzeichnis::sys::ortszeit;
 use crate::verzeichnis::{Eintrag, Typ};
@@ -1125,7 +1125,7 @@ fn titelzeile(text: &str) -> Option<String> {
 ///
 /// `None` heisst: nicht lesbar oder kein Text.
 fn angelesener_text(pfad: &Path) -> Option<String> {
-    let bytes = anlesen(pfad, HOECHSTENS_BYTES).ok()?;
+    let bytes = anlesen(pfad, HOECHSTENS_BYTES, Platzhalterregel::Laden, &|| true).ok()?;
     lesbarer_anfang(&bytes).map(str::to_owned)
 }
 
