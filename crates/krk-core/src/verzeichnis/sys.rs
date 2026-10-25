@@ -63,6 +63,14 @@
 //! sind. Eine Untergrenze bringt sie nicht mit: `F_GETLK` gibt es auf macOS
 //! seit jeher.
 //!
+//! **Das Kennzeichen `SF_DATALESS` vom 261025 ist ebenso keine weitere
+//! Schnittstelle und keine weitere Bindung**, und die Zahl elf bleibt: es ist
+//! ein Bit desselben Kennzeichenworts, das `getattrlistbulk(2)` mit
+//! `ATTR_CMN_FLAGS` schon liefert und das `stat(2)` als `st_flags` ueber die
+//! Standardbibliothek ohne `unsafe` hergibt. Gedeutet wird es an einer Stelle,
+//! [`kennzeichnet_platzhalter`], fuer den Leselauf hier und fuer die Pfadfrage
+//! [`super::ist_platzhalter`].
+//!
 //! **`libsqlite3` ist die erste Schnittstelle, die keine des Kerns oder der
 //! Systembibliothek `libSystem` ist, sondern eine eigene Bibliothek des
 //! Systems**, gebunden mit `#[link(name = "sqlite3")]` am Block, wie NetFS in
@@ -230,6 +238,23 @@ const ATTR_FILE_DATALENGTH: u32 = 0x0000_0200;
 /// versteckt, unabhaengig von einem fuehrenden Punkt im Namen.
 const UF_HIDDEN: u32 = 0x0000_8000;
 
+/// `SF_DATALESS` aus `sys/stat.h` (gelesen im SDK am 261025): der Eintrag ist
+/// ein Platzhalter, dessen Daten nicht auf diesem Datentraeger liegen, etwa
+/// eine Datei eines Cloudlaufwerks, die nur in der Cloud liegt. Ein Lesen
+/// seines Inhalts laedt ihn herunter.
+const SF_DATALESS: u32 = 0x4000_0000;
+
+/// Ob die Kennzeichen eines Eintrags ihn als Platzhalter ausweisen.
+///
+/// Die eine Deutung des Bits [`SF_DATALESS`], fuer beide Stellen, an denen die
+/// Kennzeichen entstehen: das Feld `ATTR_CMN_FLAGS` eines Verzeichnisleselaufs
+/// (in [`satz_zerlegen`]) und `st_flags` aus `stat(2)`
+/// ([`super::ist_platzhalter`]). Beide liefern dasselbe Wort desselben Kerns.
+#[must_use]
+pub(crate) fn kennzeichnet_platzhalter(kennzeichen: u32) -> bool {
+    kennzeichen & SF_DATALESS != 0
+}
+
 /// `fsobj_type_t` aus `sys/vnode.h`, soweit hier gebraucht.
 const VDIR: u32 = 2;
 const VLNK: u32 = 5;
@@ -277,6 +302,9 @@ pub struct RohEintrag<'a> {
     pub geaendert: SystemTime,
     /// Das Kennzeichen `UF_HIDDEN` des Dateisystems.
     pub systemseitig_versteckt: bool,
+    /// Das Kennzeichen `SF_DATALESS`: die Daten liegen nicht auf diesem
+    /// Datentraeger, und ein Lesen des Inhalts laedt sie herunter.
+    pub platzhalter: bool,
 }
 
 /// Liest ein Verzeichnis schwungweise ueber `getattrlistbulk(2)`.
@@ -492,6 +520,7 @@ fn satz_zerlegen(satz: &[u8]) -> Option<RohEintrag<'_>> {
         groesse,
         geaendert,
         systemseitig_versteckt: kennzeichen & UF_HIDDEN != 0,
+        platzhalter: kennzeichnet_platzhalter(kennzeichen),
     })
 }
 
@@ -2400,6 +2429,60 @@ mod tests {
     #[test]
     fn kurzer_satz_liefert_keinen_eintrag() {
         assert!(satz_zerlegen(&[0u8; 8]).is_none());
+    }
+
+    /// Ein kuenstlicher Satz im Aufbau des Antwortpuffers, fuer eine Datei
+    /// namens `wolke.txt` mit den hereingereichten Kennzeichen.
+    ///
+    /// Die Felder stehen in der Reihenfolge aus dem Modulkopf: Laenge,
+    /// `attribute_set_t`, Namensreferenz, Typ, Aenderungszeit, Kennzeichen,
+    /// Datenlaenge, dahinter der Name samt Nullbyte.
+    fn kuenstlicher_satz(kennzeichen: u32) -> Vec<u8> {
+        let name = b"wolke.txt\0";
+        // 4 Laenge + 20 Attributgruppen + 8 Referenz + 4 Typ + 16 Zeit
+        // + 4 Kennzeichen + 8 Datenlaenge.
+        let referenz_bei = 24usize;
+        let name_bei = 64usize;
+        let gesamt = name_bei + name.len();
+        let mut satz = Vec::with_capacity(gesamt);
+        satz.extend_from_slice(&(gesamt as u32).to_ne_bytes());
+        let gemeinsam = ATTR_CMN_NAME | ATTR_CMN_OBJTYPE | ATTR_CMN_MODTIME | ATTR_CMN_FLAGS;
+        satz.extend_from_slice(&gemeinsam.to_ne_bytes());
+        satz.extend_from_slice(&0u32.to_ne_bytes());
+        satz.extend_from_slice(&0u32.to_ne_bytes());
+        satz.extend_from_slice(&ATTR_FILE_DATALENGTH.to_ne_bytes());
+        satz.extend_from_slice(&0u32.to_ne_bytes());
+        assert_eq!(satz.len(), referenz_bei);
+        satz.extend_from_slice(&((name_bei - referenz_bei) as i32).to_ne_bytes());
+        satz.extend_from_slice(&(name.len() as u32).to_ne_bytes());
+        satz.extend_from_slice(&1u32.to_ne_bytes()); // VREG
+        satz.extend_from_slice(&1_700_000_000i64.to_ne_bytes());
+        satz.extend_from_slice(&0i64.to_ne_bytes());
+        satz.extend_from_slice(&kennzeichen.to_ne_bytes());
+        satz.extend_from_slice(&4096i64.to_ne_bytes());
+        assert_eq!(satz.len(), name_bei);
+        satz.extend_from_slice(name);
+        satz
+    }
+
+    #[test]
+    fn sf_dataless_im_satz_kennzeichnet_einen_platzhalter() {
+        let satz = kuenstlicher_satz(SF_DATALESS);
+        let roh = satz_zerlegen(&satz).expect("der Satz traegt einen Namen");
+        assert_eq!(roh.name, "wolke.txt");
+        assert_eq!(roh.groesse, 4096);
+        assert!(roh.platzhalter);
+        assert!(!roh.systemseitig_versteckt);
+    }
+
+    #[test]
+    fn ohne_sf_dataless_ist_der_eintrag_kein_platzhalter() {
+        let satz = kuenstlicher_satz(UF_HIDDEN);
+        let roh = satz_zerlegen(&satz).expect("der Satz traegt einen Namen");
+        assert!(!roh.platzhalter);
+        assert!(roh.systemseitig_versteckt);
+        let leer = kuenstlicher_satz(0);
+        assert!(!satz_zerlegen(&leer).expect("ein Name").platzhalter);
     }
 
     /// Zwei Deskriptoren desselben Prozesses auf dieselbe Datei schliessen

@@ -229,6 +229,23 @@ pub fn aufwaerts(ordner: &Path) -> Option<(PathBuf, String)> {
     Some((eltern.to_path_buf(), name))
 }
 
+/// Ob die Angaben eines Pfads ihn als Platzhalter ausweisen, dessen Daten
+/// nicht auf diesem Datentraeger liegen (`SF_DATALESS`), etwa eine Datei eines
+/// Cloudlaufwerks, die nur in der Cloud liegt.
+///
+/// Die Pfadfrage neben dem Feld [`Eintrag::platzhalter`] des Leselaufs: wer
+/// einen Pfad statt eines gelesenen Eintrags hat, fragt `stat(2)` (oder
+/// `lstat(2)`) und reicht die Antwort hierher. Gedeutet wird das Bit an
+/// derselben Stelle wie im Leselauf, [`sys::kennzeichnet_platzhalter`]; der
+/// Systemaufruf ist der des Rufers, und eine weitere Schnittstelle in
+/// [`sys`] entsteht dafuer nicht. `st_flags` gibt die Standardbibliothek ohne
+/// `unsafe` her.
+#[must_use]
+pub fn ist_platzhalter(angaben: &std::fs::Metadata) -> bool {
+    use std::os::darwin::fs::MetadataExt as _;
+    sys::kennzeichnet_platzhalter(angaben.st_flags())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

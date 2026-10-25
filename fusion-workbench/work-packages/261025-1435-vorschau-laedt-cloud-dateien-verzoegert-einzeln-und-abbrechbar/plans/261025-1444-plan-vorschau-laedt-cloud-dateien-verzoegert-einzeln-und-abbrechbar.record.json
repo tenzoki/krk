@@ -17,11 +17,11 @@
   },
   "extensions": {},
   "control": {
-    "state": "open",
+    "state": "in_progress",
     "steps": [
       {
         "id": "1",
-        "state": "open"
+        "state": "done"
       },
       {
         "id": "2",
