@@ -1,0 +1,46 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "fa27690a-3fc2-4991-9169-7a8ecbdaec83",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "claimed",
+  "claim": {
+    "checkout_id": "6c11b1f2",
+    "person": "Kai Stalmann <kai@stalmann.org>",
+    "claimed_at": "2026-10-25T13:35:41Z"
+  },
+  "mode": {
+    "value": "ordinary",
+    "source": null
+  },
+  "origin": {
+    "kind": "user-request",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "user",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "narrative": {
+    "path": "work-packages/261025-1435-vorschau-laedt-cloud-dateien-verzoegert-einzeln-und-abbrechbar/261025-1435-vorschau-laedt-cloud-dateien-verzoegert-einzeln-und-abbrechbar.md"
+  },
+  "depends_on": [],
+  "active_documents": [
+    {
+      "ref": {
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "record_id": "fd96596d-6b66-4003-9a74-af18738b76a2"
+      },
+      "role": "plan",
+      "revision": "sha256:1263373d0ad871651de273bb049fcf2e1a0743200317705a514b764f582ee2fe"
+    }
+  ],
+  "references": [],
+  "evidence": [],
+  "outcome": null,
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {}
+}

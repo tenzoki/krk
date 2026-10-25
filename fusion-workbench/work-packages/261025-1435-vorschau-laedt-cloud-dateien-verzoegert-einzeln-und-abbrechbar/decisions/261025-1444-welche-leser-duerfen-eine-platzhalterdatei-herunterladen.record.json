@@ -1,0 +1,26 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "e0aa4a5f-82a7-41ac-b02d-7d94e5ee059d",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/261025-1435-vorschau-laedt-cloud-dateien-verzoegert-einzeln-und-abbrechbar/decisions/261025-1444-welche-leser-duerfen-eine-platzhalterdatei-herunterladen.md"
+  },
+  "filed_by": {
+    "actor": "implementation-planner",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": "261025-1444-welche-leser-duerfen-eine-platzhalterdatei-herunterladen.md",
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}
