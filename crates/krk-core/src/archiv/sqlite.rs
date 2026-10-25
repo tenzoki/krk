@@ -52,7 +52,17 @@
 //!   Abschnitt 1; Entscheid
 //!   `261024-2215-wie-liest-krk-eine-wal-datenbank-mit-wal-und-ohne-shm.md`,
 //!   Moeglichkeit 4). So stehen etwa die Datenbanken von Programmen im
-//!   Sperrmodus `exclusive` da, die nie eine `-shm` anlegen.
+//!   Sperrmodus `exclusive` da, die nie eine `-shm` anlegen. **Vorher fragt
+//!   KRK mit `fcntl(F_GETLK)`, ob ein anderer Prozess im Sperrbereich von
+//!   SQLite eine Sperre haelt** (`verzeichnis::sys::fremde_sperre`, ab
+//!   `0x4000_0000` ueber 512 Bytes, an demselben Deskriptor, an dem der Kopf
+//!   gelesen wird). Ein solches Programm haelt, solange es laeuft, dasselbe
+//!   Bild aus leerem `-wal` ohne `-shm` und dazu seine Sperre; dann, und bei
+//!   jedem Fehler der Frage, oeffnet `mode=ro`, das neben ihm mit
+//!   `SQLITE_BUSY` endet und nichts anlegt (gemessen am 261025), und der Ort
+//!   meldet „wird gerade geschrieben“ (Issue
+//!   `261025-0030-die-vorfrage-zum-leeren-wal-liest-neben-einem-laufenden-exklusiven-schreiber-ohne-sperre-und-niemand-sagt-es.md`,
+//!   Weg B).
 //! - **Nach einem gescheiterten ersten Oeffnen:** scheitert `mode=ro` oder
 //!   das erste Lesen mit `SQLITE_CANTOPEN`, **und** steht kein `<datei>-wal`
 //!   daneben, wird unveraenderlich geoeffnet, gleich ob eine `-shm` steht.
@@ -106,6 +116,18 @@
 //! `immutable=1` bleibt den zwei Faellen der Oeffnungsregel vorbehalten, in
 //! denen es nichts Neueres zu lesen gibt.
 //!
+//! **Im Augenblick der Vorfrage, und nicht darueber hinaus.** Die Sperrfrage
+//! vor dem ersten Fall sieht ein Programm, das schon laeuft; eines, das
+//! zwischen Vorfrage und Oeffnen oder waehrend des Lesens startet und
+//! schreibt, sieht sie nicht. Das ist dieselbe Klasse von Wettlauf wie bei
+//! der Rueckfallstufe, und sie ist nicht geschlossen: eine Tabelle schuetzt
+//! die Kennungspruefung von `Archivleser::datenbank_lesen` vor und nach dem
+//! Lesen, das Inhaltsverzeichnis mit seinen Zeilenzahlen prueft niemand nach.
+//! **Ein Restfall bleibt:** haelt ein anderer Prozess allein eine geteilte
+//! Sperre und steht trotzdem keine `-shm` daneben, was nur geschieht, wenn
+//! jemand die `-shm` unter einem laufenden Programm geloescht hat, dann
+//! oeffnet `mode=ro`, und das kann dort eine `-shm` anlegen.
+//!
 //! Was die Bindung zusaetzlich zusagt, steht an `Datenbank`: es gibt keinen
 //! Weg, eine Datenbank anders als nur lesend zu oeffnen, und Erweiterungen
 //! laedt die Bibliothek des Systems nicht nach.
@@ -152,7 +174,7 @@
 //! Systems `Lesen`, jeder andere `Ungueltig` mit dem Wortlaut der Bibliothek.
 
 use std::borrow::Cow;
-use std::fs::{self, Metadata};
+use std::fs::{self, File, Metadata};
 use std::io::{self, Read};
 use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
@@ -165,7 +187,7 @@ use crate::trenntext::{Trennzeichen, feld_kodieren};
 use crate::verzeichnis::Typ;
 use crate::verzeichnis::sys::{
     Datenbank, SQLITE_BUSY, SQLITE_CANTOPEN, SQLITE_INTERRUPT, SQLITE_MISUSE, SQLITE_NOTADB,
-    Sqlitefehler, Wert, ohne_warten_oeffnen, sqlite_uri,
+    Sqlitefehler, Wert, fremde_sperre, ohne_warten_oeffnen, sqlite_uri,
 };
 
 use super::format::Archivformat;
@@ -218,7 +240,7 @@ pub(crate) fn oeffnen<'a>(
     datei: &Path,
     abbruch: &'a AtomicBool,
 ) -> Result<Datenbank<'a>, Sqlitefehler> {
-    if wal_kopf(datei) && leeres_wal_ohne_shm(datei) {
+    if sofort_unveraenderlich(datei) {
         return nur_lesend_oeffnen(datei, true, abbruch);
     }
     match nur_lesend_oeffnen(datei, false, abbruch) {
@@ -253,14 +275,54 @@ fn nur_lesend_oeffnen<'a>(
     Ok(datenbank)
 }
 
+/// Wo der Sperrbereich von SQLite in der Hauptdatei beginnt: das Byte
+/// `PENDING` bei `0x4000_0000` (`os_unix.c`), dahinter `RESERVED` und die 510
+/// Bytes des geteilten Bereichs ab `0x4000_0002`.
+const SPERRBEREICH_START: i64 = 0x4000_0000;
+
+/// Wie lang der gefragte Sperrbereich ist: `PENDING`, `RESERVED` und der
+/// geteilte Bereich zusammen. Ein Schreiber im Sperrmodus `exclusive` haelt
+/// seine ausschliessende Sperre auf dem geteilten Bereich (`0x4000_0002`,
+/// Laenge 510, gemessen am 261025); wer allein `PENDING` und `RESERVED`
+/// fragt, uebersieht sie.
+const SPERRBEREICH_LAENGE: i64 = 512;
+
+/// Ob die Datenbank `datei` vor dem ersten Oeffnen sofort unveraenderlich
+/// geoeffnet wird (Modulkopf, der Fall vor dem ersten Oeffnen): der Kopf
+/// traegt die WAL-Kennung, daneben steht ein leeres `-wal` und keine `-shm`,
+/// **und kein anderer Prozess haelt eine Sperre im Sperrbereich**. Im
+/// Zweifel, also bei jedem Fehler einer dieser Fragen, nein: dann oeffnet
+/// `mode=ro`.
+///
+/// Kopf und Sperre werden an **demselben** Deskriptor gefragt, der fuer die
+/// ganze Vorfrage offen bleibt: POSIX hebt beim Schliessen jedes Deskriptors
+/// auf die Datei alle `fcntl`-Sperren des Prozesses auf ihr auf, und ein
+/// zweites Oeffnen und Schliessen nur fuer die Sperrfrage hiesse ein weiteres
+/// Mal, an dem das geschehen kann.
+fn sofort_unveraenderlich(datei: &Path) -> bool {
+    let Ok(mut offen) = ohne_warten_oeffnen(datei) else {
+        return false;
+    };
+    kopf_traegt_wal(&mut offen)
+        && leeres_wal_ohne_shm(datei)
+        && matches!(
+            fremde_sperre(&offen, SPERRBEREICH_START, SPERRBEREICH_LAENGE),
+            Ok(false)
+        )
+}
+
 /// Ob der Kopf von `datei` die WAL-Kennung traegt (Bytes 18 und 19 je `2`).
 /// Laesst sich der Kopf nicht lesen, nein.
 fn wal_kopf(datei: &Path) -> bool {
+    ohne_warten_oeffnen(datei).is_ok_and(|mut offen| kopf_traegt_wal(&mut offen))
+}
+
+/// Ob die ersten 20 Bytes der offenen Datei die WAL-Kennung tragen; gelesen
+/// ab der Stelle des Deskriptors, also vom Anfang einer frisch geoeffneten
+/// Datei. Laesst sich der Kopf nicht lesen, nein.
+fn kopf_traegt_wal(offen: &mut File) -> bool {
     let mut kopf = [0u8; 20];
-    let kopf_gelesen = ohne_warten_oeffnen(datei)
-        .and_then(|mut offen| offen.read_exact(&mut kopf))
-        .is_ok();
-    kopf_gelesen && kopf[18] == 2 && kopf[19] == 2
+    offen.read_exact(&mut kopf).is_ok() && kopf[18] == 2 && kopf[19] == 2
 }
 
 /// Ob die Datenbank `datei` mit WAL-Kopf ruht und kein `<datei>-wal` daneben

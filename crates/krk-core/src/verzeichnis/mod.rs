@@ -27,7 +27,9 @@
 //! `renamex_np(2)` fuer die Operationsmaschine und seit dem Defekt
 //! `260809-1652` `fcntl(2)` fuer `ohne_warten_oeffnen`, den gemeinsamen Eingang
 //! von `text::datei::lesen` und, seit dem Defekt `260810-1247`, von
-//! `text::datei::bis_zur_grenze_lesen`, seit der Runde 7 `flock(2)` fuer
+//! `text::datei::bis_zur_grenze_lesen` (seit dem 261025 mit `F_GETLK` auch
+//! fuer `fremde_sperre`, die Sperrfrage vor dem Oeffnen einer
+//! SQLite-Datenbank, ohne weitere Bindung), seit der Runde 7 `flock(2)` fuer
 //! die beiden Sperren der Ablage und seit der Runde 18 `localtime_r(3)` fuer
 //! die buergerliche Ortszeit eines Zeitpunkts, und seit dem Defekt vom 261004
 //! `fsync(2)` als Rueckfall des atomaren Schreibens, wo ein Dateisystem

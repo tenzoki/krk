@@ -19,6 +19,7 @@
 //!                                             ├─> operation::entpacken
 //!                                             └─> Schwungleser (in dieser Datei)
 //! fcntl(2), fsync(2) ──> auf_die_platte_...   ──> ablage::atomar
+//! fcntl(2) F_GETLK   ──> fremde_sperre        ──> archiv::sqlite
 //! flock(2)           ──> sperre_nehmen        ──> ablage::sperre
 //!                        sperre_versuchen
 //!                        sperre_abgeben
@@ -55,7 +56,12 @@
 //! und die elfte, `libsqlite3`, das Arbeitspaket vom 261023 zu den
 //! SQLite-Datenbanken im Dateifenster (siehe [`Datenbank`]). Gebunden sind alle
 //! dreissig in den neun `unsafe extern "C"`-Bloecken dieses Moduls;
-//! `fsync` steht im Block von `fcntl`, weil es dessen Rueckfall ist.
+//! `fsync` steht im Block von `fcntl`, weil es dessen Rueckfall ist. Die
+//! Sperrfrage [`fremde_sperre`] vom 261025 ist keine weitere Schnittstelle und
+//! keine weitere Bindung, sondern ein weiterer Befehl desselben `fcntl(2)`,
+//! mit dem `struct flock` des Headers; die Zahlen bleiben deshalb, wie sie
+//! sind. Eine Untergrenze bringt sie nicht mit: `F_GETLK` gibt es auf macOS
+//! seit jeher.
 //!
 //! **`libsqlite3` ist die erste Schnittstelle, die keine des Kerns oder der
 //! Systembibliothek `libSystem` ist, sondern eine eigene Bibliothek des
@@ -1148,6 +1154,87 @@ fn blockierend_stellen(datei: &File) -> io::Result<()> {
         return Err(io::Error::last_os_error());
     }
     Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// fcntl(2) mit F_GETLK: haelt ein anderer Prozess eine Sperre auf der Datei?
+// ---------------------------------------------------------------------------
+
+/// `F_GETLK` aus `sys/fcntl.h`: nach einer Sperre fragen, die eine verlangte
+/// verhinderte, ohne selbst eine zu nehmen.
+const F_GETLK: c_int = 7;
+
+/// `F_UNLCK` aus `sys/fcntl.h`: keine Sperre; so antwortet `F_GETLK`, wenn
+/// nichts die verlangte Sperre verhinderte.
+const F_UNLCK: i16 = 2;
+
+/// `F_WRLCK` aus `sys/fcntl.h`: eine ausschliessende Sperre (Schreiben).
+const F_WRLCK: i16 = 3;
+
+/// `SEEK_SET` aus `sys/unistd.h`: `l_start` zaehlt ab dem Anfang der Datei.
+const SEEK_SET: i16 = 0;
+
+/// `struct flock` aus `sys/fcntl.h`, vollstaendig und in der Reihenfolge des
+/// Headers: `off_t l_start`, `off_t l_len`, `pid_t l_pid`, `short l_type`,
+/// `short l_whence`. 24 Bytes mit den Versaetzen 0, 8, 16, 20 und 22; die
+/// Groesse haelt ein `assert!` beim Uebersetzen.
+#[repr(C)]
+#[allow(non_camel_case_types)]
+struct flock_satz {
+    l_start: i64,
+    l_len: i64,
+    l_pid: i32,
+    l_type: i16,
+    l_whence: i16,
+}
+
+const _: () = assert!(std::mem::size_of::<flock_satz>() == 24);
+
+/// Ob ein **anderer** Prozess auf dem Bereich `start`, `laenge` der offenen
+/// Datei `datei` eine `fcntl`-Sperre haelt, gleich ob geteilt oder
+/// ausschliessend.
+///
+/// Gefragt wird mit `F_GETLK` nach einer ausschliessenden Sperre: jede fremde
+/// Sperre auf dem Bereich, eine geteilte (`F_RDLCK`, 1) wie eine
+/// ausschliessende, verhinderte sie, und der Kern nennt dann eine davon;
+/// sonst antwortet er mit `F_UNLCK`. **Genommen wird dabei nichts**, und
+/// Sperren des eigenen Prozesses meldet `F_GETLK` nie. An dieser Frage haengt
+/// [`crate::archiv`] die Oeffnungsregel einer SQLite-Datenbank (Modulkopf von
+/// `archiv/sqlite.rs`).
+///
+/// **Der Rufer fragt an dem Deskriptor, den er ohnehin offen hat**, und oeffnet
+/// dafuer keinen zweiten: POSIX hebt beim Schliessen jedes Deskriptors auf
+/// eine Datei alle `fcntl`-Sperren auf, die der Prozess auf ihr haelt, auch
+/// die einer anderen Verbindung desselben Prozesses.
+///
+/// # Errors
+///
+/// Der Fehler des Systems, wenn `fcntl` mit `-1` antwortet.
+pub fn fremde_sperre(datei: &File, start: i64, laenge: i64) -> io::Result<bool> {
+    let mut satz = flock_satz {
+        l_start: start,
+        l_len: laenge,
+        l_pid: 0,
+        l_type: F_WRLCK,
+        l_whence: SEEK_SET,
+    };
+    // SICHERHEIT: `fd` gehoert dem `File` des Aufrufers und ist offen, solange
+    // dessen Leihe lebt. `F_GETLK` nimmt genau einen Zeiger auf ein
+    // `struct flock`, liest und beschreibt allein dessen 24 Bytes, und `satz`
+    // ist ein vollstaendiges `struct flock` in der Form des Headers, das bis
+    // zum Ende des Aufrufs lebt. Variadisch uebergeben wird der Zeiger, wie
+    // der Header es verlangt.
+    let rueck = unsafe {
+        fcntl(
+            datei.as_raw_fd(),
+            F_GETLK,
+            std::ptr::from_mut(&mut satz).cast::<c_void>(),
+        )
+    };
+    if rueck == -1 {
+        return Err(io::Error::last_os_error());
+    }
+    Ok(satz.l_type != F_UNLCK)
 }
 
 // ---------------------------------------------------------------------------

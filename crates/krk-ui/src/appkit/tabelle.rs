@@ -7096,16 +7096,6 @@ mod tests {
         );
     }
 
-    /// Der Rumpf einer Methode dieser Datei, vom Kopf bis zur schliessenden
-    /// Klammer auf Methodenebene.
-    ///
-    /// **Eine Naeherung und als solche benannt.** Sie schneidet an der ersten
-    /// Zeile, die allein aus vier Leerzeichen und `}` besteht; das ist die
-    /// Einrueckung einer Methode in einem `impl`-Block und trifft in dieser
-    /// Datei zu. Ein `match`-Zweig oder ein Block auf derselben Ebene gibt es
-    /// im Rumpf einer Methode nicht, weil er tiefer steht. Eine Zerlegung des
-    /// Quelltexts waere die genaue Antwort und fuer eine Reihenfolgeprobe die
-    /// unangemessene.
     /// Der Rumpf der freien Funktion `name`, bis zur schliessenden Klammer
     /// auf Dateiebene.
     fn freie_funktion<'a>(code: &'a str, name: &str) -> &'a str {
@@ -7119,6 +7109,16 @@ mod tests {
             .unwrap_or_else(|| panic!("{name} endet nicht auf Dateiebene"))]
     }
 
+    /// Der Rumpf einer Methode dieser Datei, vom Kopf bis zur schliessenden
+    /// Klammer auf Methodenebene.
+    ///
+    /// **Eine Naeherung und als solche benannt.** Sie schneidet an der ersten
+    /// Zeile, die allein aus vier Leerzeichen und `}` besteht; das ist die
+    /// Einrueckung einer Methode in einem `impl`-Block und trifft in dieser
+    /// Datei zu. Ein `match`-Zweig oder ein Block auf derselben Ebene gibt es
+    /// im Rumpf einer Methode nicht, weil er tiefer steht. Eine Zerlegung des
+    /// Quelltexts waere die genaue Antwort und fuer eine Reihenfolgeprobe die
+    /// unangemessene.
     fn rumpf_von<'a>(code: &'a str, name: &str) -> &'a str {
         let kopf = format!("fn {name}(");
         let beginn = code

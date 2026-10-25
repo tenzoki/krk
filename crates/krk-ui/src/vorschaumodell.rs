@@ -235,7 +235,9 @@ use std::sync::mpsc::{Receiver, Sender, SyncSender, channel, sync_channel};
 use std::thread;
 use std::time::SystemTime;
 
-use krk_core::archiv::{Archivformat, Archivleser, Dateikennung, Fundstelle, Lesefehler};
+use krk_core::archiv::{
+    Archivformat, Archivleser, Dateikennung, Fundstelle, Lesefehler, Verzeichnisfehler,
+};
 use krk_core::bild::Aufnahmezeit;
 use krk_core::fern::Fernfaden;
 use krk_core::heimordner::eintraege::termine;
@@ -702,6 +704,36 @@ struct Geladen {
     /// einer SQLite-Datenbank `<name>.sql`, damit die Einfaerbung SQL
     /// erkennt ([`archiveintrag_laden`]). Sonst `None`.
     archivname: Option<PathBuf>,
+    /// Ob der Tab sich die [`Archivquelle`] des Vorgangs merken darf, sodass
+    /// dieselbe Auswahl im unveraenderten Archiv nicht neu laedt. Falsch
+    /// allein nach einem voruebergehenden Lesefehler an einem Archiveintrag
+    /// ([`voruebergehend`]); jede andere Lieferung, auch die Angaben nach
+    /// einem bleibenden Fehler, darf.
+    merkbar: bool,
+}
+
+/// Was das Lesen eines Archiveintrags fuer den Tab ergibt
+/// ([`archiveintrag_laden`]).
+#[derive(Debug)]
+struct Eintragsergebnis {
+    inhalt: Inhalt,
+    /// Der Darstellungsname, falls er nicht der des Eintrags ist
+    /// ([`Geladen::archivname`]).
+    archivname: Option<PathBuf>,
+    /// Ob das Ergebnis gemerkt werden darf ([`Geladen::merkbar`]).
+    merkbar: bool,
+}
+
+impl Eintragsergebnis {
+    /// Die Angaben aus dem Eintrag statt seines Inhalts; `merkbar` sagt, ob
+    /// der Grund bleibt.
+    fn ersatz(ersatz: String, merkbar: bool) -> Self {
+        Eintragsergebnis {
+            inhalt: Inhalt::Hinweis(ersatz),
+            archivname: None,
+            merkbar,
+        }
+    }
 }
 
 /// Ein Eintrag in einem Archiv zusammen mit der Kennung des Archivs, deren
@@ -717,6 +749,11 @@ struct Geladen {
 /// Kennung, und die naechste Meldung der Auswahl laedt neu. Eine Aenderung
 /// allein an `-shm` steht nicht in der Kennung und laedt nicht neu; genau
 /// die setzt jedes Lesen ueber `mode=ro` selbst.
+///
+/// **Nach einem voruebergehenden Lesefehler merkt sich der Tab die Quelle
+/// nicht** ([`Geladen::merkbar`]), und die naechste Meldung derselben Auswahl
+/// laedt neu, auch bei gleicher Kennung; nach einem bleibenden Grund steht
+/// die Angabe bis zum Auswahlwechsel oder bis zur naechsten Kennung.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Archivquelle {
     ort: Archivort,
@@ -820,6 +857,7 @@ impl Ladevorgang {
                             inhalt,
                             nachlieferung: None,
                             archivname: None,
+                            merkbar: true,
                         },
                     );
                     return;
@@ -831,6 +869,7 @@ impl Ladevorgang {
                         inhalt,
                         nachlieferung: Some(nachempfaenger),
                         archivname: None,
+                        merkbar: true,
                     },
                 );
                 if gesendet.is_ok() {
@@ -874,14 +913,14 @@ impl Ladevorgang {
         let marke_im_faden = Arc::clone(&marke);
         let ort = eintrag.ort.clone();
         let ergebnis = krk_core::fern::faden("krk-vorschau".to_owned(), move |pfand| {
-            let (inhalt, archivname) =
-                archiveintrag_laden(pfand, &ort, tafel, ersatz, marke_im_faden);
+            let ergebnis = archiveintrag_laden(pfand, &ort, tafel, ersatz, marke_im_faden);
             let _ = SyncSender::send(
                 &sender,
                 Geladen {
-                    inhalt,
+                    inhalt: ergebnis.inhalt,
                     nachlieferung: None,
-                    archivname,
+                    archivname: ergebnis.archivname,
+                    merkbar: ergebnis.merkbar,
                 },
             );
         });
@@ -1628,7 +1667,14 @@ impl Vorschaumodell {
                             tafel: vorgang.tafel,
                         });
                         tab.inhalt = geladen.inhalt;
-                        tab.archivquelle = vorgang.archivquelle.take();
+                        // Nach einem voruebergehenden Lesefehler bleibt die
+                        // Quelle ungemerkt, und die naechste Meldung derselben
+                        // Auswahl laedt neu (`Geladen::merkbar`).
+                        tab.archivquelle = if geladen.merkbar {
+                            vorgang.archivquelle.take()
+                        } else {
+                            None
+                        };
                         if vorgang.im_archiv {
                             tab.pfad = None;
                             tab.archivname = Some(geladen.archivname.unwrap_or(geladener_pfad));
@@ -2120,24 +2166,34 @@ fn endzeichen_der_datei(pfad: &Path, angelesen: &[u8]) -> trenntext::Endzeichen 
 /// Verzeichnis lesen laesst.
 ///
 /// Neben dem Inhalt kommt der Name zurueck, nach dem der Tab den Eintrag
-/// darstellt, wenn er nicht der des Eintrags ist (`Geladen::archivname`).
+/// darstellt, wenn er nicht der des Eintrags ist (`Geladen::archivname`),
+/// und ob der Tab sich das Ergebnis merken darf (`Geladen::merkbar`): nein
+/// allein, wenn `Archivleser::oeffnen` oder das Lesen mit einem
+/// voruebergehenden Fehler endet ([`voruebergehend`]). **Die Angaben nach
+/// einem bleibenden Grund (PDF, kein UTF-8, ueber der Grenze, verschluesselt)
+/// werden gemerkt**, sonst laese jede Auffrischung denselben Eintrag erneut,
+/// und ueber die `-shm` einer WAL-Datenbank kaeme die Schleife aus Issue
+/// `261024-2113-die-vorschau-einer-wal-tabelle-loest-ueber-die-shm-ihre-eigene-auffrischung-aus.md`
+/// zurueck (Issue
+/// `261025-0031-nach-einem-lesefehler-laedt-die-vorschau-denselben-archiveintrag-bei-gleicher-kennung-nie-wieder.md`).
 fn archiveintrag_laden(
     pfand: &Fernfaden,
     ort: &Archivort,
     tafel: Tafel,
     ersatz: String,
     abbruch: Arc<AtomicBool>,
-) -> (Inhalt, Option<PathBuf>) {
+) -> Eintragsergebnis {
     let name = PathBuf::from(ort.innen.name().unwrap_or_default());
     let datenbank = match ort.zugang.format() {
         Archivformat::Sqlite => true,
         Archivformat::Zip | Archivformat::Tar | Archivformat::TarGz | Archivformat::Gz => false,
     };
     if !datenbank && Leseart::von(&name) == Leseart::Pdf {
-        return (Inhalt::Hinweis(ersatz), None);
+        return Eintragsergebnis::ersatz(ersatz, true);
     }
-    let Ok(mut leser) = Archivleser::oeffnen(pfand, Arc::clone(&ort.zugang), abbruch) else {
-        return (Inhalt::Hinweis(ersatz), None);
+    let mut leser = match Archivleser::oeffnen(pfand, Arc::clone(&ort.zugang), abbruch) {
+        Ok(leser) => leser,
+        Err(fehler) => return Eintragsergebnis::ersatz(ersatz, !voruebergehend(&fehler)),
     };
     let (art, herkunft, darstellung) = if datenbank {
         let fundstelle = leser
@@ -2153,7 +2209,7 @@ fn archiveintrag_laden(
         )
     };
     if art == Leseart::Pdf {
-        return (Inhalt::Hinweis(ersatz), None);
+        return Eintragsergebnis::ersatz(ersatz, true);
     }
     // Eingefaerbt und benannt wird nach dem Darstellungsnamen, also eine
     // Sicht als `<name>.sql`.
@@ -2178,7 +2234,7 @@ fn archiveintrag_laden(
         // Den Abbruch hat der Empfang selbst ausgeloest, weil die Grenze
         // erreicht ist; jeder andere Abbruch kommt von der Marke.
         Err(Lesefehler::Abgebrochen) if voll => {}
-        Err(_) => return (Inhalt::Hinweis(ersatz), None),
+        Err(fehler) => return Eintragsergebnis::ersatz(ersatz, !voruebergehend(&fehler)),
     }
     let inhalt = match art {
         Leseart::Bild if !voll => Some(Inhalt::Bild {
@@ -2212,8 +2268,37 @@ fn archiveintrag_laden(
         Leseart::Bild | Leseart::Pdf | Leseart::Text => None,
     };
     match inhalt {
-        Some(inhalt) => (inhalt, darstellung),
-        None => (Inhalt::Hinweis(ersatz), None),
+        Some(inhalt) => Eintragsergebnis {
+            inhalt,
+            archivname: darstellung,
+            merkbar: true,
+        },
+        None => Eintragsergebnis::ersatz(ersatz, true),
+    }
+}
+
+/// Ob ein Fehler beim Oeffnen oder Lesen eines Archiveintrags voruebergehend
+/// ist, sodass dieselbe Auswahl im unveraenderten Archiv beim naechsten Mal
+/// gelingen kann: die Sperre eines Schreibers (`Belegt`), ein Fehler des
+/// Systems an der Datei (`Lesen`), ein Archiv, das waehrend des Lesens ein
+/// anderes wurde, und ein Abbruch. Jeder andere Grund haengt am Eintrag oder
+/// am Archiv selbst und bleibt, bis sich die Kennung aendert. Vollstaendig
+/// ueber [`Lesefehler`] und [`Verzeichnisfehler`] und ohne Auffangzweig.
+fn voruebergehend(fehler: &Lesefehler) -> bool {
+    match fehler {
+        Lesefehler::Abgebrochen | Lesefehler::VonAussenVeraendert(_) | Lesefehler::Lesen(_) => true,
+        Lesefehler::Verzeichnis(verzeichnisfehler) => match verzeichnisfehler {
+            Verzeichnisfehler::Abgebrochen
+            | Verzeichnisfehler::Belegt
+            | Verzeichnisfehler::Lesen(_) => true,
+            Verzeichnisfehler::KeineDatei
+            | Verzeichnisfehler::Ungueltig(_)
+            | Verzeichnisfehler::ZuGross => false,
+        },
+        Lesefehler::Fehlt(_)
+        | Lesefehler::KeineDaten
+        | Lesefehler::Unlesbar(_)
+        | Lesefehler::Ungueltig(_) => false,
     }
 }
 
@@ -3750,6 +3835,125 @@ mod tests {
             "nach einem anderen Inhalt wird geladen"
         );
         bis_geliefert(&mut modell);
+    }
+
+    /// Ein `/usr/bin/sqlite3`, das die Datenbank mit `BEGIN EXCLUSIVE` sperrt,
+    /// ohne zu schreiben, und offen bleibt, bis die Probe es fallen laesst;
+    /// der `Drop` beendet es auch nach einer Panik.
+    struct Sperrhalter(std::process::Child);
+
+    impl Sperrhalter {
+        fn starten(datenbank: &Path) -> Self {
+            use std::io::{BufRead, Write};
+            let mut kind = std::process::Command::new("/usr/bin/sqlite3")
+                .arg(datenbank)
+                .stdin(std::process::Stdio::piped())
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::null())
+                .spawn()
+                .expect("/usr/bin/sqlite3 laesst sich starten");
+            let ausgabe = kind.stdout.take().expect("Standardausgabe");
+            let mut halter = Sperrhalter(kind);
+            let eingabe = halter.0.stdin.as_mut().expect("Standardeingabe");
+            eingabe
+                .write_all(b".bail on\nBEGIN EXCLUSIVE;\n.print BEREIT\n")
+                .expect("schreiben");
+            eingabe.flush().expect("leeren");
+            let mut zeilen = std::io::BufReader::new(ausgabe);
+            loop {
+                let mut zeile = String::new();
+                let gelesen = zeilen.read_line(&mut zeile).expect("lesen");
+                assert!(gelesen > 0, "der Halter endet, bevor er sperrt");
+                if zeile.trim_end() == "BEREIT" {
+                    break;
+                }
+            }
+            halter
+        }
+    }
+
+    impl Drop for Sperrhalter {
+        fn drop(&mut self) {
+            let _ = self.0.kill();
+            let _ = self.0.wait();
+        }
+    }
+
+    /// Die Abnahme des Issues
+    /// `261025-0031-nach-einem-lesefehler-laedt-die-vorschau-denselben-archiveintrag-bei-gleicher-kennung-nie-wieder.md`:
+    /// haelt ein anderes Programm die Sperre einer Datenbank ueber die
+    /// Wartezeit hinaus, zeigt der Tab die Angaben und merkt sich die Quelle
+    /// nicht. Gibt das Programm die Sperre frei, ohne etwas zu aendern, bleibt
+    /// die Kennung des Archivs gleich, und dieselbe Meldung der Auswahl
+    /// startet trotzdem einen zweiten Ladevorgang, der die Tabelle zeigt.
+    #[test]
+    fn nach_einem_voruebergehenden_lesefehler_laedt_derselbe_archiveintrag_erneut() {
+        let ordner = Pruefordner::neu("archiv-voruebergehend");
+        let datenbank = datenbank_anlegen(
+            &ordner,
+            "rollback.db",
+            "CREATE TABLE t (a TEXT); INSERT INTO t VALUES ('zeile-eins');",
+        );
+        let eintrag = archivdatei(&datenbank, Archivformat::Sqlite, "t");
+        let verzeichnis = archivverzeichnis_lesen(&eintrag.ort.zugang);
+
+        let halter = Sperrhalter::starten(&datenbank);
+        let mut modell = archiv_geladen(&eintrag);
+        assert_eq!(
+            *modell.aktiver_inhalt(),
+            Inhalt::Hinweis("ANGABEN".to_owned()),
+            "neben der Sperre zeigt der Tab die Angaben"
+        );
+        drop(halter);
+
+        let aufgefrischt = archivverzeichnis_lesen(&eintrag.ort.zugang);
+        assert!(
+            Arc::ptr_eq(&verzeichnis, &aufgefrischt),
+            "die freigegebene Sperre aendert die Kennung des Archivs nicht"
+        );
+        modell.archiv_anzeigen(&eintrag, "ANGABEN".to_owned(), Tafel::Hell);
+        assert!(
+            modell.laedt_noch(),
+            "nach einem voruebergehenden Fehler laedt dieselbe Auswahl neu"
+        );
+        bis_geliefert(&mut modell);
+        let gezeigt = format!("{:?}", modell.aktiver_inhalt());
+        assert!(
+            gezeigt.contains("zeile-eins"),
+            "die Tabelle steht: {gezeigt}"
+        );
+    }
+
+    /// Die Gegenprobe: die Angaben nach einem bleibenden Grund (ein PDF, eine
+    /// Textdatei ueber der Grenze) werden gemerkt, und dieselbe Meldung der
+    /// Auswahl im unveraenderten Archiv startet keinen zweiten Ladevorgang;
+    /// sonst kaeme die Schleife aus Issue `261024-2113` fuer jeden bleibenden
+    /// Grund zurueck.
+    #[test]
+    fn nach_bleibenden_angaben_laedt_derselbe_archiveintrag_nicht_neu() {
+        let ordner = Pruefordner::neu("archiv-bleibend");
+        let gross = "x".repeat(TEXTGRENZE as usize + 1);
+        let archiv = zip_packen(
+            &ordner,
+            "a.zip",
+            &[("doku.pdf", b"%PDF-1.4\n"), ("gross.txt", gross.as_bytes())],
+            None,
+        );
+        for name in ["doku.pdf", "gross.txt"] {
+            let eintrag = archivdatei(&archiv, Archivformat::Zip, name);
+            let _ = archivverzeichnis_lesen(&eintrag.ort.zugang);
+            let mut modell = archiv_geladen(&eintrag);
+            assert_eq!(
+                *modell.aktiver_inhalt(),
+                Inhalt::Hinweis("ANGABEN".to_owned()),
+                "{name} zeigt die Angaben"
+            );
+            modell.archiv_anzeigen(&eintrag, "ANGABEN".to_owned(), Tafel::Hell);
+            assert!(
+                !modell.laedt_noch(),
+                "{name}: bleibende Angaben laden nicht neu"
+            );
+        }
     }
 
     #[test]

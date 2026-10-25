@@ -36,6 +36,7 @@ use krk_core::ort::{Archivort, Ort, nicht_verfuegbar_text};
 use krk_core::sprache::{Sprache, Text, Zahlwort, text};
 use krk_core::trenntext::{Dialekt, indexieren};
 use krk_core::verzeichnis::Typ;
+use krk_core::verzeichnis::sys::fremde_sperre;
 
 /// Legt mit `/usr/bin/sqlite3` eine Datenbank unter `pfad` an und fuehrt `sql`
 /// darin aus.
@@ -1210,6 +1211,88 @@ fn ein_leeres_wal_ohne_shm_wird_unveraenderlich_gelesen_und_nichts_entsteht() {
     );
     assert_eq!(abdruck(&datei), haupt_vorher, "die Hauptdatei bleibt");
     assert_eq!(abdruck(&wal), wal_vorher, "das -wal bleibt");
+}
+
+/// (e) Dasselbe Bild aus leerem `-wal` ohne `-shm`, aber **neben einem
+/// laufenden Schreiber im Sperrmodus `exclusive`**, der es haelt (Issue
+/// `261025-0030-die-vorfrage-zum-leeren-wal-liest-neben-einem-laufenden-exklusiven-schreiber-ohne-sperre-und-niemand-sagt-es.md`,
+/// Weg B): die Sperrfrage sieht seine Sperre, `mode=ro` oeffnet und endet
+/// mit `SQLITE_BUSY`, also `Verzeichnisfehler::Belegt`, und neben der
+/// Datenbank entsteht nichts. Nach dem Ende des Schreibers liest derselbe Weg
+/// wieder, unveraenderlich und mit der Zeile, die der Schreiber vor dem
+/// Checkpoint uebergeben hat; daran haelt die Probe, dass das `Belegt` an der
+/// Sperre hing und an nichts anderem. Den Schreiber beendet der `Drop` von
+/// [`Schreiber`] auch nach einer Panik.
+#[test]
+fn neben_einem_laufenden_exklusiven_schreiber_mit_leerem_wal_meldet_der_ort_belegt() {
+    let ordner = Pruefordner::neu("sqlite-exklusiv-laufend");
+    let datei = exklusiv_angelegt(&ordner);
+    let wal = neben(&datei, "-wal");
+    let shm = neben(&datei, "-shm");
+    let db_ordner = datei
+        .parent()
+        .expect("der Ordner der Datenbank")
+        .to_path_buf();
+    // Laesst das Anlegen eine `-shm` stehen, geht sie vor dem Start des
+    // Schreibers fort; ein Schreiber im Sperrmodus `exclusive` legt keine an.
+    if shm.exists() {
+        fs::remove_file(&shm).expect("-shm geht fort");
+    }
+    let schreiber = schreiber_bereit(
+        &datei,
+        "PRAGMA locking_mode = EXCLUSIVE;
+         PRAGMA journal_mode = WAL;
+         INSERT INTO t VALUES (3, 'drei');
+         PRAGMA wal_checkpoint(TRUNCATE);",
+    );
+    let namen_vorher = ordnernamen(&db_ordner);
+    assert_eq!(
+        namen_vorher,
+        ["exklusiv.db", "exklusiv.db-wal"],
+        "das Bild neben dem laufenden Schreiber: ein -wal und keine -shm"
+    );
+    assert_eq!(fs::metadata(&wal).unwrap().len(), 0, "das -wal ist leer");
+    let haupt_vorher = abdruck(&datei);
+    let wal_vorher = abdruck(&wal);
+    let offen = fs::File::open(&datei).expect("die Hauptdatei oeffnet");
+    assert!(
+        fremde_sperre(&offen, 0x4000_0000, 512).expect("die Sperrfrage gelingt"),
+        "der Schreiber haelt eine Sperre im Sperrbereich"
+    );
+    drop(offen);
+
+    match lesen(&datei) {
+        Err(Verzeichnisfehler::Belegt) => {}
+        andere => panic!("erwartet Belegt neben dem Schreiber, gelesen {andere:?}"),
+    }
+    assert_eq!(
+        ordnernamen(&db_ordner),
+        namen_vorher,
+        "neben der Datenbank entsteht nichts, auch keine -shm"
+    );
+    assert_eq!(abdruck(&datei), haupt_vorher, "die Hauptdatei bleibt");
+    assert_eq!(abdruck(&wal), wal_vorher, "das -wal bleibt");
+
+    drop(schreiber);
+    assert_eq!(
+        ordnernamen(&db_ordner),
+        namen_vorher,
+        "nach dem Ende des Schreibers steht dasselbe Bild"
+    );
+    let verzeichnis = lesen(&datei).expect("ohne Schreiber wird gelesen");
+    assert_eq!(verzeichnis.zeilen(&innen("t")), Some(3));
+    assert_eq!(ordnernamen(&db_ordner), namen_vorher, "nichts entsteht");
+}
+
+/// Die Sperrfrage an einer frischen Datei, die kein Prozess sperrt: nein.
+#[test]
+fn an_einer_frischen_datei_haelt_niemand_eine_sperre() {
+    let ordner = Pruefordner::neu("sqlite-sperrfrage-frisch");
+    let pfad = ordner.unter("frisch");
+    fs::write(&pfad, b"").expect("anlegen");
+    let offen = fs::File::open(&pfad).expect("oeffnen");
+    assert!(!fremde_sperre(&offen, 0x4000_0000, 512).expect("die Sperrfrage gelingt"));
+    assert!(!fremde_sperre(&offen, 0, 0).expect("die Sperrfrage gelingt"));
 }
 
 /// (b) Ein nicht leeres `-wal` ohne `-shm`, wie es ein abgestuerzter

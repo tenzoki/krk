@@ -21,3 +21,5 @@
 ## Abnahme
 
 Im Quelltext folgt auf die letzte `///`-Zeile, die mit „unangemessene.“ endet, unmittelbar `fn rumpf_von`.
+
+**Resolved:** 261025, code-implementer. `freie_funktion` steht samt Kommentar vor dem Doc-Block von `rumpf_von` (`crates/krk-ui/src/appkit/tabelle.rs`); auf die Zeile „unangemessene.“ folgt unmittelbar `fn rumpf_von`.

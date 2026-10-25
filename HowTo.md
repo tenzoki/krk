@@ -606,7 +606,10 @@ unveränderlich und legt nichts an; ein nicht leeres `-wal` ohne `-shm`
 `-shm` ist häufig, etwa bei Firefox und manchen anderen Programmen, die nie
 eine `-shm` anlegen; das nicht leere bleibt nach einem Absturz des
 schreibenden Programms oder in einer Kopie ohne `-shm` zurück, und die neue
-`-shm` bleibt dann stehen. **Steht schon ein `-shm`**, setzt SQLite beim
+`-shm` bleibt dann stehen. **Läuft das Programm, das die Datenbank hält,
+gerade**, liest KRK nicht an ihm vorbei, sondern meldet in der Statuszeile,
+dass sie gerade benutzt wird („die Datenbank wird gerade geschrieben“);
+nach dem Beenden des Programms liest KRK sie wieder. **Steht schon ein `-shm`**, setzt SQLite beim
 Lesen darin eine Lesemarke oder baut, wenn KRK als einziges Programm liest,
 ihren Index neu auf. Die Daten der Datenbank berührt das nicht. Liest KRK, während ein anderes Programm in die
 Datenbank schreibt, sieht es den neuesten übergebenen Stand; hält das andere
