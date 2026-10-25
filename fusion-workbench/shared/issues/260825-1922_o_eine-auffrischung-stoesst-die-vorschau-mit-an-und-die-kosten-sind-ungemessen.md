@@ -42,3 +42,5 @@ gemeldeten Pfad braucht oder ob der Preis getragen wird.
 ## Status
 
 Offen und ausdrücklich ungemessen.
+
+Also seen: 261025-1109 by analyst — auf Google Drive kostet das Neulesen der Vorschau wenig, sobald die Datei einmal heruntergeladen ist; teuer ist das erste Lesen (`261025-1109-warum-die-navigation-auf-google-drive-zuweilen-langsam-ist.md`, B1 und B5).
