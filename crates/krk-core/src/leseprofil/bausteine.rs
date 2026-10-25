@@ -130,6 +130,21 @@
 //! „ganz oder gar nicht" der juengsten N bleibt dieselbe; sie zaehlt seither
 //! die Dateien, die dieser Lauf noch nicht angelesen hat.
 //!
+//! **Eine Datei, die nur in der Cloud liegt, wird nicht geoeffnet** (das
+//! Kennzeichen `SF_DATALESS`, nicht zu verwechseln mit dem Platzhalter der
+//! Ortsangabe und dem der Anzeige). `angelesener_text` liest unter
+//! [`Platzhalterregel::Meiden`]; die Schleuse fragt den Pfad, bevor sie
+//! oeffnet, und antwortet fuer eine solche Datei ohne Deskriptor und ohne
+//! Download. Der Wert fehlt dann wie bei einer unlesbaren Datei. Eine
+//! Zusammenfassung ist ein Hintergrundleser und laedt nichts herunter,
+//! sonst holte schon das Bewegen der Auswahl durch einen Ordner auf einem
+//! Cloudlaufwerk Dateien aus dem Netz
+//! (`work-packages/261025-1435-vorschau-laedt-cloud-dateien-verzoegert-einzeln-und-abbrechbar/decisions/261025-1444-welche-leser-duerfen-eine-platzhalterdatei-herunterladen.md`,
+//! Moeglichkeit 1). **Im Haushalt zaehlt sie trotzdem als Oeffnung**, weil
+//! gebucht wird, bevor die Schleuse den Pfad gefragt hat; das haelt die
+//! Kosten eines Profils nach oben begrenzt wie bisher, und eine Pfadfrage
+//! vor dem Buchen kostete jede lokale Datei einen Systemaufruf mehr.
+//!
 //! **Beide Merker leben genau so lange wie ein [`Lauf`]**, also fuer eine
 //! Zusammenfassung. Zwei Zusammenfassungen desselben Ordners nacheinander lesen
 //! zweimal; alles andere zeigte dem Nutzer einen Stand von vorhin.
@@ -1123,9 +1138,14 @@ fn titelzeile(text: &str) -> Option<String> {
 
 /// Die ersten [`HOECHSTENS_BYTES`] Bytes einer Datei als Text (C6.6).
 ///
-/// `None` heisst: nicht lesbar oder kein Text.
+/// `None` heisst: nicht lesbar, kein Text, oder die Datei liegt nur in der
+/// Cloud. Eine solche Datei wird nicht geoeffnet, denn [`Platzhalterregel::Meiden`]
+/// laesst die Schleuse vor dem Oeffnen mit `Lesehindernis::Platzhalter`
+/// antworten; ein Download findet nicht statt. Gebucht ist sie im Haushalt
+/// trotzdem, weil [`Lauf::angelesen`] vor diesem Aufruf bucht (Modulkopf,
+/// „Eine Datei wird je Zusammenfassung hoechstens einmal angelesen").
 fn angelesener_text(pfad: &Path) -> Option<String> {
-    let bytes = anlesen(pfad, HOECHSTENS_BYTES, Platzhalterregel::Laden, &|| true).ok()?;
+    let bytes = anlesen(pfad, HOECHSTENS_BYTES, Platzhalterregel::Meiden, &|| true).ok()?;
     lesbarer_anfang(&bytes).map(str::to_owned)
 }
 

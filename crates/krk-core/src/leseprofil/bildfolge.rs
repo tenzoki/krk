@@ -26,6 +26,20 @@
 //! Kollationsschluessel der Namensspalte (`Eintrag::sortierschluessel`), also
 //! dieselbe Ordnung, die der Nutzer in der Dateiliste sieht.
 //!
+//! **Ein Foto, das nur in der Cloud liegt, steht nach seinem
+//! Aenderungsdatum.** Traegt sein Eintrag aus dem Leselauf das Kennzeichen
+//! `SF_DATALESS` ([`Eintrag::platzhalter`]), ruft die Ordnung den Datumsleser
+//! fuer dieses Foto nicht, denn er oeffnete die Datei und loeste damit einen
+//! Download aus; sie nimmt den Rueckfall, den ein Foto ohne lesbares Datum
+//! bekommt (C5.5). Die Frage kostet keinen Systemaufruf, weil der Leselauf das
+//! Kennzeichen schon liefert. In einer Folge aus lokalen und Cloud-Fotos
+//! stehen die Cloud-Fotos damit nach Aenderungsdatum zwischen den anderen.
+//! Das Foto an der Stelle laedt weiter die Vorschau, nach ihrer eigenen Regel
+//! fuer eine Datei, die nur in der Cloud liegt; die Ordnung ist ein
+//! Hintergrundleser und laedt nichts herunter
+//! (`work-packages/261025-1435-vorschau-laedt-cloud-dateien-verzoegert-einzeln-und-abbrechbar/decisions/261025-1444-welche-leser-duerfen-eine-platzhalterdatei-herunterladen.md`,
+//! Moeglichkeit 1).
+//!
 //! Ein Ordner ohne Fotos fehlt in der Gruppenliste (C2.5). Fotos direkt im
 //! Jahresordner und in tieferen Ordnern gehoeren nicht dazu (C2.6): gelesen
 //! wird allein die eine Ebene je Gruppe.
@@ -87,9 +101,20 @@ pub struct Fotoeintrag {
     name: String,
     schluessel: Box<[u8]>,
     geaendert: SystemTime,
+    platzhalter: bool,
 }
 
 impl Fotoeintrag {
+    /// Das Foto aus seinem Eintrag des Leselaufs, ohne Systemaufruf.
+    fn aus_eintrag(eintrag: Eintrag) -> Self {
+        Self {
+            name: eintrag.name,
+            schluessel: eintrag.sortierschluessel,
+            geaendert: eintrag.geaendert,
+            platzhalter: eintrag.platzhalter,
+        }
+    }
+
     /// Der Name ohne Pfad.
     pub fn name(&self) -> &str {
         &self.name
@@ -98,6 +123,12 @@ impl Fotoeintrag {
     /// Das Aenderungsdatum aus dem Leselauf.
     pub fn geaendert(&self) -> SystemTime {
         self.geaendert
+    }
+
+    /// Ob das Foto nur in der Cloud liegt (`SF_DATALESS` aus dem Leselauf);
+    /// dann liest die Ordnung kein Aufnahmedatum (Modulkopf).
+    pub fn platzhalter(&self) -> bool {
+        self.platzhalter
     }
 }
 
@@ -282,8 +313,10 @@ impl Bildverzeichnis {
     /// Je Foto einmal `leser`, davor jedes Mal `weiter`; sagt `weiter` nein,
     /// hoert die Ordnung auf und liefert `None`, ohne ein weiteres Datum zu
     /// lesen (C5.4). Ein Foto ohne Datum aus den Bilddaten bekommt sein
-    /// Aenderungsdatum und bricht nichts ab (C5.5). `None` heisst auch: es
-    /// gibt keine Gruppe mit diesem Index.
+    /// Aenderungsdatum und bricht nichts ab (C5.5). Ein Foto, das nur in der
+    /// Cloud liegt ([`Fotoeintrag::platzhalter`]), bekommt denselben Rueckfall,
+    /// ohne dass `leser` fuer es gerufen wird. `None` heisst auch: es gibt
+    /// keine Gruppe mit diesem Index.
     #[must_use = "die geordnete Gruppe ist das Ergebnis der Datumslesungen"]
     pub fn gruppe_ordnen(
         &self,
@@ -298,7 +331,14 @@ impl Bildverzeichnis {
                 return None;
             }
             let pfad = gruppe.ordner.join(&eintrag.name);
-            let (zeit, aus_bilddaten) = match leser(&pfad) {
+            // Ein Foto nur in der Cloud wird nicht geoeffnet: der Datumsleser
+            // loeste sonst den Download aus.
+            let gelesen = if eintrag.platzhalter {
+                None
+            } else {
+                leser(&pfad)
+            };
+            let (zeit, aus_bilddaten) = match gelesen {
                 Some(zeit) => (Some(zeit), true),
                 None => (Aufnahmezeit::aus_zeitpunkt(eintrag.geaendert), false),
             };
@@ -423,11 +463,7 @@ pub fn verzeichnis_erheben(
             .eintraege
             .into_iter()
             .filter(ist_foto)
-            .map(|eintrag| Fotoeintrag {
-                name: eintrag.name,
-                schluessel: eintrag.sortierschluessel,
-                geaendert: eintrag.geaendert,
-            })
+            .map(Fotoeintrag::aus_eintrag)
             .collect();
         if fotos.is_empty() {
             continue;
@@ -473,4 +509,66 @@ fn volle_grenzen(haushalt: &Bildhaushalt, mut kuerzung: Kuerzung) -> Option<Kuer
         kuerzung = kuerzung.mit(Grenze::Ordner);
     }
     (ordner || fotos).then_some(kuerzung)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Mutex;
+    use std::time::Duration;
+
+    use super::*;
+
+    /// Ein Foto im Pruefbau aus einem Eintrag, wie der Leselauf ihn liefert,
+    /// mit dem Kennzeichen von aussen: `SF_DATALESS` laesst sich ohne
+    /// File-Provider-Domaene an keiner Datei setzen.
+    fn foto(name: &str, geaendert: SystemTime, platzhalter: bool) -> Fotoeintrag {
+        let mut eintrag = Eintrag::neu(name.to_owned(), 0, geaendert, Typ::Datei);
+        eintrag.platzhalter = platzhalter;
+        Fotoeintrag::aus_eintrag(eintrag)
+    }
+
+    #[test]
+    fn ein_foto_nur_in_der_cloud_liest_kein_datum_und_steht_nach_seinem_aenderungsdatum() {
+        let frueh = SystemTime::UNIX_EPOCH + Duration::from_secs(1_000_000_000);
+        let spaet = SystemTime::UNIX_EPOCH + Duration::from_secs(1_700_000_000);
+        let lokal = foto("a.jpg", spaet, false);
+        let wolke = foto("b.jpg", frueh, true);
+        assert!(wolke.platzhalter());
+        assert!(!lokal.platzhalter());
+
+        let verzeichnis = Bildverzeichnis {
+            gruppen: vec![Gruppe {
+                ordner: PathBuf::from("/monat"),
+                fotos: vec![lokal, wolke],
+                beitrag: 2,
+            }],
+            gesamt: 2,
+            kuerzung: Kuerzung::default(),
+            haushalt: Bildhaushalt::neu(),
+        };
+
+        let gerufen: Mutex<Vec<PathBuf>> = Mutex::new(Vec::new());
+        let bilddatum = Aufnahmezeit::neu(2030, 1, 1, 12, 0, 0).expect("gueltiges Datum");
+        let leser = |pfad: &Path| {
+            gerufen.lock().expect("Sperre").push(pfad.to_path_buf());
+            Some(bilddatum)
+        };
+
+        let geordnet = verzeichnis
+            .gruppe_ordnen(0, &leser, &|| true)
+            .expect("die Gruppe steht");
+
+        assert_eq!(
+            *gerufen.lock().expect("Sperre"),
+            vec![PathBuf::from("/monat/a.jpg")],
+            "der Datumsleser wird fuer das Foto in der Cloud nicht gerufen"
+        );
+        assert_eq!(geordnet.len(), 2);
+        assert_eq!(geordnet[0].pfad(), Path::new("/monat/b.jpg"));
+        assert_eq!(geordnet[0].zeit(), Aufnahmezeit::aus_zeitpunkt(frueh));
+        assert!(!geordnet[0].aus_bilddaten());
+        assert_eq!(geordnet[1].pfad(), Path::new("/monat/a.jpg"));
+        assert_eq!(geordnet[1].zeit(), Some(bilddatum));
+        assert!(geordnet[1].aus_bilddaten());
+    }
 }
