@@ -31,3 +31,7 @@ Eines von beiden:
 ## Abnahme
 
 Bei 1: Der Modulkopf trägt den Absatz, und der Doc-Kommentar an `sofort_unveraenderlich` verweist darauf. Bei 2: Eine Probe in `crates/krk-core/tests/archiv_sqlite.rs` hält eine `mode=ro`-Verbindung offen, ruft danach `oeffnen` für dieselbe Datei auf und prüft mit `fremde_sperre` aus einem Kindprozess (oder mit `/usr/bin/sqlite3 … BEGIN EXCLUSIVE`, das scheitern muss), dass die Sperre der ersten Verbindung noch steht.
+
+## Erledigung 261025
+
+Die Prämisse trifft auf die Bibliothek des Systems nicht zu, gemessen in `messungen/261025-0742-sqlite-sperre-ueberlebt-fremdes-schliessen.txt`: mit `/usr/lib/libsqlite3.dylib` 3.43.2 hebt das Schließen eines fremden Deskriptors die Sperre einer lesenden SQLite-Verbindung desselben Prozesses nicht auf (Urteil b); eine gewöhnliche `F_SETLK`-Sperre fällt dabei (Gegenprobe c). `oeffnen` bleibt unverändert. Berichtigt sind der Doc-Kommentar an `sofort_unveraenderlich`, der an `verzeichnis::sys::fremde_sperre` (auch `F_GETLK` meldet die Sperre der System-SQLite im selben Prozess) und der Modulkopf `# Nur lesen`, der jetzt den Vorbehalt für eine selbst gebaute SQLite nennt. Abnahmeweg 2 ist erfüllt: die Probe `das_oeffnen_derselben_datenbank_laesst_die_sperre_einer_lesenden_verbindung_stehen` in `crates/krk-core/tests/archiv_sqlite.rs`.

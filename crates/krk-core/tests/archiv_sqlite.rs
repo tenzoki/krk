@@ -1485,3 +1485,97 @@ fn kind_liest_die_blobtabellen() {
         assert_eq!(gelesen, daten.len() as u64, "{tabelle}");
     }
 }
+
+// Die Vorfrage schliesst einen Deskriptor, und die Sperre einer anderen
+// Verbindung bleibt stehen
+// ---------------------------------------------------------------------------
+
+/// Versucht mit `/usr/bin/sqlite3` als fremdem Prozess `BEGIN EXCLUSIVE` auf
+/// `pfad`; zurueck kommen, ob es gelang, und die Fehlerausgabe. Die Wartezeit
+/// des Programms ist 0, eine fremde Sperre antwortet also sofort mit
+/// "database is locked".
+fn fremdes_exklusiv(pfad: &Path) -> (bool, String) {
+    let ausgabe = Command::new("/usr/bin/sqlite3")
+        .arg(pfad)
+        .arg("BEGIN EXCLUSIVE; COMMIT;")
+        .output()
+        .expect("/usr/bin/sqlite3 laesst sich nicht starten");
+    (
+        ausgabe.status.success(),
+        String::from_utf8_lossy(&ausgabe.stderr).trim().to_owned(),
+    )
+}
+
+/// Was die Probe mitten im Lesen beobachtet: das fremde `EXCLUSIVE` vor und
+/// nach dem zweiten Oeffnen und das Inhaltsverzeichnis des zweiten Oeffnens.
+#[derive(Debug, Default)]
+struct Beobachtung {
+    vorher: Option<(bool, String)>,
+    zweites_oeffnen: Option<Result<Vec<String>, String>>,
+    nachher: Option<(bool, String)>,
+}
+
+/// Haelt die Messung `messungen/261025-0742-sqlite-sperre-ueberlebt-fremdes-schliessen.txt`,
+/// Urteil (b), am Weg des Kerns (Issue
+/// `261025-0215-die-vorfrage-vor-jedem-oeffnen-schliesst-einen-deskriptor-der-hauptdatei-und-hebt-damit-die-sperren-einer-zweiten-verbindung-von-krk-auf.md`,
+/// Abnahme 2): eine Verbindung liest eine Tabelle im Rollback-Betrieb und
+/// steht nach dem ersten Block mitten in ihrer Anweisung, haelt also
+/// `SHARED`. Waehrenddessen liest ein zweiter Zugang das Inhaltsverzeichnis
+/// derselben Datei, ueber `oeffnen` und damit ueber die Vorfrage, die einen
+/// eigenen Deskriptor auf die Hauptdatei oeffnet und schliesst, und schliesst
+/// seine Verbindung wieder. Danach muss ein fremdes `BEGIN EXCLUSIVE` weiter
+/// scheitern. Haelt die Bibliothek ihre Sperren je Prozess, wie es der
+/// Quelltext von sqlite.org tut, gelingt es, und die Probe wird rot (Modulkopf
+/// von `archiv/sqlite.rs`, `# Nur lesen`). Zur Gegenprobe gelingt dasselbe
+/// `EXCLUSIVE`, sobald das Lesen beendet ist.
+#[test]
+fn das_oeffnen_derselben_datenbank_laesst_die_sperre_einer_lesenden_verbindung_stehen() {
+    let ordner = Pruefordner::neu("sqlite-fremdes-schliessen");
+    let datei = ordner.unter("gross.db");
+    // Groesser als ein Block, damit die Anweisung beim ersten Block noch laeuft.
+    grosse_tabelle(&datei, 40_000);
+
+    let beobachtung = Arc::new(std::sync::Mutex::new(Beobachtung::default()));
+    let im_rueckruf = Arc::clone(&beobachtung);
+    let pfad = datei.clone();
+    let (ergebnis, daten) = eintrag_lesen_mit(&zugang(&datei), "gross", move |_| {
+        let mut b = im_rueckruf.lock().expect("die Sperre der Probe");
+        b.vorher = Some(fremdes_exklusiv(&pfad));
+        b.zweites_oeffnen = Some(
+            lesen(&pfad)
+                .map(|verzeichnis| namen(&verzeichnis))
+                .map_err(|fehler| format!("{fehler:?}")),
+        );
+        b.nachher = Some(fremdes_exklusiv(&pfad));
+        ControlFlow::Break(())
+    });
+    assert!(
+        matches!(ergebnis, Err(Lesefehler::Abgebrochen)),
+        "erwartet abgebrochen nach dem ersten Block, gelesen {ergebnis:?}"
+    );
+    assert!(!daten.is_empty(), "der erste Block ist angekommen");
+
+    let b = beobachtung.lock().expect("die Sperre der Probe");
+    let (gelang, fehler) = b.vorher.clone().expect("der Rueckruf lief");
+    assert!(
+        !gelang && fehler.contains("database is locked"),
+        "mitten im Lesen muss das fremde EXCLUSIVE scheitern, sonst unterscheidet die Probe nichts: {fehler:?}"
+    );
+    assert_eq!(
+        b.zweites_oeffnen.clone().expect("der Rueckruf lief"),
+        Ok(vec!["gross".to_owned()]),
+        "das zweite Oeffnen derselben Datei liest ihr Inhaltsverzeichnis"
+    );
+    let (gelang, fehler) = b.nachher.clone().expect("der Rueckruf lief");
+    assert!(
+        !gelang && fehler.contains("database is locked"),
+        "nach dem zweiten Oeffnen und seiner Vorfrage muss die Sperre der lesenden Verbindung stehen: \
+         EXCLUSIVE gelang={gelang}, {fehler:?}"
+    );
+
+    let (gelang, fehler) = fremdes_exklusiv(&datei);
+    assert!(
+        gelang,
+        "nach dem Ende des Lesens haelt niemand mehr eine Sperre: {fehler:?}"
+    );
+}

@@ -1197,15 +1197,24 @@ const _: () = assert!(std::mem::size_of::<flock_satz>() == 24);
 /// Gefragt wird mit `F_GETLK` nach einer ausschliessenden Sperre: jede fremde
 /// Sperre auf dem Bereich, eine geteilte (`F_RDLCK`, 1) wie eine
 /// ausschliessende, verhinderte sie, und der Kern nennt dann eine davon;
-/// sonst antwortet er mit `F_UNLCK`. **Genommen wird dabei nichts**, und
-/// Sperren des eigenen Prozesses meldet `F_GETLK` nie. An dieser Frage haengt
-/// [`crate::archiv`] die Oeffnungsregel einer SQLite-Datenbank (Modulkopf von
+/// sonst antwortet er mit `F_UNLCK`. **Genommen wird dabei nichts.** Eine
+/// gewoehnliche Sperre je Prozess, gesetzt mit `F_SETLK`, meldet `F_GETLK`
+/// dem eigenen Prozess nicht; **die Sperre einer SQLite-Verbindung der
+/// Bibliothek des Systems im selben Prozess meldet es dagegen**, als
+/// `F_RDLCK` mit der eigenen Prozesskennung, weil diese Bibliothek an ihren
+/// Deskriptor gebunden sperrt (gemessen in
+/// `messungen/261025-0742-sqlite-sperre-ueberlebt-fremdes-schliessen.txt`,
+/// Urteil (b1)). Der Name sagt also mehr, als die Frage haelt: „fremd“ heisst
+/// hier „nicht an diesem Deskriptor“. Fuer die Oeffnungsregel ist das harmlos,
+/// sie oeffnet dann mit `mode=ro`. An dieser Frage haengt [`crate::archiv`]
+/// die Oeffnungsregel einer SQLite-Datenbank (Modulkopf von
 /// `archiv/sqlite.rs`).
 ///
 /// **Der Rufer fragt an dem Deskriptor, den er ohnehin offen hat**, und oeffnet
-/// dafuer keinen zweiten: POSIX hebt beim Schliessen jedes Deskriptors auf
-/// eine Datei alle `fcntl`-Sperren auf, die der Prozess auf ihr haelt, auch
-/// die einer anderen Verbindung desselben Prozesses.
+/// dafuer keinen zweiten. Das Schliessen eines Deskriptors hebt nach POSIX
+/// alle `fcntl`-Sperren des Prozesses auf der Datei auf; die Sperren der
+/// Bibliothek des Systems ueberleben es (dieselbe Messung, Urteile (b) und
+/// (c)), die einer selbst gebauten SQLite, die je Prozess sperrt, nicht.
 ///
 /// # Errors
 ///

@@ -128,6 +128,31 @@
 //! jemand die `-shm` unter einem laufenden Programm geloescht hat, dann
 //! oeffnet `mode=ro`, und das kann dort eine `-shm` anlegen.
 //!
+//! **Die Vorfrage schliesst vor jedem Oeffnen einen eigenen Deskriptor auf
+//! die Hauptdatei, und das hebt die Sperre einer anderen, gerade lesenden
+//! Verbindung von KRK nicht auf; das gilt fuer die Bibliothek des Systems und
+//! fuer keine andere.** `/usr/lib/libsqlite3.dylib` sperrt an ihren eigenen
+//! Deskriptor gebunden und nicht je Prozess: eine Verbindung `mode=ro`
+//! mitten im Lesen haelt ihr `SHARED` ueber das Oeffnen und Schliessen eines
+//! fremden Deskriptors desselben Prozesses hinweg, und ein fremdes
+//! `BEGIN EXCLUSIVE` scheitert weiter, gemessen in
+//! `messungen/261025-0742-sqlite-sperre-ueberlebt-fremdes-schliessen.txt`
+//! (Urteil (b), gehalten von der Probe
+//! `das_oeffnen_derselben_datenbank_laesst_die_sperre_einer_lesenden_verbindung_stehen`
+//! in `tests/archiv_sqlite.rs`). Dieselbe Messung zeigt, dass `F_GETLK` im
+//! eigenen Prozess die Sperre der anderen Verbindung meldet; die Vorfrage
+//! sagt dann nein, und KRK oeffnet mit `mode=ro`. **Bindet KRK je eine
+//! selbst gebaute SQLite**, die wie der Quelltext von sqlite.org je Prozess
+//! mit `F_SETLK` sperrt, kehrt die POSIX-Regel zurueck, nach der das
+//! Schliessen irgendeines Deskriptors auf die Datei alle `fcntl`-Sperren des
+//! Prozesses auf ihr aufhebt (Gegenprobe (c) derselben Messung). Dann zaehlt
+//! jeder Deskriptor, den KRK ausserhalb der Bibliothek auf die Hauptdatei
+//! oeffnet und schliesst: die Vorfrage hier, die Pruefung am Deskriptor in
+//! `Archivzugang::verzeichnis` (`archiv/zugang.rs`), der Inhaltsfilter und
+//! die Leser der Vorschau; und das Inhaltsverzeichnis, das keine
+//! Kennungspruefung absichert, koennte dann neben einem fremden Schreiber
+//! falsche Zeilenzahlen oder `SQLITE_CORRUPT` zeigen.
+//!
 //! Was die Bindung zusaetzlich zusagt, steht an `Datenbank`: es gibt keinen
 //! Weg, eine Datenbank anders als nur lesend zu oeffnen, und Erweiterungen
 //! laedt die Bibliothek des Systems nicht nach.
@@ -295,10 +320,17 @@ const SPERRBEREICH_LAENGE: i64 = 512;
 /// `mode=ro`.
 ///
 /// Kopf und Sperre werden an **demselben** Deskriptor gefragt, der fuer die
-/// ganze Vorfrage offen bleibt: POSIX hebt beim Schliessen jedes Deskriptors
-/// auf die Datei alle `fcntl`-Sperren des Prozesses auf ihr auf, und ein
-/// zweites Oeffnen und Schliessen nur fuer die Sperrfrage hiesse ein weiteres
-/// Mal, an dem das geschehen kann.
+/// ganze Vorfrage offen bleibt. Das Schliessen dieses Deskriptors hebt die
+/// Sperre einer anderen, gerade lesenden Verbindung von KRK auf derselben
+/// Datei **nicht** auf: die Bibliothek des Systems sperrt an ihren eigenen
+/// Deskriptor gebunden und nicht je Prozess, gemessen in
+/// `messungen/261025-0742-sqlite-sperre-ueberlebt-fremdes-schliessen.txt`
+/// (Urteil (b); die POSIX-Regel, nach der jedes Schliessen alle
+/// `fcntl`-Sperren des Prozesses aufhebt, gilt dort allein fuer die
+/// Gegenprobe (c)). Fuer eine selbst gebaute SQLite gaelte das nicht mehr
+/// (Modulkopf, `# Nur lesen`, der Absatz zur Bibliothek des Systems); der
+/// eine Deskriptor fuer beide Fragen haelt die Zahl der Schliessungen auch
+/// fuer diesen Fall klein.
 fn sofort_unveraenderlich(datei: &Path) -> bool {
     let Ok(mut offen) = ohne_warten_oeffnen(datei) else {
         return false;
