@@ -10,3 +10,13 @@ Die Markenspalte des Git-Bereichs ist ein Hintergrundleser, den der Entscheid zu
 **Ungeprüft.** `inference:` der Index-gegen-Arbeitsbaum-Vergleich von `gix` liest und hasht eine verfolgte Datei, wenn ihre `stat`-Angaben vom Index abweichen. `inference:` das Auslagern durch den File Provider setzt `SF_DATALESS` über eine Änderung der Kennzeichen und hebt damit `st_ctime`. Treffen beide zu, lädt die Markenspalte jede ausgelagerte verfolgte Datei eines Ordners herunter, sobald der Nutzer ihn öffnet. Keines der beiden ist gemessen; der Reviewer hat kein Repository auf einem Cloudlaufwerk geöffnet.
 
 **Abnahme.** Eines von beiden: (a) eine Messung an einem Repository auf dem Cloudlaufwerk des Nutzers, mit seiner Zustimmung, zeigt mit `ls -lO` vor und nach dem Öffnen des Ordners in KRK, dass keine verfolgte Datei ihr `dataless` verliert, und der Modulkopf von `git/leser.rs` hält das Ergebnis fest; oder (b) die Markenspalte öffnet keine Datei mit `SF_DATALESS` und nennt sie wie der Inhaltsfilter als ungelesen, mit einer Probe an einem eingespritzten Kennzeichen.
+
+## Messung vom 261026
+
+Gemessen mit Zustimmung des Nutzers an einer Kopie des Repositorys unter `~/Google Drive/Meine Ablage/shared/krk` (Arbeitskopie mit `.git`, Index vorher per `git status` bei lokalen Dateien aufgefrischt). Alle 261 Dateien unter `crates/` über `FileManager.evictUbiquitousItem` ausgelagert (`find -flags +dataless`: 261 von 261). Dann `Gitleser::oeffnen` und `Gitleser::marken` aus `krk-core` 3.11.1 auf `crates/krk-core/src`, in einem eigenen Prüfprogramm außerhalb des Baums.
+
+- Der Lauf kehrte nach über zehn Minuten nicht zurück und wurde abgebrochen.
+- `sample` zeigt die Arbeitsfäden von `gix_status::index_as_worktree` in `read_data::Stream::read_exact`: gix liest den Inhalt der ausgelagerten verfolgten Dateien.
+- In dieser Zeit sind zwei Dateien heruntergeladen worden (`crates/krk-core/src/ablage/atomar.rs`, `crates/krk-core/src/trenntext/bereich.rs`); 259 blieben ausgelagert.
+
+Befund damit bestätigt und nicht mehr Vermutung: die Markenspalte lädt in einem Repository auf einem Cloudlaufwerk jede ausgelagerte verfolgte Datei herunter, eine nach der anderen, und hält den Faden dabei minutenlang fest. Ob es `st_ctime` oder eine andere Angabe ist, die nach dem Auslagern vom Index abweicht, ist nicht gemessen.
