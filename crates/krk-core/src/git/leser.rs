@@ -18,11 +18,20 @@
 //!
 //! Alle gegen `gix` 0.87.1 geprueft, das die Wurzel-`Cargo.toml` auf `0.87`
 //! festnagelt: `gix::discover`, `Repository::head`, `Repository::head_id`,
-//! `Repository::rev_walk`, `Repository::find_commit`, `Repository::status`,
+//! `Repository::rev_walk`, `Repository::find_commit`,
 //! `Repository::object_cache_size_if_unset`, `revision::walk::Platform::sorting`,
-//! `Platform::into_iter`. Dazu die zwei Aufzaehlungen, ueber die
-//! [`entschiedene_verneinung`] vollstaendig zerlegt, `gix::discover::Error` und
-//! `gix::discover::upwards::Error`: eine Variante mehr haelt dort den Bau an.
+//! `Repository::index_worktree_status`, `Repository::tree_index_status`,
+//! `Repository::pathspec`, `Repository::stat_options`,
+//! `Repository::index_or_empty`, `Repository::head_tree_id_or_empty`,
+//! `Repository::dirwalk_options`, `BuiltinSubmoduleStatus::new`, `CompareBlobs`,
+//! `FastEq`, `VisitEntry`, `Stat::matches`, `Stat::from_fs`, `Stat::is_racy`,
+//! `fs::Metadata::from_path_no_follow` und `State::timestamp`. Bis zum 261026
+//! ging der Markenlauf ueber `Repository::status` und `Platform::into_iter`;
+//! warum nicht mehr, sagt der Abschnitt „Eine Datei, die nur in der Cloud
+//! liegt". Dazu die Aufzaehlungen, ueber die vollstaendig zerlegt wird:
+//! `gix::discover::Error` und `gix::discover::upwards::Error` in
+//! [`entschiedene_verneinung`], `Entry`, `EntryStatus` und `Change` aus
+//! `gix-status` in `posten_deuten`: eine Variante mehr haelt dort den Bau an.
 //! Die Kiste fuehrt unter 1.0 keine Zusage ueber kleine Fassungen; wer die Zahl
 //! in der `Cargo.toml` hebt, liest diese Liste nach.
 //!
@@ -41,8 +50,8 @@
 //! setzen hiesse, dem Nutzer in einem fremden Ordner eine Fehlermeldung statt
 //! einer Auskunft zu zeigen (C6.7 der Runde 23).
 //!
-//! **`Platform::index_worktree_options_mut().thread_limit` wird nicht
-//! gesetzt.** Ohne Deckel nimmt `gix` so viele Faeden, wie das Geraet Kerne hat,
+//! **`thread_limit` in den Optionen von `index_worktree_status` bleibt
+//! `None`.** Ohne Deckel nimmt `gix` so viele Faeden, wie das Geraet Kerne hat,
 //! und zwei Dateifenster koennen je einen Lauf halten; der Statuslauf kann dem
 //! Zeichendurchgang damit Bilder wegnehmen. Ob das geschieht und woran die Zahl
 //! zu messen waere, ist aus den Eingaben dieser Runde **nicht** entscheidbar:
@@ -56,9 +65,64 @@
 //! **`Outcome::write_changes` wird nicht gerufen.** Das allein traegt die
 //! Zusage der Stufe A; die Begruendung und der offene Datensatz stehen im Kopf
 //! von [`crate::git`](super). Der Zweig fuer `EntryStatus::NeedsUpdate` in
-//! `posten_deuten` traegt sie **nicht** und kann es nicht: `gix` haelt einen
-//! solchen Posten in seinem eigenen Statusiterator zurueck, bevor er hier
-//! ankommt.
+//! `posten_deuten` traegt sie **nicht**: der Posten erreicht KRK seit dem
+//! 261026 und bleibt dort ohne Marke, aber was ihn verwirft, ist allein, dass
+//! nichts ihn zurueckschreibt. Der Weg ueber `index_worktree_status` liefert
+//! ein `Outcome` ohne Schreibweg.
+//!
+//! # Eine Datei, die nur in der Cloud liegt
+//!
+//! **Der Markenlauf oeffnet keine ausgelagerte Datei** (`SF_DATALESS`,
+//! [`crate::verzeichnis::ist_platzhalter`]); so verlangt es der Entscheid
+//! `261025-1444-welche-leser-duerfen-eine-platzhalterdatei-herunterladen.md`,
+//! Moeglichkeit 1, fuer jeden Hintergrundleser. Bis zum 261026 tat er es: auf
+//! einer Wegwerfkopie auf Google Drive stand ein Lauf ueber zehn Minuten in
+//! `read_data::Stream::read_exact` und lud Datei fuer Datei herunter.
+//!
+//! **Die eine Stelle, an der `gix` den Inhalt einer verfolgten Datei liest**,
+//! ist `compute_status` in `gix-status-0.34.1/src/index_as_worktree/function.rs`:
+//! es stellt je Eintrag ein `lstat`, vergleicht mit `Stat::matches` und ruft
+//! den Inhaltsvergleich `CompareBlobs::compare_blobs` allein, wenn die
+//! stat-Angaben abweichen oder der Eintrag racy ist. Der Vergleich bekommt ein
+//! `ReadData`, und erst dessen Aufruf oeffnet die Datei. `Platform::into_iter`
+//! setzt den Vergleich fest auf `FastEq`, das bei gleicher Groesse liest und
+//! hasht; [`Gitleser::marken_mit`] geht deshalb ueber die zwei oeffentlichen
+//! Wege, aus denen jener sich zusammensetzt, und reicht `index_worktree_status`
+//! einen eigenen Vergleich:
+//!
+//! ```text
+//! gix: lstat, stat weicht ab oder racy
+//!   -> Inhaltsvergleich: SF_DATALESS?
+//!        nein -> FastEq wie bisher: Groesse, sonst lesen und hashen
+//!        ja   -> Groesse weicht ab?
+//!                  ja   -> Befund Geaendert, nichts gelesen        -> „M"
+//!                  nein -> stat ohne ctime passt und nicht racy?
+//!                            ja   -> kein Befund: unveraendert     -> keine Marke
+//!                            nein -> Befund Ungelesen              -> „?"
+//! ```
+//!
+//! Die Zweige sind disjunkt und vollstaendig. Die Groessenregel ist die von
+//! `FastEq`, die stat-Pruefung ist `gix`s eigene `Stat::matches` mit den
+//! Optionen des Repositorys und `trust_ctime: false`, dazu `Stat::is_racy`
+//! gegen `State::timestamp`; eine zweite stat-Logik entsteht in KRK nicht.
+//!
+//! **Warum ctime bei einer ausgelagerten Datei nicht zaehlt**: gemessen am
+//! 261026-1208 an drei ausgelagerten Dateien einer Wegwerfkopie auf Google
+//! Drive (`stat -f` gegen `git ls-files --debug`) weicht nach dem Auslagern
+//! allein ctime vom Index ab; mtime samt Nanosekunden, Groesse, Geraet, Inode,
+//! `uid` und `gid` stimmen. Mit ctime saehe jede ausgelagerte Datei geaendert
+//! aus. Der Nutzer hat entschieden, dass ctime fuer sie nicht zaehlt
+//! (`261026-1208-zeigt-die-markenspalte-jede-ausgelagerte-datei-als-unbekannt-oder-nur-die-deren-stat-angaben-ausser-ctime-vom-index-abweichen.md`,
+//! Moeglichkeit 2). Die Luecke, die das laesst, ist die von `git` mit
+//! `core.trustctime=false`: eine Aenderung, die mtime, Groesse und Inode
+//! unberuehrt laesst, sieht KRK an einer ausgelagerten Datei nicht. Fuer eine
+//! lokale Datei bleibt ctime, wie das Repository es sagt.
+//!
+//! **Was dabei bleibt.** Der Provider kann eine Datei zwischen dem `lstat` des
+//! Vergleichs und dem Oeffnen durch `FastEq` auslagern; dann wird gelesen und
+//! heruntergeladen, einmal je solchem Wettlauf. Das ist hingenommen wie beim
+//! Vorschaulesen im vorigen Paket. Der Verzeichnisdurchlauf liest daneben die
+//! `.gitignore`-Dateien des Arbeitsbaums und ist darin nicht einstellbar.
 //!
 //! # Ein Fehlschlag beim Oeffnen entscheidet nur in einer Lage
 //!
@@ -101,6 +165,8 @@
 //! Fragefunktionen liefern in derselben Lage `None`; die Kindprobe
 //! `kind_liest_unter_abgesenkter_deskriptorgrenze` misst es.
 
+use std::fs::Metadata;
+use std::ops::ControlFlow;
 use std::os::unix::ffi::OsStrExt;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -109,6 +175,9 @@ use std::time::{Duration, SystemTime};
 use gix::Repository;
 use gix::bstr::{BStr, BString, ByteSlice};
 use gix::revision::walk::Sorting;
+use gix::status::plumbing::index_as_worktree::traits::{CompareBlobs, FastEq, ReadData};
+use gix::status::plumbing::index_as_worktree::{Change, EntryStatus};
+use gix::status::plumbing::index_as_worktree_with_renames::{Entry, VisitEntry};
 use gix::traverse::commit::simple::CommitTimeOrder;
 
 use super::{Commit, KURZHASHLAENGE, Kopf, Marke};
@@ -312,8 +381,14 @@ impl Gitleser {
 
     /// Die Marken der Eintraege von `ordner`, ueber ihren Namen.
     ///
-    /// **Der Status ist ueber die Pfadmuster von `into_iter` auf `ordner`
-    /// beschraenkt** (E9, C7.7). Der Gewinn ist gemessen und gross, wo der
+    /// **Eine Datei, die nur in der Cloud liegt, wird dabei nicht gelesen**;
+    /// ob sie das tut, fragt [`crate::verzeichnis::ist_platzhalter`], und was
+    /// die Marke dann sagt, steht im Modulkopf unter „Eine Datei, die nur in
+    /// der Cloud liegt". Der Rumpf steht in [`Gitleser::marken_mit`], und diese
+    /// Funktion reicht ihm allein die Frage des Betriebs.
+    ///
+    /// **Der Status ist ueber die Pfadmuster auf `ordner` beschraenkt** (E9,
+    /// C7.7). Der Gewinn ist gemessen und gross, wo der
     /// Ordner klein ist: 12 ms statt 220 ms fuer einen Unterordner mit 500
     /// Eintraegen in einem Repository mit 100 000. Er verschwindet, wo der
     /// Ordner selbst der ganze Baum ist.
@@ -362,13 +437,53 @@ impl Gitleser {
     /// Form, die
     /// [`verzeichnis::durchlauf`](crate::verzeichnis::durchlauf) traegt: ein
     /// `&AtomicBool`, gelesen mit [`Ordering::Relaxed`] vor jeder Einheit, die
-    /// dauern kann. Hier ist das der naechste Posten des Statusstroms; der
-    /// Eintritt selbst ist beim Rufer geprueft, wie beim Durchlauf.
+    /// dauern kann. Der Eintritt selbst ist beim Rufer geprueft, wie beim
+    /// Durchlauf.
+    ///
+    /// **Die Einheit ist seit dem 261026 der naechste Eintrag des Index, und
+    /// gefragt wird in `gix` selbst.** `marken_mit` reicht `abbruch` unveraendert
+    /// an `Repository::index_worktree_status` weiter; `gix` liest es in jedem
+    /// Arbeitsfaden vor jedem Eintrag und im Verzeichnisdurchlauf, und der
+    /// Rueckruf des Vergleichs von Kopf-Baum und Index antwortet `Break`,
+    /// sobald es gesetzt ist. Bis dahin las KRK es allein zwischen zwei Posten
+    /// des Statusstroms von `Platform::into_iter`, und das griff nicht, solange
+    /// `gix` an einer Datei hing: der Strom fragte ein eigenes Kennzeichen, das
+    /// KRK nie setzte, und ein Erzeuger, der eine ausgelagerte Datei
+    /// herunterlud, lieferte keinen Posten, nach dem KRK haette fragen koennen.
+    /// Ein Messlauf auf einem Cloudlaufwerk stand so ueber zehn Minuten. Das
+    /// Hashen einer grossen **lokalen** Datei bleibt innerhalb der Datei
+    /// ununterbrochen; `gix` reicht seinem Hasher kein Kennzeichen hinein.
     ///
     /// Ein Abbruch liefert `None` und keine halbe Liste: die halbe waere von
     /// „diese Eintraege sind unveraendert" nicht zu unterscheiden.
     #[must_use = "die Marken sind der Befund, den das Ordnermodell nachtraegt"]
     pub fn marken(&self, ordner: &Path, abbruch: &AtomicBool) -> Option<Vec<(String, Marke)>> {
+        self.marken_mit(ordner, abbruch, &|_, angaben| {
+            crate::verzeichnis::ist_platzhalter(angaben)
+        })
+    }
+
+    /// Dasselbe wie [`Gitleser::marken`], mit austauschbarer Platzhalterfrage.
+    ///
+    /// **Der Betrieb ruft [`Gitleser::marken`] und nie diese Funktion.** Die
+    /// Frage ist allein fuer die Proben austauschbar: ein echter Platzhalter
+    /// laesst sich ohne File-Provider-Domaene nicht herstellen, und die Proben
+    /// in `tests/git.rs` reichen deshalb eine Frage herein, die nach dem
+    /// Dateinamen antwortet. Oeffentlich ist sie, weil diese Proben ausserhalb
+    /// der Kiste liegen.
+    ///
+    /// `ist_platzhalter` bekommt den absoluten Pfad einer verfolgten Datei und
+    /// ihre Angaben aus `lstat`, und zwar allein fuer Dateien, deren
+    /// stat-Angaben vom Index abweichen oder deren Eintrag racy ist; fuer alle
+    /// anderen fragt `gix` den Vergleich gar nicht. Sie wird aus mehreren
+    /// Arbeitsfaeden zugleich gerufen und ist deshalb `Sync`.
+    #[must_use = "die Marken sind der Befund, den das Ordnermodell nachtraegt"]
+    pub fn marken_mit(
+        &self,
+        ordner: &Path,
+        abbruch: &AtomicBool,
+        ist_platzhalter: &(dyn Fn(&Path, &Metadata) -> bool + Sync),
+    ) -> Option<Vec<(String, Marke)>> {
         let Some(arbeitsbaum) = self.repo.workdir() else {
             return Some(Vec::new());
         };
@@ -380,38 +495,237 @@ impl Gitleser {
             vec![BString::from(praefix.clone())]
         };
 
-        let strom = self
+        // Die Reihenfolge ist die des Zweigs ohne `parallel` in
+        // `Platform::into_iter` (`gix-0.87.1/src/status/iter/mod.rs`): erst
+        // Kopf-Baum gegen Index, dann Index gegen Arbeitskopie.
+        let gehalten = self.repo.index_or_empty().ok()?;
+        let index: &gix::index::State = &gehalten;
+        let baum = self.repo.head_tree_id_or_empty().ok()?;
+        let mut pfadmuster = self
             .repo
-            .status(gix::progress::Discard)
-            .ok()?
-            .untracked_files(gix::status::UntrackedFiles::Files)
-            .index_worktree_submodules(gix::status::Submodule::Given {
-                ignore: gix::submodule::config::Ignore::All,
-                check_dirty: false,
-            })
-            .into_iter(muster)
+            .pathspec(
+                false,
+                &muster,
+                true,
+                index,
+                gix::worktree::stack::state::attributes::Source::WorktreeThenIdMapping,
+            )
             .ok()?;
 
         let mut gefunden: Vec<(String, Marke)> = Vec::new();
-        for posten in strom {
-            // Die Abbruchgrenze dieser Auskunft: ein Ordner traegt beliebig
-            // viele Posten, und ohne diese Zeile liest ein aufgegebener Lauf
-            // sie alle.
-            if abbruch.load(Ordering::Relaxed) {
-                return None;
-            }
-            let posten = posten.ok()?;
-            let Some((pfad, marke)) = posten_deuten(&posten) else {
-                continue;
-            };
-            let Some(name) = eintragsname(pfad.as_ref(), &praefix) else {
-                continue;
-            };
-            eintragen(&mut gefunden, name, marke);
+        self.repo
+            .tree_index_status(
+                &baum,
+                index,
+                Some(&mut pfadmuster),
+                gix::status::tree_index::TrackRenames::AsConfigured,
+                |aenderung, _, _| {
+                    let aenderung = aenderung.into_owned();
+                    let marke = indexaenderung_deuten(&aenderung);
+                    if let Some(name) =
+                        eintragsname(pfad_der_indexaenderung(&aenderung).as_ref(), &praefix)
+                    {
+                        eintragen(&mut gefunden, name, marke);
+                    }
+                    let weiter = if abbruch.load(Ordering::Relaxed) {
+                        ControlFlow::Break(())
+                    } else {
+                        ControlFlow::Continue(())
+                    };
+                    Ok::<_, std::convert::Infallible>(weiter)
+                },
+            )
+            .ok()?;
+        if abbruch.load(Ordering::Relaxed) {
+            return None;
         }
-        Some(gefunden)
+
+        let mut stat = self.repo.stat_options().ok()?;
+        stat.trust_ctime = false;
+        let vergleich = Inhaltsvergleich {
+            index,
+            arbeitsbaum,
+            stat,
+            ist_platzhalter,
+        };
+        let unterbau = gix::status::index_worktree::BuiltinSubmoduleStatus::new(
+            self.repo.clone().into_sync(),
+            gix::status::Submodule::Given {
+                ignore: gix::submodule::config::Ignore::All,
+                check_dirty: false,
+            },
+        )
+        .ok()?;
+        let durchlauf = self
+            .repo
+            .dirwalk_options()
+            .ok()?
+            .emit_untracked(gix::dir::walk::EmissionMode::Matching);
+        let mut sammler = Sammler {
+            praefix: &praefix,
+            gefunden,
+        };
+        self.repo
+            .index_worktree_status(
+                index,
+                &muster,
+                &mut sammler,
+                vergleich,
+                unterbau,
+                &mut gix::progress::Discard,
+                abbruch,
+                gix::status::index_worktree::Options {
+                    sorting: None,
+                    dirwalk_options: Some(durchlauf),
+                    rewrites: None,
+                    thread_limit: None,
+                },
+            )
+            .ok()?;
+
+        // `gix` darf nach einem Abbruch mit `Ok` und einer halben Liste
+        // zurueckkehren; die halbe waere von „unveraendert" nicht zu
+        // unterscheiden.
+        if abbruch.load(Ordering::Relaxed) {
+            return None;
+        }
+        Some(sammler.gefunden)
     }
 }
+
+/// Was der [`Inhaltsvergleich`] ueber eine Datei sagt, deren stat-Angaben vom
+/// Index abweichen.
+///
+/// Kein Befund, also `None` aus dem Vergleich, heisst „unveraendert". Die zwei
+/// Werte trennen, was KRK weiss, von dem, was es nicht weiss.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Befund {
+    /// Der Inhalt weicht ab: gelesen und verglichen bei einer lokalen Datei,
+    /// an der Groesse erkannt bei einer ausgelagerten.
+    Geaendert,
+    /// Die Datei liegt nur in der Cloud, und ohne ihren Inhalt laesst sich
+    /// nicht sagen, ob sie geaendert ist. Daraus wird [`Marke::Unbekannt`].
+    Ungelesen,
+}
+
+/// Der Inhaltsvergleich, den KRK `gix` statt `FastEq` reicht.
+///
+/// `gix` ruft ihn allein fuer Eintraege, deren stat-Angaben abweichen oder die
+/// racy sind (`compute_status` in `gix-status-0.34.1`), und er ist die eine
+/// Stelle, an der `gix` sonst den Inhalt lesen wuerde. Fuer eine lokale Datei
+/// tut er Byte fuer Byte dasselbe wie `FastEq`; fuer eine ausgelagerte faellt
+/// er das Urteil aus den stat-Angaben allein und ruehrt `ReadData` nicht an.
+/// Das Bild dazu steht im Modulkopf.
+#[derive(Clone)]
+struct Inhaltsvergleich<'a> {
+    /// Der Index, aus dem `gix` die Eintraege nimmt; er liefert den Pfad eines
+    /// Eintrags und den Zeitstempel fuer die Racy-Pruefung.
+    index: &'a gix::index::State,
+    /// Der Arbeitsbaum, unter dem der Pfad eines Eintrags liegt.
+    arbeitsbaum: &'a Path,
+    /// Die stat-Optionen des Repositorys, mit `trust_ctime` auf `false`: das
+    /// Auslagern hebt ctime, ohne den Inhalt zu aendern.
+    stat: gix::index::entry::stat::Options,
+    /// Ob die Datei nur in der Cloud liegt.
+    ist_platzhalter: &'a (dyn Fn(&Path, &Metadata) -> bool + Sync),
+}
+
+impl CompareBlobs for Inhaltsvergleich<'_> {
+    type Output = Befund;
+
+    fn compare_blobs<'a, 'b>(
+        &mut self,
+        entry: &gix::index::Entry,
+        worktree_blob_size: u64,
+        data: impl ReadData<'a>,
+        buf: &mut Vec<u8>,
+    ) -> Result<Option<Befund>, gix::status::plumbing::index_as_worktree::Error> {
+        let pfad = self
+            .arbeitsbaum
+            .join(gix::path::from_bstr(entry.path(self.index)));
+        // Ein zweites `lstat` je Eintrag, und nur fuer Eintraege, deren stat
+        // abweicht. `lstat` laedt nichts herunter.
+        let Ok(angaben) = std::fs::symlink_metadata(&pfad) else {
+            return Ok(Some(Befund::Ungelesen));
+        };
+        if !(self.ist_platzhalter)(&pfad, &angaben) {
+            return FastEq
+                .compare_blobs(entry, worktree_blob_size, data, buf)
+                .map(|befund| befund.map(|()| Befund::Geaendert));
+        }
+        Ok(ausgelagert_deuten(
+            entry,
+            worktree_blob_size,
+            &pfad,
+            self.stat,
+            self.index,
+        ))
+    }
+}
+
+/// Das Urteil ueber eine ausgelagerte Datei, aus ihren stat-Angaben allein.
+///
+/// Drei Ausgaenge in dieser Reihenfolge (Entscheid E-Stat, Moeglichkeit 2):
+/// weicht die Groesse ab, ist sie geaendert, nach derselben Regel, die `FastEq`
+/// ohne zu lesen anwendet; passen die stat-Angaben ohne ctime und ist der
+/// Eintrag nicht racy, gilt sie als unveraendert; sonst ist sie ungelesen.
+/// Die Pruefung nimmt `gix`s eigene `Stat::matches` und `Stat::is_racy`, damit
+/// keine zweite stat-Logik neben der Kiste entsteht. Dafuer holt sie die
+/// Angaben ein drittes Mal ueber `lstat`, in der Form, die `gix` liest; das
+/// kostet einen Aufruf je ausgelagerter Datei und laedt nichts.
+fn ausgelagert_deuten(
+    eintrag: &gix::index::Entry,
+    groesse: u64,
+    pfad: &Path,
+    optionen: gix::index::entry::stat::Options,
+    index: &gix::index::State,
+) -> Option<Befund> {
+    if u64::from(eintrag.stat.size) != groesse
+        && (eintrag.id.is_empty_blob() || eintrag.stat.size != 0)
+    {
+        return Some(Befund::Geaendert);
+    }
+    let Ok(angaben) = gix::index::fs::Metadata::from_path_no_follow(pfad) else {
+        return Some(Befund::Ungelesen);
+    };
+    let Ok(jetzt) = gix::index::entry::Stat::from_fs(&angaben) else {
+        return Some(Befund::Ungelesen);
+    };
+    if jetzt.matches(&eintrag.stat, optionen) && !jetzt.is_racy(index.timestamp(), optionen) {
+        None
+    } else {
+        Some(Befund::Ungelesen)
+    }
+}
+
+/// Nimmt die Eintraege von Index gegen Arbeitskopie entgegen und traegt sie
+/// unter dem Namen im angezeigten Ordner ein.
+struct Sammler<'p> {
+    /// Der angezeigte Ordner, repositoryrelativ; siehe [`eintragsname`].
+    praefix: &'p [u8],
+    /// Die Marken, wie [`eintragen`] sie fuehrt; der Vergleich von Kopf-Baum
+    /// und Index hat sie schon begonnen.
+    gefunden: Vec<(String, Marke)>,
+}
+
+impl<'i> VisitEntry<'i> for Sammler<'_> {
+    type ContentChange = Befund;
+    type SubmoduleStatus = gix::submodule::Status;
+
+    fn visit_entry(&mut self, eintrag: Arbeitskopieposten<'i>) {
+        let Some((pfad, marke)) = posten_deuten(&eintrag) else {
+            return;
+        };
+        let Some(name) = eintragsname(pfad, self.praefix) else {
+            return;
+        };
+        eintragen(&mut self.gefunden, name, marke);
+    }
+}
+
+/// Ein Eintrag aus dem Vergleich von Index und Arbeitskopie, wie
+/// [`Sammler`] ihn bekommt.
+type Arbeitskopieposten<'i> = Entry<'i, Befund, gix::submodule::Status>;
 
 /// Traegt `name` mit `marke` ein, ohne eine hoeherrangige Marke zu verdraengen.
 ///
@@ -475,70 +789,92 @@ fn eintragsname(rela_path: &BStr, praefix: &[u8]) -> Option<String> {
     Some(String::from_utf8_lossy(name).into_owned())
 }
 
-/// Welche Marke ein Posten des Statusstroms traegt, und zu welchem Pfad.
+/// Welche Marke eine Aenderung zwischen Kopf-Baum und Index traegt.
 ///
-/// Die Fallunterscheidung ist vollstaendig ueber beide Haelften des Stroms:
-/// `TreeIndex` vergleicht den Kopf-Baum mit dem Index und liefert damit das
-/// **Vorgemerkte**, `IndexWorktree` vergleicht den Index mit der Arbeitskopie
-/// und liefert das **Geaenderte**, das **Neue** und den **Konflikt**. Die
-/// Umbenennung kommt aus beiden.
+/// Diese Haelfte liefert das **Vorgemerkte** und die Umbenennung im Index; die
+/// Fallunterscheidung ist vollstaendig und ohne Auffangzweig.
+fn indexaenderung_deuten(aenderung: &gix::diff::index::Change) -> Marke {
+    match aenderung {
+        gix::diff::index::Change::Rewrite { .. } => Marke::Umbenannt,
+        gix::diff::index::Change::Addition { .. }
+        | gix::diff::index::Change::Deletion { .. }
+        | gix::diff::index::Change::Modification { .. } => Marke::Vorgemerkt,
+    }
+}
+
+/// Welche Marke ein Eintrag aus dem Vergleich von Index und Arbeitskopie
+/// traegt, und zu welchem Pfad.
 ///
-/// `None` heisst „dieser Posten traegt keine Marke". Drei Faelle fallen
+/// Diese Haelfte liefert das **Geaenderte**, das **Unbekannte**, das **Neue**
+/// und den **Konflikt**, dazu die Umbenennung aus dem Verzeichnisdurchlauf. Die
+/// Fallunterscheidung ist vollstaendig ueber `Entry`, `EntryStatus`, `Change`
+/// und [`Befund`] und hat keinen Auffangzweig.
+///
+/// **[`Marke::Unbekannt`] steht genau dort, wo der Inhalt ungelesen blieb und
+/// sonst nichts bekannt ist.** Eine geaenderte Ausfuehrbarkeit ist eine
+/// bekannte Aenderung, auch wenn der Inhalt ungelesen blieb, und bleibt „M".
+///
+/// `None` heisst „dieser Eintrag traegt keine Marke". Drei Faelle fallen
 /// darunter, und jeder aus einem eigenen Grund:
 ///
 /// - **`EntryStatus::NeedsUpdate`**: der Eintrag hat sich nicht geaendert, nur
-///   sein Stat-Zwischenspeicher waere aufzufrischen. **Dieser Zweig loest
-///   nicht aus, und er steht trotzdem hier.** `gix` 0.87.1 faengt einen solchen
-///   Posten in seinem eigenen Statusiterator ab, legt ihn in `Iter::index_changes`
-///   und liefert `None` an den Rufer weiter
-///   (`gix-0.87.1/src/status/iter/mod.rs`, `Iter::maybe_keep_index_change`); er
-///   kommt hier also gar nicht erst an. Verworfen wird er dadurch, dass KRK
-///   `Outcome::write_changes` nicht ruft, und durch nichts sonst (E8). Der
-///   Zweig haelt allein die Fallunterscheidung vollstaendig, falls eine
-///   spaetere `gix`-Fassung den Posten wieder durchreicht — ohne ihn faellt ein
-///   neuer `EntryStatus`-Wert still durch, statt den Bau anzuhalten. Gemessen
-///   am 260831
-///   (`circles/260830-1045-git-bereich-liest-status-branch-verlauf/issues/260831-0855_*_der-zweig-fuer-needsupdate-in-posten-deuten-ist-unerreichbar-gix-faengt-den-posten-vorher-ab.md`).
+///   sein Stat-Zwischenspeicher waere aufzufrischen. **Seit dem 261026 erreicht
+///   der Posten KRK**: bis dahin fing ihn der Statusiterator von `gix` ab
+///   (`Iter::maybe_keep_index_change` in `gix-0.87.1/src/status/iter/mod.rs`,
+///   gemessen am 260831 in
+///   `circles/260830-1045-git-bereich-liest-status-branch-verlauf/issues/260831-0855_*_der-zweig-fuer-needsupdate-in-posten-deuten-ist-unerreichbar-gix-faengt-den-posten-vorher-ab.md`),
+///   und der Weg ueber `Repository::index_worktree_status` kennt diesen Filter
+///   nicht. Er bleibt ohne Marke, und zurueckgeschrieben wird weiter nichts:
+///   der Weg liefert ein anderes `Outcome`, an dem es `write_changes` gar
+///   nicht gibt (E8). Eine ausgelagerte Datei, deren stat ohne ctime passt,
+///   kommt ebenfalls hier an.
 /// - **`Status::Ignored` und `Status::Pruned`** aus dem Verzeichnisdurchlauf:
 ///   ein ignorierter Eintrag ist kein neuer.
 /// - **`Status::Tracked`**: der Durchlauf hat einen Eintrag gefunden, den der
-///   Index schon fuehrt; seine Aenderung meldet die andere Haelfte.
-fn posten_deuten(posten: &gix::status::Item) -> Option<(BString, Marke)> {
-    use gix::status::index_worktree::Item as Arbeitskopie;
-    use gix::status::plumbing::index_as_worktree::EntryStatus;
-
+///   Index schon fuehrt; seine Aenderung meldet der Vergleich der Eintraege.
+fn posten_deuten<'p>(posten: &'p Arbeitskopieposten<'_>) -> Option<(&'p BStr, Marke)> {
     match posten {
-        gix::status::Item::TreeIndex(aenderung) => {
-            let marke = match aenderung {
-                gix::diff::index::Change::Rewrite { .. } => Marke::Umbenannt,
-                gix::diff::index::Change::Addition { .. }
-                | gix::diff::index::Change::Deletion { .. }
-                | gix::diff::index::Change::Modification { .. } => Marke::Vorgemerkt,
-            };
-            Some((pfad_der_indexaenderung(aenderung), marke))
-        }
-        gix::status::Item::IndexWorktree(Arbeitskopie::Modification {
+        Entry::Modification {
             rela_path, status, ..
-        }) => {
+        } => {
             let marke = match status {
                 EntryStatus::Conflict { .. } => Marke::Konflikt,
-                EntryStatus::Change(_) => Marke::Geaendert,
+                EntryStatus::Change(aenderung) => aenderung_deuten(aenderung),
                 EntryStatus::IntentToAdd => Marke::Vorgemerkt,
                 EntryStatus::NeedsUpdate(_) => return None,
             };
-            Some((rela_path.clone(), marke))
+            Some((rela_path, marke))
         }
-        gix::status::Item::IndexWorktree(Arbeitskopie::DirectoryContents { entry, .. }) => {
-            match entry.status {
-                gix::dir::entry::Status::Untracked => Some((entry.rela_path.clone(), Marke::Neu)),
-                gix::dir::entry::Status::Ignored(_)
-                | gix::dir::entry::Status::Pruned
-                | gix::dir::entry::Status::Tracked => None,
-            }
+        Entry::DirectoryContents { entry, .. } => match entry.status {
+            gix::dir::entry::Status::Untracked => Some((entry.rela_path.as_ref(), Marke::Neu)),
+            gix::dir::entry::Status::Ignored(_)
+            | gix::dir::entry::Status::Pruned
+            | gix::dir::entry::Status::Tracked => None,
+        },
+        Entry::Rewrite { dirwalk_entry, .. } => {
+            Some((dirwalk_entry.rela_path.as_ref(), Marke::Umbenannt))
         }
-        gix::status::Item::IndexWorktree(Arbeitskopie::Rewrite { dirwalk_entry, .. }) => {
-            Some((dirwalk_entry.rela_path.clone(), Marke::Umbenannt))
+    }
+}
+
+/// Die Marke einer Aenderung in der Arbeitskopie.
+fn aenderung_deuten(aenderung: &Change<Befund, gix::submodule::Status>) -> Marke {
+    match aenderung {
+        Change::Modification {
+            executable_bit_changed: false,
+            content_change,
+            ..
+        } => match content_change {
+            Some(Befund::Ungelesen) => Marke::Unbekannt,
+            Some(Befund::Geaendert) | None => Marke::Geaendert,
+        },
+        Change::Modification {
+            executable_bit_changed: true,
+            ..
         }
+        | Change::Removed
+        | Change::Type { .. }
+        | Change::SubmoduleModification(_) => Marke::Geaendert,
     }
 }
 

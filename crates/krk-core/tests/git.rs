@@ -32,7 +32,8 @@ mod gemeinsam;
 
 use std::path::Path;
 use std::process::Command;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use gemeinsam::{Pruefordner, aufrufstellen, kind_mit_deskriptorgrenze, kindauftrag};
 use krk_core::git::lauf::{Gitfrage, Gitlauf, Gitmeldung, VERLAUFSSCHRITT};
@@ -890,6 +891,333 @@ fn ein_nicht_zu_oeffnendes_repository_bleibt_unentschieden() {
         "ein gefundenes, nicht zu oeffnendes Repository liefert {antwort:?}; \
          „kein Repository\" waere eine entschiedene Verneinung ueber einen Ordner, \
          der eines traegt"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// Eine Datei, die nur in der Cloud liegt
+// ---------------------------------------------------------------------------
+//
+// Ein echter Platzhalter (`SF_DATALESS`) laesst sich ohne File-Provider-Domaene
+// in keiner Probe herstellen. Die Proben halten deshalb den Weg vom Kennzeichen
+// zur Marke mit eingespritzter Frage: [`wolke_ist_platzhalter`] sagt ja fuer
+// jeden Dateinamen, der `wolke` enthaelt. Die Deutung des Kennzeichens selbst
+// haelt die Probe an `verzeichnis::ist_platzhalter`.
+//
+// **`chmod 000` macht jedes Lesen sichtbar**: es wuerde scheitern, und ein
+// Fehlschlag fuehrt den Markenlauf zu `None`. Ein `Some(…)` belegt damit, dass
+// nichts gelesen wurde. Jede Probe haelt die Sperre ueber
+// `rechtesperre_haelt_oder_abbruch`, damit ein Lauf als root nicht gruen
+// misst, was er nicht messen kann.
+
+/// Die Platzhalterfrage der Proben: ja fuer jeden Dateinamen mit `wolke`.
+fn wolke_ist_platzhalter(pfad: &Path, _angaben: &std::fs::Metadata) -> bool {
+    pfad.file_name()
+        .is_some_and(|name| name.to_string_lossy().contains("wolke"))
+}
+
+/// Die Marken eines Ordners unter der Platzhalterfrage der Proben, sortiert.
+fn wolkenmarken(leser: &Gitleser, ordner: &Path) -> Option<Vec<(String, Marke)>> {
+    let mut gefunden = leser.marken_mit(ordner, &LAEUFT, &wolke_ist_platzhalter)?;
+    gefunden.sort_by(|links, rechts| links.0.cmp(&rechts.0));
+    Some(gefunden)
+}
+
+/// Setzt die mtime von `pfad` zehn Sekunden zurueck.
+///
+/// Vor dem `git add` gerufen, haelt das den Eintrag aus der Racy-Pruefung: der
+/// Zeitstempel des Index liegt dann sicher nach der mtime der Datei, und `gix`
+/// fragt den Vergleich allein wegen der Aenderung, die die Probe herstellt.
+fn mtime_zuruecksetzen(pfad: &Path) {
+    let frueher = SystemTime::now() - Duration::from_secs(10);
+    std::fs::File::options()
+        .write(true)
+        .open(pfad)
+        .expect("die Datei laesst sich zum Setzen der Zeit nicht oeffnen")
+        .set_modified(frueher)
+        .expect("die mtime laesst sich nicht setzen");
+}
+
+/// Setzt die mtime von `pfad` auf jetzt, ohne den Inhalt anzufassen.
+fn mtime_auffrischen(pfad: &Path) {
+    std::fs::File::options()
+        .write(true)
+        .open(pfad)
+        .expect("die Datei laesst sich zum Setzen der Zeit nicht oeffnen")
+        .set_modified(SystemTime::now())
+        .expect("die mtime laesst sich nicht setzen");
+}
+
+/// Wartet, bis die Uhr eine Sekunde ueber die ctime von `pfad` hinaus steht.
+///
+/// `gix` vergleicht Zeiten ab Werk ohne Nanosekunden (`gitoxide.core.useNsec`
+/// steht auf `false`). Ein `chmod` in derselben Sekunde wie das `git add`
+/// hinterliesse eine ctime, die zum Index passt; `gix` fragte den Vergleich
+/// dann gar nicht, und die Gegenprobe saehe nichts.
+fn sekunde_nach_ctime_abwarten(pfad: &Path) {
+    use std::os::unix::fs::MetadataExt as _;
+    let ctime = std::fs::symlink_metadata(pfad)
+        .expect("die Datei laesst sich nicht befragen")
+        .ctime();
+    while SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("die Uhr steht vor 1970")
+        .as_secs()
+        <= u64::try_from(ctime).expect("eine ctime vor 1970")
+    {
+        std::thread::sleep(Duration::from_millis(50));
+    }
+}
+
+/// Entzieht jedes Recht an `pfad` und haelt, dass Lesen danach scheitert.
+fn lesen_sperren(pfad: &Path) {
+    use std::os::unix::fs::PermissionsExt as _;
+    std::fs::set_permissions(pfad, std::fs::Permissions::from_mode(0o000))
+        .expect("die Rechte lassen sich nicht entziehen");
+    gemeinsam::rechtesperre_haelt_oder_abbruch(
+        "der Markenlauf liest keine ausgelagerte Datei",
+        std::fs::File::open(pfad).is_err(),
+    );
+}
+
+/// Ein Repository, das die genannten Dateien verfolgt, jede mit einem Eintrag,
+/// der nicht racy ist.
+///
+/// Ein Name mit `/` legt den Ordner davor an. Jede Datei traegt `grund\n`,
+/// sieben Bytes, damit die Proben gleich lang oder anders lang ersetzen
+/// koennen.
+fn verfolgt(zweck: &str, namen: &[&str]) -> Pruefordner {
+    let ordner = repository(zweck);
+    for name in namen {
+        if let Some((vorne, _)) = name.rsplit_once('/') {
+            let _ = ordner.ordner(vorne);
+        }
+        let pfad = ordner.datei(name, "grund!\n");
+        mtime_zuruecksetzen(&pfad);
+    }
+    git(ordner.pfad(), &["add", "-A"]);
+    git(
+        ordner.pfad(),
+        &["commit", "-q", "-m", "der verfolgte Stand"],
+    );
+    ordner
+}
+
+/// (1) Eine ausgelagerte Datei, an der allein ctime gestiegen ist, traegt
+/// keine Marke und wird nicht gelesen (E-Stat, Moeglichkeit 2).
+///
+/// `chmod 000` hebt ctime und laesst mtime und Groesse stehen, genau wie das
+/// Auslagern bei der Messung vom 261026-1208.
+///
+/// **Die Gegenprobe steht voran:** `marken` mit der Frage des Betriebs haelt
+/// die Datei fuer lokal, `gix` will sie lesen und scheitert an der Sperre, und
+/// der Lauf liefert `None`. Ohne sie bestuende die Probe auch dann, wenn `gix`
+/// den Vergleich an dieser Datei gar nicht fragte.
+#[test]
+fn eine_ausgelagerte_datei_mit_allein_neuer_ctime_bleibt_ungelesen_und_ohne_marke() {
+    let ordner = verfolgt("wolke-ctime", &["wolke.txt"]);
+    let pfad = ordner.pfad().to_owned();
+    let datei = ordner.unter("wolke.txt");
+    sekunde_nach_ctime_abwarten(&datei);
+    lesen_sperren(&datei);
+
+    let leser = leser(&pfad);
+    assert_eq!(
+        leser.marken(&pfad, &LAEUFT),
+        None,
+        "Gegenprobe: ohne Platzhalterfrage liest gix die gesperrte Datei nicht; \
+         die Probe belegt nicht, dass der Vergleich ueberhaupt gefragt wird"
+    );
+
+    let gefunden = wolkenmarken(&leser, &pfad)
+        .expect("der Markenlauf hat die ausgelagerte Datei gelesen oder ist gescheitert");
+    assert!(
+        !gefunden.iter().any(|(name, _)| name == "wolke.txt"),
+        "eine ausgelagerte Datei, an der allein ctime gestiegen ist, traegt eine Marke: \
+         {gefunden:?}"
+    );
+}
+
+/// (2) Eine ausgelagerte Datei mit neuem Inhalt gleicher Laenge und neuer
+/// mtime traegt `?` und wird nicht gelesen.
+#[test]
+fn eine_ausgelagerte_datei_gleicher_groesse_mit_neuer_mtime_ist_unbekannt() {
+    let ordner = verfolgt("wolke-gleich", &["wolke.txt"]);
+    let pfad = ordner.pfad().to_owned();
+    let datei = ordner.datei("wolke.txt", "nebel!\n");
+    lesen_sperren(&datei);
+
+    let leser = leser(&pfad);
+    assert_eq!(
+        leser.marken(&pfad, &LAEUFT),
+        None,
+        "Gegenprobe: ohne Platzhalterfrage liest gix die gesperrte Datei nicht"
+    );
+
+    assert_eq!(
+        wolkenmarken(&leser, &pfad),
+        Some(vec![("wolke.txt".to_owned(), Marke::Unbekannt)]),
+        "eine ausgelagerte Datei gleicher Groesse mit neuer mtime traegt nicht „unbekannt\""
+    );
+}
+
+/// (3) Eine ausgelagerte Datei anderer Laenge traegt `M`, ohne gelesen zu
+/// werden.
+///
+/// **Die Gegenprobe steht voran:** `FastEq` urteilt ueber dieselbe gesperrte
+/// Datei ebenso „geaendert", ohne zu lesen. Die Groessenregel des
+/// Vergleichs ist also die von `gix` und keine neue Annahme.
+#[test]
+fn eine_ausgelagerte_datei_anderer_groesse_ist_geaendert() {
+    let ordner = verfolgt("wolke-anders", &["wolke.txt"]);
+    let pfad = ordner.pfad().to_owned();
+    let datei = ordner.datei("wolke.txt", "eine laengere Wolke\n");
+    lesen_sperren(&datei);
+
+    let leser = leser(&pfad);
+    assert_eq!(
+        marken_sortiert(&leser, &pfad),
+        vec![("wolke.txt".to_owned(), Marke::Geaendert)],
+        "Gegenprobe: FastEq urteilt an einer Datei anderer Groesse nicht ohne Lesen"
+    );
+
+    assert_eq!(
+        wolkenmarken(&leser, &pfad),
+        Some(vec![("wolke.txt".to_owned(), Marke::Geaendert)]),
+        "eine ausgelagerte Datei anderer Groesse traegt nicht „geaendert\""
+    );
+}
+
+/// (4) Ein Ordner mit einer unbekannten Datei traegt `?`, solange darunter
+/// nichts Gewichtigeres als „vorgemerkt" bekannt ist, und `M`, sobald eine
+/// geaenderte Datei daneben liegt.
+///
+/// **Die Gegenprobe steht jeweils voran:** im Ordner selbst stehen beide
+/// Dateien mit ihrer eigenen Marke. Ohne sie bestuende die Probe auch dann,
+/// wenn eine der beiden gar keine bekaeme.
+#[test]
+fn ein_ordner_mit_einer_unbekannten_datei_traegt_den_hoeheren_rang() {
+    // Neben einer vorgemerkten Datei.
+    let ordner = verfolgt(
+        "wolke-ordner-vorgemerkt",
+        &["unter/wolke.txt", "unter/vorgemerkt.txt"],
+    );
+    let pfad = ordner.pfad().to_owned();
+    let unter = ordner.unter("unter");
+    ordner.datei("unter/vorgemerkt.txt", "vorgemerkt\n");
+    git(&pfad, &["add", "unter/vorgemerkt.txt"]);
+    let datei = ordner.datei("unter/wolke.txt", "nebel!\n");
+    lesen_sperren(&datei);
+
+    let erster = leser(&pfad);
+    assert_eq!(
+        wolkenmarken(&erster, &unter),
+        Some(vec![
+            ("vorgemerkt.txt".to_owned(), Marke::Vorgemerkt),
+            ("wolke.txt".to_owned(), Marke::Unbekannt),
+        ]),
+        "Gegenprobe: im Ordner tragen die zwei Dateien nicht ihre eigenen Marken"
+    );
+    let oben = wolkenmarken(&erster, &pfad).expect("der Markenlauf ist gescheitert");
+    assert!(
+        oben.contains(&("unter".to_owned(), Marke::Unbekannt)),
+        "ein Ordner mit einer unbekannten und einer vorgemerkten Datei traegt nicht „?\": \
+         {oben:?}"
+    );
+
+    // Neben einer geaenderten Datei.
+    let ordner = verfolgt(
+        "wolke-ordner-geaendert",
+        &["unter/wolke.txt", "unter/geaendert.txt"],
+    );
+    let pfad = ordner.pfad().to_owned();
+    let unter = ordner.unter("unter");
+    ordner.datei("unter/geaendert.txt", "geaendert\n");
+    let datei = ordner.datei("unter/wolke.txt", "nebel!\n");
+    lesen_sperren(&datei);
+
+    let zweiter = leser(&pfad);
+    assert_eq!(
+        wolkenmarken(&zweiter, &unter),
+        Some(vec![
+            ("geaendert.txt".to_owned(), Marke::Geaendert),
+            ("wolke.txt".to_owned(), Marke::Unbekannt),
+        ]),
+        "Gegenprobe: im Ordner tragen die zwei Dateien nicht ihre eigenen Marken"
+    );
+    let oben = wolkenmarken(&zweiter, &pfad).expect("der Markenlauf ist gescheitert");
+    assert!(
+        oben.contains(&("unter".to_owned(), Marke::Geaendert)),
+        "ein Ordner mit einer unbekannten und einer geaenderten Datei traegt nicht „M\": \
+         {oben:?}"
+    );
+}
+
+/// (5) Ein Abbruch mitten im Lauf erreicht `gix` selbst: der Lauf liefert
+/// `None`, und der Vergleich wird danach fuer keine weitere Datei gefragt.
+///
+/// Gezaehlt werden Rufe der Platzhalterfrage und nicht Zeit, weil Zeitproben
+/// auf diesem Geraet unzuverlaessig sind. Jede der dreihundert Dateien bekommt
+/// nach dem Commit eine neue mtime, also fragt `gix` den Vergleich fuer jede.
+///
+/// **Die Gegenprobe steht voran:** dieselbe Frage, ohne das Kennzeichen zu
+/// setzen, wird genau dreihundertmal gerufen, und der Lauf liefert `Some`.
+#[test]
+fn ein_abbruch_mitten_im_markenlauf_erreicht_gix() {
+    const ZAHL: usize = 300;
+
+    let namen: Vec<String> = (0..ZAHL)
+        .map(|nummer| format!("datei-{nummer:03}.txt"))
+        .collect();
+    let namen_als_text: Vec<&str> = namen.iter().map(String::as_str).collect();
+    let ordner = verfolgt("markenabbruch-mitten", &namen_als_text);
+    let pfad = ordner.pfad().to_owned();
+    for name in &namen {
+        mtime_auffrischen(&ordner.unter(name));
+    }
+    let leser = leser(&pfad);
+
+    let gezaehlt = |rufe: &AtomicUsize, pfad: &Path| {
+        if pfad
+            .file_name()
+            .is_some_and(|name| name.to_string_lossy().starts_with("datei-"))
+        {
+            rufe.fetch_add(1, Ordering::SeqCst);
+        }
+    };
+
+    let rufe = AtomicUsize::new(0);
+    let laeuft = AtomicBool::new(false);
+    let ohne_abbruch = leser.marken_mit(&pfad, &laeuft, &|pfad, _| {
+        gezaehlt(&rufe, pfad);
+        false
+    });
+    assert!(
+        ohne_abbruch.is_some(),
+        "Gegenprobe: ohne Abbruch bleibt der Markenlauf unentschieden"
+    );
+    assert_eq!(
+        rufe.load(Ordering::SeqCst),
+        ZAHL,
+        "Gegenprobe: gix fragt den Vergleich nicht fuer jede Datei mit neuer mtime"
+    );
+
+    let rufe = AtomicUsize::new(0);
+    let abbruch = AtomicBool::new(false);
+    let mit_abbruch = leser.marken_mit(&pfad, &abbruch, &|pfad, _| {
+        gezaehlt(&rufe, pfad);
+        abbruch.store(true, Ordering::SeqCst);
+        false
+    });
+    assert_eq!(
+        mit_abbruch, None,
+        "ein mitten im Lauf gesetztes Abbruchkennzeichen liefert eine Liste statt `None`"
+    );
+    let gerufen = rufe.load(Ordering::SeqCst);
+    assert!(
+        gerufen < ZAHL,
+        "nach dem Abbruch hat gix den Vergleich fuer alle {gerufen} Dateien gefragt; \
+         das Kennzeichen erreicht gix nicht"
     );
 }
 

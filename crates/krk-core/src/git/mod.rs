@@ -21,9 +21,10 @@
 //! die erste Fundstelle und braeche die eigene Pruefung, wie es der Modulkopf
 //! von `ablage` fuer das Ausgabemakro schon einmal beschreibt. Der Zweig fuer
 //! `EntryStatus::NeedsUpdate` in `leser::posten_deuten` traegt die Zusage
-//! nicht: `gix` haelt einen solchen Posten zurueck, bevor er KRK erreicht, und
-//! der Zweig haelt allein die Fallunterscheidung vollstaendig. Der
-//! Doc-Kommentar jener Funktion schreibt die Messung aus. Ob die Stufe A das
+//! nicht: der Posten erreicht KRK seit dem 261026, weil der Markenlauf nicht
+//! mehr ueber den Statusiterator von `gix` geht, und bleibt ohne Marke;
+//! verworfen wird er allein dadurch, dass nichts ihn zurueckschreibt. Der
+//! Doc-Kommentar jener Funktion schreibt aus, warum. Ob die Stufe A das
 //! Zurueckschreiben bekommen soll, ist eine offene Nutzerfrage
 //! (`shared/decisions/260830-1006_*_darf-stufe-a-den-aufgefrischten-index-zurueckschreiben-oder-zahlt-sie-die-wiederholung.md`);
 //! solange sie offen ist, zahlt jede Abfrage die Auffrischung erneut.
