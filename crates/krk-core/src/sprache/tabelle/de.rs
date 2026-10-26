@@ -1017,6 +1017,11 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "danach trüge die Tabelle {spalten} Spalten, sie zeigt höchstens {hoechstens}; nichts geändert"
         }
         Text::VorschauNichtLesbar => "{pfad} ließ sich nicht lesen: {fehler}",
+        Text::VorschauCloudLaedt => "Liegt nur in der Cloud und wird für die Vorschau geladen.",
+        Text::VorschauCloudZuGross => {
+            "Liegt nur in der Cloud und ist mit {groesse} größer als die {grenze}, die die Vorschau lädt."
+        }
+        Text::VorschauCloudNichtGeladen => "Liegt nur in der Cloud und ließ sich nicht laden.",
         Text::VorschauLeertext => "Kein Inhalt. Die Auswahl im Dateifenster füllt diesen Tab.",
         Text::VorschauBildNichtDarstellbar => {
             "Das Bild aus der Zwischenablage ließ sich nicht darstellen."

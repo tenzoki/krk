@@ -971,6 +971,11 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "the table would then have {spalten} columns, it shows at most {hoechstens}; nothing changed"
         }
         Text::VorschauNichtLesbar => "{pfad} could not be read: {fehler}",
+        Text::VorschauCloudLaedt => "Only in the cloud; loading it for the preview.",
+        Text::VorschauCloudZuGross => {
+            "Only in the cloud, and at {groesse} larger than the {grenze} the preview loads."
+        }
+        Text::VorschauCloudNichtGeladen => "Only in the cloud, and it could not be loaded.",
         Text::VorschauLeertext => "No content. The selection in the file pane fills this tab.",
         Text::VorschauBildNichtDarstellbar => {
             "The image from the clipboard could not be displayed."

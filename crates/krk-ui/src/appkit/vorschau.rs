@@ -341,8 +341,8 @@ use crate::hervorhebung::{
 };
 use crate::markdown::Quellbezug;
 use crate::vorschaumodell::{
-    Archivangaben, Blaetterrichtung, Fernangaben, Groessenangabe, Inhalt, Metadaten, Tabstand,
-    Vorschaumodell, Zwischenablageinhalt, rechte_text,
+    Archivangaben, Blaetterrichtung, Cloudhinweis, Fernangaben, Groessenangabe, Inhalt, Metadaten,
+    Tabstand, Vorschaumodell, Zwischenablageinhalt, rechte_text,
 };
 
 use super::betrachter::{Deutung, Pdfbetrachter, Zoom};
@@ -1548,8 +1548,9 @@ impl Vorschaufenster {
             Inhalt::Metadaten {
                 metadaten,
                 zaehlzeilen,
+                cloud,
             } => {
-                let zeilen = self.metadaten_text(&metadaten, &zaehlzeilen);
+                let zeilen = self.metadaten_text(&metadaten, &zaehlzeilen, cloud);
                 self.text_zeigen(&zeilen);
             }
             Inhalt::Bild { daten, metadaten } => self.bild_zeigen(&daten, metadaten.as_ref()),
@@ -1734,7 +1735,7 @@ impl Vorschaufenster {
         match betrachter.dokument_setzen(daten) {
             Deutung::Gesetzt => self.flaeche_zeigen(Flaeche::Betrachter),
             Deutung::Beschaedigt | Deutung::Gesperrt => {
-                let zeilen = self.metadaten_text(metadaten, &[]);
+                let zeilen = self.metadaten_text(metadaten, &[], None);
                 self.text_zeigen(&zeilen);
             }
         }
@@ -1907,7 +1908,7 @@ impl Vorschaufenster {
             }
             None => match metadaten {
                 Some(metadaten) => {
-                    let zeilen = self.metadaten_text(metadaten, &[]);
+                    let zeilen = self.metadaten_text(metadaten, &[], None);
                     self.text_zeigen(&zeilen);
                 }
                 None => self.text_zeigen(text(Text::VorschauBildNichtDarstellbar)),
@@ -1925,10 +1926,15 @@ impl Vorschaufenster {
     /// [`zeilen_als_text`], dieselbe
     /// Stelle, die auch die Zusammenfassung ruft; eine leere Folge haengt
     /// nichts an, und so bleiben die sechs Zeilen einer Datei, wie sie waren.
+    ///
+    /// **Fuer eine Datei, die nur in der Cloud liegt, folgt eine Zeile mit
+    /// ihrem [`Cloudhinweis`]** ([`Self::cloudzeile`]), durch eine Leerzeile
+    /// abgesetzt; ohne Hinweis haengt auch sie nichts an.
     fn metadaten_text(
         &self,
         metadaten: &Metadaten,
         zaehlzeilen: &[Zusammenfassungszeile],
+        cloud: Option<Cloudhinweis>,
     ) -> String {
         let groesse = self.groesse_text(metadaten.typ, metadaten.groesse);
         let geaendert = self.datum_text(metadaten.geaendert);
@@ -1948,7 +1954,33 @@ impl Vorschaufenster {
                 &[("typ", &typ_beschriften(metadaten.typ))],
             ),
         ];
-        format!("{}{}", zeilen.join("\n"), zeilen_als_text(zaehlzeilen))
+        format!(
+            "{}{}{}",
+            zeilen.join("\n"),
+            zeilen_als_text(zaehlzeilen),
+            self.cloudzeile(metadaten, cloud)
+        )
+    }
+
+    /// Die Zeile unter den Metadaten einer Datei, die nur in der Cloud liegt,
+    /// mit der Leerzeile davor; ohne Hinweis leer.
+    ///
+    /// Die Groessen gehen durch dasselbe [`Self::groesse_text`] wie die Zeile
+    /// „Groesse“ darueber, damit beide Zahlen in derselben Einheit stehen.
+    fn cloudzeile(&self, metadaten: &Metadaten, cloud: Option<Cloudhinweis>) -> String {
+        let zeile = match cloud {
+            None => return String::new(),
+            Some(Cloudhinweis::Laedt) => text(Text::VorschauCloudLaedt).to_owned(),
+            Some(Cloudhinweis::ZuGross { grenze }) => satz(
+                Text::VorschauCloudZuGross,
+                &[
+                    ("groesse", &self.groesse_text(Typ::Datei, metadaten.groesse)),
+                    ("grenze", &self.groesse_text(Typ::Datei, grenze)),
+                ],
+            ),
+            Some(Cloudhinweis::NichtGeladen) => text(Text::VorschauCloudNichtGeladen).to_owned(),
+        };
+        format!("\n\n{zeile}")
     }
 
     /// Die Groessenangabe einer Metadatenzeile.
@@ -2238,6 +2270,7 @@ mod tests {
             Inhalt::Metadaten {
                 metadaten: metadaten(&csv),
                 zaehlzeilen: Vec::new(),
+                cloud: None,
             },
             Inhalt::Zusammenfassung(krk_core::leseprofil::Zusammenfassung::neu(
                 "werkbank".to_owned(),
@@ -2330,6 +2363,7 @@ mod tests {
             Inhalt::Metadaten {
                 metadaten: metadaten(&quelltext),
                 zaehlzeilen: Vec::new(),
+                cloud: None,
             },
             Inhalt::Hinweis("etwas ging nicht".to_owned()),
             bildfolge_mit_einem_foto(),

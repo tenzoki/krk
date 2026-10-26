@@ -1088,6 +1088,15 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "le tableau aurait alors {spalten} colonnes, il en affiche au plus {hoechstens}\u{202f}; rien n’est modifié"
         }
         Text::VorschauNichtLesbar => "{pfad} n’a pas pu être lu\u{a0}: {fehler}",
+        Text::VorschauCloudLaedt => {
+            "Se trouve uniquement dans le cloud et est en cours de chargement pour l’aperçu."
+        }
+        Text::VorschauCloudZuGross => {
+            "Se trouve uniquement dans le cloud et, avec {groesse}, dépasse les {grenze} que l’aperçu charge."
+        }
+        Text::VorschauCloudNichtGeladen => {
+            "Se trouve uniquement dans le cloud et n’a pas pu être chargé."
+        }
         Text::VorschauLeertext => {
             "Aucun contenu. La sélection dans le volet de fichiers remplit cet onglet."
         }

@@ -811,6 +811,20 @@ sagt in der ersten Zeile, dass gekürzt ist. Der Editor zeigt dieselbe Datei
 unverändert, eine Zeile je Datensatz. Dasselbe gilt für eine `.jsonl` in einem
 Archiv, auch in einer `.jsonl.gz`.
 
+**Eine Datei, die auf einem Cloudlaufwerk wie Google Drive oder iCloud Drive
+nur in der Cloud liegt, lädt die Vorschau erst, wenn die Auswahl 0,2 Sekunden
+auf ihr steht.** Bis dahin und während des Ladens zeigt sie die Angaben der
+Datei mit dem Satz, dass sie geladen wird; wer mit den Pfeiltasten über solche
+Dateien hinwegfährt, löst also keinen Download aus. Die Vorschau lädt eine
+Datei zur Zeit und nur bis zu der Größe, die sie zeigen kann: Bilder und PDFs
+bis 64 MB, alles andere bis 1 MB. Eine größere Datei bleibt in der Cloud, und
+die Vorschau sagt es. Die Bildfolge, der Inhaltsfilter mit „Content“ und die
+Zusammenfassung eines Ordners laden nichts herunter: ein Foto, das nur in der
+Cloud liegt, steht in der Bildfolge nach seinem Änderungsdatum, und die
+Statuszeile des Filters nennt, wie viele Dateien nur in der Cloud liegen und
+deshalb nicht durchsucht sind. Lokale Dateien zeigt die Vorschau wie bisher
+sofort.
+
 **Zeigt die Vorschau nichts, ist sie vielleicht ausgeblendet.** Die Vorschau
 und der Editor teilen sich den rechten Rand: steht dort der Editor, ist in der
 Leiste am Fensterfuß „Vorschau“ nicht angekreuzt, und die Auswahl in der

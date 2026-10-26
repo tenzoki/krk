@@ -1567,6 +1567,16 @@ pub enum Text {
     /// `vorschaumodell::laden`: der Eintrag liess sich nicht lesen; `{pfad}`,
     /// `{fehler}`.
     VorschauNichtLesbar,
+    /// `Vorschaufenster::metadaten_text`: die Datei liegt nur in der Cloud,
+    /// und die Vorschau laedt sie gerade (`Cloudhinweis::Laedt`).
+    VorschauCloudLaedt,
+    /// `Vorschaufenster::metadaten_text`: die Datei liegt nur in der Cloud und
+    /// ist groesser als die Grenze ihrer Leseart (`Cloudhinweis::ZuGross`);
+    /// `{groesse}` und `{grenze}` sind fertig formatierte Groessenangaben.
+    VorschauCloudZuGross,
+    /// `Vorschaufenster::metadaten_text`: die Datei liegt nur in der Cloud,
+    /// und das Laden ist gescheitert (`Cloudhinweis::NichtGeladen`).
+    VorschauCloudNichtGeladen,
     /// `Vorschaufenster`: was ein leerer Tab statt einer leeren Flaeche sagt.
     VorschauLeertext,
     /// `Vorschaufenster::bild_zeigen`: `NSImage` liest die Daten der
@@ -1885,7 +1895,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 772] = [
+    pub const ALLE: [Text; 775] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -2537,6 +2547,9 @@ impl Text {
         Text::TrenntextTrennzeichenFest,
         Text::TrenntextZuBreit,
         Text::VorschauNichtLesbar,
+        Text::VorschauCloudLaedt,
+        Text::VorschauCloudZuGross,
+        Text::VorschauCloudNichtGeladen,
         Text::VorschauLeertext,
         Text::VorschauBildNichtDarstellbar,
         Text::MetadatenName,

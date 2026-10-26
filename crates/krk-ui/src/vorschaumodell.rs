@@ -134,8 +134,10 @@
 //! Kennzeichen, dann der Deskriptor nach Typ und Groesse.** Die Huelle fragt
 //! vor dem Oeffnen `stat(2)`, sodass eine Datei ueber der Grenze nicht
 //! geoeffnet wird (und auf einem Cloudlaufwerk nicht heruntergeladen), und
-//! liest danach in Stuecken zu `LESESTUECK`. Die Vorschau ruft sie heute mit
-//! `Platzhalterregel::Laden` und einem `weiter`, das nie nein sagt.
+//! liest danach in Stuecken zu `LESESTUECK`. Die Vorschau ruft sie fuer jede
+//! Datei, auch eine lokale, mit `Platzhalterregel::Laden` und einem `weiter`
+//! an der Abbruchmarke ihres Vorgangs; siehe `# Eine Datei, die nur in der
+//! Cloud liegt`.
 //!
 //! **Die eine Ausnahme ist eine Datei aus JSON-Zeilen**: sie geht ueber
 //! [`krk_core::text::datei::anlesen`], dieselbe Tuer mit einem Deckel statt
@@ -155,7 +157,7 @@
 //! Bis dahin stand ihr Rumpf in dieser Datei, und er stand damit an einer
 //! Stelle, die der Inhaltsfilter der Dateiliste nicht erreicht; der Rumpf ist
 //! unveraendert umgezogen. Die Vorschau uebersetzt jedes
-//! [`Lesehindernis`](krk_core::text::datei::Lesehindernis) in ihre
+//! [`Lesehindernis`] in ihre
 //! Metadatenanzeige — jeder Grund, eine Antwort, siehe [`laden`] — und ist
 //! damit der eine Aufrufer, den die Unterscheidung der Gruende nichts
 //! angeht.
@@ -185,12 +187,76 @@
 //!
 //! [`Vorschaumodell::datei_anzeigen`] kehrt sofort zurueck: das Lesen der
 //! Vorschaudatei laeuft je Anfrage auf einem eigenen Faden, damit L7 nicht auf
-//! Kosten von L1 geht. Der Faden schickt genau eine Meldung ueber einen Kanal
-//! und endet. Der [`Ladevorgang`] wohnt **im Tab**, so wie der `Lesevorgang`
+//! Kosten von L1 geht. Der Faden schickt fuer eine lokale Datei genau eine
+//! Meldung ueber einen Kanal und endet. **Fuer eine Datei, die nur in der
+//! Cloud liegt, kann er zwei schicken**: vorlaeufig die Metadaten mit
+//! [`Cloudhinweis::Laedt`] und danach die endgueltige; nach einem
+//! Auswahlwechsel keine weitere ([`Geladen::vorlaeufig`], und der naechste
+//! Abschnitt). Der [`Ladevorgang`] wohnt **im Tab**, so wie der `Lesevorgang`
 //! aus [`crate::tabs`] im Tabinhalt wohnt: eine neue Anfrage an denselben Tab
 //! laesst den alten Empfaenger fallen, das `send` des ueberholten Fadens
 //! scheitert still, und eine Generationspruefung braucht es nicht. Die
 //! Zwischenablage liegt im Arbeitsspeicher und braucht keinen Faden.
+//!
+//! # Eine Datei, die nur in der Cloud liegt
+//!
+//! Eine Datei mit dem Kennzeichen `SF_DATALESS` laedt jedes Oeffnen herunter.
+//! Die Vorschau der Auswahl laedt sie trotzdem, weil der Nutzer sie sehen will
+//! (Narrativ des Arbeitspakets
+//! `261025-1435-vorschau-laedt-cloud-dateien-verzoegert-einzeln-und-abbrechbar`),
+//! aber erst nach einer Ruhezeit, hoechstens eine zur Zeit und nur unter der
+//! Grenze ihrer Leseart. Wer liest, entscheidet, was geschieht (Entscheid
+//! `261025-1444-welche-leser-duerfen-eine-platzhalterdatei-herunterladen.md`,
+//! Moeglichkeit 1):
+//!
+//! | Wer liest | Was mit einer Platzhalterdatei geschieht |
+//! |---|---|
+//! | die Vorschau der ausgewaehlten Datei, auch das Foto an der Stelle einer Bildfolge | laedt, wenn die Groesse unter der Grenze ihrer Leseart liegt, nach 0,2 s Ruhe, ueber den einen Ladeplatz, abbrechbar bis zum Oeffnen und zwischen zwei Lesestuecken |
+//! | ein Hintergrundleser: Aufnahmedatum der Bildfolge, Inhaltsfilter, Profilwerte einer Zusammenfassung | oeffnet nicht und gilt als ungelesen |
+//! | ein Weg, den der Nutzer ausdruecklich auf eine Datei richtet: Editor, Kopieren, Zippen, Entpacken, Teilen, Oeffnen mit, `secrets.txt` | unveraendert |
+//!
+//! **Das Tor steht in [`laden`] zwischen dem Zweig fuer Ordner und
+//! Verknuepfungen und der [`Leseart`]**, also hinter der Frage nach
+//! `secrets.txt` und vor jedem Oeffnen einer Datei. Gefragt wird die
+//! [`Cloudregel`] des Modells am `lstat(2)`, das `laden` ohnehin stellt:
+//!
+//! ```text
+//! lstat ──> kein SF_DATALESS ──> heutiger Weg, sofort ──────────────> Geliefert
+//!      └──> Groesse ueber Grenze der Leseart ──> Metadaten, ZuGross ──> Geliefert
+//!      └──> vorlaeufig: Metadaten, Laedt
+//!            ──> 200 ms warten ──(Marke gesetzt)──> Verworfen
+//!            ──> Ladeplatz belegen ──(Marke gesetzt)──> Verworfen
+//!            ──> lesen in Stuecken ──(Marke gesetzt)──> Verworfen
+//!                                  └──> Inhalt oder NichtGeladen ──> Geliefert
+//! ```
+//!
+//! Alle Wege enden in `Geliefert` oder `Verworfen`; allein das Lesen haelt
+//! den Ladeplatz ([`cloudladen::Ladeplatz`]), und nur aus ihm heraus laeuft
+//! ein Download. Die Marke ist die [`Abbruchmarke`] des [`Ladevorgang`]s, die
+//! jeder neue Auftrag an denselben Tab setzt, indem er den alten fallen
+//! laesst; die vorlaeufige Meldung laesst den Vorgang stehen
+//! ([`Vorschaumodell::einziehen`]), sodass [`Vorschaumodell::laedt_noch`]
+//! wahr bleibt, bis die endgueltige kommt.
+//!
+//! **„Abbrechen“ heisst: es beginnt keiner mehr, und hoechstens einer laeuft**
+//! (Entscheid
+//! `261025-1444-was-heisst-abbrechen-fuer-einen-download-den-die-vorschau-schon-angestossen-hat.md`,
+//! Moeglichkeit 1). Ein Faden, der schon im `open(2)` oder `read(2)` steht,
+//! gibt den Platz erst frei, wenn dieser Systemaufruf zurueckkehrt; ob der
+//! Provider seinen Abruf dann beendet, liegt nicht bei KRK, und was ein
+//! ueberholter Download noch kostet, begrenzt die Grenze der Leseart.
+//!
+//! **Die Grenze bekommt keine neue Zahl**: es sind [`BILDGRENZE`] fuer Bild
+//! und PDF und [`TEXTGRENZE`] fuer alles andere ([`Leseart::grenze`]), fuer
+//! einen Platzhalter an der Dateigroesse gemessen, auch fuer JSON-Zeilen und
+//! Trenntext, die eine lokale Datei ueber der Grenze anlesen: ein Provider,
+//! der ganze Dateien holt, holte fuer das Anlesen die ganze Datei.
+//!
+//! **Eine lokale Datei wartet nicht.** L7 sagt die Vorschau einer lokalen
+//! Datei in 100 ms im Perzentil zu, und 200 ms Ruhezeit vor jeder Vorschau
+//! braechen sie bei jedem Cursorschritt; auf der lokalen Platte kostet ein
+//! uebersprungenes Lesen auch nichts, was eine Wartezeit sparen koennte. Eine
+//! lokale Datei belegt deshalb auch den Ladeplatz nicht.
 //!
 //! # Die Bildfolge liefert nach
 //!
@@ -240,7 +306,7 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{Receiver, Sender, SyncSender, channel, sync_channel};
 use std::thread;
-use std::time::SystemTime;
+use std::time::{Duration, SystemTime};
 
 use krk_core::archiv::{
     Archivformat, Archivleser, Dateikennung, Fundstelle, Lesefehler, Verzeichnisfehler,
@@ -253,10 +319,11 @@ use krk_core::leseprofil::bildfolge::{Bildverzeichnis, Foto, Kuerzung};
 use krk_core::leseprofil::{Auskunft, Profile, Zusammenfassungszeile, zusammenfassen};
 use krk_core::ort::Archivort;
 use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
-use krk_core::text::datei::{Platzhalterregel, anlesen, bis_zur_grenze_lesen};
+use krk_core::text::datei::{Lesehindernis, Platzhalterregel, anlesen, bis_zur_grenze_lesen};
 use krk_core::trenntext::{self, dialekt_erkennen, vollstaendig_bis};
 use krk_core::verzeichnis::Typ;
 
+use crate::cloudladen::{self, CLOUDVERZOEGERUNG, Ladeplatz};
 use crate::editormodell::Dateityp;
 use crate::hervorhebung::{self, Darstellungsart, Tafel};
 use crate::jsonzeilen;
@@ -513,6 +580,10 @@ pub enum Inhalt {
         metadaten: Metadaten,
         /// Die drei Zeilen des eingebauten Default-Profils, oder keine.
         zaehlzeilen: Vec<Zusammenfassungszeile>,
+        /// Fuer eine Datei, die nur in der Cloud liegt, was die Vorschau mit
+        /// ihr tut oder warum sie sie nicht zeigt; sonst `None`. Siehe den
+        /// Modulkopf unter „Eine Datei, die nur in der Cloud liegt“.
+        cloud: Option<Cloudhinweis>,
     },
     /// Die Zeilen eines Leseprofils fuer einen **erkannten** Ordner (C4 der
     /// Runde 16).
@@ -545,6 +616,29 @@ pub enum Inhalt {
     Bildfolge(Box<Folgeanzeige>),
     /// Ein Satz an den Nutzer: die leere Zwischenablage, ein Lesefehler.
     Hinweis(String),
+}
+
+/// Was die Metadaten einer Datei, die nur in der Cloud liegt (`SF_DATALESS`),
+/// ueber ihr Laden sagen.
+///
+/// Die Ansicht macht daraus eine Zeile unter den sechs Angaben; die Zahlen
+/// reisen als Bytes und werden erst dort formatiert, wie die Groesse der
+/// Metadaten selbst.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Cloudhinweis {
+    /// Die Vorschau laedt die Datei: die Auswahl ruht noch nicht lange
+    /// genug, der Ladeplatz ist belegt, oder der Download laeuft. Eine
+    /// vorlaeufige Meldung; die endgueltige ersetzt sie.
+    Laedt,
+    /// Die Datei ist groesser als die Grenze ihrer Leseart und wird nicht
+    /// geladen; `grenze` in Bytes ([`TEXTGRENZE`] oder [`BILDGRENZE`]).
+    ZuGross {
+        /// Die Grenze der Leseart in Bytes.
+        grenze: u64,
+    },
+    /// Das Laden ist gescheitert: der Provider hat die Datei nicht
+    /// geliefert, oder sie liess sich danach nicht lesen.
+    NichtGeladen,
 }
 
 /// Was eine Bildfolge zeigt: die erhobenen Gruppen, die davon schon
@@ -717,6 +811,11 @@ struct Geladen {
     /// ([`voruebergehend`]); jede andere Lieferung, auch die Angaben nach
     /// einem bleibenden Fehler, darf.
     merkbar: bool,
+    /// Ob eine endgueltige Meldung folgt: wahr allein fuer die Metadaten mit
+    /// [`Cloudhinweis::Laedt`], die der Faden fuer eine Datei, die nur in der
+    /// Cloud liegt, vor dem Laden schickt. Der Tab zeigt sie und behaelt
+    /// seinen [`Ladevorgang`] samt Abbruchmarke ([`Vorschaumodell::einziehen`]).
+    vorlaeufig: bool,
 }
 
 /// Was das Lesen eines Archiveintrags fuer den Tab ergibt
@@ -828,15 +927,24 @@ impl Ladevorgang {
     /// **Der Datumsleser faehrt als Funktionszeiger mit**: im Betrieb ist es
     /// [`krk_core::bild::aufnahmedatum()`], eine Probe reicht einen eigenen
     /// herein ([`Vorschaumodell::datumsleser`]).
+    ///
+    /// **Die [`Cloudregel`] faehrt als Abschrift mit**, ihr Ladeplatz als
+    /// geteilter `Arc`: jeder Faden, den das Modell startet, wartet auf
+    /// denselben einen Platz. Die Abbruchmarke des Vorgangs ist dabei die
+    /// Frage `weiter` des Fadens, an der Wartezeit, am Platz und an jedem
+    /// Lesestueck.
     fn starten(
         pfad: PathBuf,
         tafel: Tafel,
         profile: Arc<Profile>,
         heim: Option<Heimordner>,
         datumsleser: Datumsleserfunktion,
+        cloud: Cloudregel,
     ) -> Self {
-        // Tiefe 1 genuegt: der Faden schickt genau eine erste Meldung, und
-        // was eine Bildfolge nachliefert, geht ueber ihren eigenen Kanal.
+        // Tiefe 1 genuegt: der Faden schickt hoechstens eine vorlaeufige und
+        // eine endgueltige Meldung, die zweite wartet, bis der Takt der
+        // Ansicht die erste abgeholt hat, und was eine Bildfolge nachliefert,
+        // geht ueber ihren eigenen Kanal.
         let (sender, empfaenger) = sync_channel(1);
         let marke = Arc::new(AtomicBool::new(false));
         let fuer_faden = pfad.clone();
@@ -844,7 +952,32 @@ impl Ladevorgang {
         let ergebnis = thread::Builder::new()
             .name("krk-vorschau".to_owned())
             .spawn(move || {
-                let inhalt = laden(&fuer_faden, tafel, &profile, heim.as_ref());
+                let weiter = || !marke_im_faden.load(Ordering::Relaxed);
+                let vorlaeufig = |inhalt| {
+                    // Ein gescheitertes `send` heisst, dass niemand mehr
+                    // zuhoert; das Laden danach fragt die Marke und endet.
+                    let _ = SyncSender::send(
+                        &sender,
+                        Geladen {
+                            inhalt,
+                            nachlieferung: None,
+                            archivname: None,
+                            merkbar: true,
+                            vorlaeufig: true,
+                        },
+                    );
+                };
+                let umstand = Ladeumstand {
+                    regel: &cloud,
+                    weiter: &weiter,
+                    vorlaeufig: &vorlaeufig,
+                };
+                // Ohne Inhalt hat ein Auswahlwechsel das Laden verworfen, und
+                // es gibt nichts zu melden.
+                let Some(inhalt) = laden(&fuer_faden, tafel, &profile, heim.as_ref(), &umstand)
+                else {
+                    return;
+                };
                 let verzeichnis = match &inhalt {
                     Inhalt::Bildfolge(folge) => Some(Arc::clone(&folge.verzeichnis)),
                     Inhalt::Leer
@@ -865,6 +998,7 @@ impl Ladevorgang {
                             nachlieferung: None,
                             archivname: None,
                             merkbar: true,
+                            vorlaeufig: false,
                         },
                     );
                     return;
@@ -877,6 +1011,7 @@ impl Ladevorgang {
                         nachlieferung: Some(nachempfaenger),
                         archivname: None,
                         merkbar: true,
+                        vorlaeufig: false,
                     },
                 );
                 if gesendet.is_ok() {
@@ -928,6 +1063,7 @@ impl Ladevorgang {
                     nachlieferung: None,
                     archivname: ergebnis.archivname,
                     merkbar: ergebnis.merkbar,
+                    vorlaeufig: false,
                 },
             );
         });
@@ -949,6 +1085,61 @@ impl Ladevorgang {
 /// Wie der Faden an ein Aufnahmedatum kommt: ein Funktionszeiger, der den
 /// Faden erreicht und keinen Wert des Rufers leiht.
 type Datumsleserfunktion = fn(&Path) -> Option<Aufnahmezeit>;
+
+/// Ob eine Datei nur in der Cloud liegt, gefragt am Pfad und an seinem
+/// `lstat(2)`. Im Betrieb [`ist_platzhalter_im_betrieb`], das allein die
+/// Angaben liest; eine Probe reicht eine Frage herein, die am Namen
+/// entscheidet, weil sich `SF_DATALESS` ohne File-Provider-Domaene nicht
+/// setzen laesst.
+type Platzhalterfrage = fn(&Path, &std::fs::Metadata) -> bool;
+
+/// Die Platzhalterfrage des Betriebs: das Kennzeichen `SF_DATALESS` in den
+/// Angaben, gedeutet von [`krk_core::verzeichnis::ist_platzhalter`]. Der Pfad
+/// geht nicht ein.
+fn ist_platzhalter_im_betrieb(_pfad: &Path, angaben: &std::fs::Metadata) -> bool {
+    krk_core::verzeichnis::ist_platzhalter(angaben)
+}
+
+/// Wie die Vorschau eine Datei laedt, die nur in der Cloud liegt: der eine
+/// geteilte Ladeplatz, die Ruhezeit davor und die Frage, ob eine Datei ein
+/// Platzhalter ist.
+///
+/// Das Modell haelt einen Wert davon ([`Vorschaumodell::cloud`]) und reicht
+/// je Auftrag eine Abschrift an den Faden; die Abschrift teilt den Platz.
+/// Im Betrieb [`Cloudregel::betrieb`], eine Probe setzt eine eigene, wie den
+/// Datumsleser.
+#[derive(Debug, Clone)]
+struct Cloudregel {
+    /// Der eine Platz, den ein Download der Vorschau belegt.
+    ladeplatz: Arc<Ladeplatz>,
+    /// Wie lange die Auswahl ruhen muss, bevor geladen wird.
+    wartezeit: Duration,
+    /// Ob eine Datei ein Platzhalter ist.
+    ist_platzhalter: Platzhalterfrage,
+}
+
+impl Cloudregel {
+    /// Die Regel des Betriebs: ein neuer Platz, [`CLOUDVERZOEGERUNG`] und das
+    /// Kennzeichen am `lstat(2)`.
+    fn betrieb() -> Self {
+        Self {
+            ladeplatz: Arc::new(Ladeplatz::neu()),
+            wartezeit: CLOUDVERZOEGERUNG,
+            ist_platzhalter: ist_platzhalter_im_betrieb,
+        }
+    }
+}
+
+/// Was [`laden`] neben dem Pfad vom Faden bekommt: die [`Cloudregel`], die
+/// Frage `weiter` an der Abbruchmarke und den Weg fuer die vorlaeufige
+/// Meldung.
+struct Ladeumstand<'a> {
+    regel: &'a Cloudregel,
+    /// Ob niemand abgebrochen hat; nein heisst, die Auswahl ist weiter.
+    weiter: &'a dyn Fn() -> bool,
+    /// Schickt die vorlaeufige Meldung an den Tab ([`Geladen::vorlaeufig`]).
+    vorlaeufig: &'a dyn Fn(Inhalt),
+}
 
 /// Ordnet die Gruppen einer Bildfolge der Reihe nach und schickt jede,
 /// sobald sie geordnet ist.
@@ -1048,7 +1239,7 @@ impl Vorschautab {
     /// Laden des Fotos an der Stelle, sobald seine Gruppe da ist.
     ///
     /// Liefert, ob sich die Anzeige geaendert hat.
-    fn folge_nachziehen(&mut self, datumsleser: Datumsleserfunktion) -> bool {
+    fn folge_nachziehen(&mut self, datumsleser: Datumsleserfunktion, cloud: &Cloudregel) -> bool {
         let (Some(betrieb), Inhalt::Bildfolge(anzeige)) = (self.folge.as_mut(), &mut self.inhalt)
         else {
             return false;
@@ -1079,7 +1270,12 @@ impl Vorschautab {
                         anzeige.bild = geladen.inhalt;
                         geaendert = true;
                     }
-                    betrieb.bildvorgang = None;
+                    // Nach einer vorlaeufigen Meldung laedt das Foto, das nur
+                    // in der Cloud liegt, weiter, und der Vorgang bleibt
+                    // samt seiner Marke stehen.
+                    if !geladen.vorlaeufig {
+                        betrieb.bildvorgang = None;
+                    }
                 }
                 Err(std::sync::mpsc::TryRecvError::Empty) => {}
                 Err(std::sync::mpsc::TryRecvError::Disconnected) => {
@@ -1094,6 +1290,7 @@ impl Vorschautab {
                 Arc::default(),
                 None,
                 datumsleser,
+                cloud.clone(),
             ));
         }
         geaendert
@@ -1102,7 +1299,12 @@ impl Vorschautab {
     /// Blaettert die Bildfolge des Tabs und startet das Laden des Fotos an der
     /// neuen Stelle, wenn seine Gruppe geordnet ist. Liefert, ob sich die
     /// Stelle bewegt hat.
-    fn blaettern(&mut self, richtung: Blaetterrichtung, datumsleser: Datumsleserfunktion) -> bool {
+    fn blaettern(
+        &mut self,
+        richtung: Blaetterrichtung,
+        datumsleser: Datumsleserfunktion,
+        cloud: &Cloudregel,
+    ) -> bool {
         let (Some(betrieb), Inhalt::Bildfolge(anzeige)) = (self.folge.as_mut(), &mut self.inhalt)
         else {
             return false;
@@ -1117,6 +1319,7 @@ impl Vorschautab {
                 Arc::default(),
                 None,
                 datumsleser,
+                cloud.clone(),
             )
         });
         true
@@ -1188,6 +1391,10 @@ pub struct Vorschaumodell {
     /// Wie eine Bildfolge an ihre Aufnahmedaten kommt. Im Betrieb
     /// [`krk_core::bild::aufnahmedatum()`]; eine Probe setzt einen eigenen.
     datumsleser: Datumsleserfunktion,
+    /// Wie eine Datei geladen wird, die nur in der Cloud liegt: der eine
+    /// Ladeplatz, die Ruhezeit und die Platzhalterfrage. Im Betrieb
+    /// [`Cloudregel::betrieb`]; eine Probe setzt eine eigene.
+    cloud: Cloudregel,
 }
 
 impl Default for Vorschaumodell {
@@ -1204,6 +1411,7 @@ impl Vorschaumodell {
             tabs: vec![Vorschautab::leer()],
             aktiv: 0,
             datumsleser: krk_core::bild::aufnahmedatum,
+            cloud: Cloudregel::betrieb(),
         }
     }
 
@@ -1318,12 +1526,15 @@ impl Vorschaumodell {
         }
         tab.titel = titel_von(pfad);
         tab.folge = None;
+        // Der vorige Vorgang faellt hier und setzt seine Marke: ein Faden, der
+        // noch auf die Ruhezeit oder den Ladeplatz wartet, oeffnet nichts.
         tab.ladevorgang = Some(Ladevorgang::starten(
             pfad.to_path_buf(),
             tafel,
             profile,
             heim,
             datumsleser,
+            self.cloud.clone(),
         ));
     }
 
@@ -1387,6 +1598,7 @@ impl Vorschaumodell {
                 Arc::clone(profile),
                 heim.cloned(),
                 self.datumsleser,
+                self.cloud.clone(),
             ));
             auftraege += 1;
         }
@@ -1490,7 +1702,7 @@ impl Vorschaumodell {
     #[must_use = "die Antwort sagt, ob die Ansicht neu zu zeichnen und der Takt anzuwerfen ist"]
     pub fn blaettern(&mut self, richtung: Blaetterrichtung) -> bool {
         let datumsleser = self.datumsleser;
-        self.tabs[self.aktiv].blaettern(richtung, datumsleser)
+        self.tabs[self.aktiv].blaettern(richtung, datumsleser, &self.cloud)
     }
 
     /// Der Pfad des Fotos an der Stelle der Bildfolge des aktiven Tabs,
@@ -1521,7 +1733,13 @@ impl Vorschaumodell {
     pub fn gezeigtes_folgebild(&self) -> Option<PathBuf> {
         match self.aktiver_inhalt() {
             Inhalt::Bildfolge(folge) => match folge.bild() {
-                Inhalt::Hinweis(_) => None,
+                // Ein Foto, das nur in der Cloud liegt und noch laedt, ist
+                // noch nicht gezeigt.
+                Inhalt::Hinweis(_)
+                | Inhalt::Metadaten {
+                    cloud: Some(Cloudhinweis::Laedt),
+                    ..
+                } => None,
                 Inhalt::Leer
                 | Inhalt::Text(_)
                 | Inhalt::Trenntext(_)
@@ -1665,6 +1883,17 @@ impl Vorschaumodell {
             if let Some(vorgang) = tab.ladevorgang.as_mut() {
                 let geladener_pfad = vorgang.pfad.clone();
                 match vorgang.empfaenger.try_recv() {
+                    // Die vorlaeufige Meldung einer Datei, die nur in der
+                    // Cloud liegt: Inhalt und Pfad wechseln, der Vorgang samt
+                    // Marke bleibt, und `laedt_noch` bleibt wahr, bis die
+                    // endgueltige kommt. Ein Archiveintrag schickt keine.
+                    Ok(geladen) if geladen.vorlaeufig => {
+                        tab.inhalt = geladen.inhalt;
+                        tab.pfad = Some(geladener_pfad);
+                        tab.archivname = None;
+                        tab.archivquelle = None;
+                        geaendert = true;
+                    }
                     Ok(geladen) => {
                         let abbruch = vorgang.abbruch.take();
                         tab.folge = geladen.nachlieferung.map(|nachlieferung| Folgebetrieb {
@@ -1700,7 +1929,7 @@ impl Vorschaumodell {
                     }
                 }
             }
-            geaendert |= tab.folge_nachziehen(datumsleser);
+            geaendert |= tab.folge_nachziehen(datumsleser, &self.cloud);
             if geaendert && stelle == self.aktiv {
                 aktiver_geaendert = true;
             }
@@ -1799,6 +2028,12 @@ fn zu_gross_text(groesse: u64) -> String {
 /// ([`geheimnishinweis`]); eine Vorschau, die das Chiffrat liest, um es dann
 /// nicht zu zeigen, haette die Datei schon beruehrt.
 ///
+/// **Eine Datei, die nur in der Cloud liegt, laeuft durch ein Tor**, das
+/// hinter dem Zweig fuer Ordner und Verknuepfungen steht; siehe den Modulkopf
+/// unter „Eine Datei, die nur in der Cloud liegt“. Liefert `None`, wenn die
+/// Frage `weiter` des [`Ladeumstand`]s nein gesagt hat: die Auswahl ist
+/// weiter, und es gibt nichts zu melden.
+///
 /// **Gefragt wird die genaue Erkennung** ([`Heimordner::sonderdatei_genau`]),
 /// dieselbe eine Regel, die der Editor beim Oeffnen und Sichern fragt: fuer
 /// eine Datei namens `secrets.txt` vergleicht sie ueber die zwei Pfadformen
@@ -1806,20 +2041,26 @@ fn zu_gross_text(groesse: u64) -> String {
 /// dritten Schreibweise des Heimordners ungelesen. Das kostet fuer genau
 /// diesen Namen zwei `stat(2)` auf dem Lesefaden der Vorschau, der ohnehin
 /// schon eines stellt, und fuer jeden anderen Namen keinen.
-fn laden(pfad: &Path, tafel: Tafel, profile: &Profile, heim: Option<&Heimordner>) -> Inhalt {
+fn laden(
+    pfad: &Path,
+    tafel: Tafel,
+    profile: &Profile,
+    heim: Option<&Heimordner>,
+    umstand: &Ladeumstand<'_>,
+) -> Option<Inhalt> {
     // `symlink_metadata`, damit eine Verknuepfung als sie selbst erscheint
     // und nicht als ihr Ziel: der Leser aus S2 folgt ihr auch nicht.
     let roh = match std::fs::symlink_metadata(pfad) {
         Ok(roh) => roh,
         Err(fehler) => {
-            return Inhalt::Hinweis(satz(
+            return Some(Inhalt::Hinweis(satz(
                 Text::VorschauNichtLesbar,
                 &[("pfad", &pfad.display()), ("fehler", &fehler)],
-            ));
+            )));
         }
     };
     if heim.and_then(|heim| heim.sonderdatei_genau(pfad)) == Some(Sonderdatei::Geheimnisse) {
-        return Inhalt::Hinweis(geheimnishinweis().to_owned());
+        return Some(Inhalt::Hinweis(geheimnishinweis().to_owned()));
     }
     let metadaten = Metadaten {
         name: titel_von(pfad),
@@ -1847,7 +2088,7 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile, heim: Option<&Heimordner>
         // Angaben allein (C1.7). Welcher Ausgang es ist, entscheidet der Kern
         // und nicht dieser Zweig; deshalb faellt hier nirgends ein Ordner
         // ohne Zaehlzeilen durch, den der Kern zaehlen wollte.
-        return match zusammenfassen(profile, pfad) {
+        return Some(match zusammenfassen(profile, pfad) {
             Some(Auskunft::Erkannt(zusammenfassung)) => Inhalt::Zusammenfassung(zusammenfassung),
             // Die Bildfolge steht mit ihrem Hinweis da; die Gruppen ordnet
             // derselbe Faden danach, siehe den Modulkopf.
@@ -1857,30 +2098,59 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile, heim: Option<&Heimordner>
             Some(Auskunft::Default(zaehlzeilen)) => Inhalt::Metadaten {
                 metadaten,
                 zaehlzeilen,
+                cloud: None,
             },
             // Ordner und Verknuepfungen erscheinen als Metadaten (C6).
             None => Inhalt::Metadaten {
                 metadaten,
                 zaehlzeilen: Vec::new(),
+                cloud: None,
             },
-        };
+        });
     }
-    let auf_die_metadaten = |metadaten| Inhalt::Metadaten {
-        metadaten,
-        zaehlzeilen: Vec::new(),
+    let leseart = Leseart::von(pfad);
+    // Das Tor fuer eine Datei, die nur in der Cloud liegt, siehe den
+    // Modulkopf unter „Eine Datei, die nur in der Cloud liegt“. Eine lokale
+    // Datei geht daran vorbei und nimmt sofort den Weg darunter (L7).
+    let platzhalter = (umstand.regel.ist_platzhalter)(pfad, &roh);
+    let _belegung = if platzhalter {
+        let grenze = leseart.grenze();
+        // Die Groessengrenze der Leseart, an der Dateigroesse gemessen, auch
+        // fuer die zwei anlesenden Wege: ueber ihr wird nichts geoeffnet.
+        if metadaten.groesse > grenze {
+            return Some(Inhalt::Metadaten {
+                metadaten,
+                zaehlzeilen: Vec::new(),
+                cloud: Some(Cloudhinweis::ZuGross { grenze }),
+            });
+        }
+        (umstand.vorlaeufig)(Inhalt::Metadaten {
+            metadaten: metadaten.clone(),
+            zaehlzeilen: Vec::new(),
+            cloud: Some(Cloudhinweis::Laedt),
+        });
+        if !cloudladen::abwarten(umstand.regel.wartezeit, umstand.weiter) {
+            return None;
+        }
+        // Der Waechter haelt den Platz bis zum Ende dieser Funktion, also bis
+        // das Lesen darunter zurueckgekehrt ist, auch ein abgebrochenes.
+        Some(umstand.regel.ladeplatz.belegen(umstand.weiter)?)
+    } else {
+        None
     };
-    match Leseart::von(pfad) {
+    let gelesen = match leseart {
         // Ueber der Bildgrenze wird nicht gelesen, sondern beschrieben;
         // dieselbe Antwort wie beim Text und aus demselben Grund. Jeder der
-        // Gruende von `Lesehindernis` endet in den Metadaten; welcher es war, fragt die
-        // Vorschau nicht.
+        // Gruende von `Lesehindernis` endet in den Metadaten; welcher es war,
+        // fragt die Vorschau allein fuer eine Datei, die nur in der Cloud
+        // liegt.
         Leseart::Bild => {
-            match bis_zur_grenze_lesen(pfad, BILDGRENZE, Platzhalterregel::Laden, &|| true) {
-                Ok(daten) => Inhalt::Bild {
+            match bis_zur_grenze_lesen(pfad, BILDGRENZE, Platzhalterregel::Laden, umstand.weiter) {
+                Ok(daten) => Ok(Inhalt::Bild {
                     daten: Arc::new(daten),
                     metadaten: Some(metadaten),
-                },
-                Err(_) => auf_die_metadaten(metadaten),
+                }),
+                Err(hindernis) => Err((hindernis, metadaten)),
             }
         }
         // Dieselbe Grenze und dieselbe Huelle wie beim Bild, und keine zweite
@@ -1888,46 +2158,55 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile, heim: Option<&Heimordner>
         // nicht gelesen, sondern beschrieben, und unter ihr reisen die Bytes
         // ungedeutet in die Ansicht.
         Leseart::Pdf => {
-            match bis_zur_grenze_lesen(pfad, BILDGRENZE, Platzhalterregel::Laden, &|| true) {
-                Ok(daten) => Inhalt::Pdf {
+            match bis_zur_grenze_lesen(pfad, BILDGRENZE, Platzhalterregel::Laden, umstand.weiter) {
+                Ok(daten) => Ok(Inhalt::Pdf {
                     daten: Arc::new(daten),
                     metadaten,
-                },
-                Err(_) => auf_die_metadaten(metadaten),
+                }),
+                Err(hindernis) => Err((hindernis, metadaten)),
             }
         }
         // Ueber der Grenze angelesen statt abgewiesen, siehe
         // [`jsonzeilen_aus_bytes`]. Nicht lesbar, keine gewoehnliche Datei
         // oder kein UTF-8: dieselbe Antwort wie bei jeder Textdatei.
         Leseart::Jsonzeilen => {
-            match anlesen(pfad, TEXTGRENZE + 1, Platzhalterregel::Laden, &|| true)
-                .ok()
-                .and_then(jsonzeilen_aus_bytes)
-            {
-                Some(text) => Inhalt::Text(text),
-                None => auf_die_metadaten(metadaten),
+            match anlesen(
+                pfad,
+                TEXTGRENZE + 1,
+                Platzhalterregel::Laden,
+                umstand.weiter,
+            ) {
+                Ok(bytes) => Ok(match jsonzeilen_aus_bytes(bytes) {
+                    Some(text) => Inhalt::Text(text),
+                    None => auf_die_metadaten(metadaten),
+                }),
+                Err(hindernis) => Err((hindernis, metadaten)),
             }
         }
         // Eine Textdatei ueber 1 MB faellt auf die Metadaten, siehe den
         // Modulkopf; ebenso eine, die nicht lesbar, keine gewoehnliche Datei
         // oder kein UTF-8 ist, also keine Textdatei im Sinne von C6.
         Leseart::Text => {
-            match bis_zur_grenze_lesen(pfad, TEXTGRENZE, Platzhalterregel::Laden, &|| true)
-                .ok()
-                .and_then(|bytes| String::from_utf8(bytes).ok())
-            {
-                Some(text) => text_als_inhalt(pfad, text, Dateityp::von_pfad(pfad, heim), tafel),
-                None => auf_die_metadaten(metadaten),
+            match bis_zur_grenze_lesen(pfad, TEXTGRENZE, Platzhalterregel::Laden, umstand.weiter) {
+                Ok(bytes) => Ok(match String::from_utf8(bytes) {
+                    Ok(text) => text_als_inhalt(pfad, text, Dateityp::von_pfad(pfad, heim), tafel),
+                    Err(_) => auf_die_metadaten(metadaten),
+                }),
+                Err(hindernis) => Err((hindernis, metadaten)),
             }
         }
         // Angelesen wie JSON-Zeilen, siehe [`trenntext_aus_bytes`]; was dort
         // keine Tabelle und kein Text wird, beschreiben die Metadaten.
         Leseart::Trenntext(art) => {
-            match anlesen(pfad, TEXTGRENZE + 1, Platzhalterregel::Laden, &|| true)
-                .ok()
-                .and_then(|bytes| {
+            match anlesen(
+                pfad,
+                TEXTGRENZE + 1,
+                Platzhalterregel::Laden,
+                umstand.weiter,
+            ) {
+                Ok(bytes) => {
                     let endzeichen = endzeichen_der_datei(pfad, &bytes);
-                    trenntext_aus_bytes(
+                    Ok(trenntext_aus_bytes(
                         bytes,
                         endzeichen,
                         art,
@@ -1935,11 +2214,57 @@ fn laden(pfad: &Path, tafel: Tafel, profile: &Profile, heim: Option<&Heimordner>
                         Dateityp::von_pfad(pfad, heim),
                         tafel,
                     )
-                }) {
-                Some(inhalt) => inhalt,
-                None => auf_die_metadaten(metadaten),
+                    .unwrap_or_else(|| auf_die_metadaten(metadaten)))
+                }
+                Err(hindernis) => Err((hindernis, metadaten)),
             }
         }
+    };
+    match gelesen {
+        Ok(inhalt) => Some(inhalt),
+        // Die Auswahl ist weiter: das Ergebnis wird verworfen, gemeldet wird
+        // nichts.
+        Err((Lesehindernis::Abgebrochen, _)) => None,
+        Err((hindernis, metadaten)) => Some(Inhalt::Metadaten {
+            metadaten,
+            zaehlzeilen: Vec::new(),
+            cloud: platzhalter
+                .then(|| cloudhinweis_nach(hindernis, leseart))
+                .flatten(),
+        }),
+    }
+}
+
+/// Die Metadaten einer Datei ohne Zaehlzeilen und ohne Cloudhinweis: der
+/// Rueckfall jedes Lesewegs fuer eine Datei, deren Bytes keine Anzeige
+/// ergeben.
+fn auf_die_metadaten(metadaten: Metadaten) -> Inhalt {
+    Inhalt::Metadaten {
+        metadaten,
+        zaehlzeilen: Vec::new(),
+        cloud: None,
+    }
+}
+
+/// Was die Metadaten einer Datei, die nur in der Cloud liegt, nach einem
+/// gescheiterten Lesen sagen.
+///
+/// **Vollstaendig und ohne Auffangzweig.** Ueber der Grenze sagt dasselbe wie
+/// das Tor davor (die Datei kann zwischen `lstat` und `stat` gewachsen sein);
+/// keine gewoehnliche Datei ist kein Download, also kein Hinweis; jeder andere
+/// Grund heisst, dass das Laden gescheitert ist. `Abgebrochen` erreicht diese
+/// Stelle nicht, weil [`laden`] es vorher verwirft; es steht der
+/// Vollstaendigkeit halber bei „nicht geladen“.
+fn cloudhinweis_nach(hindernis: Lesehindernis, leseart: Leseart) -> Option<Cloudhinweis> {
+    match hindernis {
+        Lesehindernis::ZuGross => Some(Cloudhinweis::ZuGross {
+            grenze: leseart.grenze(),
+        }),
+        Lesehindernis::KeineDatei => None,
+        Lesehindernis::Deskriptormangel
+        | Lesehindernis::Fehler
+        | Lesehindernis::Platzhalter
+        | Lesehindernis::Abgebrochen => Some(Cloudhinweis::NichtGeladen),
     }
 }
 
@@ -2477,6 +2802,25 @@ mod tests {
 
     use super::*;
     use crate::pruefordner::Pruefordner;
+
+    /// [`super::laden`] fuer die Proben, die eine lokale Datei ohne
+    /// Abbruchmarke lesen: mit der Cloudregel des Betriebs, einem `weiter`,
+    /// das nie nein sagt, und ohne Empfaenger fuer eine vorlaeufige Meldung.
+    ///
+    /// **Ein Schatten mit demselben Namen**, damit die Proben dieses Moduls
+    /// weiter `laden(pfad, tafel, profile, heim)` schreiben; er verdeckt den
+    /// Namen aus `use super::*` allein in diesem Modul. Ohne Abbruch liefert
+    /// `laden` immer einen Inhalt.
+    fn laden(pfad: &Path, tafel: Tafel, profile: &Profile, heim: Option<&Heimordner>) -> Inhalt {
+        let regel = Cloudregel::betrieb();
+        let umstand = Ladeumstand {
+            regel: &regel,
+            weiter: &|| true,
+            vorlaeufig: &|_| {},
+        };
+        super::laden(pfad, tafel, profile, heim, &umstand)
+            .expect("ohne Abbruch liefert laden einen Inhalt")
+    }
 
     /// Fuellt den aktiven Tab ohne Arbeitsfaden.
     fn text_zeigen(modell: &mut Vorschaumodell, text: &str) {
@@ -4312,6 +4656,7 @@ mod tests {
                 ..probenmetadaten()
             },
             zaehlzeilen: Vec::new(),
+            cloud: None,
         }
     }
 
@@ -4332,6 +4677,7 @@ mod tests {
             Arc::default(),
             None,
             krk_core::bild::aufnahmedatum,
+            Cloudregel::betrieb(),
         ));
         let mut modell = Vorschaumodell::neu();
         modell.tabs = vec![
@@ -4520,7 +4866,8 @@ pfad = 'fusion-workbench$'
             !tab_setzen(
                 Inhalt::Metadaten {
                     metadaten: probenmetadaten(),
-                    zaehlzeilen: Vec::new()
+                    zaehlzeilen: Vec::new(),
+                    cloud: None,
                 },
                 Some("/tmp/probe.bin")
             )
@@ -4648,6 +4995,7 @@ kennzeichen = '^\.fusion-setup$'
         let Inhalt::Metadaten {
             metadaten,
             zaehlzeilen,
+            ..
         } = laden(ordner.pfad(), Tafel::Hell, &Profile::default(), None)
         else {
             panic!("ein Ordner ohne Profiltreffer bleibt bei den Metadaten");
@@ -4706,6 +5054,7 @@ kennzeichen = '^\.fusion-setup$'
             let Inhalt::Metadaten {
                 metadaten,
                 zaehlzeilen,
+                ..
             } = laden(pfad, Tafel::Hell, &Profile::default(), None)
             else {
                 panic!("{} gehoert in die Metadatenanzeige", pfad.display());
@@ -5279,5 +5628,269 @@ pfad = 'werkbank'
         )
         .expect("die Folge laesst sich erheben");
         Inhalt::Bildfolge(Box::new(Folgeanzeige::neu(verzeichnis)))
+    }
+
+    // --- Eine Datei, die nur in der Cloud liegt -------------------------------
+    //
+    // Ein echter Platzhalter steht in keiner Probe: `SF_DATALESS` setzt allein
+    // der Kern fuer ein Dateisystem mit File-Provider-Domaene. Die Proben
+    // reichen deshalb eine Platzhalterfrage herein, die am Namensteil `wolke`
+    // entscheidet, eine kurze Wartezeit und einen eigenen Ladeplatz, den sie
+    // zaehlen. Die Zeitabstaende rechnen mit Spielraum (50 ms Wartezeit gegen
+    // 5 ms Abstand), weil eng gezogene Zeitproben hier ausfallen.
+
+    /// Die Platzhalterfrage der Proben: ja fuer jeden Namen mit `wolke`.
+    fn ist_wolke(pfad: &Path, _angaben: &std::fs::Metadata) -> bool {
+        pfad.file_name()
+            .is_some_and(|name| name.to_string_lossy().contains("wolke"))
+    }
+
+    /// Ein Modell mit der Platzhalterfrage der Proben, der genannten
+    /// Wartezeit und einem eigenen Ladeplatz, den die Probe mitbekommt.
+    fn wolkenmodell(wartezeit: Duration) -> (Vorschaumodell, Arc<Ladeplatz>) {
+        let platz = Arc::new(Ladeplatz::neu());
+        let mut modell = Vorschaumodell::neu();
+        modell.cloud = Cloudregel {
+            ladeplatz: Arc::clone(&platz),
+            wartezeit,
+            ist_platzhalter: ist_wolke,
+        };
+        (modell, platz)
+    }
+
+    /// Ob der aktive Tab die Metadaten mit genau diesem Cloudhinweis zeigt.
+    fn zeigt_cloudhinweis(modell: &Vorschaumodell, erwartet: Cloudhinweis) -> bool {
+        matches!(
+            modell.aktiver_inhalt(),
+            Inhalt::Metadaten { cloud: Some(hinweis), .. } if *hinweis == erwartet
+        )
+    }
+
+    /// Zieht ein, bis der aktive Tab die vorlaeufige Meldung zeigt.
+    fn bis_cloudhinweis_laedt(modell: &mut Vorschaumodell) {
+        let beginn = std::time::Instant::now();
+        while !zeigt_cloudhinweis(modell, Cloudhinweis::Laedt) {
+            let _ = modell.einziehen();
+            assert!(
+                beginn.elapsed() < Duration::from_secs(10),
+                "die vorlaeufige Meldung kommt nicht"
+            );
+            std::thread::sleep(Duration::from_millis(1));
+        }
+    }
+
+    /// Zehn Auswahlwechsel im Abstand von 5 ms ueber Dateien, die nur in der
+    /// Cloud liegen: die ersten neun belegen den Ladeplatz nie, die zehnte
+    /// genau einmal, und sie wird gezeigt.
+    #[test]
+    fn schnelles_weiterbewegen_laedt_allein_die_letzte_cloud_datei() {
+        let ordner = Pruefordner::neu("wolke-zehn");
+        let pfade: Vec<PathBuf> = (0..10)
+            .map(|stelle| ordner.datei(&format!("wolke-{stelle}.txt"), format!("inhalt {stelle}")))
+            .collect();
+        let (mut modell, platz) = wolkenmodell(Duration::from_millis(50));
+
+        for pfad in &pfade {
+            modell.datei_anzeigen(pfad, Tafel::Hell, Arc::default(), None);
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        bis_geliefert(&mut modell);
+
+        assert_eq!(
+            *modell.aktiver_inhalt(),
+            Inhalt::Text("inhalt 9".to_owned()),
+            "die zehnte Datei wird gezeigt"
+        );
+        assert_eq!(modell.aktiver_pfad().as_deref(), Some(pfade[9].as_path()));
+        assert_eq!(
+            platz.belegungen(),
+            1,
+            "allein die zehnte Datei hat den Ladeplatz belegt"
+        );
+    }
+
+    /// Haelt die Probe den Platz selbst, waehrend die Auswahl zweimal
+    /// wechselt, bestehen nie zwei Belegungen zugleich, und die ueberholten
+    /// Vorgaenge belegen nach der Freigabe nicht mehr.
+    #[test]
+    fn hoechstens_ein_cloud_download_besteht_zugleich() {
+        let ordner = Pruefordner::neu("wolke-platz");
+        let erste = ordner.datei("wolke-a.txt", "a");
+        let zweite = ordner.datei("wolke-b.txt", "b");
+        let dritte = ordner.datei("wolke-c.txt", "c");
+        let (mut modell, platz) = wolkenmodell(Duration::from_millis(50));
+        let gehalten = platz
+            .belegen(&|| true)
+            .expect("der freie Platz wird belegt");
+
+        // Jede Auswahl ruht laenger als die Wartezeit, ihr Faden steht also
+        // vor dem belegten Platz, wenn die naechste kommt.
+        modell.datei_anzeigen(&erste, Tafel::Hell, Arc::default(), None);
+        std::thread::sleep(Duration::from_millis(120));
+        modell.datei_anzeigen(&zweite, Tafel::Hell, Arc::default(), None);
+        std::thread::sleep(Duration::from_millis(120));
+        modell.datei_anzeigen(&dritte, Tafel::Hell, Arc::default(), None);
+        std::thread::sleep(Duration::from_millis(120));
+        assert!(modell.laedt_noch(), "die dritte wartet auf den Platz");
+        drop(gehalten);
+        bis_geliefert(&mut modell);
+
+        assert_eq!(*modell.aktiver_inhalt(), Inhalt::Text("c".to_owned()));
+        assert_eq!(platz.hoechstens_zugleich(), 1);
+        assert_eq!(
+            platz.belegungen(),
+            2,
+            "belegt haben die Probe und die dritte Datei, keine der ueberholten"
+        );
+    }
+
+    /// Eine Datei, die nur in der Cloud liegt und groesser ist als die Grenze
+    /// ihrer Leseart, ergibt den Hinweis `ZuGross`, ohne zu warten und ohne
+    /// den Platz zu belegen.
+    #[test]
+    fn eine_cloud_datei_ueber_der_grenze_wird_nicht_geladen() {
+        let ordner = Pruefordner::neu("wolke-gross");
+        let gross = usize::try_from(TEXTGRENZE).expect("die Grenze passt") + 1;
+        let pfad = ordner.datei("wolke-gross.txt", vec![b'a'; gross]);
+        let (mut modell, platz) = wolkenmodell(Duration::from_secs(5));
+
+        let beginn = std::time::Instant::now();
+        modell.datei_anzeigen(&pfad, Tafel::Hell, Arc::default(), None);
+        bis_geliefert(&mut modell);
+
+        assert!(
+            beginn.elapsed() < Duration::from_secs(2),
+            "ueber der Grenze wird nicht gewartet: {:?}",
+            beginn.elapsed()
+        );
+        assert!(zeigt_cloudhinweis(
+            &modell,
+            Cloudhinweis::ZuGross { grenze: TEXTGRENZE }
+        ));
+        assert_eq!(platz.belegungen(), 0);
+    }
+
+    /// Vor der endgueltigen Meldung steht der Hinweis `Laedt` im aktiven Tab,
+    /// und `laedt_noch` bleibt wahr, bis der Inhalt kommt.
+    #[test]
+    fn vor_dem_download_steht_der_hinweis_und_das_laden_laeuft_noch() {
+        let ordner = Pruefordner::neu("wolke-hinweis");
+        let pfad = ordner.datei("wolke.txt", "geladen");
+        let (mut modell, platz) = wolkenmodell(Duration::from_millis(50));
+        let gehalten = platz
+            .belegen(&|| true)
+            .expect("der freie Platz wird belegt");
+
+        modell.datei_anzeigen(&pfad, Tafel::Hell, Arc::default(), None);
+        bis_cloudhinweis_laedt(&mut modell);
+        assert!(
+            modell.laedt_noch(),
+            "die vorlaeufige Meldung beendet das Laden nicht"
+        );
+        assert_eq!(modell.aktiver_pfad().as_deref(), Some(pfad.as_path()));
+
+        std::thread::sleep(Duration::from_millis(100));
+        let _ = modell.einziehen();
+        assert!(zeigt_cloudhinweis(&modell, Cloudhinweis::Laedt));
+        assert!(modell.laedt_noch());
+
+        drop(gehalten);
+        bis_geliefert(&mut modell);
+        assert_eq!(*modell.aktiver_inhalt(), Inhalt::Text("geladen".to_owned()));
+    }
+
+    /// Eine lokale Datei belegt den Platz nie und erscheint ohne die
+    /// Wartezeit (L7).
+    #[test]
+    fn eine_lokale_datei_wartet_nicht_und_belegt_den_platz_nie() {
+        let ordner = Pruefordner::neu("wolke-lokal");
+        let pfad = ordner.datei("lokal.txt", "sofort");
+        let (mut modell, platz) = wolkenmodell(Duration::from_secs(5));
+
+        let beginn = std::time::Instant::now();
+        modell.datei_anzeigen(&pfad, Tafel::Hell, Arc::default(), None);
+        bis_geliefert(&mut modell);
+
+        assert!(
+            beginn.elapsed() < Duration::from_secs(2),
+            "die lokale Datei hat gewartet: {:?}",
+            beginn.elapsed()
+        );
+        assert_eq!(*modell.aktiver_inhalt(), Inhalt::Text("sofort".to_owned()));
+        assert_eq!(platz.belegungen(), 0);
+    }
+
+    /// Laesst sich eine Datei, die nur in der Cloud liegt, nicht lesen, sagen
+    /// ihre Metadaten `NichtGeladen`; eine lokale behaelt dieselben Metadaten
+    /// ohne Hinweis.
+    #[test]
+    fn eine_unlesbare_cloud_datei_sagt_nicht_geladen() {
+        use std::os::unix::fs::PermissionsExt as _;
+        let ordner = Pruefordner::neu("wolke-unlesbar");
+        let wolke = ordner.datei("wolke.txt", "geheim");
+        let lokal = ordner.datei("lokal.txt", "geheim");
+        for pfad in [&wolke, &lokal] {
+            std::fs::set_permissions(pfad, std::fs::Permissions::from_mode(0o000))
+                .expect("die Rechte lassen sich nehmen");
+        }
+        let regel = Cloudregel {
+            ladeplatz: Arc::new(Ladeplatz::neu()),
+            wartezeit: Duration::ZERO,
+            ist_platzhalter: ist_wolke,
+        };
+        let umstand = Ladeumstand {
+            regel: &regel,
+            weiter: &|| true,
+            vorlaeufig: &|_| {},
+        };
+        let wie = |pfad: &Path| match super::laden(
+            pfad,
+            Tafel::Hell,
+            &Profile::default(),
+            None,
+            &umstand,
+        ) {
+            Some(Inhalt::Metadaten { cloud, .. }) => cloud,
+            anderes => panic!("eine unlesbare Datei zeigt ihre Metadaten: {anderes:?}"),
+        };
+        assert_eq!(wie(&wolke), Some(Cloudhinweis::NichtGeladen));
+        assert_eq!(wie(&lokal), None);
+        assert_eq!(regel.ladeplatz.belegungen(), 1);
+    }
+
+    /// Ein Abbruch waehrend der Wartezeit endet ohne Inhalt, ohne den Platz
+    /// zu belegen, und die vorlaeufige Meldung ist das Einzige, was der Faden
+    /// geschickt hat.
+    #[test]
+    fn ein_abbruch_in_der_wartezeit_endet_ohne_inhalt_und_ohne_belegung() {
+        let ordner = Pruefordner::neu("wolke-abbruch");
+        let pfad = ordner.datei("wolke.txt", "nie gelesen");
+        let regel = Cloudregel {
+            ladeplatz: Arc::new(Ladeplatz::neu()),
+            wartezeit: Duration::from_secs(5),
+            ist_platzhalter: ist_wolke,
+        };
+        let gemeldet = std::cell::RefCell::new(Vec::new());
+        let umstand = Ladeumstand {
+            regel: &regel,
+            weiter: &|| gemeldet.borrow().is_empty(),
+            vorlaeufig: &|inhalt| gemeldet.borrow_mut().push(inhalt),
+        };
+        let beginn = std::time::Instant::now();
+        assert_eq!(
+            super::laden(&pfad, Tafel::Hell, &Profile::default(), None, &umstand),
+            None
+        );
+        assert!(beginn.elapsed() < Duration::from_secs(2));
+        assert_eq!(regel.ladeplatz.belegungen(), 0);
+        let gemeldet = gemeldet.into_inner();
+        assert_eq!(gemeldet.len(), 1);
+        assert!(matches!(
+            gemeldet[0],
+            Inhalt::Metadaten {
+                cloud: Some(Cloudhinweis::Laedt),
+                ..
+            }
+        ));
     }
 }

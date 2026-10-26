@@ -21,7 +21,10 @@
 //! Sichtbarkeit der sechs Bereiche und ihre Breiten. `tabs` haelt die Tabs eines
 //! Dateifensters samt ihrem Inhalt und der Reihenfolge, in der sie gelesen
 //! werden. `vorschaumodell` haelt die Tabs des Vorschaufensters aus C6 samt
-//! Halteverhalten und dem Lesen der Vorschaudatei auf dem Arbeitsfaden.
+//! Halteverhalten und dem Lesen der Vorschaudatei auf dem Arbeitsfaden;
+//! `cloudladen` haelt daneben den einen Ladeplatz und die abbrechbare
+//! Wartezeit, mit denen dieser Faden eine Datei, die nur in der Cloud liegt,
+//! erst nach einer Ruhezeit und hoechstens eine zur Zeit laedt.
 //! `editormodell` haelt, was der eingebaute Editor der Runde 2 ueber die
 //! geoeffnete Datei weiss: ihren Pfad, ihren Stand, ob der Stand von der Datei
 //! abweicht, die gewaehlte Ansicht und den laufenden Suchlauf. `hervorhebung`
@@ -85,6 +88,7 @@ mod archivregister;
 mod auffrischung;
 mod belegungsausgabe;
 mod belegungsmodell;
+mod cloudladen;
 mod editormodell;
 mod fenstermodell;
 mod fenstertitel;
