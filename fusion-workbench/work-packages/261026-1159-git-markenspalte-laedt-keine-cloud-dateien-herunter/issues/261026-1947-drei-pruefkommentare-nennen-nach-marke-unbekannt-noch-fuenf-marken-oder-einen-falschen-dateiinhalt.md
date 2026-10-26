@@ -16,3 +16,5 @@ Mit `3c065f79` hat `Marke::ALLE` sechs Werte. Drei Kommentare in Proben beschrei
 
 - Die drei Kommentare stimmen mit dem Code überein. Keine Zahl wird behauptet, ohne aus der Liste daneben zu folgen (`rules/critical-stance.md` §5).
 - `cargo test -p krk-core --test git` und `cargo test -p krk-core --lib verzeichnis::modell` grün.
+
+Resolved: 261026. Der Kommentar zu `fuenf_marken` nennt die ersten fünf Werte von `Marke::ALLE`; Überschrift und Doc-Kommentar der C5-Probe nennen die fünf Zustände ohne Platzhalter und verweisen für `Unbekannt` auf den Cloud-Abschnitt; der Kommentar von `verfolgt` nennt den wirklichen Inhalt `grund!\n`.

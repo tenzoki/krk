@@ -549,11 +549,15 @@ fn der_verlauf_steht_nach_der_zeit_und_nicht_nach_dem_graphen() {
 }
 
 // ---------------------------------------------------------------------------
-// C5: die fuenf Markenzustaende
+// C5: die fuenf Markenzustaende ohne Platzhalter
 // ---------------------------------------------------------------------------
+//
+// `Marke::ALLE` fuehrt sechs Werte. Die sechste, `Marke::Unbekannt` („?"),
+// entsteht ohne eingespritzte Platzhalterfrage nicht und wird unter „Eine
+// Datei, die nur in der Cloud liegt" geprueft.
 
-/// C5.3, E11: Die fuenf Zustaende an je einem Eintrag, gegen die erwartete
-/// Zuordnung von Name auf Buchstabe.
+/// C5.3, E11: Die fuenf Zustaende, die ohne Platzhalter entstehen, an je einem
+/// Eintrag, gegen die erwartete Zuordnung von Name auf Buchstabe.
 ///
 /// Ein Repository, fuenf Eintraege, fuenf Marken. Der Konflikt entsteht ueber
 /// eine Zusammenfuehrung zweier Zweige, die dieselbe Zeile verschieden
@@ -983,7 +987,7 @@ fn lesen_sperren(pfad: &Path) {
 /// Ein Repository, das die genannten Dateien verfolgt, jede mit einem Eintrag,
 /// der nicht racy ist.
 ///
-/// Ein Name mit `/` legt den Ordner davor an. Jede Datei traegt `grund\n`,
+/// Ein Name mit `/` legt den Ordner davor an. Jede Datei traegt `grund!\n`,
 /// sieben Bytes, damit die Proben gleich lang oder anders lang ersetzen
 /// koennen.
 fn verfolgt(zweck: &str, namen: &[&str]) -> Pruefordner {

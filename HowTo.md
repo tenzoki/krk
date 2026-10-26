@@ -1147,7 +1147,10 @@ Bereich ausblendet und die Spalte stehen lässt, hat den Statuslauf weiterhin be
 jedem Ordnerwechsel.
 
 **Eine Datei, die auf einem Cloudlaufwerk nur in der Cloud liegt, lädt die
-Markenspalte nicht herunter.** Ob sie geändert ist, liest KRK dann allein an
+Markenspalte nicht herunter, um ihren Inhalt zu vergleichen.** Das gilt nicht
+für die Dateien `.gitignore` und `.gitattributes` des Repositorys: sie liest
+KRK beim Nachsehen weiter, und liegen sie nur in der Cloud, können sie dafür
+heruntergeladen werden. Ob eine ausgelagerte Datei geändert ist, liest KRK dann allein an
 ihren Angaben im Dateisystem ab. Hat sie eine andere Größe als im Index, trägt
 sie `M`. Stimmen Größe, Änderungsdatum und die übrigen Angaben, trägt sie keine
 Marke: eine ausgelagerte Datei, an der seit dem letzten `git status` nichts

@@ -72,12 +72,16 @@
 //!
 //! # Eine Datei, die nur in der Cloud liegt
 //!
-//! **Der Markenlauf oeffnet keine ausgelagerte Datei** (`SF_DATALESS`,
-//! [`crate::verzeichnis::ist_platzhalter`]); so verlangt es der Entscheid
+//! **Der Inhaltsvergleich des Markenlaufs oeffnet keine ausgelagerte
+//! verfolgte Datei** (`SF_DATALESS`, [`crate::verzeichnis::ist_platzhalter`]);
+//! so verlangt es der Entscheid
 //! `261025-1444-welche-leser-duerfen-eine-platzhalterdatei-herunterladen.md`,
 //! Moeglichkeit 1, fuer jeden Hintergrundleser. Bis zum 261026 tat er es: auf
 //! einer Wegwerfkopie auf Google Drive stand ein Lauf ueber zehn Minuten in
-//! `read_data::Stream::read_exact` und lud Datei fuer Datei herunter.
+//! `read_data::Stream::read_exact` und lud Datei fuer Datei herunter. Fuer den
+//! ganzen Lauf gilt der Satz **nicht**: zwei Wege in `gix` lesen Ausschluss-
+//! und Attributdateien des Arbeitsbaums, ohne den Vergleich zu fragen, und
+//! sie stehen unter „Was dabei bleibt".
 //!
 //! **Die eine Stelle, an der `gix` den Inhalt einer verfolgten Datei liest**,
 //! ist `compute_status` in `gix-status-0.34.1/src/index_as_worktree/function.rs`:
@@ -92,7 +96,9 @@
 //!
 //! ```text
 //! gix: lstat, stat weicht ab oder racy
-//!   -> Inhaltsvergleich: SF_DATALESS?
+//!   -> Inhaltsvergleich: eigenes lstat scheitert?
+//!        ja   -> Befund Ungelesen, nichts gelesen                   -> „?"
+//!      sonst SF_DATALESS?
 //!        nein -> FastEq wie bisher: Groesse, sonst lesen und hashen
 //!        ja   -> Groesse weicht ab?
 //!                  ja   -> Befund Geaendert, nichts gelesen        -> „M"
@@ -121,8 +127,30 @@
 //! **Was dabei bleibt.** Der Provider kann eine Datei zwischen dem `lstat` des
 //! Vergleichs und dem Oeffnen durch `FastEq` auslagern; dann wird gelesen und
 //! heruntergeladen, einmal je solchem Wettlauf. Das ist hingenommen wie beim
-//! Vorschaulesen im vorigen Paket. Der Verzeichnisdurchlauf liest daneben die
-//! `.gitignore`-Dateien des Arbeitsbaums und ist darin nicht einstellbar.
+//! Vorschaulesen im vorigen Paket.
+//!
+//! **Zwei Wege in `gix` lesen daneben Dateien des Arbeitsbaums, die
+//! ausgelagert sein koennen, und keiner von beiden fragt den Vergleich:**
+//!
+//! 1. Der Verzeichnisdurchlauf von `index_worktree_status` baut seinen
+//!    Ausschluss-Stapel mit `ignore::Source::WorktreeThenIdMappingIfNotSkipped`
+//!    (`gix-0.87.1/src/status/index_worktree.rs`) und liest die `.gitignore`
+//!    jedes betretenen Ordners ueber `gix_glob::search::add_patterns_file`
+//!    (`gix-worktree-0.56.0/src/stack/state/ignore.rs`).
+//! 2. Weicht das stat einer **lokalen** Datei ab und ist die Groesse gleich,
+//!    hasht `FastEq` sie, und `ReadDataImpl::stream_worktree_file`
+//!    (`gix-status-0.34.1/src/index_as_worktree/function.rs`) ruft vor dem
+//!    Oeffnen `attr_stack.at_entry(…)`. Dieser Stapel steht auf
+//!    `attributes::Source::WorktreeThenIdMapping` und liest die
+//!    `.gitattributes` jedes Ordners auf dem Pfad ueber `add_patterns_file`
+//!    (`gix-worktree-0.56.0/src/stack/state/attributes.rs`).
+//!
+//! `index_worktree_status` setzt beide Quellen fest; einstellbar ist keine
+//! davon. **Ungemessen ist, ob eine ausgelagerte `.gitignore` oder
+//! `.gitattributes` dabei heruntergeladen wird**; aus dem Quelltext folgt nur,
+//! dass `add_patterns_file` die Datei liest, und ein Lesen laedt eine Datei mit
+//! `SF_DATALESS` herunter. Fuer den Entscheid `261025-1444` sind beide Wege
+//! offene Ausnahmen.
 //!
 //! # Ein Fehlschlag beim Oeffnen entscheidet nur in einer Lage
 //!
@@ -422,6 +450,15 @@ impl Gitleser {
     /// Eintraege sind unveraendert" nicht zu unterscheiden, und die zweite
     /// Auskunft waere falsch.
     ///
+    /// **Die eine Ausnahme ist ein Fehlschlag im Inhaltsvergleich, der eine
+    /// einzelne Datei betrifft.** Laesst sich das `lstat`, das der Vergleich
+    /// selbst stellt, nicht ausfuehren — etwa weil die Datei zwischen dem
+    /// `lstat` von `gix` und dem des Vergleichs geloescht wurde —, oder lassen
+    /// sich die Angaben einer ausgelagerten Datei nicht erneut lesen, bekommt
+    /// diese eine Datei [`Marke::Unbekannt`] („?"), auch wenn sie lokal liegt,
+    /// und der Lauf liefert die uebrigen Marken weiter. Das ist kein halber
+    /// Status: „?" behauptet nicht „unveraendert".
+    ///
     /// Ein Repository ohne Arbeitsbaum liefert `Some(Vec::new())`: dort gibt es
     /// keine Arbeitskopie, deren Zustand eine Marke haette, und das ist eine
     /// entschiedene Antwort.
@@ -603,8 +640,12 @@ enum Befund {
     /// Der Inhalt weicht ab: gelesen und verglichen bei einer lokalen Datei,
     /// an der Groesse erkannt bei einer ausgelagerten.
     Geaendert,
-    /// Die Datei liegt nur in der Cloud, und ohne ihren Inhalt laesst sich
-    /// nicht sagen, ob sie geaendert ist. Daraus wird [`Marke::Unbekannt`].
+    /// Ob die Datei geaendert ist, laesst sich ohne ihren Inhalt nicht sagen,
+    /// und gelesen ist er nicht. Zwei Urspruenge fuehren hierher: die Datei
+    /// liegt nur in der Cloud, und ihre stat-Angaben entscheiden nicht; oder
+    /// ihre Angaben liessen sich im Vergleich nicht erneut lesen (das eigene
+    /// `lstat` scheitert, bei einer lokalen Datei ebenso wie bei einer
+    /// ausgelagerten). Daraus wird [`Marke::Unbekannt`].
     Ungelesen,
 }
 

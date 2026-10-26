@@ -124,8 +124,11 @@ pub enum Marke {
     Konflikt,
     /// Der Eintrag ist umbenannt oder kopiert worden.
     Umbenannt,
-    /// Der Inhalt der Datei liegt nur in der Cloud und ist nicht gelesen; was
-    /// ihre stat-Angaben zulassen, ist unveraendert oder geaendert.
+    /// Der Inhalt der Datei ist nicht gelesen, und sie ist unveraendert oder
+    /// geaendert. Meist liegt er nur in der Cloud, und die stat-Angaben
+    /// entscheiden nicht; daneben entsteht die Marke auch fuer eine lokale
+    /// Datei, deren Angaben sich im Inhaltsvergleich nicht erneut lesen
+    /// liessen, etwa weil sie zwischen zwei `lstat` geloescht wurde.
     Unbekannt,
 }
 

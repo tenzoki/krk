@@ -30,3 +30,5 @@ Ob KRK die zwei Wege schließen soll, etwa durch einen eigenen Durchlauf oder ei
 - Der erste Satz jenes Abschnitts behauptet nichts mehr über den ganzen Markenlauf, sondern über den Inhaltsvergleich.
 - `HowTo.md` nennt im Absatz über Cloud-Dateien im Git-Bereich `.gitignore` und `.gitattributes`.
 - `RUSTDOCFLAGS="-D warnings" cargo doc -p krk-core --no-deps` und `cargo fmt --all --check` sind grün.
+
+Resolved: 261026. Der Modulkopf von `leser.rs` sagt den Satz über ausgelagerte Dateien allein vom Inhaltsvergleich aus und nennt die zwei Lesewege von `gix` mit Fundstellen und als ungemessen (`.gitignore` im Verzeichnisdurchlauf, `.gitattributes` über `stream_worktree_file`); `HowTo.md` sagt, dass diese beiden Dateien gelesen und dafür heruntergeladen werden können. Ob sie es tun, misst erst die Abnahme am Drive.

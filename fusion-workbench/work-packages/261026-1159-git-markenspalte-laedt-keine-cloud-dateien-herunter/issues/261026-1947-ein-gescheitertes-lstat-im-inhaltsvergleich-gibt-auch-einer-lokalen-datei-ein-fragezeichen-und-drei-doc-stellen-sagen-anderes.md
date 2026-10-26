@@ -34,3 +34,5 @@ Entweder die drei Doc-Stellen nennen den zweiten Ursprung von `?` (die Angaben l
 
 - Die drei genannten Doc-Kommentare beschreiben den Fall „`lstat` des Vergleichs scheitert“ so, wie der Code ihn behandelt.
 - `RUSTDOCFLAGS="-D warnings" cargo doc -p krk-core --no-deps` grün.
+
+Resolved: 261026. Doku-Richtung ohne Codeänderung, wie der Plan festlegt („Ein Fehlschlag des eigenen `lstat` ergibt `Ungelesen`“): die Doc-Kommentare von `Gitleser::marken`, `Marke::Unbekannt` und `Befund::Ungelesen` und das Ablaufbild im Modulkopf nennen das gescheiterte `lstat` als zweiten Ursprung von `?`, der auch eine lokale Datei treffen kann.
