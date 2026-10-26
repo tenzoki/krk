@@ -1,0 +1,28 @@
+{
+  "schema": "fusion.evidence/v1",
+  "id": "388de584-4433-4d47-85c6-2e9f24c4663c",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "subject": {
+    "git_tree": "d530afd854dc5abd8d21266d8099895d6056ddfd",
+    "git_range": null
+  },
+  "brief_revision": "sha256:8c128e2eb8068e3555e9b22279023a760fc5d9808856b191e1d3fbc80f18d609",
+  "plan_revision": "sha256:dee0ac0269051be069fb569fc6086ddf36e95b809e97c58be1ea19ce164039aa",
+  "role": {
+    "profile": "reviewer",
+    "version": "13.3.9"
+  },
+  "host": "claude-code",
+  "execution_policy": "claude-guided",
+  "verdict": "revise",
+  "uncertainties": [],
+  "checks": [],
+  "report": {
+    "path": "work-packages/261026-1159-git-markenspalte-laedt-keine-cloud-dateien-herunter/reviews/261026-1947-reviewer-abschlussdurchsicht-git-markenspalte-cloud-dateien.md",
+    "sha256": "sha256:0bdf92b3fea7d58a7a7191a4f74ce4b3637a7995df5f84f00ba36d9699875506",
+    "kind": "review"
+  },
+  "predecessor": null,
+  "accepted_at": "2026-10-26T18:49:09Z",
+  "extensions": {}
+}

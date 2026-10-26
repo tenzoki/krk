@@ -20,3 +20,7 @@ Gemessen mit Zustimmung des Nutzers an einer Kopie des Repositorys unter `~/Goog
 - In dieser Zeit sind zwei Dateien heruntergeladen worden (`crates/krk-core/src/ablage/atomar.rs`, `crates/krk-core/src/trenntext/bereich.rs`); 259 blieben ausgelagert.
 
 Befund damit bestätigt und nicht mehr Vermutung: die Markenspalte lädt in einem Repository auf einem Cloudlaufwerk jede ausgelagerte verfolgte Datei herunter, eine nach der anderen, und hält den Faden dabei minutenlang fest. Ob es `st_ctime` oder eine andere Angabe ist, die nach dem Auslagern vom Index abweicht, ist nicht gemessen.
+
+## Stand vom 261026, nach dem Umbau
+
+Behoben im Code durch das Paket `261026-1159-git-markenspalte-laedt-keine-cloud-dateien-herunter` (`3c065f79`, `8c059dfc`): der Inhaltsvergleich öffnet keine ausgelagerte Datei mehr, urteilt aus stat ohne ctime und zeigt `?`, wo eine Änderung möglich ist; der Abbruch erreicht `gix`. Abnahme (b) ist mit den Proben in `crates/krk-core/tests/git.rs` belegt. **Abnahme (a), die Messung an Google Drive, ist ungemessen**, weil Drive offline stand; dieser Defekt bleibt deshalb offen, bis sie läuft. Dabei auch zu messen: ob `gix` eine ausgelagerte `.gitignore` oder `.gitattributes` herunterlädt (`261026-1947-der-markenlauf-liest-ausgelagerte-gitignore-und-gitattributes-und-modulkopf-und-anleitung-sagen-er-lade-nichts.md`).
