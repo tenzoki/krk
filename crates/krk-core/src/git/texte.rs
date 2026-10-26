@@ -192,7 +192,7 @@ pub fn einzelheiten(commit: &Commit) -> String {
 ///
 /// Ausgeschriebene Woerter und nicht die Buchstaben der Spalte: die Spalte
 /// ist schmal und braucht ein Zeichen, der Satz ist es nicht und wird
-/// gelesen. Die deutschen fuenf sind so gewaehlt, dass sie hinter einer Zahl
+/// gelesen. Die deutschen sechs sind so gewaehlt, dass sie hinter einer Zahl
 /// stehen koennen, ohne dekliniert zu werden; die franzoesischen brauchen
 /// hinter einer Zahl ueber 1 die Mehrzahl, deshalb ist jedes ein [`Zahlwort`]
 /// und kein [`Text`]. Der Wortlaut steht in der Sprachtabelle
@@ -204,6 +204,7 @@ const fn wort(marke: Marke) -> Zahlwort {
         Marke::Neu => Zahlwort::MarkeNeu,
         Marke::Konflikt => Zahlwort::MarkeKonflikt,
         Marke::Umbenannt => Zahlwort::MarkeUmbenannt,
+        Marke::Unbekannt => Zahlwort::MarkeUnbekannt,
     }
 }
 
@@ -323,7 +324,7 @@ mod tests {
         assert_eq!(unveraendert(), "unverändert");
     }
 
-    /// C5.3, E11: jeder der fuenf Zustaende traegt seinen Buchstaben, und keine
+    /// C5.3, E11: jeder der sechs Zustaende traegt seinen Buchstaben, und keine
     /// zwei teilen sich einen.
     #[test]
     fn jede_marke_traegt_ihren_eigenen_buchstaben() {
@@ -333,6 +334,7 @@ mod tests {
             (Marke::Neu, 'N'),
             (Marke::Konflikt, 'K'),
             (Marke::Umbenannt, 'U'),
+            (Marke::Unbekannt, '?'),
         ];
         for (marke, buchstabe) in erwartet {
             assert_eq!(
@@ -351,7 +353,7 @@ mod tests {
         );
     }
 
-    /// Jede der fuenf traegt ein eigenes Wort, in jeder Sprache und in
+    /// Jede der sechs traegt ein eigenes Wort, in jeder Sprache und in
     /// beiden Formen; ohne die Zusicherung liest sich „2 neu, 1 neu" wie ein
     /// Fehler der Zaehlung.
     #[test]
@@ -390,6 +392,45 @@ mod tests {
             Marke::Konflikt.rang() > Marke::Umbenannt.rang()
                 && Marke::Umbenannt.rang() > Marke::Neu.rang(),
             "die Umbenennung faellt hinter Konflikt und vor Neu"
+        );
+    }
+
+    /// Die Rangfolge der sechs Werte ist streng und lautet K, U, M, ?, S, N.
+    ///
+    /// `Unbekannt` steht unmittelbar unter `Geaendert`: ein bekannter Befund
+    /// ab „M" stimmt auch neben einer ungelesenen Datei, einer darunter nicht
+    /// (Doc-Kommentar von [`Marke::rang`]).
+    #[test]
+    fn die_rangfolge_lautet_k_u_m_fragezeichen_s_n() {
+        let mut nach_rang: Vec<Marke> = Marke::ALLE.to_vec();
+        nach_rang.sort_by_key(|m| std::cmp::Reverse(m.rang()));
+        let buchstaben: String = nach_rang.iter().map(|m| m.buchstabe()).collect();
+        assert_eq!(
+            buchstaben, "KUM?SN",
+            "die Rangfolge der Marken ist eine andere"
+        );
+        for paar in nach_rang.windows(2) {
+            assert!(
+                paar[0].rang() > paar[1].rang(),
+                "{:?} und {:?} folgen nicht streng aufeinander",
+                paar[0],
+                paar[1]
+            );
+        }
+    }
+
+    /// Eine ungelesene Datei erscheint in der Zusammenfassung als „1
+    /// unbekannt", an letzter Stelle, weil `Unbekannt` die letzte Variante ist.
+    #[test]
+    fn die_zusammenfassung_nennt_unbekannt_zuletzt() {
+        let stand = marken(&[
+            ("a", Marke::Unbekannt),
+            ("b", Marke::Neu),
+            ("c", Marke::Geaendert),
+        ]);
+        assert_eq!(
+            zusammenfassung(&stand),
+            "1 geändert, 1 neu, 1 unbekannt in diesem Ordner"
         );
     }
 

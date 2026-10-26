@@ -1212,6 +1212,7 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::MarkeNeu => ("{n} new", "{n} new"),
         Zahlwort::MarkeKonflikt => ("{n} in conflict", "{n} in conflict"),
         Zahlwort::MarkeUmbenannt => ("{n} renamed", "{n} renamed"),
+        Zahlwort::MarkeUnbekannt => ("{n} unknown", "{n} unknown"),
         Zahlwort::StatuszeileDateienZuGross => (", one file too large", ", {n} files too large"),
         Zahlwort::StatuszeileDateienNurInDerCloud => (
             ", one file only in the cloud",

@@ -104,7 +104,7 @@ pub(crate) const KURZHASHLAENGE: usize = 7;
 
 /// Die Marke, die ein Eintrag der Dateiliste traegt.
 ///
-/// Fuenf Zustaende, und ein sechster fuer „unveraendert" entsteht nicht: ein
+/// Sechs Zustaende, und ein siebter fuer „unveraendert" entsteht nicht: ein
 /// Eintrag ohne Befund traegt eine leere Zelle (A11 der Runde 23). Die
 /// Aufzaehlung ist damit die Liste dessen, was ueberhaupt eine Zelle fuellt.
 ///
@@ -123,24 +123,28 @@ pub enum Marke {
     Konflikt,
     /// Der Eintrag ist umbenannt oder kopiert worden.
     Umbenannt,
+    /// Der Inhalt der Datei liegt nur in der Cloud und ist nicht gelesen; was
+    /// ihre stat-Angaben zulassen, ist unveraendert oder geaendert.
+    Unbekannt,
 }
 
 impl Marke {
-    /// Alle fuenf Werte, in der Reihenfolge der Aufzaehlung.
+    /// Alle sechs Werte, in der Reihenfolge der Aufzaehlung.
     ///
-    /// **Der Uebersetzer haelt diese Liste nicht.** Die Feldbreite `[Marke; 5]`
-    /// zwingt zu fuenf Eintraegen und sagt nichts darueber, welche fuenf; eine
-    /// sechste Variante uebersetzt hier vorbei. Gehalten wird sie deshalb von
+    /// **Der Uebersetzer haelt diese Liste nicht.** Die Feldbreite `[Marke; 6]`
+    /// zwingt zu sechs Eintraegen und sagt nichts darueber, welche sechs; eine
+    /// siebte Variante uebersetzt hier vorbei. Gehalten wird sie deshalb von
     /// der Probe `jede_marke_steht_genau_einmal_in_alle` in
     /// `crates/krk-core/tests/git.rs`, die die Varianten aus dem Quelltext der
     /// Aufzaehlung liest und beide Mengen gegeneinander haelt — dieselbe
     /// Bauform, mit der `Kommando::KENNUNGEN` gehalten wird.
-    pub const ALLE: [Marke; 5] = [
+    pub const ALLE: [Marke; 6] = [
         Marke::Geaendert,
         Marke::Vorgemerkt,
         Marke::Neu,
         Marke::Konflikt,
         Marke::Umbenannt,
+        Marke::Unbekannt,
     ];
 
     /// Der eine Buchstabe der Markenspalte (E11 der Runde 23).
@@ -148,7 +152,9 @@ impl Marke {
     /// Schmal und ohne Farbe lesbar; kein ausgeschriebenes Wort, kein farbiger
     /// Punkt als alleiniges Merkmal. Die Buchstaben folgen den deutschen
     /// Woertern und nicht `git status`: `S` steht fuer „vorgemerkt" und nicht
-    /// fuer „staged", `K` fuer „Konflikt", `U` fuer „umbenannt".
+    /// fuer „staged", `K` fuer „Konflikt", `U` fuer „umbenannt". `?` steht fuer
+    /// „unbekannt" und ist das eine Zeichen, das kein Buchstabe ist: es sagt,
+    /// dass hier keine Auskunft steht, und nicht, welche.
     #[must_use]
     pub const fn buchstabe(self) -> char {
         match self {
@@ -157,6 +163,7 @@ impl Marke {
             Marke::Neu => 'N',
             Marke::Konflikt => 'K',
             Marke::Umbenannt => 'U',
+            Marke::Unbekannt => '?',
         }
     }
 
@@ -177,12 +184,24 @@ impl Marke {
     /// das Ziel einer erkannten Umbenennung erscheint im Verzeichnisdurchlauf
     /// als unverfolgter Eintrag, und stuende `Neu` oben, verschwaende die
     /// Umbenennung wieder.
+    ///
+    /// **`Unbekannt` steht unmittelbar unter `Geaendert`, und auch das folgt
+    /// aus der Sache.** Eine verfolgte Datei, deren Inhalt nicht gelesen ist,
+    /// ist in der Arbeitskopie unveraendert oder geaendert; Konflikt,
+    /// Vorgemerktes, Neu und Umbenannt haengen nicht am Inhalt und sind auch
+    /// ohne ihn bekannt. Ein bekannter Befund ab „M" stimmt deshalb fuer den
+    /// Eintrag, gleich was die ungelesene Datei ist, und gewinnt. Ein bekannter
+    /// darunter („S", „N") koennte von einem „M" in der ungelesenen Datei
+    /// ueberholt sein, und dann ist „?" die richtige Auskunft. Dieselbe Regel
+    /// gilt fuer einen Ordner mit einer ungelesenen Datei im Unterbaum und fuer
+    /// eine vorgemerkte Datei, deren Arbeitskopie ungelesen bleibt.
     #[must_use]
     pub const fn rang(self) -> u8 {
         match self {
-            Marke::Konflikt => 4,
-            Marke::Umbenannt => 3,
-            Marke::Geaendert => 2,
+            Marke::Konflikt => 5,
+            Marke::Umbenannt => 4,
+            Marke::Geaendert => 3,
+            Marke::Unbekannt => 2,
             Marke::Vorgemerkt => 1,
             Marke::Neu => 0,
         }

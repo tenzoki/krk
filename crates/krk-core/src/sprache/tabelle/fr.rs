@@ -1365,6 +1365,7 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::MarkeNeu => ("{n} nouveau", "{n} nouveaux"),
         Zahlwort::MarkeKonflikt => ("{n} en conflit", "{n} en conflit"),
         Zahlwort::MarkeUmbenannt => ("{n} renommé", "{n} renommés"),
+        Zahlwort::MarkeUnbekannt => ("{n} inconnu", "{n} inconnus"),
         Zahlwort::StatuszeileDateienZuGross => (
             ", un fichier trop volumineux",
             ", {n} fichiers trop volumineux",

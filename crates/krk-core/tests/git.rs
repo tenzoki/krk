@@ -685,8 +685,8 @@ fn ein_zerlegt_benannter_eintrag_bekommt_seine_marke() {
 
 /// Die Liste [`Marke::ALLE`] fuehrt jede Variante von `Marke` genau einmal.
 ///
-/// **Der Uebersetzer haelt sie nicht**: die Feldbreite `[Marke; 5]` zwingt zu
-/// fuenf Eintraegen und sagt nichts darueber, welche fuenf. Entscheidbar wird
+/// **Der Uebersetzer haelt sie nicht**: die Feldbreite `[Marke; 6]` zwingt zu
+/// sechs Eintraegen und sagt nichts darueber, welche sechs. Entscheidbar wird
 /// die Frage aus einer zweiten Quelle, und die ist der Quelltext der
 /// Aufzaehlung; dieselbe Bauform haelt `Kommando::KENNUNGEN`.
 #[test]

@@ -2700,6 +2700,8 @@ pub enum Zahlwort {
     MarkeKonflikt,
     /// `Marke::Umbenannt`.
     MarkeUmbenannt,
+    /// `Marke::Unbekannt`.
+    MarkeUnbekannt,
     /// `statuszeile::filterstand_text`: der Satzteil `{zu_gross}` zu den
     /// Dateien ueber der Lesegrenze; beide Formen beginnen mit dem Komma, das
     /// sie anhaengt, und die Einzahl laesst `{n}` aus.
@@ -2819,7 +2821,7 @@ pub enum Zahlwort {
 
 impl Zahlwort {
     /// Alle Zahlwoerter, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Zahlwort; 44] = [
+    pub const ALLE: [Zahlwort; 45] = [
         Zahlwort::Byte,
         Zahlwort::NeuerungenEintraegeIn,
         Zahlwort::HeimZettelUebernommen,
@@ -2828,6 +2830,7 @@ impl Zahlwort {
         Zahlwort::MarkeNeu,
         Zahlwort::MarkeKonflikt,
         Zahlwort::MarkeUmbenannt,
+        Zahlwort::MarkeUnbekannt,
         Zahlwort::StatuszeileDateienZuGross,
         Zahlwort::StatuszeileDateienNurInDerCloud,
         Zahlwort::StatuszeileMarkierungenAusgeblendet,
