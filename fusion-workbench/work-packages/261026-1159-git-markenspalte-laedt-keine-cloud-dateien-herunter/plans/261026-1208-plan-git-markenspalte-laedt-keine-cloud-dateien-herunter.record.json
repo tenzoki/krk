@@ -1,0 +1,48 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "b9899f37-b689-404e-9a54-ce948512aad6",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "plan",
+  "narrative": {
+    "path": "work-packages/261026-1159-git-markenspalte-laedt-keine-cloud-dateien-herunter/plans/261026-1208-plan-git-markenspalte-laedt-keine-cloud-dateien-herunter.md"
+  },
+  "filed_by": {
+    "actor": "implementation-planner",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "steps": [
+      {
+        "id": "1",
+        "state": "open"
+      },
+      {
+        "id": "2",
+        "state": "open"
+      },
+      {
+        "id": "3",
+        "state": "open"
+      },
+      {
+        "id": "4",
+        "state": "open"
+      }
+    ],
+    "criteria": [],
+    "acceptance": {
+      "ref": {
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "record_id": "4e6ab459-6208-44e5-8929-29e8bb2975d2"
+      },
+      "revision": "sha256:dee0ac0269051be069fb569fc6086ddf36e95b809e97c58be1ea19ce164039aa"
+    }
+  }
+}
