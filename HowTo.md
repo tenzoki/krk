@@ -1137,14 +1137,29 @@ sauber ist, bekommt aus KRK keine Antwort darauf. Der Zuschnitt ist gemessen und
 nicht geraten: eine repositoryweite Zahl kostet über einem großen Ordner ein
 Vielfaches der ordnerweiten.
 
-Die Spalte „Marke" der Dateiliste trägt die Git-Marke eines Eintrags, einen
-Buchstaben: `M` geändert, `S` vorgemerkt, `N` neu, `K` in Konflikt, `U`
-umbenannt. Ein unveränderter Eintrag trägt kein sechstes Zeichen, sondern eine
-leere Zelle. **Diese Spalte steht ab Werk**, anders als der Bereich selbst, und
-daran hängt eine Folge, die man sonst nicht sieht: nachgesehen wird, sobald
-**entweder** der Bereich **oder** die Markenspalte sichtbar ist. Wer den Bereich
-ausblendet und die Spalte stehen lässt, hat den Statuslauf weiterhin bei jedem
-Ordnerwechsel.
+Die Spalte „Marke" der Dateiliste trägt die Git-Marke eines Eintrags, ein
+Zeichen: `M` geändert, `S` vorgemerkt, `N` neu, `K` in Konflikt, `U`
+umbenannt, `?` unbekannt. Ein unveränderter Eintrag trägt kein siebtes Zeichen,
+sondern eine leere Zelle. **Diese Spalte steht ab Werk**, anders als der Bereich
+selbst, und daran hängt eine Folge, die man sonst nicht sieht: nachgesehen wird,
+sobald **entweder** der Bereich **oder** die Markenspalte sichtbar ist. Wer den
+Bereich ausblendet und die Spalte stehen lässt, hat den Statuslauf weiterhin bei
+jedem Ordnerwechsel.
+
+**Eine Datei, die auf einem Cloudlaufwerk nur in der Cloud liegt, lädt die
+Markenspalte nicht herunter.** Ob sie geändert ist, liest KRK dann allein an
+ihren Angaben im Dateisystem ab. Hat sie eine andere Größe als im Index, trägt
+sie `M`. Stimmen Größe, Änderungsdatum und die übrigen Angaben, trägt sie keine
+Marke: eine ausgelagerte Datei, an der seit dem letzten `git status` nichts
+geändert ist, bleibt ohne Zeichen, auch wenn das Auslagern ihren Statuszeitpunkt
+(ctime) verschoben hat. `?` trägt sie, wenn sich ohne ihren Inhalt nicht sagen
+lässt, ob sie geändert ist: die Größe ist gleich, aber das Änderungsdatum oder
+eine der übrigen Angaben außer dem Statuszeitpunkt weicht ab, oder sie ist so kurz vor dem letzten Auffrischen des Index geändert worden,
+dass gleiche Angaben nichts beweisen. Ein Ordner trägt `?`, wenn darunter so
+eine Datei liegt und nichts Gewichtigeres als „vorgemerkt" oder „neu" bekannt
+ist; ein `M`, `U` oder `K` im selben Ordner geht vor. Eine Änderung, die Größe,
+Änderungsdatum und Inode unberührt lässt, sieht KRK an einer ausgelagerten
+Datei nicht.
 
 **Was einen Wechsel übersteht und was nicht:**
 
