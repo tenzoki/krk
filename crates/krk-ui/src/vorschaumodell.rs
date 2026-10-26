@@ -2113,7 +2113,7 @@ fn laden(
     // Modulkopf unter „Eine Datei, die nur in der Cloud liegt“. Eine lokale
     // Datei geht daran vorbei und nimmt sofort den Weg darunter (L7).
     let platzhalter = (umstand.regel.ist_platzhalter)(pfad, &roh);
-    let _belegung = if platzhalter {
+    let belegung = if platzhalter {
         let grenze = leseart.grenze();
         // Die Groessengrenze der Leseart, an der Dateigroesse gemessen, auch
         // fuer die zwei anlesenden Wege: ueber ihr wird nichts geoeffnet.
@@ -2132,93 +2132,22 @@ fn laden(
         if !cloudladen::abwarten(umstand.regel.wartezeit, umstand.weiter) {
             return None;
         }
-        // Der Waechter haelt den Platz bis zum Ende dieser Funktion, also bis
-        // das Lesen darunter zurueckgekehrt ist, auch ein abgebrochenes.
         Some(umstand.regel.ladeplatz.belegen(umstand.weiter)?)
     } else {
         None
     };
-    let gelesen = match leseart {
-        // Ueber der Bildgrenze wird nicht gelesen, sondern beschrieben;
-        // dieselbe Antwort wie beim Text und aus demselben Grund. Jeder der
-        // Gruende von `Lesehindernis` endet in den Metadaten; welcher es war,
-        // fragt die Vorschau allein fuer eine Datei, die nur in der Cloud
-        // liegt.
-        Leseart::Bild => {
-            match bis_zur_grenze_lesen(pfad, BILDGRENZE, Platzhalterregel::Laden, umstand.weiter) {
-                Ok(daten) => Ok(Inhalt::Bild {
-                    daten: Arc::new(daten),
-                    metadaten: Some(metadaten),
-                }),
-                Err(hindernis) => Err((hindernis, metadaten)),
-            }
-        }
-        // Dieselbe Grenze und dieselbe Huelle wie beim Bild, und keine zweite
-        // Zahl daneben (C2.1, C2.7 der Runde 20): ueber `BILDGRENZE` wird
-        // nicht gelesen, sondern beschrieben, und unter ihr reisen die Bytes
-        // ungedeutet in die Ansicht.
-        Leseart::Pdf => {
-            match bis_zur_grenze_lesen(pfad, BILDGRENZE, Platzhalterregel::Laden, umstand.weiter) {
-                Ok(daten) => Ok(Inhalt::Pdf {
-                    daten: Arc::new(daten),
-                    metadaten,
-                }),
-                Err(hindernis) => Err((hindernis, metadaten)),
-            }
-        }
-        // Ueber der Grenze angelesen statt abgewiesen, siehe
-        // [`jsonzeilen_aus_bytes`]. Nicht lesbar, keine gewoehnliche Datei
-        // oder kein UTF-8: dieselbe Antwort wie bei jeder Textdatei.
-        Leseart::Jsonzeilen => {
-            match anlesen(
-                pfad,
-                TEXTGRENZE + 1,
-                Platzhalterregel::Laden,
-                umstand.weiter,
-            ) {
-                Ok(bytes) => Ok(match jsonzeilen_aus_bytes(bytes) {
-                    Some(text) => Inhalt::Text(text),
-                    None => auf_die_metadaten(metadaten),
-                }),
-                Err(hindernis) => Err((hindernis, metadaten)),
-            }
-        }
-        // Eine Textdatei ueber 1 MB faellt auf die Metadaten, siehe den
-        // Modulkopf; ebenso eine, die nicht lesbar, keine gewoehnliche Datei
-        // oder kein UTF-8 ist, also keine Textdatei im Sinne von C6.
-        Leseart::Text => {
-            match bis_zur_grenze_lesen(pfad, TEXTGRENZE, Platzhalterregel::Laden, umstand.weiter) {
-                Ok(bytes) => Ok(match String::from_utf8(bytes) {
-                    Ok(text) => text_als_inhalt(pfad, text, Dateityp::von_pfad(pfad, heim), tafel),
-                    Err(_) => auf_die_metadaten(metadaten),
-                }),
-                Err(hindernis) => Err((hindernis, metadaten)),
-            }
-        }
-        // Angelesen wie JSON-Zeilen, siehe [`trenntext_aus_bytes`]; was dort
-        // keine Tabelle und kein Text wird, beschreiben die Metadaten.
-        Leseart::Trenntext(art) => {
-            match anlesen(
-                pfad,
-                TEXTGRENZE + 1,
-                Platzhalterregel::Laden,
-                umstand.weiter,
-            ) {
-                Ok(bytes) => {
-                    let endzeichen = endzeichen_der_datei(pfad, &bytes);
-                    Ok(trenntext_aus_bytes(
-                        bytes,
-                        endzeichen,
-                        art,
-                        pfad,
-                        Dateityp::von_pfad(pfad, heim),
-                        tafel,
-                    )
-                    .unwrap_or_else(|| auf_die_metadaten(metadaten)))
-                }
-                Err(hindernis) => Err((hindernis, metadaten)),
-            }
-        }
+    let gelesen = roh_lesen(pfad, leseart, umstand.weiter);
+    // Der Waechter haelt den Platz allein ueber das Lesen darueber, auch ein
+    // abgebrochenes, und gibt ihn frei, sobald es zurueckgekehrt ist: das
+    // Aufbereiten darunter (Markdown, JSON-Zeilen, Trenntext) laedt nichts
+    // mehr herunter, und die naechste Cloud-Vorschau soll nicht darauf warten.
+    drop(belegung);
+    let gelesen = match gelesen {
+        Ok(gelesen) => Ok(aufbereiten(gelesen, metadaten, pfad, heim, tafel)),
+        // Jeder der Gruende von `Lesehindernis` endet in den Metadaten, auch
+        // eine Datei ueber der Grenze ihrer Leseart; welcher es war, fragt die
+        // Vorschau allein fuer eine Datei, die nur in der Cloud liegt.
+        Err(hindernis) => Err((hindernis, metadaten)),
     };
     match gelesen {
         Ok(inhalt) => Some(inhalt),
@@ -2232,6 +2161,110 @@ fn laden(
                 .then(|| cloudhinweis_nach(hindernis, leseart))
                 .flatten(),
         }),
+    }
+}
+
+/// Die Bytes einer Datei, wie [`laden`] sie je [`Leseart`] liest, noch
+/// nicht aufbereitet.
+///
+/// **Die Trennung ist die Grenze des Ladeplatzes**: [`roh_lesen`] laeuft fuer
+/// eine Datei, die nur in der Cloud liegt, unter der Belegung, [`aufbereiten`]
+/// erst nach ihrer Freigabe (Modulkopf unter „Eine Datei, die nur in der Cloud
+/// liegt“).
+enum Rohlesung {
+    /// Bis [`BILDGRENZE`] gelesen.
+    Bild(Vec<u8>),
+    /// Bis [`BILDGRENZE`] gelesen.
+    Pdf(Vec<u8>),
+    /// Angelesen bis ein Byte ueber [`TEXTGRENZE`].
+    Jsonzeilen(Vec<u8>),
+    /// Angelesen bis ein Byte ueber [`TEXTGRENZE`], dazu die Zeilenenden der
+    /// Datei. [`endzeichen_der_datei`] liest eine angelesene Datei ein zweites
+    /// Mal und steht deshalb hier beim Lesen und nicht beim Aufbereiten.
+    Trenntext {
+        bytes: Vec<u8>,
+        endzeichen: trenntext::Endzeichen,
+        art: trenntext::Art,
+    },
+    /// Bis [`TEXTGRENZE`] gelesen.
+    Text(Vec<u8>),
+}
+
+/// Liest die Bytes einer Datei nach ihrer [`Leseart`], abbrechbar ueber
+/// `weiter`; jeder Weg ist [`Platzhalterregel::Laden`].
+fn roh_lesen(
+    pfad: &Path,
+    leseart: Leseart,
+    weiter: &dyn Fn() -> bool,
+) -> Result<Rohlesung, Lesehindernis> {
+    let regel = Platzhalterregel::Laden;
+    Ok(match leseart {
+        Leseart::Bild => Rohlesung::Bild(bis_zur_grenze_lesen(pfad, BILDGRENZE, regel, weiter)?),
+        // Dieselbe Grenze und dieselbe Huelle wie beim Bild, und keine zweite
+        // Zahl daneben (C2.1, C2.7 der Runde 20).
+        Leseart::Pdf => Rohlesung::Pdf(bis_zur_grenze_lesen(pfad, BILDGRENZE, regel, weiter)?),
+        // Ueber der Grenze angelesen statt abgewiesen, siehe
+        // [`jsonzeilen_aus_bytes`].
+        Leseart::Jsonzeilen => Rohlesung::Jsonzeilen(anlesen(pfad, TEXTGRENZE + 1, regel, weiter)?),
+        // Angelesen wie JSON-Zeilen, siehe [`trenntext_aus_bytes`].
+        Leseart::Trenntext(art) => {
+            let bytes = anlesen(pfad, TEXTGRENZE + 1, regel, weiter)?;
+            let endzeichen = endzeichen_der_datei(pfad, &bytes);
+            Rohlesung::Trenntext {
+                bytes,
+                endzeichen,
+                art,
+            }
+        }
+        Leseart::Text => Rohlesung::Text(bis_zur_grenze_lesen(pfad, TEXTGRENZE, regel, weiter)?),
+    })
+}
+
+/// Macht aus gelesenen Bytes den Inhalt der Vorschau; liest nichts mehr.
+///
+/// Ueber der Bildgrenze wird nicht gelesen, sondern beschrieben, dieselbe
+/// Antwort wie beim Text; das entscheidet schon [`roh_lesen`]. Hier faellt
+/// auf die Metadaten, was keine Anzeige ergibt: eine Textdatei, die kein
+/// UTF-8 ist, also keine Textdatei im Sinne von C6, und JSON-Zeilen oder
+/// Trenntext, aus denen kein Text und keine Tabelle wird.
+fn aufbereiten(
+    gelesen: Rohlesung,
+    metadaten: Metadaten,
+    pfad: &Path,
+    heim: Option<&Heimordner>,
+    tafel: Tafel,
+) -> Inhalt {
+    match gelesen {
+        Rohlesung::Bild(daten) => Inhalt::Bild {
+            daten: Arc::new(daten),
+            metadaten: Some(metadaten),
+        },
+        // Unter der Grenze reisen die Bytes ungedeutet in die Ansicht.
+        Rohlesung::Pdf(daten) => Inhalt::Pdf {
+            daten: Arc::new(daten),
+            metadaten,
+        },
+        Rohlesung::Jsonzeilen(bytes) => match jsonzeilen_aus_bytes(bytes) {
+            Some(text) => Inhalt::Text(text),
+            None => auf_die_metadaten(metadaten),
+        },
+        Rohlesung::Trenntext {
+            bytes,
+            endzeichen,
+            art,
+        } => trenntext_aus_bytes(
+            bytes,
+            endzeichen,
+            art,
+            pfad,
+            Dateityp::von_pfad(pfad, heim),
+            tafel,
+        )
+        .unwrap_or_else(|| auf_die_metadaten(metadaten)),
+        Rohlesung::Text(bytes) => match String::from_utf8(bytes) {
+            Ok(text) => text_als_inhalt(pfad, text, Dateityp::von_pfad(pfad, heim), tafel),
+            Err(_) => auf_die_metadaten(metadaten),
+        },
     }
 }
 
@@ -3244,10 +3277,11 @@ mod tests {
     }
 
     /// Die Frage nach der Sonderdatei steht in [`laden`] vor jedem Zweig, der
-    /// liest: vor der Zusammenfassung eines Ordners, vor jedem
-    /// `bis_zur_grenze_lesen` und vor dem Dateityp. Die Proben oben messen es
-    /// an einer Datei; diese haelt die Reihenfolge fuer jeden kuenftigen Zweig
-    /// fest, der vor ihnen eingefuegt wuerde.
+    /// liest: vor der Zusammenfassung eines Ordners, vor `roh_lesen`, das
+    /// jedes Lesen einer Datei traegt, und vor `aufbereiten`, das den Dateityp
+    /// fragt. Die Proben oben messen es an einer Datei; diese haelt die
+    /// Reihenfolge fuer jeden kuenftigen Zweig fest, der vor ihnen eingefuegt
+    /// wuerde.
     ///
     /// **Blind** ist sie fuer einen Lesezweig unter einem Namen, den sie nicht
     /// kennt; die drei Nadeln sind die Lesewege, die `laden` heute hat.
@@ -3272,8 +3306,8 @@ mod tests {
         let frage = stelle(concat!(".sonder", "datei_genau(pfad)"));
         for leseweg in [
             concat!("zusammen", "fassen("),
-            concat!("bis_zur_grenze_", "lesen("),
-            concat!("Dateityp::von_", "pfad("),
+            concat!("roh_", "lesen("),
+            concat!("aufbe", "reiten("),
         ] {
             assert!(
                 frage < stelle(leseweg),
@@ -5856,6 +5890,54 @@ pfad = 'werkbank'
         assert_eq!(wie(&wolke), Some(Cloudhinweis::NichtGeladen));
         assert_eq!(wie(&lokal), None);
         assert_eq!(regel.ladeplatz.belegungen(), 1);
+    }
+
+    /// Der Ladeplatz wird frei, sobald das Lesen zurueckgekehrt ist, und nicht
+    /// erst nach dem Aufbereiten. Am laufenden Faden laesst sich das nicht
+    /// beobachten, weil das Aufbereiten nichts zurueckruft; gehalten wird
+    /// deshalb die Reihenfolge im Rumpf von `laden` (lesen, freigeben,
+    /// aufbereiten) und dass `aufbereiten` keinen Leseweg ruft.
+    #[test]
+    fn der_ladeplatz_wird_vor_dem_aufbereiten_frei() {
+        let quelle = include_str!("vorschaumodell.rs");
+        let code = quelle
+            .split_once(concat!("#[cfg(test)]\nmod ", "tests {"))
+            .map_or(quelle, |(vorne, _)| vorne);
+        let rumpf = |kopf: &str| -> &str {
+            let beginn = code
+                .find(kopf)
+                .unwrap_or_else(|| panic!("{kopf} steht nicht im Code"));
+            let rest = &code[beginn..];
+            let ende = rest
+                .find("\n}\n")
+                .unwrap_or_else(|| panic!("der Rumpf von {kopf} endet nicht"));
+            &rest[..ende]
+        };
+        let laden = rumpf("\nfn laden(\n");
+        let stelle = |nadel: &str| {
+            laden
+                .find(nadel)
+                .unwrap_or_else(|| panic!("{nadel} steht nicht in laden"))
+        };
+        let lesen = stelle(concat!("roh_", "lesen("));
+        let frei = stelle(concat!("drop(", "belegung)"));
+        let aufbereiten = stelle(concat!("aufbe", "reiten("));
+        assert!(lesen < frei, "der Platz wird erst nach dem Lesen frei");
+        assert!(
+            frei < aufbereiten,
+            "der Platz wird vor dem Aufbereiten frei"
+        );
+        let aufbereiten = rumpf("\nfn aufbereiten(\n");
+        for leseweg in [
+            concat!("anle", "sen("),
+            concat!("bis_zur_grenze_", "lesen("),
+            concat!("endzeichen_der_", "datei("),
+        ] {
+            assert!(
+                !aufbereiten.contains(leseweg),
+                "aufbereiten ruft {leseweg} und liest damit nach der Freigabe"
+            );
+        }
     }
 
     /// Ein Abbruch waehrend der Wartezeit endet ohne Inhalt, ohne den Platz

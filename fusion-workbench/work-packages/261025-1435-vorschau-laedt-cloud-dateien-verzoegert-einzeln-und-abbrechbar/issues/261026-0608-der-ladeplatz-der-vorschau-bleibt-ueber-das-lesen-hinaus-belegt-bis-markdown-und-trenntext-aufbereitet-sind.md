@@ -14,3 +14,5 @@ Der Kommentar über dem Wächter sagt „Der Waechter haelt den Platz bis zum En
 **Richtung.** Die Bytes in einem eigenen Schritt lesen, die Belegung danach fallen lassen und erst dann aufbereiten; oder die Kommentare und den Plan auf das Verhalten ziehen, wenn das Halten gewollt ist.
 
 **Abnahme.** Eine Probe in `vorschaumodell.rs` mit eingespritzter Platzhalterfrage zeigt, dass der Ladeplatz frei ist, sobald das Lesen zurückgekehrt ist, und nicht erst nach der Aufbereitung; oder die drei Textstellen sagen ausdrücklich, dass der Platz bis zum Ende der Aufbereitung gehalten wird, und warum.
+
+Resolved: 261026, behoben im Commit nach `d325032e` (Nachbesserung nach der Abschlussdurchsicht), `make check` gruen.

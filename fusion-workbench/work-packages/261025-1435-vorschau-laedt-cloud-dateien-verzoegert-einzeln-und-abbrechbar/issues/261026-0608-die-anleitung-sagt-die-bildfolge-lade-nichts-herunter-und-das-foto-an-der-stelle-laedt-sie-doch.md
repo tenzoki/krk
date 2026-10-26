@@ -10,3 +10,5 @@ Die Anleitung sagt, die Bildfolge lade nichts herunter, und das Foto an der Stel
 Der Satz folgt dem Wortlaut von Schritt 8 des Plans; ungenau ist schon dieser.
 
 **Abnahme.** Der Absatz in `HowTo.md` trennt das Ordnen der Bildfolge (lädt nichts, ein Foto in der Cloud steht nach seinem Änderungsdatum) vom Foto an der Stelle (lädt wie jede andere Vorschau nach 0,2 s, eines zur Zeit, bis 64 MB).
+
+Resolved: 261026, behoben im Commit nach `d325032e` (Nachbesserung nach der Abschlussdurchsicht), `make check` gruen.
