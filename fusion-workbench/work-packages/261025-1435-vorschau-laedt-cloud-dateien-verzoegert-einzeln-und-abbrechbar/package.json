@@ -3,7 +3,7 @@
   "id": "fa27690a-3fc2-4991-9169-7a8ecbdaec83",
   "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
   "domain": "code",
-  "status": "claimed",
+  "status": "done",
   "claim": {
     "checkout_id": "6c11b1f2",
     "person": "Kai Stalmann <kai@stalmann.org>",
@@ -37,7 +37,20 @@
   ],
   "references": [],
   "evidence": [],
-  "outcome": null,
+  "outcome": {
+    "class": "completed",
+    "reason": "Acht Planschritte gebaut (8679feb7..0650dd47): Cloud-Dateien laedt die Vorschau nach 0,2 s, einzeln, unter der Grenze; Hintergrundleser oeffnen keine Platzhalterdatei. Abschlussdurchsicht: revise, drei Befunde als Defekte offen. Am Laufwerk nicht abgenommen.",
+    "evidence": [
+      {
+        "ref": {
+          "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+          "record_id": "ea26562f-1df0-4b7e-a65e-5d02e0565dd7",
+          "revision": "sha256:2ab1eb75ae9cdbc5ec351d298bfdda1ca974ba95fd3dd4de667f7b29b86f372e"
+        },
+        "policy": "claude-guided"
+      }
+    ]
+  },
   "provenance": {
     "source": "created",
     "legacy_fields": {}

@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "ab2d196a-8244-43c9-ba38-8d15d1fa7ff5",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261025-1435-vorschau-laedt-cloud-dateien-verzoegert-einzeln-und-abbrechbar/issues/261026-0608-die-anleitung-sagt-die-bildfolge-lade-nichts-herunter-und-das-foto-an-der-stelle-laedt-sie-doch.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

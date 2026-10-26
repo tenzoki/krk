@@ -1,0 +1,28 @@
+{
+  "schema": "fusion.evidence/v1",
+  "id": "ea26562f-1df0-4b7e-a65e-5d02e0565dd7",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "subject": {
+    "git_tree": "1e7798bf51cd1adef57398d2d8e3bc89343b0579",
+    "git_range": null
+  },
+  "brief_revision": "sha256:d9561e148711ac939badb4fc89bc2e4f731a0b54899222c2c6548a4b6564bcae",
+  "plan_revision": "sha256:1263373d0ad871651de273bb049fcf2e1a0743200317705a514b764f582ee2fe",
+  "role": {
+    "profile": "reviewer",
+    "version": "13.3.9"
+  },
+  "host": "claude-code",
+  "execution_policy": "claude-guided",
+  "verdict": "revise",
+  "uncertainties": [],
+  "checks": [],
+  "report": {
+    "path": "work-packages/261025-1435-vorschau-laedt-cloud-dateien-verzoegert-einzeln-und-abbrechbar/reviews/261026-0608-reviewer-abschlussdurchsicht-cloud-dateien-in-der-vorschau.md",
+    "sha256": "sha256:27764d5a66ba00f4cf3667989658f58a7ffe321499cdbd720a539c08fcd7a72d",
+    "kind": "review"
+  },
+  "predecessor": null,
+  "accepted_at": "2026-10-26T05:10:25Z",
+  "extensions": {}
+}
