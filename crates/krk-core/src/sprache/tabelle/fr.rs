@@ -1497,6 +1497,7 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::UmbenennenStapel => "Renommer par lot",
         Kommando::Umbenennen => "Renommer",
         Kommando::TerminalOeffnen => "Ouvrir le dossier dans le Terminal",
+        Kommando::ImTerminalBearbeiten => "Modifier dans le Terminal",
         Kommando::OrdnerpfadKopieren => "Copier le chemin du dossier affiché",
         Kommando::EintragspfadKopieren => "Copier le chemin de l’entrée",
         Kommando::MitStandardprogrammOeffnen => "Ouvrir avec l’application par défaut",

@@ -3711,8 +3711,9 @@ fn nach_dem_sichern_traegt_jede_funktion_name_in_der_geltenden_sprache() {
 fn genau_diese_kommandos_brauchen_einen_lokalen_ort() {
     use krk_core::tasten::Ortsbedarf;
 
-    const LOKAL: [Kommando; 8] = [
+    const LOKAL: [Kommando; 9] = [
         Kommando::TerminalOeffnen,
+        Kommando::ImTerminalBearbeiten,
         Kommando::MitStandardprogrammOeffnen,
         Kommando::OrdnerpfadKopieren,
         Kommando::EintragspfadKopieren,

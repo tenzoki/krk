@@ -39,7 +39,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 116 Funktionen mit zusammen 117 Kombinationen.
+# Ausgeliefert sind 117 Funktionen mit zusammen 118 Kombinationen.
 #
 # Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
@@ -869,6 +869,29 @@ tasten = ["ctrl+o"]
 # gilt fuer die fuenf Funktionen der Norton-Reihe ganz oben und nicht fuer jede
 # Funktion; die vier Funktionen vom 260804 tragen aus demselben Grund je eine.
 
+[[funktion]]
+id = "im_terminal_bearbeiten"
+tasten = ["opt+cmd+e"]
+# Oeffnet die Datei unter dem Cursor in der eingestellten Terminal-Anwendung,
+# im Ordner der Datei. Ein Befehl und nicht zwei: KRK waehlt beim Tastendruck
+# nach dem Schreibrecht, vim, wenn die Datei oder ihr Ordner schreibbar ist,
+# sonst sudo -e (Nutzerentscheid vom 261029 im Narrativ des Arbeitspakets
+# `work-packages/261029-0915-datei-im-terminal-mit-vim-und-sudo-e-oeffnen`,
+# dazu `261029-0957-geht-eine-nicht-schreibbare-datei-in-einem-beschreibbaren-ordner-an-sudo-e-oder-an-vim.md`,
+# Moeglichkeit 2). Das Passwort fragt sudo selbst im Terminal; KRK sieht und
+# speichert es nicht.
+#
+# Geteilt mit "editor_schliessen": dieser Befehl wirkt allein im Dateifenster,
+# jener allein im Editor, und zwei Funktionen eines Zustellers duerfen eine
+# Kombination teilen, wenn ihre Wirkungsbereiche einander so ausschliessen
+# (Entscheid
+# `260926-2308_*_duerfen-zwei-funktionen-desselben-zustellers-eine-kombination-tragen-wenn-ihre-wirkungsbereiche-einander-ausschliessen.md`).
+# Der Preis ist eine Anzeige und keine Wirkung: im Hauptmenue zeigt dieser
+# Eintrag unter "Dateioperationen" das Kuerzel, weil er in der Leiste frueher
+# steht, und "Editor schliessen" steht ohne Kuerzel da
+# (`261029-0921-welcher-menueeintrag-zeigt-opt-cmd-e-editor-schliessen-oder-mit-vim-bearbeiten.md`,
+# Moeglichkeit 1). opt+shift+cmd+e bleibt frei.
+
 # ── Pfade kopieren und mit dem Standardprogramm öffnen ───────────────────────
 # Drei Funktionen der Runde 4. Sie stehen neben C11, weil sie dieselbe Sorte
 # Handlung sind: KRK gibt den angezeigten Ordner oder die betroffenen Eintraege
@@ -1022,6 +1045,12 @@ tasten = ["opt+cmd+e"]
 # "editor_rundweg" geht durch denselben Rumpf und damit durch dieselbe
 # Nachfrage; er blendet danach die Vorschau wieder ein, und darin allein
 # unterscheiden sich die beiden. Opt+cmd+e selbst ist unveraendert.
+#
+# Seit dem 261029 teilt opt+cmd+e die Kombination mit "im_terminal_bearbeiten"
+# beim Terminal weiter oben, als Ausschluss, den der Kommentar dort begruendet. Im
+# Editor ist die Bedeutung unveraendert; die Anzeige des Kuerzels im
+# Hauptmenue steht seitdem beim neuen Befehl, und "Editor schliessen" steht
+# dort ohne Kuerzel.
 
 [[funktion]]
 id = "editor_umschalten"

@@ -372,6 +372,7 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::UmbenennenStapel
         | Kommando::Umbenennen
         | Kommando::TerminalOeffnen
+        | Kommando::ImTerminalBearbeiten
         | Kommando::OrdnerpfadKopieren
         | Kommando::EintragspfadKopieren
         | Kommando::MitStandardprogrammOeffnen

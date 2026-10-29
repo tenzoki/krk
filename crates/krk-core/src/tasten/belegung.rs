@@ -1016,6 +1016,25 @@ pub enum Kommando {
     /// Den angezeigten Ordner in der eingestellten Terminal-Anwendung
     /// oeffnen (C11).
     TerminalOeffnen,
+    /// Die Datei unter dem Cursor in der eingestellten Terminal-Anwendung zum
+    /// Bearbeiten oeffnen (Arbeitspaket
+    /// `261029-0915-datei-im-terminal-mit-vim-und-sudo-e-oeffnen`).
+    ///
+    /// **Ein Befehl, und KRK waehlt das Programm** (Nutzerentscheid vom
+    /// 261029): `vim`, wenn der Nutzer die Datei oder ihren Ordner beschreiben
+    /// darf, sonst `sudo -e` (Entscheidung `261029-0957-…`, Moeglichkeit 2).
+    /// Gefragt wird beim Tastendruck mit `access(2)`; die Wahl selbst traegt
+    /// `terminalskript::befehl_fuer`. Ein Ordner unter dem Cursor wird
+    /// gemeldet, nicht ausgegraut.
+    ///
+    /// **KRK sieht kein Passwort.** Fragt `sudo` danach, fragt es im Terminal,
+    /// und die Antwort geht an sudo und nicht durch KRK.
+    ///
+    /// **`opt+cmd+e` teilt dieser Befehl mit [`Kommando::EditorSchliessen`]**,
+    /// und zwar per Ausschluss: er traegt [`Wirkungsbereich::Dateifenster`],
+    /// jener [`Wirkungsbereich::Editor`], und welchen ein Anschlag meint,
+    /// entscheidet der Fokus.
+    ImTerminalBearbeiten,
     /// Den Pfad des angezeigten Ordners in die Zwischenablage legen (C1 der
     /// Runde 4).
     OrdnerpfadKopieren,
@@ -1438,7 +1457,7 @@ const _: () = assert!(Kommando::KENNUNGEN.len() <= u16::MAX as usize);
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 109] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 110] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -1501,6 +1520,7 @@ impl Kommando {
         (Kommando::UmbenennenStapel, "umbenennen_stapel"),
         (Kommando::Umbenennen, "umbenennen"),
         (Kommando::TerminalOeffnen, "terminal_oeffnen"),
+        (Kommando::ImTerminalBearbeiten, "im_terminal_bearbeiten"),
         (Kommando::OrdnerpfadKopieren, "ordnerpfad_kopieren"),
         (Kommando::EintragspfadKopieren, "eintragspfad_kopieren"),
         (
@@ -2000,6 +2020,7 @@ impl Kommando {
             | Kommando::UmbenennenStapel
             | Kommando::Umbenennen
             | Kommando::TerminalOeffnen
+            | Kommando::ImTerminalBearbeiten
             | Kommando::OrdnerpfadKopieren
             | Kommando::EintragspfadKopieren
             | Kommando::MitStandardprogrammOeffnen => Wirkungsbereich::Dateifenster,
@@ -2053,11 +2074,13 @@ impl Kommando {
     pub const fn ortsbedarf(self) -> Ortsbedarf {
         match self {
             // Sie lesen den lokalen Ordner oder lokale Pfade des aktiven
-            // Dateifensters: das Terminal, das Standardprogramm, die zwei
+            // Dateifensters: das Terminal (der Ordner darin und die Datei zum
+            // Bearbeiten darin), das Standardprogramm, die zwei
             // Pfadkopierer, der Editor, die zwei Suchschalter der
             // Bereichsleiste (ein ferner Tab bekommt keinen Durchlauf) und
             // das Stapelumbenennen.
             Kommando::TerminalOeffnen
+            | Kommando::ImTerminalBearbeiten
             | Kommando::MitStandardprogrammOeffnen
             | Kommando::OrdnerpfadKopieren
             | Kommando::EintragspfadKopieren

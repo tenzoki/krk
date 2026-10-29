@@ -2863,8 +2863,9 @@ mod tests {
     /// `betroffene_oder_melden` beim Anwendungsdelegierten.
     #[test]
     fn an_einem_fernen_ort_sind_genau_diese_befehle_ausgegraut() {
-        const AUSGEGRAUT: [Kommando; 12] = [
+        const AUSGEGRAUT: [Kommando; 13] = [
             Kommando::TerminalOeffnen,
+            Kommando::ImTerminalBearbeiten,
             Kommando::MitStandardprogrammOeffnen,
             Kommando::Teilen,
             Kommando::OrdnerpfadKopieren,
@@ -3074,8 +3075,9 @@ mod tests {
     /// Schritten 6 und 7 in ihren Zweigen beim Anwendungsdelegierten.
     #[test]
     fn im_archiv_sind_genau_diese_befehle_ausgegraut() {
-        const LOKALER_PFAD: [Kommando; 11] = [
+        const LOKALER_PFAD: [Kommando; 12] = [
             Kommando::TerminalOeffnen,
+            Kommando::ImTerminalBearbeiten,
             Kommando::MitStandardprogrammOeffnen,
             Kommando::Teilen,
             Kommando::OrdnerpfadKopieren,

@@ -1345,6 +1345,7 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::UmbenennenStapel => "Batch Rename",
         Kommando::Umbenennen => "Rename",
         Kommando::TerminalOeffnen => "Open Folder in Terminal",
+        Kommando::ImTerminalBearbeiten => "Edit in Terminal",
         Kommando::OrdnerpfadKopieren => "Copy Path of Displayed Folder",
         Kommando::EintragspfadKopieren => "Copy Path of Entry",
         Kommando::MitStandardprogrammOeffnen => "Open with Default Application",

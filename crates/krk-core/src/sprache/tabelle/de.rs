@@ -1411,6 +1411,7 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::UmbenennenStapel => "Im Stapel umbenennen",
         Kommando::Umbenennen => "Umbenennen",
         Kommando::TerminalOeffnen => "Ordner im Terminal öffnen",
+        Kommando::ImTerminalBearbeiten => "Im Terminal bearbeiten",
         Kommando::OrdnerpfadKopieren => "Pfad des angezeigten Ordners kopieren",
         Kommando::EintragspfadKopieren => "Pfad des Eintrags kopieren",
         Kommando::MitStandardprogrammOeffnen => "Mit dem Standardprogramm öffnen",
