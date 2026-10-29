@@ -483,8 +483,9 @@ ersetzt das alte erst ganz am Ende in einem Schritt. Daraus folgt:
 
 **Was im Archiv nicht geht, oder nur zum Teil:**
 
-- **Ausgegraut** sind dort „Terminal öffnen“, „Mit dem Standardprogramm
-  öffnen“, beide Pfadkopien, „Bearbeiten“, das Stapelumbenennen und die
+- **Ausgegraut** sind dort „Terminal öffnen“, „Im Terminal bearbeiten“,
+  „Mit dem Standardprogramm öffnen“, beide Pfadkopien, „Bearbeiten“, das
+  Stapelumbenennen und die
   Schalter „Deep“ und „Content“, dazu mit dem Fokus im Dateifenster „Teilen“,
   „Lesezeichen anlegen“ und der Rundweg (`cmd+e`). In einer `.gz`-Datei kommen
   Verschieben, Papierkorb, Umbenennen und die zwei Anlegebefehle dazu.
@@ -675,6 +676,59 @@ der, der in der Menüleiste weiter links steht. „Termine: Sortierrichtung
 umkehren“ unter „Home“ zeigt `⌘1`, und „Nach Name sortieren“ steht ohne Kürzel
 da, sortiert mit `cmd+1` im Dateifenster aber weiter.
 
+### Eine Datei im Terminal bearbeiten
+
+`ctrl+o` öffnet den angezeigten Ordner in der Terminal-Anwendung, die in
+`settings.toml` unter `terminal` eingestellt ist. **`opt+cmd+e` öffnet dort die
+Datei unter dem Cursor zum Bearbeiten**, und der Arbeitsordner im Terminal ist
+ihr Ordner. Der Befehl heißt im Hauptmenü „Im Terminal bearbeiten“ und steht
+unter „Dateioperationen“.
+
+**Welches Programm die Datei bekommt, entscheidet KRK beim Tastendruck**, und
+eine zweite Taste dafür gibt es nicht. Gefragt wird, ob der Nutzer die Datei
+schreiben darf und ob er ihren Ordner beschreiben darf; die Antwort berücksichtigt
+Rechte, Eigentümer und Zugriffsliste zusammen.
+
+- Darf er die Datei schreiben, öffnet sie in `vim`.
+- Darf er die Datei nicht schreiben, wohl aber ihren Ordner, öffnet sie
+  ebenfalls in `vim`. vim zeigt sie dann als schreibgeschützt und meldet das
+  beim Sichern; `:w!` schreibt sie trotzdem, weil der Ordner es erlaubt.
+- Darf er weder die Datei noch ihren Ordner schreiben, etwa unter `/etc`,
+  öffnet sie mit `sudo -e`.
+
+**Die zweite Zeile hat einen Preis, den man kennen muss.** Eine Datei, die
+root gehört und in einem eigenen Ordner liegt, öffnet ebenfalls in vim und
+nicht als root. `:w!` ersetzt sie dann durch eine Datei, die dem Nutzer gehört.
+Als root geöffnet wird allein eine Datei, deren Ordner der Nutzer ebenfalls
+nicht beschreiben darf. Eine schreibbare Datei als root zu öffnen, geht mit
+diesem Befehl nicht; wer das will, öffnet mit `ctrl+o` ein Terminal und tippt
+`sudo -e` selbst.
+
+**Das Passwort fragt `sudo` im Terminal, und KRK sieht und speichert es
+nicht.** Welchen Editor `sudo -e` startet, bestimmt sudo selbst, über
+`SUDO_EDITOR`, `VISUAL` oder `EDITOR`; ohne diese Angaben ist es `vi`. Bei
+einer Verknüpfung weigert sich sudo und sagt das im Terminal.
+
+**Steht unter dem Cursor ein Ordner, startet nichts**, und die Statuszeile
+sagt es. Ebenso, wenn sich nicht feststellen lässt, ob die Datei beschreibbar
+ist: KRK macht daraus nicht stillschweigend `sudo -e`, sondern meldet den Grund
+und startet nichts. An einem Ort auf einem Server und in einem Archiv ist der
+Befehl ausgegraut.
+
+**Der Weg führt über ein kurzes Skript**, das KRK im eigenen
+Temporärverzeichnis anlegt und der Terminal-Anwendung übergibt; es löscht sich
+beim Start selbst. Mit Terminal.app geht das. Eine andere eingestellte
+Terminal-Anwendung muss Shell-Skripte mit der Endung `.command` ausführen; ob
+sie das tut, entscheidet sie selbst, und KRK kann es vorher nicht feststellen.
+Tut sie es nicht, bleibt das Skript im Temporärverzeichnis liegen.
+
+**Die Taste teilt sich der Befehl mit „Editor schließen“**, nach der Regel
+oben: dieser wirkt allein im Dateifenster, jener allein im Editor. Wer eine
+eigene `keymap.toml` führt, findet den Befehl dort zunächst ohne Taste; er ist
+über das Hauptmenü erreichbar und wird in der F1-Ansicht über **Zuweisen**
+(`cmd+t`) belegt und nicht über `cmd+r`, das die ganze eigene Belegung
+zurücksetzen würde.
+
 ---
 
 ## Editor und Vorschau
@@ -686,7 +740,7 @@ Git-Bereich. Nie sind zwei von ihnen zugleich zu sehen.
 |---|---|
 | `cmd+e` | der Rundweg, siehe unten |
 | `f4` | den ausgewählten Eintrag im Editor öffnen |
-| `opt+cmd+e` | Editor schließen, mit Nachfrage bei ungesichertem Stand |
+| `opt+cmd+e` | Editor schließen, mit Nachfrage bei ungesichertem Stand; in der Dateiliste öffnet dieselbe Taste die Datei im Terminal, siehe „Eine Datei im Terminal bearbeiten“ |
 | `opt+cmd+b` | Editor ein- und ausblenden, ohne Nachfrage, der Stand bleibt |
 | `ctrl+cmd+e` | zwischen Roh- und Formatansicht wechseln |
 | `shift+cmd+e` | Fokus in den Editor |
@@ -707,6 +761,10 @@ Git-Bereich. Nie sind zwei von ihnen zugleich zu sehen.
 **Der Rückweg schließt und blendet nicht aus.** Er gibt die Datei frei und löst
 damit dieselbe Nachfrage aus wie `opt+cmd+e`. Wer den Editor nur kurz aus dem
 Weg haben will und seinen Stand behalten, nimmt `opt+cmd+b`.
+
+Im Hauptmenü zeigt „Im Terminal bearbeiten“ unter „Dateioperationen“ das
+Kürzel `⌥⌘E`, und „Editor schließen“ steht ohne Kürzel da. Mit dem Fokus im
+Editor schließt `opt+cmd+e` den Editor trotzdem wie bisher.
 
 Der PDF-Betrachter der Vorschau kennt außer den drei Zoombefehlen keine eigenen
 Tasten. Bild-auf, Bild-ab, Pos1 und Ende sind dort keine Befehle von KRK; sie
@@ -2442,8 +2500,9 @@ verbunden wird nicht.
 
 **Was im Ordner auf dem Server nicht geht:**
 
-- **Ausgegraut** sind dort „Terminal öffnen“, „Mit dem Standardprogramm
-  öffnen“, beide Pfadkopien, „Bearbeiten“ und das Stapelumbenennen, dazu mit
+- **Ausgegraut** sind dort „Terminal öffnen“, „Im Terminal bearbeiten“,
+  „Mit dem Standardprogramm öffnen“, beide Pfadkopien, „Bearbeiten“ und das
+  Stapelumbenennen, dazu mit
   dem Fokus im Dateifenster „Teilen“, „Lesezeichen anlegen“ und der Rundweg
   (`cmd+e`), außerdem „Zur Zwischenablage springen“. Die Ankreuzfelder „Deep“ und „Content“ lassen sich nicht
   bedienen.
