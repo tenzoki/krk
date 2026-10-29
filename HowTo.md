@@ -722,6 +722,17 @@ Terminal-Anwendung muss Shell-Skripte mit der Endung `.command` ausführen; ob
 sie das tut, entscheidet sie selbst, und KRK kann es vorher nicht feststellen.
 Tut sie es nicht, bleibt das Skript im Temporärverzeichnis liegen.
 
+**Nach dem Beenden von vim oder `sudo -e` bleibt das Terminalfenster mit
+„[Prozess abgeschlossen]“ stehen, wenn das Profil der Terminal-Anwendung es so
+einstellt**; KRK schließt das Fenster nicht selbst. In Terminal.app ändert man
+das unter Terminal → Einstellungen → Profile → (Profil) → Shell → „Wenn die
+Shell beendet wird“ auf „Schließen, wenn die Shell sauber beendet wurde“. Das
+beendet kein laufendes Programm, sondern regelt allein, was mit dem Fenster
+geschieht, nachdem die Shell geendet hat; endet sie mit einem Fehler, etwa nach
+einem falschen sudo-Passwort, bleibt das Fenster mit der Meldung offen, und die
+Einstellung gilt für jedes Fenster dieses Profils. Andere Terminal-Anwendungen
+wie iTerm2 oder Ghostty haben eine eigene, gleichartige Einstellung.
+
 **Die Taste teilt sich der Befehl mit „Editor schließen“**, nach der Regel
 oben: dieser wirkt allein im Dateifenster, jener allein im Editor. Wer eine
 eigene `keymap.toml` führt, findet den Befehl dort zunächst ohne Taste; er ist
