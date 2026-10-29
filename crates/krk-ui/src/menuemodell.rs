@@ -1118,6 +1118,36 @@ mod tests {
         );
     }
 
+    /// `opt+cmd+e` zeigt im Menue „Im Terminal bearbeiten“, und „Editor
+    /// schließen“ steht ohne Kuerzel da (Schritt 4c des Plans
+    /// `261029-0920_*_plan-datei-im-terminal-mit-vim-und-sudo-e-oeffnen.md`,
+    /// Moeglichkeit 1 von
+    /// `261029-0921-welcher-menueeintrag-zeigt-opt-cmd-e-editor-schliessen-oder-mit-vim-bearbeiten.md`):
+    /// „Dateioperationen“ steht in der Leiste vor „Editor“, und AppKit nimmt
+    /// dem spaeteren von zwei gleichen Kuerzeln das Zeichen.
+    #[test]
+    fn opt_cmd_e_zeigt_im_menue_das_terminal_und_nicht_das_schliessen() {
+        let belegung = Belegung::auslieferung();
+        let leiste = aufbau(&belegung);
+        let kuerzel = |gesucht: &str| {
+            leiste
+                .iter()
+                .flat_map(|obermenue| obermenue.eintraege.iter())
+                .find_map(|eintrag| match eintrag {
+                    Eintrag::Befehl {
+                        kennung,
+                        kombination,
+                        ..
+                    } if *kennung == gesucht => Some(*kombination),
+                    _ => None,
+                })
+                .unwrap_or_else(|| panic!("{gesucht} steht nicht im Menue"))
+        };
+        let opt_cmd_e = Kombination::lesen("opt+cmd+e").expect("eine Kombination");
+        assert_eq!(kuerzel("im_terminal_bearbeiten"), Some(opt_cmd_e));
+        assert_eq!(kuerzel("editor_schliessen"), None);
+    }
+
     /// Die drei Befehle der Quicknote stehen im Obermenue „Editor", in der
     /// Reihenfolge der Auslieferungsbelegung, zwei mit Kuerzel und „Quicknote
     /// leeren" ohne (Schritt 1 des Plans

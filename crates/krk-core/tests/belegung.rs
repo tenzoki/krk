@@ -3356,6 +3356,37 @@ fn die_auslieferung_teilt_delete_und_cmd_n_mit_den_eintragsbefehlen() {
     assert!(nutzerbelegung_mit(&[("eintrag_loeschen", "esc")]).is_err());
 }
 
+/// `opt+cmd+e` teilen seit dem 261029 „Im Terminal bearbeiten“ und „Editor
+/// schließen“, als Ausschluss (Schritt 4a des Plans
+/// `261029-0920_*_plan-datei-im-terminal-mit-vim-und-sudo-e-oeffnen.md`): der
+/// eine wirkt allein im Dateifenster, der andere allein im Editor. Bei einem
+/// Ausschluss nennt der Nachschlag die zwei in der Reihenfolge der Datei, und
+/// `im_terminal_bearbeiten` steht dort beim Terminal und damit vor
+/// `editor_schliessen`. `opt+shift+cmd+e` bleibt unbelegt.
+#[test]
+fn die_auslieferung_teilt_opt_cmd_e_zwischen_terminal_und_editor() {
+    let belegung = Belegung::auslieferung();
+    assert!(belegung.konflikte().is_empty());
+    let Nachschlag::Geteilt(erste, zweite) = belegung.nachschlag(kombi("opt+cmd+e").tastendruck())
+    else {
+        panic!("opt+cmd+e ergibt keinen geteilten Nachschlag");
+    };
+    assert_eq!(erste.kennung(), "im_terminal_bearbeiten");
+    assert_eq!(zweite.kennung(), "editor_schliessen");
+    assert!(
+        Kommando::ImTerminalBearbeiten
+            .wirkungsbereich()
+            .schliesst_aus(Kommando::EditorSchliessen.wirkungsbereich())
+    );
+    assert!(
+        matches!(
+            belegung.nachschlag(kombi("opt+shift+cmd+e").tastendruck()),
+            Nachschlag::Unbelegt
+        ),
+        "opt+shift+cmd+e ist belegt"
+    );
+}
+
 /// C3.8: zwei Funktionen der Bildfolge auf einer Kombination bleiben ein
 /// Konflikt, ebenso drei Funktionen desselben Zustellers, die sich paarweise
 /// vertragen (Editor, Dateifenster, Bildfolge): mehr als zwei traegt keine

@@ -2703,6 +2703,75 @@ mod tests {
         assert!(angelegt > 0, "keine Lage legt an; die Probe prueft nichts");
     }
 
+    /// `opt+cmd+e` am ausgelieferten Stand (Schritt 4b des Plans
+    /// `261029-0920_*_plan-datei-im-terminal-mit-vim-und-sudo-e-oeffnen.md`):
+    /// mit dem Fokus im Dateifenster an einem lokalen Ort oeffnet es die Datei
+    /// im Terminal, mit dem Fokus im Editor schliesst es ihn wie bisher, in
+    /// jeder Form ausser der Quicknote, und an einem fernen Ort oder im Archiv
+    /// ist mit dem Fokus im Dateifenster keiner der zwei zulaessig. In jeder
+    /// anderen Lage ebenso keiner.
+    ///
+    /// Ein Ausschluss, also nennt der Nachschlag die zwei in der Reihenfolge
+    /// der Datei; [`waehlen`] nimmt die zweite, wo allein sie zulaessig ist.
+    #[test]
+    fn opt_cmd_e_oeffnet_im_dateifenster_das_terminal_und_schliesst_im_editor() {
+        use krk_core::tasten::{Belegung, Kombination, Nachschlag};
+        let belegung = Belegung::auslieferung();
+        let druck = Kombination::lesen("opt+cmd+e")
+            .expect("gueltige Schreibweise")
+            .tastendruck();
+        let Nachschlag::Geteilt(erste, zweite) = belegung.nachschlag(druck) else {
+            panic!("opt+cmd+e ergibt keinen geteilten Nachschlag");
+        };
+        let erste = erste.kommando().expect("ein Kommando");
+        let zweite = zweite.kommando().expect("ein Kommando");
+        assert_eq!(
+            (erste, zweite),
+            (Kommando::ImTerminalBearbeiten, Kommando::EditorSchliessen),
+            "in der Reihenfolge der Datei"
+        );
+        let (mut terminal, mut geschlossen, mut im_text, mut ausgegraut) =
+            (0usize, 0usize, 0usize, 0usize);
+        for lage in jede_lage() {
+            let frei = !lage.blatt_steht
+                && !lage.ersthelfer_gehoert_appkit
+                && lage.schluesselfenster_gehoert_krk;
+            let erwartet = match lage.fokus {
+                Fokus::Dateifenster if frei && lage.aktiv_ort == Ortsart::Lokal => {
+                    terminal += 1;
+                    Some(Kommando::ImTerminalBearbeiten)
+                }
+                Fokus::Dateifenster if frei => {
+                    ausgegraut += 1;
+                    None
+                }
+                Fokus::Editor if frei && lage.editorform != Editorform::Quicknote => {
+                    geschlossen += 1;
+                    if lage.editorform == Editorform::Text {
+                        im_text += 1;
+                    }
+                    Some(Kommando::EditorSchliessen)
+                }
+                _ => None,
+            };
+            let gewaehlt = waehlen(erste, zweite, lage);
+            match erwartet {
+                Some(kommando) => {
+                    assert_eq!(gewaehlt, kommando, "{lage:?}");
+                    assert!(zulaessig(gewaehlt, lage), "{lage:?}");
+                }
+                None => {
+                    assert!(!zulaessig(erste, lage), "{erste:?} in {lage:?}");
+                    assert!(!zulaessig(zweite, lage), "{zweite:?} in {lage:?}");
+                }
+            }
+        }
+        assert!(
+            terminal > 0 && geschlossen > 0 && im_text > 0 && ausgegraut > 0,
+            "eine der vier Lagen fehlt; die Probe prueft sie nicht"
+        );
+    }
+
     /// Sichern, Schliessen und der Ansichtswechsel wirken in jeder Form, in
     /// der der Editor die Datei zeigt.
     ///
