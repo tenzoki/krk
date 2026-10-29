@@ -29,6 +29,7 @@
 //!                                                 heimordner::schluesselmerker
 //! statfs(2)          ──> auf_lokalem_...      ──> operation::fern
 //! access(2)          ──> schreiben_erlaubt    ──> archiv::umbau
+//!                                             └─> terminalskript::vorbereiten
 //! ```
 //!
 //! **Zehn ist die Zahl der Schnittstellen und nicht die der Bindungen: es sind
@@ -1536,9 +1537,17 @@ unsafe extern "C" {
 /// ersetzt die Archivdatei ueber ein `rename(2)` im Ordner, und dafuer genuegte
 /// das Schreibrecht am Ordner. Eine Datei, die der Nutzer gegen Aenderungen
 /// gesperrt hat, schriebe er damit trotzdem neu; gefragt wird deshalb die
-/// Datei selbst, wie ein Programm, das sie zum Schreiben oeffnen wollte. Die
-/// Frage stellt einen Systemaufruf und wird allein auf einem Arbeitsfaden
-/// gerufen.
+/// Datei selbst, wie ein Programm, das sie zum Schreiben oeffnen wollte.
+///
+/// Der zweite Rufer ist seit dem 261029 [`crate::terminalskript::vorbereiten`]:
+/// er fragt die Datei unter dem Cursor und ihren Ordner und waehlt danach
+/// zwischen `vim` und `sudo -e`. Ein Fehlschlag ist dort kein Nein, sondern
+/// haelt den Start an. `access(2)` prueft gegen die reale Kennung des
+/// Prozesses; KRK ist kein setuid-Programm, die reale ist also die wirksame,
+/// und die Antwort ist die fuer den Nutzer.
+///
+/// Die Frage stellt einen Systemaufruf und wird allein auf einem Arbeitsfaden
+/// gerufen, von beiden Rufern.
 ///
 /// # Errors
 ///

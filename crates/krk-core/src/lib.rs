@@ -61,6 +61,10 @@
 //! die Archivdatei verlangt dasselbe Pfand `fern::Fernfaden` wie eine Anfrage
 //! an einen Server; die Bauweise steht im Kopf jenes Moduls.
 //!
+//! `terminalskript` waehlt fuer eine Datei zwischen `vim` und `sudo -e`,
+//! prueft sie und legt das kurze Skript an, das die Terminal-Anwendung
+//! ausfuehrt; die Regel der Wahl steht im Kopf jenes Moduls.
+//!
 //! `trenntext` liest CSV und TSV in einen Index aus Byte-Bereichen und rechnet
 //! jede Tabellenhandlung als Ersetzung genau der Bytes, die sie beruehrt, damit
 //! Vorschau und Editor dieselbe Zerlegung teilen; die Regeln stehen im Kopf
@@ -97,6 +101,7 @@ pub mod ort;
 pub mod sprache;
 pub mod stapelumbenennen;
 pub mod tasten;
+pub mod terminalskript;
 pub mod text;
 pub mod trenntext;
 pub mod verzeichnis;

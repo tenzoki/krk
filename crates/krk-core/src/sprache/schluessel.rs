@@ -976,6 +976,22 @@ pub enum Text {
     OrdnerNichtMehrErreichbar,
     /// `operationen::kein_terminal`; `{kennung}`.
     KeinTerminal,
+    /// `terminalskript::Skriptfehler::Fehlt`: die Datei unter dem Cursor gibt
+    /// es nicht (mehr).
+    TerminalDateiFehlt,
+    /// `Skriptfehler::IstOrdner`: unter dem Cursor steht ein Ordner.
+    TerminalIstOrdner,
+    /// `Skriptfehler::KeinUtf8`: der Pfad der Datei ist kein UTF-8.
+    TerminalPfadOhneUtf8,
+    /// `Skriptfehler::NichtAbsolut`: der Pfad ist nicht absolut oder hat
+    /// keinen Elternordner.
+    TerminalPfadNichtAbsolut,
+    /// `Skriptfehler::Pruefen`: das Schreibrecht liess sich nicht feststellen;
+    /// `{grund}`.
+    TerminalSchreibrechtUnklar,
+    /// `Skriptfehler::Schreiben`: das Skript liess sich nicht anlegen;
+    /// `{grund}`.
+    TerminalSkriptNichtAngelegt,
     /// `operationen::kopiermeldung` fuer einen Pfad; `{pfad}`.
     PfadKopiert,
     /// `kopiermeldung` fuer mehrere Pfade; `{n}`.
@@ -1843,7 +1859,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 761] = [
+    pub const ALLE: [Text; 767] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -2247,6 +2263,12 @@ impl Text {
         Text::OrdnerKeinOrdnerMehr,
         Text::OrdnerNichtMehrErreichbar,
         Text::KeinTerminal,
+        Text::TerminalDateiFehlt,
+        Text::TerminalIstOrdner,
+        Text::TerminalPfadOhneUtf8,
+        Text::TerminalPfadNichtAbsolut,
+        Text::TerminalSchreibrechtUnklar,
+        Text::TerminalSkriptNichtAngelegt,
         Text::PfadKopiert,
         Text::PfadeKopiert,
         Text::NichtsBetroffen,

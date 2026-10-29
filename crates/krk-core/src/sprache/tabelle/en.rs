@@ -637,6 +637,22 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::KeinTerminal => {
             "no application with the bundle identifier “{kennung}” is installed; settings.toml names it under terminal, and a change takes effect only after a restart"
         }
+        Text::TerminalDateiFehlt => {
+            "nothing to edit in Terminal: the file under the cursor no longer exists"
+        }
+        Text::TerminalIstOrdner => {
+            "nothing to edit in Terminal: the cursor is on a folder, and only a file can be edited"
+        }
+        Text::TerminalPfadOhneUtf8 => {
+            "nothing to edit in Terminal: the file’s path is not valid UTF-8"
+        }
+        Text::TerminalPfadNichtAbsolut => {
+            "nothing to edit in Terminal: the file’s path is not absolute"
+        }
+        Text::TerminalSchreibrechtUnklar => {
+            "could not determine whether the file is writable: {grund}; nothing is started"
+        }
+        Text::TerminalSkriptNichtAngelegt => "could not create the script for Terminal: {grund}",
         Text::PfadKopiert => "Path copied: {pfad}",
         Text::PfadeKopiert => "{n} paths copied",
         Text::NichtsBetroffen => "nothing {nennform}: nothing marked and nothing selected",

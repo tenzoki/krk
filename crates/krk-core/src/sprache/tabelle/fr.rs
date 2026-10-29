@@ -716,6 +716,24 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::KeinTerminal => {
             "aucune application portant l’identifiant de bundle «\u{a0}{kennung}\u{a0}» n’est installée\u{202f}; settings.toml la nomme sous terminal, une modification ne prend effet qu’après un redémarrage"
         }
+        Text::TerminalDateiFehlt => {
+            "rien à modifier dans le Terminal\u{a0}: le fichier sous le curseur n’existe plus"
+        }
+        Text::TerminalIstOrdner => {
+            "rien à modifier dans le Terminal\u{a0}: sous le curseur se trouve un dossier, et seul un fichier peut être modifié"
+        }
+        Text::TerminalPfadOhneUtf8 => {
+            "rien à modifier dans le Terminal\u{a0}: le chemin du fichier n’est pas en UTF-8 valide"
+        }
+        Text::TerminalPfadNichtAbsolut => {
+            "rien à modifier dans le Terminal\u{a0}: le chemin du fichier n’est pas absolu"
+        }
+        Text::TerminalSchreibrechtUnklar => {
+            "impossible de déterminer si le fichier est modifiable\u{a0}: {grund}\u{202f}; rien n’est lancé"
+        }
+        Text::TerminalSkriptNichtAngelegt => {
+            "impossible de créer le script pour le Terminal\u{a0}: {grund}"
+        }
         Text::PfadKopiert => "Chemin copié\u{a0}: {pfad}",
         Text::PfadeKopiert => "{n} chemins copiés",
         Text::NichtsBetroffen => "rien {nennform}\u{a0}: rien de marqué ni de sélectionné",

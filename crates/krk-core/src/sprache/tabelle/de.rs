@@ -665,6 +665,24 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::KeinTerminal => {
             "keine Anwendung mit der Bündelkennung „{kennung}“ installiert; settings.toml nennt sie unter terminal, eine Änderung wirkt erst nach einem Neustart"
         }
+        Text::TerminalDateiFehlt => {
+            "nichts im Terminal zu bearbeiten: die Datei unter dem Cursor gibt es nicht mehr"
+        }
+        Text::TerminalIstOrdner => {
+            "nichts im Terminal zu bearbeiten: unter dem Cursor steht ein Ordner, und bearbeitet wird allein eine Datei"
+        }
+        Text::TerminalPfadOhneUtf8 => {
+            "nichts im Terminal zu bearbeiten: der Pfad der Datei ist kein gültiges UTF-8"
+        }
+        Text::TerminalPfadNichtAbsolut => {
+            "nichts im Terminal zu bearbeiten: der Pfad der Datei ist nicht absolut"
+        }
+        Text::TerminalSchreibrechtUnklar => {
+            "ob die Datei beschreibbar ist, ließ sich nicht feststellen: {grund}; gestartet wird nichts"
+        }
+        Text::TerminalSkriptNichtAngelegt => {
+            "das Skript für das Terminal ließ sich nicht anlegen: {grund}"
+        }
         Text::PfadKopiert => "Pfad kopiert: {pfad}",
         Text::PfadeKopiert => "{n} Pfade kopiert",
         Text::NichtsBetroffen => "nichts {nennform}: nichts markiert und nichts ausgewählt",
