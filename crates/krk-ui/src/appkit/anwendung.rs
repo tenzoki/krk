@@ -300,6 +300,7 @@ use krk_core::stapelumbenennen::Vorschau;
 use krk_core::tasten::belegung;
 use krk_core::tasten::normalisierung::ModMaske;
 use krk_core::tasten::{Belegung, Kommando, Tastendruck, code_von_pflicht};
+use krk_core::terminalskript;
 use krk_core::verzeichnis::{Erlaubnisbefund, Richtung, Warnbefund, arbeitsbaum, umfang};
 
 use crate::angezeigtedatei;
@@ -3235,6 +3236,75 @@ impl Anwendungsdelegierter {
         true
     }
 
+    /// Oeffnet die Datei unter dem Cursor im Terminal, mit `vim` oder mit
+    /// `sudo -e` (261029, `opt+cmd+e`).
+    ///
+    /// **Welches Programm, waehlt KRK** in [`terminalskript::vorbereiten`]
+    /// nach dem Schreibrecht, und das Kennwort fragt `sudo` selbst im
+    /// Terminal; KRK sieht, haelt und uebergibt keins.
+    ///
+    /// **Dieser Rumpf laeuft auf dem Hauptfaden und stellt keinen
+    /// Systemaufruf** (Entscheidung E4 des Plans): der Ordner kommt am Wert
+    /// aus [`Self::lokaler_ordner_oder_melden`], der Pfad aus der Tabelle, die
+    /// Kennung aus den Einstellungen, und alles, was die Platte fragt, geht
+    /// ueber [`terminal::vorbereiten_lassen`] auf den Faden `krk-terminal`.
+    /// Die Antwort nimmt [`Self::im_terminal_einziehen`] entgegen. Ein Ordner
+    /// unter dem Cursor wird dort gemeldet und nicht hier ausgegraut
+    /// (Entscheidung E1), denn die Frage danach ist eine an die Platte.
+    ///
+    /// Liefert immer `true`, mit der Begruendung von [`Self::terminal_oeffnen`].
+    fn im_terminal_bearbeiten(&self) -> bool {
+        let seite = self.ivars().modell.borrow().aktiv();
+        if self.lokaler_ordner_oder_melden(seite).is_none() {
+            return true;
+        }
+        let Some(datei) = self.dateifenster(seite).quelle().auswahl_pfad() else {
+            self.antwort_zeigen(seite, text(Text::NichtsAusgewaehlt));
+            return true;
+        };
+        let kennung = self.ivars().einstellungen.borrow().terminal.clone();
+        terminal::vorbereiten_lassen(datei, move |mtm, ergebnis| {
+            Anwendungsdelegierter::im_terminal_einziehen(mtm, seite, &kennung, ergebnis);
+        });
+        true
+    }
+
+    /// Nimmt das vorbereitete Skript auf dem Hauptfaden entgegen und uebergibt
+    /// es der eingestellten Terminal-Anwendung (261029).
+    ///
+    /// Gerufen aus [`terminal::vorbereiten_lassen`]; den Delegierten sucht sie
+    /// dort, wo er steht, wie [`Self::auswurf_einziehen`]. Ein Fehler beim
+    /// Vorbereiten geht mit seinem Satz aus der Sprachtabelle in die
+    /// Statuszeile, und es startet nichts. Scheitert die Uebergabe, weil zu der
+    /// Kennung keine Anwendung installiert ist, wird das Skript sofort
+    /// verworfen und die Kennung gemeldet wie bei `ctrl+o`.
+    ///
+    /// **Das Verwerfen ist der eine Systemaufruf dieses Weges auf dem
+    /// Hauptfaden** (Ausnahme nach E4): es entfernt eine Datei, die KRK selbst
+    /// unter `$TMPDIR` angelegt hat, und `$TMPDIR` liegt auf der Startplatte.
+    fn im_terminal_einziehen(
+        mtm: MainThreadMarker,
+        seite: Fensterseite,
+        kennung: &str,
+        ergebnis: terminal::Vorbereitung,
+    ) {
+        let Some(delegierter) = NSApplication::sharedApplication(mtm).delegate() else {
+            return;
+        };
+        let Ok(selbst) = delegierter.downcast::<Anwendungsdelegierter>() else {
+            return;
+        };
+        match ergebnis {
+            Err(fehler) => selbst.antwort_zeigen(seite, &fehler.meldung()),
+            Ok(vorbereitet) => {
+                if !terminal::skript_uebergeben(kennung, &vorbereitet.skript) {
+                    terminalskript::verwerfen(&vorbereitet.skript);
+                    selbst.antwort_zeigen(seite, &operationen::kein_terminal(kennung));
+                }
+            }
+        }
+    }
+
     /// Startet eine weitere Instanz von KRK (C3 der Runde 7).
     ///
     /// Liefert immer `true`: der Befehl war zustaendig, auch wenn er nur etwas
@@ -4767,6 +4837,7 @@ impl Anwendungsdelegierter {
             Kommando::DateiAnlegen => self.anlegen(Anlegeart::Datei),
             Kommando::UmbenennenStapel => self.stapel_umbenennen(),
             Kommando::TerminalOeffnen => self.terminal_oeffnen(),
+            Kommando::ImTerminalBearbeiten => self.im_terminal_bearbeiten(),
             Kommando::ZwischenablageAnsehen => self.zwischenablage_ansehen(),
             // **Der Tabbefehl nimmt den Ersthelferrang mit, seit dem 260825.**
             // Bis dahin schrieb er allein `Fenstermodell::aktiv` um und liess
@@ -15858,6 +15929,107 @@ mod kontextproben {
                 "auswurf_beginnen enthaelt {nadel}: ein Systemaufruf auf dem Hauptfaden"
             );
         }
+    }
+
+    /// Der Terminalbefehl reisst nirgends ab: Zweig, Faden, Antwort (261029).
+    ///
+    /// **`kommando_ausfuehren_bei` endet auf einen Auffangzweig**, und ein
+    /// Kommando ohne eigenen Zweig dort taete still nichts und bestuende jede
+    /// andere Probe. Gehalten wird deshalb die ganze Kette am Quelltext: der
+    /// Zweig fuer `ImTerminalBearbeiten` fuehrt auf `im_terminal_bearbeiten`,
+    /// dessen Rumpf reicht die Arbeit an `terminal::vorbereiten_lassen` und die
+    /// Antwort an `im_terminal_einziehen`, und dort stehen die Uebergabe, das
+    /// Verwerfen nach einer gescheiterten Uebergabe und die Meldung eines
+    /// Fehlers.
+    ///
+    /// **Was sie nicht sieht:** ob die Nadel in einem Zweig steht, den der
+    /// Rumpf nie erreicht, und ob die Terminal-Anwendung das Skript ausfuehrt;
+    /// das zweite zeigt allein die Nutzerabnahme.
+    #[test]
+    fn der_terminalbefehl_reisst_nirgends_ab() {
+        let datei = diese_datei();
+
+        let ausfuehren = rumpf(&datei, "kommando_ausfuehren_bei");
+        assert!(
+            ausfuehren.contains(concat!(
+                "Kommando::ImTerminalBearbeiten => self.",
+                "im_terminal_bearbeiten()"
+            )),
+            "kommando_ausfuehren_bei fuehrt ImTerminalBearbeiten nicht auf \
+             im_terminal_bearbeiten: der Befehl faellt in den Auffangzweig"
+        );
+
+        let bearbeiten = rumpf(&datei, "im_terminal_bearbeiten");
+        for nadel in [
+            concat!("terminal::", "vorbereiten_lassen("),
+            concat!("im_terminal_", "einziehen("),
+        ] {
+            assert!(
+                bearbeiten.contains(nadel),
+                "im_terminal_bearbeiten enthaelt {nadel} nicht: der Befehl reisst ab"
+            );
+        }
+
+        let einziehen = rumpf(&datei, "im_terminal_einziehen");
+        for nadel in [
+            concat!("terminal::", "skript_uebergeben("),
+            concat!("terminalskript::", "verwerfen("),
+            concat!("operationen::", "kein_terminal("),
+            ".meldung()",
+        ] {
+            assert!(
+                einziehen.contains(nadel),
+                "im_terminal_einziehen enthaelt {nadel} nicht: das Skript erreicht \
+                 das Terminal nicht oder ein Fehler bleibt still"
+            );
+        }
+    }
+
+    /// Der Terminalbefehl stellt auf dem Hauptfaden keinen Systemaufruf
+    /// (261029, Entscheidung E4 des Plans).
+    ///
+    /// Dieselbe Bauform wie
+    /// `der_duplikatweg_stellt_auf_dem_hauptfaden_keinen_systemaufruf`: in den
+    /// Ruempfen von `im_terminal_bearbeiten` und `im_terminal_einziehen` steht
+    /// keine Frage an die Platte. Gemessen sind `fs::`, `metadata(`,
+    /// `exists(`, `schreiben_erlaubt(`, `terminalskript::vorbereiten(` (das
+    /// gehoert auf den Faden `krk-terminal`) und `ordner_fehlt(`, das `ctrl+o`
+    /// heute auf dem Hauptfaden fragt und das hier kein Vorbild ist.
+    ///
+    /// **Die eine Ausnahme ist `terminalskript::verwerfen`** nach einer
+    /// gescheiterten Uebergabe: es entfernt eine Datei, die KRK selbst unter
+    /// `$TMPDIR` angelegt hat, und `$TMPDIR` liegt nie auf einer Freigabe.
+    /// Die Probe verlangt, dass es allein in `im_terminal_einziehen` steht.
+    ///
+    /// **Was sie nicht sieht:** einen Systemaufruf in einer tiefer gerufenen
+    /// Funktion. Sie liest die Ruempfe und nicht den Aufrufbaum darunter;
+    /// `lokaler_ordner_oder_melden` und `auswahl_pfad` fragen das Modell, und
+    /// `terminal::skript_uebergeben` reicht den Pfad an `NSWorkspace`.
+    #[test]
+    fn der_terminalbefehl_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
+        let datei = diese_datei();
+        for name in ["im_terminal_bearbeiten", "im_terminal_einziehen"] {
+            let rumpf = rumpf(&datei, name);
+            for nadel in [
+                "fs::",
+                "metadata(",
+                "exists(",
+                "schreiben_erlaubt(",
+                concat!("terminalskript::", "vorbereiten("),
+                "ordner_fehlt(",
+            ] {
+                assert!(
+                    !rumpf.contains(nadel),
+                    "{name} enthaelt {nadel}: ein Systemaufruf auf dem Hauptfaden"
+                );
+            }
+        }
+        assert!(
+            !rumpf(&datei, "im_terminal_bearbeiten")
+                .contains(concat!("terminalskript::", "verwerfen(")),
+            "im_terminal_bearbeiten verwirft ein Skript: die Ausnahme nach E4 gilt \
+             allein nach der gescheiterten Uebergabe"
+        );
     }
 
     /// Die Leiste wirft ueber denselben Weg aus wie die Dateiliste (261016).

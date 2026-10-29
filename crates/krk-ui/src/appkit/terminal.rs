@@ -21,6 +21,28 @@
 //! Kennung, weil der Nutzer sie berichtigen kann,
 //! [`crate::kommandos::operationen::kein_finder`] nennt keine).
 //!
+//! **Seit dem 261029 stellt ein dritter Weg die Frage, und er reicht keinen
+//! Ordner, sondern ein Skript.** „Im Terminal bearbeiten" (`opt+cmd+e`)
+//! uebergibt der eingestellten Terminal-Anwendung eine `.command`-Datei, die
+//! [`krk_core::terminalskript::vorbereiten`] angelegt hat und die `vim` oder
+//! `sudo -e` an der Datei unter dem Cursor startet. Er geht durch
+//! [`skript_uebergeben`], und beide oeffentlichen Huellen rufen denselben
+//! privaten Rumpf [`oeffnen_mit`]: die Abweisung ohne UTF-8, die eine
+//! Aufloesung und der eine Ruf an `NSWorkspace` stehen damit weiter genau
+//! einmal da. [`ordner_oeffnen`] bleibt in Name und Vertrag, wie es war.
+//!
+//! # Der Faden `krk-terminal`
+//!
+//! Das Anlegen des Skripts fragt die Platte (`metadata`, `access(2)`, das
+//! Schreiben), und die Datei kann auf einer eingehaengten Freigabe liegen,
+//! deren Haengen sonst die Ereignisschleife anhielte. [`vorbereiten_lassen`]
+//! stellt diese Fragen deshalb auf einem eigenen, benannten Faden und reicht
+//! das Ergebnis ueber `DispatchQueue::main()` an den Hauptfaden zurueck —
+//! dasselbe Muster wie [`super::auswurf`]. Auf dem Hauptfaden bleibt allein
+//! die Uebergabe an `NSWorkspace` und, scheitert sie, das Verwerfen des
+//! eigenen Skripts unter `$TMPDIR` (Entscheidung E4 des Plans
+//! `261029-0920-plan-datei-im-terminal-mit-vim-und-sudo-e-oeffnen.md`).
+//!
 //! # Die eine Aufloesung, und ihr zweiter Frager
 //!
 //! [`anwendungsort`] ist die eine Stelle des Programms, die eine
@@ -85,12 +107,20 @@
 //! deshalb eine Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
 //! Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die Untergrenze
 //! nicht; die Nennung hier ist die Gegenmassnahme.
+//!
+//! **Was die `use`-Zeilen fuer den Faden `krk-terminal` hereinholen, und warum
+//! keines davon die Untergrenze dieser Datei anhebt:** `MainThreadMarker` ist
+//! ein Rust-Typ der Kiste und hat kein macOS-Alter; `DispatchQueue` aus
+//! `dispatch2` ist eine Rust-Huelle um `libdispatch`, seit 10.6 im System.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
+use dispatch2::DispatchQueue;
+use krk_core::terminalskript::{self, Skriptfehler, Vorbereitet};
 use objc2::rc::Retained;
 use objc2_app_kit::{NSWorkspace, NSWorkspaceOpenConfiguration};
-use objc2_foundation::{NSArray, NSString, NSURL};
+use objc2_foundation::{MainThreadMarker, NSArray, NSString, NSURL};
 
 /// Wo die Anwendung mit dieser Buendelkennung liegt, sofern eine installiert
 /// ist.
@@ -130,16 +160,38 @@ pub fn anwendung_vorhanden(kennung: &str) -> bool {
 /// die ihn seinen Tippfehler nicht finden laesst.
 ///
 /// Aufgeloest wird ueber [`anwendungsort`], die eine Stelle des Programms, die
-/// eine Buendelkennung in einen Anwendungsort umsetzt.
+/// eine Buendelkennung in einen Anwendungsort umsetzt; den Ruf an
+/// `NSWorkspace` teilt sie mit [`skript_uebergeben`] ueber [`oeffnen_mit`].
 #[must_use = "die Antwort sagt, ob eine Anwendung dieser Kennung installiert ist; fallengelassen bleibt der Nutzer ohne Meldung"]
 pub fn ordner_oeffnen(kennung: &str, ordner: &Path) -> bool {
+    oeffnen_mit(kennung, ordner)
+}
+
+/// Uebergibt ein Skript aus [`krk_core::terminalskript::vorbereiten`] der
+/// Anwendung mit dieser Buendelkennung (261029, „Im Terminal bearbeiten").
+///
+/// Derselbe Vertrag wie [`ordner_oeffnen`]: `false` heisst, dass nichts
+/// gerufen worden ist, weil der Pfad kein UTF-8 ist oder keine Anwendung
+/// dieser Kennung installiert ist; der Aufrufer verwirft dann das Skript und
+/// meldet die Kennung. `true` heisst allein, dass das System den Auftrag
+/// angenommen hat. **Ob die Anwendung eine `.command`-Datei ausfuehrt, ist aus
+/// KRKs Eingaben nicht entscheidbar** (Decidability (4) des Plans); das zeigt
+/// das Terminal, und der Rueckruf bleibt aus dem Grund im Modulkopf leer.
+#[must_use = "die Antwort sagt, ob das Skript uebergeben ist; fallengelassen bliebe das Skript liegen und der Nutzer ohne Meldung"]
+pub fn skript_uebergeben(kennung: &str, skript: &Path) -> bool {
+    oeffnen_mit(kennung, skript)
+}
+
+/// Der eine Ruf an `NSWorkspace`, den [`ordner_oeffnen`] und
+/// [`skript_uebergeben`] teilen.
+fn oeffnen_mit(kennung: &str, pfad: &Path) -> bool {
     // **Kein `to_string_lossy`.** Ein Pfad ohne gueltiges UTF-8 wuerde damit zu
     // einem Pfad mit `U+FFFD`, und das Terminal oeffnete einen anderen Ordner,
     // ohne dass der Rufer es erfuehre. `false` heisst hier dasselbe wie bei
     // einer fehlenden Anwendung: der Rufer meldet es. Dieselbe Antwort geben
     // `super::papierkorb`, `super::abwurf` und `super::volumes`
     // (`issues/260826-1421_*_pfade-ohne-gueltiges-utf-8-vier-huellen-glaetten-still-mit-to-string-lossy-und-drei-weisen-ab.md`).
-    let Some(ordner) = ordner.to_str() else {
+    let Some(pfad) = pfad.to_str() else {
         return false;
     };
     let Some(anwendung) = anwendungsort(kennung) else {
@@ -147,7 +199,7 @@ pub fn ordner_oeffnen(kennung: &str, ordner: &Path) -> bool {
     };
 
     let arbeitsflaeche = NSWorkspace::sharedWorkspace();
-    let ziel = NSURL::fileURLWithPath(&NSString::from_str(ordner));
+    let ziel = NSURL::fileURLWithPath(&NSString::from_str(pfad));
     let ziele = NSArray::from_retained_slice(&[ziel]);
     arbeitsflaeche.openURLs_withApplicationAtURL_configuration_completionHandler(
         &ziele,
@@ -156,6 +208,75 @@ pub fn ordner_oeffnen(kennung: &str, ordner: &Path) -> bool {
         None,
     );
     true
+}
+
+/// Was [`vorbereiten_lassen`] an den Hauptfaden zurueckreicht.
+pub type Vorbereitung = Result<Vorbereitet, Skriptfehler>;
+
+/// Legt auf dem Faden `krk-terminal` das Skript fuer `datei` an und reicht das
+/// Ergebnis ueber `DispatchQueue::main()` an `fertig` (261029).
+///
+/// **Auf dem rufenden Faden stellt sie keinen Systemaufruf**: das `metadata`,
+/// die zwei Fragen an `access(2)` und das Schreiben stehen allein in
+/// [`terminalskript::vorbereiten`], und das laeuft auf dem neuen Faden. Das
+/// Muster ist das von [`super::auswurf::auswerfen`]: `fertig` bekommt den
+/// [`MainThreadMarker`], damit der Rufer seinen Delegierten dort sucht, wo er
+/// steht, statt ein `Retained` ueber die Fadengrenze zu reichen.
+///
+/// **Scheitert schon der Fadenstart, bekommt `fertig` das als
+/// [`Skriptfehler::Schreiben`]**, ebenfalls ueber die Hauptschlange: es ist
+/// kein Skript entstanden, und der Rufer meldet es wie jeden anderen Fehler
+/// beim Anlegen. `fertig` wird in jedem Fall genau einmal gerufen, ausser die
+/// Hauptschlange laeuft nie wieder.
+pub fn vorbereiten_lassen(
+    datei: PathBuf,
+    fertig: impl FnOnce(MainThreadMarker, Vorbereitung) + Send + 'static,
+) {
+    // `Builder::spawn` nimmt den Abschluss und gibt ihn bei einem Fehlschlag
+    // nicht zurueck; der Halter laesst `fertig` deshalb auch dann erreichbar,
+    // wenn kein Faden entsteht.
+    let halter = Arc::new(Mutex::new(Some(fertig)));
+    let auf_dem_faden = Arc::clone(&halter);
+    let gestartet = std::thread::Builder::new()
+        .name("krk-terminal".to_owned())
+        .spawn(move || {
+            let ergebnis =
+                terminalskript::vorbereiten(&terminalskript::skriptverzeichnis(), &datei);
+            if let Some(fertig) = nehmen(&auf_dem_faden) {
+                auf_dem_hauptfaden(fertig, ergebnis);
+            }
+        });
+    if let Err(fehler) = gestartet
+        && let Some(fertig) = nehmen(&halter)
+    {
+        auf_dem_hauptfaden(fertig, Err(Skriptfehler::Schreiben(fehler)));
+    }
+}
+
+/// Nimmt `fertig` aus dem Halter, auch aus einem vergifteten: der Wert darin
+/// ist trotzdem der richtige, und ihn liegen zu lassen hiesse, die Antwort zu
+/// verschlucken (dieselbe Ueberlegung wie in [`super::auswurf`]).
+fn nehmen<F>(halter: &Mutex<Option<F>>) -> Option<F> {
+    match halter.lock() {
+        Ok(mut fertig) => fertig.take(),
+        Err(vergiftet) => vergiftet.into_inner().take(),
+    }
+}
+
+/// Reicht das Ergebnis an den Hauptfaden weiter.
+fn auf_dem_hauptfaden(
+    fertig: impl FnOnce(MainThreadMarker, Vorbereitung) + Send + 'static,
+    ergebnis: Vorbereitung,
+) {
+    DispatchQueue::main().exec_async(move || {
+        let Some(mtm) = MainThreadMarker::new() else {
+            // Kann nicht eintreten: die Hauptschlange laeuft auf dem
+            // Hauptfaden. Ein angelegtes Skript bliebe hier liegen, mit `0700`
+            // im privaten `$TMPDIR`, und das ist der Rest, den E2 hinnimmt.
+            return;
+        };
+        fertig(mtm, ergebnis);
+    });
 }
 
 #[cfg(test)]
