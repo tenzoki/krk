@@ -1,0 +1,29 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "f318a9a5-d09b-47eb-a036-f2a152ddd2ba",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/261029-0915-datei-im-terminal-mit-vim-und-sudo-e-oeffnen/decisions/261029-0921-welcher-menueeintrag-zeigt-opt-cmd-e-editor-schliessen-oder-mit-vim-bearbeiten.md"
+  },
+  "filed_by": {
+    "actor": "implementation-planner",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": {
+      "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+      "record_id": "f318a9a5-d09b-47eb-a036-f2a152ddd2ba"
+    },
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

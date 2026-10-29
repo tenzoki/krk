@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "90c44f6a-0170-402b-87cc-554431474114",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261029-0915-datei-im-terminal-mit-vim-und-sudo-e-oeffnen/issues/261029-0958-ordner-im-terminal-oeffnen-fragt-metadata-auf-dem-hauptfaden-und-ein-haengendes-netzlaufwerk-haelt-die-ereignisschleife-an.md"
+  },
+  "filed_by": {
+    "actor": "implementation-planner",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

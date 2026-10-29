@@ -1,0 +1,29 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "c5305545-65ca-4d5f-b472-3799a04b1643",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/261029-0915-datei-im-terminal-mit-vim-und-sudo-e-oeffnen/decisions/261029-0920-wie-kommt-ein-befehl-wie-vim-datei-in-die-eingestellte-terminal-anwendung.md"
+  },
+  "filed_by": {
+    "actor": "implementation-planner",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "answered",
+    "answer_ref": {
+      "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+      "record_id": "c5305545-65ca-4d5f-b472-3799a04b1643"
+    },
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

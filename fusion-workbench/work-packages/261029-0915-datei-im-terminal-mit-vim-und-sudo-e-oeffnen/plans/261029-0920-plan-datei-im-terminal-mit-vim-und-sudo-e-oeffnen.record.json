@@ -1,0 +1,56 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "dfa726cb-7cd8-4bd9-a9ad-d3c1f2b65bf8",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "plan",
+  "narrative": {
+    "path": "work-packages/261029-0915-datei-im-terminal-mit-vim-und-sudo-e-oeffnen/plans/261029-0920-plan-datei-im-terminal-mit-vim-und-sudo-e-oeffnen.md"
+  },
+  "filed_by": {
+    "actor": "implementation-planner",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "steps": [
+      {
+        "id": "1",
+        "state": "open"
+      },
+      {
+        "id": "2",
+        "state": "open"
+      },
+      {
+        "id": "3",
+        "state": "open"
+      },
+      {
+        "id": "4",
+        "state": "open"
+      },
+      {
+        "id": "5",
+        "state": "open"
+      },
+      {
+        "id": "6",
+        "state": "open"
+      }
+    ],
+    "criteria": [],
+    "acceptance": {
+      "ref": {
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "record_id": "accab262-1d8e-40cf-8a11-fd993c491c16"
+      },
+      "revision": "sha256:eecbb39a34c45dc4fdeae2596845d5d6fa3183d19f2c5d85df7bf326f64a819c"
+    }
+  }
+}
