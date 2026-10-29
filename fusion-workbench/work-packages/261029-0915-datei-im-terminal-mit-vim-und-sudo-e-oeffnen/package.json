@@ -3,7 +3,7 @@
   "id": "accab262-1d8e-40cf-8a11-fd993c491c16",
   "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
   "domain": "code",
-  "status": "claimed",
+  "status": "done",
   "claim": {
     "checkout_id": "9be83618",
     "person": "Kai Stalmann <ks@qantr.com>",
@@ -37,7 +37,20 @@
   ],
   "references": [],
   "evidence": [],
-  "outcome": null,
+  "outcome": {
+    "class": "completed",
+    "reason": "Alle sechs Planschritte gebaut (36efb7f3..7a69a051), Abschlussdurchsicht accept, Stoppbedingungen vom Nutzer alle bestaetigt, Nutzerabnahme (a)-(h) bestanden.",
+    "evidence": [
+      {
+        "ref": {
+          "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+          "record_id": "44a25976-55a5-4c25-b1e8-01f8ebfca6dc",
+          "revision": "sha256:4f4423da0d1b0f17d037186a5271e44a8338904bd1ded102fe815555f47dd4b3"
+        },
+        "policy": "claude-guided"
+      }
+    ]
+  },
   "provenance": {
     "source": "created",
     "legacy_fields": {}

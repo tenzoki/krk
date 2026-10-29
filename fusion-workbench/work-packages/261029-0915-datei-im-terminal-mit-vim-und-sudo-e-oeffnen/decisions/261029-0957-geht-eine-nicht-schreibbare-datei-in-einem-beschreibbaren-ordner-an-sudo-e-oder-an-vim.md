@@ -39,3 +39,4 @@ Möglichkeit 2. Sie hält die Absicht des Nutzerentscheids, dass KRK den Weg nim
 
 ---
 Answered: Nutzer im Chat, 261029, Antwort „1, Aa Ba Cb“ zur Planfreigabe — Möglichkeit 2: zusätzlich den Ordner fragen; ist er schreibbar, vim; ruled by user, Kai Stalmann <ks@qantr.com>
+Implemented: 36efb7f3 (befehl_fuer: vim wenn Datei oder Ordner schreibbar, sonst sudo -e); Nutzerabnahme 261029 bestanden

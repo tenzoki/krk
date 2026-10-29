@@ -33,3 +33,4 @@ Möglichkeit 1. Sie braucht keine Berechtigung und keinen neuen Namen aus AppKit
 
 ---
 Answered: Nutzer im Chat, 261029, Antwort „1, Aa Ba Cb“ zur Planfreigabe — Möglichkeit 1: kurzlebige ausführbare .command-Datei an die eingestellte Terminal-Anwendung; ruled by user, Kai Stalmann <ks@qantr.com>
+Implemented: 36efb7f3 (terminalskript legt das .command-Skript an), 80edd741 (Uebergabe an die eingestellte Terminal-Anwendung); Nutzerabnahme 261029 bestanden

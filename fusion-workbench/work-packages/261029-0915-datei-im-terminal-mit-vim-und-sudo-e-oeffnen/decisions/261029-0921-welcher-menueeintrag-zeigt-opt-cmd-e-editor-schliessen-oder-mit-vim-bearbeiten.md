@@ -32,3 +32,4 @@ Möglichkeit 1. Sie folgt der Regel, die schon gilt (der frühere Eintrag der Le
 
 ---
 Answered: Nutzer im Chat, 261029, Antwort „1, Aa Ba Cb“ zur Planfreigabe — Möglichkeit 1: „Im Terminal bearbeiten“ unter „Dateioperationen“ zeigt opt+cmd+e, „Editor schließen“ steht ohne Kürzel; ruled by user, Kai Stalmann <ks@qantr.com>
+Implemented: 158ef17b (Menue zeigt opt+cmd+e bei "Im Terminal bearbeiten"), Probe in d5e891e0; Nutzerabnahme 261029 bestanden
