@@ -1120,7 +1120,7 @@ mod tests {
 
     /// `opt+cmd+e` zeigt im Menue „Im Terminal bearbeiten“, und „Editor
     /// schließen“ steht ohne Kuerzel da (Schritt 4c des Plans
-    /// `261029-0920_*_plan-datei-im-terminal-mit-vim-und-sudo-e-oeffnen.md`,
+    /// `261029-0920-plan-datei-im-terminal-mit-vim-und-sudo-e-oeffnen.md`,
     /// Moeglichkeit 1 von
     /// `261029-0921-welcher-menueeintrag-zeigt-opt-cmd-e-editor-schliessen-oder-mit-vim-bearbeiten.md`):
     /// „Dateioperationen“ steht in der Leiste vor „Editor“, und AppKit nimmt

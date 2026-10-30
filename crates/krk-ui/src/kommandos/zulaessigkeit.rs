@@ -2704,7 +2704,7 @@ mod tests {
     }
 
     /// `opt+cmd+e` am ausgelieferten Stand (Schritt 4b des Plans
-    /// `261029-0920_*_plan-datei-im-terminal-mit-vim-und-sudo-e-oeffnen.md`):
+    /// `261029-0920-plan-datei-im-terminal-mit-vim-und-sudo-e-oeffnen.md`):
     /// mit dem Fokus im Dateifenster an einem lokalen Ort oeffnet es die Datei
     /// im Terminal, mit dem Fokus im Editor schliesst es ihn wie bisher, in
     /// jeder Form ausser der Quicknote, und an einem fernen Ort oder im Archiv

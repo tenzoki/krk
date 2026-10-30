@@ -3358,7 +3358,7 @@ fn die_auslieferung_teilt_delete_und_cmd_n_mit_den_eintragsbefehlen() {
 
 /// `opt+cmd+e` teilen seit dem 261029 „Im Terminal bearbeiten“ und „Editor
 /// schließen“, als Ausschluss (Schritt 4a des Plans
-/// `261029-0920_*_plan-datei-im-terminal-mit-vim-und-sudo-e-oeffnen.md`): der
+/// `261029-0920-plan-datei-im-terminal-mit-vim-und-sudo-e-oeffnen.md`): der
 /// eine wirkt allein im Dateifenster, der andere allein im Editor. Bei einem
 /// Ausschluss nennt der Nachschlag die zwei in der Reihenfolge der Datei, und
 /// `im_terminal_bearbeiten` steht dort beim Terminal und damit vor

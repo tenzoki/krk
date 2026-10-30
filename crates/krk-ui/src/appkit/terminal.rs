@@ -1,14 +1,15 @@
-//! Wie ein Ordner an eine ueber ihre Buendelkennung benannte Anwendung kommt.
+//! Wie ein Pfad, ein Ordner oder ein Skript, an eine ueber ihre Buendelkennung
+//! benannte Anwendung kommt.
 //!
 //! ```text
 //! Buendelkennung ──> URLForApplicationWithBundleIdentifier: ──> Ort der Anwendung
 //!                                                                     │
-//!             Ordner ──> openURLs:withApplicationAtURL:… <────────────┘
+//!   Ordner oder Skript ──> openURLs:withApplicationAtURL:… <──────────┘
 //! ```
 //!
-//! # Zwei Wege stellen diese Frage
+//! # Wer diese Frage stellt
 //!
-//! Das Modul heisst nach dem ersten und beantwortet die Frage fuer beide. Der
+//! Das Modul heisst nach dem ersten Weg und beantwortet die Frage fuer alle. Der
 //! Terminal-Befehl aus C11 stellt sie mit der Kennung aus `settings.toml`, die
 //! der Nutzer selbst eintraegt; der Eintrag „Im Finder oeffnen" des
 //! Kontextmenues aus der Runde 17 stellt sie mit der festen Kennung des
