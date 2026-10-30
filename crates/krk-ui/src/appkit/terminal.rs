@@ -44,6 +44,12 @@
 //! eigenen Skripts unter `$TMPDIR` (Entscheidung E4 des Plans
 //! `261029-0920-plan-datei-im-terminal-mit-vim-und-sudo-e-oeffnen.md`).
 //!
+//! **Seit dem 261030 geht auch `ctrl+o` ueber diesen Faden**:
+//! [`ordner_pruefen_lassen`] fragt dort, ob der angezeigte Ordner noch
+//! dasteht, und erst die Antwort auf dem Hauptfaden oeffnet ihn ueber
+//! [`ordner_oeffnen`]. Beide Wege teilen den einen Fadenweg
+//! [`auf_dem_faden`]; einen zweiten Mechanismus daneben gibt es nicht.
+//!
 //! # Die eine Aufloesung, und ihr zweiter Frager
 //!
 //! [`anwendungsort`] ist die eine Stelle des Programms, die eine
@@ -82,9 +88,11 @@
 //! `openURLs:withApplicationAtURL:configuration:completionHandler:` arbeitet
 //! asynchron und meldet den Erfolg ueber einen Block auf einer beliebigen
 //! Schlange. Die beiden Fehler, die der Nutzer beheben kann, stellt KRK vorher
-//! und synchron fest: eine Kennung ohne installierte Anwendung an der
-//! `None`-Antwort der Aufloesung, einen nicht mehr erreichbaren Ordner an der
-//! Pruefung in [`crate::kommandos::operationen::ordner_fehlt`]. Was
+//! fest: eine Kennung ohne installierte Anwendung an der `None`-Antwort der
+//! Aufloesung, einen nicht mehr erreichbaren Ordner an der Pruefung in
+//! [`crate::kommandos::operationen::ordner_fehlt`], fuer `ctrl+o` auf dem
+//! Faden `krk-terminal` und fuer „Im Finder oeffnen" weiter auf dem
+//! Hauptfaden. Was
 //! danach noch scheitern kann, ist der Start eines aufgeloesten Buendels
 //! selbst, und dafuer bleibt der Rueckruf leer: ein Block mit einem Sprung auf
 //! den Hauptfaden waere der zweite asynchrone Weg neben dem Vermittlerfaden aus
@@ -94,7 +102,8 @@
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
 //! `NSWorkspace`, `NSArray`, `NSString` und `NSURL` stehen seit macOS 10.0 zur
-//! Verfuegung, ebenso `sharedWorkspace` und `fileURLWithPath:`.
+//! Verfuegung, ebenso `sharedWorkspace`; `fileURLWithPath:isDirectory:` steht
+//! seit macOS 10.5.
 //! **`NSWorkspaceOpenConfiguration` ist die juengste Klasse dieser Datei und
 //! steht seit macOS 10.15** (`NSWorkspace.h`, `API_AVAILABLE(macos(10.15))`
 //! ueber dem `@interface`); ihre Bauform `configuration` traegt keine eigene
@@ -122,6 +131,8 @@ use krk_core::terminalskript::{self, Skriptfehler, Vorbereitet};
 use objc2::rc::Retained;
 use objc2_app_kit::{NSWorkspace, NSWorkspaceOpenConfiguration};
 use objc2_foundation::{MainThreadMarker, NSArray, NSString, NSURL};
+
+use crate::kommandos::operationen;
 
 /// Wo die Anwendung mit dieser Buendelkennung liegt, sofern eine installiert
 /// ist.
@@ -165,7 +176,7 @@ pub fn anwendung_vorhanden(kennung: &str) -> bool {
 /// `NSWorkspace` teilt sie mit [`skript_uebergeben`] ueber [`oeffnen_mit`].
 #[must_use = "die Antwort sagt, ob eine Anwendung dieser Kennung installiert ist; fallengelassen bleibt der Nutzer ohne Meldung"]
 pub fn ordner_oeffnen(kennung: &str, ordner: &Path) -> bool {
-    oeffnen_mit(kennung, ordner)
+    oeffnen_mit(kennung, ordner, true)
 }
 
 /// Uebergibt ein Skript aus [`krk_core::terminalskript::vorbereiten`] der
@@ -180,12 +191,19 @@ pub fn ordner_oeffnen(kennung: &str, ordner: &Path) -> bool {
 /// das Terminal, und der Rueckruf bleibt aus dem Grund im Modulkopf leer.
 #[must_use = "die Antwort sagt, ob das Skript uebergeben ist; fallengelassen bliebe das Skript liegen und der Nutzer ohne Meldung"]
 pub fn skript_uebergeben(kennung: &str, skript: &Path) -> bool {
-    oeffnen_mit(kennung, skript)
+    oeffnen_mit(kennung, skript, false)
 }
 
 /// Der eine Ruf an `NSWorkspace`, den [`ordner_oeffnen`] und
 /// [`skript_uebergeben`] teilen.
-fn oeffnen_mit(kennung: &str, pfad: &Path) -> bool {
+///
+/// **`ist_ordner` sagt der Rufer, und gefragt wird die Platte dafuer nicht.**
+/// `fileURLWithPath:` ohne diese Angabe prueft am Dateisystem, ob der Pfad ein
+/// Ordner ist, und auf einer haengenden Freigabe hielte das den Hauptfaden an,
+/// nachdem [`ordner_pruefen_lassen`] die Frage gerade von ihm weggenommen hat.
+/// Der Ordner ist an dieser Stelle schon geprueft, das Skript ist eine Datei,
+/// die KRK selbst angelegt hat.
+fn oeffnen_mit(kennung: &str, pfad: &Path, ist_ordner: bool) -> bool {
     // **Kein `to_string_lossy`.** Ein Pfad ohne gueltiges UTF-8 wuerde damit zu
     // einem Pfad mit `U+FFFD`, und das Terminal oeffnete einen anderen Ordner,
     // ohne dass der Rufer es erfuehre. `false` heisst hier dasselbe wie bei
@@ -200,7 +218,7 @@ fn oeffnen_mit(kennung: &str, pfad: &Path) -> bool {
     };
 
     let arbeitsflaeche = NSWorkspace::sharedWorkspace();
-    let ziel = NSURL::fileURLWithPath(&NSString::from_str(pfad));
+    let ziel = NSURL::fileURLWithPath_isDirectory(&NSString::from_str(pfad), ist_ordner);
     let ziele = NSArray::from_retained_slice(&[ziel]);
     arbeitsflaeche.openURLs_withApplicationAtURL_configuration_completionHandler(
         &ziele,
@@ -233,6 +251,60 @@ pub fn vorbereiten_lassen(
     datei: PathBuf,
     fertig: impl FnOnce(MainThreadMarker, Vorbereitung) + Send + 'static,
 ) {
+    auf_dem_faden(
+        move || terminalskript::vorbereiten(&terminalskript::skriptverzeichnis(), &datei),
+        |fehler| Err(Skriptfehler::Schreiben(fehler)),
+        fertig,
+    );
+}
+
+/// Fragt auf dem Faden `krk-terminal`, ob `ordner` noch ein erreichbarer
+/// Ordner ist, und reicht die Antwort ueber `DispatchQueue::main()` an
+/// `fertig` (C11, `ctrl+o`).
+///
+/// Die Antwort ist die von [`operationen::ordner_fehlt`]: `None`, wenn der
+/// Ordner dasteht, sonst der Satz fuer die Statuszeile. **Auf dem rufenden
+/// Faden stellt sie keinen Systemaufruf**, denn das `metadata` darin wartet
+/// auf einer haengenden Freigabe auf das Zeitlimit des Dateisystems, und auf
+/// dem Hauptfaden hielte es so lange die Ereignisschleife an
+/// (`261029-0958-ordner-im-terminal-oeffnen-fragt-metadata-auf-dem-hauptfaden-und-ein-haengendes-netzlaufwerk-haelt-die-ereignisschleife-an.md`).
+///
+/// **Scheitert schon der Fadenstart, bekommt `fertig` den Satz fuer einen
+/// unerreichbaren Ordner mit dem Fehler des Starts**, ebenfalls ueber die
+/// Hauptschlange: gefragt ist dann nichts, und der Ordner zu oeffnen, ohne
+/// gefragt zu haben, hiesse die Pruefung still auszulassen. `fertig` wird in
+/// jedem Fall genau einmal gerufen, ausser die Hauptschlange laeuft nie
+/// wieder.
+pub fn ordner_pruefen_lassen(
+    ordner: PathBuf,
+    fertig: impl FnOnce(MainThreadMarker, Option<String>) + Send + 'static,
+) {
+    let fuer_den_startfehler = ordner.clone();
+    auf_dem_faden(
+        move || operationen::ordner_fehlt(&ordner),
+        move |fehler| {
+            Some(operationen::ordner_unerreichbar(
+                &fuer_den_startfehler,
+                &fehler,
+            ))
+        },
+        fertig,
+    );
+}
+
+/// Der eine Fadenweg dieses Moduls: `arbeit` laeuft auf dem Faden
+/// `krk-terminal`, ihr Ergebnis geht ueber `DispatchQueue::main()` an
+/// `fertig`.
+///
+/// Scheitert der Fadenstart, macht `startfehler` aus dem Fehler das Ergebnis,
+/// und `fertig` bekommt es ebenso ueber die Hauptschlange. Beide oeffentlichen
+/// Wege, [`vorbereiten_lassen`] und [`ordner_pruefen_lassen`], gehen hier
+/// durch, damit Halter, Fadenname und Rueckweg genau einmal dastehen.
+fn auf_dem_faden<T: Send + 'static>(
+    arbeit: impl FnOnce() -> T + Send + 'static,
+    startfehler: impl FnOnce(std::io::Error) -> T,
+    fertig: impl FnOnce(MainThreadMarker, T) + Send + 'static,
+) {
     // `Builder::spawn` nimmt den Abschluss und gibt ihn bei einem Fehlschlag
     // nicht zurueck; der Halter laesst `fertig` deshalb auch dann erreichbar,
     // wenn kein Faden entsteht.
@@ -241,8 +313,7 @@ pub fn vorbereiten_lassen(
     let gestartet = std::thread::Builder::new()
         .name("krk-terminal".to_owned())
         .spawn(move || {
-            let ergebnis =
-                terminalskript::vorbereiten(&terminalskript::skriptverzeichnis(), &datei);
+            let ergebnis = arbeit();
             if let Some(fertig) = nehmen(&auf_dem_faden) {
                 auf_dem_hauptfaden(fertig, ergebnis);
             }
@@ -250,7 +321,7 @@ pub fn vorbereiten_lassen(
     if let Err(fehler) = gestartet
         && let Some(fertig) = nehmen(&halter)
     {
-        auf_dem_hauptfaden(fertig, Err(Skriptfehler::Schreiben(fehler)));
+        auf_dem_hauptfaden(fertig, startfehler(fehler));
     }
 }
 
@@ -265,9 +336,9 @@ fn nehmen<F>(halter: &Mutex<Option<F>>) -> Option<F> {
 }
 
 /// Reicht das Ergebnis an den Hauptfaden weiter.
-fn auf_dem_hauptfaden(
-    fertig: impl FnOnce(MainThreadMarker, Vorbereitung) + Send + 'static,
-    ergebnis: Vorbereitung,
+fn auf_dem_hauptfaden<T: Send + 'static>(
+    fertig: impl FnOnce(MainThreadMarker, T) + Send + 'static,
+    ergebnis: T,
 ) {
     DispatchQueue::main().exec_async(move || {
         let Some(mtm) = MainThreadMarker::new() else {

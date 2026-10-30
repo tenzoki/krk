@@ -3214,6 +3214,13 @@ impl Anwendungsdelegierter {
     /// eigenes Blatt entsteht nicht. Der dritte Fehler aus C11, die beschaedigte
     /// `settings.toml`, hat sich beim Start gemeldet, denn dort faellt er an.
     ///
+    /// **Dieser Rumpf stellt keinen Systemaufruf** (261030): ob der Ordner
+    /// noch dasteht, fragt [`terminal::ordner_pruefen_lassen`] auf dem Faden
+    /// `krk-terminal`, denn auf einer haengenden Freigabe wartete die Frage
+    /// auf das Zeitlimit des Dateisystems und hielte die Ereignisschleife an.
+    /// Die Antwort nimmt [`Self::terminalordner_einziehen`] auf dem Hauptfaden
+    /// entgegen, und dort stehen die Meldung und die Uebergabe.
+    ///
     /// Liefert immer `true`: der Befehl war zustaendig, auch wenn er nur etwas
     /// zu melden hatte. Ein `false` liesse den Nachzug der Aufteilung und die
     /// vorgemerkte Sitzung ausfallen; den Tastendruck gaebe es nicht her, denn
@@ -3225,15 +3232,44 @@ impl Anwendungsdelegierter {
         let Some(ordner) = self.lokaler_ordner_oder_melden(seite) else {
             return true;
         };
-        if let Some(meldung) = operationen::ordner_fehlt(&ordner) {
-            self.antwort_zeigen(seite, &meldung);
-            return true;
-        }
         let kennung = self.ivars().einstellungen.borrow().terminal.clone();
-        if !terminal::ordner_oeffnen(&kennung, &ordner) {
-            self.antwort_zeigen(seite, &operationen::kein_terminal(&kennung));
-        }
+        let geprueft = ordner.clone();
+        terminal::ordner_pruefen_lassen(geprueft, move |mtm, fehlt| {
+            Anwendungsdelegierter::terminalordner_einziehen(mtm, seite, &kennung, &ordner, fehlt);
+        });
         true
+    }
+
+    /// Nimmt die Antwort der Ordnerpruefung von `ctrl+o` auf dem Hauptfaden
+    /// entgegen und oeffnet den Ordner in der eingestellten Anwendung (C11).
+    ///
+    /// Gerufen aus [`terminal::ordner_pruefen_lassen`]; den Delegierten sucht
+    /// sie dort, wo er steht, wie [`Self::im_terminal_einziehen`]. Fehlt der
+    /// Ordner, geht der Satz aus [`operationen::ordner_fehlt`] in die
+    /// Statuszeile und es startet nichts; ist zu der Kennung keine Anwendung
+    /// installiert, meldet sie die Kennung. **Sie stellt keinen
+    /// Systemaufruf**: die Frage an die Platte ist auf dem Faden gestellt, und
+    /// [`terminal::ordner_oeffnen`] reicht den Pfad an `NSWorkspace`.
+    fn terminalordner_einziehen(
+        mtm: MainThreadMarker,
+        seite: Fensterseite,
+        kennung: &str,
+        ordner: &Path,
+        fehlt: Option<String>,
+    ) {
+        let Some(delegierter) = NSApplication::sharedApplication(mtm).delegate() else {
+            return;
+        };
+        let Ok(selbst) = delegierter.downcast::<Anwendungsdelegierter>() else {
+            return;
+        };
+        if let Some(meldung) = fehlt {
+            selbst.antwort_zeigen(seite, &meldung);
+            return;
+        }
+        if !terminal::ordner_oeffnen(kennung, ordner) {
+            selbst.antwort_zeigen(seite, &operationen::kein_terminal(kennung));
+        }
     }
 
     /// Oeffnet die Datei unter dem Cursor im Terminal, mit `vim` oder mit
@@ -15993,8 +16029,8 @@ mod kontextproben {
     /// Ruempfen von `im_terminal_bearbeiten` und `im_terminal_einziehen` steht
     /// keine Frage an die Platte. Gemessen sind `fs::`, `metadata(`,
     /// `exists(`, `schreiben_erlaubt(`, `terminalskript::vorbereiten(` (das
-    /// gehoert auf den Faden `krk-terminal`) und `ordner_fehlt(`, das `ctrl+o`
-    /// heute auf dem Hauptfaden fragt und das hier kein Vorbild ist.
+    /// gehoert auf den Faden `krk-terminal`) und `ordner_fehlt(`, das auch
+    /// `ctrl+o` seit dem 261030 dort fragt.
     ///
     /// **Die eine Ausnahme ist `terminalskript::verwerfen`** nach einer
     /// gescheiterten Uebergabe: es entfernt eine Datei, die KRK selbst unter
@@ -16030,6 +16066,71 @@ mod kontextproben {
             "im_terminal_bearbeiten verwirft ein Skript: die Ausnahme nach E4 gilt \
              allein nach der gescheiterten Uebergabe"
         );
+    }
+
+    /// `ctrl+o` stellt auf dem Hauptfaden keinen Systemaufruf (261030).
+    ///
+    /// Dieselbe Bauform wie
+    /// `der_terminalbefehl_stellt_auf_dem_hauptfaden_keinen_systemaufruf`: in
+    /// den Ruempfen von `terminal_oeffnen` und `terminalordner_einziehen` steht
+    /// keine Frage an die Platte, auch nicht `ordner_fehlt(`, das auf den
+    /// Faden `krk-terminal` gehoert. Daneben haelt sie die Kette: der Zweig
+    /// fuer `TerminalOeffnen` fuehrt auf `terminal_oeffnen`, dessen Rumpf
+    /// reicht die Frage an `terminal::ordner_pruefen_lassen` und die Antwort
+    /// an `terminalordner_einziehen`, und dort stehen die Uebergabe und die
+    /// Meldung der Kennung.
+    ///
+    /// **Was sie nicht sieht:** einen Systemaufruf in einer tiefer gerufenen
+    /// Funktion. Sie liest die Ruempfe und nicht den Aufrufbaum darunter;
+    /// dass `terminal::ordner_oeffnen` die Platte nicht fragt, haelt der
+    /// Doc-Kommentar von `oeffnen_mit` und keine Probe.
+    #[test]
+    fn ctrl_o_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
+        let datei = diese_datei();
+        assert!(
+            rumpf(&datei, "kommando_ausfuehren_bei").contains(concat!(
+                "Kommando::TerminalOeffnen => self.",
+                "terminal_oeffnen()"
+            )),
+            "kommando_ausfuehren_bei fuehrt TerminalOeffnen nicht auf terminal_oeffnen"
+        );
+        for name in ["terminal_oeffnen", "terminalordner_einziehen"] {
+            let rumpf = rumpf(&datei, name);
+            for nadel in [
+                "fs::",
+                "metadata(",
+                "exists(",
+                "is_dir(",
+                "canonicalize(",
+                concat!("ordner_", "fehlt("),
+            ] {
+                assert!(
+                    !rumpf.contains(nadel),
+                    "{name} enthaelt {nadel}: ein Systemaufruf auf dem Hauptfaden"
+                );
+            }
+        }
+        let oeffnen = rumpf(&datei, "terminal_oeffnen");
+        for nadel in [
+            concat!("terminal::", "ordner_pruefen_lassen("),
+            concat!("terminalordner_", "einziehen("),
+        ] {
+            assert!(
+                oeffnen.contains(nadel),
+                "terminal_oeffnen enthaelt {nadel} nicht: die Frage geht nicht auf den Faden"
+            );
+        }
+        let einziehen = rumpf(&datei, "terminalordner_einziehen");
+        for nadel in [
+            concat!("terminal::", "ordner_oeffnen("),
+            concat!("operationen::", "kein_terminal("),
+        ] {
+            assert!(
+                einziehen.contains(nadel),
+                "terminalordner_einziehen enthaelt {nadel} nicht: der Ordner erreicht \
+                 das Terminal nicht oder ein Fehler bleibt still"
+            );
+        }
     }
 
     /// Die Leiste wirft ueber denselben Weg aus wie die Dateiliste (261016).

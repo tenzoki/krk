@@ -1409,11 +1409,23 @@ pub fn ordner_fehlt(ordner: &Path) -> Option<String> {
             Text::OrdnerKeinOrdnerMehr,
             &[("pfad", &ordner.display())],
         )),
-        Err(fehler) => Some(satz(
-            Text::OrdnerNichtMehrErreichbar,
-            &[("pfad", &ordner.display()), ("fehler", &fehler)],
-        )),
+        Err(fehler) => Some(ordner_unerreichbar(ordner, &fehler)),
     }
+}
+
+/// Der Satz fuer einen Ordner, den KRK nicht erreicht, mit dem Fehler, der es
+/// sagt.
+///
+/// Der eine Wortlaut fuer zwei Wege: den gescheiterten `metadata` in
+/// [`ordner_fehlt`] und den gescheiterten Fadenstart in
+/// `crate::appkit::terminal::ordner_pruefen_lassen`, nach dem gar nicht
+/// gefragt ist.
+#[must_use]
+pub fn ordner_unerreichbar(ordner: &Path, fehler: &std::io::Error) -> String {
+    satz(
+        Text::OrdnerNichtMehrErreichbar,
+        &[("pfad", &ordner.display()), ("fehler", fehler)],
+    )
 }
 
 /// Die Meldung auf eine Kennung, zu der keine Anwendung installiert ist (C11).
