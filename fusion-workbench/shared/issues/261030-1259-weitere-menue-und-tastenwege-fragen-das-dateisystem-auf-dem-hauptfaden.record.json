@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "1254ba2e-b1bb-4f19-b1c8-179e0af99e25",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "shared/issues/261030-1259-weitere-menue-und-tastenwege-fragen-das-dateisystem-auf-dem-hauptfaden.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}
