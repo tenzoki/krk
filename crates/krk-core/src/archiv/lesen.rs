@@ -10,6 +10,7 @@
 //!  Tar, Tgz: Lesezeiger, der nur vorwaerts laeuft; ein Eintrag hinter dem
 //!            Zeiger beginnt den Strom neu (gezaehlt in `neustarts`)
 //!  Gz:       der ganze Strom
+//!  Sqlite:   eine Abfrage je Tabelle oder Sicht (`archiv::sqlite`)
 //! ```
 //!
 //! **Ein Durchlauf fuer einen Baum aus einem tar.gz.** Ein gepackter tar-Strom
@@ -25,7 +26,9 @@
 //! Jedes Oeffnen der Datei fragt Geraet, Inode, Groesse und Aenderungszeit am
 //! Deskriptor und vergleicht sie mit der Kennung, aus der das Verzeichnis
 //! gelesen ist; weichen sie ab, stimmen Fundstellen und Groessen nicht mehr,
-//! und das Lesen endet mit [`Lesefehler::VonAussenVeraendert`]. Was ein
+//! und das Lesen endet mit [`Lesefehler::VonAussenVeraendert`]. Eine
+//! Datenbank oeffnet die Bibliothek am Pfad; ihre Kennung, Hauptdatei und
+//! `-wal`, wird vor und nach dem Lesen am Pfad gefragt. Was ein
 //! Schreiber an derselben Datei aendert, solange sie offen ist, sieht die
 //! Frage nicht; ein Zip faengt das an der Pruefsumme, ein tar nicht.
 //!
@@ -63,7 +66,9 @@ use crate::verzeichnis::Typ;
 use crate::verzeichnis::sys::ohne_warten_oeffnen;
 
 use super::HOECHSTENS_EINTRAEGE;
+use super::format::Archivformat;
 use super::innenpfad::Innenpfad;
+use super::sqlite;
 use super::verzeichnis::{
     Archiveintrag, Bewacht, Fundstelle, Inhaltsverzeichnis, Kopfwache, Lesbarkeit,
     Verzeichnisfehler,
@@ -89,15 +94,19 @@ pub enum Lesefehler {
     /// Das Inhaltsverzeichnis liess sich nicht lesen.
     Verzeichnis(Verzeichnisfehler),
     /// Der Pfad benennt keinen Eintrag des Verzeichnisses, oder der Eintrag
-    /// steht nicht an der Fundstelle, die das Verzeichnis nennt.
-    Fehlt,
+    /// steht nicht an der Fundstelle, die das Verzeichnis nennt. Das Format
+    /// ist das des Lesers und waehlt den Grund
+    /// ([`Archivformat::eintrag_fehlt_text`]).
+    Fehlt(Archivformat),
     /// Der Eintrag ist ein Ordner und hat keine Daten.
     KeineDaten,
     /// Der Eintrag kommt nicht heraus; der Text ist der Grund
     /// ([`lesbarkeit_grund`]).
     Unlesbar(String),
-    /// Die Datei ist nicht mehr die, aus der das Verzeichnis gelesen ist.
-    VonAussenVeraendert,
+    /// Die Datei ist nicht mehr die, aus der das Verzeichnis gelesen ist. Das
+    /// Format ist das des Lesers und waehlt den Grund
+    /// ([`Archivformat::beim_lesen_veraendert_text`]).
+    VonAussenVeraendert(Archivformat),
     /// Ein Systemaufruf an der Archivdatei ist gescheitert.
     Lesen(io::Error),
     /// Die Daten sind kein gueltiges Archiv mehr, etwa eine falsche
@@ -115,10 +124,12 @@ impl Lesefehler {
             // vollstaendig ist.
             Lesefehler::Abgebrochen => text(Text::ArchivUnveraendertNachAbbruch).to_owned(),
             Lesefehler::Verzeichnis(fehler) => verzeichnisgrund(fehler),
-            Lesefehler::Fehlt => text(Text::ArchivEintragFehlt).to_owned(),
+            Lesefehler::Fehlt(format) => text(format.eintrag_fehlt_text()).to_owned(),
             Lesefehler::KeineDaten => text(Text::VorgangKeineGewoehnlicheDatei).to_owned(),
             Lesefehler::Unlesbar(grund) | Lesefehler::Ungueltig(grund) => grund.clone(),
-            Lesefehler::VonAussenVeraendert => text(Text::ArchivBeimLesenVeraendert).to_owned(),
+            Lesefehler::VonAussenVeraendert(format) => {
+                text(format.beim_lesen_veraendert_text()).to_owned()
+            }
             Lesefehler::Lesen(fehler) => crate::operation::grund(fehler),
         }
     }
@@ -133,10 +144,10 @@ impl Lesefehler {
             }
             Lesefehler::Abgebrochen
             | Lesefehler::Verzeichnis(_)
-            | Lesefehler::Fehlt
+            | Lesefehler::Fehlt(_)
             | Lesefehler::KeineDaten
             | Lesefehler::Unlesbar(_)
-            | Lesefehler::VonAussenVeraendert
+            | Lesefehler::VonAussenVeraendert(_)
             | Lesefehler::Ungueltig(_) => false,
         }
     }
@@ -149,6 +160,7 @@ fn verzeichnisgrund(fehler: &Verzeichnisfehler) -> String {
         Verzeichnisfehler::Lesen(fehler) => crate::operation::grund(fehler),
         Verzeichnisfehler::KeineDatei => text(Text::VorgangKeineGewoehnlicheDatei).to_owned(),
         Verzeichnisfehler::Ungueltig(wortlaut) => wortlaut.clone(),
+        Verzeichnisfehler::Belegt => text(Text::DatenbankWirdGeschrieben).to_owned(),
         Verzeichnisfehler::ZuGross => satz(
             Text::ArchivUmbauZuGross,
             &[("grenze", &zahl(HOECHSTENS_EINTRAEGE))],
@@ -346,12 +358,15 @@ impl Archivleser {
     }
 
     /// Ob das Archiv ein tar-Strom ist, gepackt oder nicht, der sich allein
-    /// vorwaerts lesen laesst; dann lohnt die [`Archivleser::lesefolge`].
+    /// vorwaerts lesen laesst; dann lohnt die [`Archivleser::lesefolge`]. Eine
+    /// Datenbank liest jede Tabelle mit einer eigenen Abfrage und ist keiner.
     #[must_use]
     pub fn liest_strom(&self) -> bool {
         match self.zugang.format() {
             super::Archivformat::Tar | super::Archivformat::TarGz => true,
-            super::Archivformat::Zip | super::Archivformat::Gz => false,
+            super::Archivformat::Zip | super::Archivformat::Gz | super::Archivformat::Sqlite => {
+                false
+            }
         }
     }
 
@@ -414,6 +429,46 @@ impl Archivleser {
                 durchreichen(&mut strom, &mut empfang)
             }
             Fundstelle::Erschlossen => Err(Lesefehler::KeineDaten),
+            Fundstelle::SqliteTabelle { .. } => {
+                self.datenbank_lesen(innen, |datei, name, abbruch| {
+                    sqlite::tabelle_lesen(pfand, datei, name, abbruch, &mut empfang)
+                })
+            }
+            Fundstelle::SqliteSicht => self.datenbank_lesen(innen, |datei, name, abbruch| {
+                sqlite::sicht_lesen(pfand, datei, name, abbruch, &mut empfang)
+            }),
+        }
+    }
+
+    /// Liest eine Tabelle oder Sicht der Datenbank ueber `lesen`, und zwar
+    /// allein, wenn die Kennung vorher und nachher die des Verzeichnisses ist.
+    ///
+    /// Die Kennung umfasst Hauptdatei und `-wal` (`archiv::sqlite`,
+    /// Modulkopf); ein Schreiber, der waehrend des Lesens uebergibt, aendert
+    /// sie, und was gelesen ist, endet dann als
+    /// [`Lesefehler::VonAussenVeraendert`]. Ein Abbruch geht vor.
+    fn datenbank_lesen(
+        &self,
+        innen: &Innenpfad,
+        lesen: impl FnOnce(&Path, &str, &AtomicBool) -> Result<u64, Lesefehler>,
+    ) -> Result<u64, Lesefehler> {
+        let name = innen
+            .name()
+            .ok_or(Lesefehler::Fehlt(self.zugang.format()))?;
+        let datei = self.zugang.datei();
+        self.datenbankkennung_pruefen()?;
+        let gelesen = lesen(datei, name, &self.abbruch)?;
+        self.datenbankkennung_pruefen()?;
+        Ok(gelesen)
+    }
+
+    /// Ob die Datenbank am Pfad die Kennung des Verzeichnisses traegt.
+    fn datenbankkennung_pruefen(&self) -> Result<(), Lesefehler> {
+        let kennung = sqlite::kennung(self.zugang.datei()).map_err(Lesefehler::Lesen)?;
+        if kennung == self.verzeichnis.kennung() {
+            Ok(())
+        } else {
+            Err(Lesefehler::VonAussenVeraendert(self.zugang.format()))
         }
     }
 
@@ -432,9 +487,9 @@ impl Archivleser {
             .verzeichnis
             .eintrag(innen)
             .cloned()
-            .ok_or(Lesefehler::Fehlt)?;
+            .ok_or(Lesefehler::Fehlt(self.zugang.format()))?;
         if eintrag.typ != Typ::Verknuepfung {
-            return Err(Lesefehler::Fehlt);
+            return Err(Lesefehler::Fehlt(self.zugang.format()));
         }
         if let Some(grund) = lesbarkeit_grund(&eintrag.lesbarkeit) {
             return Err(Lesefehler::Unlesbar(grund));
@@ -462,7 +517,10 @@ impl Archivleser {
                     .map(|verweis| verweis.into_owned())
                     .unwrap_or_default())
             }),
-            Fundstelle::GzGanz | Fundstelle::Erschlossen => Err(Lesefehler::Fehlt),
+            Fundstelle::GzGanz
+            | Fundstelle::Erschlossen
+            | Fundstelle::SqliteTabelle { .. }
+            | Fundstelle::SqliteSicht => Err(Lesefehler::Fehlt(self.zugang.format())),
         }
     }
 
@@ -472,7 +530,7 @@ impl Archivleser {
             .verzeichnis
             .eintrag(innen)
             .cloned()
-            .ok_or(Lesefehler::Fehlt)?;
+            .ok_or(Lesefehler::Fehlt(self.zugang.format()))?;
         if eintrag.typ == Typ::Ordner {
             return Err(Lesefehler::KeineDaten);
         }
@@ -491,7 +549,7 @@ impl Archivleser {
             return Err(Lesefehler::Verzeichnis(Verzeichnisfehler::KeineDatei));
         }
         if Dateikennung::aus_angaben(&angaben) != self.verzeichnis.kennung() {
-            return Err(Lesefehler::VonAussenVeraendert);
+            return Err(Lesefehler::VonAussenVeraendert(self.zugang.format()));
         }
         Ok(datei)
     }
@@ -508,7 +566,7 @@ impl Archivleser {
             Some(Offen::Zip(archiv)) => Ok(archiv),
             // Eben gesetzt; der Zweig steht, weil die Unterscheidung
             // vollstaendig ist.
-            Some(Offen::Tar(_)) | None => Err(Lesefehler::Fehlt),
+            Some(Offen::Tar(_)) | None => Err(Lesefehler::Fehlt(self.zugang.format())),
         }
     }
 
@@ -538,7 +596,7 @@ impl Archivleser {
         };
         self.geoeffnet = true;
         let abbruch = Arc::clone(&self.abbruch);
-        let ergebnis = tar_suchen(&mut zeiger, versatz, &abbruch, mit);
+        let ergebnis = tar_suchen(&mut zeiger, versatz, self.zugang.format(), &abbruch, mit);
         if ergebnis.is_ok() {
             self.offen = Some(Offen::Tar(zeiger));
         }
@@ -563,6 +621,7 @@ impl Archivleser {
 fn tar_suchen<T>(
     zeiger: &mut Zeiger,
     versatz: u64,
+    format: Archivformat,
     abbruch: &AtomicBool,
     mit: impl FnOnce(&mut tar::Entry<'_, Bewacht<'_, Ausschnitt<'_>>>) -> Result<T, Lesefehler>,
 ) -> Result<T, Lesefehler> {
@@ -587,7 +646,7 @@ fn tar_suchen<T>(
             continue;
         }
         if kopf > versatz {
-            return Err(Lesefehler::Fehlt);
+            return Err(Lesefehler::Fehlt(format));
         }
         let ergebnis = mit(&mut eintrag)?;
         // Der Rest der Daten, damit der Zeiger hinter dem Eintrag steht.
@@ -595,7 +654,7 @@ fn tar_suchen<T>(
             .map_err(|fehler| strom_oder_abbruch(fehler, abbruch))?;
         return Ok(ergebnis);
     }
-    Err(Lesefehler::Fehlt)
+    Err(Lesefehler::Fehlt(format))
 }
 
 /// Der Schluessel einer Fundstelle in der Lesefolge.
@@ -603,7 +662,7 @@ fn fundstellenschluessel(fundstelle: Fundstelle) -> u64 {
     match fundstelle {
         Fundstelle::Zip(stelle) => stelle as u64,
         Fundstelle::Tar { versatz } => versatz,
-        Fundstelle::GzGanz => 0,
+        Fundstelle::GzGanz | Fundstelle::SqliteTabelle { .. } | Fundstelle::SqliteSicht => 0,
         Fundstelle::Erschlossen => u64::MAX,
     }
 }

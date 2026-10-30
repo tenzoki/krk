@@ -1,0 +1,28 @@
+{
+  "schema": "fusion.evidence/v1",
+  "id": "8c450a00-415a-499f-baef-6bda9f4d760d",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "subject": {
+    "git_tree": "0953590a6c2a54ca88d0c4fbfc057ffbfcbfbad6",
+    "git_range": null
+  },
+  "brief_revision": "sha256:5965a59c2be980317e70347f099f78428a31f66956b26504fa1be20090e99f82",
+  "plan_revision": "sha256:d89ac4011da78a506e923a51c86d292ebe73e79a125fb2d7516e56d7349ce880",
+  "role": {
+    "profile": "reviewer",
+    "version": "13.3.5"
+  },
+  "host": "claude-code",
+  "execution_policy": "claude-guided",
+  "verdict": "revise",
+  "uncertainties": [],
+  "checks": [],
+  "report": {
+    "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/reviews/261024-2120-reviewer-abschlussreview-sqlite-datenbanken.md",
+    "sha256": "sha256:6fef826b11e4c33695f0ca878d56ec1623948778efe6300593e35de032765644",
+    "kind": "review"
+  },
+  "predecessor": null,
+  "accepted_at": "2026-10-24T19:15:22Z",
+  "extensions": {}
+}

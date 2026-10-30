@@ -166,6 +166,16 @@
 //!   was dahinter steht". Es weist wegen der Groesse nie ab und kann
 //!   [`Lesehindernis::ZuGross`] deshalb gar nicht liefern.
 //!
+//! **Beide fragen erst den Pfad und dann den Deskriptor.** Vor dem Oeffnen
+//! steht ein `stat(2)` nach Groesse und Kennzeichen: eine Datei ueber der
+//! Grenze wird gar nicht erst geoeffnet, und eine Datei, die nur in der Cloud
+//! liegt, unter [`Platzhalterregel::Meiden`] ebenso wenig, denn auf einem
+//! Cloudlaufwerk holt schon das Oeffnen sie herunter. Danach fragt der
+//! Deskriptor nach Typ und Groesse wie vorher, und gelesen wird in Stuecken zu
+//! [`LESESTUECK`], vor jedem Stueck mit der Frage `weiter` des Rufers. Regel
+//! und `weiter` reisen wie die Grenze als Argumente, und jeder Rufer waehlt sie
+//! ausdruecklich.
+//!
 //! **Der Unterschied zwischen den beiden ist keine Feinheit, sondern der Grund
 //! fuer die zweite Fassung.** Wer eine Ueberschrift, ein Feld oder die ersten
 //! Zeilen einer Datei braucht, ist mit einer Abweisung nicht bedient: gesucht
@@ -741,14 +751,43 @@ fn geoeffnet_oder_abgewiesen(
     }
 }
 
+/// Wie eine Leseschleuse mit einer Datei umgeht, die nur in der Cloud liegt.
+///
+/// Eine solche Datei traegt das Kennzeichen `SF_DATALESS`
+/// ([`crate::verzeichnis::ist_platzhalter`]), und `inference:` jedes Lesen
+/// ihres Inhalts loest beim Anbieter einen Download aus. **Kein Vorgabewert**:
+/// jeder Rufer von [`bis_zur_grenze_lesen`] und [`anlesen`] waehlt die Regel
+/// ausdruecklich, damit ein kuenftiger Rufer nicht still herunterlaedt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Platzhalterregel {
+    /// Lesen wie jede andere Datei, also herunterladen lassen. Die Regel der
+    /// Vorschau der ausgewaehlten Datei und der Wege, die der Nutzer
+    /// ausdruecklich auf eine Datei richtet.
+    Laden,
+    /// Nicht oeffnen und mit [`Lesehindernis::Platzhalter`] antworten. Die
+    /// Regel der Hintergrundleser.
+    Meiden,
+}
+
+/// Wie viele Bytes die zwei Leseschleusen hoechstens in einem Zug lesen, bevor
+/// sie wieder `weiter` fragen.
+///
+/// 1 MiB: eine Textdatei der Vorschau (1 MB) braucht damit hoechstens zwei
+/// Zuege, ein Bild bis 64 MB 64. `inference:` auf einem Anbieter, der
+/// stueckweise holt, endet ein abgebrochenes Lesen am naechsten Stueck.
+pub const LESESTUECK: u64 = 1024 * 1024;
+
 /// Warum das begrenzte Lesen keine Bytes geliefert hat.
 ///
-/// **Vier Werte, ueberschneidungsfrei und vollstaendig, ohne Auffangzweig.**
+/// **Sechs Werte, ueberschneidungsfrei und vollstaendig, ohne Auffangzweig.**
 /// Ueberschneidungsfrei sind sie durch die Reihenfolge der Pruefungen in
-/// [`bis_zur_grenze_lesen`]: das Oeffnen scheitert vor jeder Frage an den
-/// Deskriptor, die Typfrage steht vor der Groessenfrage, und was danach
-/// schiefgeht, ist ein Lesefehler. Ein fuenfter Grund haelt jede Uebersetzung
-/// an, die diese Werte auseinanderlegt.
+/// [`bis_zur_grenze_lesen`]: erst fragt `stat(2)` den Pfad, ob er erreichbar
+/// ist, ob eine gemiedene Datei nur in der Cloud liegt und ob sie ueber der
+/// Grenze steht; dann scheitert das Oeffnen vor jeder Frage an den Deskriptor,
+/// die Typfrage steht vor der Groessenfrage, und beim Lesen steht vor jedem
+/// Stueck die Frage, ob weitergelesen werden soll; was danach schiefgeht, ist
+/// ein Lesefehler. Ein siebter Grund haelt jede Uebersetzung an, die diese
+/// Werte auseinanderlegt.
 ///
 /// **[`Deskriptormangel`](Self::Deskriptormangel) wird hier getrennt und nicht
 /// beim Aufrufer**, denn allein diese Stelle haelt den `io::Error` in der Hand;
@@ -773,6 +812,77 @@ pub enum Lesehindernis {
     /// Jeder andere Fehler des Systems: der fehlende Pfad, das fehlende
     /// Leserecht, ein Fehler beim Lesen selbst.
     Fehler,
+    /// Die Datei liegt nur in der Cloud (`SF_DATALESS`), und der Rufer hat
+    /// [`Platzhalterregel::Meiden`] gewaehlt. Geoeffnet wurde nichts, also
+    /// auch nichts heruntergeladen; der Aufrufer weiss ueber den Inhalt nichts.
+    Platzhalter,
+    /// Die Frage `weiter` des Rufers hat vor einem Lesestueck nein gesagt.
+    /// Gelesene Bytes verwirft die Schleuse; ein Befund ueber die Datei ist
+    /// das nicht.
+    Abgebrochen,
+}
+
+/// Die Fragen am Pfad, die vor dem Oeffnen stehen: erreichbar, nur in der
+/// Cloud, ueber der Grenze.
+///
+/// `std::fs::metadata` ist `stat(2)` und folgt einer Verknuepfung wie das
+/// Oeffnen danach. Es oeffnet nichts, blockiert also an keiner benannten Roehre
+/// und loest an keinem Platzhalter einen Download aus. Groesse und Kennzeichen
+/// werden allein fuer eine gewoehnliche Datei gefragt; alles andere geht weiter
+/// zur Typfrage am Deskriptor und bekommt dort [`Lesehindernis::KeineDatei`].
+fn vor_dem_oeffnen(
+    pfad: &Path,
+    grenze: Option<u64>,
+    regel: Platzhalterregel,
+) -> Result<(), Lesehindernis> {
+    let angaben = std::fs::metadata(pfad).map_err(|fehler| {
+        if crate::verzeichnis::sys::ist_deskriptormangel(&fehler) {
+            Lesehindernis::Deskriptormangel
+        } else {
+            Lesehindernis::Fehler
+        }
+    })?;
+    if !angaben.is_file() {
+        return Ok(());
+    }
+    if regel == Platzhalterregel::Meiden && crate::verzeichnis::ist_platzhalter(&angaben) {
+        return Err(Lesehindernis::Platzhalter);
+    }
+    if let Some(grenze) = grenze
+        && angaben.len() > grenze
+    {
+        return Err(Lesehindernis::ZuGross);
+    }
+    Ok(())
+}
+
+/// Liest hoechstens `hoechstens` Bytes aus `datei`, in Stuecken zu hoechstens
+/// [`LESESTUECK`], und fragt vor jedem Stueck `weiter`.
+///
+/// Nach dem letzten noetigen Stueck wird `weiter` nicht mehr gefragt: ist der
+/// Deckel erreicht oder kam ein Stueck kuerzer zurueck, ist die Datei zu Ende
+/// gelesen.
+fn stueckweise_lesen(
+    datei: File,
+    hoechstens: u64,
+    vorrat: usize,
+    weiter: &dyn Fn() -> bool,
+) -> Result<Vec<u8>, Lesehindernis> {
+    let mut bytes = Vec::with_capacity(vorrat);
+    let mut quelle = datei.take(hoechstens);
+    while quelle.limit() > 0 {
+        if !weiter() {
+            return Err(Lesehindernis::Abgebrochen);
+        }
+        let gelesen = (&mut quelle)
+            .take(LESESTUECK)
+            .read_to_end(&mut bytes)
+            .map_err(|_| Lesehindernis::Fehler)?;
+        if (gelesen as u64) < LESESTUECK {
+            break;
+        }
+    }
+    Ok(bytes)
 }
 
 /// Liest hoechstens `grenze` Bytes hinter einem Pfad, **ohne bei einer
@@ -805,12 +915,31 @@ pub enum Lesehindernis {
 /// [`lesen`] auf diese Form kostete den Deskriptor und die Sicherungsform und
 /// braechte den Aufrufern dieser Huelle nichts.
 ///
-/// # Die Reihenfolge ist dieselbe wie bei [`lesen`]
+/// # Erst der Pfad, dann der Deskriptor
 ///
-/// Oeffnen ohne zu warten, `fstat(2)` am Deskriptor, Typ, dann Groesse, dann
-/// erst lesen. Sie steht ausfuehrlich an [`lesen`] und wird hier nicht ein
-/// zweites Mal begruendet; der eine Aufruf, der den **Namen** anfasst, ist das
-/// Oeffnen, und alles danach fragt den Deskriptor.
+/// **Vor dem Oeffnen fragt `stat(2)` den Pfad nach Groesse und Kennzeichen**:
+/// eine Datei ueber der Grenze ergibt [`Lesehindernis::ZuGross`], ohne dass
+/// sie geoeffnet wird, und unter [`Platzhalterregel::Meiden`] ergibt eine
+/// Datei, die nur in der Cloud liegt, [`Lesehindernis::Platzhalter`]. Bis zum
+/// 261025 stand die Groessenfrage allein am Deskriptor, also nach dem Oeffnen,
+/// und auf einem Cloudlaufwerk holte schon das Oeffnen eine zu grosse Datei
+/// herunter (Defekt
+/// `261025-1109-bis-zur-grenze-lesen-oeffnet-die-datei-vor-der-groessenpruefung-und-holt-auf-einem-cloudlaufwerk-jede-zu-grosse-datei-herunter.md`).
+/// Ein `stat` auf eine benannte Roehre blockiert nicht, weil es nichts oeffnet.
+///
+/// **Danach ist die Reihenfolge dieselbe wie bei [`lesen`]**: oeffnen ohne zu
+/// warten, `fstat(2)` am Deskriptor, Typ, dann Groesse, dann erst lesen. Die
+/// Fragen am Deskriptor bleiben stehen, denn sie beantworten die andere Frage,
+/// was **da geoeffnet wurde**: zwischen `stat` und `open` kann ein anderer den
+/// Namen auf eine Roehre umhaengen oder die Datei wachsen lassen. Begruendet
+/// ist das an [`lesen`] und wird hier nicht ein zweites Mal ausgefuehrt.
+///
+/// # Gelesen wird stueckweise und abbrechbar
+///
+/// In Stuecken zu hoechstens [`LESESTUECK`] Bytes, und vor jedem Stueck fragt
+/// die Huelle `weiter`. Sagt es nein, antwortet sie mit
+/// [`Lesehindernis::Abgebrochen`] und verwirft, was sie schon gelesen hat. Wer
+/// nicht abbrechen will, reicht `&|| true`.
 ///
 /// # Die Grenze wird eingehalten und nicht nur vorhergesagt
 ///
@@ -827,7 +956,13 @@ pub enum Lesehindernis {
 /// [`Lesehindernis::ZuGross`]. Ohne diese Schranke waere "es wird nie mehr als
 /// die Grenze gelesen" eine Vorhersage aus einer alten Auskunft, mit ihr ist es
 /// eine Eigenschaft der Bauart.
-pub fn bis_zur_grenze_lesen(pfad: &Path, grenze: u64) -> Result<Vec<u8>, Lesehindernis> {
+pub fn bis_zur_grenze_lesen(
+    pfad: &Path,
+    grenze: u64,
+    regel: Platzhalterregel,
+    weiter: &dyn Fn() -> bool,
+) -> Result<Vec<u8>, Lesehindernis> {
+    vor_dem_oeffnen(pfad, Some(grenze), regel)?;
     let datei = match crate::verzeichnis::sys::ohne_warten_oeffnen(pfad) {
         Ok(datei) => datei,
         Err(fehler) => {
@@ -846,7 +981,6 @@ pub fn bis_zur_grenze_lesen(pfad: &Path, grenze: u64) -> Result<Vec<u8>, Lesehin
         return Err(Lesehindernis::ZuGross);
     }
 
-    let mut bytes = Vec::with_capacity(angaben.len() as usize);
     // `saturating_add` und nicht `+`: die Grenze ist ein `u64` des Aufrufers,
     // und bei `u64::MAX` braeche die Addition im Profil `debug` ab und liefe im
     // Profil `release` auf `take(0)` ueber. Die Huelle antwortete dann mit
@@ -854,10 +988,12 @@ pub fn bis_zur_grenze_lesen(pfad: &Path, grenze: u64) -> Result<Vec<u8>, Lesehin
     // zusagt — genau die stille falsche Antwort, gegen die die Schranke
     // darueber argumentiert
     // (`shared/issues/260826-1223_*_bis-zur-grenze-lesen-rechnet-grenze-plus-eins-ohne-schutz-und-antwortet-bei-ueberlauf-mit-null-bytes.md`).
-    datei
-        .take(grenze.saturating_add(1))
-        .read_to_end(&mut bytes)
-        .map_err(|_| Lesehindernis::Fehler)?;
+    let bytes = stueckweise_lesen(
+        datei,
+        grenze.saturating_add(1),
+        angaben.len() as usize,
+        weiter,
+    )?;
     if bytes.len() as u64 > grenze {
         // Die Datei ist zwischen `fstat` und `read` gewachsen.
         return Err(Lesehindernis::ZuGross);
@@ -871,12 +1007,14 @@ pub fn bis_zur_grenze_lesen(pfad: &Path, grenze: u64) -> Result<Vec<u8>, Lesehin
 /// Die dritte der drei Fragen an dieselbe eine Tuer,
 /// [`verzeichnis::sys::ohne_warten_oeffnen`](crate::verzeichnis::sys::ohne_warten_oeffnen):
 /// "gib mir die ersten N Bytes und sage nichts ueber das, was dahinter steht".
-/// Die Reihenfolge — oeffnen ohne zu warten, `fstat(2)` am Deskriptor, Typ,
-/// dann lesen — ist dieselbe wie bei [`lesen`] und dort ausfuehrlich begruendet;
-/// der eine Aufruf, der den **Namen** anfasst, ist das Oeffnen, und alles danach
-/// fragt den Deskriptor. Wer die Pruefung an den Pfad zurueckzoege, haette das
-/// Fenster aus dem Defekt `260809-1652` wieder und bliebe an einer benannten
-/// Roehre haengen.
+/// Die Reihenfolge ist die von [`bis_zur_grenze_lesen`]: erst fragt `stat(2)`
+/// den Pfad nach dem Kennzeichen (unter [`Platzhalterregel::Meiden`] ergibt
+/// eine Datei, die nur in der Cloud liegt, [`Lesehindernis::Platzhalter`],
+/// ohne geoeffnet zu werden), dann oeffnen ohne zu warten, `fstat(2)` am
+/// Deskriptor, Typ, dann lesen, stueckweise und vor jedem Stueck mit der
+/// Frage `weiter` ([`Lesehindernis::Abgebrochen`]). Die Typfrage bleibt am
+/// Deskriptor; wer sie an den Pfad zurueckzoege, haette das Fenster aus dem
+/// Defekt `260809-1652` wieder und bliebe an einer benannten Roehre haengen.
 ///
 /// # Der eine Unterschied zu [`bis_zur_grenze_lesen`]
 ///
@@ -909,7 +1047,13 @@ pub fn bis_zur_grenze_lesen(pfad: &Path, grenze: u64) -> Result<Vec<u8>, Lesehin
 /// damals und nicht als Zusage: der Datensatz liegt ausserhalb des Quellbaums,
 /// keine Probe liest ihn, und ein Archivlauf verschiebt ihn. Dieselbe Form
 /// tragen die Kostenangaben in der Wurzel-`Cargo.toml`.
-pub fn anlesen(pfad: &Path, hoechstens: u64) -> Result<Vec<u8>, Lesehindernis> {
+pub fn anlesen(
+    pfad: &Path,
+    hoechstens: u64,
+    regel: Platzhalterregel,
+    weiter: &dyn Fn() -> bool,
+) -> Result<Vec<u8>, Lesehindernis> {
+    vor_dem_oeffnen(pfad, None, regel)?;
     let datei = match crate::verzeichnis::sys::ohne_warten_oeffnen(pfad) {
         Ok(datei) => datei,
         Err(fehler) => {
@@ -928,12 +1072,12 @@ pub fn anlesen(pfad: &Path, hoechstens: u64) -> Result<Vec<u8>, Lesehindernis> {
     // Vorgemerkt wird die kleinere der beiden Zahlen: die Datei kann groesser
     // sein als der Deckel, und dann waere ihre Groesse als Vorrat genau das,
     // was diese Huelle nicht in den Speicher holen soll.
-    let mut bytes = Vec::with_capacity(angaben.len().min(hoechstens) as usize);
-    datei
-        .take(hoechstens)
-        .read_to_end(&mut bytes)
-        .map_err(|_| Lesehindernis::Fehler)?;
-    Ok(bytes)
+    stueckweise_lesen(
+        datei,
+        hoechstens,
+        angaben.len().min(hoechstens) as usize,
+        weiter,
+    )
 }
 
 /// Aus den Bytes einer Datei den gehaltenen Stand des Editors.

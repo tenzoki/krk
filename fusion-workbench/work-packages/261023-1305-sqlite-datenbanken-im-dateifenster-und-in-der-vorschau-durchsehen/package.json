@@ -1,0 +1,59 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "72b9073a-2467-4011-bf10-e8365092edd3",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "done",
+  "claim": {
+    "checkout_id": "6c11b1f2",
+    "person": "Kai Stalmann <kai@stalmann.org>",
+    "claimed_at": "2026-10-23T13:00:00Z"
+  },
+  "mode": {
+    "value": "ordinary",
+    "source": null
+  },
+  "origin": {
+    "kind": "user-request",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "user",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "narrative": {
+    "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen.md"
+  },
+  "depends_on": [],
+  "active_documents": [
+    {
+      "ref": {
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "record_id": "161e9721-aa81-43a7-8de4-a51f34f1fc77"
+      },
+      "role": "plan",
+      "revision": "sha256:d89ac4011da78a506e923a51c86d292ebe73e79a125fb2d7516e56d7349ce880"
+    }
+  ],
+  "references": [],
+  "evidence": [],
+  "outcome": {
+    "class": "completed",
+    "reason": "SQLite-Datenbanken lassen sich mit Pfeil rechts betreten; Tabellen und Sichten im Dateifenster mit Zeilenzahl, Vorschau als Tabelle bzw. SQL-Text, Kopieren als .tsv/.sql, nur lesend; Plan 261023-1507 Schritte 1-8, drei Reviews, letztes accept",
+    "evidence": [
+      {
+        "ref": {
+          "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+          "record_id": "b7fd9ae0-dbcc-4168-a488-6c2a2381e334",
+          "revision": "sha256:1ad49c099cf83b51f015a622f62f8cd2546f0a90feb114e613b6ca5d9762b394"
+        },
+        "policy": "claude-guided"
+      }
+    ]
+  },
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {}
+}

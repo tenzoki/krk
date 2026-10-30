@@ -58,6 +58,20 @@ pub struct Eintrag {
     /// Wahr, wenn der Name mit einem Punkt beginnt oder das Dateisystem den
     /// Eintrag als versteckt kennzeichnet.
     pub versteckt: bool,
+    /// Wahr, wenn das Dateisystem den Eintrag mit `SF_DATALESS` als Platzhalter
+    /// kennzeichnet: seine Daten liegen nicht auf diesem Datentraeger, etwa in
+    /// einem Cloudlaufwerk, und ein Lesen des Inhalts laedt sie herunter.
+    ///
+    /// Gefuellt allein auf dem Weg aus dem Verzeichnisleselauf
+    /// ([`Eintrag::aus_roh`]), ohne weiteren Systemaufruf; jeder andere Bau
+    /// ([`Eintrag::neu`], [`Eintrag::mit_versteckt`], ferne Namen,
+    /// Archiveintraege) setzt `false`.
+    ///
+    /// **Das Feld ist eine sichtbare Entscheidung im Sinne der Probe
+    /// `der_eintrag_bleibt_so_gross_wie_bisher`**: es liegt wie `typ` und
+    /// `versteckt` in der Luecke, die die Ausrichtung der Struktur ohnehin
+    /// laesst, und die 88 Bytes, an denen L3 und L10 haengen, bleiben.
+    pub platzhalter: bool,
 }
 
 impl Eintrag {
@@ -98,6 +112,7 @@ impl Eintrag {
             endung_ab,
             typ,
             versteckt,
+            platzhalter: false,
         }
     }
 
@@ -126,7 +141,10 @@ impl Eintrag {
     pub(crate) fn aus_roh(roh: RohEintrag<'_>) -> Self {
         let name = roh.name.into_owned();
         let versteckt = roh.systemseitig_versteckt || name.starts_with('.');
-        Self::mit_versteckt(name, roh.groesse, roh.geaendert, roh.typ, versteckt)
+        Self {
+            platzhalter: roh.platzhalter,
+            ..Self::mit_versteckt(name, roh.groesse, roh.geaendert, roh.typ, versteckt)
+        }
     }
 }
 
@@ -176,8 +194,17 @@ mod tests {
             _geaendert: SystemTime,
             _typ: Typ,
             _versteckt: bool,
+            _platzhalter: bool,
         }
         assert_eq!(size_of::<Eintrag>(), size_of::<OhneVersatz>());
+    }
+
+    #[test]
+    fn ein_gebauter_eintrag_ist_kein_platzhalter() {
+        assert!(!eintrag("wolke.txt").platzhalter);
+        let versteckt =
+            Eintrag::mit_versteckt("a".to_owned(), 0, SystemTime::UNIX_EPOCH, Typ::Datei, true);
+        assert!(!versteckt.platzhalter);
     }
 
     #[test]

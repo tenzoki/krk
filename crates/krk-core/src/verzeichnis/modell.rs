@@ -1836,8 +1836,9 @@ mod tests {
         modell
     }
 
-    /// Die fuenf Marken in der Reihenfolge von [`Marke::ALLE`], an den fuenf
-    /// gleichnamigen Eintraegen.
+    /// Die ersten fuenf Werte von [`Marke::ALLE`] in dessen Reihenfolge, an
+    /// den fuenf gleichnamigen Eintraegen; `Marke::Unbekannt`, der sechste,
+    /// fehlt.
     fn fuenf_marken() -> Vec<(String, Marke)> {
         [
             ("geaendert.txt", Marke::Geaendert),

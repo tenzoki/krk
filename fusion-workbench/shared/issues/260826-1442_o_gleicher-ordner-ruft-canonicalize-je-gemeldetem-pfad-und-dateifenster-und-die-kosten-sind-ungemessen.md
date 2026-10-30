@@ -19,3 +19,5 @@ Der Fall, in dem es zählt, ist der Aufschub selbst: ein Stapel-Umbenennen über
 ## Vorschlag
 
 Die aufgelöste Form der zwei bis drei beobachteten Ordner einmal beim Setzen des Stroms berechnen und halten, statt sie je Meldung neu zu lösen; `canonicalize` dann nur für den gemeldeten Pfad, einmal je Pfad.
+
+Also seen: 261025-1109 by analyst — gemessen 29 bis 42 µs je `realpath` auf Google Drive, also rund 0,15 ms je Pfad bei vier Aufrufen; unter `/Users/k1/Google Drive/…` scheitert der Zeichenvergleich immer, weil FSEvents den Pfad unter `~/Library/CloudStorage` meldet; in drei Minuten Ruhe null Stapel (`261025-1109-warum-die-navigation-auf-google-drive-zuweilen-langsam-ist.md`, B5).

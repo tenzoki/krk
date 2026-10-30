@@ -453,7 +453,8 @@ pub(crate) fn starten(auftrag: Fernauftrag) -> Lauf {
 /// ```
 ///
 /// Aus einem Archiv, das KRK allein lesen darf, verschiebt sie nichts: die
-/// Quelle meldet `Text::ArchivNurLesbar`, bevor am Ziel etwas entsteht.
+/// Quelle meldet den Text ihres Formats (`Archivformat::nur_lesbar_text`),
+/// bevor am Ziel etwas entsteht.
 fn ausfuehren(pfand: &Fernfaden, auftrag: &Fernauftrag, steuerung: &mut Steuerung) -> Abschluss {
     let verschieben = match &auftrag.art {
         Fernart::Kopieren { ziel } | Fernart::Verschieben { ziel } => {
@@ -488,7 +489,7 @@ fn ausfuehren(pfand: &Fernfaden, auftrag: &Fernauftrag, steuerung: &mut Steuerun
                 continue;
             }
             Ort::Archiv(archivort) if verschieben && !archivort.format().beschreibbar() => {
-                Err(text(Text::ArchivNurLesbar).to_owned())
+                Err(text(archivort.format().nur_lesbar_text()).to_owned())
             }
             Ort::Archiv(archivort) => {
                 match archivzugriff(pfand, &mut leser, archivort, steuerung) {
@@ -625,7 +626,8 @@ fn in_lesefolge_bringen(quellen: &mut [(PathBuf, Result<Quelle, String>)]) {
 /// Umbenennen, Anlegen und Loeschen schreiben an der Quelle selbst und nehmen
 /// deshalb allein eine [`Stelle`]; eine Quelle im Archiv kommt dafuer nicht
 /// hierher, sondern an `archiv::im_archiv_abarbeiten` ([`ausfuehren`]). Kaeme
-/// sie doch, meldete sie `Text::ImArchivNichtVerfuegbar`.
+/// sie doch, meldete sie den Text ihres Formats
+/// (`Archivformat::nicht_verfuegbar_text`).
 ///
 /// `nachher` sammelt die Eintraege aus Archiven, die ein Verschieben
 /// vollstaendig kopiert hat und die erst danach entfernt werden.
@@ -641,9 +643,18 @@ fn einen_abarbeiten(
         Fernart::Kopieren { .. } => false,
         Fernart::Verschieben { .. } => true,
         Fernart::Umbenennen { .. } | Fernart::Anlegen { .. } | Fernart::Loeschen => {
-            let Some(stelle) = quelle.als_stelle() else {
-                steuerung.ueberspringen(&quelle.bezeichnung(), text(Text::ImArchivNichtVerfuegbar));
-                return Ablauf::Weiter;
+            let stelle = match quelle {
+                Quelle::Stelle(stelle) => stelle,
+                Quelle::Archiv(archivstelle) => {
+                    let grund = archivstelle
+                        .leser
+                        .borrow()
+                        .zugang()
+                        .format()
+                        .nicht_verfuegbar_text();
+                    steuerung.ueberspringen(&quelle.bezeichnung(), text(grund));
+                    return Ablauf::Weiter;
+                }
             };
             return an_der_stelle_abarbeiten(pfand, art, stelle, steuerung);
         }
@@ -1926,7 +1937,8 @@ fn quellkinder_lesen(
         Quelle::Archiv(stelle) => match stelle.kinder() {
             Some(kinder) => Ok(kinder),
             None => {
-                steuerung.ueberspringen(&stelle.bezeichnung(), text(Text::ArchivEintragFehlt));
+                let format = stelle.leser.borrow().zugang().format();
+                steuerung.ueberspringen(&stelle.bezeichnung(), text(format.eintrag_fehlt_text()));
                 Err(Ablauf::Weiter)
             }
         },
@@ -2491,12 +2503,16 @@ impl Angaben {
     /// herauskommt, sagt [`Quelle::kommt_nicht_heraus`] vor dem Anlegen. Eine
     /// Zugriffszeit fuehrt kein Archiv, also gilt die Aenderungszeit fuer
     /// beide, wie bei einer Quelle ohne Zugriffszeit.
+    ///
+    /// Die Groesse ist die in Bytes, `Archiveintrag::datenlaenge`, und nicht
+    /// `groesse`, das in einer Datenbank Zeilen zaehlt; steht sie vor dem
+    /// Lesen nicht fest, wie bei einer Tabelle, ist sie 0.
     fn aus_archiveintrag(eintrag: &Archiveintrag) -> Self {
         Angaben {
             typ: eintrag.typ,
             gewoehnlich: eintrag.lesbarkeit != Lesbarkeit::Sonderdatei,
             groesse: if eintrag.typ == Typ::Datei {
-                eintrag.groesse
+                eintrag.datenlaenge().unwrap_or(0)
             } else {
                 0
             },
@@ -3171,17 +3187,22 @@ impl Quelle {
         }
     }
 
-    /// Der letzte Namensteil, oder der Schluessel des Grundes, warum es
-    /// keinen gibt. Im Archiv ist er eine einzelne Komponente nach der einen
-    /// Namensregel (`Innenpfad::aus_archivname`); ein Name mit `..` oder `/`
-    /// kommt also nie bis ans Ziel.
+    /// Der Name am Ziel, oder der Schluessel des Grundes, warum es keinen
+    /// gibt. Eine Stelle bringt ihren letzten Namensteil mit; ein Eintrag im
+    /// Archiv seinen `Archiveintrag::ausfuhrname`, die eine Stelle, an der
+    /// eine Tabelle zu `<name>.tsv` und eine Sicht zu `<name>.sql` wird. Der
+    /// Name darin ist eine einzelne Komponente nach der einen Namensregel
+    /// (`Innenpfad::aus_archivname`); ein Name mit `..` oder `/` kommt also
+    /// nie bis ans Ziel.
     fn name(&self) -> Result<String, Text> {
         match self {
             Quelle::Stelle(stelle) => stelle.name(),
             Quelle::Archiv(stelle) => stelle
-                .innen
-                .name()
-                .map(str::to_owned)
+                .leser
+                .borrow()
+                .verzeichnis()
+                .eintrag(&stelle.innen)
+                .and_then(Archiveintrag::ausfuhrname)
                 .ok_or(Text::VorgangPfadBenenntKeinenEintrag),
         }
     }
@@ -3200,7 +3221,9 @@ impl Quelle {
                     .verzeichnis()
                     .eintrag(&stelle.innen)
                     .map(Angaben::aus_archiveintrag)
-                    .ok_or(Fehlschlag::Archiv(Lesefehler::Fehlt))
+                    .ok_or(Fehlschlag::Archiv(Lesefehler::Fehlt(
+                        leser.zugang().format(),
+                    )))
             }
         }
     }

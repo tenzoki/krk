@@ -176,6 +176,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "the archive contains entries hidden from the list, such as two with the same name, and is not changed"
         }
         Text::ArchivNurLesbar => "this archive is read-only",
+        Text::DatenbankNurLesbar => "this database is read-only",
+        Text::SqliteKeineDatenbank => "the file is not in SQLite format",
+        Text::DatenbankWirdGeschrieben => "the database is being written to",
+        Text::SqliteNull => "NULL",
         Text::ArchivSchreibgeschuetzt => "the archive file is write-protected",
         Text::ArchivAbbruchNachDemErsetzen => {
             "the cancellation came after the archive was replaced; the archive is changed"
@@ -201,6 +205,8 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "the archive has changed since its table of contents was read"
         }
         Text::ArchivEintragFehlt => "the entry is no longer where the archive lists it",
+        Text::DatenbankBeimLesenVeraendert => "the database has changed since its tables were read",
+        Text::DatenbankEintragFehlt => "the table or view is no longer in the database",
         Text::StapelKeinStartwert => "“{text}” is not a starting value for the numbering",
         Text::StapelKeineStellenzahl => {
             "“{text}” is not a number of digits between 1 and {hoechste}"
@@ -582,7 +588,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::TabelleNichtInDerListe => "{name} is not in the list",
         Text::FenstertitelQuicknote => "Quicknote",
         Text::StatuszeileFilterstand => {
-            "Filter “{filtertext}”: {gezeigt} of {vorhanden} shown{liest}{zu_gross}{ausgeblendet}"
+            "Filter “{filtertext}”: {gezeigt} of {vorhanden} shown{liest}{zu_gross}{nur_in_der_cloud}{ausgeblendet}"
         }
         Text::StatuszeileInhaltWirdGelesen => ", reading content",
         Text::StatuszeileSeiteVon => "Page {aktuell} of {gesamt}",
@@ -961,6 +967,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::TrenntextKopfzeileGekuerzt => {
             "{trennzeichen} · {zeilen} · {spalten} · truncated: the file is larger than {grenze} MB, shown are the complete rows at its beginning."
         }
+        Text::SqliteTabelleKopfzeile => "Table · {zeilen} · {spalten}",
+        Text::SqliteTabelleKopfzeileGekuerzt => {
+            "Table · {zeilen} · {spalten} · truncated: the table yields more than {grenze} MB of text, shown are its first complete rows."
+        }
         Text::TrennzeichenKomma => "Comma",
         Text::TrennzeichenSemikolon => "Semicolon",
         Text::TrennzeichenTabulator => "Tab",
@@ -977,6 +987,11 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "the table would then have {spalten} columns, it shows at most {hoechstens}; nothing changed"
         }
         Text::VorschauNichtLesbar => "{pfad} could not be read: {fehler}",
+        Text::VorschauCloudLaedt => "Only in the cloud; loading it for the preview.",
+        Text::VorschauCloudZuGross => {
+            "Only in the cloud, and at {groesse} larger than the {grenze} the preview loads."
+        }
+        Text::VorschauCloudNichtGeladen => "Only in the cloud, and it could not be loaded.",
         Text::VorschauLeertext => "No content. The selection in the file pane fills this tab.",
         Text::VorschauBildNichtDarstellbar => {
             "The image from the clipboard could not be displayed."
@@ -1124,6 +1139,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::AmFernenOrtNichtVerfuegbar => "This is not possible in a folder on a server.",
         Text::ImArchivNichtVerfuegbar => "This is not possible inside an archive.",
+        Text::InDatenbankNichtVerfuegbar => "This is not possible inside a database.",
         Text::ArchivAmFernenOrt => {
             "An archive on a server cannot be opened as a folder; copy it here first."
         }
@@ -1133,6 +1149,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::ArchivUngueltig => {
             "{datei} is not a readable archive in the {format} format: {grund}"
         }
+        Text::DatenbankUngueltig => "{datei} is not a readable SQLite database: {grund}",
         Text::ArchivKeineDatei => "{datei} is not a regular file.",
         Text::ArchivZuGross => "{datei} holds more than {grenze} entries and is not shown.",
         Text::ArchivOrdnerFehlt => {
@@ -1140,6 +1157,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::ArchivDateiFehlt => "The archive {datei} no longer exists; showing {ordner}.",
         Text::ArchivAlleinLesbar => "This archive is read-only.",
+        Text::DatenbankAlleinLesbar => "This database is read-only.",
         Text::FernVerbindungGetrennt => {
             "The connection “{name}” is closed; clicking the connection reconnects."
         }
@@ -1210,7 +1228,12 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::MarkeNeu => ("{n} new", "{n} new"),
         Zahlwort::MarkeKonflikt => ("{n} in conflict", "{n} in conflict"),
         Zahlwort::MarkeUmbenannt => ("{n} renamed", "{n} renamed"),
+        Zahlwort::MarkeUnbekannt => ("{n} unknown", "{n} unknown"),
         Zahlwort::StatuszeileDateienZuGross => (", one file too large", ", {n} files too large"),
+        Zahlwort::StatuszeileDateienNurInDerCloud => (
+            ", one file only in the cloud",
+            ", {n} files only in the cloud",
+        ),
         Zahlwort::StatuszeileMarkierungenAusgeblendet => {
             (", one mark hidden", ", {n} marks hidden")
         }
@@ -1288,6 +1311,9 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
             "one column deleted; cmd+z brings it back",
             "{n} columns deleted; cmd+z brings them back",
         ),
+        Zahlwort::SqliteBlob => ("[BLOB, {n} byte]", "[BLOB, {n} bytes]"),
+        Zahlwort::SqliteZeilen => ("{n} row", "{n} rows"),
+        Zahlwort::SqliteZeilenVon => ("{gezeigt} of one row", "{gezeigt} of {n} rows"),
     }
 }
 

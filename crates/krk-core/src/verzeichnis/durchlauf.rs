@@ -27,6 +27,7 @@
 //! traegt der Inhalt?        ─ Traegt ───────> Treffer
 //!                           ├ TraegtNicht ──> kein Treffer
 //!                           ├ ZuGross ──────> kein Treffer, der Zaehler steigt
+//!                           ├ NurInDerCloud > kein Treffer, der zweite Zaehler steigt
 //!                           └ Unentschieden > kein Befund
 //!
 //! Auftragsart Unterbaum — ein Ordner oder eine Verknuepfung:
@@ -58,15 +59,18 @@
 //! Zwei getrennte Argumente waeren zwei Gelegenheiten, sie widerspruechlich zu
 //! setzen.
 //!
-//! # Die zu grossen Dateien sind ein Zustand des Laufs und kein zweiter Kanal
+//! # Die ungelesenen Dateien sind ein Zustand des Laufs und kein zweiter Kanal
 //!
-//! Eine Datei ueber der Grenze wird gar nicht erst gelesen. Sie ist damit kein
-//! Nichttreffer, sondern **ungelesen**, und die Statuszeile sagt, wie viele es
-//! waren. Der Durchlauf zaehlt sie in einem zweiten geteilten Kennzeichen neben
-//! dem Abbruch, einem `Arc<AtomicU64>`, abzulesen ueber [`Durchlauf::zu_gross`].
-//! Es steht dort, wo der Lauf seinen anderen Zustand schon haelt, und es ist
-//! ausdruecklich kein zweiter Kanal: der Kanal traegt Befunde ueber Eintraege,
-//! die Zahl aber gehoert zum Lauf und zu keinem einzelnen Eintrag.
+//! Eine Datei ueber der Grenze wird gar nicht erst gelesen, und eine Datei, die
+//! nur in der Cloud liegt, auch nicht, weil ihr Oeffnen sie herunterholte
+//! ([`super::inhalt`], Modulkopf). Beide sind damit kein Nichttreffer, sondern
+//! **ungelesen**, und die Statuszeile sagt, wie viele es je Grund waren. Der
+//! Durchlauf zaehlt sie in zwei geteilten Zaehlern neben dem Abbruch, einem
+//! `Arc<Ungelesen>`, abzulesen ueber [`Durchlauf::zu_gross`] und
+//! [`Durchlauf::nur_in_der_cloud`]. Sie stehen dort, wo der Lauf seinen
+//! anderen Zustand schon haelt, und sie sind ausdruecklich kein zweiter Kanal:
+//! der Kanal traegt Befunde ueber Eintraege, die Zahlen aber gehoeren zum Lauf
+//! und zu keinem einzelnen Eintrag.
 //!
 //! # Die Bauart ist die des Lesevorgangs
 //!
@@ -232,8 +236,23 @@ pub struct Befundmeldung {
 /// Ein laufender Durchlauf auf einem eigenen Faden.
 pub struct Durchlauf {
     abbruch: Arc<AtomicBool>,
-    zu_gross: Arc<AtomicU64>,
+    ungelesen: Arc<Ungelesen>,
     befunde: Receiver<Befundmeldung>,
+}
+
+/// Die zwei Zaehler der Dateien, die ein Lauf **nicht** gelesen hat, je Grund
+/// einer.
+///
+/// Eine Struktur und nicht zwei `Arc<AtomicU64>` nebeneinander: beide werden
+/// an denselben Stellen gezaehlt und an denselben Stellen abgelesen, und ein
+/// Argument je Zaehler hiesse, dass jeder Rufer zwei gleich getypte Werte in
+/// der richtigen Reihenfolge reicht.
+#[derive(Debug, Default)]
+struct Ungelesen {
+    /// Ueber der Grenze, aus [`Inhaltsbefund::ZuGross`].
+    zu_gross: AtomicU64,
+    /// Nur in der Cloud, aus [`Inhaltsbefund::NurInDerCloud`].
+    nur_in_der_cloud: AtomicU64,
 }
 
 impl Durchlauf {
@@ -279,10 +298,10 @@ impl Durchlauf {
         generation: u64,
     ) -> Self {
         let abbruch = Arc::new(AtomicBool::new(false));
-        let zu_gross = Arc::new(AtomicU64::new(0));
+        let ungelesen = Arc::new(Ungelesen::default());
         let (sender, befunde) = sync_channel(STAPELGROESSE);
         let faden_abbruch = Arc::clone(&abbruch);
-        let faden_zu_gross = Arc::clone(&zu_gross);
+        let faden_ungelesen = Arc::clone(&ungelesen);
         let _ = thread::Builder::new()
             .name(format!("krk-durchlauf-{generation}"))
             .spawn(move || {
@@ -293,11 +312,11 @@ impl Durchlauf {
                     muster: &muster,
                     inhaltsgrenze,
                 };
-                durchlauffaden(&lage, &faden_abbruch, &faden_zu_gross, &sender);
+                durchlauffaden(&lage, &faden_abbruch, &faden_ungelesen, &sender);
             });
         Self {
             abbruch,
-            zu_gross,
+            ungelesen,
             befunde,
         }
     }
@@ -326,7 +345,20 @@ impl Durchlauf {
     /// der das sagt.
     #[must_use]
     pub fn zu_gross(&self) -> u64 {
-        self.zu_gross.load(Ordering::Relaxed)
+        self.ungelesen.zu_gross.load(Ordering::Relaxed)
+    }
+
+    /// Wie viele Dateien dieser Lauf bisher **nicht** gelesen hat, weil sie
+    /// nur in der Cloud liegen.
+    ///
+    /// Dieselbe Art Zahl wie [`Self::zu_gross`], mit demselben Verhalten: sie
+    /// waechst waehrend des Laufs, faellt nie, zaehlt Dateien und keine
+    /// Auftraege und ist kein Befund ueber eine Zeile. Eine Datei, die nur in
+    /// der Cloud liegt und zugleich ueber der Grenze, zaehlt hier und nicht
+    /// dort, weil die Huelle das Kennzeichen vor der Groesse fragt.
+    #[must_use]
+    pub fn nur_in_der_cloud(&self) -> u64 {
+        self.ungelesen.nur_in_der_cloud.load(Ordering::Relaxed)
     }
 
     /// Bricht den Durchlauf ab.
@@ -380,7 +412,7 @@ struct Auftragslage<'a> {
 fn durchlauffaden(
     lage: &Auftragslage<'_>,
     abbruch: &AtomicBool,
-    zu_gross: &AtomicU64,
+    ungelesen: &Ungelesen,
     sender: &SyncSender<Befundmeldung>,
 ) {
     let muster = lage.muster;
@@ -397,7 +429,7 @@ fn durchlauffaden(
         // Gestalten der Grenze.
         let entschieden = match (auftrag.art, lage.inhaltsgrenze) {
             (Auftragsart::Unterbaum, grenze) => {
-                unterbaum_entscheiden(&pfad, muster, grenze, abbruch, zu_gross)
+                unterbaum_entscheiden(&pfad, muster, grenze, abbruch, ungelesen)
             }
             (Auftragsart::Inhalt, Some(grenze)) => {
                 // Die zweite Stelle der Abbruchgrenze, hier im flachen Zweig:
@@ -406,7 +438,7 @@ fn durchlauffaden(
                 if abbruch.load(Ordering::Relaxed) {
                     None
                 } else {
-                    datei_entscheiden(&pfad, muster, grenze, zu_gross)
+                    datei_entscheiden(&pfad, muster, grenze, ungelesen)
                 }
             }
             // Ein Inhaltsauftrag ohne Grenze ist von diesem Lauf nicht zu
@@ -443,7 +475,10 @@ fn durchlauffaden(
 /// das ist keine Vermengung zweier Aussagen: die Zeile steht nicht, weil ueber
 /// sie nichts bekannt ist, und dass sie nicht angesehen wurde, sagt der Zaehler
 /// und nicht ihre Zeile. Einen dritten Trefferzustand gaebe es sonst, und
-/// [`Befund`](super::modell::Befund) hat aus genau diesem Grund keinen.
+/// [`Befund`](super::modell::Befund) hat aus genau diesem Grund keinen. Eine
+/// Datei, die nur in der Cloud liegt, ist aus demselben Grund dasselbe
+/// `Some(false)`, mit ihrem eigenen Zaehler; die Uebersetzung steht in
+/// [`befund_verbuchen`].
 ///
 /// **Die Abbruchgrenze steht nicht hier, sondern bei jedem Rufer davor.** Beide
 /// Rufer pruefen unmittelbar vor dem Aufruf; sie hier hereinzuziehen naehme dem
@@ -453,13 +488,29 @@ fn datei_entscheiden(
     pfad: &Path,
     muster: &Muster,
     grenze: u64,
-    zu_gross: &AtomicU64,
+    ungelesen: &Ungelesen,
 ) -> Option<bool> {
-    match traegt_der_inhalt(pfad, muster, grenze) {
+    befund_verbuchen(traegt_der_inhalt(pfad, muster, grenze), ungelesen)
+}
+
+/// Uebersetzt einen Inhaltsbefund in die Antwort des Durchlaufs und zaehlt
+/// dabei die ungelesenen Dateien.
+///
+/// Getrennt vom Lesen, damit die Uebersetzung ohne Datei pruefbar ist: ein
+/// Platzhalter, also eine Datei mit `SF_DATALESS`, laesst sich ohne
+/// File-Provider-Domaene in keiner Probe herstellen, und
+/// [`Inhaltsbefund::NurInDerCloud`] waere sonst ein Zweig, den keine Probe
+/// erreicht. Vollstaendig und ohne Auffangzweig.
+fn befund_verbuchen(befund: Inhaltsbefund, ungelesen: &Ungelesen) -> Option<bool> {
+    match befund {
         Inhaltsbefund::Traegt => Some(true),
         Inhaltsbefund::TraegtNicht => Some(false),
         Inhaltsbefund::ZuGross => {
-            zu_gross.fetch_add(1, Ordering::Relaxed);
+            ungelesen.zu_gross.fetch_add(1, Ordering::Relaxed);
+            Some(false)
+        }
+        Inhaltsbefund::NurInDerCloud => {
+            ungelesen.nur_in_der_cloud.fetch_add(1, Ordering::Relaxed);
             Some(false)
         }
         Inhaltsbefund::Unentschieden => None,
@@ -507,7 +558,7 @@ fn unterbaum_entscheiden(
     muster: &Muster,
     inhaltsgrenze: Option<u64>,
     abbruch: &AtomicBool,
-    zu_gross: &AtomicU64,
+    ungelesen: &Ungelesen,
 ) -> Option<bool> {
     // Erster Zweig: eine symbolische Verknuepfung ist ohne Lesen entschieden.
     //
@@ -593,7 +644,7 @@ fn unterbaum_entscheiden(
                             return None;
                         }
                         let pfad = lesestand.pfad.join(&kandidat.name);
-                        if datei_entscheiden(&pfad, muster, grenze, zu_gross)? {
+                        if datei_entscheiden(&pfad, muster, grenze, ungelesen)? {
                             return Some(true);
                         }
                     }
@@ -701,5 +752,59 @@ impl Ordnerlesestand {
         let traegt_eintraege = !stapel.is_empty();
         self.stapel = stapel.into_iter();
         Ok(traegt_eintraege)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Eine Datei, die nur in der Cloud liegt, hebt ihren eigenen Zaehler und
+    /// ist ein `Some(false)`, wie eine zu grosse Datei, und keiner der beiden
+    /// Zaehler beruehrt den anderen.
+    ///
+    /// Der Befund ist eingespritzt und nicht gelesen: einen echten Platzhalter
+    /// gibt es in keiner Probe (Doc-Kommentar von [`befund_verbuchen`]).
+    #[test]
+    fn nur_in_der_cloud_hebt_den_zweiten_zaehler_und_steht_nicht() {
+        let ungelesen = Ungelesen::default();
+
+        assert_eq!(
+            befund_verbuchen(Inhaltsbefund::NurInDerCloud, &ungelesen),
+            Some(false)
+        );
+        assert_eq!(
+            befund_verbuchen(Inhaltsbefund::NurInDerCloud, &ungelesen),
+            Some(false)
+        );
+        assert_eq!(ungelesen.nur_in_der_cloud.load(Ordering::Relaxed), 2);
+        assert_eq!(ungelesen.zu_gross.load(Ordering::Relaxed), 0);
+
+        assert_eq!(
+            befund_verbuchen(Inhaltsbefund::ZuGross, &ungelesen),
+            Some(false)
+        );
+        assert_eq!(ungelesen.zu_gross.load(Ordering::Relaxed), 1);
+        assert_eq!(ungelesen.nur_in_der_cloud.load(Ordering::Relaxed), 2);
+    }
+
+    /// Die drei uebrigen Befunde lassen beide Zaehler stehen.
+    #[test]
+    fn die_uebrigen_befunde_zaehlen_nichts() {
+        let ungelesen = Ungelesen::default();
+        assert_eq!(
+            befund_verbuchen(Inhaltsbefund::Traegt, &ungelesen),
+            Some(true)
+        );
+        assert_eq!(
+            befund_verbuchen(Inhaltsbefund::TraegtNicht, &ungelesen),
+            Some(false)
+        );
+        assert_eq!(
+            befund_verbuchen(Inhaltsbefund::Unentschieden, &ungelesen),
+            None
+        );
+        assert_eq!(ungelesen.zu_gross.load(Ordering::Relaxed), 0);
+        assert_eq!(ungelesen.nur_in_der_cloud.load(Ordering::Relaxed), 0);
     }
 }

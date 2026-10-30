@@ -1,0 +1,259 @@
+Messung: ob die Sperre einer nur lesenden SQLite-Verbindung das Schliessen eines fremden Deskriptors desselben Prozesses ueberlebt
+Arbeitspaket 261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen
+Anlass: Issue 261025-0215-die-vorfrage-vor-jedem-oeffnen-schliesst-einen-deskriptor-der-hauptdatei-und-hebt-damit-die-sperren-einer-zweiten-verbindung-von-krk-auf.md
+Gefahren: 261025-0742 auf diesem Geraet (Darwin 24.6.0), SQLite 3.43.2 des Systems
+
+Frage: `archiv::sqlite::oeffnen` oeffnet vor jedem Oeffnen einer Datenbank einen eigenen
+Deskriptor auf die Hauptdatei (`sofort_unveraenderlich`, Rueckfallstufe `wal_kopf`) und
+schliesst ihn wieder. Nach der POSIX-Regel hebt das Schliessen irgendeines Deskriptors alle
+`fcntl`-Sperren auf, die der Prozess auf der Datei haelt, also auch das SHARED einer anderen,
+gerade lesenden Verbindung von KRK. Das Issue nimmt die Regel als gegeben (Inferenz aus dem
+Quelltext, nicht gemessen). Gemessen wird hier, ob die Bibliothek, die KRK bindet, sich so
+verhaelt.
+
+Aufbau: Gemessen wurde ausschliesslich an Datenbanken, die das Skript selbst in einem frischen
+Wegwerfordner unter dem Scratchpad der Sitzung anlegt und am Ende loescht. wordstore.db, der
+Baum und nichts unter ~/Library sind beruehrt. Die Sonde (sonde.c unten) ist gegen
+/usr/lib/libsqlite3.dylib gelinkt, also gegen die Bibliothek, die `verzeichnis/sys.rs` ueber
+`#[link(name = "sqlite3")]` bindet, und oeffnet wie KRK mit
+sqlite3_open_v2("file:<pfad>?mode=ro", SQLITE_OPEN_READONLY | SQLITE_OPEN_URI). Den fremden
+Deskriptor oeffnet sie wie `ohne_warten_oeffnen` mit O_RDONLY | O_NONBLOCK. /usr/bin/sqlite3
+dient allein als fremder Schreiber in einem Kindprozess (es traegt SQLite statisch, siehe
+messungen/261023-1556-sqlite-nur-lesend-shm.txt, (a)); sein Wartezeitwert ist 0, ein
+"database is locked (5)" kommt also sofort.
+
+Die drei Proben:
+(a) Grundstand: eine Verbindung mode=ro steht mit SELECT * FROM t nach der ersten Zeile, die
+    Lesetransaktion ist offen. Ein Kindprozess fragt mit F_GETLK den Sperrbereich
+    0x40000000/512, und /usr/bin/sqlite3 versucht "BEGIN EXCLUSIVE; COMMIT;". Zur Kontrolle
+    dasselbe nach sqlite3_finalize (a2): dann muss das EXCLUSIVE gelingen, sonst unterschiede
+    die Probe nichts.
+(b) Derselbe Stand; der Prozess der Verbindung oeffnet einen eigenen Deskriptor auf die
+    Hauptdatei, fragt an ihm F_GETLK (b1) und schliesst ihn; danach Kind-F_GETLK und
+    EXCLUSIVE (b2). Noch einmal mit einem Deskriptor, an dem wie in `kopf_traegt_wal` 20 Bytes
+    Kopf gelesen werden (b3). Gefahren an einer Datenbank im Rollback-Betrieb und an einer im
+    WAL-Betrieb.
+(c) Gegenprobe ohne SQLite: der Prozess setzt selbst mit F_SETLK eine geteilte POSIX-Sperre
+    auf 0x40000002/1 an fd 3, ein Kind fragt F_GETLK (c1); dann oeffnet und schliesst er fd 4
+    auf dieselbe Datei, das Kind fragt erneut (c2).
+
+==================================================================== Skript: messen.sh
+#!/bin/bash
+# Misst, ob die Sperre einer nur lesenden SQLite-Verbindung das Schliessen eines
+# fremden Deskriptors desselben Prozesses auf die Hauptdatei ueberlebt.
+set -u
+HIER=$(cd "$(dirname "$0")" && pwd)
+W=$(mktemp -d "${TMPDIR:-/tmp}/krk-sperre.XXXXXX")
+cc -Wall -o "$W/sonde" "$HIER/sonde.c" -lsqlite3 || exit 1
+echo "Wegwerfordner: $W"
+echo "=== Bibliothek"
+echo "\$ otool -L sonde"; otool -L "$W/sonde"
+echo "\$ sonde --version"; "$W/sonde" --version
+for modus in delete wal; do
+  D=$W/$modus; mkdir "$D"; DB=$D/x.db
+  /usr/bin/sqlite3 "$DB" "pragma journal_mode=$modus; create table t(x); insert into t values(1),(2),(3);" >/dev/null
+  echo; echo "=== (a, b) journal_mode=$modus, Kopfbytes 18/19: $(xxd -s 18 -l 2 -p "$DB")"
+  "$W/sonde" sqlite "$DB"
+done
+D=$W/posix; mkdir "$D"; DB=$D/x.db
+/usr/bin/sqlite3 "$DB" "create table t(x);"
+echo; echo "=== (c) Gegenprobe ohne SQLite"
+"$W/sonde" posix "$DB"
+rm -rf "$W"
+
+==================================================================== Sonde: sonde.c
+/* Wegwerf-Sonde: haelt eine nur lesende Verbindung ueber /usr/lib/libsqlite3.dylib
+   mitten in einem Lesen offen und prueft, ob das Oeffnen und Schliessen eines
+   fremden Deskriptors auf die Hauptdatei ihre Sperre aufhebt. */
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <sqlite3.h>
+
+static const char *DB;
+
+/* Fragt mit F_GETLK an einem eigenen Deskriptor nach einer ausschliessenden
+   Sperre auf [start, start+len) und druckt die Antwort. */
+static void getlk(const char *wer, off_t start, off_t len) {
+  int fd = open(DB, O_RDONLY | O_NONBLOCK);
+  struct flock f = {.l_start = start, .l_len = len, .l_pid = 0, .l_type = F_WRLCK, .l_whence = SEEK_SET};
+  if (fcntl(fd, F_GETLK, &f) == -1) { perror("F_GETLK"); }
+  const char *t = f.l_type == F_UNLCK ? "UNLCK" : f.l_type == F_RDLCK ? "RDLCK" : "WRLCK";
+  printf("  F_GETLK %-6s pid=%d: l_type=%s", wer, getpid(), t);
+  if (f.l_type != F_UNLCK) printf(" l_pid=%d l_start=0x%llx l_len=%lld", f.l_pid, (long long)f.l_start, (long long)f.l_len);
+  printf("\n"); fflush(stdout);
+  close(fd); /* im Kind harmlos; im Elternprozess Teil der Pruefung (b) */
+}
+
+/* Fragt aus einem Kindprozess nach. */
+static void kind_getlk(off_t start, off_t len) {
+  pid_t p = fork();
+  if (p == 0) { getlk("kind", start, len); _exit(0); }
+  waitpid(p, NULL, 0);
+}
+
+/* /usr/bin/sqlite3 db "BEGIN EXCLUSIVE; COMMIT;" als Kind, Ausgabe und Code. */
+static void exklusiv(void) {
+  fflush(stdout);
+  pid_t p = fork();
+  if (p == 0) {
+    dup2(1, 2);
+    execl("/usr/bin/sqlite3", "sqlite3", DB, "BEGIN EXCLUSIVE; COMMIT;", (char *)NULL);
+    _exit(127);
+  }
+  int st; waitpid(p, &st, 0);
+  printf("  /usr/bin/sqlite3 BEGIN EXCLUSIVE: exit=%d\n", WEXITSTATUS(st)); fflush(stdout);
+}
+
+int main(int argc, char **argv) {
+  setvbuf(stdout, NULL, _IONBF, 0); /* ungepuffert, sonst druckt jedes fork den Puffer doppelt */
+  if (argc == 2 && strcmp(argv[1], "--version") == 0) { printf("%s %s\n", sqlite3_libversion(), sqlite3_sourceid()); return 0; }
+  if (argc != 3) return 2;
+  DB = argv[2];
+  if (strcmp(argv[1], "posix") == 0) {
+    /* (c) Gegenprobe: eine gewoehnliche POSIX-Sperre des Prozesses */
+    int fd1 = open(DB, O_RDWR);
+    struct flock f = {.l_start = 0x40000002, .l_len = 1, .l_type = F_RDLCK, .l_whence = SEEK_SET};
+    if (fcntl(fd1, F_SETLK, &f) == -1) { perror("F_SETLK"); return 1; }
+    printf("c1 POSIX-Sperre F_RDLCK 0x40000002/1 an fd %d gesetzt\n", fd1);
+    kind_getlk(0x40000002, 1);
+    int fd2 = open(DB, O_RDONLY | O_NONBLOCK); close(fd2);
+    printf("c2 zweiter Deskriptor %d geoeffnet und geschlossen\n", fd2);
+    kind_getlk(0x40000002, 1);
+    close(fd1);
+    return 0;
+  }
+  char uri[4096]; snprintf(uri, sizeof uri, "file:%s?mode=ro", DB);
+  sqlite3 *db = NULL;
+  if (sqlite3_open_v2(uri, &db, SQLITE_OPEN_READONLY | SQLITE_OPEN_URI, NULL) != SQLITE_OK) { printf("open: %s\n", sqlite3_errmsg(db)); return 1; }
+  sqlite3_stmt *st = NULL;
+  sqlite3_prepare_v2(db, "SELECT * FROM t", -1, &st, NULL);
+  int rc = sqlite3_step(st);
+  printf("a1 Verbindung mode=ro, SELECT * FROM t steht nach der ersten Zeile (step=%d, 100=SQLITE_ROW)\n", rc);
+  kind_getlk(0x40000000, 512);
+  exklusiv();
+  printf("b1 im selben Prozess: F_GETLK an einem eigenen Deskriptor, der danach geschlossen wird\n");
+  getlk("selbst", 0x40000000, 512);
+  printf("b2 nach dem Schliessen dieses Deskriptors (O_RDONLY|O_NONBLOCK)\n");
+  kind_getlk(0x40000000, 512);
+  exklusiv();
+  int fd = open(DB, O_RDONLY | O_NONBLOCK); char kopf[20]; ssize_t n = read(fd, kopf, 20); close(fd);
+  printf("b3 noch ein Deskriptor geoeffnet, 20 Bytes Kopf gelesen (%zd), geschlossen\n", n);
+  kind_getlk(0x40000000, 512);
+  exklusiv();
+  sqlite3_finalize(st);
+  printf("a2 Anweisung beendet, Lesetransaktion zu (Verbindung offen)\n");
+  kind_getlk(0x40000000, 512);
+  exklusiv();
+  sqlite3_close_v2(db);
+  return 0;
+}
+
+==================================================================== Aufruf
+cc und sonde.c neben messen.sh, dann
+TMPDIR=<scratchpad>/sperre/tmp ./messen.sh > ausgabe.txt 2>&1   (exit 0)
+
+==================================================================== rohe Ausgabe
+Wegwerfordner: /private/tmp/claude-502/-Users-k1-Projects-productive-krk/0b36ed58-9d42-4cf6-9218-f110f4816f97/scratchpad/sperre/tmp/krk-sperre.cB686R
+=== Bibliothek
+$ otool -L sonde
+/private/tmp/claude-502/-Users-k1-Projects-productive-krk/0b36ed58-9d42-4cf6-9218-f110f4816f97/scratchpad/sperre/tmp/krk-sperre.cB686R/sonde:
+	/usr/lib/libsqlite3.dylib (compatibility version 9.0.0, current version 380.0.0)
+	/usr/lib/libSystem.B.dylib (compatibility version 1.0.0, current version 1356.0.0)
+$ sonde --version
+3.43.2 2023-10-10 13:08:14 1b37c146ee9ebb7acd0160c0ab1fd11017a419fa8a3187386ed8cb32b709aapl
+
+=== (a, b) journal_mode=delete, Kopfbytes 18/19: 0101
+a1 Verbindung mode=ro, SELECT * FROM t steht nach der ersten Zeile (step=100, 100=SQLITE_ROW)
+  F_GETLK kind   pid=76379: l_type=RDLCK l_pid=76378 l_start=0x40000002 l_len=510
+Error: stepping, database is locked (5)
+  /usr/bin/sqlite3 BEGIN EXCLUSIVE: exit=5
+b1 im selben Prozess: F_GETLK an einem eigenen Deskriptor, der danach geschlossen wird
+  F_GETLK selbst pid=76378: l_type=RDLCK l_pid=76378 l_start=0x40000002 l_len=510
+b2 nach dem Schliessen dieses Deskriptors (O_RDONLY|O_NONBLOCK)
+  F_GETLK kind   pid=76381: l_type=RDLCK l_pid=76378 l_start=0x40000002 l_len=510
+Error: stepping, database is locked (5)
+  /usr/bin/sqlite3 BEGIN EXCLUSIVE: exit=5
+b3 noch ein Deskriptor geoeffnet, 20 Bytes Kopf gelesen (20), geschlossen
+  F_GETLK kind   pid=76383: l_type=RDLCK l_pid=76378 l_start=0x40000002 l_len=510
+Error: stepping, database is locked (5)
+  /usr/bin/sqlite3 BEGIN EXCLUSIVE: exit=5
+a2 Anweisung beendet, Lesetransaktion zu (Verbindung offen)
+  F_GETLK kind   pid=76385: l_type=UNLCK
+  /usr/bin/sqlite3 BEGIN EXCLUSIVE: exit=0
+
+=== (a, b) journal_mode=wal, Kopfbytes 18/19: 0202
+a1 Verbindung mode=ro, SELECT * FROM t steht nach der ersten Zeile (step=100, 100=SQLITE_ROW)
+  F_GETLK kind   pid=76392: l_type=RDLCK l_pid=76391 l_start=0x40000002 l_len=510
+  /usr/bin/sqlite3 BEGIN EXCLUSIVE: exit=0
+b1 im selben Prozess: F_GETLK an einem eigenen Deskriptor, der danach geschlossen wird
+  F_GETLK selbst pid=76391: l_type=RDLCK l_pid=76391 l_start=0x40000002 l_len=510
+b2 nach dem Schliessen dieses Deskriptors (O_RDONLY|O_NONBLOCK)
+  F_GETLK kind   pid=76394: l_type=RDLCK l_pid=76391 l_start=0x40000002 l_len=510
+  /usr/bin/sqlite3 BEGIN EXCLUSIVE: exit=0
+b3 noch ein Deskriptor geoeffnet, 20 Bytes Kopf gelesen (20), geschlossen
+  F_GETLK kind   pid=76396: l_type=RDLCK l_pid=76391 l_start=0x40000002 l_len=510
+  /usr/bin/sqlite3 BEGIN EXCLUSIVE: exit=0
+a2 Anweisung beendet, Lesetransaktion zu (Verbindung offen)
+  F_GETLK kind   pid=76398: l_type=RDLCK l_pid=76391 l_start=0x40000002 l_len=510
+  /usr/bin/sqlite3 BEGIN EXCLUSIVE: exit=0
+
+=== (c) Gegenprobe ohne SQLite
+c1 POSIX-Sperre F_RDLCK 0x40000002/1 an fd 3 gesetzt
+  F_GETLK kind   pid=76403: l_type=RDLCK l_pid=76402 l_start=0x40000002 l_len=1
+c2 zweiter Deskriptor 4 geoeffnet und geschlossen
+  F_GETLK kind   pid=76404: l_type=UNLCK
+
+==================================================================== Urteile je Versuch
+
+(a) Rollback-Betrieb: die lesende Verbindung haelt SHARED als F_RDLCK auf 0x40000002, Laenge
+    510, mit der Prozesskennung der Sonde; /usr/bin/sqlite3 scheitert an BEGIN EXCLUSIVE mit
+    "database is locked (5)". Nach sqlite3_finalize meldet das Kind F_UNLCK, und dasselbe
+    EXCLUSIVE gelingt (exit 0): die Probe unterscheidet "Sperre steht" von "Sperre fort".
+(b) Rollback-Betrieb: nach dem Oeffnen und Schliessen eines fremden Deskriptors (b2) und nach
+    einem zweiten mit gelesenem Kopf (b3) meldet das Kind weiter F_RDLCK auf 0x40000002/510
+    mit derselben Prozesskennung, und BEGIN EXCLUSIVE scheitert weiter mit exit 5. **Das
+    Schliessen eines fremden Deskriptors hebt die Sperre der SQLite-Verbindung nicht auf.**
+    WAL-Betrieb: das Kind sieht die geteilte Sperre auf der Hauptdatei vor und nach dem
+    Schliessen ebenso stehen, auch nach dem Ende der Lesetransaktion (eine WAL-Verbindung haelt
+    SHARED auf der Hauptdatei, solange sie offen ist). BEGIN EXCLUSIVE gelingt dort in jedem
+    Schritt, weil im WAL-Betrieb ein Schreiber neben Lesern schreibt; als Unterscheidung taugt
+    in diesem Betrieb allein F_GETLK.
+(b1) Im selben Prozess meldet F_GETLK an einem eigenen Deskriptor die Sperre der eigenen
+    SQLite-Verbindung: l_type=RDLCK, l_pid gleich der eigenen Prozesskennung. Die Aussage
+    "Sperren des eigenen Prozesses meldet F_GETLK nie" ist fuer Sperren dieser Bibliothek
+    falsch. Folge fuer `fremde_sperre`: haelt eine zweite Verbindung von KRK die Datei, sagt
+    die Vorfrage ja, und `sofort_unveraenderlich` antwortet nein; dann oeffnet KRK mit
+    mode=ro, also den vorsichtigen Weg. Harmlos.
+(c) Gegenprobe: eine gewoehnliche POSIX-Sperre des Prozesses sieht das Kind in c1 (F_RDLCK,
+    Elternkennung) und nach dem Oeffnen und Schliessen von fd 4 in c2 nicht mehr (F_UNLCK).
+    Die POSIX-Regel gilt auf diesem System also fuer Sperren, die ein Programm mit F_SETLK
+    setzt; die Sperren der System-SQLite unterliegen ihr nicht.
+
+Deutung (Inferenz, nicht aus dem Quelltext der Bibliothek belegt): Apples Fassung von SQLite
+sperrt an den Deskriptor bzw. die offene Dateibeschreibung gebunden (nach Art der
+OFD-Sperren), nicht je Prozess. Dazu passen beide Befunde: eine solche Sperre faellt nicht mit
+dem Schliessen eines anderen Deskriptors, und sie kollidiert mit einer Frage an einer anderen
+Dateibeschreibung desselben Prozesses, weshalb F_GETLK sie in (b1) meldet.
+
+Folge fuer KRK: Die Praemisse des Issues 261025-0215 haelt fuer die gebundene
+Systembibliothek nicht. Die Vorfrage in `oeffnen` hebt die Sperre einer anderen, gerade
+lesenden Verbindung von KRK nicht auf; eine Verhaltensaenderung in `oeffnen` ist nicht
+noetig. Die Aussage gilt fuer /usr/lib/libsqlite3.dylib in dieser Fassung. Bindet KRK je eine
+eigene SQLite-Fassung (Standardquelltext von sqlite.org, Sperren je Prozess ueber F_SETLK),
+kehrt die POSIX-Regel zurueck, und dann zaehlt jeder Deskriptor, den KRK ausserhalb von
+SQLite auf die Hauptdatei oeffnet und schliesst (Vorfrage, Archivzugang, Inhaltsfilter,
+Vorschauleser). Die Regressionsprobe
+`das_oeffnen_derselben_datenbank_laesst_die_sperre_einer_lesenden_verbindung_stehen`
+(crates/krk-core/tests/archiv_sqlite.rs) haelt den Befund (b) am Weg des Kerns.
+
+Wiederholen: sonde.c und messen.sh aus diesem Bericht in einen leeren Ordner legen,
+TMPDIR auf einen Wegwerfordner setzen und ./messen.sh fahren; braucht cc
+(Command Line Tools), /usr/bin/sqlite3 und xxd.
+
+Urteil: Sperre der SQLite-Verbindung ueberlebt fremdes Schliessen
+Urteil: F_GETLK meldet Sperren der eigenen SQLite-Verbindung
+Urteil: POSIX-Sperre des Prozesses faellt mit fremdem Schliessen

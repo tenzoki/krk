@@ -1,0 +1,30 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "4a9d5162-3c27-4d9f-805e-9c088f3ec990",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261023-1507-wie-stehen-null-und-blob-in-der-tsv-einer-sqlite-tabelle.md"
+  },
+  "filed_by": {
+    "actor": "implementation-planner",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "implemented",
+    "answer_ref": {
+      "kind": "other",
+      "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261023-1507-wie-stehen-null-und-blob-in-der-tsv-einer-sqlite-tabelle.md",
+      "sha256": "sha256:0f38335c729e804e20894e96437a4a1913068485db496ad4d64d6854346653f9"
+    },
+    "implementation_ref": "e5d2c38735a14ca86ff1b27934343747d0e07891",
+    "superseded_by": null,
+    "deferral": null
+  }
+}

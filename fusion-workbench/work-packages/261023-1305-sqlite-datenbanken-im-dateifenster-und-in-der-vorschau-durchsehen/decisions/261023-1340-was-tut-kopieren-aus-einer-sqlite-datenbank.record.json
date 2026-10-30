@@ -1,0 +1,30 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "19ddc55c-0a43-4d28-9519-f234333c53e8",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261023-1340-was-tut-kopieren-aus-einer-sqlite-datenbank.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "implemented",
+    "answer_ref": {
+      "kind": "other",
+      "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261023-1340-was-tut-kopieren-aus-einer-sqlite-datenbank.md",
+      "sha256": "sha256:c2879b3c710908fdc2fc9dfc9bca7e75b957cf0f48344de0186dfab6888f8f41"
+    },
+    "implementation_ref": "e5d2c38735a14ca86ff1b27934343747d0e07891",
+    "superseded_by": null,
+    "deferral": null
+  }
+}

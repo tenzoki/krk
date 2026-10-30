@@ -3,7 +3,10 @@
 //! Herauskopieren aus einem Archiv in ein lokales oder fernes Ziel, ueber die
 //! Maschine fuer ferne Vorgaenge mit dem Archiveintrag als Lesequelle (E11);
 //! das Kopieren und Verschieben hinein und hinaus (E10, E13); Umbenennen,
-//! Anlegen und endgueltiges Loeschen im Archiv (E17).
+//! Anlegen und endgueltiges Loeschen im Archiv (E17). Dazu Schritt 4 des
+//! Plans `261023-1507-plan-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau.md`:
+//! Kopieren aus einer SQLite-Datenbank legt eine Tabelle als `<name>.tsv` und
+//! eine Sicht als `<name>.sql` an.
 //!
 //! Jede Probe baut ihre Archive selbst in einem Pruefordner
 //! (`gemeinsam::archivbau`), das verschluesselte Zip ueber `/usr/bin/zip -P`;
@@ -1837,4 +1840,212 @@ fn ein_archiv_ohne_schreibrecht_an_der_datei_bleibt_unveraendert() {
         );
         fs::set_permissions(&archiv, fs::Permissions::from_mode(0o644)).expect("entsperren");
     }
+}
+
+// ---------------------------------------------------------------------------
+// SQLite: Kopieren fuehrt eine Tabelle als TSV und eine Sicht als SQL aus
+// (Schritt 4 des Plans
+// `261023-1507-plan-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau.md`)
+// ---------------------------------------------------------------------------
+
+/// Legt mit `/usr/bin/sqlite3` eine Datenbank unter `pfad` an und fuehrt `sql`
+/// darin aus; `/usr/bin/sqlite3` schreibt allein die Pruefdaten.
+fn datenbank_anlegen(pfad: &Path, sql: &str) {
+    let ausgabe = Command::new("/usr/bin/sqlite3")
+        .arg(pfad)
+        .arg(sql)
+        .output()
+        .expect("/usr/bin/sqlite3 laesst sich nicht starten");
+    assert!(
+        ausgabe.status.success(),
+        "sqlite3 scheitert an {}: {}",
+        pfad.display(),
+        String::from_utf8_lossy(&ausgabe.stderr)
+    );
+}
+
+/// Eine Datenbank mit einer kleinen Tabelle `t`, einer Tabelle `gross`, deren
+/// TSV ueber der Lesegrenze der Vorschau (1 MiB) liegt, und einer Sicht `v`.
+fn kleine_datenbank(ordner: &Pruefordner) -> PathBuf {
+    let datei = ordner.unter("daten.db");
+    datenbank_anlegen(
+        &datei,
+        "CREATE TABLE t(a, b);
+         INSERT INTO t VALUES (1, 'eins'), (NULL, x'0102');
+         CREATE TABLE gross(n INTEGER, text TEXT);
+         WITH RECURSIVE z(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM z WHERE i < 30000)
+           INSERT INTO gross SELECT i, printf('%0100d', i) FROM z;
+         CREATE VIEW v AS SELECT a FROM t WHERE a > 0;",
+    );
+    datei
+}
+
+/// Die Namen in einem Ordner, geordnet.
+fn ordnernamen(ordner: &Path) -> Vec<String> {
+    let mut namen: Vec<String> = fs::read_dir(ordner)
+        .expect("Ordner lesen")
+        .map(|eintrag| {
+            eintrag
+                .expect("Eintrag")
+                .file_name()
+                .to_string_lossy()
+                .into_owned()
+        })
+        .collect();
+    namen.sort();
+    namen
+}
+
+#[test]
+fn kopieren_einer_tabelle_legt_name_tsv_mit_der_ganzen_tabelle_an() {
+    let ordner = Pruefordner::neu("sqlite-kopieren-tabelle");
+    let datenbank = kleine_datenbank(&ordner);
+    let vorher = fs::read(&datenbank).expect("die Datenbank");
+    let gelesen = inhalt(&datenbank);
+    let ziel = ordner.ordner("ziel");
+
+    let ausgang = fahren(
+        Fernauftrag::kopieren(
+            im_archiv(&datenbank, &["t", "gross"]),
+            Ort::Lokal(ziel.clone()),
+        ),
+        Konfliktantwort::Ueberspringen,
+    );
+    assert_eq!(ausgang.bericht.abschluss, Abschluss::Fertig);
+    ohne_uebersprungene(&ausgang.bericht);
+
+    assert_eq!(ordnernamen(&ziel), ["gross.tsv", "t.tsv"]);
+    assert_eq!(
+        fs::read(ziel.join("t.tsv")).expect("t.tsv"),
+        "a\tb\n1\teins\nNULL\t[BLOB, 2 Bytes]\n".as_bytes()
+    );
+    let gross = fs::read(ziel.join("gross.tsv")).expect("gross.tsv");
+    assert!(gross.len() > 1 << 20, "ungekuerzt: {}", gross.len());
+    assert_eq!(gross, gelesen["gross"].1, "dieselben Bytes wie gelesen");
+    assert_eq!(fs::read(&datenbank).expect("die Datenbank"), vorher);
+}
+
+#[test]
+fn kopieren_einer_sicht_legt_name_sql_an() {
+    let ordner = Pruefordner::neu("sqlite-kopieren-sicht");
+    let datenbank = kleine_datenbank(&ordner);
+    let ziel = ordner.ordner("ziel");
+
+    let ausgang = fahren(
+        Fernauftrag::kopieren(im_archiv(&datenbank, &["v"]), Ort::Lokal(ziel.clone())),
+        Konfliktantwort::Ueberspringen,
+    );
+    assert_eq!(ausgang.bericht.abschluss, Abschluss::Fertig);
+    ohne_uebersprungene(&ausgang.bericht);
+    assert_eq!(ordnernamen(&ziel), ["v.sql"]);
+    assert_eq!(
+        fs::read(ziel.join("v.sql")).expect("v.sql"),
+        b"CREATE VIEW v AS SELECT a FROM t WHERE a > 0"
+    );
+}
+
+/// Ebenso in ein tar und ein tar.gz: ihr Kopf verlangt die Laenge vor den
+/// Daten, die eine Tabelle erst nach dem Lesen kennt (`Zulieferung`).
+#[test]
+fn kopieren_einer_tabelle_in_ein_zip_legt_einen_eintrag_name_tsv_an() {
+    let ordner = Pruefordner::neu("sqlite-kopieren-ins-archiv");
+    let datenbank = kleine_datenbank(&ordner);
+    let vorher = fs::read(&datenbank).expect("die Datenbank");
+    let gelesen = inhalt(&datenbank);
+
+    for (endung, packen) in BESCHREIBBAR {
+        let archiv = kleines_archiv(&ordner, &format!("ziel.{endung}"), packen);
+        let ausgang = fahren(
+            Fernauftrag::kopieren(
+                im_archiv(&datenbank, &["t", "gross", "v"]),
+                Ort::Archiv(archivort(&archiv, "")),
+            ),
+            Konfliktantwort::Ueberspringen,
+        );
+        assert_eq!(ausgang.bericht.abschluss, Abschluss::Fertig, "{endung}");
+        ohne_uebersprungene(&ausgang.bericht);
+
+        let steht = inhalt(&archiv);
+        let namen: Vec<&str> = steht.keys().map(String::as_str).collect();
+        assert_eq!(
+            namen,
+            ["gross.tsv", "t.tsv", "v.sql", "vorher.txt"],
+            "{endung}"
+        );
+        for (name, quelle) in [("gross.tsv", "gross"), ("t.tsv", "t"), ("v.sql", "v")] {
+            assert_eq!(steht[name].0, Typ::Datei, "{endung} {name}");
+            assert_eq!(steht[name].1, gelesen[quelle].1, "{endung} {name}");
+        }
+        assert!(zwischennamen(ordner.pfad()).is_empty(), "{endung}");
+    }
+    assert_eq!(fs::read(&datenbank).expect("die Datenbank"), vorher);
+}
+
+#[test]
+fn verschieben_aus_einer_datenbank_meldet_den_text_der_datenbank_und_laesst_die_quelle_stehen() {
+    let ordner = Pruefordner::neu("sqlite-verschieben");
+    let datenbank = kleine_datenbank(&ordner);
+    let vorher = fs::read(&datenbank).expect("die Datenbank");
+    let ziel = ordner.ordner("ziel");
+
+    let ausgang = fahren(
+        Fernauftrag::verschieben(im_archiv(&datenbank, &["t", "v"]), Ort::Lokal(ziel.clone())),
+        Konfliktantwort::Ueberspringen,
+    );
+    let gruende: Vec<&str> = ausgang
+        .bericht
+        .uebersprungen
+        .iter()
+        .map(|eintrag| eintrag.grund.as_str())
+        .collect();
+    let datenbanktext = text(Text::DatenbankNurLesbar);
+    assert_eq!(gruende, [datenbanktext, datenbanktext]);
+    assert!(
+        !gruende.contains(&text(Text::ArchivNurLesbar)),
+        "der Text eines Archivs"
+    );
+    assert!(ordnernamen(&ziel).is_empty(), "am Ziel entsteht nichts");
+    assert_eq!(fs::read(&datenbank).expect("die Datenbank"), vorher);
+    let steht = inhalt(&datenbank);
+    assert!(steht.contains_key("t") && steht.contains_key("v"));
+}
+
+/// Aendert sich die Datenbank zwischen dem Lesen ihrer Tabellen und dem
+/// Lesen einer Tabelle, nennt die Abschlussliste die Datenbank und kein
+/// Archiv (Issue
+/// `261024-2117-lesefehler-in-einer-sqlite-datenbank-sprechen-weiter-von-einem-archiv.md`).
+/// Die Konfliktfrage ueber das vorhandene `t.tsv` haelt den Lauf an, nachdem
+/// er das Verzeichnis gelesen hat und bevor er die Tabelle liest; in dieser
+/// Spanne schreibt `/usr/bin/sqlite3` eine Zeile.
+#[test]
+fn eine_waehrend_des_kopierens_geaenderte_datenbank_nennt_im_bericht_kein_archiv() {
+    let ordner = Pruefordner::neu("sqlite-kopieren-veraendert");
+    let datenbank = kleine_datenbank(&ordner);
+    let ziel = ordner.ordner("ziel");
+    fs::write(ziel.join("t.tsv"), b"am Ziel").expect("t.tsv am Ziel");
+
+    let bericht = fahren_mit(
+        Fernauftrag::kopieren(im_archiv(&datenbank, &["t"]), Ort::Lokal(ziel.clone())),
+        || {
+            datenbank_anlegen(&datenbank, "INSERT INTO t VALUES (2, 'zwei');");
+            Konfliktantwort::Ueberschreiben
+        },
+    );
+    let gruende: Vec<&str> = bericht
+        .uebersprungen
+        .iter()
+        .map(|eintrag| eintrag.grund.as_str())
+        .collect();
+    assert!(
+        gruende.contains(&text(Text::DatenbankBeimLesenVeraendert)),
+        "{gruende:?}"
+    );
+    for grund in &gruende {
+        assert!(!grund.contains("Archiv"), "{grund}");
+    }
+    assert_eq!(
+        fs::read(ziel.join("t.tsv")).expect("t.tsv"),
+        b"am Ziel",
+        "das Ziel bleibt stehen"
+    );
 }

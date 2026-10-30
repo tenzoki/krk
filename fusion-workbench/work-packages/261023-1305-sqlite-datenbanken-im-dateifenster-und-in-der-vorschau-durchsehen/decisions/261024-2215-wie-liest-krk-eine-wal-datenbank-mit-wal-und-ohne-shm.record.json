@@ -1,0 +1,30 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "09c3e90f-9286-4955-a5f9-cb8c618280d3",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261024-2215-wie-liest-krk-eine-wal-datenbank-mit-wal-und-ohne-shm.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "implemented",
+    "answer_ref": {
+      "kind": "other",
+      "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261024-2215-wie-liest-krk-eine-wal-datenbank-mit-wal-und-ohne-shm.md",
+      "sha256": "sha256:b4c0db3da186fdc543b927ce536692e1bdfb7ff28206111ea6ce5a4e8da4fd43"
+    },
+    "implementation_ref": "a1fec2b72fd0af5a8549f46bf2a173bfcf8163e9",
+    "superseded_by": null,
+    "deferral": null
+  }
+}

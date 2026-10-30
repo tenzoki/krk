@@ -1,0 +1,30 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "9f8a3352-738e-4408-8d07-844c2e4fe4c1",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261023-1340-wie-bindet-krk-sqlite-an-ohne-die-c-freiheits-zusage-zu-brechen.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "implemented",
+    "answer_ref": {
+      "kind": "other",
+      "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261023-1340-wie-bindet-krk-sqlite-an-ohne-die-c-freiheits-zusage-zu-brechen.md",
+      "sha256": "sha256:a7b8b7d6084a55ce1d14f1003c70fad69a3fdfb163ee50768979e3582f04dda8"
+    },
+    "implementation_ref": "a74f7809210f9af8dc923c2e71013222b3c1cab7",
+    "superseded_by": null,
+    "deferral": null
+  }
+}

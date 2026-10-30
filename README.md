@@ -450,6 +450,34 @@ Bytefolgenmarke und ihre Zeilenenden**, als einzige Ausnahme von der Regel,
 dass KRK ohne Marke und mit `\n` sichert (Modulkopf von
 `crates/krk-core/src/text/datei.rs`, „Der Preis dieser Wahl“).
 
+### SQLite: womit KRK sie liest
+
+KRK betritt `.sqlite`, `.sqlite3`, `.db` und `.db3` wie ein Archiv, das sich
+allein lesen lässt; was das für den Nutzer heißt, steht in `HowTo.md` unter
+„SQLite-Datenbanken im Dateifenster“. **Gelesen wird über die `libsqlite3`,
+die macOS mitbringt, und ohne fremde Kiste**: `crates/krk-core/src/verzeichnis/sys.rs`
+bindet ihre Funktionen von Hand mit `#[link(name = "sqlite3")]`, nach dem
+Muster, mit dem `crates/krk-ui/src/appkit/verbinden.rs` NetFS bindet, und gibt
+nach außen allein sichere Typen her. Dafür kommt kein `cc` und kein Paket
+mit einem Namen auf `-sys` in den Baum, gebaut wird kein C-Code, und keine
+`Cargo.toml` hat sich geändert. **Fremder C-Code läuft trotzdem im Prozess**,
+nämlich SQLite selbst in der Fassung des Systems; das ist der Preis der Wahl
+(`fusion-workbench/work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261023-1340-wie-bindet-krk-sqlite-an-ohne-die-c-freiheits-zusage-zu-brechen.md`).
+
+Geöffnet wird an genau einer Stelle, `crates/krk-core/src/archiv/sqlite.rs`,
+mit `mode=ro`, und eine Datenbank im WAL-Betrieb mit leerem `-wal` und ohne
+`-shm` oder ganz ohne `-wal` daneben mit `immutable=1`. Einen Weg, eine
+Datenbank schreibend zu öffnen, hat die Bindung nicht. Hauptdatei und `-wal`
+bleiben beim Lesen unverändert, und KRK legt weder `-wal` noch `-journal`
+an. Ein leeres `-wal` ohne `-shm` liest KRK unveränderlich und legt nichts
+an; ein nicht leeres `-wal` ohne `-shm` (Absturz, Kopie) lässt SQLite eine
+`-shm` anlegen. Ein schon vorhandenes `-shm` bekommt eine Lesemarke oder
+einen neu gebauten Index. So gemessen in
+`messungen/261023-1556-sqlite-nur-lesend-shm.txt` und gehalten von den Proben
+in `crates/krk-core/tests/archiv_sqlite.rs`, die einen laufenden Schreiber
+neben das Lesen stellen. Eine Tabelle kommt als TSV, eine Sicht als ihr
+SQL-Text, für Vorschau und Kopieren aus demselben Leser.
+
 ---
 
 Alles Weitere richtet sich an den, der KRK baut, signiert und ausliefert.

@@ -1,0 +1,30 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "a5039267-be4b-438e-be66-d7c53a8aa64c",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261023-1340-welche-dateien-gelten-als-sqlite-datenbank.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "implemented",
+    "answer_ref": {
+      "kind": "other",
+      "path": "work-packages/261023-1305-sqlite-datenbanken-im-dateifenster-und-in-der-vorschau-durchsehen/decisions/261023-1340-welche-dateien-gelten-als-sqlite-datenbank.md",
+      "sha256": "sha256:979b85c6b099b8f938cd5d5bd7d02c0ee18427851c54ffbcc5a16c10642143b6"
+    },
+    "implementation_ref": "148f84ddb59d05ad5b4770296270ec7041ddd1a6",
+    "superseded_by": null,
+    "deferral": null
+  }
+}

@@ -186,6 +186,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "das Archiv trägt Einträge, die die Liste verdeckt, etwa zwei gleichen Namens, und wird nicht geändert"
         }
         Text::ArchivNurLesbar => "dieses Archiv ist allein lesbar",
+        Text::DatenbankNurLesbar => "diese Datenbank ist allein lesbar",
+        Text::SqliteKeineDatenbank => "die Datei hat nicht das Format von SQLite",
+        Text::DatenbankWirdGeschrieben => "die Datenbank wird gerade geschrieben",
+        Text::SqliteNull => "NULL",
         Text::ArchivSchreibgeschuetzt => "die Archivdatei ist schreibgeschützt",
         Text::ArchivAbbruchNachDemErsetzen => {
             "der Abbruch kam erst nach dem Ersetzen; das Archiv ist geändert"
@@ -211,6 +215,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "das Archiv hat sich seit dem Lesen seines Inhaltsverzeichnisses geändert"
         }
         Text::ArchivEintragFehlt => "der Eintrag steht nicht mehr an seiner Stelle im Archiv",
+        Text::DatenbankBeimLesenVeraendert => {
+            "die Datenbank hat sich seit dem Lesen ihrer Tabellen geändert"
+        }
+        Text::DatenbankEintragFehlt => "die Tabelle oder Sicht steht nicht mehr in der Datenbank",
         Text::StapelKeinStartwert => "„{text}“ ist kein Startwert für die Nummerierung",
         Text::StapelKeineStellenzahl => "„{text}“ ist keine Stellenzahl zwischen 1 und {hoechste}",
         Text::EditorKeinFreierDateizugriff => {
@@ -612,7 +620,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::TabelleNichtInDerListe => "{name} steht nicht in der Liste",
         Text::FenstertitelQuicknote => "Quicknote",
         Text::StatuszeileFilterstand => {
-            "Filter „{filtertext}“: {gezeigt} von {vorhanden} angezeigt{liest}{zu_gross}{ausgeblendet}"
+            "Filter „{filtertext}“: {gezeigt} von {vorhanden} angezeigt{liest}{zu_gross}{nur_in_der_cloud}{ausgeblendet}"
         }
         Text::StatuszeileInhaltWirdGelesen => ", Inhalt wird gelesen",
         Text::StatuszeileSeiteVon => "Seite {aktuell} von {gesamt}",
@@ -1005,6 +1013,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::TrenntextKopfzeileGekuerzt => {
             "{trennzeichen} · {zeilen} · {spalten} · gekürzt: Die Datei ist größer als {grenze} MB, gezeigt sind die vollständigen Zeilen ihres Anfangs."
         }
+        Text::SqliteTabelleKopfzeile => "Tabelle · {zeilen} · {spalten}",
+        Text::SqliteTabelleKopfzeileGekuerzt => {
+            "Tabelle · {zeilen} · {spalten} · gekürzt: Die Tabelle ergibt mehr als {grenze} MB Text, gezeigt sind ihre ersten vollständigen Zeilen."
+        }
         Text::TrennzeichenKomma => "Komma",
         Text::TrennzeichenSemikolon => "Semikolon",
         Text::TrennzeichenTabulator => "Tabulator",
@@ -1023,6 +1035,11 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "danach trüge die Tabelle {spalten} Spalten, sie zeigt höchstens {hoechstens}; nichts geändert"
         }
         Text::VorschauNichtLesbar => "{pfad} ließ sich nicht lesen: {fehler}",
+        Text::VorschauCloudLaedt => "Liegt nur in der Cloud und wird für die Vorschau geladen.",
+        Text::VorschauCloudZuGross => {
+            "Liegt nur in der Cloud und ist mit {groesse} größer als die {grenze}, die die Vorschau lädt."
+        }
+        Text::VorschauCloudNichtGeladen => "Liegt nur in der Cloud und ließ sich nicht laden.",
         Text::VorschauLeertext => "Kein Inhalt. Die Auswahl im Dateifenster füllt diesen Tab.",
         Text::VorschauBildNichtDarstellbar => {
             "Das Bild aus der Zwischenablage ließ sich nicht darstellen."
@@ -1176,6 +1193,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::AmFernenOrtNichtVerfuegbar => "Das geht an einem Ort auf einem Server nicht.",
         Text::ImArchivNichtVerfuegbar => "Das geht in einem Archiv nicht.",
+        Text::InDatenbankNichtVerfuegbar => "Das geht in einer Datenbank nicht.",
         Text::ArchivAmFernenOrt => {
             "Ein Archiv auf einem Server lässt sich nicht betreten; erst herunterkopieren."
         }
@@ -1183,6 +1201,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "Ein Archiv in einem Archiv lässt sich nicht betreten; erst herauskopieren."
         }
         Text::ArchivUngueltig => "{datei} ist kein lesbares Archiv im Format {format}: {grund}",
+        Text::DatenbankUngueltig => "{datei} ist keine lesbare SQLite-Datenbank: {grund}",
         Text::ArchivKeineDatei => "Unter {datei} steht keine gewöhnliche Datei.",
         Text::ArchivZuGross => "{datei} führt mehr als {grenze} Einträge und wird nicht gezeigt.",
         Text::ArchivOrdnerFehlt => {
@@ -1190,6 +1209,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::ArchivDateiFehlt => "Das Archiv {datei} gibt es nicht mehr; gezeigt wird {ordner}.",
         Text::ArchivAlleinLesbar => "Dieses Archiv ist allein lesbar.",
+        Text::DatenbankAlleinLesbar => "Diese Datenbank ist allein lesbar.",
         Text::FernVerbindungGetrennt => {
             "Die Verbindung „{name}“ ist getrennt; ein Klick auf die Verbindung verbindet neu."
         }
@@ -1264,7 +1284,12 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::MarkeNeu => ("{n} neu", "{n} neu"),
         Zahlwort::MarkeKonflikt => ("{n} in Konflikt", "{n} in Konflikt"),
         Zahlwort::MarkeUmbenannt => ("{n} umbenannt", "{n} umbenannt"),
+        Zahlwort::MarkeUnbekannt => ("{n} unbekannt", "{n} unbekannt"),
         Zahlwort::StatuszeileDateienZuGross => (", eine Datei zu groß", ", {n} Dateien zu groß"),
+        Zahlwort::StatuszeileDateienNurInDerCloud => (
+            ", eine Datei nur in der Cloud",
+            ", {n} Dateien nur in der Cloud",
+        ),
         Zahlwort::StatuszeileMarkierungenAusgeblendet => (
             ", eine Markierung ausgeblendet",
             ", {n} Markierungen ausgeblendet",
@@ -1354,6 +1379,9 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
             "eine Spalte gelöscht; cmd+z holt sie zurück",
             "{n} Spalten gelöscht; cmd+z holt sie zurück",
         ),
+        Zahlwort::SqliteBlob => ("[BLOB, {n} Byte]", "[BLOB, {n} Bytes]"),
+        Zahlwort::SqliteZeilen => ("{n} Zeile", "{n} Zeilen"),
+        Zahlwort::SqliteZeilenVon => ("{gezeigt} von einer Zeile", "{gezeigt} von {n} Zeilen"),
     }
 }
 

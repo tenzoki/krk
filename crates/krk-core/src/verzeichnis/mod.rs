@@ -27,7 +27,9 @@
 //! `renamex_np(2)` fuer die Operationsmaschine und seit dem Defekt
 //! `260809-1652` `fcntl(2)` fuer `ohne_warten_oeffnen`, den gemeinsamen Eingang
 //! von `text::datei::lesen` und, seit dem Defekt `260810-1247`, von
-//! `text::datei::bis_zur_grenze_lesen`, seit der Runde 7 `flock(2)` fuer
+//! `text::datei::bis_zur_grenze_lesen` (seit dem 261025 mit `F_GETLK` auch
+//! fuer `fremde_sperre`, die Sperrfrage vor dem Oeffnen einer
+//! SQLite-Datenbank, ohne weitere Bindung), seit der Runde 7 `flock(2)` fuer
 //! die beiden Sperren der Ablage und seit der Runde 18 `localtime_r(3)` fuer
 //! die buergerliche Ortszeit eines Zeitpunkts, und seit dem Defekt vom 261004
 //! `fsync(2)` als Rueckfall des atomaren Schreibens, wo ein Dateisystem
@@ -35,9 +37,12 @@
 //! fuer die Wachzeit, an der die zehn Minuten eines gemerkten Schluessels
 //! gemessen werden, und seit dem 261017 `statfs(2)` fuer die Frage, ob ein
 //! Pfad auf einem Netzlaufwerk liegt, und `access(2)` fuer die Frage, ob ein
-//! Archiv schreibgeschuetzt ist. Das sind zehn Schnittstellen
-//! und vierzehn gebundene Funktionen, denn `copyfile(3)` braucht seine vier
-//! `copyfile_state_*`-Helfer. [`leser`] macht aus der ersten der zehn
+//! Archiv schreibgeschuetzt ist, und seit dem 261023 die Bibliothek
+//! `libsqlite3` des Systems, die eine Datenbank nur lesend durchsieht. Das sind
+//! elf Schnittstellen und dreissig gebundene Funktionen, denn
+//! `copyfile(3)` braucht seine vier `copyfile_state_*`-Helfer und
+//! `libsqlite3` ist eine Schnittstelle aus sechzehn Funktionen. [`leser`]
+//! macht aus der ersten der elf
 //! Schnittstellen den gestueckelten Lesevorgang auf einem Arbeitsfaden. [`eintrag`] beschreibt, was ein Eintrag traegt, und
 //! laesst sich von [`kollation`] die beiden Sortierschluessel bauen.
 //! [`modell`] haelt Eintraege und Sichtreihenfolge getrennt, und [`sortierung`]
@@ -222,6 +227,23 @@ pub fn aufwaerts(ordner: &Path) -> Option<(PathBuf, String)> {
     let name = ordner.file_name()?.to_string_lossy().into_owned();
     let eltern = ordner.parent()?;
     Some((eltern.to_path_buf(), name))
+}
+
+/// Ob die Angaben eines Pfads ihn als Platzhalter ausweisen, dessen Daten
+/// nicht auf diesem Datentraeger liegen (`SF_DATALESS`), etwa eine Datei eines
+/// Cloudlaufwerks, die nur in der Cloud liegt.
+///
+/// Die Pfadfrage neben dem Feld [`Eintrag::platzhalter`] des Leselaufs: wer
+/// einen Pfad statt eines gelesenen Eintrags hat, fragt `stat(2)` (oder
+/// `lstat(2)`) und reicht die Antwort hierher. Gedeutet wird das Bit an
+/// derselben Stelle wie im Leselauf, [`sys::kennzeichnet_platzhalter`]; der
+/// Systemaufruf ist der des Rufers, und eine weitere Schnittstelle in
+/// [`sys`] entsteht dafuer nicht. `st_flags` gibt die Standardbibliothek ohne
+/// `unsafe` her.
+#[must_use]
+pub fn ist_platzhalter(angaben: &std::fs::Metadata) -> bool {
+    use std::os::darwin::fs::MetadataExt as _;
+    sys::kennzeichnet_platzhalter(angaben.st_flags())
 }
 
 #[cfg(test)]

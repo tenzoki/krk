@@ -539,6 +539,92 @@ dem Mac und verlässt damit das Archiv; vorbelegt ist der Pfad der Archivdatei.
 
 ---
 
+## SQLite-Datenbanken im Dateifenster
+
+**Eine SQLite-Datenbank lässt sich im Dateifenster betreten wie ein Archiv,
+allein zum Durchsehen.** Betreten werden Dateien mit den Endungen `.sqlite`,
+`.sqlite3`, `.db` und `.db3`, ohne Rücksicht auf Groß- und Kleinschreibung.
+Auch hier entscheidet allein die Endung: eine `.db`, die keine
+SQLite-Datenbank ist, etwa ein `Thumbs.db` von Windows, betritt KRK trotzdem,
+und die Statuszeile sagt „Thumbs.db ist keine lesbare SQLite-Datenbank: die
+Datei hat nicht das Format von SQLite“, vor dem Namen der volle Pfad.
+
+**Hinein mit Pfeil rechts oder einem Doppelklick, hinaus mit Pfeil links**,
+wie bei einem Archiv. **`return` öffnet die Datenbank weiter mit dem
+Standardprogramm.** Der Fenstertitel nennt sie als
+`/pfad/zur/datei.db:/name`.
+
+**Was das Fenster zeigt:**
+
+- Jede **Tabelle** und jede **Sicht** der Datenbank steht als Eintrag an der
+  obersten Ebene, auch die inneren Tabellen, deren Name mit `sqlite_` beginnt.
+  Indizes und Trigger stehen nicht da, Unterordner gibt es keine. Ein Name
+  mit `/` oder `..` erscheint nicht; die Statuszeile nennt die Zahl.
+- **Die Spalte „Größe“ zählt Zeilen und nicht Bytes**: für eine Tabelle steht
+  dort „3 Zeilen“, für eine Sicht `--`, ebenso für eine Tabelle, deren Zeilen
+  KRK nicht zählen kann, etwa eine virtuelle Tabelle. Auch der
+  Markierungsstand unten zählt in einer Datenbank Zeilen.
+- **Die Vorschau zeigt eine Tabelle als Tabelle**, so wie eine TSV-Datei,
+  mit einer Kopfzeile „Tabelle · 3 Zeilen · 2 Spalten“ und den Spaltennamen
+  in der ersten Zeile. Ergibt die Tabelle mehr als 1 MB Text, zeigt sie die
+  vollständigen Zeilen dieses ersten MB, und die Kopfzeile sagt, wie viele
+  von wie vielen Zeilen gezeigt sind.
+- **Eine Sicht zeigt die Vorschau als ihren SQL-Text**, eingefärbt. KRK führt
+  eine Sicht nie aus, auch nicht für die Vorschau.
+- Eine Datenbank-Datei, die nicht betreten ist, zeigt in der Vorschau wie
+  bisher ihre Angaben.
+
+**Herauskopieren** (`f5`) ins andere Dateifenster, auf den Mac, auf einen
+Server oder in ein Zip oder tar, legt eine Datei an:
+
+| Eintrag | Datei am Ziel | Inhalt |
+|---|---|---|
+| Tabelle `kunden` | `kunden.tsv` | eine Zeile mit den Spaltennamen, dann jede Zeile, getrennt mit Tabulator |
+| Sicht `offen` | `offen.sql` | der SQL-Text der Sicht |
+
+Die Zeilen kommen in der Reihenfolge, in der die Datenbank sie liefert.
+**Die Ausfuhr ist nicht verlustfrei**: ein leerer Wert (`NULL`) steht als
+`NULL` da und ist von einer Zelle mit dem Text `NULL` nicht zu unterscheiden,
+und ein Binärwert (BLOB) steht als Platzhalter wie `[BLOB, 512 Bytes]`, ohne
+seinen Inhalt. Beide Wörter folgen der Sprache der Oberfläche. Beim Kopieren
+in ein Zip oder tar liest KRK eine Tabelle zweimal, einmal, um die Länge zu
+zählen, die das Archiv vorab braucht, und einmal zum Schreiben; eine große
+Tabelle dauert dort also doppelt so lange.
+
+**KRK schreibt nichts in eine Datenbank.** Hineinkopieren, Verschieben,
+Umbenennen, Anlegen und Löschen gehen dort nicht. Die Befehle sind
+ausgegraut, das Kontextmenü sagt „Das geht in einer Datenbank nicht.“, und
+ein Kopieren aus dem anderen Fenster, ein Abwurf oder ein Löschen in einer
+Datenbank weist KRK ab; die Statuszeile sagt dabei „Diese Datenbank ist
+allein lesbar.“.
+
+**Was beim Lesen an der Datei geschieht.** KRK öffnet eine Datenbank allein
+lesend. Die Datenbankdatei selbst und ein danebenstehendes `-wal` bleiben
+dabei Byte für Byte, wie sie sind, und KRK legt neben der Datenbank weder
+`-wal` noch `-journal` an. **Ein leeres `-wal` ohne `-shm` liest KRK
+unveränderlich und legt nichts an; ein nicht leeres `-wal` ohne `-shm`
+(Absturz, Kopie) lässt SQLite eine `-shm` anlegen.** Das leere `-wal` ohne
+`-shm` ist häufig, etwa bei Firefox und manchen anderen Programmen, die nie
+eine `-shm` anlegen; das nicht leere bleibt nach einem Absturz des
+schreibenden Programms oder in einer Kopie ohne `-shm` zurück, und die neue
+`-shm` bleibt dann stehen. **Läuft das Programm, das die Datenbank hält,
+gerade**, liest KRK nicht an ihm vorbei, sondern meldet in der Statuszeile,
+dass sie gerade benutzt wird („die Datenbank wird gerade geschrieben“);
+nach dem Beenden des Programms liest KRK sie wieder. **Steht schon ein `-shm`**, setzt SQLite beim
+Lesen darin eine Lesemarke oder baut, wenn KRK als einziges Programm liest,
+ihren Index neu auf. Die Daten der Datenbank berührt das nicht. Liest KRK, während ein anderes Programm in die
+Datenbank schreibt, sieht es den neuesten übergebenen Stand; hält das andere
+Programm die Datenbank länger gesperrt, sagt die Statuszeile „die Datenbank
+wird gerade geschrieben“. Eine kopierte WAL-Datenbank ohne ihre
+Begleitdateien liest KRK ebenso, ohne dabei etwas anzulegen.
+
+**Änderungen von außen erscheinen von selbst**, wie bei einem Archiv: legt
+ein anderes Programm eine Tabelle an oder schreibt Zeilen, liest KRK das
+Verzeichnis neu. Nach einem Neustart steht ein Tab, der eine Datenbank
+zeigte, im Ordner der Datenbankdatei.
+
+---
+
 ## Einen Datenträger auswerfen
 
 **Auch dieser Eintrag steht allein im Menü der rechten Maustaste über der
@@ -793,6 +879,22 @@ Textdateien zeigt: dann zeigt sie die vollständigen Zeilen des ersten MB und
 sagt in der ersten Zeile, dass gekürzt ist. Der Editor zeigt dieselbe Datei
 unverändert, eine Zeile je Datensatz. Dasselbe gilt für eine `.jsonl` in einem
 Archiv, auch in einer `.jsonl.gz`.
+
+**Eine Datei, die auf einem Cloudlaufwerk wie Google Drive oder iCloud Drive
+nur in der Cloud liegt, lädt die Vorschau erst, wenn die Auswahl 0,2 Sekunden
+auf ihr steht.** Bis dahin und während des Ladens zeigt sie die Angaben der
+Datei mit dem Satz, dass sie geladen wird; wer mit den Pfeiltasten über solche
+Dateien hinwegfährt, löst also keinen Download aus. Die Vorschau lädt eine
+Datei zur Zeit und nur bis zu der Größe, die sie zeigen kann: Bilder und PDFs
+bis 64 MB, alles andere bis 1 MB. Eine größere Datei bleibt in der Cloud, und
+die Vorschau sagt es. Der Inhaltsfilter mit „Content“ und die Zusammenfassung
+eines Ordners laden nichts herunter, und die Bildfolge lädt zum Ordnen nichts
+herunter: ein Foto, das nur in der Cloud liegt, steht in ihr nach seinem
+Änderungsdatum, und die Statuszeile des Filters nennt, wie viele Dateien nur in
+der Cloud liegen und deshalb nicht durchsucht sind. Das Foto, das die Bildfolge
+gerade zeigt, lädt die Vorschau dagegen wie jede andere Datei: nach 0,2
+Sekunden, eines zur Zeit und bis 64 MB. Lokale Dateien zeigt die Vorschau wie
+bisher sofort.
 
 **Zeigt die Vorschau nichts, ist sie vielleicht ausgeblendet.** Die Vorschau
 und der Editor teilen sich den rechten Rand: steht dort der Editor, ist in der
@@ -1104,14 +1206,32 @@ sauber ist, bekommt aus KRK keine Antwort darauf. Der Zuschnitt ist gemessen und
 nicht geraten: eine repositoryweite Zahl kostet über einem großen Ordner ein
 Vielfaches der ordnerweiten.
 
-Die Spalte „Marke" der Dateiliste trägt die Git-Marke eines Eintrags, einen
-Buchstaben: `M` geändert, `S` vorgemerkt, `N` neu, `K` in Konflikt, `U`
-umbenannt. Ein unveränderter Eintrag trägt kein sechstes Zeichen, sondern eine
-leere Zelle. **Diese Spalte steht ab Werk**, anders als der Bereich selbst, und
-daran hängt eine Folge, die man sonst nicht sieht: nachgesehen wird, sobald
-**entweder** der Bereich **oder** die Markenspalte sichtbar ist. Wer den Bereich
-ausblendet und die Spalte stehen lässt, hat den Statuslauf weiterhin bei jedem
-Ordnerwechsel.
+Die Spalte „Marke" der Dateiliste trägt die Git-Marke eines Eintrags, ein
+Zeichen: `M` geändert, `S` vorgemerkt, `N` neu, `K` in Konflikt, `U`
+umbenannt, `?` unbekannt. Ein unveränderter Eintrag trägt kein siebtes Zeichen,
+sondern eine leere Zelle. **Diese Spalte steht ab Werk**, anders als der Bereich
+selbst, und daran hängt eine Folge, die man sonst nicht sieht: nachgesehen wird,
+sobald **entweder** der Bereich **oder** die Markenspalte sichtbar ist. Wer den
+Bereich ausblendet und die Spalte stehen lässt, hat den Statuslauf weiterhin bei
+jedem Ordnerwechsel.
+
+**Eine Datei, die auf einem Cloudlaufwerk nur in der Cloud liegt, lädt die
+Markenspalte nicht herunter, um ihren Inhalt zu vergleichen.** Das gilt nicht
+für die Dateien `.gitignore` und `.gitattributes` des Repositorys: sie liest
+KRK beim Nachsehen weiter, und liegen sie nur in der Cloud, können sie dafür
+heruntergeladen werden. Ob eine ausgelagerte Datei geändert ist, liest KRK dann allein an
+ihren Angaben im Dateisystem ab. Hat sie eine andere Größe als im Index, trägt
+sie `M`. Stimmen Größe, Änderungsdatum und die übrigen Angaben, trägt sie keine
+Marke: eine ausgelagerte Datei, an der seit dem letzten `git status` nichts
+geändert ist, bleibt ohne Zeichen, auch wenn das Auslagern ihren Statuszeitpunkt
+(ctime) verschoben hat. `?` trägt sie, wenn sich ohne ihren Inhalt nicht sagen
+lässt, ob sie geändert ist: die Größe ist gleich, aber das Änderungsdatum oder
+eine der übrigen Angaben außer dem Statuszeitpunkt weicht ab, oder sie ist so kurz vor dem letzten Auffrischen des Index geändert worden,
+dass gleiche Angaben nichts beweisen. Ein Ordner trägt `?`, wenn darunter so
+eine Datei liegt und nichts Gewichtigeres als „vorgemerkt" oder „neu" bekannt
+ist; ein `M`, `U` oder `K` im selben Ordner geht vor. Eine Änderung, die Größe,
+Änderungsdatum und Inode unberührt lässt, sieht KRK an einer ausgelagerten
+Datei nicht.
 
 **Was einen Wechsel übersteht und was nicht:**
 

@@ -4426,3 +4426,28 @@ fn allein_eperm_meldet_die_datenschutzsperre() {
         "ein Fehler ohne Betriebssystemnummer ist keine Datenschutzsperre"
     );
 }
+
+/// Eine frisch angelegte Datei auf der lokalen Platte ist kein Platzhalter,
+/// weder fuer die Pfadfrage noch im Leselauf.
+///
+/// Einen echten Platzhalter stellt keine Probe her: `SF_DATALESS` setzt allein
+/// der Kern fuer ein Dateisystem mit File-Provider-Domaene, und `chflags` setzt
+/// es nicht. Die Deutung des Bits haelt die Probe am kuenstlichen Satz in
+/// `verzeichnis/sys.rs`; diese haelt die Gegenseite, dass eine gewoehnliche
+/// Datei auf beiden Wegen `false` ergibt.
+#[test]
+fn eine_frische_lokale_datei_ist_kein_platzhalter() {
+    let ordner = Pruefordner::neu("platzhalter");
+    let datei = ordner.datei("lokal.txt", "inhalt");
+    let angaben = fs::metadata(&datei).expect("die Datei steht");
+    assert!(!krk_core::verzeichnis::ist_platzhalter(&angaben));
+    let angaben = fs::symlink_metadata(&datei).expect("die Datei steht");
+    assert!(!krk_core::verzeichnis::ist_platzhalter(&angaben));
+
+    let eintraege = lesen(ordner.pfad()).expect("der Ordner ist lesbar");
+    let eintrag = eintraege
+        .iter()
+        .find(|eintrag| eintrag.name == "lokal.txt")
+        .expect("der Leselauf liefert die Datei");
+    assert!(!eintrag.platzhalter);
+}

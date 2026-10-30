@@ -1,0 +1,26 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "c529f213-da94-445c-b899-5087b9821f3b",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261025-1435-vorschau-laedt-cloud-dateien-verzoegert-einzeln-und-abbrechbar/issues/261026-0608-der-ladeplatz-der-vorschau-bleibt-ueber-das-lesen-hinaus-belegt-bis-markdown-und-trenntext-aufbereitet-sind.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <kai@stalmann.org>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "closed",
+    "disposition": {
+      "kind": "fixed",
+      "reason_ref": null
+    }
+  }
+}

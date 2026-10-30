@@ -280,7 +280,7 @@ pub(super) fn hinein(
 ) -> Abschluss {
     if !ziel.format().beschreibbar() {
         for ort in quellen {
-            steuerung.ueberspringen(&bezeichnung(ort), text(Text::ArchivNurLesbar));
+            steuerung.ueberspringen(&bezeichnung(ort), text(ziel.format().nur_lesbar_text()));
         }
         return Abschluss::Fertig;
     }
@@ -566,7 +566,7 @@ fn aus_einem_archiv(
         .unwrap_or_else(PoisonError::into_inner)
         .geteiltes_verzeichnis();
     let Some(eintrag) = verzeichnis.eintrag(&quelle.innen) else {
-        steuerung.ueberspringen(&wo, text(Text::ArchivEintragFehlt));
+        steuerung.ueberspringen(&wo, text(quelle.zugang.format().eintrag_fehlt_text()));
         return Ok(None);
     };
     let neu = archiveintrag_bauen(
@@ -607,7 +607,9 @@ fn archiveintrag_bauen(
         steuerung.ueberspringen(&wo, warum);
         return Ok(None);
     }
-    let Some(name) = eintrag.innen.name() else {
+    // Der Name am Ziel entsteht an einer Stelle: eine Tabelle kommt als
+    // `<name>.tsv`, eine Sicht als `<name>.sql` (E-Ausfuhr).
+    let Some(name) = eintrag.ausfuhrname() else {
         steuerung.ueberspringen(&wo, text(Text::VorgangPfadBenenntKeinenEintrag));
         return Ok(None);
     };
@@ -647,11 +649,11 @@ fn archiveintrag_bauen(
         Typ::Datei => Neuart::Datei(Box::new(Zulieferung::aus_archiv(
             Arc::clone(leser),
             eintrag.innen.clone(),
-            eintrag.groesse,
+            eintrag.datenlaenge(),
         ))),
     };
     Ok(Some(Neueintrag {
-        name: name.to_owned(),
+        name,
         herkunft: wo,
         rechte: eintrag.rechte.unwrap_or(match eintrag.typ {
             Typ::Ordner => 0o755,
@@ -923,7 +925,7 @@ fn im_einen_archiv(
         for ort in orte {
             steuerung.ueberspringen(
                 &archivbezeichnung(ort.datei(), &ort.innen),
-                text(Text::ArchivNurLesbar),
+                text(zugang.format().nur_lesbar_text()),
             );
         }
         return None;
@@ -950,7 +952,8 @@ fn im_einen_archiv(
                 let groesse = verzeichnis
                     .eintrag(&ort.innen)
                     .filter(|eintrag| eintrag.typ == Typ::Datei)
-                    .map_or(0, |eintrag| eintrag.groesse);
+                    .and_then(Archiveintrag::datenlaenge)
+                    .unwrap_or(0);
                 Ok((
                     archivbezeichnung(ort.datei(), &ort.innen),
                     Umbauschritt::Entfernen(ort.innen.clone()),
@@ -1089,8 +1092,10 @@ fn anlegen_planen(
 
 /// Wie eine [`Zulieferung`] ihre Daten liest: in Bloecken an einen
 /// Rueckruf, auf einem eigenen Faden mit eigenem Pfand.
+///
+/// `FnMut`, weil eine Zulieferung ohne bekannte Laenge zweimal liest.
 type Lesung =
-    Box<dyn FnOnce(&Fernfaden, &mut dyn FnMut(&[u8]) -> ControlFlow<()>) -> io::Result<()> + Send>;
+    Box<dyn FnMut(&Fernfaden, &mut dyn FnMut(&[u8]) -> ControlFlow<()>) -> io::Result<()> + Send>;
 
 /// Die Daten einer neuen Datei, die in einem Archiv oder auf einem Server
 /// liegen (Modulkopf).
@@ -1100,14 +1105,23 @@ type Lesung =
 /// dort. Endet der Faden ohne Fehler, ist das Ende der Daten erreicht; ein
 /// Fehler kommt als Fehler des Lesers an, und der Umbau laesst das Archiv
 /// stehen.
+///
+/// **Die Laenge darf beim Bauen unbekannt sein** (`None`), wie die TSV einer
+/// Tabelle (`Archiveintrag::datenlaenge`). Der Umbau verlangt sie trotzdem vor
+/// dem ersten Byte, denn ein tar schreibt sie in den Kopf, und jeder Umbau
+/// haelt den Leser an genau ihr fest. Eine solche Zulieferung liest ihre
+/// Daten deshalb beim Oeffnen einmal zur Zaehlung und dann ein zweites Mal
+/// zum Schreiben; liefert das zweite Lesen eine andere Laenge, scheitert der
+/// Umbau, und das Archiv bleibt unveraendert.
 struct Zulieferung {
-    groesse: u64,
+    groesse: Option<u64>,
     lesung: Option<Lesung>,
 }
 
 impl Zulieferung {
-    /// Der Eintrag `innen` aus dem geteilten Leser eines Archivs.
-    fn aus_archiv(leser: Arc<Mutex<Archivleser>>, innen: Innenpfad, groesse: u64) -> Self {
+    /// Der Eintrag `innen` aus dem geteilten Leser eines Archivs, mit seiner
+    /// Laenge in Bytes, wenn sie vor dem Lesen feststeht.
+    fn aus_archiv(leser: Arc<Mutex<Archivleser>>, innen: Innenpfad, groesse: Option<u64>) -> Self {
         Zulieferung {
             groesse,
             lesung: Some(Box::new(move |pfand, empfang| {
@@ -1127,7 +1141,7 @@ impl Zulieferung {
     /// Die Datei an einer Stelle, lokal oder auf einem Server.
     fn von_stelle(stelle: Stelle, groesse: u64) -> Self {
         Zulieferung {
-            groesse,
+            groesse: Some(groesse),
             lesung: Some(Box::new(move |pfand, empfang| {
                 stelle
                     .lesen(pfand, |block| empfang(block))
@@ -1142,11 +1156,24 @@ impl Zulieferung {
 }
 
 impl Datenquelle for Zulieferung {
-    fn oeffnen<'a>(&'a mut self, _pfand: &'a Fernfaden) -> io::Result<Geoeffnet<'a>> {
-        let lesung = self
+    fn oeffnen<'a>(&'a mut self, pfand: &'a Fernfaden) -> io::Result<Geoeffnet<'a>> {
+        let mut lesung = self
             .lesung
             .take()
             .ok_or_else(|| io::Error::other(text(Text::ArchivQuelleVeraendert)))?;
+        // Ohne bekannte Laenge wird einmal gezaehlt, auf dem Faden des Umbaus
+        // und mit seinem Pfand (Doc-Kommentar der Struktur).
+        let groesse = match self.groesse {
+            Some(groesse) => groesse,
+            None => {
+                let mut gezaehlt: u64 = 0;
+                lesung(pfand, &mut |block| {
+                    gezaehlt += block.len() as u64;
+                    ControlFlow::Continue(())
+                })?;
+                gezaehlt
+            }
+        };
         let (sender, empfaenger) = sync_channel::<io::Result<Vec<u8>>>(ZULIEFERTIEFE);
         let faden = fernzugriff::faden("krk-zulieferung".to_owned(), move |pfand| {
             let fehlerweg = sender.clone();
@@ -1169,7 +1196,7 @@ impl Datenquelle for Zulieferung {
                 stelle: 0,
                 faden: Some(faden),
             }),
-            groesse: self.groesse,
+            groesse,
         })
     }
 }

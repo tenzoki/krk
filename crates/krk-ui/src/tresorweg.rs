@@ -235,12 +235,23 @@ pub fn geheimnisse_lesen(pfad: &Path, mittel: &Oeffnungsmittel) -> Result<Entspe
         mittel_abgewiesen: false,
         datei_leer: false,
     };
-    let bytes = datei::bis_zur_grenze_lesen(pfad, GEHEIMNISGRENZE).map_err(|hindernis| {
+    let bytes = datei::bis_zur_grenze_lesen(
+        pfad,
+        GEHEIMNISGRENZE,
+        datei::Platzhalterregel::Laden,
+        &|| true,
+    )
+    .map_err(|hindernis| {
         let (grund, mangel) = match hindernis {
             Lesehindernis::ZuGross => (Text::EditorGeheimnisseZuGross, false),
             Lesehindernis::KeineDatei => (Text::EditorKeineGewoehnlicheDatei, false),
             Lesehindernis::Deskriptormangel => (Text::EditorGeheimnisseKeinDateizugriff, true),
-            Lesehindernis::Fehler => (Text::EditorGeheimnisseNichtLesbar, false),
+            // `Platzhalter` und `Abgebrochen` sind unter `Laden` und einem
+            // `weiter`, das nie nein sagt, unerreichbar; sie bekommen den Satz
+            // eines Lesefehlers.
+            Lesehindernis::Fehler | Lesehindernis::Platzhalter | Lesehindernis::Abgebrochen => {
+                (Text::EditorGeheimnisseNichtLesbar, false)
+            }
         };
         ohne_mittel(Abweisung::KeinGueltigesZiel {
             pfad: pfad.to_path_buf(),

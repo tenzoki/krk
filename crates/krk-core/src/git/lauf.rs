@@ -91,11 +91,12 @@
 //! ist
 //! `260831-1444_*_ein-abgebrochener-gitlauf-laeuft-weiter-und-a10-gilt-nur-dem-halter-und-nicht-dem-faden.md`.
 //!
-//! **Was das haelt und was nicht.** Ein aufgegebener Lauf bricht beim naechsten
-//! Posten ab, statt den ganzen Status zu lesen. Nebeneinander laufen koennen
-//! zwei Faeden trotzdem, und zwar so lange, wie der aeltere fuer einen Posten
-//! und den Aufbau seines Stroms braucht: `Drop` wartet ausdruecklich nicht, und
-//! ein Warten waere genau die Bildzeit, die dieser Lauf vermeidet.
+//! **Was das haelt und was nicht.** Ein aufgegebener Lauf bricht vor dem
+//! naechsten Eintrag des Index ab, statt den ganzen Status zu lesen.
+//! Nebeneinander laufen koennen zwei Faeden trotzdem, und zwar so lange, wie
+//! der aeltere fuer einen Eintrag und den Aufbau seines Laufs braucht: `Drop`
+//! wartet ausdruecklich nicht, und ein Warten waere genau die Bildzeit, die
+//! dieser Lauf vermeidet.
 //!
 //! # Kein `warten`
 //!

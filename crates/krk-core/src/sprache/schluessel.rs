@@ -280,6 +280,22 @@ pub enum Text {
     ArchivVerdecktNurLesbar,
     /// `archiv::umbau`: ein Format, das allein lesbar ist (gz).
     ArchivNurLesbar,
+    /// Wie `ArchivNurLesbar`, fuer eine SQLite-Datenbank
+    /// (`Archivformat::nur_lesbar_text`).
+    DatenbankNurLesbar,
+    /// `archiv::sqlite`: eine Datei mit der Endung einer Datenbank, die keine
+    /// SQLite-Datenbank ist; der Grund in `DatenbankUngueltig`.
+    SqliteKeineDatenbank,
+    /// `archiv::sqlite`: ein anderes Programm haelt die Sperre der Datenbank
+    /// ueber die Wartezeit hinaus (`Verzeichnisfehler::Belegt`).
+    DatenbankWirdGeschrieben,
+    /// `archiv::sqlite`: eine Zelle mit `NULL` in der TSV einer Tabelle, die
+    /// Vorschau und Ausfuhr teilen (Entscheid
+    /// `261023-1507-wie-stehen-null-und-blob-in-der-tsv-einer-sqlite-tabelle.md`).
+    /// Der Wortlaut ist das Schluesselwort von SQL und steht in jeder Sprache
+    /// gleich; er steht in der Tabelle, weil ein Mensch ihn in der Vorschau
+    /// liest.
+    SqliteNull,
     /// `archiv::umbau`: die Archivdatei ist schreibgeschuetzt.
     ArchivSchreibgeschuetzt,
     /// `archiv::umbau::abschluss_nach_ersetzen`: ein Abbruch kam erst, nachdem
@@ -313,6 +329,13 @@ pub enum Text {
     /// `archiv::lesen`: der Eintrag steht nicht an der Fundstelle, die das
     /// Inhaltsverzeichnis nennt.
     ArchivEintragFehlt,
+    /// `Archivformat::beim_lesen_veraendert_text` fuer eine Datenbank: die
+    /// Kennung aus Hauptdatei und `-wal` hat sich seit dem Lesen der
+    /// Tabellenliste geaendert.
+    DatenbankBeimLesenVeraendert,
+    /// `Archivformat::eintrag_fehlt_text` fuer eine Datenbank: die Tabelle
+    /// oder Sicht steht nicht mehr in der Datenbank.
+    DatenbankEintragFehlt,
     /// `Regelfehler::Startwert` in der Hinweiszeile des Stapelumbenennens;
     /// `{text}` ist die Eingabe.
     StapelKeinStartwert,
@@ -867,8 +890,9 @@ pub enum Text {
     /// Kopf des Editorbereichs ueber ihr.
     FenstertitelQuicknote,
     /// `statuszeile::filterstand_text`: der Satz des Filterstands;
-    /// `{filtertext}`, `{gezeigt}`, `{vorhanden}` und die drei Satzteile
-    /// `{liest}`, `{zu_gross}`, `{ausgeblendet}`, die leer bleiben duerfen.
+    /// `{filtertext}`, `{gezeigt}`, `{vorhanden}` und die vier Satzteile
+    /// `{liest}`, `{zu_gross}`, `{nur_in_der_cloud}`, `{ausgeblendet}`, die
+    /// leer bleiben duerfen.
     StatuszeileFilterstand,
     /// `filterstand_text`: der Satzteil `{liest}`, solange der Inhalt gelesen
     /// wird; er beginnt mit dem Komma, das ihn anhaengt.
@@ -1517,6 +1541,14 @@ pub enum Text {
     /// am letzten vollstaendigen Satz gekuerzt erscheint; dazu `{grenze}` in
     /// MB.
     TrenntextKopfzeileGekuerzt,
+    /// `trenntextvorschau::aufbereiten_aus`: die Kopfzeile ueber einer Tabelle
+    /// einer SQLite-Datenbank in der Vorschau; `{zeilen}` sind die gezeigten
+    /// (und, weichen sie ab, die gesamten) Zeilen, `{spalten}` die Spalten.
+    SqliteTabelleKopfzeile,
+    /// Dieselbe Kopfzeile, wenn die TSV der Tabelle groesser ist als die
+    /// Lesegrenze und am letzten vollstaendigen Satz gekuerzt erscheint; dazu
+    /// `{grenze}` in MB.
+    SqliteTabelleKopfzeileGekuerzt,
     /// Der Name des Trennzeichens Komma einer CSV-Datei.
     TrennzeichenKomma,
     /// Der Name des Trennzeichens Semikolon.
@@ -1551,6 +1583,16 @@ pub enum Text {
     /// `vorschaumodell::laden`: der Eintrag liess sich nicht lesen; `{pfad}`,
     /// `{fehler}`.
     VorschauNichtLesbar,
+    /// `Vorschaufenster::metadaten_text`: die Datei liegt nur in der Cloud,
+    /// und die Vorschau laedt sie gerade (`Cloudhinweis::Laedt`).
+    VorschauCloudLaedt,
+    /// `Vorschaufenster::metadaten_text`: die Datei liegt nur in der Cloud und
+    /// ist groesser als die Grenze ihrer Leseart (`Cloudhinweis::ZuGross`);
+    /// `{groesse}` und `{grenze}` sind fertig formatierte Groessenangaben.
+    VorschauCloudZuGross,
+    /// `Vorschaufenster::metadaten_text`: die Datei liegt nur in der Cloud,
+    /// und das Laden ist gescheitert (`Cloudhinweis::NichtGeladen`).
+    VorschauCloudNichtGeladen,
     /// `Vorschaufenster`: was ein leerer Tab statt einer leeren Flaeche sagt.
     VorschauLeertext,
     /// `Vorschaufenster::bild_zeigen`: `NSImage` liest die Daten der
@@ -1766,6 +1808,9 @@ pub enum Text {
     /// Ein Befehl, der allein an einem lokalen Ordner wirkt, in einem Archiv
     /// (`ort::nicht_verfuegbar_text`).
     ImArchivNichtVerfuegbar,
+    /// Wie `ImArchivNichtVerfuegbar`, in einer SQLite-Datenbank
+    /// (`Archivformat::nicht_verfuegbar_text`).
+    InDatenbankNichtVerfuegbar,
     /// Der Einstieg in ein Archiv, das auf einem Server liegt (E15 des Plans
     /// der Archive).
     ArchivAmFernenOrt,
@@ -1775,6 +1820,10 @@ pub enum Text {
     /// Formats ihrer Endung; `{datei}`, `{format}`, `{grund}` (der Wortlaut
     /// des Lesers).
     ArchivUngueltig,
+    /// Wie `ArchivUngueltig`, fuer eine Datei mit der Endung einer
+    /// SQLite-Datenbank (`Archivformat::ungueltig_text`); `{datei}`,
+    /// `{grund}`.
+    DatenbankUngueltig,
     /// Der Lesevorgang eines Archivtabs: unter dem Namen steht keine
     /// gewoehnliche Datei; `{datei}`.
     ArchivKeineDatei,
@@ -1792,6 +1841,9 @@ pub enum Text {
     /// allein lesen darf (der ganze Satz; `ArchivNurLesbar` ist der Grund in
     /// der Abschlussliste).
     ArchivAlleinLesbar,
+    /// Wie `ArchivAlleinLesbar`, in einer SQLite-Datenbank
+    /// (`Archivformat::allein_lesbar_satz`).
+    DatenbankAlleinLesbar,
     /// Der Lesevorgang eines fernen Tabs scheitert, weil die Verbindung
     /// getrennt ist; `{name}` (die Verbindung in `secrets.txt`).
     FernVerbindungGetrennt,
@@ -1859,7 +1911,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 767] = [
+    pub const ALLE: [Text; 781] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1968,6 +2020,10 @@ impl Text {
         Text::ArchivVerschluesseltNurLesbar,
         Text::ArchivVerdecktNurLesbar,
         Text::ArchivNurLesbar,
+        Text::DatenbankNurLesbar,
+        Text::SqliteKeineDatenbank,
+        Text::DatenbankWirdGeschrieben,
+        Text::SqliteNull,
         Text::ArchivSchreibgeschuetzt,
         Text::ArchivAbbruchNachDemErsetzen,
         Text::ArchivZipUngewoehnlicheForm,
@@ -1981,6 +2037,8 @@ impl Text {
         Text::ArchivHarterVerweis,
         Text::ArchivBeimLesenVeraendert,
         Text::ArchivEintragFehlt,
+        Text::DatenbankBeimLesenVeraendert,
+        Text::DatenbankEintragFehlt,
         Text::StapelKeinStartwert,
         Text::StapelKeineStellenzahl,
         Text::EditorKeinFreierDateizugriff,
@@ -2497,6 +2555,8 @@ impl Text {
         Text::VorschauJsonzeilenGekuerzt,
         Text::TrenntextKopfzeile,
         Text::TrenntextKopfzeileGekuerzt,
+        Text::SqliteTabelleKopfzeile,
+        Text::SqliteTabelleKopfzeileGekuerzt,
         Text::TrennzeichenKomma,
         Text::TrennzeichenSemikolon,
         Text::TrennzeichenTabulator,
@@ -2509,6 +2569,9 @@ impl Text {
         Text::TrenntextTrennzeichenFest,
         Text::TrenntextZuBreit,
         Text::VorschauNichtLesbar,
+        Text::VorschauCloudLaedt,
+        Text::VorschauCloudZuGross,
+        Text::VorschauCloudNichtGeladen,
         Text::VorschauLeertext,
         Text::VorschauBildNichtDarstellbar,
         Text::MetadatenName,
@@ -2592,14 +2655,17 @@ impl Text {
         Text::FernStartordnerFehlt,
         Text::AmFernenOrtNichtVerfuegbar,
         Text::ImArchivNichtVerfuegbar,
+        Text::InDatenbankNichtVerfuegbar,
         Text::ArchivAmFernenOrt,
         Text::ArchivImArchiv,
         Text::ArchivUngueltig,
+        Text::DatenbankUngueltig,
         Text::ArchivKeineDatei,
         Text::ArchivZuGross,
         Text::ArchivOrdnerFehlt,
         Text::ArchivDateiFehlt,
         Text::ArchivAlleinLesbar,
+        Text::DatenbankAlleinLesbar,
         Text::FernVerbindungGetrennt,
         Text::VerbindenErstSichern,
         Text::VerbindenPinNochNichtGesichert,
@@ -2656,10 +2722,16 @@ pub enum Zahlwort {
     MarkeKonflikt,
     /// `Marke::Umbenannt`.
     MarkeUmbenannt,
+    /// `Marke::Unbekannt`.
+    MarkeUnbekannt,
     /// `statuszeile::filterstand_text`: der Satzteil `{zu_gross}` zu den
     /// Dateien ueber der Lesegrenze; beide Formen beginnen mit dem Komma, das
     /// sie anhaengt, und die Einzahl laesst `{n}` aus.
     StatuszeileDateienZuGross,
+    /// `filterstand_text`: der Satzteil `{nur_in_der_cloud}` zu den Dateien,
+    /// die der Inhaltsfilter nicht geoeffnet hat, weil sie nur in der Cloud
+    /// liegen; gebaut wie `StatuszeileDateienZuGross`.
+    StatuszeileDateienNurInDerCloud,
     /// `filterstand_text`: der Satzteil `{ausgeblendet}` zu den Markierungen,
     /// die der Filter ausblendet; ebenso gebaut.
     StatuszeileMarkierungenAusgeblendet,
@@ -2751,11 +2823,27 @@ pub enum Zahlwort {
     TrenntextZeilenEingefuegt,
     /// `Trenntextantwort::SpaltenGeloescht`: so viele Spalten sind fort.
     TrenntextSpaltenGeloescht,
+    /// `archiv::sqlite`: eine Zelle mit einem BLOB in der TSV einer Tabelle,
+    /// als Platzhalter mit seiner Laenge in Bytes; Vorschau und Ausfuhr teilen
+    /// ihn (Entscheid
+    /// `261023-1507-wie-stehen-null-und-blob-in-der-tsv-einer-sqlite-tabelle.md`).
+    SqliteBlob,
+    /// `appkit::tabelle`: die Zeilenzahl einer Tabelle in der Spalte
+    /// „Groesse“ eines Tabs in einer SQLite-Datenbank und die Summe im
+    /// Markierungsstand (Entscheid
+    /// `261023-1340-was-zeigt-die-spalte-groesse-einer-tabelle.md`). Nicht
+    /// `TrenntextZeilen`, weil dessen Einzahl das Zahlwort ausschreibt und
+    /// eine Spalte mit Zahlen eine Ziffer braucht.
+    SqliteZeilen,
+    /// `trenntextvorschau::aufbereiten_aus`: die gezeigten von den gesamten
+    /// Zeilen einer gekuerzten Tabelle in der Kopfzeile; `{n}` ist die
+    /// gesamte Zahl aus dem Inhaltsverzeichnis, `{gezeigt}` die gezeigte.
+    SqliteZeilenVon,
 }
 
 impl Zahlwort {
     /// Alle Zahlwoerter, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Zahlwort; 40] = [
+    pub const ALLE: [Zahlwort; 45] = [
         Zahlwort::Byte,
         Zahlwort::NeuerungenEintraegeIn,
         Zahlwort::HeimZettelUebernommen,
@@ -2764,7 +2852,9 @@ impl Zahlwort {
         Zahlwort::MarkeNeu,
         Zahlwort::MarkeKonflikt,
         Zahlwort::MarkeUmbenannt,
+        Zahlwort::MarkeUnbekannt,
         Zahlwort::StatuszeileDateienZuGross,
+        Zahlwort::StatuszeileDateienNurInDerCloud,
         Zahlwort::StatuszeileMarkierungenAusgeblendet,
         Zahlwort::BildfolgeGrenzeFotos,
         Zahlwort::BildfolgeGrenzeOrdner,
@@ -2796,5 +2886,8 @@ impl Zahlwort {
         Zahlwort::TrenntextSpalten,
         Zahlwort::TrenntextZeilenEingefuegt,
         Zahlwort::TrenntextSpaltenGeloescht,
+        Zahlwort::SqliteBlob,
+        Zahlwort::SqliteZeilen,
+        Zahlwort::SqliteZeilenVon,
     ];
 }
