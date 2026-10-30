@@ -44,11 +44,13 @@
 //! eigenen Skripts unter `$TMPDIR` (Entscheidung E4 des Plans
 //! `261029-0920-plan-datei-im-terminal-mit-vim-und-sudo-e-oeffnen.md`).
 //!
-//! **Seit dem 261030 geht auch `ctrl+o` ueber diesen Faden**:
-//! [`ordner_pruefen_lassen`] fragt dort, ob der angezeigte Ordner noch
-//! dasteht, und erst die Antwort auf dem Hauptfaden oeffnet ihn ueber
-//! [`ordner_oeffnen`]. Beide Wege teilen den einen Fadenweg
-//! [`auf_dem_faden`]; einen zweiten Mechanismus daneben gibt es nicht.
+//! **Seit dem 261030 gehen auch `ctrl+o` und „Im Finder oeffnen" ueber
+//! diesen Faden**: [`ordner_pruefen_lassen`] fragt dort, ob der angezeigte
+//! Ordner noch dasteht, und erst die Antwort auf dem Hauptfaden oeffnet ihn
+//! ueber [`ordner_oeffnen`]. Skript und Ordnerpruefung teilen den einen
+//! Fadenweg [`auf_dem_faden`]; einen zweiten Mechanismus daneben gibt es
+//! nicht. Der Faden heisst nach dem ersten Weg `krk-terminal`, auch wenn der
+//! Finder fragt, aus demselben Grund wie das Modul.
 //!
 //! # Die eine Aufloesung, und ihr zweiter Frager
 //!
@@ -90,11 +92,10 @@
 //! Schlange. Die beiden Fehler, die der Nutzer beheben kann, stellt KRK vorher
 //! fest: eine Kennung ohne installierte Anwendung an der `None`-Antwort der
 //! Aufloesung, einen nicht mehr erreichbaren Ordner an der Pruefung in
-//! [`crate::kommandos::operationen::ordner_fehlt`], fuer `ctrl+o` auf dem
-//! Faden `krk-terminal` und fuer „Im Finder oeffnen" weiter auf dem
-//! Hauptfaden. Was
-//! danach noch scheitern kann, ist der Start eines aufgeloesten Buendels
-//! selbst, und dafuer bleibt der Rueckruf leer: ein Block mit einem Sprung auf
+//! [`crate::kommandos::operationen::ordner_fehlt`], fuer `ctrl+o` und fuer
+//! „Im Finder oeffnen" auf dem Faden `krk-terminal`. Was danach noch
+//! scheitern kann, ist der Start eines aufgeloesten Buendels selbst, und
+//! dafuer bleibt der Rueckruf leer: ein Block mit einem Sprung auf
 //! den Hauptfaden waere der zweite asynchrone Weg neben dem Vermittlerfaden aus
 //! Schritt 16, und der traegt dort einen laufenden Vorgang und nicht eine
 //! einzelne Meldung.
@@ -260,7 +261,7 @@ pub fn vorbereiten_lassen(
 
 /// Fragt auf dem Faden `krk-terminal`, ob `ordner` noch ein erreichbarer
 /// Ordner ist, und reicht die Antwort ueber `DispatchQueue::main()` an
-/// `fertig` (C11, `ctrl+o`).
+/// `fertig` (C11, `ctrl+o` und „Im Finder oeffnen").
 ///
 /// Die Antwort ist die von [`operationen::ordner_fehlt`]: `None`, wenn der
 /// Ordner dasteht, sonst der Satz fuer die Statuszeile. **Auf dem rufenden

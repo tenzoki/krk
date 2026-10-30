@@ -9707,11 +9707,18 @@ impl Anwendungsdelegierter {
     /// [`operationen::kein_terminal`], das die eingestellte Kennung nennt, weil
     /// der Nutzer sie berichtigen kann.
     ///
-    /// **Der zweite Aufrufer von [`operationen::ordner_fehlt`]**, das bis zur
-    /// Runde 17 `terminalordner_fehlt` hiess. Geprueft wird vor dem Aufruf,
-    /// weil der Rueckruf von `openURLs:…` leer bleibt und dies die eine
-    /// Gelegenheit ist, dem Nutzer etwas zu sagen, das er beheben kann: der
-    /// ausgeworfene Datentraeger, dessen Pfad der Tab noch traegt.
+    /// **Geprueft wird vor dem Aufruf, ob der Ordner noch dasteht**, mit
+    /// derselben Frage wie bei `ctrl+o`, weil der Rueckruf von `openURLs:…`
+    /// leer bleibt und dies die eine Gelegenheit ist, dem Nutzer etwas zu
+    /// sagen, das er beheben kann: der ausgeworfene Datentraeger, dessen Pfad
+    /// der Tab noch traegt.
+    ///
+    /// **Dieser Rumpf stellt keinen Systemaufruf** (261030): die Frage stellt
+    /// [`terminal::ordner_pruefen_lassen`] auf dem Faden `krk-terminal`, denn
+    /// auf einer haengenden Freigabe wartete sie auf das Zeitlimit des
+    /// Dateisystems und hielte die Ereignisschleife an. Die Antwort nimmt
+    /// [`Self::finderordner_einziehen`] auf dem Hauptfaden entgegen, und dort
+    /// stehen die Meldung und die Uebergabe an den Finder.
     ///
     /// **Kein laufender Vorgang haelt ihn auf**, anders als die zwei Zweige
     /// darueber. Er stellt keinen Auftrag, fasst nichts an und reicht einen
@@ -9721,12 +9728,41 @@ impl Anwendungsdelegierter {
         let Some(ordner) = self.lokaler_ordner_oder_melden(seite) else {
             return;
         };
-        if let Some(meldung) = operationen::ordner_fehlt(&ordner) {
-            self.antwort_zeigen(seite, &meldung);
+        let geprueft = ordner.clone();
+        terminal::ordner_pruefen_lassen(geprueft, move |mtm, fehlt| {
+            Anwendungsdelegierter::finderordner_einziehen(mtm, seite, &ordner, fehlt);
+        });
+    }
+
+    /// Nimmt die Antwort der Ordnerpruefung von „Im Finder oeffnen" auf dem
+    /// Hauptfaden entgegen und gibt den Ordner an den Finder (Runde 17).
+    ///
+    /// Gerufen aus [`terminal::ordner_pruefen_lassen`]; den Delegierten sucht
+    /// sie dort, wo er steht, wie [`Self::terminalordner_einziehen`]. Fehlt
+    /// der Ordner, geht der Satz aus [`operationen::ordner_fehlt`] in die
+    /// Statuszeile und der Finder bekommt nichts; nennt das System keinen
+    /// Finder, meldet sie [`operationen::kein_finder`]. **Sie stellt keinen
+    /// Systemaufruf**: die Frage an die Platte ist auf dem Faden gestellt, und
+    /// [`terminal::ordner_oeffnen`] reicht den Pfad mit der Angabe „Ordner"
+    /// an `NSWorkspace`, ohne das Dateisystem danach zu fragen.
+    fn finderordner_einziehen(
+        mtm: MainThreadMarker,
+        seite: Fensterseite,
+        ordner: &Path,
+        fehlt: Option<String>,
+    ) {
+        let Some(delegierter) = NSApplication::sharedApplication(mtm).delegate() else {
+            return;
+        };
+        let Ok(selbst) = delegierter.downcast::<Anwendungsdelegierter>() else {
+            return;
+        };
+        if let Some(meldung) = fehlt {
+            selbst.antwort_zeigen(seite, &meldung);
             return;
         }
-        if !terminal::ordner_oeffnen(FINDERKENNUNG, &ordner) {
-            self.antwort_zeigen(seite, &operationen::kein_finder());
+        if !terminal::ordner_oeffnen(FINDERKENNUNG, ordner) {
+            selbst.antwort_zeigen(seite, &operationen::kein_finder());
         }
     }
 
@@ -15651,10 +15687,13 @@ mod kontextproben {
                 "verbindung_erfragen",
                 concat!("verbindungsblatt_", "zeigen("),
             ),
+            // Die Wirkung von „Im Finder oeffnen" ist die Frage auf dem
+            // Faden; was aus ihrer Antwort wird, haelt
+            // `im_finder_oeffnen_stellt_auf_dem_hauptfaden_keinen_systemaufruf`.
             (
                 "Kontextbefehl::ImFinderOeffnen",
                 "im_finder_oeffnen",
-                concat!("terminal::", "ordner_oeffnen("),
+                concat!("terminal::", "ordner_pruefen_lassen("),
             ),
             (
                 "Kontextbefehl::ImFinderAnzeigen",
@@ -16030,7 +16069,7 @@ mod kontextproben {
     /// keine Frage an die Platte. Gemessen sind `fs::`, `metadata(`,
     /// `exists(`, `schreiben_erlaubt(`, `terminalskript::vorbereiten(` (das
     /// gehoert auf den Faden `krk-terminal`) und `ordner_fehlt(`, das auch
-    /// `ctrl+o` seit dem 261030 dort fragt.
+    /// `ctrl+o` und „Im Finder oeffnen" seit dem 261030 dort fragen.
     ///
     /// **Die eine Ausnahme ist `terminalskript::verwerfen`** nach einer
     /// gescheiterten Uebergabe: es entfernt eine Datei, die KRK selbst unter
@@ -16129,6 +16168,70 @@ mod kontextproben {
                 einziehen.contains(nadel),
                 "terminalordner_einziehen enthaelt {nadel} nicht: der Ordner erreicht \
                  das Terminal nicht oder ein Fehler bleibt still"
+            );
+        }
+    }
+
+    /// „Im Finder oeffnen" stellt auf dem Hauptfaden keinen Systemaufruf
+    /// (261030).
+    ///
+    /// Dieselbe Bauform wie `ctrl_o_stellt_auf_dem_hauptfaden_keinen_systemaufruf`:
+    /// in den Ruempfen von `im_finder_oeffnen` und `finderordner_einziehen`
+    /// steht keine Frage an die Platte, auch nicht `ordner_fehlt(`, das auf den
+    /// Faden `krk-terminal` gehoert. Daneben haelt sie die Kette: der Zweig
+    /// fuer `ImFinderOeffnen` fuehrt auf `im_finder_oeffnen`, dessen Rumpf
+    /// reicht die Frage an `terminal::ordner_pruefen_lassen` und die Antwort
+    /// an `finderordner_einziehen`, und dort stehen die Uebergabe an den
+    /// Finder und die Meldung `kein_finder`.
+    ///
+    /// **Was sie nicht sieht:** einen Systemaufruf in einer tiefer gerufenen
+    /// Funktion. Dass `terminal::ordner_oeffnen` die Platte nicht fragt, haelt
+    /// der Doc-Kommentar von `oeffnen_mit` und keine Probe.
+    #[test]
+    fn im_finder_oeffnen_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
+        let datei = diese_datei();
+        assert!(
+            rumpf(&datei, "kontextbefehl_ausfuehren").contains(concat!(
+                "Kontextbefehl::ImFinderOeffnen => self.",
+                "im_finder_oeffnen(seite)"
+            )),
+            "kontextbefehl_ausfuehren fuehrt ImFinderOeffnen nicht auf im_finder_oeffnen"
+        );
+        for name in ["im_finder_oeffnen", "finderordner_einziehen"] {
+            let rumpf = rumpf(&datei, name);
+            for nadel in [
+                "fs::",
+                "metadata(",
+                "exists(",
+                "is_dir(",
+                "canonicalize(",
+                concat!("ordner_", "fehlt("),
+            ] {
+                assert!(
+                    !rumpf.contains(nadel),
+                    "{name} enthaelt {nadel}: ein Systemaufruf auf dem Hauptfaden"
+                );
+            }
+        }
+        let oeffnen = rumpf(&datei, "im_finder_oeffnen");
+        for nadel in [
+            concat!("terminal::", "ordner_pruefen_lassen("),
+            concat!("finderordner_", "einziehen("),
+        ] {
+            assert!(
+                oeffnen.contains(nadel),
+                "im_finder_oeffnen enthaelt {nadel} nicht: die Frage geht nicht auf den Faden"
+            );
+        }
+        let einziehen = rumpf(&datei, "finderordner_einziehen");
+        for nadel in [
+            concat!("terminal::", "ordner_oeffnen(FINDERKENNUNG"),
+            concat!("operationen::", "kein_finder("),
+        ] {
+            assert!(
+                einziehen.contains(nadel),
+                "finderordner_einziehen enthaelt {nadel} nicht: der Ordner erreicht \
+                 den Finder nicht oder ein Fehler bleibt still"
             );
         }
     }

@@ -1388,7 +1388,10 @@ use krk_core::sprache::menge;
 /// Rumpf war seit C11 allgemein und die zwei Saetze sind es auch; gefragt wird
 /// von jedem Befehl, der einen Ordner an eine ueber ihre Buendelkennung
 /// benannte Anwendung uebergibt. Der Terminal-Befehl aus C11 stellt die Frage,
-/// der Finder-Eintrag des Kontextmenues aus der Runde 17 stellt dieselbe. Ein
+/// der Finder-Eintrag des Kontextmenues aus der Runde 17 stellt dieselbe,
+/// beide seit dem 261030 ueber `crate::appkit::terminal::ordner_pruefen_lassen`
+/// auf dem Faden `krk-terminal` und nie auf dem Hauptfaden, denn das
+/// `metadata` hier wartet auf einer haengenden Freigabe. Ein
 /// Aufruf mit "terminal" im Namen aus dem Finder-Zweig waere die
 /// Doppelbenennung, die dieses Projekt vermeidet.
 ///
@@ -1650,9 +1653,11 @@ pub fn mehrere_archive() -> String {
 /// einer, der nicht angekommen ist.
 ///
 /// **Zwei Rufer, und sie fragen an verschiedenen Stellen.**
-/// `Anwendungsdelegierter::im_finder_oeffnen` meldet, wenn
-/// `crate::appkit::terminal::ordner_oeffnen` `false` liefert, also **nachdem**
-/// die Uebergabe an der fehlenden Anwendung gescheitert ist.
+/// `Anwendungsdelegierter::im_finder_oeffnen` meldet ueber
+/// `finderordner_einziehen`, auf dem Rueckweg der Ordnerpruefung vom Faden
+/// (seit dem 261030), wenn `crate::appkit::terminal::ordner_oeffnen` `false`
+/// liefert, also **nachdem** die Uebergabe an der fehlenden Anwendung
+/// gescheitert ist.
 /// `Anwendungsdelegierter::im_finder_anzeigen` meldet **vor** seinem Aufruf,
 /// auf `crate::appkit::terminal::anwendung_vorhanden`, denn sein eigener
 /// Aufruf gibt nichts zurueck (seit dem 260907). Derselbe Satz fuer beide, weil die
