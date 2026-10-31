@@ -317,6 +317,19 @@ fn singlestrip_ist_ohne_kommentar_idempotent() {
 }
 
 #[test]
+fn eine_leerzeile_nach_einer_fortsetzung_trennt_zwei_woerter() {
+    // Die Leerzeile ist ein Umbruch und ergibt ein Leerzeichen; `foobar` waere
+    // ein Wort, das niemand geschrieben hat.
+    assert_eq!(befehl("foo\\\n\n  bar"), "foo bar");
+    assert_eq!(befehl("foo \\\n\n  bar\n"), "foo bar");
+    assert_eq!(befehl("ls\n\n  -la\n"), "ls -la");
+    // Ohne Leerzeile bleibt es ein Wort, wie die Shell es liest.
+    assert_eq!(befehl("foo\\\nbar"), "foobar");
+    let einmal = befehl("foo\\\n\n  bar");
+    assert_eq!(befehl(&einmal), einmal);
+}
+
+#[test]
 fn singlestrip_haengt_getrennte_befehle_aneinander_denn_die_eingabe_ist_einer() {
     // Der Preis der Annahme (Issue `261031-1226-strip-verbindet-getrennte-
     // befehle-…`): zwei Befehle untereinander werden einer, der zweite als
@@ -524,6 +537,8 @@ fn die_beispiele_der_anleitung_stimmen() {
         befehl(strip),
         "cd ~/Projekte/krk && export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo test --workspace -- --skip appkit:: && cargo clippy --workspace --all-targets -- -D warnings"
     );
+    let mehrere = "rm -rf build/alt\n  ls -la build/neu\n";
+    assert_eq!(befehl(mehrere), "rm -rf build/alt ls -la build/neu");
     let kommentar = "ls -la # zeigt alle\n  dateien an\n";
     assert_eq!(befehl(kommentar), "ls -la");
     let format = "Das ist ein langer Absatz aus dem Chat, den das Terminal bei seiner Breite\n  umgebrochen hat.\n\n  Eine Überschrift\n  - Ein Punkt, der ebenfalls so lang ist, dass das Terminal ihn umbrechen\n    musste.\n  - Ein kurzer Punkt.\n";

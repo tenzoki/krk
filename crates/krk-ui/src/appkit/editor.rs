@@ -630,7 +630,7 @@ pub enum Umformung {
 ///  Ausgang von „PIN ändern"      crate::editormodell::Pinwechselausgang (5.5 derselben)
 ///  Ausgang des Kopierens         crate::quicknote::kopieren (Schritt 3 der Quicknote)
 ///  Grenze der Quicknote          crate::quicknote::aenderung_passt (Schritt 4 derselben)
-///  Singlestrip und Format              crate::appkit::editor::umgeformt (Schritt 7 der Sicherung)
+///  Singlestrip und Format        crate::appkit::editor::umgeformt (Schritt 7 der Sicherung)
 ///  Sicherung der Quicknote       crate::quicknotesicherung::Sicherungsmeldung (dieselbe)
 /// ```
 ///

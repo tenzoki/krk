@@ -346,7 +346,12 @@ pub fn befehl(eingabe: &str) -> String {
         let letzte = nummer + 1 == bereinigt.len();
         if matches!(lage, Lage::Normal) && zeile.is_empty() {
             // Eine Leerzeile zwischen zwei Teilen des einen Befehls ist ein
-            // Umbruch wie jeder andere; der Trenner davor steht schon.
+            // Umbruch wie jeder andere und ergibt ein Leerzeichen. Meist steht
+            // es schon; nach einer `\`-Fortsetzung ohne Leerraum nicht, denn
+            // dort hat die Leerzeile als Folgezeile keinen gezeigt.
+            if !aus.is_empty() && !aus.ends_with(char::is_whitespace) {
+                aus.push(' ');
+            }
             continue;
         }
 
