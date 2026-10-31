@@ -4,7 +4,10 @@
 //! haengen mehrere Regeln: die Vorschau rendert `notes.txt` und `tasks.txt`
 //! dort mit Aufgabenkaestchen, der Editor zeigt sie in der Formatansicht als
 //! Tabelle, und `secrets.txt` bekommt dort vom Inhaltsfilter keinen Auftrag.
-//! Die vierte Eintragsdatei ist `appointments.md` mit den Terminen.
+//! Die vierte Eintragsdatei ist `appointments.md` mit den Terminen. Daneben
+//! liegt `scratch.txt` ([`QUICKNOTEDATEI`]), der gesicherte Inhalt der
+//! Quicknote; sie ist **keine** Eintragsdatei und steht deshalb nicht in
+//! [`Sonderdatei`].
 //! **Jede dieser Regeln fragt dieses Modul und keine eigene Erkennung** (C2 des Spec
 //! `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
 //! Die Form der Eintraege in `notes.txt`, `tasks.txt` und `appointments.md`
@@ -114,6 +117,22 @@ use crate::ablage::pfade;
 /// Gilt, solange `settings.toml` keinen anderen Ort nennt; der Modulkopf sagt,
 /// was sonst an ihm haengt.
 pub const ORDNERNAME: &str = "krkhome";
+
+/// Der Name, unter dem die Quicknote ihren Inhalt im Notizordner sichert.
+///
+/// **Keine [`Sonderdatei`], und das ist Absicht:** jeder Wert jener Aufzaehlung
+/// ist eine Eintragsdatei und fuehrt ueber [`Heimordner::sonderdatei`] zur
+/// Tabellenansicht, zu den Eintragsbefehlen, zur Vorschau mit
+/// Aufgabenkaestchen und zum Anlegen bei F2. `scratch.txt` ist nichts davon:
+/// im Editor und in der Vorschau eine gewoehnliche Textdatei, und F2 legt sie
+/// nicht an; sie entsteht beim ersten Sichern der Quicknote. Eine fuenfte
+/// Variante brauchte an jeder dieser Stellen eine Ausnahme, die sagt, dass sie
+/// gar keine Eintragsdatei ist.
+///
+/// **Geschrieben wird sie allein von der Sicherung der Quicknote**
+/// (`krk-ui/src/quicknotesicherung.rs`), die den Pfad aus
+/// [`Heimordner::quicknotedatei`] bekommt.
+pub const QUICKNOTEDATEI: &str = "scratch.txt";
 
 /// Eine der Dateien im Heimordner, die KRK als Eintragsdatei behandelt.
 ///
@@ -268,6 +287,15 @@ impl Heimordner {
     /// Nutzer kennt, auch wenn `krkhome` ein Verweis ist.
     pub fn geschrieben(&self) -> &Path {
         &self.geschrieben
+    }
+
+    /// Der Pfad von [`QUICKNOTEDATEI`] im Notizordner, in der geschriebenen
+    /// Form.
+    ///
+    /// Ein `join` und kein Systemaufruf: ob Ordner oder Datei stehen, fragt
+    /// erst die Sicherung der Quicknote auf ihrem eigenen Faden.
+    pub fn quicknotedatei(&self) -> PathBuf {
+        self.geschrieben.join(QUICKNOTEDATEI)
     }
 
     /// Die aufgeloeste Form, falls es eine gibt.

@@ -51,7 +51,8 @@ use krk_core::heimordner::verbindung::{
 };
 use krk_core::heimordner::{
     ALTE_ZETTEL, ALTER_GEHEIMNISNAME, AlteGeheimnisse, Bereitstellung, Heimordner, Hindernis,
-    ORDNERNAME, Sonderdatei, Uebernahmeausgang, Zettelbefund, Zettelmerker, bereitstellen,
+    ORDNERNAME, QUICKNOTEDATEI, Sonderdatei, Uebernahmeausgang, Zettelbefund, Zettelmerker,
+    bereitstellen,
 };
 use krk_core::verzeichnis::Richtung as SortRichtung;
 
@@ -340,6 +341,30 @@ fn die_genaue_frage_nennt_allein_secrets_txt_als_geheimnisse() {
         heim.sonderdatei_genau(&heimpfad.join("Appointments.MD")),
         None
     );
+}
+
+/// Schritt 2 des Plans der Quicknote (E1): `scratch.txt` liegt im Notizordner,
+/// ist aber keine Eintragsdatei. Weder die Erkennung am Pfadtext noch die
+/// genaue Frage antwortet fuer sie mit einer Sorte, und ihr Pfad ist der
+/// geschriebene Ort samt Name.
+#[test]
+fn die_quicknotedatei_ist_keine_eintragsdatei() {
+    assert_eq!(QUICKNOTEDATEI, "scratch.txt");
+    for sorte in Sonderdatei::ALLE {
+        assert_ne!(sorte.dateiname(), QUICKNOTEDATEI, "{sorte:?}");
+    }
+
+    let ordner = Pruefordner::neu("heim-quicknote");
+    let zuhause = kanonisch(&ordner);
+    let heimpfad = zuhause.join(ORDNERNAME);
+    fs::create_dir(&heimpfad).expect("Heimordner laesst sich nicht anlegen");
+    fs::write(heimpfad.join(QUICKNOTEDATEI), b"notiert").expect("scratch.txt");
+    let heim = Heimordner::im_benutzerverzeichnis(&zuhause);
+
+    let pfad = heim.quicknotedatei();
+    assert_eq!(pfad, heim.geschrieben().join("scratch.txt"));
+    assert_eq!(heim.sonderdatei(&pfad), None);
+    assert_eq!(heim.sonderdatei_genau(&pfad), None);
 }
 
 /// Der Rumpf einer Methode aus `heimordner/mod.rs`, ohne Kommentarzeilen.
