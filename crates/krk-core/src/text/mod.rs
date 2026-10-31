@@ -1,5 +1,6 @@
 //! Die Textrechnung des Editors: Einlesen, Zeilenindex, Suche und Ersetzen,
-//! Sichern (C2, C4, C5, C6).
+//! Sichern (C2, C4, C5, C6), dazu Strip und Format der Quicknote
+//! ([`glaetten`]).
 //!
 //! ```text
 //!  Bytes ──> datei::einlesen ──┐
@@ -47,9 +48,10 @@
 //! `krk-ui`'s `editormodell.rs`. Beide rechnen nicht selbst nach, was hier
 //! steht.
 //!
-//! **Kein Zustand, und das Dateisystem an genau einer Stelle.** [`zeilen`] und
-//! [`suche`] bekommen den Text als Zeichenkette und liefern Versaetze oder eine
-//! neue Zeichenkette; sie lesen keine Datei und schreiben keine. Daraus faellt
+//! **Kein Zustand, und das Dateisystem an genau einer Stelle.** [`zeilen`],
+//! [`suche`] und [`glaetten`] bekommen den Text als Zeichenkette und liefern
+//! Versaetze oder eine neue Zeichenkette; sie lesen keine Datei und schreiben
+//! keine. Daraus faellt
 //! das neunte Abnahmekriterium von C5 von selbst an: die Suche geht ueber den
 //! gehaltenen Stand des Editors und nicht ueber die Datei auf der Platte, weil
 //! sie einen Pfad gar nicht entgegennehmen kann.
@@ -79,6 +81,7 @@
 //! eingibt und liest.
 
 pub mod datei;
+pub mod glaetten;
 pub mod marke;
 pub mod suche;
 pub mod zeilen;
