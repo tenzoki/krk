@@ -52,3 +52,5 @@ Die Proben in `crates/krk-core/tests/glaetten.rs` sehen das nicht: `strip_laesst
 - Eine Probe hält, dass Format eine Tabelle in Kastenzeichen und eine Baumskizze Zeile für Zeile erhält.
 - `das_beispiel_des_nutzers_wird_zeichen_fuer_zeichen_zur_erwarteten_ausgabe` bleibt grün und unverändert.
 - `HowTo.md` (Abschnitt „Strip und Format“) und der Modulkopf von `glaetten.rs` nennen die Fälle, die bleiben, so, wie sie auftreten.
+
+**Resolved:** 261031, fixed in `b21ca032` (Breite erst mit zwei vollen Zeilen, kein Verbinden nach Kommentar, Geruestzeilen bleiben). Nachdurchsicht `261031-1226-reviewer-nachdurchsicht-quicknote-behebungen.md`: behoben, Restfaelle in `261031-1226-strip-verbindet-getrennte-befehle-aehnlicher-laenge-und-howto-verspricht-das-gegenteil.md`.

@@ -23,3 +23,5 @@ Dasselbe gilt nach `Gescheitert` (etwa voller Datenträger, danach Platz geschaf
 - Dieselbe Probe mit `Gescheitert` statt `OrdnerFehlt`.
 - Eine Probe hält, dass eine Abgabe vor `QUICKNOTE_RUHE` nicht geschieht und danach genau einmal.
 - `vor_der_antwort_auf_das_lesen_wird_nichts_geschrieben` und `die_quicknote_stellt_auf_dem_hauptfaden_keinen_systemaufruf` bleiben grün.
+
+**Resolved:** 261031, fixed in `5b50e387` (flaechenlose `Vormerkung`, ungesichert faellt erst mit `Gesichert`). Nachdurchsicht `261031-1226-reviewer-nachdurchsicht-quicknote-behebungen.md`: korrekt.

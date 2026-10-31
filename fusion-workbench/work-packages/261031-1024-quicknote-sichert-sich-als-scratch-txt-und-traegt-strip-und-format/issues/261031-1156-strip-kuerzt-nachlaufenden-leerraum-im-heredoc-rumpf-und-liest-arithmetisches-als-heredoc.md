@@ -20,3 +20,5 @@ Der Modulkopf sagt „was fuer die Shell Inhalt ist, bleibt“. E11 begründet d
 - Eine Probe in `crates/krk-core/tests/glaetten.rs` hält, dass nachlaufender Leerraum in einem Heredoc-Rumpf und in einer offenen Anführung erhalten bleibt und außerhalb weiter fällt; `strip_entfernt_backslash_fortsetzungen_ohne_die_bedeutung_zu_aendern` bleibt grün.
 - Eine Probe hält, dass `$((a << b))` keinen Heredoc öffnet und ein Terminalumbruch danach verbunden wird.
 - `strip_ist_idempotent` bleibt grün.
+
+**Resolved:** 261031, fixed in `c1c2b7f8` (Leerraum im Heredoc-Rumpf und in Anfuehrung bleibt, Arithmetik oeffnet keinen Heredoc). Nachdurchsicht `261031-1226-reviewer-nachdurchsicht-quicknote-behebungen.md`: behoben.

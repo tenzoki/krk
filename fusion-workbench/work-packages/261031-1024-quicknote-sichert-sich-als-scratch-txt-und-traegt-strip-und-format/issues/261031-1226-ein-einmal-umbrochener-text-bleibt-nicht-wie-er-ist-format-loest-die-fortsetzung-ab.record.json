@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "839ef451-e368-4111-9797-000ae9cc0d39",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261031-1024-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format/issues/261031-1226-ein-einmal-umbrochener-text-bleibt-nicht-wie-er-ist-format-loest-die-fortsetzung-ab.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}
