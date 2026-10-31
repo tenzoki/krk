@@ -489,6 +489,18 @@ two-face = { version = "0.5.2", default-features = false, features = ["syntect-f
 # L7. Gemessen ist allein die Zerlegung auf dem Faden `krk-vorschau`; was die
 # Breitenrechnung von `NSTextTable` auf dem Hauptfaden kostet, sagt erst der
 # Blick am Buendel.
+#
+# **Der Blick hat es gesagt, und seit dem 261101 gilt eine Zellengrenze**
+# (`markdown::ZELLENGRENZE`, Entscheid
+# `261101-0015-ab-welcher-groesse-zeigt-die-vorschau-eine-markdown-tabelle-nicht-mehr-als-eine-nstexttable.md`,
+# Moeglichkeit 3): eine Datei ueber 20 000 Tabellenzellen erscheint mit ihren
+# Tabellen als Quelltext. Neu gemessen am 261101 auf diesem Geraet, im Profil
+# `release`, drei Laeufe nach einem Vorlauf, kopflos mit einer Probe, die nicht
+# eingecheckt ist: die Abnahmedatei `tabellen-gross.md` (1 000 009 Bytes,
+# 124 320 Zellen, also ueber der Grenze; der erste Durchgang bricht an der
+# 20 001. Zelle ab, der zweite zerlegt ohne Tabellen) 7,3 ms bis 7,5 ms; ihre
+# ersten 5 001 Zeilen (152 248 Bytes, genau 20 000 Zellen in 50 Abschnitten)
+# 2,4 ms bis 2,5 ms.
 pulldown-cmark = { version = "0.13", default-features = false }
 
 # Die Git-Anbindung der Stufe A (Runde 23): Repository finden, Branchname,

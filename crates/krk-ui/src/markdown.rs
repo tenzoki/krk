@@ -182,6 +182,39 @@
 //! Merkzeichen eine eigene Zeile davor ([`Zerlegung::tabelle_oeffnen`]), und
 //! die Zellen tragen die Tiefe des Punktes.
 //!
+//! **Eine lange Tabelle wird in Abschnitte geteilt, und geteilt wird hier und
+//! nicht in AppKit.** Hat eine Tabelle mehr als [`ABSCHNITTSZEILEN`]
+//! Datenzeilen, beginnt mit jeder weiteren solchen Zahl ein neuer Abschnitt:
+//! seine Zellen tragen eine eigene Nummer im Feld `tabelle` der
+//! [`Auszeichnung::Tabellenzelle`] und zaehlen ihre Zeile ab 0
+//! ([`Zerlegung::zeile_oeffnen`]). `crate::appkit::textmerkmale` baut wie
+//! zuvor je Nummer ein `NSTextTable` und weiss von Abschnitten nichts. Die
+//! Teilung steht hier, weil allein die Zerlegung die Zeilen einer Tabelle
+//! zaehlt und die Nummer vergibt; in AppKit stuende eine zweite Zeilenzaehlung
+//! neben dieser, und die Teilung waere nur mit AppKit pruefbar. **Geteilt wird
+//! allein die Nummer**: Text, Kachelung und Klammern bleiben Zeichen fuer
+//! Zeichen dieselben, und was eine Auswahl kopiert, aendert sich nicht. Die
+//! Kopfzeile steht nur ueber dem ersten Abschnitt, denn eine wiederholte
+//! stuende ohne Quelle im Text. Warum 100 Zeilen, steht an der Konstante.
+//!
+//! # Die Zellengrenze
+//!
+//! **Traegt eine Datei mehr als [`ZELLENGRENZE`] Tabellenzellen, erscheinen
+//! ihre Tabellen als Quelltext**, so wie vor dem Arbeitspaket
+//! `261031-1645-markdown-vorschau-richtet-tabellenspalten-aus`: jede Tabelle
+//! ein Absatz, dessen Zeilen woertlich mit weichen Umbruechen dastehen. Der
+//! uebrige Text der Datei bleibt gerendert. Gebaut ist dafuer kein eigener
+//! Weg: [`rendern`] faehrt denselben Durchgang ohne `ENABLE_TABLES`, und die
+//! Kachelung ist dann woertlich wie bei jedem Absatz. Ein Hinweis erscheint
+//! nicht.
+//!
+//! **Gezaehlt wird im ersten Durchgang und nicht in einem davor.** Unter der
+//! Grenze bleibt es bei einem Durchgang; darueber bricht der erste an der
+//! ersten Zelle zuviel ab, und der zweite zerlegt die ganze Datei. Das teure
+//! Stueck, das Setzen der Merkmale und das Auslegen auf dem Hauptfaden, kommt
+//! damit nie an eine Tabelle ueber der Grenze. Warum 20 000, steht an der
+//! Konstante; die Zahl ist interpoliert.
+//!
 //! # Die Einrueckebenen einer Liste
 //!
 //! Ein Listenpunkt traegt sein Merkzeichen im Text — `• ` oder die Nummer
@@ -727,9 +760,41 @@ struct Quellelement {
 ///
 /// Die [`Lesart`] entscheidet allein ueber die Aufgabenkaestchen; siehe den
 /// Modulkopf.
+///
+/// **Ueber [`ZELLENGRENZE`] erscheinen die Tabellen der Datei als Quelltext**,
+/// so wie vor dem Arbeitspaket: der Durchgang mit Tabellen bricht an der
+/// ersten Zelle ueber der Grenze ab, und ein zweiter ohne `ENABLE_TABLES`
+/// zerlegt die Datei, in dem jede Tabelle ein Absatz mit weichen Umbruechen
+/// ist. Siehe den Modulkopf unter „Die Zellengrenze“.
 pub fn rendern(quelle: &str, tafel: Tafel, lesart: Lesart) -> Gerendert {
+    let mut optionen = lesart.optionen();
+    let mut grenze = Some(ZELLENGRENZE);
+    // **Hoechstens zwei Durchgaenge, und das haelt der Bau und keine Zaehlung:**
+    // der zweite laeuft ohne Grenze, und ohne Grenze liefert `durchgang`
+    // immer einen Text. Eine Schleife statt eines zweiten Rufs mit Abbruchpfad,
+    // damit kein `expect` an einer Stelle steht, die nie erreicht wird.
+    loop {
+        if let Some(gerendert) = durchgang(quelle, tafel, optionen, grenze) {
+            return gerendert;
+        }
+        optionen.remove(Options::ENABLE_TABLES);
+        grenze = None;
+    }
+}
+
+/// Ein Durchgang der Zerlegung mit diesen Merkmalen der Kiste.
+///
+/// `None` allein dann, wenn `grenze` gesetzt ist und die Datei mehr
+/// Tabellenzellen meldet; der Durchgang bricht an der ersten Zelle darueber
+/// ab und rechnet nicht zu Ende. Ohne `grenze` ist das Ergebnis immer `Some`.
+fn durchgang(
+    quelle: &str,
+    tafel: Tafel,
+    optionen: Options,
+    grenze: Option<usize>,
+) -> Option<Gerendert> {
     let mut zerlegung = Zerlegung::neu(quelle, linkfarbe(tafel));
-    let mut ereignisse = Parser::new_ext(quelle, lesart.optionen()).into_offset_iter();
+    let mut ereignisse = Parser::new_ext(quelle, optionen).into_offset_iter();
     while let Some((ereignis, bereich)) = ereignisse.next() {
         // Der erste Satz der Deckung, vor jedem Ereignis und ohne seine Art zu
         // kennen: was seit dem letzten Stand ungelesen blieb, steht da.
@@ -788,7 +853,15 @@ pub fn rendern(quelle: &str, tafel: Tafel, lesart: Lesart) -> Gerendert {
                     zerlegung.tabelle_oeffnen(bereich, ausrichtungen);
                 }
                 Behandlung::Tabellenzeile { kopf } => zerlegung.zeile_oeffnen(bereich, kopf),
-                Behandlung::Tabellenzelle => zerlegung.zelle_oeffnen(bereich),
+                Behandlung::Tabellenzelle => {
+                    zerlegung.zelle_oeffnen(bereich);
+                    // Gezaehlt wird im Durchgang und nicht in einem eigenen
+                    // davor: unter der Grenze bleibt es bei einem Durchgang,
+                    // darueber endet dieser an der ersten Zelle zuviel.
+                    if grenze.is_some_and(|grenze| zerlegung.zellen > grenze) {
+                        return None;
+                    }
+                }
                 // Die eine Auffangregel: der Quelltext, woertlich, und das
                 // Element danach uebersprungen. Ein Bild, das hier
                 // hindurchgeht, wird damit auch nicht geladen — das sechste
@@ -830,7 +903,7 @@ pub fn rendern(quelle: &str, tafel: Tafel, lesart: Lesart) -> Gerendert {
             | Event::DisplayMath(_) => zerlegung.woertlich(bereich),
         }
     }
-    zerlegung.abschliessen()
+    Some(zerlegung.abschliessen())
 }
 
 /// Was aus einem Element wird.
@@ -969,6 +1042,49 @@ fn spaltenausrichtung(ausrichtung: Alignment) -> Spaltenausrichtung {
 /// zu einem, und eine leere Zelle verschwaende samt ihrer Spalte. Siehe den
 /// Modulkopf unter „Tabellen".
 const ZELLENENDE: &str = "\n";
+
+/// Wie viele Datenzeilen einer Markdown-Tabelle hoechstens in einem Abschnitt
+/// stehen, also in einem `NSTextTable`.
+///
+/// **Die Zahl kommt aus der Messung im Entscheid**
+/// `261101-0015-ab-welcher-groesse-zeigt-die-vorschau-eine-markdown-tabelle-nicht-mehr-als-eine-nstexttable.md`
+/// (Moeglichkeit 3, vom Nutzer gewaehlt am 261101): AppKit rechnet bei jedem
+/// Bild den Hintergrund des **ganzen** `NSTextTable`, in dem der sichtbare
+/// Ausschnitt liegt, und die Zeit je Bild waechst linear mit dessen
+/// Zellenzahl, gleich wie viel davon zu sehen ist. In Abschnitte zu 100
+/// Zeilen geteilt kostet ein Bild 6 bis 13 ms, gleich wie lang die Tabelle
+/// ist; eine Tabelle von 31 079 Zeilen in einem Stueck kostet 3,7 s je Bild.
+/// Gemessen auf einem M2 Max und nicht auf dem Referenzgeraet.
+///
+/// Eine Tabelle bis zu dieser Zahl ist genau ein Abschnitt und sieht aus wie
+/// vor der Teilung. Der Preis darueber: jeder Abschnitt rechnet seine
+/// Spaltenbreiten selbst, und an der Grenze zweier Abschnitte stehen zwei
+/// Linien aufeinander. Siehe den Modulkopf unter „Tabellen“.
+const ABSCHNITTSZEILEN: usize = 100;
+
+/// Wie viele Tabellenzellen eine Datei hoechstens tragen darf, damit die
+/// Vorschau ihre Tabellen ausrichtet; darueber erscheinen sie als Quelltext.
+///
+/// **Interpoliert und nicht gemessen, und nicht auf dem Referenzgeraet.** Der
+/// Entscheid
+/// `261101-0015-ab-welcher-groesse-zeigt-die-vorschau-eine-markdown-tabelle-nicht-mehr-als-eine-nstexttable.md`
+/// (Moeglichkeit 3) hat auf einem M2 Max 16 004 Zellen mit 57 bis 67 ms und
+/// 32 004 Zellen mit 111 bis 124 ms fuer das Setzen der Merkmale auf dem
+/// Hauptfaden gemessen; 20 000 liegen dazwischen, bei rund 80 ms und damit
+/// unter den 100 ms von L7. Die Abschnitte nehmen die Last je Bild weg, das
+/// Setzen und das volle Auslegen bleiben linear, und diese Grenze faengt
+/// genau sie ab. Ein Lauf auf dem Referenzgeraet (`MacBookPro15,1`) steht aus
+/// und kann die Zahl verschieben.
+///
+/// **Gezaehlt werden die Zellen, die die Kiste meldet**, ueber alle Tabellen
+/// der Datei und mit der Kopfzeile: jede `TableCell`, auch eine leere, die sie
+/// einer zu kurzen Zeile anhaengt. Die ueberzaehligen Zellen einer zu langen
+/// Zeile meldet sie nicht, und sie zaehlen nicht. Bei genau dieser Zahl
+/// erscheinen die Tabellen noch ausgerichtet.
+///
+/// Ein Hinweis erscheint darueber nicht, so hat es der Nutzer gewaehlt: der
+/// Quelltext einer Tabelle ist lesbar und als das zu erkennen, was er ist.
+const ZELLENGRENZE: usize = 20_000;
 
 /// Verwirft die Ereignisse bis zum Ende des gerade begonnenen Elements.
 ///
@@ -1254,9 +1370,16 @@ struct Zerlegung<'q> {
     /// Angelegt wird ein Eintrag in [`Zerlegung::oeffnen`], seine Klammer
     /// eingetragen in [`Zerlegung::schliessen`].
     elemente: Vec<Quellelement>,
-    /// Wie viele Tabellen bisher geoeffnet wurden; die naechste bekommt diese
+    /// Wie viele Abschnitte bisher begonnen wurden; der naechste bekommt diese
     /// Zahl als Nummer.
+    ///
+    /// **Abschnitte und nicht Tabellen**: eine Tabelle mit mehr als
+    /// [`ABSCHNITTSZEILEN`] Datenzeilen zieht hier mehr als eine Nummer
+    /// ([`Zerlegung::zeile_oeffnen`]).
     tabellen: usize,
+    /// Wie viele Tabellenzellen der Durchgang bisher geoeffnet hat, ueber alle
+    /// Tabellen; gefragt gegen [`ZELLENGRENZE`] in [`durchgang`].
+    zellen: usize,
     /// Die zuletzt geoeffnete Tabelle; `None` vor der ersten.
     ///
     /// **Eine und kein Stapel**, weil eine Zelle nur Zeileninhalt traegt und
@@ -1268,7 +1391,8 @@ struct Zerlegung<'q> {
 
 /// Was die Zerlegung ueber die Tabelle weiss, in der sie gerade steht.
 struct Tabellenlage {
-    /// Ihre laufende Nummer im Dokument.
+    /// Die laufende Nummer ihres Abschnitts im Dokument; sie waechst mit
+    /// jedem neuen Abschnitt ([`ABSCHNITTSZEILEN`]).
     nummer: usize,
     /// Die Ausrichtung jeder Spalte; ihre Laenge ist die Spaltenzahl.
     ausrichtungen: Vec<Spaltenausrichtung>,
@@ -1280,10 +1404,14 @@ struct Tabellenlage {
     /// Zelle ihr Ende schreibt: das Ende der Zeile, beim Kopf das Ende der
     /// Trennzeile dahinter.
     nachlauf_bis: usize,
-    /// Die Zeile, in der die Zerlegung steht; 0 ist die Kopfzeile.
+    /// Die Zeile im Abschnitt, in der die Zerlegung steht; im ersten
+    /// Abschnitt ist 0 die Kopfzeile.
     zeile: usize,
-    /// Die Nummer, die die naechste Zeile bekommt.
+    /// Die Nummer, die die naechste Zeile im Abschnitt bekommt.
     naechste_zeile: usize,
+    /// Wie viele Datenzeilen, also Zeilen ohne den Kopf, die Tabelle bisher
+    /// begonnen hat.
+    datenzeilen: usize,
     /// Ob die laufende Zeile die Kopfzeile ist.
     kopf: bool,
     /// Die Spalte, die die naechste Zelle bekommt.
@@ -1305,6 +1433,7 @@ impl<'q> Zerlegung<'q> {
             abschnitte: Vec::new(),
             elemente: Vec::new(),
             tabellen: 0,
+            zellen: 0,
             tabelle: None,
         }
     }
@@ -1841,6 +1970,7 @@ impl<'q> Zerlegung<'q> {
             nachlauf_bis: quelle.start,
             zeile: 0,
             naechste_zeile: 0,
+            datenzeilen: 0,
             kopf: false,
             naechste_spalte: 0,
         });
@@ -1863,9 +1993,24 @@ impl<'q> Zerlegung<'q> {
     /// **Die Trennzeile ist genau eine Zeile**, so verlangt es GFM; ihr Ende
     /// ist deshalb der erste Umbruch hinter dem Kopf, und ohne einen das Ende
     /// der Tabelle.
+    ///
+    /// **Hier beginnt ein neuer Abschnitt**, sobald die Tabelle
+    /// [`ABSCHNITTSZEILEN`] Datenzeilen hinter sich hat: die Zeile bekommt
+    /// eine neue Nummer und ist darin Zeile 0. Geteilt wird allein die
+    /// Nummer; Text, Kachelung und Klammern bleiben Zeichen fuer Zeichen
+    /// dieselben, und eine Kopfzeile wird nicht wiederholt, denn sie stuende
+    /// im Text ohne Quelle.
     fn zeile_oeffnen(&mut self, quelle: Range<usize>, kopf: bool) {
         let text = self.quelle;
         if let Some(lage) = &mut self.tabelle {
+            if !kopf {
+                if lage.datenzeilen > 0 && lage.datenzeilen % ABSCHNITTSZEILEN == 0 {
+                    lage.nummer = self.tabellen;
+                    self.tabellen += 1;
+                    lage.naechste_zeile = 0;
+                }
+                lage.datenzeilen += 1;
+            }
             lage.zeile = lage.naechste_zeile;
             lage.naechste_zeile += 1;
             lage.kopf = kopf;
@@ -1904,6 +2049,7 @@ impl<'q> Zerlegung<'q> {
     fn zelle_oeffnen(&mut self, quelle: Range<usize>) {
         let was = match &mut self.tabelle {
             Some(lage) => {
+                self.zellen += 1;
                 let spalte = lage.naechste_spalte;
                 lage.naechste_spalte += 1;
                 let letzte = spalte + 1 >= lage.ausrichtungen.len();
@@ -3019,6 +3165,206 @@ mod tests {
                 quelle
             );
         }
+    }
+
+    // ---------------------------------------------------------------------
+    // Abschnitte und Zellengrenze (Entscheid
+    // `261101-0015-ab-welcher-groesse-zeigt-die-vorschau-eine-markdown-tabelle-nicht-mehr-als-eine-nstexttable.md`,
+    // Moeglichkeit 3)
+    // ---------------------------------------------------------------------
+
+    /// Eine Tabelle mit zwei Spalten und `datenzeilen` Zeilen unter dem Kopf;
+    /// die Zellen heissen `a000`, `b000`, `a001` und so fort, damit kein Name
+    /// im Text Teil eines anderen ist.
+    fn lange_tabelle(datenzeilen: usize) -> String {
+        let mut quelle = String::from("| Kopf | Wert |\n|:--|--:|\n");
+        for zeile in 0..datenzeilen {
+            quelle.push_str(&format!("| a{zeile:03} | b{zeile:03} |\n"));
+        }
+        quelle
+    }
+
+    /// Wie viele Stellen eine [`Auszeichnung::Tabellenzelle`] tragen, ohne
+    /// deren Text herauszuschneiden wie [`zellen`]; das waere bei
+    /// [`ZELLENGRENZE`] Zellen quadratisch.
+    fn zellenzahl(gerendert: &Gerendert) -> usize {
+        gerendert
+            .formatierung
+            .auszeichnungen
+            .iter()
+            .filter(|stelle| matches!(stelle.art, Auszeichnung::Tabellenzelle { .. }))
+            .count()
+    }
+
+    /// Eine Tabelle mit einer Spalte und genau `zellen` Zellen, den Kopf
+    /// eingeschlossen.
+    fn einspaltige_tabelle(zellen: usize) -> String {
+        let mut quelle = String::from("| k |\n|---|\n");
+        for _ in 1..zellen {
+            quelle.push_str("| z |\n");
+        }
+        quelle
+    }
+
+    /// Eine Tabelle bis [`ABSCHNITTSZEILEN`] Datenzeilen ist ein Abschnitt,
+    /// und ihre Zeilen zaehlen vom Kopf an durch.
+    #[test]
+    fn eine_tabelle_mit_hundert_datenzeilen_ist_ein_abschnitt() {
+        let ergebnis = kachelung_pruefen(&lange_tabelle(ABSCHNITTSZEILEN));
+        let gefunden = zellen(&ergebnis);
+        assert_eq!(gefunden.len(), 2 * (ABSCHNITTSZEILEN + 1));
+        assert!(gefunden.iter().all(|zelle| zelle.tabelle == 0));
+        assert_eq!(
+            gefunden.last().map(|zelle| zelle.zeile),
+            Some(ABSCHNITTSZEILEN)
+        );
+    }
+
+    /// 101 Datenzeilen sind zwei Abschnitte: der erste traegt Kopf und 100
+    /// Zeilen, der zweite die 101. als seine Zeile 0, mit eigener Nummer.
+    /// Die Tabelle danach zieht die naechste Nummer, und Spaltenzahl,
+    /// Ausrichtung und Spalten bleiben ueber die Grenze dieselben.
+    #[test]
+    fn hundertundeine_datenzeile_sind_zwei_abschnitte() {
+        let quelle = format!(
+            "{}\nDazwischen.\n\n| x |\n|---|\n| 1 |\n",
+            lange_tabelle(ABSCHNITTSZEILEN + 1)
+        );
+        let ergebnis = kachelung_pruefen(&quelle);
+        let gefunden: Vec<(String, usize, usize, usize, usize, Spaltenausrichtung)> =
+            zellen(&ergebnis)
+                .into_iter()
+                .map(|z| {
+                    (
+                        z.text,
+                        z.tabelle,
+                        z.zeile,
+                        z.spalte,
+                        z.spalten,
+                        z.ausrichtung,
+                    )
+                })
+                .collect();
+        assert_eq!(gefunden.len(), 2 * (ABSCHNITTSZEILEN + 2) + 2);
+        assert_eq!(
+            gefunden[0],
+            ("Kopf\n".to_owned(), 0, 0, 0, 2, Spaltenausrichtung::Links)
+        );
+        assert_eq!(
+            gefunden[2 * ABSCHNITTSZEILEN + 1],
+            (
+                "b099\n".to_owned(),
+                0,
+                ABSCHNITTSZEILEN,
+                1,
+                2,
+                Spaltenausrichtung::Rechts
+            ),
+            "die hundertste Datenzeile steht noch im ersten Abschnitt"
+        );
+        assert_eq!(
+            gefunden[2 * ABSCHNITTSZEILEN + 2],
+            ("a100\n".to_owned(), 1, 0, 0, 2, Spaltenausrichtung::Links),
+            "die hunderterste Datenzeile beginnt den zweiten Abschnitt bei Zeile 0"
+        );
+        assert_eq!(
+            gefunden[2 * ABSCHNITTSZEILEN + 3],
+            ("b100\n".to_owned(), 1, 0, 1, 2, Spaltenausrichtung::Rechts)
+        );
+        assert_eq!(
+            &gefunden[2 * ABSCHNITTSZEILEN + 4..],
+            &[
+                ("x\n".to_owned(), 2, 0, 0, 1, Spaltenausrichtung::Ohne),
+                ("1\n".to_owned(), 2, 1, 0, 1, Spaltenausrichtung::Ohne),
+            ],
+            "die naechste Tabelle zieht die naechste Nummer"
+        );
+        // Kein Kopf wird wiederholt: er steht genau einmal im Text, und der
+        // Text ist Zelle fuer Zelle der einer Tabelle ohne Teilung.
+        assert_eq!(ergebnis.text.matches("Kopf\n").count(), 1);
+        assert!(ergebnis.text.contains("a099\nb099\na100\nb100\n"));
+    }
+
+    /// Die Teilung aendert nichts an Text, Kachelung und Kopieren: die
+    /// Auswahl ueber alles liefert die Datei, ein Wort im zweiten Abschnitt
+    /// seine Quellzeile, und eine Auswahl ueber die Abschnittsgrenze die
+    /// beiden Quellzeilen beiderseits davon.
+    #[test]
+    fn die_abschnittsgrenze_aendert_das_kopieren_nicht() {
+        let quelle = lange_tabelle(ABSCHNITTSZEILEN + 1);
+        let ergebnis = kachelung_pruefen(&quelle);
+        assert_eq!(
+            ergebnis
+                .quellbezug
+                .quelltext(0..ergebnis.formatierung.laenge),
+            quelle
+        );
+        assert_eq!(kopiert(&quelle, "a100"), "| a100 | b100 |\n");
+        assert_eq!(kopiert(&quelle, "b099"), "| a099 | b099 |\n");
+        assert_eq!(
+            kopiert(&quelle, "b099\na100"),
+            "| a099 | b099 |\n| a100 | b100 |\n"
+        );
+    }
+
+    /// Genau [`ZELLENGRENZE`] Zellen stehen noch als Tabelle, eine mehr als
+    /// Quelltext, und gezaehlt wird ueber alle Tabellen der Datei.
+    ///
+    /// Ueber der Grenze ist die Zerlegung die von vor dem Arbeitspaket: jede
+    /// Tabelle ein woertlicher Absatz, der uebrige Text gerendert, die
+    /// Auswahl ueber alles die Datei.
+    #[test]
+    fn ueber_der_zellengrenze_stehen_die_tabellen_als_quelltext() {
+        let haelfte = ZELLENGRENZE / 2;
+        let an_der_grenze = format!(
+            "# Titel\n\n{}\n{}",
+            einspaltige_tabelle(haelfte),
+            einspaltige_tabelle(ZELLENGRENZE - haelfte)
+        );
+        assert_eq!(
+            zellenzahl(&rendern(&an_der_grenze, Tafel::Hell, Lesart::Markdown)),
+            ZELLENGRENZE
+        );
+
+        let darueber = format!(
+            "# Titel\n\n{}\n{}",
+            einspaltige_tabelle(haelfte),
+            einspaltige_tabelle(ZELLENGRENZE - haelfte + 1)
+        );
+        // Ohne `kachelung_pruefen`, das je Abschnitt den ganzen Text umrechnet
+        // und hier quadratisch wuerde; die Auswahl ueber alles unten haelt die
+        // Kachelung fuer diesen Fall.
+        let ergebnis = rendern(&darueber, Tafel::Hell, Lesart::Markdown);
+        assert_eq!(zellenzahl(&ergebnis), 0, "ueber der Grenze keine Zelle");
+        assert_eq!(
+            stellen(&ergebnis, Auszeichnung::Ueberschrift { stufe: 1 }),
+            vec![(0, 5)],
+            "der uebrige Text bleibt gerendert"
+        );
+        assert!(
+            ergebnis.text.starts_with("Titel\n\n| k |\n|---|\n| z |\n"),
+            "die Tabelle steht woertlich da"
+        );
+        assert_eq!(
+            ergebnis
+                .quellbezug
+                .quelltext(0..ergebnis.formatierung.laenge),
+            darueber
+        );
+    }
+
+    /// Die Grenze zaehlt die Zellen, die die Kiste meldet: auch die leere,
+    /// die sie einer zu kurzen Zeile anhaengt, und nicht die ueberzaehlige
+    /// einer zu langen. Der Durchgang mit Grenze bricht an der ersten Zelle
+    /// darueber ab, der ohne Grenze nie.
+    #[test]
+    fn die_zellengrenze_zaehlt_die_gemeldeten_zellen() {
+        // Kopf 2, kurze Zeile 1 + 1 angehaengte, lange Zeile 2 von 3.
+        let quelle = "| a | b |\n|---|---|\n| 1 |\n| x | y | z |\n";
+        let optionen = Lesart::Markdown.optionen();
+        assert!(durchgang(quelle, Tafel::Hell, optionen, Some(6)).is_some());
+        assert!(durchgang(quelle, Tafel::Hell, optionen, Some(5)).is_none());
+        assert!(durchgang(quelle, Tafel::Hell, optionen, None).is_some());
     }
 
     /// Das dritte Abnahmekriterium von C4, erster Fall: ein Bild erscheint als

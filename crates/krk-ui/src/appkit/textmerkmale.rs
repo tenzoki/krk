@@ -264,9 +264,28 @@ const TABSPALTEN: f64 = 4.0;
 /// Formatansicht gibt es keine Spalten, und der Schritt ist dort vier
 /// Leerzeichen breit, ohne einen Mindestabstand zusagen zu koennen.
 fn grundabsatz(schrift: &NSFont) -> Retained<NSMutableParagraphStyle> {
+    absatz_mit_schritt(tabschritt(schrift))
+}
+
+/// Der Tabulatorschritt des [`grundabsatz`] zu dieser Schrift, in Punkt.
+///
+/// **Eigens abgerufen, damit er einmal gemessen wird und nicht je Stelle.**
+/// [`auszeichnungen_legen`] braucht ihn fuer jede Listenzeile und jede
+/// Tabellenzelle, und alle tragen dieselbe Schrift; bis zum 261101 baute es
+/// je Stelle die Grundschrift neu und mass ein Leerzeichen mit
+/// `sizeWithAttributes:`, bei 124 320 Zellen 1,48 s statt 0,42 s im Nachbau
+/// (Defekt
+/// `261101-0015-zellenmerkmal-misst-je-tabellenzelle-schrift-und-leerzeichenbreite-neu.md`).
+fn tabschritt(schrift: &NSFont) -> f64 {
+    TABSPALTEN * leerzeichenbreite(schrift)
+}
+
+/// Der [`grundabsatz`] mit einem schon gemessenen Tabulatorschritt
+/// ([`tabschritt`]).
+fn absatz_mit_schritt(schritt: f64) -> Retained<NSMutableParagraphStyle> {
     let stil = NSMutableParagraphStyle::new();
     stil.setTabStops(Some(&NSArray::new()));
-    stil.setDefaultTabInterval(TABSPALTEN * leerzeichenbreite(schrift));
+    stil.setDefaultTabInterval(schritt);
     stil
 }
 
@@ -383,10 +402,20 @@ fn auszeichnungen_legen(
     // damit auf einer anderen Grundlage auf als der Text, ueber dem sie steht,
     // sobald jemand die Grundlage aendert.
     let grundgroesse = grundgroesse(ansicht, art);
-    // Je Tabelle genau ein `NSTextTable`, fuer die Dauer dieses Rufs gehalten
+    // Der Tabulatorschritt der Grundschrift, **einmal je Ruf** und nicht je
+    // Stelle: jede Listenzeile und jede Tabellenzelle traegt ihn, und alle
+    // haengen allein an `ansicht` und `art` (Defekt
+    // `261101-0015-zellenmerkmal-misst-je-tabellenzelle-schrift-und-leerzeichenbreite-neu.md`).
+    // Den Absatzstil selbst teilen die Stellen nicht: jede Zelle traegt ihren
+    // eigenen `NSTextTableBlock`, also ihren eigenen Stil.
+    let schritt = tabschritt(&grundschrift(ansicht, art));
+    // Je Nummer genau ein `NSTextTable`, fuer die Dauer dieses Rufs gehalten
     // wie die Farben in `anwenden`: der Satzspiegel erkennt die Zellen einer
     // Tabelle allein daran, dass ihre Bloecke auf **dasselbe** Objekt zeigen.
-    // Zwei gleich eingestellte Tabellen waeren zwei Tabellen.
+    // Zwei gleich eingestellte Tabellen waeren zwei Tabellen. Die Nummer ist
+    // die eines Abschnitts; eine lange Markdown-Tabelle teilt
+    // `crate::markdown` in mehrere (`ABSCHNITTSZEILEN` dort), und hier steht
+    // davon nichts.
     let mut tabellen: HashMap<usize, Retained<NSTextTable>> = HashMap::new();
     speicher.beginEditing();
     for stelle in &formatierung.auszeichnungen {
@@ -397,9 +426,7 @@ fn auszeichnungen_legen(
                 schriftmerkmal(&NSFont::boldSystemFontOfSize(grundgroesse * faktor))
             }
             Auszeichnung::FesteSchrift => schriftmerkmal(&feste_schrift(grundgroesse)),
-            Auszeichnung::Listenzeile { tiefe } => {
-                einzugsmerkmal(tiefe, &grundschrift(ansicht, art))
-            }
+            Auszeichnung::Listenzeile { tiefe } => einzugsmerkmal(tiefe, schritt),
             Auszeichnung::Betonung => schriftmerkmal(&kursive_schrift(grundgroesse)),
             Auszeichnung::StarkeBetonung => {
                 schriftmerkmal(&NSFont::boldSystemFontOfSize(grundgroesse))
@@ -415,13 +442,7 @@ fn auszeichnungen_legen(
                 let tafel = tabellen
                     .entry(tabelle)
                     .or_insert_with(|| texttabelle(spalten, tiefe));
-                zellenmerkmal(
-                    tafel,
-                    zeile,
-                    spalte,
-                    ausrichtung,
-                    &grundschrift(ansicht, art),
-                )
+                zellenmerkmal(tafel, zeile, spalte, ausrichtung, schritt)
             }
         };
         // SAFETY: Der Bereich liegt im Text, und das ist die ganze
@@ -759,9 +780,12 @@ fn grundmerkmale_des_textes(schrift: &NSFont) -> Retained<NSDictionary<NSString,
 /// **Auf dem [`grundabsatz`] und nicht auf einem leeren Stil**, denn der
 /// Absatzstil ersetzt den des Grundes ganz: ohne ihn fielen die Tabulatoren
 /// einer Listenzeile auf die 28 Punkt des Systems zurueck.
-fn einzugsmerkmal(tiefe: u8, schrift: &NSFont) -> Retained<NSDictionary<NSString, AnyObject>> {
+///
+/// `schritt` ist der [`tabschritt`] der Grundschrift, vom Rufer einmal
+/// gemessen.
+fn einzugsmerkmal(tiefe: u8, schritt: f64) -> Retained<NSDictionary<NSString, AnyObject>> {
     let einzug = LISTENEINZUG * f64::from(tiefe.clamp(1, EINZUGSGRENZE));
-    let stil = grundabsatz(schrift);
+    let stil = absatz_mit_schritt(schritt);
     // Beide, damit die erste Zeile mit dem Aufzaehlungszeichen genauso weit
     // einrueckt wie ihre Fortsetzung nach einem Umbruch; sonst haengt das
     // Zeichen als einziges am linken Rand.
@@ -828,7 +852,9 @@ fn texttabelle(spalten: usize, tiefe: u8) -> Retained<NSTextTable> {
 /// **Auf dem [`grundabsatz`]**, aus dem Grund von [`einzugsmerkmal`]: ohne ihn
 /// fielen die Tabulatoren in einer Zelle auf die 28 Punkt des Systems zurueck.
 /// Der Stil traegt genau einen Block, die Zelle an (`zeile`, `spalte`) mit den
-/// Spannen 1, und die Ausrichtung der Spalte.
+/// Spannen 1, und die Ausrichtung der Spalte. `schritt` ist der
+/// [`tabschritt`] der Grundschrift, vom Rufer einmal je Ruf gemessen und
+/// nicht hier je Zelle.
 ///
 /// **Die Linienfarbe ist `separatorColor` und keine Farbe der Tafel**, weil sie
 /// dynamisch ist: sie folgt dem Wechsel auf Dunkel, ohne dass jemand die
@@ -840,7 +866,7 @@ fn zellenmerkmal(
     zeile: usize,
     spalte: usize,
     ausrichtung: Spaltenausrichtung,
-    schrift: &NSFont,
+    schritt: f64,
 ) -> Retained<NSDictionary<NSString, AnyObject>> {
     // Eine Tabelle mit mehr als `isize::MAX` Zeilen passt in keinen Speicher;
     // die Saettigung steht da, damit die Umwandlung keinen Abbruchpfad hat.
@@ -866,7 +892,7 @@ fn zellenmerkmal(
     );
     zelle.setBorderColor(Some(&NSColor::separatorColor()));
     let block: &NSTextBlock = &zelle;
-    let stil = grundabsatz(schrift);
+    let stil = absatz_mit_schritt(schritt);
     stil.setTextBlocks(&NSArray::from_slice(&[block]));
     stil.setAlignment(textausrichtung(ausrichtung));
     // SAFETY: Ein Fremdsymbol von AppKit, der Merkmalsname des Absatzstils.
@@ -999,7 +1025,7 @@ mod proben {
     fn der_listeneinzug_behaelt_den_tabulatorschritt() {
         let schrift = grundschrift(Ansicht::Format, Darstellungsart::Markdown);
         let schritt = TABSPALTEN * leerzeichenbreite(&schrift);
-        let merkmale = einzugsmerkmal(2, &schrift);
+        let merkmale = einzugsmerkmal(2, tabschritt(&schrift));
         // SAFETY: Ein Fremdsymbol von AppKit, der Merkmalsname des Absatzstils.
         let stil = unsafe { merkmale.objectForKey(NSParagraphStyleAttributeName) }
             .expect("der Einzug setzt einen Absatzstil")
@@ -1109,6 +1135,7 @@ mod proben {
             (2, 0, 1, NSTextAlignment::Right),
             (4, 1, 0, NSTextAlignment::Center),
         ];
+        let schritt = tabschritt(&grundschrift(Ansicht::Format, Darstellungsart::Markdown));
         let mut tafeln = Vec::new();
         for (stelle, zeile, spalte, ausrichtung) in erwartet {
             // SAFETY: Ein Fremdsymbol von AppKit, der Merkmalsname des
@@ -1140,6 +1167,11 @@ mod proben {
                 ausrichtung,
                 "Stelle {stelle}: falsche Ausrichtung"
             );
+            assert!(
+                (stil.defaultTabInterval() - schritt).abs() < f64::EPSILON,
+                "Stelle {stelle}: die Zelle traegt den Schritt {} statt {schritt}",
+                stil.defaultTabInterval()
+            );
             tafeln.push(block.table());
         }
         assert!(
@@ -1159,6 +1191,49 @@ mod proben {
             tafeln[2].numberOfColumns(),
             3,
             "die zweite Tabelle hat drei Spalten"
+        );
+    }
+
+    /// [`auszeichnungen_legen`] misst den Tabulatorschritt einmal je Ruf und
+    /// nicht je Stelle (Defekt
+    /// `261101-0015-zellenmerkmal-misst-je-tabellenzelle-schrift-und-leerzeichenbreite-neu.md`).
+    ///
+    /// Eine Quelltextprobe, weil die Wirkung eine Zeit ist und keine
+    /// Eigenschaft des Ergebnisses: ein Absatzstil mit neu gemessenem Schritt
+    /// sieht aus wie einer mit dem einmal gemessenen. **Was sie faengt:** ein
+    /// `grundschrift(`, `tabschritt(`, `leerzeichenbreite(` oder
+    /// `grundabsatz(` in der Schleife ueber die Stellen, also die Rueckkehr der
+    /// Messung je Zelle. Dass [`zellenmerkmal`] und [`einzugsmerkmal`] selbst
+    /// nicht messen, haelt ihr Typ: sie nehmen einen Schritt und keine Schrift.
+    /// **Was sie nicht sieht:** eine Messung in einer Hilfsfunktion, die die
+    /// Schleife unter einem anderen Namen ruft.
+    #[test]
+    fn auszeichnungen_legen_misst_den_tabschritt_einmal_je_ruf() {
+        let quelle = include_str!("textmerkmale.rs");
+        let rumpf = quelle
+            .split("\nfn auszeichnungen_legen(")
+            .nth(1)
+            .and_then(|rest| rest.split("\n}\n").next())
+            .expect("auszeichnungen_legen steht in dieser Datei");
+        let schleife = rumpf
+            .split("for stelle in &formatierung.auszeichnungen")
+            .nth(1)
+            .expect("auszeichnungen_legen geht ueber die Stellen");
+        for messung in [
+            "grundschrift(",
+            "tabschritt(",
+            "leerzeichenbreite(",
+            "grundabsatz(",
+        ] {
+            assert!(
+                !schleife.contains(messung),
+                "die Schleife ueber die Stellen ruft {messung}"
+            );
+        }
+        assert_eq!(
+            rumpf.matches("tabschritt(").count(),
+            1,
+            "auszeichnungen_legen misst den Schritt nicht genau einmal"
         );
     }
 

@@ -341,13 +341,24 @@ pub enum Auszeichnung {
     /// **Die Zerlegung rechnet die Struktur und nichts von der Gestalt.** Wo
     /// eine Spalte beginnt und wie breit sie ist, haengt an Schriftmassen und
     /// an der Breite der Flaeche, und beides kennt erst
-    /// `crate::appkit::textmerkmale`, das je Tabellennummer (`tabelle`) genau
-    /// ein `NSTextTable` baut.
+    /// `crate::appkit::textmerkmale`, das je Nummer (`tabelle`) genau ein
+    /// `NSTextTable` baut.
     Tabellenzelle {
-        /// Die laufende Nummer der Tabelle im Dokument, von 0 an. Zellen mit
-        /// derselben Nummer gehoeren zu derselben Tabelle.
+        /// Die laufende Nummer des Abschnitts im Dokument, von 0 an. Zellen
+        /// mit derselben Nummer gehoeren zu demselben `NSTextTable`.
+        ///
+        /// **Ein Abschnitt und nicht unbedingt eine ganze Tabelle**: eine
+        /// Markdown-Tabelle mit mehr Datenzeilen als
+        /// `crate::markdown::ABSCHNITTSZEILEN` teilt die Zerlegung in mehrere
+        /// Abschnitte mit je eigener Nummer (Entscheid
+        /// `261101-0015-ab-welcher-groesse-zeigt-die-vorschau-eine-markdown-tabelle-nicht-mehr-als-eine-nstexttable.md`,
+        /// Moeglichkeit 3). Eine Tabelle bis zu dieser Zahl ist genau ein
+        /// Abschnitt.
         tabelle: usize,
-        /// Die Zeile in der Tabelle, von 0 an; 0 ist die Kopfzeile.
+        /// Die Zeile im Abschnitt, von 0 an. Im ersten Abschnitt einer
+        /// Tabelle ist 0 die Kopfzeile; jeder weitere beginnt mit seiner
+        /// ersten Datenzeile bei 0, denn die Kopfzeile steht nur einmal in der
+        /// Quelle und wird nicht wiederholt.
         zeile: usize,
         /// Die Spalte in der Zeile, von 0 an.
         spalte: usize,
