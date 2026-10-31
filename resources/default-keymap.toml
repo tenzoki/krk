@@ -39,7 +39,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 117 Funktionen mit zusammen 118 Kombinationen.
+# Ausgeliefert sind 119 Funktionen mit zusammen 118 Kombinationen.
 #
 # Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
@@ -1174,7 +1174,9 @@ tasten = []
 
 # ── Die Quicknote ────────────────────────────────────────────────────────────
 # Drei Funktionen aus dem Spec
-# `260926-2300_*_spec-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`. Die
+# `260926-2300_*_spec-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`, dazu
+# Strip und Format aus dem Arbeitspaket
+# `261031-1024-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format`. Die
 # nackte F10 ist auf Apple-Tastaturen "Ton aus"; KRK bekommt den Tastencode
 # dann erst mit gehaltener fn-Taste (siehe den Absatz ueber die fn-Taste im
 # Kopf dieser Datei).
@@ -1197,6 +1199,20 @@ tasten = []
 # Ab Werk unbelegt: cmd+a und die Ruecktaste tun in der Quicknote dasselbe,
 # und cmd+return traegt "eintrag_bearbeiten". Erreichbar ist die Funktion ueber
 # ihre Schaltflaeche und das Menue.
+
+[[funktion]]
+id = "quicknote_strip"
+tasten = []
+# Ab Werk unbelegt (E13): ein seltener Befehl, der einen umbrochen
+# eingefuegten Befehl wieder auf eine Zeile bringt. Erreichbar ueber seine
+# Schaltflaeche und das Menue "Editor", in F1 belegbar.
+
+[[funktion]]
+id = "quicknote_format"
+tasten = []
+# Ab Werk unbelegt (E13): ein seltener Befehl, der hart umbrochenen
+# Fliesstext zu Absaetzen zusammenzieht. Erreichbar ueber seine Schaltflaeche
+# und das Menue "Editor", in F1 belegbar.
 
 # ── C3: die Belegungsansicht ─────────────────────────────────────────────────
 
