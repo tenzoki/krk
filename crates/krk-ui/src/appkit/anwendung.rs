@@ -1580,6 +1580,12 @@ define_class!(
             // (Entscheidung 3 des Plans der sechs Felder); was danach kommt,
             // braucht ihn nicht.
             self.schluessel_verwerfen();
+            // Die letzte Sicherung der Quicknote vor dem Sitzungsstand, mit
+            // hoechstens zwei Sekunden Warten (Entscheidung 4c des Plans der
+            // Quicknote-Sicherung).
+            if let Some(editor) = self.ivars().editor.get() {
+                editor.quicknote_abschliessen();
+            }
             // **Kein `sitzung_vormerken()` davor.** Bis zur Runde 7 stand hier
             // eines, und es nahm die Schreibsperre ein zweites Mal: beim
             // Beenden liefen damit zwei Durchgaenge hintereinander, und genau
@@ -12114,16 +12120,19 @@ impl Anwendungsdelegierter {
         true
     }
 
-    /// Strip oder Format an der Quicknote, ueber [`Self::editorbefehl`].
+    /// Strip oder Format an der Quicknote.
+    ///
+    /// **Derselbe Zuschnitt wie [`Self::editorbefehl`], bis auf die Meldung**:
+    /// eine gelungene Umformung zeigt ihr Ergebnis ausgewaehlt in der Flaeche
+    /// und meldet nichts, also antwortet der Editor mit `Option`.
     fn quicknote_umformen(&self, art: Umformung) -> bool {
-        match art {
-            Umformung::Strip => {
-                self.editorbefehl(|editor| editor.quicknote_umformen(Umformung::Strip))
-            }
-            Umformung::Format => {
-                self.editorbefehl(|editor| editor.quicknote_umformen(Umformung::Format))
-            }
+        let Some(editor) = self.ivars().editor.get() else {
+            return false;
+        };
+        if let Some(meldung) = editor.quicknote_umformen(art) {
+            self.editormeldung_zeigen(&meldung);
         }
+        true
     }
 
     /// Fuehrt einen Editorbefehl aus, der genau eine Meldung liefert.

@@ -527,6 +527,7 @@ use std::cell::{Cell, OnceCell, RefCell};
 use std::path::{Path, PathBuf};
 use std::ptr::NonNull;
 use std::rc::Rc;
+use std::time::{Duration, Instant};
 
 use block2::RcBlock;
 use objc2::rc::{Retained, Weak};
@@ -556,8 +557,9 @@ use krk_core::heimordner::schluesselmerker::Schluesselmerker;
 use krk_core::heimordner::tresor::{Oeffnungsmittel, Pin, Schluessel};
 use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
 use krk_core::tasten::Kommando;
+use krk_core::text::datei::Lesehindernis;
 use krk_core::text::{
-    Abweisung, Fund, Markensprung, Treffer, Zeilenindex, Zeilenlage, datei, marke,
+    Abweisung, Fund, Markensprung, Treffer, Zeilenindex, Zeilenlage, datei, glaetten, marke,
 };
 use krk_core::trenntext::{self, Dialekt, Herkunft, Satzindex, Trenntextstand, Zellbereich};
 use krk_core::verzeichnis::Richtung as Sortierrichtung;
@@ -571,7 +573,8 @@ use crate::hervorhebung::{
     Abholung, Darstellungsart, Einfaerbungsstand, Einfaerbungsvorgang, Formatierung, Tafel,
 };
 use crate::kommandos::zulaessigkeit::Editorform;
-use crate::quicknote::Rueckkehr;
+use crate::quicknote::{QUICKNOTEGRENZE, Rueckkehr};
+use crate::quicknotesicherung::{Sicherung, Sicherungsmeldung, Sicherungsstand, Unlesbar};
 use crate::tresorweg;
 
 use super::bereichsleiste::Kommandomelder;
@@ -625,6 +628,8 @@ pub enum Umformung {
 ///  Ausgang von „PIN ändern"      crate::editormodell::Pinwechselausgang (5.5 derselben)
 ///  Ausgang des Kopierens         crate::quicknote::kopieren (Schritt 3 der Quicknote)
 ///  Grenze der Quicknote          crate::quicknote::aenderung_passt (Schritt 4 derselben)
+///  Strip und Format              crate::appkit::editor::umgeformt (Schritt 7 der Sicherung)
+///  Sicherung der Quicknote       crate::quicknotesicherung::Sicherungsmeldung (dieselbe)
 /// ```
 ///
 /// **Die Tafel zaehlt Ausloeser, die Aufzaehlung darunter zaehlt Varianten, und
@@ -794,6 +799,19 @@ pub enum Editormeldung {
     /// Eine Aenderung haette den Puffer der Quicknote ueber ihre Grenze
     /// gebracht und ist unterblieben (Q3 des Spec der Quicknote).
     QuicknoteZuGross,
+    /// Die Sicherung der Quicknote findet den Notizordner nicht und schreibt
+    /// nichts, bis er steht (Entscheidung 2 des Plans der Sicherung); `ort`
+    /// ist der Notizordner, wie die Statuszeile ihn nennt, `None` ohne
+    /// Heimordner.
+    QuicknoteOrdnerFehlt { ort: Option<String> },
+    /// `scratch.txt` wurde ausserhalb der Quicknote geaendert; die Sicherung
+    /// ist bis zum naechsten Start gesperrt (Entscheidung 6 desselben Plans).
+    QuicknoteFremdGeaendert,
+    /// `scratch.txt` liess sich nicht lesen; die Sicherung ist bis zum
+    /// naechsten Start gesperrt (Entscheidung 7 desselben Plans).
+    QuicknoteNichtGelesen(Unlesbar),
+    /// Das Schreiben von `scratch.txt` ist gescheitert; `fehler` vom System.
+    QuicknoteNichtGesichert { fehler: String },
     /// Eine CSV- oder TSV-Datei ist geoeffnet, und so liest der Editor sie:
     /// das Trennzeichen und woher die Wahl kommt (E2 des Plans der
     /// CSV-Tabelle).
@@ -994,6 +1012,20 @@ impl Editormeldung {
             }
             Self::QuicknoteNichtKopiert => text(Text::QuicknoteNichtKopiert).to_owned(),
             Self::QuicknoteZuGross => text(Text::QuicknoteZuGross).to_owned(),
+            Self::QuicknoteOrdnerFehlt { ort: Some(ort) } => {
+                satz(Text::QuicknoteOrdnerFehlt, &[("ort", ort)])
+            }
+            Self::QuicknoteOrdnerFehlt { ort: None } => {
+                text(Text::QuicknoteKeinNotizordner).to_owned()
+            }
+            Self::QuicknoteFremdGeaendert => text(Text::QuicknoteFremdGeaendert).to_owned(),
+            Self::QuicknoteNichtGelesen(grund) => satz(
+                Text::QuicknoteNichtGelesen,
+                &[("grund", &text(grund_der_unlesbarkeit(*grund)))],
+            ),
+            Self::QuicknoteNichtGesichert { fehler } => {
+                satz(Text::QuicknoteNichtGesichert, &[("fehler", fehler)])
+            }
             Self::Trennzeichen(dialekt) => satz(
                 Text::TrenntextTrennzeichen,
                 &[
@@ -2225,6 +2257,59 @@ const AUFBAUGROESSE: NSSize = NSSize::new(460.0, 400.0);
 /// gezeichnet wird.
 const LADETAKT: NSTimeInterval = 1.0 / 60.0;
 
+/// Wie lange nach der letzten Aenderung die Quicknote gesichert wird
+/// (Entscheidung 4a des Plans der Sicherung).
+const QUICKNOTE_RUHE: Duration = Duration::from_secs(1);
+
+/// Wie lange das Beenden hoechstens auf die letzte Sicherung der Quicknote
+/// wartet (Entscheidung 4c desselben Plans); ein haengender Notizordner haelt
+/// das Beenden nicht laenger auf.
+const QUICKNOTE_ABSCHLUSS: Duration = Duration::from_secs(2);
+
+/// Warum `scratch.txt` sich nicht lesen liess, als Schluessel der
+/// Sprachtabelle; vollstaendig und ohne Auffangzweig (Entscheidung 7 des Plans
+/// der Sicherung).
+///
+/// `Platzhalter` und `Abgebrochen` erreicht das Lesen unter
+/// `Platzhalterregel::Laden` und ohne Abbruchfrage nicht; sie stehen beim
+/// Lesefehler, damit ein spaeter erreichbarer Grund einen Satz hat.
+fn grund_der_unlesbarkeit(grund: Unlesbar) -> Text {
+    match grund {
+        Unlesbar::Hindernis(Lesehindernis::ZuGross) => Text::QuicknoteGrundZuGross,
+        Unlesbar::Hindernis(Lesehindernis::KeineDatei) => Text::EditorKeineGewoehnlicheDatei,
+        Unlesbar::Hindernis(Lesehindernis::Deskriptormangel) => {
+            Text::EditorGeheimnisseKeinDateizugriff
+        }
+        Unlesbar::Hindernis(
+            Lesehindernis::Fehler | Lesehindernis::Platzhalter | Lesehindernis::Abgebrochen,
+        ) => Text::QuicknoteGrundLesefehler,
+        Unlesbar::KeinText => Text::QuicknoteGrundKeinText,
+    }
+}
+
+/// Was Strip oder Format aus `vorher` machen; `None`, wenn die Umformung
+/// nichts aendert (Entscheidung 12 des Plans der Sicherung). Rein und ohne
+/// AppKit, damit die Regel „unveraendert heisst keine Handlung" ohne Flaeche
+/// pruefbar ist.
+fn umgeformt(art: Umformung, vorher: &str) -> Option<String> {
+    let nachher = match art {
+        Umformung::Strip => glaetten::befehl(vorher),
+        Umformung::Format => glaetten::fliesstext(vorher),
+    };
+    (nachher != vorher).then_some(nachher)
+}
+
+/// Die Sicherung der Quicknote samt dem Ort, den ihre Meldungen nennen.
+///
+/// **Beide gelten ab dem ersten F10 fuer den ganzen Prozess** (Entscheidung 8
+/// des Plans der Sicherung): „Ort waehlen…" wechselt den Notizordner fuer F2
+/// sofort, die Quicknote sichert bis zum naechsten Start weiter am alten Ort.
+struct Quicknoteablage {
+    sicherung: Sicherung,
+    /// Der Notizordner, wie die Statuszeile ihn nennt; `None` ohne Heimordner.
+    ort: Option<String>,
+}
+
 /// Das Zeichen, das einen ungesicherten Stand am Kopf anzeigt (C4).
 ///
 /// **Vor dem Namen und nicht dahinter.** Der Kopf ist so breit wie der
@@ -3000,6 +3085,14 @@ pub struct EditorIvars {
     /// [`Editorbereich::quicknote_zeigen`], genommen allein von
     /// [`Editorbereich::quicknote_verlassen`].
     quicknote_rueckkehr: Cell<Option<Rueckkehr>>,
+    /// Die Sicherung der Quicknote in `scratch.txt`, gestartet beim Bau der
+    /// Flaeche in [`Editorbereich::quicknote`]; leer, solange die Quicknote nie
+    /// offen war oder der Faden nicht starten konnte.
+    quicknote_ablage: OnceCell<Quicknoteablage>,
+    /// Wann die naechste Sicherung der Quicknote faellig ist; gesetzt von
+    /// [`Editorbereich::quicknote_vormerken`], genommen von
+    /// [`Editorbereich::quicknote_sichern`].
+    quicknote_faellig: Cell<Option<Instant>>,
     /// Was der Editor ueber die gehaltene CSV- oder TSV-Datei weiss: ihr
     /// Dialekt und die zuletzt gebildete Sicht (Schritt 3 des Plans der
     /// CSV-Tabelle); `None` fuer jede andere Datei.
@@ -3179,6 +3272,8 @@ impl Editorbereich {
             kommandomelder: RefCell::new(None),
             quicknote: OnceCell::new(),
             quicknote_rueckkehr: Cell::new(None),
+            quicknote_ablage: OnceCell::new(),
+            quicknote_faellig: Cell::new(None),
             trenntext: RefCell::new(None),
             trenntextgeneration: Cell::new(0),
             trenntextpfad: RefCell::new(None),
@@ -3400,13 +3495,29 @@ impl Editorbereich {
             .is_some_and(|quicknote| ersthelfer.isEqual(Some(quicknote.textflaeche())))
     }
 
-    /// Die Flaeche der Quicknote; beim ersten Ruf gebaut.
+    /// Die Flaeche der Quicknote; beim ersten Ruf gebaut, und mit ihr startet
+    /// die Sicherung (Entscheidung 3 des Plans der Sicherung).
     ///
     /// Deckungsgleich mit der Rolle der Textflaeche und als Unteransicht des
     /// Bereichs, ausgeblendet; zu sehen ist sie erst nach
-    /// [`Self::flaeche_waehlen`].
+    /// [`Self::flaeche_waehlen`]. **Die Sicherung startet nach dem Bau und
+    /// nicht in ihm**, damit eine Meldung beim Start nicht in eine Zelle
+    /// zurueckfuehrt, die noch initialisiert wird.
     fn quicknote(&self) -> &Quicknote {
-        self.ivars().quicknote.get_or_init(|| {
+        if let Some(quicknote) = self.ivars().quicknote.get() {
+            return quicknote;
+        }
+        let gebaut = self.quicknote_bauen();
+        let quicknote = self.ivars().quicknote.get_or_init(|| gebaut);
+        self.quicknote_sicherung_starten(quicknote);
+        quicknote
+    }
+
+    /// Baut die Flaeche der Quicknote mit ihren drei Meldern, **nicht
+    /// bearbeitbar**, bis die Sicherung den Inhalt von `scratch.txt` geliefert
+    /// hat.
+    fn quicknote_bauen(&self) -> Retained<Quicknote> {
+        {
             let quicknote = Quicknote::bauen(self.mtm(), self.ivars().textrolle.frame());
             self.ivars().bereich.addSubview(quicknote.rolle());
             // Ein Klick auf eine Schaltflaeche geht als Kommando durch den
@@ -3426,8 +3537,162 @@ impl Editorbereich {
                     editor.meldung_melden(Editormeldung::QuicknoteZuGross);
                 }
             }));
+            // Jede Aenderung merkt eine Sicherung vor (Entscheidung 4a).
+            let schwach = Weak::from_retained(&self.retain());
+            quicknote.aenderungsmelder_setzen(Box::new(move || {
+                if let Some(editor) = schwach.load() {
+                    editor.quicknote_vormerken();
+                }
+            }));
+            quicknote.bearbeitbar_setzen(false);
             quicknote
+        }
+    }
+
+    /// Startet die Sicherung fuer `scratch.txt` im geltenden Notizordner und
+    /// gibt ihr den Auftrag „Lesen"; die Antwort holt der Takt ab
+    /// ([`Self::quicknote_sicherung_einziehen`]).
+    ///
+    /// **Kein Systemaufruf**: der Pfad ist ein `join` an den geschriebenen Ort,
+    /// und ob Ordner und Datei stehen, fragt der Faden. Startet der Faden
+    /// nicht, bleibt die Quicknote fluechtig wie vor der Sicherung, wird
+    /// bearbeitbar und sagt es.
+    fn quicknote_sicherung_starten(&self, quicknote: &Quicknote) {
+        let heim = heimgriff::lesen(&self.ivars().heim);
+        let pfad = heim.as_ref().map(|heim| heim.quicknotedatei());
+        let ort = heim.as_ref().map(|heim| heim.anzeigename().to_owned());
+        match Sicherung::starten(pfad, QUICKNOTEGRENZE) {
+            Ok(sicherung) => {
+                // `let _ =`: die Zelle ist leer, denn dieser Weg laeuft allein
+                // nach dem ersten Bau der Flaeche.
+                let _ = self
+                    .ivars()
+                    .quicknote_ablage
+                    .set(Quicknoteablage { sicherung, ort });
+                self.takt_starten();
+            }
+            Err(fehler) => {
+                quicknote.bearbeitbar_setzen(true);
+                self.meldung_melden(Editormeldung::QuicknoteNichtGesichert {
+                    fehler: fehler.to_string(),
+                });
+            }
+        }
+    }
+
+    /// Merkt eine Sicherung der Quicknote eine Sekunde spaeter vor und startet
+    /// den Takt; gerufen vom Aenderungsmelder der Flaeche (Entscheidung 4a).
+    ///
+    /// **Nichts wird vorgemerkt, solange die Sicherung keine Auftraege nimmt**:
+    /// vor der Antwort auf das Lesen und nach einer Sperre.
+    fn quicknote_vormerken(&self) {
+        let Some(ablage) = self.ivars().quicknote_ablage.get() else {
+            return;
+        };
+        if !ablage.sicherung.stand().nimmt_auftraege() {
+            return;
+        }
+        self.ivars()
+            .quicknote_faellig
+            .set(Some(Instant::now() + QUICKNOTE_RUHE));
+        self.takt_starten();
+    }
+
+    /// Gibt eine vorgemerkte Sicherung sofort als Schreibauftrag mit dem ganzen
+    /// Text; ohne Vormerkung tut es nichts (Entscheidung 4b).
+    fn quicknote_sichern(&self) {
+        if self.ivars().quicknote_faellig.take().is_none() {
+            return;
+        }
+        let (Some(ablage), Some(quicknote)) = (
+            self.ivars().quicknote_ablage.get(),
+            self.ivars().quicknote.get(),
+        ) else {
+            return;
+        };
+        // `let _ =`: abgewiesen heisst ungelesen oder gesperrt, und die
+        // Meldung dazu ist schon gegangen oder kommt mit dem Lesen.
+        let _ = ablage.sicherung.schreiben(quicknote.text());
+        self.takt_starten();
+    }
+
+    /// Der vierte Teil von [`Self::einziehen`]: eine faellige Sicherung geben,
+    /// die Meldungen der Sicherung abholen, den gelesenen Inhalt einsetzen und
+    /// die Flaeche freigeben.
+    ///
+    /// Jede Meldung geht an die Senke, so wie sie kommt: der Faden meldet je
+    /// Uebergang einmal und nicht je Auftrag (Modulkopf von
+    /// [`crate::quicknotesicherung`]).
+    fn quicknote_sicherung_einziehen(&self) {
+        let Some(ablage) = self.ivars().quicknote_ablage.get() else {
+            return;
+        };
+        if self
+            .ivars()
+            .quicknote_faellig
+            .get()
+            .is_some_and(|faellig| Instant::now() >= faellig)
+        {
+            self.quicknote_sichern();
+        }
+        let vorher = ablage.sicherung.stand();
+        for meldung in ablage.sicherung.einziehen() {
+            let anzeige = match meldung {
+                Sicherungsmeldung::Gelesen(text) => {
+                    if let Some(quicknote) = self.ivars().quicknote.get() {
+                        quicknote.einsetzen_ohne_rueckgaengig(&text);
+                    }
+                    None
+                }
+                Sicherungsmeldung::Fehlt | Sicherungsmeldung::Gesichert => None,
+                Sicherungsmeldung::NichtGelesen(grund) => {
+                    Some(Editormeldung::QuicknoteNichtGelesen(grund))
+                }
+                Sicherungsmeldung::OrdnerFehlt => Some(Editormeldung::QuicknoteOrdnerFehlt {
+                    ort: ablage.ort.clone(),
+                }),
+                Sicherungsmeldung::FremdGeaendert => Some(Editormeldung::QuicknoteFremdGeaendert),
+                Sicherungsmeldung::Gescheitert(fehler) => {
+                    Some(Editormeldung::QuicknoteNichtGesichert { fehler })
+                }
+            };
+            if let Some(anzeige) = anzeige {
+                self.meldung_melden(anzeige);
+            }
+        }
+        // Freigegeben wird mit dem ersten Stand nach dem Lesen, auch wenn der
+        // Faden ohne Antwort gefallen ist und die Sicherung sich gesperrt hat.
+        if vorher == Sicherungsstand::Ungelesen
+            && ablage.sicherung.stand() != Sicherungsstand::Ungelesen
+            && let Some(quicknote) = self.ivars().quicknote.get()
+        {
+            quicknote.bearbeitbar_setzen(true);
+        }
+    }
+
+    /// Ob die Sicherung der Quicknote den Takt noch braucht: eine Antwort auf
+    /// das Lesen steht aus, eine Sicherung ist faellig oder unterwegs.
+    fn quicknote_sicherung_laeuft(&self) -> bool {
+        self.ivars().quicknote_ablage.get().is_some_and(|ablage| {
+            self.ivars().quicknote_faellig.get().is_some()
+                || ablage.sicherung.unterwegs()
+                || ablage.sicherung.stand() == Sicherungsstand::Ungelesen
         })
+    }
+
+    /// Gibt beim Beenden die letzte Sicherung und wartet hoechstens
+    /// [`QUICKNOTE_ABSCHLUSS`] auf den Faden (Entscheidung 4c).
+    ///
+    /// **Die eine Stelle der Quicknote, die auf dem Hauptfaden wartet**, und
+    /// die benannte Ausnahme der Probe
+    /// `die_quicknote_stellt_auf_dem_hauptfaden_keinen_systemaufruf`.
+    pub fn quicknote_abschliessen(&self) {
+        self.quicknote_sichern();
+        if let Some(ablage) = self.ivars().quicknote_ablage.get() {
+            // `let _ =`: beim Beenden gibt es keine Statuszeile mehr, und ein
+            // Faden, der nicht rechtzeitig quittiert, haelt es nicht auf.
+            let _ = ablage.sicherung.abschliessen(QUICKNOTE_ABSCHLUSS);
+        }
     }
 
     /// Der ganze Text der Quicknote; leer, solange sie nie offen war.
@@ -3440,15 +3705,27 @@ impl Editorbereich {
     }
 
     /// Strip oder Format am Text der Quicknote (Entscheidung 12 des Plans
-    /// `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`).
+    /// `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`):
+    /// an der Auswahl, sonst am ganzen Text, als eine Handlung, die `cmd+z`
+    /// zuruecknimmt, und danach ist das Ergebnis ausgewaehlt.
     ///
-    /// **Bis Schritt 7 jenes Plans aendert dieser Weg nichts** und meldet das
-    /// auch so; Schritt 5 legt allein die Signatur an, damit der
-    /// Ausfuehrungszweig beim Anwendungsdelegierten schon uebersetzt. Erreichbar
-    /// ist er bis dahin ueber das Hauptmenue, sobald die Auslieferungsbelegung
-    /// die zwei Funktionen fuehrt (Schritt 6).
-    pub fn quicknote_umformen(&self, art: Umformung) -> Editormeldung {
-        Editormeldung::QuicknoteUnveraendert(art)
+    /// Antwortet mit der Meldung „nichts zu aendern", wenn die Umformung den
+    /// Text gleich laesst; dann bleibt der Puffer unberuehrt und der
+    /// Rueckgaengigstapel ohne leeren Eintrag. **Nach einer Ersetzung
+    /// antwortet sie `None`**: das Ergebnis steht ausgewaehlt in der Flaeche,
+    /// und eine Ersetzung, die die Grenze abweist, hat ihre Meldung schon
+    /// ueber den Grenzmelder gegeben.
+    #[must_use = "die Meldung „nichts zu aendern“ gehoert in die Statuszeile"]
+    pub fn quicknote_umformen(&self, art: Umformung) -> Option<Editormeldung> {
+        let quicknote = self.ivars().quicknote.get()?;
+        let (bereich, vorher) = quicknote.auswahl_oder_alles();
+        let Some(nachher) = umgeformt(art, &vorher) else {
+            return Some(Editormeldung::QuicknoteUnveraendert(art));
+        };
+        // `let _ =`: abgewiesen hat die Grenze, deren Melder es sagt, oder die
+        // Flaeche vor dem Einlesen, an der noch nichts zu aendern ist.
+        let _ = quicknote.ersetzen(bereich, &nachher);
+        None
     }
 
     /// Leert den Puffer der Quicknote als zuruecknehmbare Handlung (A13).
@@ -3498,6 +3775,9 @@ impl Editorbereich {
     #[must_use = "die Rueckkehr sagt, was am Rand und beim Fokus zurueckzustellen ist"]
     pub fn quicknote_verlassen(&self) -> Option<Rueckkehr> {
         let rueckkehr = self.ivars().quicknote_rueckkehr.take()?;
+        // Eine vorgemerkte Sicherung geht sofort (Entscheidung 4b des Plans
+        // der Sicherung), auf jedem Weg hinaus.
+        self.quicknote_sichern();
         self.flaeche_waehlen();
         self.kopf_nachziehen();
         Some(rueckkehr)
@@ -5025,10 +5305,11 @@ impl Editorbereich {
         self.ladeausgang_einziehen();
         self.einfaerbung_einziehen();
         self.pinwechsel_einziehen();
+        self.quicknote_sicherung_einziehen();
         let faeden_ruhen = {
             let modell = self.ivars().modell.borrow();
             !modell.laedt_noch() && !modell.pin_wechselt()
-        };
+        } && !self.quicknote_sicherung_laeuft();
         if faeden_ruhen && self.ivars().einfaerbung.borrow().is_none() {
             self.takt_beenden();
         }
@@ -9233,6 +9514,132 @@ mod tests {
             esc_regel(Editorform::Quicknote, None),
             Editorform::Quicknote
         );
+    }
+
+    /// Die Quicknote stellt auf dem Hauptfaden keinen Systemaufruf an die
+    /// Platte (Entscheidung 15 des Plans
+    /// `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`):
+    /// Lesen und Schreiben von `scratch.txt` laufen auf dem Faden
+    /// `krk-quicknote`.
+    ///
+    /// Gelesen werden die Ruempfe der Wege des Editorbereichs, die die
+    /// Quicknote bauen, ihre Sicherung starten, vormerken, geben und abholen,
+    /// sie verlassen und umformen, und die Codezeilen von
+    /// `appkit/quicknote.rs` vor ihrem Pruefmodul; in keinem steht `std::fs`,
+    /// `fs::`, `File::`, `metadata(`, `datei::` oder `Stempel::von_pfad`.
+    /// **Die eine benannte Ausnahme ist `quicknote_abschliessen`**, das beim
+    /// Beenden hoechstens zwei Sekunden auf den Faden wartet; die Probe liest
+    /// es nicht.
+    ///
+    /// **Was sie nicht sieht:** einen Systemaufruf in einer tiefer gerufenen
+    /// Funktion einer anderen Datei, etwa in `Sicherung::schreiben` (der
+    /// heute allein einen Kanal beschickt), und einen Weg, der unter anderem
+    /// Namen an diesen Ruempfen vorbei auf die Platte geht.
+    #[test]
+    fn die_quicknote_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+
+        let nadeln = [
+            concat!("std::", "fs"),
+            concat!("fs", "::"),
+            concat!("File", "::"),
+            concat!("metadata", "("),
+            concat!("datei", "::"),
+            concat!("Stempel::", "von_pfad"),
+        ];
+        let editor = datei("krk-ui/src/appkit/editor.rs");
+        let mut gelesen: Vec<(String, String)> = [
+            "quicknote",
+            "quicknote_bauen",
+            "quicknote_sicherung_starten",
+            "quicknote_vormerken",
+            "quicknote_sichern",
+            "quicknote_sicherung_einziehen",
+            "quicknote_sicherung_laeuft",
+            "quicknote_verlassen",
+            "quicknote_umformen",
+        ]
+        .iter()
+        .map(|name| ((*name).to_owned(), rumpf(&editor, name)))
+        .collect();
+        let flaeche = datei("krk-ui/src/appkit/quicknote.rs");
+        let (code, _) = flaeche
+            .split_once(concat!("#[cfg(test)]\nmod ", "tests {"))
+            .expect("das Pruefmodul steht am Fuss der Datei");
+        let code: String = crate::quellbaum::codezeilen(code)
+            .collect::<Vec<_>>()
+            .join("\n");
+        gelesen.push(("appkit/quicknote.rs".to_owned(), code));
+        for (wo, rumpf) in &gelesen {
+            for nadel in nadeln {
+                assert!(
+                    !rumpf.contains(nadel),
+                    "{wo} nennt {nadel} und fragt damit auf dem Hauptfaden die Platte"
+                );
+            }
+        }
+    }
+
+    /// Vor dem Einlesen ist die Flaeche der Quicknote nicht bearbeitbar, und
+    /// frei wird sie erst, wenn die Sicherung den Stand nach dem Lesen kennt
+    /// (Entscheidung 3 des Plans der Sicherung).
+    ///
+    /// **Am Quelltext und nicht an einer Flaeche**, aus dem Grund ueber den
+    /// Proben des Umbauwegs: eine `NSTextView`, deren Text sich aendert, laesst
+    /// sich unter `libtest` nicht fahren (am 261031 wieder gemessen: der
+    /// Prueflauf haengt). Was sie nicht sieht, ist, ob AppKit eine nicht
+    /// bearbeitbare Flaeche wirklich unberuehrt laesst; das ist am 261031 im
+    /// laufenden Programm gemessen
+    /// (`messungen/261031-1300-quicknote-textdidchange.txt`).
+    #[test]
+    fn vor_dem_einlesen_ist_die_flaeche_nicht_bearbeitbar() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        let bauen = rumpf(&quelle, "quicknote_bauen");
+        assert!(
+            bauen.contains("quicknote.bearbeitbar_setzen(false)"),
+            "die Quicknote entsteht bearbeitbar"
+        );
+        let einziehen = rumpf(&quelle, "quicknote_sicherung_einziehen");
+        let ungelesen = einziehen
+            .find("vorher == Sicherungsstand::Ungelesen")
+            .expect("die Freigabe fragt nicht nach dem Stand vor dem Abholen");
+        let frei = einziehen
+            .find("quicknote.bearbeitbar_setzen(true)")
+            .expect("die Flaeche wird nach dem Lesen nicht frei");
+        assert!(ungelesen < frei);
+        let eingesetzt = einziehen
+            .find("quicknote.einsetzen_ohne_rueckgaengig(&text)")
+            .expect("der gelesene Text wird nicht eingesetzt");
+        assert!(
+            eingesetzt < frei,
+            "die Flaeche wird frei, bevor der Text steht"
+        );
+    }
+
+    /// Eine Umformung, die nichts aendert, ergibt keine Ersetzung und damit
+    /// keinen leeren Rueckgaengigeintrag (Entscheidung 12 des Plans der
+    /// Sicherung): `umgeformt` antwortet `None`, und `quicknote_umformen`
+    /// kehrt dann mit der Meldung zurueck, bevor es `ersetzen` ruft.
+    #[test]
+    fn eine_umformung_ohne_aenderung_legt_keinen_rueckgaengigeintrag_an() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+
+        assert_eq!(umgeformt(Umformung::Strip, "ls -la"), None);
+        assert_eq!(umgeformt(Umformung::Format, "Ein Satz.\n"), None);
+        assert_eq!(
+            umgeformt(Umformung::Strip, "  ls -la  \n"),
+            Some("ls -la".to_owned())
+        );
+        let quelle = rumpf(&datei("krk-ui/src/appkit/editor.rs"), "quicknote_umformen");
+        let unveraendert = quelle
+            .find("Editormeldung::QuicknoteUnveraendert(art)")
+            .expect("die Umformung meldet „nichts zu aendern“ nicht");
+        let ersetzen = quelle
+            .find(concat!("quicknote.", "ersetzen("))
+            .expect("die Umformung ersetzt nicht ueber den einen Weg");
+        assert!(unveraendert < ersetzen);
     }
 
     /// Die Textmarke fragt die Quicknote vor dem Modell (Entscheidung 8 des

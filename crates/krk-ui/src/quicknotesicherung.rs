@@ -839,11 +839,9 @@ mod proben {
     ///   dieser Datei;
     /// - der Name `QUICKNOTEDATEI` steht in keiner Codezeile dieser Kiste, der
     ///   Pfad entsteht also allein ueber `Heimordner::quicknotedatei`;
-    /// - `quicknotedatei(` wird in dieser Kiste hoechstens in
-    ///   `appkit/editor.rs` gerufen, der Stelle, die die Sicherung startet und
-    ///   ihr den Pfad reicht. **Bis Schritt 7 des Plans ruft sie noch niemand**;
-    ///   die Probe verlangt deshalb eine Teilmenge und nicht genau diese eine
-    ///   Datei;
+    /// - `quicknotedatei(` wird in dieser Kiste genau in `appkit/editor.rs`
+    ///   gerufen, der Stelle, die die Sicherung startet und ihr den Pfad
+    ///   reicht, und in keiner Datei sonst;
     /// - diese Datei ruft `datei::sichern`.
     ///
     /// **Was sie nicht sieht:** einen Pfad auf `scratch.txt`, der anders gebaut
@@ -860,6 +858,7 @@ mod proben {
         let ruf = concat!("quicknote", "datei(");
         let schreibweg = concat!("datei::", "sichern(");
         let mut diese_gelesen = false;
+        let mut rufer: Vec<String> = Vec::new();
         for (datei, inhalt) in quelldateien() {
             if !datei.starts_with("krk-ui/src/") {
                 continue;
@@ -878,12 +877,13 @@ mod proben {
             assert!(!nennt(anlegen), "{datei} legt exklusiv an");
             assert!(!nennt(name), "{datei} nennt den Namen der Quicknote-Datei");
             if nennt(ruf) {
-                assert!(
-                    erlaubte_rufer.contains(&datei.as_str()),
-                    "{datei} ruft quicknotedatei"
-                );
+                rufer.push(datei);
             }
         }
         assert!(diese_gelesen, "{diese} steht nicht im Baum");
+        assert_eq!(
+            rufer, erlaubte_rufer,
+            "quicknotedatei wird nicht genau in den erlaubten Dateien gerufen"
+        );
     }
 }

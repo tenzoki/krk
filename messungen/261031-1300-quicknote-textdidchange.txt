@@ -1,0 +1,86 @@
+KRK — Kommt textDidChange: an der Quicknote auch beim Rueckgaengig an?
+=====================================================================
+
+Wozu dieser Lauf
+----------------
+Stoppbedingung des Plans
+`fusion-workbench/work-packages/261031-1024-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format/plans/261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`
+(Abschnitt „Where this work stops“): die Sicherung der Quicknote merkt jede
+Aenderung ueber `textDidChange:` am Delegierten vor
+(`crates/krk-ui/src/appkit/quicknote.rs`, `text_geaendert`). Kaeme die
+Benachrichtigung bei Rueckgaengig oder Wiederholen nicht an, bliebe ein
+zurueckgenommener Stand ungesichert. Unter `libtest` laesst sich eine
+`NSTextView`, deren Text sich aendert, nicht fahren (der Prueflauf haengt), also
+misst ein Wegwerf-Programm im laufenden Prozess.
+
+Bedingungen
+-----------
+Zeitpunkt             2026-10-31, Ortszeit
+hw.model              Mac14,5
+sw_vers               macOS 26.6.2 25G83
+Werkzeug              Apple Swift version 6.4 (swiftlang-6.4.0.34.1 clang-2100.3.34.1)
+Programme             spikes/quicknote-textdidchange/mit_fenster.swift
+                      spikes/quicknote-textdidchange/ohne_schluesselfenster.swift
+Aufruf                spikes/quicknote-textdidchange/starten.sh (Exit 0)
+
+Aufbau
+------
+Wie die Quicknote: eine gewoehnliche `NSTextView`, `allowsUndo`, deren
+Delegierter `undoManagerForTextView:` mit einem eigenen Verwalter beantwortet.
+Gezaehlt werden `textDidChange:` am Delegierten, `NSTextDidChangeNotification`
+in der Mitteilungszentrale, `textView:shouldChangeTextInRange:replacementString:`
+und `NSTextStorageDidProcessEditingNotification`.
+
+- `mit_fenster`: die Flaeche ist Inhalt eines Schluesselfensters einer aktiven
+  Anwendung, getippt wird ueber zwei Tastenereignisse in KRKs Art
+  (`postEvent:atStart:`), dann eine Ersetzung auf dem Weg von
+  `Quicknote::ersetzen` (`breakUndoCoalescing`,
+  `shouldChangeTextInRange:replacementString:`,
+  `replaceCharactersInRange:withString:`, `didChangeText`), dann zweimal
+  Rueckgaengig und einmal Wiederholen am Verwalter des Ersthelfers. Das ist
+  der Weg, den `NSWindow.undo:` nimmt (Messung 260927-0232). Zuletzt wird die
+  Flaeche nicht bearbeitbar geschaltet und dieselbe Ersetzung versucht, dann
+  `setString:` gerufen.
+- `ohne_schluesselfenster`: Gegenprobe ohne Schluesselfenster und ohne
+  Ereignisse, Text ueber `insertText:replacementRange:`.
+
+Protokoll
+---------
+== mit_fenster
+nach zwei Tasten text="ab" textDidChange=2 notif=2 shouldChange=2 storage=2 undoMgrIsOurs=true
+nach ersetzen text="X" textDidChange=3 notif=3 shouldChange=3 storage=3 undoMgrIsOurs=true
+nach undo text="ab" textDidChange=4 notif=4 shouldChange=4 storage=4 undoMgrIsOurs=true
+nach zweitem undo text="" textDidChange=5 notif=5 shouldChange=5 storage=5 undoMgrIsOurs=true
+nach redo text="ab" textDidChange=6 notif=6 shouldChange=6 storage=6 undoMgrIsOurs=true
+nicht bearbeitbar, shouldChangeText=false text="ab" textDidChange=6 notif=6 shouldChange=6 storage=6 undoMgrIsOurs=true
+nach setString text="gelesen" textDidChange=6 notif=6 shouldChange=6 storage=7 undoMgrIsOurs=true
+== ohne_schluesselfenster
+nach insertText text="abc" textDidChange=1 shouldChange=1 canUndo=true
+nach ersetzen text="X" textDidChange=2 shouldChange=2 canUndo=true
+nach undo (um.undo) text="" textDidChange=2 shouldChange=2 canUndo=false
+nach redo text="X" textDidChange=2 shouldChange=2 canUndo=true
+nach undo: ueber die Kette text="X" textDidChange=2 shouldChange=2 canUndo=true
+nach zweitem undo: text="X" textDidChange=2 shouldChange=2 canUndo=true
+nach redo: text="X" textDidChange=2 shouldChange=2 canUndo=true
+
+Befund
+------
+1. Mit Schluesselfenster kommt jede Aenderung als `textDidChange:` an:
+   Tippen, die Ersetzung auf dem Weg von `ersetzen`, jedes Rueckgaengig und
+   das Wiederholen. Die vier Zaehler laufen gleich. **Die Stoppbedingung des
+   Plans ist nicht eingetreten**, und die Vormerkung bleibt an
+   `textDidChange:`.
+2. Ohne Schluesselfenster nimmt der Verwalter die Tipp- und die
+   Ersetzungshandlung als eine Gruppe zurueck, und keiner der zwei Zaehler
+   bewegt sich. Das ist die Lage der Proben unter `libtest` und keine der
+   Quicknote: `cmd+z` und „Rueckgaengig“ im Menue erreichen sie allein mit
+   ihrem Fenster als Schluesselfenster. Wer die Frage an einer Flaeche ohne
+   Fenster misst, misst diesen zweiten Fall.
+3. `setString:` meldet sich nicht als `textDidChange:` (allein der
+   Textspeicher zaehlt es); darauf ruht, dass
+   `Quicknote::einsetzen_ohne_rueckgaengig` nichts vormerkt und
+   `Quicknote::nach_kopie_leeren` selbst melden muss.
+4. Eine nicht bearbeitbare Flaeche beantwortet
+   `shouldChangeTextInRange:replacementString:` mit nein, ohne den
+   Delegierten zu fragen, also nimmt die Quicknote vor dem Einlesen auch ueber
+   `ersetzen` keine Aenderung an.
