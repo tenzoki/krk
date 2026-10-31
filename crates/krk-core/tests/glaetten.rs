@@ -239,25 +239,81 @@ fn format_laesst_einen_einmal_umbrochenen_punkt_und_absatz_als_fortsetzung_stehe
 }
 
 #[test]
-fn singlestrip_haelt_einen_kommentar_bis_zum_ende_der_zeile() {
-    // Die sichere Wahl (Modulkopf): was nach einem Kommentar steht, laeuft
-    // nicht, statt dass der Rest eines umbrochenen Kommentars als Befehl liefe.
+fn singlestrip_nimmt_einen_kommentar_samt_seinen_folgezeilen_heraus() {
+    // Die sichere Wahl (Modulkopf): der Kommentar faellt, damit keine Shell,
+    // die `#` in der Eingabe nicht als Kommentar liest (die zsh von macOS ab
+    // Werk), seine Woerter als Argumente bekommt; die Folgezeilen gehoeren nach
+    // der Annahme „ein Befehl“ zu ihm und fallen mit.
+    assert_eq!(befehl("ls -la # zeigt alle\n  dateien an"), "ls -la");
     let text =
         "ls -la # zeigt alles, auch was das Terminal des Chats beim Kopieren\n  umgebrochen hat";
-    assert_eq!(
-        befehl(text),
-        "ls -la # zeigt alles, auch was das Terminal des Chats beim Kopieren umgebrochen hat"
-    );
-    // Ein Befehl unter einer Kommentarzeile landet im Kommentar, sichtbar.
+    assert_eq!(befehl(text), "ls -la");
+    // Ein Befehl unter einer Kommentarzeile faellt mit: es laeuft weniger,
+    // nie ein Wort, das niemand als Befehl geschrieben hat.
     let text = "# Erst die Abhaengigkeiten und dann die Proben des Kerns bauen\n  cargo build\n  cargo test";
-    assert_eq!(
-        befehl(text),
-        "# Erst die Abhaengigkeiten und dann die Proben des Kerns bauen cargo build cargo test"
-    );
+    assert_eq!(befehl(text), "");
     // Im Kommentar liest der Automat nichts mehr: kein Anfuehrungszeichen,
     // kein Heredoc, kein `\`.
     let text = "ls # don't\n  cat <<EOF \\\n  echo 'x";
-    assert_eq!(befehl(text), "ls # don't cat <<EOF \\ echo 'x");
+    assert_eq!(befehl(text), "ls");
+    // Auf der letzten Zeile, nach einer Fortsetzung und nach dem Ende eines
+    // Heredocs faellt er ebenso, samt dem Leerraum davor.
+    assert_eq!(
+        befehl("cargo build \\\n  --release   # schnell"),
+        "cargo build --release"
+    );
+    assert_eq!(
+        befehl("cargo build \\\n  # schnell\n  --release"),
+        "cargo build"
+    );
+    assert_eq!(
+        befehl("cat <<EOF\n  rumpf\n  EOF\n  # erledigt\n  ls"),
+        "cat <<EOF\nrumpf\nEOF"
+    );
+    // Was ausserhalb kein Kommentar ist, bleibt, und was vor dem `#` steht,
+    // auch hinter `;`.
+    assert_eq!(befehl("echo a;# don't\n  weiter"), "echo a;");
+    assert_eq!(befehl("echo ${#x}\n  $# a#b"), "echo ${#x} $# a#b");
+    assert_eq!(
+        befehl("curl https://example.org/seite#anker\n  -o seite.html"),
+        "curl https://example.org/seite#anker -o seite.html"
+    );
+    assert_eq!(
+        befehl("echo '# kein'\n  \"# auch keiner\""),
+        "echo '# kein' \"# auch keiner\""
+    );
+}
+
+#[test]
+fn ein_kommentar_vor_einem_heredoc_rumpf_reisst_den_rumpf_nicht_mit() {
+    // Die Zeile oeffnet den Heredoc vor dem Kommentar: der Rumpf ist Inhalt,
+    // in jeder Shell, und bleibt samt Endzeile; allein der Kommentar faellt.
+    let text = "cat <<'EOF' > a.txt   # legt die Datei an\n  zeile eins  \n    zeile zwei\n  EOF\n  ls a.txt";
+    assert_eq!(
+        befehl(text),
+        "cat <<'EOF' > a.txt\nzeile eins  \n  zeile zwei\nEOF\nls a.txt"
+    );
+    // Ein Kommentar im Rumpf ist Text des Rumpfs.
+    assert_eq!(
+        befehl("cat <<EOF # an\n  # im rumpf\n  EOF"),
+        "cat <<EOF\n# im rumpf\nEOF"
+    );
+    // Steht er auf der letzten Zeile, bleibt allein, was davor steht.
+    assert_eq!(befehl("cat <<EOF # an"), "cat <<EOF");
+}
+
+#[test]
+fn singlestrip_ist_ohne_kommentar_idempotent() {
+    for text in [
+        "ls -la # zeigt alle\n  dateien an",
+        "# Kommentar\n  cargo build",
+        "cat <<'EOF' > a.txt # legt an\n  zeile  \n  EOF\n  ls",
+        "cargo build \\\n  --release # schnell",
+    ] {
+        let einmal = befehl(text);
+        assert!(!einmal.contains("# "), "Kommentar blieb in {einmal:?}");
+        assert_eq!(befehl(&einmal), einmal, "an {text:?}");
+    }
 }
 
 #[test]
@@ -451,12 +507,9 @@ fn singlestrip_endet_ohne_zeilenumbruch_und_ohne_nachlaufenden_leerraum() {
 fn ein_kommentar_oeffnet_kein_anfuehrungszeichen() {
     let lang = reihe('k', 60);
     // Das Apostroph im Kommentar oeffnet nichts: kein Umbruch bleibt als einer
-    // in Anfuehrung stehen, und der Kommentar haelt die Zeile bis zum Ende.
+    // in Anfuehrung stehen, und der Kommentar faellt samt seinen Folgezeilen.
     let text = format!("ls # don't\n  echo {lang}\n  {}", reihe('m', 63));
-    assert_eq!(
-        befehl(&text),
-        format!("ls # don't echo {lang} {}", reihe('m', 63))
-    );
+    assert_eq!(befehl(&text), "ls");
     // Ein `#` mitten im Wort ist kein Kommentar, und das Apostroph danach
     // oeffnet eine Anfuehrung.
     let text = format!("echo a#'b\n  {lang}'");
@@ -465,12 +518,14 @@ fn ein_kommentar_oeffnet_kein_anfuehrungszeichen() {
 
 #[test]
 fn die_beispiele_der_anleitung_stimmen() {
-    // `HowTo.md`, Abschnitt „Singlestrip und Format“: beide Beispiele woertlich.
+    // `HowTo.md`, Abschnitt „Singlestrip und Format“: jedes Beispiel woertlich.
     let strip = "cd ~/Projekte/krk && export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo test\n  --workspace -- --skip appkit:: && cargo clippy --workspace --all-targets\n  -- -D warnings\n";
     assert_eq!(
         befehl(strip),
         "cd ~/Projekte/krk && export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo test --workspace -- --skip appkit:: && cargo clippy --workspace --all-targets -- -D warnings"
     );
+    let kommentar = "ls -la # zeigt alle\n  dateien an\n";
+    assert_eq!(befehl(kommentar), "ls -la");
     let format = "Das ist ein langer Absatz aus dem Chat, den das Terminal bei seiner Breite\n  umgebrochen hat.\n\n  Eine Überschrift\n  - Ein Punkt, der ebenfalls so lang ist, dass das Terminal ihn umbrechen\n    musste.\n  - Ein kurzer Punkt.\n";
     assert_eq!(
         fliesstext(format),

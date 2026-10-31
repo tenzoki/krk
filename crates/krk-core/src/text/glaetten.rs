@@ -134,17 +134,33 @@
 //! einem Leerzeichen**, ohne Breitenschaetzung, und eine Leerzeile ausserhalb
 //! faellt dabei mit.
 //!
-//! **Ein Kommentar haelt die Zeile bis zu ihrem Ende**: endet eine Zeile
-//! ausserhalb in einem Kommentar, wird auch sie verbunden, und alles danach
-//! steht im Kommentar, ohne dass der Automat es liest. Das ist die sichere
-//! Wahl, und der Grund ist die Annahme selbst: in einem einzelnen Befehl ist
-//! ein Kommentar sein Ende oder eine Zeile davor, und ein Umbruch darin stammt
-//! vom Terminal. Liesse Singlestrip den Umbruch nach dem Kommentar stehen,
-//! liefe der umbrochene Rest eines Kommentars beim Einfuegen als Befehl, mit
-//! Woertern, die niemand als Befehl geschrieben hat. Verbunden laeuft
-//! schlimmstenfalls nichts: ein Befehl unter einer Kommentarzeile landet im
-//! Kommentar, und die Ausgabe zeigt das, denn sie ist eine Zeile, die mit `#`
-//! beginnt. Bis zum 261031 blieb der Umbruch nach einem Kommentar stehen.
+//! **Ein Kommentar faellt heraus**, ab dem `#`, das ausserhalb jeder Anfuehrung
+//! und jedes Heredoc-Rumpfs am Wortanfang steht, samt dem Leerraum davor; ein
+//! `#` mitten im Wort, in `${#x}` oder `$#` und in einer Adresse mit Anker
+//! beginnt keinen. Mit ihm fallen alle Zeilen danach, denn in einem einzelnen
+//! Befehl ist ein Kommentar sein Ende oder eine Zeile davor, und ein Umbruch
+//! darin stammt vom Terminal. Herausgenommen und nicht stehen gelassen wird er,
+//! weil seine Bedeutung an der Shell haengt: die zsh von macOS liest `#` in der
+//! interaktiven Eingabe ab Werk nicht als Kommentar (ohne `setopt
+//! interactivecomments`), und jedes Wort dahinter, auch jedes aus den
+//! angehaengten Folgezeilen, waere dort ein Argument des Befehls davor. Ohne
+//! Kommentar liest jede Shell dasselbe. Steht die Kommentarzeile ueber dem
+//! Befehl, faellt der Befehl mit, und die Ausgabe ist leer oder traegt allein,
+//! was vor dem `#` stand: beim Einfuegen laeuft dann weniger, nie etwas, das
+//! niemand als Befehl geschrieben hat, und `cmd+z` holt den Text zurueck. Bis
+//! zum 261031 blieb der Kommentar stehen und hielt die Folgezeilen, davor blieb
+//! der Umbruch nach ihm stehen
+//! (`261031-1344-singlestrip-verlaesst-sich-auf-kommentare-die-zsh-ab-werk-nicht-kennt.md`).
+//!
+//! **Die eine Ausnahme ist ein Heredoc, den die Zeile vor dem Kommentar
+//! oeffnet** (`cat <<EOF > a.txt # legt an`): sein Rumpf beginnt in jeder Shell
+//! mit der naechsten Zeile, gleich was der Kommentar sagt, und ist Inhalt.
+//! Dort faellt allein der Kommentar bis zum Ende seiner Zeile, und Rumpf und
+//! Endzeile bleiben wie jeder andere Rumpf. Die sichere Wahl, denn den Rumpf
+//! mitzunehmen haette den Befehl ohne seine Eingabe gelassen, und die Shell
+//! wartete auf eine Endzeile, die nicht kommt; ob die Zeilen danach der
+//! umbrochene Rest des Kommentars waren, ist nicht entscheidbar, und die Shell
+//! liest sie als Rumpf, also auch Singlestrip.
 //!
 //! Singlestrip ist idempotent bis auf einen Fall, der nicht entscheidbar ist:
 //! traegt nach dem ersten Lauf jede Zeile ab der zweiten noch Einrueckung,
@@ -317,8 +333,6 @@ pub fn befehl(eingabe: &str) -> String {
     let mut aus = String::new();
     let mut lage = Lage::Normal;
     let mut wartend: VecDeque<Heredoc> = VecDeque::new();
-    // Ob ein Kommentar die Ausgabezeile bis zu ihrem Ende haelt (Modulkopf).
-    let mut im_kommentar = false;
 
     for (nummer, (zeile, roh)) in bereinigt.iter().zip(&roh).enumerate() {
         // Eine Zeile, die ausserhalb jeder Anfuehrung und jedes Heredoc-Rumpfs
@@ -335,50 +349,60 @@ pub fn befehl(eingabe: &str) -> String {
             // Umbruch wie jeder andere; der Trenner davor steht schon.
             continue;
         }
+
+        // Ob der nachlaufende Leerraum dieser Zeile Inhalt ist: im Rumpf eines
+        // Heredocs und am Ende in einer offenen Anfuehrung.
+        let (trenner, leerraum_bleibt) = match &lage {
+            Lage::Heredoc(heredoc) => {
+                // Die Endzeile eines Heredocs steht immer auf eigener Zeile
+                // und ohne nachlaufenden Leerraum, damit sie ihn beendet;
+                // der Rumpf ist Inhalt.
+                if heredoc.endet_mit(zeile) {
+                    lage = wartend.pop_front().map_or(Lage::Normal, Lage::Heredoc);
+                    (Trenner::Umbruch, false)
+                } else {
+                    (Trenner::Umbruch, true)
+                }
+            }
+            Lage::Normal | Lage::Einfach | Lage::Doppelt | Lage::Ansi => {
+                let ende = zeile_lesen(zeile, &mut lage, &mut wartend);
+                if let Zeilenende::Kommentar(stelle) = ende {
+                    // Der Kommentar faellt samt dem Leerraum davor (Modulkopf).
+                    aus.push_str(&zeile[..stelle]);
+                    let behalten = aus.trim_end().len();
+                    aus.truncate(behalten);
+                    if let Some(heredoc) = wartend.pop_front() {
+                        // Ein Heredoc, den die Zeile vor dem Kommentar
+                        // geoeffnet hat: sein Rumpf ist Inhalt und bleibt.
+                        if letzte {
+                            break;
+                        }
+                        lage = Lage::Heredoc(heredoc);
+                        aus.push('\n');
+                        continue;
+                    }
+                    // Sonst gehoert alles danach zum Kommentar und faellt mit.
+                    break;
+                }
+                if let Some(heredoc) = wartend.pop_front() {
+                    lage = Lage::Heredoc(heredoc);
+                    (Trenner::Umbruch, false)
+                } else if !matches!(lage, Lage::Normal) {
+                    (Trenner::Umbruch, true)
+                } else if ende == Zeilenende::Fortsetzung {
+                    (Trenner::Fortsetzung, false)
+                } else {
+                    (Trenner::Verbinden, false)
+                }
+            }
+        };
         if letzte {
             // Die Ausgabe endet ohne nachlaufenden Leerraum (Modulkopf).
             aus.push_str(zeile);
             break;
         }
-        let folgezeile = bereinigt[nummer + 1];
-
-        // Ob der nachlaufende Leerraum dieser Zeile Inhalt ist: im Rumpf eines
-        // Heredocs und am Ende in einer offenen Anfuehrung.
-        let (trenner, leerraum_bleibt) = if im_kommentar {
-            // Was nach dem Kommentarzeichen steht, liest die Shell nicht.
-            (Trenner::Verbinden, false)
-        } else {
-            match &lage {
-                Lage::Heredoc(heredoc) => {
-                    // Die Endzeile eines Heredocs steht immer auf eigener Zeile
-                    // und ohne nachlaufenden Leerraum, damit sie ihn beendet;
-                    // der Rumpf ist Inhalt.
-                    if heredoc.endet_mit(zeile) {
-                        lage = wartend.pop_front().map_or(Lage::Normal, Lage::Heredoc);
-                        (Trenner::Umbruch, false)
-                    } else {
-                        (Trenner::Umbruch, true)
-                    }
-                }
-                Lage::Normal | Lage::Einfach | Lage::Doppelt | Lage::Ansi => {
-                    let ende = zeile_lesen(zeile, &mut lage, &mut wartend);
-                    if let Some(heredoc) = wartend.pop_front() {
-                        lage = Lage::Heredoc(heredoc);
-                        (Trenner::Umbruch, false)
-                    } else if !matches!(lage, Lage::Normal) {
-                        (Trenner::Umbruch, true)
-                    } else if ende == Zeilenende::Fortsetzung {
-                        (Trenner::Fortsetzung, false)
-                    } else {
-                        if ende == Zeilenende::Kommentar {
-                            im_kommentar = true;
-                        }
-                        (Trenner::Verbinden, false)
-                    }
-                }
-            }
-        };
         aus.push_str(if leerraum_bleibt { roh } else { zeile });
+        let folgezeile = bereinigt[nummer + 1];
 
         match trenner {
             Trenner::Umbruch => aus.push('\n'),
@@ -430,8 +454,9 @@ enum Zeilenende {
     Gewoehnlich,
     /// Auf ein unmaskiertes `\`.
     Fortsetzung,
-    /// In einem Kommentar ab `#` am Wortanfang.
-    Kommentar,
+    /// In einem Kommentar ab `#` am Wortanfang; die Zahl ist die Byte-Stelle
+    /// des `#` in der Zeile.
+    Kommentar(usize),
 }
 
 /// Die Lage der Shell am Ende einer gelesenen Zeile.
@@ -494,7 +519,11 @@ fn zeile_lesen(zeile: &str, lage: &mut Lage, wartend: &mut VecDeque<Heredoc>) ->
                     '\'' if dollar_davor => *lage = Lage::Ansi,
                     '\'' => *lage = Lage::Einfach,
                     '"' => *lage = Lage::Doppelt,
-                    '#' if am_wortanfang(&zeichen, stelle) => return Zeilenende::Kommentar,
+                    '#' if am_wortanfang(&zeichen, stelle) => {
+                        return Zeilenende::Kommentar(
+                            zeichen[..stelle].iter().map(|z| z.len_utf8()).sum(),
+                        );
+                    }
                     '$' if zeichen.get(stelle + 1) == Some(&'(')
                         && zeichen.get(stelle + 2) == Some(&'(') =>
                     {

@@ -1252,12 +1252,27 @@ rm -rf build/alt
 wird `rm -rf build/alt ls -la build/neu`, und das löscht auch `build/neu`. Mehrere Befehle einzeln umformen und einfügen; `cmd+z` nimmt eine
 Umformung zurück.
 
-**Ein Kommentar (`# …`) reicht nach Singlestrip bis zum Ende der Zeile.** Alles,
-was danach steht, steht im Kommentar und läuft nicht. Das ist Absicht: ein
-Kommentar, den das Terminal umgebrochen hat, liefe sonst mit seinem Rest als
-Befehl. Steht über dem Befehl eine Kommentarzeile, landet der Befehl im
-Kommentar und läuft beim Einfügen nicht; die Zeile beginnt dann mit `#`. Die
-Kommentarzeile vorher aus der Auswahl lassen.
+**Ein Kommentar (`# …`) fällt bei Singlestrip heraus, und alles danach mit.**
+Ein Kommentar beginnt mit einem `#` am Anfang eines Wortes, außerhalb von
+Anführungszeichen und Heredoc; ein `#` mitten im Wort, in `${#x}` oder `$#`
+und in einer Adresse wie `https://example.org/seite#anker` bleibt stehen. Die
+Zeilen danach gelten als der Rest des Kommentars, den das Terminal umgebrochen
+hat, und fallen mit:
+
+```
+ls -la # zeigt alle
+  dateien an
+```
+
+wird zu `ls -la`. Das ist Absicht, und es hängt an keiner Shell: die zsh von
+macOS liest `#` beim Einfügen ab Werk nicht als Kommentar (erst mit
+`setopt interactivecomments`), und dort bekäme `ls` sonst `#`, `zeigt`,
+`alle`, `dateien` und `an` als Argumente, bei einem löschenden Befehl also
+Dateien dieses Namens. Steht über dem Befehl eine Kommentarzeile, fällt der
+Befehl mit, und das Ergebnis ist leer: die Kommentarzeile vorher aus der
+Auswahl lassen, oder `cmd+z`. Öffnet die Zeile vor dem Kommentar einen Heredoc
+(`cat <<EOF > a.txt # legt an`), fällt allein der Kommentar, und Rumpf und
+Endzeile bleiben, denn die Shell liest sie als Eingabe.
 
 Ein Wort, das breiter ist als die Zeile und das der Chat mitten im Wort
 getrennt hat, etwa ein sehr langer Pfad, bekommt ein Leerzeichen zu viel.
