@@ -1,25 +1,42 @@
-//! Strip und Format der Quicknote: aus einem aus dem Chat kopierten Text wird
-//! ein lauffaehiger Befehl ([`befehl`]) oder Fliesstext mit Absaetzen und
-//! Aufzaehlungspunkten auf je einer Zeile ([`fliesstext`]).
+//! Singlestrip und Format der Quicknote: aus einem aus dem Chat kopierten Text
+//! wird ein Befehl auf einer Zeile ([`befehl`]) oder Fliesstext mit Absaetzen
+//! und Aufzaehlungspunkten auf je einer Zeile ([`fliesstext`]).
 //!
 //! ```text
-//!  eingefuegter Text ──┬──> befehl()     Strip:  Kopiereinrueckung, `\`-Fortsetzung
-//!                      │                         und Terminalumbruch fallen, was fuer
-//!                      │                         die Shell Inhalt ist, bleibt
+//!  eingefuegter Text ──┬──> befehl()     Singlestrip: Einrueckung, `\`-Fortsetzung
+//!                      │                              und jeder Umbruch ausserhalb
+//!                      │                              fallen, was fuer die Shell
+//!                      │                              Inhalt ist, bleibt
 //!                      │
 //!                      └──> fliesstext() Format: Terminalumbrueche fallen,
 //!                                                Ueberschriften und Punkte bleiben
 //!                                 │
-//!            beide fragen ────────┴──> umgebrochen(zeile, folgezeile, breite)
+//!                                 └──> umgebrochen(zeile, folgezeile, breite)
 //! ```
 //!
-//! # Die eine Frage, und warum sie geschaetzt wird
+//! # Zwei Umformungen, zwei Annahmen
 //!
-//! Beide Umformungen haengen an derselben Frage: war ein Zeilenumbruch im
-//! eingefuegten Text einer des Terminals oder ein gewollter? **Aus dem Text
-//! allein ist sie nicht entscheidbar**, denn die Breite des Terminals reist
-//! nicht mit. Beantwortet wird sie deshalb an genau einer Stelle,
-//! `umgebrochen`, mit drei Bedingungen:
+//! Ob ein Zeilenumbruch im eingefuegten Text einer des Terminals oder ein
+//! gewollter war, ist **aus dem Text allein nicht entscheidbar**, denn die
+//! Breite des Terminals reist nicht mit. Die zwei Umformungen loesen das
+//! verschieden:
+//!
+//! - **Singlestrip schaetzt nicht, sondern nimmt an: die Eingabe ist ein
+//!   einzelner Befehl** und keine Liste von Befehlen untereinander. Dann ist
+//!   jeder Umbruch ausserhalb von Anfuehrungen und Heredocs einer, der weg
+//!   muss. So vom Nutzer entschieden (`261031-1226-in-welche-richtung-irrt-strip-wenn-ein-umbruch-nicht-entscheidbar-ist.md`
+//!   im Arbeitspaket `261031-1024-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format`).
+//!   Bis dahin hiess die Umformung Strip und schaetzte wie Format; jede
+//!   Fehlschaetzung aenderte dort die Bedeutung, in beiden Richtungen. Wer
+//!   mehrere Befehle untereinander hineinsteckt, bekommt sie auf einer Zeile,
+//!   der zweite als Argumente des ersten; das ist der Preis der Annahme, und
+//!   `cmd+z` nimmt die Umformung zurueck.
+//! - **Format schaetzt**, an genau einer Stelle, `umgebrochen`, denn fuer
+//!   Fliesstext ist ein Irrtum Kosmetik. Die Regel steht unter „Format“.
+//!
+//! # Format
+//!
+//! `umgebrochen` fragt drei Bedingungen:
 //!
 //! - **Breite** `B` ist die laengste Zeile der Eingabe in Zeichen
 //!   (Unicode-Skalarwerte, Einrueckung mitgezaehlt; nachlaufender Leerraum
@@ -35,69 +52,69 @@
 //! **Warum die Breite belegt sein muss.** Bei Text aus dem Chat ist die
 //! Einrueckung kein Signal, denn der Chat rueckt jede Zeile nach der ersten
 //! ein. Bliebe allein die Laenge, erfuellte die laengste Zeile die dritte
-//! Bedingung fuer jedes Folgewort, denn sie ist die Breite: ein Kommentar ueber
-//! einem Befehl verschluckte den Befehl, und von zwei Befehlen untereinander
-//! wuerde der laengere mit dem naechsten verbunden. Ein Umbruch des Terminals
-//! laesst dagegen eine Spur, die eine einzelne lange Zeile nicht hat: er
-//! erzeugt mehrere Zeilen nahe derselben Breite. Erst diese Spur belegt die
-//! Breite. Der Preis: ein Text, den das Terminal genau einmal umgebrochen hat,
-//! hat nur eine volle Zeile und bleibt, wie er ist.
+//! Bedingung fuer jedes Folgewort, denn sie ist die Breite. Ein Umbruch des
+//! Terminals laesst dagegen eine Spur, die eine einzelne lange Zeile nicht
+//! hat: er erzeugt mehrere Zeilen nahe derselben Breite. Erst diese Spur belegt
+//! die Breite. Ein Text ohne Einrueckung wird so nie verbunden, und ein schon
+//! formatierter auch nicht; Format ist dadurch idempotent. Jede Umformung ist
+//! in der Quicknote eine Handlung, die `cmd+z` zuruecknimmt.
 //!
-//! Ein Text ohne Einrueckung wird so nie verbunden, und ein schon geglaetteter
-//! auch nicht; beide Umformungen sind dadurch idempotent. Jede Umformung ist in
-//! der Quicknote eine Handlung, die `cmd+z` zuruecknimmt; die Schaetzung darf
-//! sich deshalb irren, solange sie es selten und in der Richtung tut, die
-//! nichts verbindet.
+//! **Ein Text, den das Terminal genau einmal umgebrochen hat**, hat nur eine
+//! volle Zeile und belegt keine Breite; das trifft vor allem die Auswahl eines
+//! einzelnen Absatzes oder Punkts. Seine Fortsetzung wird nicht verbunden,
+//! **behaelt aber ihre Einrueckung**: jede Zeile, die mit der laengsten Zeile
+//! als Breite verbunden wuerde und es allein mangels belegter Breite nicht
+//! wird, steht mit ihrer Einrueckung da. So bleibt sie als Fortsetzung
+//! erkennbar, und ein Format ueber einen groesseren Text, der die Breite
+//! belegt, verbindet sie noch. Bis zum 261031 verlor sie die Einrueckung und
+//! stand danach als eigener Absatz da, den kein Format mehr verband
+//! (`261031-1226-ein-einmal-umbrochener-text-bleibt-nicht-wie-er-ist-format-loest-die-fortsetzung-ab.md`).
 //!
-//! # Was nicht entscheidbar ist und deshalb hier steht
+//! Nicht entscheidbar und deshalb hingenommen:
 //!
-//! - **Ein einmal umgebrochener Text** (eine volle Zeile und ihr Rest) wird
-//!   nicht verbunden, denn eine einzelne lange Zeile belegt keine Breite. Ein
-//!   so umgebrochener Befehl bleibt nach Strip auf zwei Zeilen.
 //! - **Zwei getrennte Zeilen, die beide fast die volle Breite einnehmen**,
 //!   belegen sie, und die erste wird mit der zweiten verbunden, wenn die zweite
-//!   eingerueckt ist. In Strip gilt das nicht nach einer Kommentarzeile (siehe
-//!   dort).
+//!   eingerueckt ist.
 //! - **Ein Wort, das breiter ist als die Zeile** und das der Chat mitten im Wort
 //!   trennt (ein sehr langer Pfad), bekommt beim Verbinden ein Leerzeichen zu
-//!   viel.
+//!   viel; in Singlestrip ebenso.
 //! - **Breite Zeichen** (CJK, Emoji) zaehlen als eines; die Regel schaetzt die
 //!   Breite dann zu klein und verbindet eher seltener.
-//!
-//! # Format
 //!
 //! Eine Leerzeile bleibt eine und beendet den laufenden Absatz oder Punkt. Ein
 //! **Aufzaehlungspunkt** ist eine Zeile, deren Text nach der Einrueckung mit
 //! `- `, `* `, `• `, `<Ziffern>. ` oder `<Ziffern>) ` beginnt; er beginnt immer
 //! eine eigene Zeile und steht danach mit einem Leerzeichen davor, ein tiefer
 //! eingerueckter Punkt mit seinem Abstand zum flachsten Punkt des Textes
-//! zusaetzlich. Jede andere Zeile steht ohne Einrueckung da, ausser sie wird
-//! verbunden: das wird sie, wenn sie kein Punkt ist, `umgebrochen` gilt und
-//! ihre Einrueckung die Textspalte des laufenden Eintrags erreicht (die erste
-//! Zeile eines Absatzes, die Spalte hinter Zeichen und Leerzeichen eines
-//! Punkts). **Ueberschriften brauchen keine eigene Regel**: eine kurze Zeile ist
-//! nie umgebrochen, also beginnt die Zeile danach neu. **Eine Geruestzeile**
-//! (eine Zeile mit Kasten- oder Blockzeichen von `U+2500` bis `U+259F`, also
-//! Tabellen in Kastenzeichen und Baumskizzen mit `├──`, oder eine, deren Text
-//! mit `|` beginnt wie eine Markdown-Tabelle, oder eine aus `+`, `-`, `=`, `|`
-//! und `:` wie der Rahmen einer ASCII-Tabelle) wird nie verbunden, weder an die
-//! Zeile davor noch mit der danach: in einer Tabelle sind alle Zeilen gleich
-//! lang und belegen die Breite, also ist sie der eine Fall, den die Breite
-//! nicht trennt. Sie verliert allein die kleinste Einrueckung der Geruestzeilen
-//! ab der zweiten Zeile, die erste Zeile der Eingabe ihre ganze; so bleibt die
-//! Ausrichtung der Skizze stehen. Zeilen in einem
-//! Code-Zaun (drei Backticks bis zu den naechsten) bleiben woertlich und
-//! verlieren allein die Einrueckung der oeffnenden Zaunzeile. Ein Schlussumbruch
-//! der Eingabe bleibt.
+//! zusaetzlich. Jede andere Zeile steht ohne Einrueckung da (bis auf die
+//! Fortsetzung ohne belegte Breite oben), ausser sie wird verbunden: das wird
+//! sie, wenn sie kein Punkt ist, `umgebrochen` gilt und ihre Einrueckung die
+//! Textspalte des laufenden Eintrags erreicht (die erste Zeile eines Absatzes,
+//! die Spalte hinter Zeichen und Leerzeichen eines Punkts). **Ueberschriften
+//! brauchen keine eigene Regel**: eine kurze Zeile ist nie umgebrochen, also
+//! beginnt die Zeile danach neu. **Eine Geruestzeile** (eine Zeile mit Kasten-
+//! oder Blockzeichen von `U+2500` bis `U+259F`, also Tabellen in Kastenzeichen
+//! und Baumskizzen mit `├──`, oder eine, deren Text mit `|` beginnt wie eine
+//! Markdown-Tabelle, oder eine aus `+`, `-`, `=`, `|` und `:` wie der Rahmen
+//! einer ASCII-Tabelle) wird nie verbunden, weder an die Zeile davor noch mit
+//! der danach: in einer Tabelle sind alle Zeilen gleich lang und belegen die
+//! Breite, also ist sie der eine Fall, den die Breite nicht trennt. Sie
+//! verliert allein die kleinste Einrueckung der Geruestzeilen ab der zweiten
+//! Zeile, die erste Zeile der Eingabe ihre ganze; so bleibt die Ausrichtung der
+//! Skizze stehen. Zeilen in einem Code-Zaun (drei Backticks bis zu den
+//! naechsten) bleiben woertlich und verlieren allein die Einrueckung der
+//! oeffnenden Zaunzeile. Ein Schlussumbruch der Eingabe bleibt.
 //!
-//! # Strip
+//! # Singlestrip
 //!
 //! Nachlaufender Leerraum faellt in jeder Zeile ausser im Heredoc-Rumpf und am
 //! Ende einer Zeile in offener Anfuehrung (siehe unten), Leerzeilen am Anfang
 //! und am Ende fallen, und die Ausgabe endet ohne `\n`, damit ein Einfuegen ins
-//! Terminal nicht sofort ausfuehrt. Die erste Zeile verliert ihren ganzen
-//! fuehrenden Leerraum, jede weitere die kleinste Einrueckung der nicht leeren
-//! Zeilen ab der zweiten (die Kopiereinrueckung); mehr Einrueckung bleibt.
+//! Terminal nicht sofort ausfuehrt. Jede Zeile, die ausserhalb jeder
+//! Anfuehrung und jedes Heredoc-Rumpfs beginnt, verliert ihren ganzen
+//! fuehrenden Leerraum; eine Zeile in einer Anfuehrung oder einem Rumpf allein
+//! die kleinste Einrueckung der nicht leeren Zeilen ab der zweiten (die
+//! Kopiereinrueckung), mehr Einrueckung bleibt.
 //!
 //! Ein kleiner Automat liest die Lage der Shell je Zeichen: ausserhalb,
 //! `'…'`, `"…"`, `$'…'`, ein Kommentar ab `#` am Wortanfang und Heredocs
@@ -107,19 +124,34 @@
 //! offenen Anfuehrungszeichen oder in einem Heredoc-Rumpf, bleibt ihr Umbruch,
 //! denn er ist Inhalt, und mit ihm ihr nachlaufender Leerraum, etwa die zwei
 //! Leerzeichen eines harten Umbruchs in Markdown; die Endzeile eines Heredocs
-//! verliert ihn, damit sie ihn beendet. Ob der Chat nachlaufenden Leerraum
-//! hinzufuegt, ist nicht entscheidbar; gekuerzt wird deshalb allein dort, wo er
-//! fuer die Shell keine Bedeutung hat, und vor allem hinter einem `\`. **Endet eine Zeile in
-//! einem Kommentar, bleibt ihr Umbruch immer**: was danach steht, waere sonst
-//! Teil des Kommentars und liefe nicht. Ein Kommentar, den der Chat umbrochen
-//! hat, bleibt dafuer auf mehreren Zeilen, und die Shell liest jede weitere als
-//! Befehl; Strip laesst den Text damit sichtbar unfertig, statt still einen
-//! Befehl zu verschlucken. Endet sie ausserhalb
-//! auf ein unmaskiertes `\`, fallen `\` und Umbruch, wie die Shell sie
-//! entfernt; stand auf einer Seite Leerraum, steht dazwischen genau ein
-//! Leerzeichen, sonst keins. Sonst wird die Folgezeile angehaengt, wenn
-//! `umgebrochen` gilt, und bleibt andernfalls auf eigener Zeile, denn ein
-//! Umbruch ist fuer die Shell ein `;`.
+//! verliert ihn und steht auf eigener Zeile, damit sie ihn beendet, und ihr
+//! Umbruch bleibt ebenso. Ob der Chat nachlaufenden Leerraum hinzufuegt, ist
+//! nicht entscheidbar; gekuerzt wird deshalb allein dort, wo er fuer die Shell
+//! keine Bedeutung hat, und vor allem hinter einem `\`. Endet eine Zeile
+//! ausserhalb auf ein unmaskiertes `\`, fallen `\` und Umbruch, wie die Shell
+//! sie entfernt; stand auf einer Seite Leerraum, steht dazwischen genau ein
+//! Leerzeichen, sonst keins. **Jeder andere Umbruch ausserhalb wird zu genau
+//! einem Leerzeichen**, ohne Breitenschaetzung, und eine Leerzeile ausserhalb
+//! faellt dabei mit.
+//!
+//! **Ein Kommentar haelt die Zeile bis zu ihrem Ende**: endet eine Zeile
+//! ausserhalb in einem Kommentar, wird auch sie verbunden, und alles danach
+//! steht im Kommentar, ohne dass der Automat es liest. Das ist die sichere
+//! Wahl, und der Grund ist die Annahme selbst: in einem einzelnen Befehl ist
+//! ein Kommentar sein Ende oder eine Zeile davor, und ein Umbruch darin stammt
+//! vom Terminal. Liesse Singlestrip den Umbruch nach dem Kommentar stehen,
+//! liefe der umbrochene Rest eines Kommentars beim Einfuegen als Befehl, mit
+//! Woertern, die niemand als Befehl geschrieben hat. Verbunden laeuft
+//! schlimmstenfalls nichts: ein Befehl unter einer Kommentarzeile landet im
+//! Kommentar, und die Ausgabe zeigt das, denn sie ist eine Zeile, die mit `#`
+//! beginnt. Bis zum 261031 blieb der Umbruch nach einem Kommentar stehen.
+//!
+//! Singlestrip ist idempotent bis auf einen Fall, der nicht entscheidbar ist:
+//! traegt nach dem ersten Lauf jede Zeile ab der zweiten noch Einrueckung,
+//! etwa weil dort allein eine Zeile in Anfuehrung steht, die tiefer
+//! eingerueckt war als die Kopiereinrueckung, und keine Endzeile eines Heredocs,
+//! dann liest ein zweiter Lauf diese Einrueckung als Kopiereinrueckung und
+//! nimmt sie auch.
 //!
 //! Kein Systemaufruf, kein Dateisystem, keine Kiste: Rechnung auf einer
 //! Zeichenkette wie der Rest dieses Verzeichnisses.
@@ -150,6 +182,9 @@ pub fn fliesstext(eingabe: &str) -> String {
         .map(|zeile| zeile.trim_end().to_owned())
         .collect();
     let breite = belegte_breite(&zeilen);
+    // Die laengste Zeile, auch wenn sie keine Breite belegt: an ihr misst sich,
+    // ob eine Zeile allein mangels belegter Breite unverbunden bleibt.
+    let laengste = zeilen.iter().map(|zeile| laenge(zeile)).max().unwrap_or(0);
     let geruestabzug = zeilen
         .iter()
         .skip(1)
@@ -218,6 +253,19 @@ pub fn fliesstext(eingabe: &str) -> String {
             laufend = Some((zeile, spalte));
             continue;
         }
+        if let Some((vorige, spalte)) = laufend
+            && breite == 0
+            && einrueckung(zeile) >= spalte
+            && umgebrochen(vorige, zeile, laengste)
+        {
+            // Eine Fortsetzung, die allein mangels belegter Breite nicht
+            // verbunden wird, behaelt ihre Einrueckung: so bleibt sie eine
+            // Fortsetzung, und ein spaeteres Format ueber einen Text, der die
+            // Breite belegt, verbindet sie noch (Modulkopf).
+            aus.push(zeile.to_owned());
+            laufend = Some((zeile, spalte));
+            continue;
+        }
         aus.push(text.to_owned());
         laufend = Some((zeile, einrueckung(zeile)));
     }
@@ -229,13 +277,14 @@ pub fn fliesstext(eingabe: &str) -> String {
     ergebnis
 }
 
-/// Strip: macht aus einem aus dem Chat kopierten Shell-Befehl einen, der im
-/// Terminal laeuft. Die Regeln stehen im Modulkopf.
+/// Singlestrip: macht aus einem aus dem Chat kopierten, umbrochenen Shell-Befehl
+/// eine Zeile, die im Terminal laeuft. Die Eingabe gilt als **ein** Befehl; die
+/// Regeln stehen im Modulkopf.
 #[must_use]
 pub fn befehl(eingabe: &str) -> String {
     let (roh_alle, _) = zerlegen(eingabe);
-    // Gekuerzt fuer die Lage, die Breite und die Frage nach leeren Zeilen; roh,
-    // wo der nachlaufende Leerraum Inhalt ist (Modulkopf).
+    // Gekuerzt fuer die Lage und die Frage nach leeren Zeilen; roh, wo der
+    // nachlaufende Leerraum Inhalt ist (Modulkopf).
     let alle: Vec<String> = roh_alle
         .iter()
         .map(|zeile| zeile.trim_end().to_owned())
@@ -248,7 +297,6 @@ pub fn befehl(eingabe: &str) -> String {
         .rposition(|zeile| !zeile.is_empty())
         .map_or(anfang, |stelle| stelle + 1);
     let zeilen = &alle[anfang..ende];
-    let breite = belegte_breite(zeilen);
     let kopiereinrueckung = zeilen[1..]
         .iter()
         .filter(|zeile| !zeile.is_empty())
@@ -269,52 +317,64 @@ pub fn befehl(eingabe: &str) -> String {
     let mut aus = String::new();
     let mut lage = Lage::Normal;
     let mut wartend: VecDeque<Heredoc> = VecDeque::new();
-    // Ob die naechste Zeile ohne ihren fuehrenden Leerraum angehaengt wird.
-    let mut naechste_kuerzen = false;
+    // Ob ein Kommentar die Ausgabezeile bis zu ihrem Ende haelt (Modulkopf).
+    let mut im_kommentar = false;
 
     for (nummer, (zeile, roh)) in bereinigt.iter().zip(&roh).enumerate() {
-        let (zeile, roh) = if naechste_kuerzen {
+        // Eine Zeile, die ausserhalb jeder Anfuehrung und jedes Heredoc-Rumpfs
+        // beginnt, verliert ihre ganze Einrueckung: fuer die Shell ist sie
+        // Leerraum zwischen zwei Woertern.
+        let (zeile, roh) = if matches!(lage, Lage::Normal) {
             (zeile.trim_start(), roh.trim_start())
         } else {
             (*zeile, *roh)
         };
-        naechste_kuerzen = false;
-        let Some(folgezeile) = bereinigt.get(nummer + 1) else {
+        let letzte = nummer + 1 == bereinigt.len();
+        if matches!(lage, Lage::Normal) && zeile.is_empty() {
+            // Eine Leerzeile zwischen zwei Teilen des einen Befehls ist ein
+            // Umbruch wie jeder andere; der Trenner davor steht schon.
+            continue;
+        }
+        if letzte {
             // Die Ausgabe endet ohne nachlaufenden Leerraum (Modulkopf).
             aus.push_str(zeile);
             break;
-        };
+        }
+        let folgezeile = bereinigt[nummer + 1];
 
         // Ob der nachlaufende Leerraum dieser Zeile Inhalt ist: im Rumpf eines
         // Heredocs und am Ende in einer offenen Anfuehrung.
-        let (trenner, leerraum_bleibt) = match &lage {
-            Lage::Heredoc(heredoc) => {
-                // Die Endzeile eines Heredocs steht immer auf eigener Zeile und
-                // ohne nachlaufenden Leerraum, damit sie ihn beendet; der Rumpf
-                // ist Inhalt.
-                if heredoc.endet_mit(zeile) {
-                    lage = wartend.pop_front().map_or(Lage::Normal, Lage::Heredoc);
-                    (Trenner::Umbruch, false)
-                } else {
-                    (Trenner::Umbruch, true)
+        let (trenner, leerraum_bleibt) = if im_kommentar {
+            // Was nach dem Kommentarzeichen steht, liest die Shell nicht.
+            (Trenner::Verbinden, false)
+        } else {
+            match &lage {
+                Lage::Heredoc(heredoc) => {
+                    // Die Endzeile eines Heredocs steht immer auf eigener Zeile
+                    // und ohne nachlaufenden Leerraum, damit sie ihn beendet;
+                    // der Rumpf ist Inhalt.
+                    if heredoc.endet_mit(zeile) {
+                        lage = wartend.pop_front().map_or(Lage::Normal, Lage::Heredoc);
+                        (Trenner::Umbruch, false)
+                    } else {
+                        (Trenner::Umbruch, true)
+                    }
                 }
-            }
-            Lage::Normal | Lage::Einfach | Lage::Doppelt | Lage::Ansi => {
-                let ende = zeile_lesen(zeile, &mut lage, &mut wartend);
-                if let Some(heredoc) = wartend.pop_front() {
-                    lage = Lage::Heredoc(heredoc);
-                    (Trenner::Umbruch, false)
-                } else if !matches!(lage, Lage::Normal) {
-                    (Trenner::Umbruch, true)
-                } else if ende == Zeilenende::Fortsetzung {
-                    (Trenner::Fortsetzung, false)
-                } else if ende == Zeilenende::Kommentar {
-                    // Was angehaengt wuerde, stuende im Kommentar und liefe nicht.
-                    (Trenner::Umbruch, false)
-                } else if umgebrochen(&zeilen[nummer], &zeilen[nummer + 1], breite) {
-                    (Trenner::Verbinden, false)
-                } else {
-                    (Trenner::Umbruch, false)
+                Lage::Normal | Lage::Einfach | Lage::Doppelt | Lage::Ansi => {
+                    let ende = zeile_lesen(zeile, &mut lage, &mut wartend);
+                    if let Some(heredoc) = wartend.pop_front() {
+                        lage = Lage::Heredoc(heredoc);
+                        (Trenner::Umbruch, false)
+                    } else if !matches!(lage, Lage::Normal) {
+                        (Trenner::Umbruch, true)
+                    } else if ende == Zeilenende::Fortsetzung {
+                        (Trenner::Fortsetzung, false)
+                    } else {
+                        if ende == Zeilenende::Kommentar {
+                            im_kommentar = true;
+                        }
+                        (Trenner::Verbinden, false)
+                    }
                 }
             }
         };
@@ -322,10 +382,7 @@ pub fn befehl(eingabe: &str) -> String {
 
         match trenner {
             Trenner::Umbruch => aus.push('\n'),
-            Trenner::Verbinden => {
-                aus.push(' ');
-                naechste_kuerzen = true;
-            }
+            Trenner::Verbinden => aus.push(' '),
             Trenner::Fortsetzung => {
                 aus.pop();
                 let vorher_leer = aus.ends_with([' ', '\t']);
@@ -335,7 +392,6 @@ pub fn befehl(eingabe: &str) -> String {
                         aus.pop();
                     }
                     aus.push(' ');
-                    naechste_kuerzen = true;
                 }
             }
         }
@@ -359,7 +415,8 @@ fn ohne_kopiereinrueckung(nummer: usize, zeile: &str, kopiereinrueckung: usize) 
 enum Trenner {
     /// Der Umbruch bleibt.
     Umbruch,
-    /// Ein Terminalumbruch: genau ein Leerzeichen.
+    /// Ein Umbruch ausserhalb jeder Anfuehrung und jedes Heredoc-Rumpfs:
+    /// genau ein Leerzeichen.
     Verbinden,
     /// `\` und Umbruch fallen, wie die Shell sie entfernt.
     Fortsetzung,
@@ -537,8 +594,7 @@ fn heredoc_lesen(zeichen: &[char], stelle: usize, wartend: &mut VecDeque<Heredoc
     weiter
 }
 
-/// Die eine Umbruchregel, die [`fliesstext`] und [`befehl`] teilen; der
-/// Modulkopf schreibt sie aus.
+/// Die Umbruchregel von [`fliesstext`]; der Modulkopf schreibt sie aus.
 fn umgebrochen(zeile: &str, folgezeile: &str, breite: usize) -> bool {
     if breite < MINDESTBREITE {
         return false;

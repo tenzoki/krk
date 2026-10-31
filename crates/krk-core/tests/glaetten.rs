@@ -1,11 +1,13 @@
-//! Strip und Format der Quicknote (`krk_core::text::glaetten`), Schritt 1 des
-//! Plans `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`.
+//! Singlestrip und Format der Quicknote (`krk_core::text::glaetten`), Schritt 1
+//! des Plans `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`,
+//! Singlestrip nach der Antwort `261031-1226-in-welche-richtung-irrt-strip-wenn-ein-umbruch-nicht-entscheidbar-ist.md`.
 //!
 //! Die Abnahme von Ziel 3 des Briefs ist die erste Probe: Eingabe und
 //! erwartete Ausgabe stehen woertlich so, wie der Nutzer sie angegeben hat, und
 //! verglichen wird Zeichen fuer Zeichen. Die uebrigen Proben halten die Faelle,
-//! in denen die Schaetzung danebenliegen koennte, in der Richtung, die nichts
-//! verbindet, und die Shell-Lagen, die Strip nicht anfassen darf.
+//! in denen die Schaetzung von Format danebenliegen koennte, und fuer
+//! Singlestrip, dass jeder Umbruch ausserhalb faellt und die Shell-Lagen, die
+//! es nicht anfassen darf, stehen bleiben.
 
 use krk_core::text::glaetten::{befehl, fliesstext};
 
@@ -105,7 +107,16 @@ fn ein_text_ohne_einrueckung_wird_nicht_verbunden() {
         reihe('c', 79)
     );
     assert_eq!(fliesstext(&text), text);
-    assert_eq!(befehl(&text), text);
+    // Singlestrip schaetzt nicht: die Eingabe ist ein Befehl.
+    assert_eq!(
+        befehl(&text),
+        format!(
+            "{} {} zwei {}",
+            reihe('a', 80),
+            reihe('b', 20),
+            reihe('c', 79)
+        )
+    );
 }
 
 #[test]
@@ -122,9 +133,10 @@ fn unter_der_mindestbreite_wird_nichts_verbunden() {
         fliesstext(&text),
         format!("{}\n{}\n{}", reihe('a', 39), reihe('b', 37), reihe('c', 30))
     );
+    // Singlestrip kennt keine Mindestbreite.
     assert_eq!(
         befehl(&text),
-        format!("{}\n{}\n{}", reihe('a', 39), reihe('b', 37), reihe('c', 30))
+        format!("{} {} {}", reihe('a', 39), reihe('b', 37), reihe('c', 30))
     );
 }
 
@@ -154,8 +166,19 @@ fn ein_tiefer_punkt_behaelt_seinen_abstand() {
 }
 
 #[test]
-fn strip_verbindet_einen_terminalumbruch_mit_einem_leerzeichen() {
-    // Zwei volle Zeilen belegen die Breite: der Befehl ist zweimal umgebrochen.
+fn singlestrip_verbindet_einen_einmal_umbrochenen_befehl() {
+    // Der Fall aus dem Issue `261031-1226-ein-einmal-umbrochener-text-…`: bis
+    // zum 261031 blieb die Fortsetzung stehen, und eingefuegt lief
+    // `git push --force-with-lease` ohne Ziel.
+    let text = "git add -A && git commit -m 'quicknote: strip und format' && git push --force-with-lease\n  origin feature/quicknote-strip-und-format";
+    assert_eq!(
+        befehl(text),
+        "git add -A && git commit -m 'quicknote: strip und format' && git push --force-with-lease origin feature/quicknote-strip-und-format"
+    );
+}
+
+#[test]
+fn singlestrip_verbindet_einen_zweimal_umbrochenen_befehl() {
     let text = format!("echo {}\n  {}\n  ende", reihe('a', 55), reihe('b', 58));
     assert_eq!(
         befehl(&text),
@@ -164,50 +187,91 @@ fn strip_verbindet_einen_terminalumbruch_mit_einem_leerzeichen() {
 }
 
 #[test]
-fn eine_einzelne_lange_zeile_belegt_keinen_umbruch() {
-    // Bis zum 261031 galt die laengste Zeile immer als umgebrochen; ein einmal
-    // umgebrochener Text bleibt seitdem, wie er ist.
-    let text = format!("echo {}\n  {} ende", reihe('a', 55), reihe('b', 8));
+fn singlestrip_verbindet_einen_dreimal_umbrochenen_befehl() {
+    let text = "cargo test -p krk-core --test glaetten --test heimordner --test\n  belegung -- --nocapture && cargo clippy --workspace --all-targets -- -D\n  warnings && cargo fmt --all --check && git status --short\n  --branch";
     assert_eq!(
-        befehl(&text),
-        format!("echo {}\n{} ende", reihe('a', 55), reihe('b', 8))
+        befehl(text),
+        "cargo test -p krk-core --test glaetten --test heimordner --test belegung -- --nocapture && cargo clippy --workspace --all-targets -- -D warnings && cargo fmt --all --check && git status --short --branch"
     );
+}
+
+#[test]
+fn eine_einzelne_lange_zeile_belegt_keinen_umbruch() {
+    // Format: bis zum 261031 galt die laengste Zeile immer als umgebrochen.
+    // Ohne belegte Breite wird die Fortsetzung nicht verbunden und behaelt
+    // seitdem ihre Einrueckung (Issue `261031-1226-ein-einmal-umbrochener-text-…`).
     let text = format!("{}\n  {} weiter", reihe('a', 70), reihe('b', 12));
     assert_eq!(
         fliesstext(&text),
-        format!("{}\n{} weiter", reihe('a', 70), reihe('b', 12))
+        format!("{}\n  {} weiter", reihe('a', 70), reihe('b', 12))
+    );
+    // Singlestrip fragt keine Breite: der Befehl wird eine Zeile.
+    let text = format!("echo {}\n  {} ende", reihe('a', 55), reihe('b', 8));
+    assert_eq!(
+        befehl(&text),
+        format!("echo {} {} ende", reihe('a', 55), reihe('b', 8))
     );
 }
 
 #[test]
-fn strip_schiebt_keinen_befehl_in_den_kommentar_darueber() {
+fn format_laesst_einen_einmal_umbrochenen_punkt_und_absatz_als_fortsetzung_stehen() {
+    // Ein Punkt aus dem Beispiel des Nutzers, allein ausgewaehlt.
+    let punkt = "- Jede englische Textdatei hat Name, Beschreibung, Abgrenzung, KI-Hinweise, Outputs und eine Client-Match-Surface (der Text, über den die Auswahl ein Framework zur\n    Kundenlage findet; nachgetragen in c3cabfcb5).";
+    let einmal = fliesstext(punkt);
+    assert_eq!(
+        einmal,
+        " - Jede englische Textdatei hat Name, Beschreibung, Abgrenzung, KI-Hinweise, Outputs und eine Client-Match-Surface (der Text, über den die Auswahl ein Framework zur\n    Kundenlage findet; nachgetragen in c3cabfcb5)."
+    );
+    assert_eq!(fliesstext(&einmal), einmal, "idempotent");
+    // Steht derselbe Punkt spaeter neben einem zweiten, ebenso allein
+    // formatierten, belegen beide die Breite, und ein Format verbindet sie.
+    let groesser = format!(
+        "{einmal}\n - Herkunft: 121 Manifeste stammen aus dem generierten UFDS-Import, 81 sind aus Quellen erstellt. Laut Commit 263a0989e wurden die Texte der UFDS-Frameworks gegen ihre\n    Quellen abgeglichen."
+    );
+    assert_eq!(
+        fliesstext(&groesser),
+        " - Jede englische Textdatei hat Name, Beschreibung, Abgrenzung, KI-Hinweise, Outputs und eine Client-Match-Surface (der Text, über den die Auswahl ein Framework zur Kundenlage findet; nachgetragen in c3cabfcb5).\n - Herkunft: 121 Manifeste stammen aus dem generierten UFDS-Import, 81 sind aus Quellen erstellt. Laut Commit 263a0989e wurden die Texte der UFDS-Frameworks gegen ihre Quellen abgeglichen."
+    );
+
+    // Der erste Absatz des Beispiels, allein auf zwei Zeilen.
+    let absatz = "Von den 202 registrierten Frameworks sind alle 202 strukturell vollständig, und 194 davon kann der Kernel heute auswählen. Acht schließt die Auswahl bewusst aus,\n  weil sie ein Readiness-Tag tragen.";
+    assert_eq!(fliesstext(absatz), absatz);
+}
+
+#[test]
+fn singlestrip_haelt_einen_kommentar_bis_zum_ende_der_zeile() {
+    // Die sichere Wahl (Modulkopf): was nach einem Kommentar steht, laeuft
+    // nicht, statt dass der Rest eines umbrochenen Kommentars als Befehl liefe.
+    let text =
+        "ls -la # zeigt alles, auch was das Terminal des Chats beim Kopieren\n  umgebrochen hat";
+    assert_eq!(
+        befehl(text),
+        "ls -la # zeigt alles, auch was das Terminal des Chats beim Kopieren umgebrochen hat"
+    );
+    // Ein Befehl unter einer Kommentarzeile landet im Kommentar, sichtbar.
     let text = "# Erst die Abhaengigkeiten und dann die Proben des Kerns bauen\n  cargo build\n  cargo test";
     assert_eq!(
         befehl(text),
-        "# Erst die Abhaengigkeiten und dann die Proben des Kerns bauen\ncargo build\ncargo test"
+        "# Erst die Abhaengigkeiten und dann die Proben des Kerns bauen cargo build cargo test"
     );
-    // Auch wenn zwei volle Zeilen die Breite belegen, verbindet Strip nicht
-    // ueber das Ende eines Kommentars hinweg.
-    let text = format!("ls # {}\n  echo {}", reihe('k', 60), reihe('a', 59));
-    assert_eq!(
-        befehl(&text),
-        format!("ls # {}\necho {}", reihe('k', 60), reihe('a', 59))
-    );
+    // Im Kommentar liest der Automat nichts mehr: kein Anfuehrungszeichen,
+    // kein Heredoc, kein `\`.
+    let text = "ls # don't\n  cat <<EOF \\\n  echo 'x";
+    assert_eq!(befehl(text), "ls # don't cat <<EOF \\ echo 'x");
 }
 
 #[test]
-fn strip_haengt_zwei_befehle_nicht_aneinander_wenn_der_laengere_zuerst_steht() {
-    let text =
-        "cargo test --workspace --all-targets -- --skip appkit::\n  cargo clippy --workspace";
+fn singlestrip_haengt_getrennte_befehle_aneinander_denn_die_eingabe_ist_einer() {
+    // Der Preis der Annahme (Issue `261031-1226-strip-verbindet-getrennte-
+    // befehle-…`): zwei Befehle untereinander werden einer, der zweite als
+    // Argumente des ersten. `cmd+z` nimmt das zurueck.
+    let text = "rm -rf target/debug/incremental/krk_core-1a2b3c4d5e6f7a8b\n  ls -la target/debug/incremental/krk_ui-0f1e2d3c4b5a6978";
     assert_eq!(
         befehl(text),
-        "cargo test --workspace --all-targets -- --skip appkit::\ncargo clippy --workspace"
+        "rm -rf target/debug/incremental/krk_core-1a2b3c4d5e6f7a8b ls -la target/debug/incremental/krk_ui-0f1e2d3c4b5a6978"
     );
-    let text = "cd /Users/kai/Projects\n  git log --oneline 135960bf..be1a725d -- crates/krk-ui/src\n  git status";
-    assert_eq!(
-        befehl(text),
-        "cd /Users/kai/Projects\ngit log --oneline 135960bf..be1a725d -- crates/krk-ui/src\ngit status"
-    );
+    let text = "  cd /tmp\n  ls -la\n\n  pwd\n";
+    assert_eq!(befehl(text), "cd /tmp ls -la pwd");
 }
 
 #[test]
@@ -269,7 +333,7 @@ krk/
 }
 
 #[test]
-fn strip_entfernt_backslash_fortsetzungen_ohne_die_bedeutung_zu_aendern() {
+fn singlestrip_entfernt_backslash_fortsetzungen_ohne_die_bedeutung_zu_aendern() {
     // Leerraum vor dem `\`: ein Leerzeichen bleibt, wie die Shell zwei Woerter liest.
     assert_eq!(
         befehl("cargo build \\\n  --release"),
@@ -281,11 +345,11 @@ fn strip_entfernt_backslash_fortsetzungen_ohne_die_bedeutung_zu_aendern() {
     // Fortsetzung, und das Leerzeichen faellt.
     assert_eq!(befehl("ls \\ \n  -la \\  \n  /tmp"), "ls -la /tmp");
     // Ein maskiertes `\` am Zeilenende ist keine Fortsetzung.
-    assert_eq!(befehl("echo a\\\\\nls"), "echo a\\\\\nls");
+    assert_eq!(befehl("echo a\\\\\nls"), "echo a\\\\ ls");
 }
 
 #[test]
-fn strip_laesst_einen_heredoc_rumpf_samt_einrueckung_stehen() {
+fn singlestrip_laesst_einen_heredoc_rumpf_samt_einrueckung_stehen() {
     let lang = reihe('x', 60);
     // Die Kopiereinrueckung von zwei Zeichen faellt, die Einrueckung des
     // Rumpfs darueber hinaus bleibt, und kein Rumpfumbruch wird verbunden.
@@ -316,17 +380,25 @@ fn strip_laesst_einen_heredoc_rumpf_samt_einrueckung_stehen() {
         format!("paste <<A /dev/fd/0 <<\"B\"\n{lang}\n  eins\nA\n{lang}\n  zwei\nB\necho fertig")
     );
 
-    // `<<<` ist ein Here-String und oeffnet keinen Rumpf: der Terminalumbruch
-    // danach wird verbunden.
+    // `<<<` ist ein Here-String und oeffnet keinen Rumpf: der Umbruch danach
+    // wird verbunden.
     let text = format!("grep -c x <<< {lang}\n  {}\n  ende", reihe('y', 72));
     assert_eq!(
         befehl(&text),
         format!("grep -c x <<< {lang} {} ende", reihe('y', 72))
     );
+
+    // Ein Befehl mit Heredoc, wie er aus dem Chat kommt: vor dem Rumpf wird
+    // verbunden, der Rumpf bleibt, und nach der Endzeile beginnt eine Zeile.
+    let text = "cat <<'EOF' | sed -e 's/a/b/' | sort -u > /tmp/ausgabe-der-quicknote.txt\n  2>/dev/null\n  zeile eins\n    zeile zwei\n  EOF";
+    assert_eq!(
+        befehl(text),
+        "cat <<'EOF' | sed -e 's/a/b/' | sort -u > /tmp/ausgabe-der-quicknote.txt\n2>/dev/null\nzeile eins\n  zeile zwei\nEOF"
+    );
 }
 
 #[test]
-fn strip_laesst_einen_umbruch_in_anfuehrungszeichen_stehen() {
+fn singlestrip_laesst_einen_umbruch_in_anfuehrungszeichen_stehen() {
     let lang = reihe('q', 60);
     for (auf, zu) in [("'", "'"), ("\"", "\""), ("$'", "'")] {
         let text = format!("echo {auf}{lang}\n  {}{zu}", reihe('r', 10));
@@ -336,33 +408,40 @@ fn strip_laesst_einen_umbruch_in_anfuehrungszeichen_stehen() {
             "Anfuehrung {auf}"
         );
     }
+    // Eine Anfuehrung ueber den Umbruch: in ihr bleibt er, danach wird
+    // verbunden.
+    let text = "git commit -m 'quicknote: singlestrip\n\n  nimmt jeden Umbruch ausserhalb' --author\n  'Kai <ks@example.org>'";
+    assert_eq!(
+        befehl(text),
+        "git commit -m 'quicknote: singlestrip\n\nnimmt jeden Umbruch ausserhalb' --author 'Kai <ks@example.org>'"
+    );
 }
 
 #[test]
-fn strip_laesst_kurze_befehle_untereinander_stehen() {
-    let lang = reihe('z', 45);
-    let text = format!("  cd /tmp\n  ls -la\n  echo {lang}\n");
-    assert_eq!(befehl(&text), format!("cd /tmp\nls -la\necho {lang}"));
-}
-
-#[test]
-fn strip_ist_idempotent() {
+fn singlestrip_ist_idempotent() {
     let lang = reihe('a', 55);
     for text in [
         format!("echo {lang}\n  {} ende\n  ls", reihe('b', 8)),
         format!("echo {lang}\n  {}\n  ende", reihe('b', 58)),
+        "git push --force-with-lease\n  origin main".to_owned(),
         "# ein Kommentar ueber einem Befehl, der lang genug ist\n  cargo build".to_owned(),
-        "cargo test \\\n  --workspace\n  cat <<EOF\n      rumpf\n  EOF".to_owned(),
-        format!("echo '{lang}\n   offen'\n  pwd"),
+        "cargo test \\\n  --workspace\n  cat <<EOF\n      rumpf\n  EOF\n  ls".to_owned(),
+        format!("echo '{lang}\n  offen'\n  pwd"),
+        "  cd /tmp\n  ls -la\n\n  pwd\n".to_owned(),
     ] {
         let einmal = befehl(&text);
         assert_eq!(befehl(&einmal), einmal, "an {text:?}");
     }
+    // Der eine Fall, den der Modulkopf nennt: nach dem ersten Lauf traegt jede
+    // Zeile ab der zweiten noch Einrueckung, und ein zweiter Lauf nimmt sie.
+    let einmal = befehl(&format!("echo '{lang}\n   offen'\n  pwd"));
+    assert_eq!(einmal, format!("echo '{lang}\n offen' pwd"));
+    assert_eq!(befehl(&einmal), format!("echo '{lang}\noffen' pwd"));
 }
 
 #[test]
-fn strip_endet_ohne_zeilenumbruch_und_ohne_nachlaufenden_leerraum() {
-    assert_eq!(befehl("\n\n   ls -la   \n  pwd \t\n\n\n"), "ls -la\npwd");
+fn singlestrip_endet_ohne_zeilenumbruch_und_ohne_nachlaufenden_leerraum() {
+    assert_eq!(befehl("\n\n   ls -la   \n  pwd \t\n\n\n"), "ls -la pwd");
     assert_eq!(befehl("  \n \n"), "");
     assert_eq!(befehl(""), "");
     assert_eq!(fliesstext(""), "");
@@ -371,12 +450,12 @@ fn strip_endet_ohne_zeilenumbruch_und_ohne_nachlaufenden_leerraum() {
 #[test]
 fn ein_kommentar_oeffnet_kein_anfuehrungszeichen() {
     let lang = reihe('k', 60);
-    // Das Apostroph im Kommentar oeffnet nichts: der Umbruch nach `ls` bleibt
-    // keiner in Anfuehrung, und der Terminalumbruch danach wird verbunden.
+    // Das Apostroph im Kommentar oeffnet nichts: kein Umbruch bleibt als einer
+    // in Anfuehrung stehen, und der Kommentar haelt die Zeile bis zum Ende.
     let text = format!("ls # don't\n  echo {lang}\n  {}", reihe('m', 63));
     assert_eq!(
         befehl(&text),
-        format!("ls # don't\necho {lang} {}", reihe('m', 63))
+        format!("ls # don't echo {lang} {}", reihe('m', 63))
     );
     // Ein `#` mitten im Wort ist kein Kommentar, und das Apostroph danach
     // oeffnet eine Anfuehrung.
@@ -386,7 +465,7 @@ fn ein_kommentar_oeffnet_kein_anfuehrungszeichen() {
 
 #[test]
 fn die_beispiele_der_anleitung_stimmen() {
-    // `HowTo.md`, Abschnitt „Strip und Format“: beide Beispiele woertlich.
+    // `HowTo.md`, Abschnitt „Singlestrip und Format“: beide Beispiele woertlich.
     let strip = "cd ~/Projekte/krk && export PATH=\"$HOME/.cargo/bin:$PATH\" && cargo test\n  --workspace -- --skip appkit:: && cargo clippy --workspace --all-targets\n  -- -D warnings\n";
     assert_eq!(
         befehl(strip),
@@ -400,7 +479,7 @@ fn die_beispiele_der_anleitung_stimmen() {
 }
 
 #[test]
-fn strip_laesst_nachlaufenden_leerraum_im_heredoc_rumpf_und_in_anfuehrung_stehen() {
+fn singlestrip_laesst_nachlaufenden_leerraum_im_heredoc_rumpf_und_in_anfuehrung_stehen() {
     // Die zwei Leerzeichen eines harten Umbruchs in Markdown sind Inhalt; die
     // Endzeile verliert ihren Leerraum, damit sie den Rumpf beendet.
     assert_eq!(
@@ -410,10 +489,10 @@ fn strip_laesst_nachlaufenden_leerraum_im_heredoc_rumpf_und_in_anfuehrung_stehen
     // Endet eine Zeile in offener Anfuehrung, gehoert ihr Leerraum zum Wert.
     assert_eq!(
         befehl("echo 'wert mit leerraum  \n  zweite zeile'  \n  ls  "),
-        "echo 'wert mit leerraum  \nzweite zeile'\nls"
+        "echo 'wert mit leerraum  \nzweite zeile' ls"
     );
     // Ausserhalb faellt er weiter, auch vor der Endzeile und hinter einem `\`.
-    assert_eq!(befehl("ls -la   \n  pwd  "), "ls -la\npwd");
+    assert_eq!(befehl("ls -la   \n  pwd  "), "ls -la pwd");
     assert_eq!(befehl("ls \\  \n  -la"), "ls -la");
 }
 
@@ -425,11 +504,11 @@ fn eine_arithmetik_oeffnet_keinen_heredoc() {
         "(( x = 1 << 4 ))",
         "echo $(( (1 << 2) + 1 ))",
     ] {
-        // Hinter der Arithmetik wird ein Terminalumbruch weiter verbunden.
+        // Hinter der Arithmetik wird weiter verbunden: kein Rumpf ist offen.
         let text = format!("{anfang}\n  echo {lang}\n  {}\n  -n", reihe('v', 63));
         assert_eq!(
             befehl(&text),
-            format!("{anfang}\necho {lang} {} -n", reihe('v', 63)),
+            format!("{anfang} echo {lang} {} -n", reihe('v', 63)),
             "an {anfang}"
         );
     }
@@ -441,7 +520,7 @@ fn eine_arithmetik_oeffnet_keinen_heredoc() {
 }
 
 #[test]
-fn strip_bleibt_mit_erhaltenem_leerraum_idempotent() {
+fn singlestrip_bleibt_mit_erhaltenem_leerraum_idempotent() {
     for text in [
         "cat <<EOF > a.md\n  zeile mit hartem Umbruch  \n  weiter\n  EOF",
         "echo 'wert  \n  zweite'\n  ls",
