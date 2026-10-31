@@ -592,12 +592,12 @@ use super::teilen;
 use super::textautomatik;
 use super::textmerkmale;
 
-/// Welche der zwei Umformungen der Quicknote: Strip
+/// Welche der zwei Umformungen der Quicknote: Singlestrip
 /// (`krk_core::text::glaetten::befehl`) oder Format
 /// (`krk_core::text::glaetten::fliesstext`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Umformung {
-    Strip,
+    Singlestrip,
     Format,
 }
 
@@ -630,7 +630,7 @@ pub enum Umformung {
 ///  Ausgang von „PIN ändern"      crate::editormodell::Pinwechselausgang (5.5 derselben)
 ///  Ausgang des Kopierens         crate::quicknote::kopieren (Schritt 3 der Quicknote)
 ///  Grenze der Quicknote          crate::quicknote::aenderung_passt (Schritt 4 derselben)
-///  Strip und Format              crate::appkit::editor::umgeformt (Schritt 7 der Sicherung)
+///  Singlestrip und Format              crate::appkit::editor::umgeformt (Schritt 7 der Sicherung)
 ///  Sicherung der Quicknote       crate::quicknotesicherung::Sicherungsmeldung (dieselbe)
 /// ```
 ///
@@ -791,7 +791,7 @@ pub enum Editormeldung {
     /// Der Puffer der Quicknote war leer; die Zwischenablage bleibt, wie sie
     /// war (A12).
     QuicknoteLeer,
-    /// Strip oder Format haben am Text der Quicknote nichts geaendert
+    /// Singlestrip oder Format haben am Text der Quicknote nichts geaendert
     /// (Entscheidung 12 des Plans
     /// `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`).
     QuicknoteUnveraendert(Umformung),
@@ -1006,8 +1006,8 @@ impl Editormeldung {
                 &[],
             ),
             Self::QuicknoteLeer => text(Text::QuicknoteLeer).to_owned(),
-            Self::QuicknoteUnveraendert(Umformung::Strip) => {
-                text(Text::QuicknoteStripUnveraendert).to_owned()
+            Self::QuicknoteUnveraendert(Umformung::Singlestrip) => {
+                text(Text::QuicknoteSinglestripUnveraendert).to_owned()
             }
             Self::QuicknoteUnveraendert(Umformung::Format) => {
                 text(Text::QuicknoteFormatUnveraendert).to_owned()
@@ -2289,13 +2289,13 @@ fn grund_der_unlesbarkeit(grund: Unlesbar) -> Text {
     }
 }
 
-/// Was Strip oder Format aus `vorher` machen; `None`, wenn die Umformung
+/// Was Singlestrip oder Format aus `vorher` machen; `None`, wenn die Umformung
 /// nichts aendert (Entscheidung 12 des Plans der Sicherung). Rein und ohne
 /// AppKit, damit die Regel „unveraendert heisst keine Handlung" ohne Flaeche
 /// pruefbar ist.
 fn umgeformt(art: Umformung, vorher: &str) -> Option<String> {
     let nachher = match art {
-        Umformung::Strip => glaetten::befehl(vorher),
+        Umformung::Singlestrip => glaetten::befehl(vorher),
         Umformung::Format => glaetten::fliesstext(vorher),
     };
     (nachher != vorher).then_some(nachher)
@@ -3466,7 +3466,7 @@ impl Editorbereich {
 
     // ------------------------------------------------------------------
     // Die Quicknote (Plan `260927-0110_*_plan-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`,
-    // Sicherung, Strip und Format nach `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`)
+    // Sicherung, Singlestrip und Format nach `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`)
     // ------------------------------------------------------------------
 
     /// Ob die Quicknote offen ist, also ob der Bereich ihre Rueckkehr haelt.
@@ -3709,7 +3709,7 @@ impl Editorbereich {
             .map_or_else(String::new, |quicknote| quicknote.text())
     }
 
-    /// Strip oder Format am Text der Quicknote (Entscheidung 12 des Plans
+    /// Singlestrip oder Format am Text der Quicknote (Entscheidung 12 des Plans
     /// `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`):
     /// an der Auswahl, sonst am ganzen Text, als eine Handlung, die `cmd+z`
     /// zuruecknimmt, und danach ist das Ergebnis ausgewaehlt.
@@ -9631,10 +9631,10 @@ mod tests {
     fn eine_umformung_ohne_aenderung_legt_keinen_rueckgaengigeintrag_an() {
         use super::super::anwendung::quelltextproben::{datei, rumpf};
 
-        assert_eq!(umgeformt(Umformung::Strip, "ls -la"), None);
+        assert_eq!(umgeformt(Umformung::Singlestrip, "ls -la"), None);
         assert_eq!(umgeformt(Umformung::Format, "Ein Satz.\n"), None);
         assert_eq!(
-            umgeformt(Umformung::Strip, "  ls -la  \n"),
+            umgeformt(Umformung::Singlestrip, "  ls -la  \n"),
             Some("ls -la".to_owned())
         );
         let quelle = rumpf(&datei("krk-ui/src/appkit/editor.rs"), "quicknote_umformen");

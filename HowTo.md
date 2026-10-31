@@ -1126,17 +1126,19 @@ Oben in der Fläche stehen fünf Schaltflächen:
   leere Quicknote kopiert nichts: sie schließt, und die Zwischenablage bleibt,
   wie sie war. Lässt sich der Text nicht kopieren, bleibt er stehen und die
   Quicknote offen.
-- **Strip** macht aus einem Shell-Befehl, der beim Kopieren aus einem Chat
-  umgebrochen und eingerückt wurde, wieder einen, der im Terminal läuft.
+- **Singlestrip** macht aus einem einzelnen Shell-Befehl, der beim Kopieren
+  aus einem Chat umgebrochen und eingerückt wurde, wieder eine Zeile, die im
+  Terminal läuft. Für mehrere Befehle untereinander ist es nicht gedacht.
 - **Format** macht aus Fließtext, den das Terminal eines Chats umgebrochen
   hat, wieder Absätze und Aufzählungspunkte auf je einer Zeile.
 
-Beide stehen unten unter „Strip und Format“ im Einzelnen.
+Beide stehen unten unter „Singlestrip und Format“ im Einzelnen.
 
 Im Hauptmenü stehen die fünf als „Quicknote öffnen und schließen“, „Quicknote
-kopieren und schließen“, „Quicknote leeren“, „Quicknote: Befehl glätten
-(Strip)“ und „Quicknote: Fließtext formatieren (Format)“ unter „Editor“; die
-letzten drei haben ab Werk keine Taste und lassen sich in **F1** belegen.
+kopieren und schließen“, „Quicknote leeren“, „Quicknote: Befehl auf eine Zeile
+bringen (Singlestrip)“ und „Quicknote: Fließtext formatieren (Format)“ unter
+„Editor“; die letzten drei haben ab Werk keine Taste und lassen sich in **F1**
+belegen.
 
 **Eine im Editor offene Datei liegt unberührt darunter.** Ihr Stand, ihre
 Schreibmarke und ihr Rückgängig bleiben, wie sie waren, und nach dem Schließen
@@ -1208,21 +1210,23 @@ ohne PIN, bis er geleert oder kopiert wird; „Leeren“ und „Kopieren“ leer
 Datei mit. „Kopieren“ legt ihn ohne weitere Frage in die Zwischenablage, wie es
 ein Kopieren aus `secrets.txt` selbst täte.
 
-### Strip und Format
+### Singlestrip und Format
 
 Beide wirken auf die Auswahl, und ohne Auswahl auf den ganzen Text. Das
 Ergebnis ist danach ausgewählt, und `cmd+z` nimmt die Umformung als eine
 Handlung zurück. Ändert sich nichts, bleibt der Text unberührt, und die
-Statuszeile sagt „Strip: nichts zu ändern.“ oder „Format: nichts zu ändern.“
+Statuszeile sagt „Singlestrip: nichts zu ändern.“ oder „Format: nichts zu
+ändern.“
 
-**Strip** nimmt nachlaufende Leerzeichen und die Einrückung, die das Kopieren
-hinzufügt, und verbindet Zeilen, die das Terminal des Chats umgebrochen hat,
-mit einem Leerzeichen. Eine Fortsetzung mit `\` am Zeilenende wird zu einer
-Zeile, wie die Shell sie liest. Was in Anführungszeichen oder in einem Heredoc
-steht, bleibt mit seinen Umbrüchen und mit dem Leerraum am Zeilenende, wie es
-ist; Befehle untereinander bleiben untereinander, und nach einer Kommentarzeile
-(`# …`) beginnt immer eine neue Zeile, damit kein Befehl im Kommentar landet.
-Das Ergebnis endet ohne Zeilenumbruch, damit ein Einfügen ins Terminal nicht
+**Singlestrip macht aus einem einzelnen umbrochenen Befehl eine Zeile.** Es geht
+davon aus, dass die Eingabe **ein** Befehl ist und keine Liste von Befehlen
+untereinander. Es nimmt nachlaufende Leerzeichen und die Einrückung, und
+**jeder** Zeilenumbruch wird zu einem Leerzeichen, gleich wie lang die Zeilen
+sind. Eine Fortsetzung mit `\` am Zeilenende wird zu einer Zeile, wie die Shell
+sie liest. Was in Anführungszeichen oder in einem Heredoc steht, bleibt mit
+seinen Umbrüchen und mit dem Leerraum am Zeilenende, wie es ist; nach der
+Endzeile eines Heredocs beginnt eine neue Zeile, damit sie ihn beendet. Das
+Ergebnis endet ohne Zeilenumbruch, damit ein Einfügen ins Terminal nicht
 sofort ausführt.
 
 ```
@@ -1236,6 +1240,27 @@ wird zu
 ```
 cd ~/Projekte/krk && export PATH="$HOME/.cargo/bin:$PATH" && cargo test --workspace -- --skip appkit:: && cargo clippy --workspace --all-targets -- -D warnings
 ```
+
+**Für mehrere Befehle untereinander ist Singlestrip nicht gedacht.** Es hängt
+sie aneinander, und der zweite läuft dann als Argumente des ersten: aus
+
+```
+rm -rf build/alt
+  ls -la build/neu
+```
+
+wird `rm -rf build/alt ls -la build/neu`, und das löscht auch `build/neu`. Mehrere Befehle einzeln umformen und einfügen; `cmd+z` nimmt eine
+Umformung zurück.
+
+**Ein Kommentar (`# …`) reicht nach Singlestrip bis zum Ende der Zeile.** Alles,
+was danach steht, steht im Kommentar und läuft nicht. Das ist Absicht: ein
+Kommentar, den das Terminal umgebrochen hat, liefe sonst mit seinem Rest als
+Befehl. Steht über dem Befehl eine Kommentarzeile, landet der Befehl im
+Kommentar und läuft beim Einfügen nicht; die Zeile beginnt dann mit `#`. Die
+Kommentarzeile vorher aus der Auswahl lassen.
+
+Ein Wort, das breiter ist als die Zeile und das der Chat mitten im Wort
+getrennt hat, etwa ein sehr langer Pfad, bekommt ein Leerzeichen zu viel.
 
 **Format** verbindet Fließtext-Zeilen, die nur der Umbruch des Terminals
 getrennt hat, nimmt die Einrückung und lässt Überschriften, Leerzeilen und
@@ -1267,29 +1292,24 @@ Eine Überschrift
 ```
 
 **Ob ein Zeilenumbruch vom Terminal stammt oder gewollt ist, lässt sich am Text
-allein nicht sicher sagen**, denn die Breite des Terminals reist nicht mit. KRK
-nimmt die längste Zeile als Breite, aber erst, wenn mindestens zwei Zeilen sie
-fast erreichen: ein Umbruch des Terminals hinterlässt mehrere gleich lange
-Zeilen, eine einzelne lange Zeile beweist keinen. Dann verbindet es eine Zeile
-mit der nächsten nur, wenn das erste Wort der nächsten nicht mehr in die Zeile
-gepasst hätte und die nächste eingerückt ist. Text ohne Einrückung und Text,
-dessen längste Zeile kürzer als 40 Zeichen ist, wird deshalb nie verbunden,
-außer bei einer Fortsetzung mit `\` in Strip. Diese Fälle sind so nicht zu
-entscheiden:
+allein nicht sicher sagen**, denn die Breite des Terminals reist nicht mit.
+Format schätzt deshalb: es nimmt die längste Zeile als Breite, aber erst, wenn
+mindestens zwei Zeilen sie fast erreichen. Ein Umbruch des Terminals
+hinterlässt mehrere gleich lange Zeilen, eine einzelne lange Zeile beweist
+keinen. Dann verbindet es eine Zeile mit der nächsten nur, wenn das erste Wort
+der nächsten nicht mehr in die Zeile gepasst hätte und die nächste eingerückt
+ist. Text ohne Einrückung und Text, dessen längste Zeile kürzer als 40 Zeichen
+ist, wird deshalb nie verbunden. Diese Fälle sind so nicht zu entscheiden:
 
-- **Ein Text, den das Terminal genau einmal umgebrochen hat**, hat nur eine
-  volle Zeile und bleibt, wie er ist; ein so umgebrochener Befehl steht nach
-  Strip weiter auf zwei Zeilen. Vor dem Einfügen ins Terminal von Hand
-  verbinden.
+- **Ein Text, den das Terminal genau einmal umgebrochen hat**, etwa ein
+  einzelner ausgewählter Absatz oder Punkt, hat nur eine volle Zeile. Format
+  verbindet ihn nicht und lässt die Fortsetzungszeile mit ihrer Einrückung
+  stehen. Ein späteres Format über mehr Text, in dem mindestens zwei Zeilen
+  fast die volle Breite haben, verbindet sie dann noch.
 - **Zwei getrennte Zeilen, die beide fast die volle Breite einnehmen**, werden
-  verbunden, wenn die zweite eingerückt ist; `cmd+z` nimmt das zurück. Nach
-  einer Kommentarzeile verbindet Strip nie.
-- **Ein Kommentar, den das Terminal umgebrochen hat**, bleibt nach Strip auf
-  mehreren Zeilen, und die Shell liest jede weitere als Befehl. Vor dem Einfügen
-  prüfen.
+  verbunden, wenn die zweite eingerückt ist; `cmd+z` nimmt das zurück.
 - Ein Wort, das breiter ist als die Zeile und das der Chat mitten im Wort
-  getrennt hat, etwa ein sehr langer Pfad, bekommt beim Verbinden ein
-  Leerzeichen zu viel.
+  getrennt hat, bekommt beim Verbinden ein Leerzeichen zu viel.
 
 ### Mit einer eigenen `keymap.toml`
 

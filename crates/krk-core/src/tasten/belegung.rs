@@ -1201,22 +1201,25 @@ pub enum Kommando {
     /// Traegt [`Wirkungsbereich::Quicknote`] wie das Kopieren und ist ab Werk
     /// unbelegt; erreichbar ist er ueber die Schaltflaeche und das Menue.
     QuicknoteLeeren,
-    /// Strip: aus einem aus dem Chat kopierten Shell-Befehl einen
-    /// lauffaehigen machen, an der Auswahl der Quicknote oder sonst am ganzen
-    /// Text, mit `cmd+z` zuruecknehmbar (`crate::text::glaetten::befehl`;
-    /// Plan `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`,
-    /// Entscheidung 13).
+    /// Singlestrip: aus einem aus dem Chat kopierten, umbrochenen Shell-Befehl
+    /// eine Zeile machen, die im Terminal laeuft, an der Auswahl der Quicknote
+    /// oder sonst am ganzen Text, mit `cmd+z` zuruecknehmbar
+    /// (`crate::text::glaetten::befehl`; Plan
+    /// `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`,
+    /// Entscheidung 13). Die Eingabe gilt als **ein** Befehl, nicht als Liste
+    /// (`261031-1226-in-welche-richtung-irrt-strip-wenn-ein-umbruch-nicht-entscheidbar-ist.md`);
+    /// bis dahin hiess die Funktion Strip und die Kennung `quicknote_strip`.
     ///
     /// Traegt [`Wirkungsbereich::Quicknote`] wie das Leeren und ist ab Werk
     /// unbelegt; erreichbar ueber die Schaltflaeche und das Menue.
-    QuicknoteStrip,
+    QuicknoteSinglestrip,
     /// Format: terminal-umbrochenen Fliesstext der Quicknote zu Absaetzen und
     /// Aufzaehlungspunkten auf je einer Zeile machen, an der Auswahl oder sonst
     /// am ganzen Text, mit `cmd+z` zuruecknehmbar
     /// (`crate::text::glaetten::fliesstext`).
     ///
     /// Traegt [`Wirkungsbereich::Quicknote`] und ist ab Werk unbelegt wie
-    /// [`Kommando::QuicknoteStrip`].
+    /// [`Kommando::QuicknoteSinglestrip`].
     QuicknoteFormat,
     /// Am Ende der Eintragstabelle einen leeren Eintrag anlegen und seine
     /// Zelle in Bearbeitung setzen (C6 des Spec
@@ -1576,7 +1579,7 @@ impl Kommando {
         (Kommando::QuicknoteUmschalten, "quicknote_umschalten"),
         (Kommando::QuicknoteKopieren, "quicknote_kopieren"),
         (Kommando::QuicknoteLeeren, "quicknote_leeren"),
-        (Kommando::QuicknoteStrip, "quicknote_strip"),
+        (Kommando::QuicknoteSinglestrip, "quicknote_singlestrip"),
         (Kommando::QuicknoteFormat, "quicknote_format"),
         (Kommando::EintragHinzufuegen, "eintrag_hinzufuegen"),
         (Kommando::EintragBearbeiten, "eintrag_bearbeiten"),
@@ -1925,7 +1928,7 @@ impl Kommando {
             // Quicknote); ob sie offen ist, fragt `krk_ui` ueber die Form.
             Kommando::QuicknoteKopieren
             | Kommando::QuicknoteLeeren
-            | Kommando::QuicknoteStrip
+            | Kommando::QuicknoteSinglestrip
             | Kommando::QuicknoteFormat => Wirkungsbereich::Quicknote,
             // Die Leiste (C5).
             Kommando::LesezeichenUmbenennen
@@ -2191,7 +2194,7 @@ impl Kommando {
             | Kommando::QuicknoteUmschalten
             | Kommando::QuicknoteKopieren
             | Kommando::QuicknoteLeeren
-            | Kommando::QuicknoteStrip
+            | Kommando::QuicknoteSinglestrip
             | Kommando::QuicknoteFormat
             | Kommando::EintragHinzufuegen
             | Kommando::EintragBearbeiten

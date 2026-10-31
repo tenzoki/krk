@@ -2831,7 +2831,7 @@ mod tests {
         for kommando in [
             Kommando::QuicknoteKopieren,
             Kommando::QuicknoteLeeren,
-            Kommando::QuicknoteStrip,
+            Kommando::QuicknoteSinglestrip,
             Kommando::QuicknoteFormat,
         ] {
             assert!(zulaessig(kommando, quicknote), "{kommando:?} wirkt nicht");

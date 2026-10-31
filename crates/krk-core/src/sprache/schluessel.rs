@@ -1408,13 +1408,13 @@ pub enum Text {
     /// Schluessel neben `VorgangsartKopieren`, weil die Ueberschrift eines
     /// laufenden Vorgangs in Englisch ein anderes Wort traegt.
     QuicknoteKopieren,
-    /// Die Schaltflaeche „Strip“ der Quicknote; ein Name, in jeder Sprache
+    /// Die Schaltflaeche „Singlestrip“ der Quicknote; ein Name, in jeder Sprache
     /// derselbe (Entscheidung 13 des Plans der Quicknote-Sicherung).
-    QuicknoteStrip,
-    /// Die Schaltflaeche „Format“ der Quicknote; ein Name wie „Strip“.
+    QuicknoteSinglestrip,
+    /// Die Schaltflaeche „Format“ der Quicknote; ein Name wie „Singlestrip“.
     QuicknoteFormat,
-    /// Strip hat am Text nichts geaendert.
-    QuicknoteStripUnveraendert,
+    /// Singlestrip hat am Text nichts geaendert.
+    QuicknoteSinglestripUnveraendert,
     /// Format hat am Text nichts geaendert.
     QuicknoteFormatUnveraendert,
     /// Die Sicherung der Quicknote findet den Notizordner nicht; `{ort}`.
@@ -2521,9 +2521,9 @@ impl Text {
         Text::QuicknoteKeineTextmarken,
         Text::QuicknoteLeeren,
         Text::QuicknoteKopieren,
-        Text::QuicknoteStrip,
+        Text::QuicknoteSinglestrip,
         Text::QuicknoteFormat,
-        Text::QuicknoteStripUnveraendert,
+        Text::QuicknoteSinglestripUnveraendert,
         Text::QuicknoteFormatUnveraendert,
         Text::QuicknoteOrdnerFehlt,
         Text::QuicknoteKeinNotizordner,

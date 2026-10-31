@@ -27,7 +27,7 @@
 //!
 //! **Jede Aenderung des Textes meldet sich ueber `textDidChange:`** am
 //! Delegierten, und der ruft den Aenderungsmelder, den der Editorbereich beim
-//! Bau setzt: Tippen, Einfuegen, Ziehen, Leeren, Strip, Format und auch
+//! Bau setzt: Tippen, Einfuegen, Ziehen, Leeren, Singlestrip, Format und auch
 //! Rueckgaengig und Wiederholen, denn die Textflaeche meldet jede Handlung
 //! ihres Verwalters ueber dieselbe Benachrichtigung, solange ihr Fenster das
 //! Schluesselfenster ist, und anders erreicht `cmd+z` sie nicht (gemessen am
@@ -73,10 +73,10 @@
 //! # Die fuenf Schaltflaechen
 //!
 //! Oben in der Rolle stehen Leeren, Schliessen und Kopieren, von links nach
-//! rechts (Entscheidung 2 des Plans), und rechts daneben Strip und Format
+//! rechts (Entscheidung 2 des Plans), und rechts daneben Singlestrip und Format
 //! (Entscheidung 13 des Plans der Sicherung), beschriftet aus der
-//! Sprachtabelle; „Strip“ und „Format“ sind Namen und in jeder Sprache
-//! dieselben. Strip und Format wirken auf die Auswahl, sonst auf den ganzen
+//! Sprachtabelle; „Singlestrip“ und „Format“ sind Namen und in jeder Sprache
+//! dieselben. Singlestrip und Format wirken auf die Auswahl, sonst auf den ganzen
 //! Text, und gehen ueber [`Quicknote::ersetzen`], denselben einen
 //! Ersetzungsweg wie Leeren; was sie rechnen, steht in
 //! `krk_core::text::glaetten`.
@@ -283,11 +283,11 @@ define_class!(
             self.geklickt(Kommando::QuicknoteKopieren);
         }
 
-        /// Die Schaltflaeche „Strip".
+        /// Die Schaltflaeche „Singlestrip".
         // SAFETY: Die Signatur ist die uebliche einer Aktion.
-        #[unsafe(method(quicknoteStrip:))]
-        fn strip_geklickt(&self, _absender: Option<&AnyObject>) {
-            self.geklickt(Kommando::QuicknoteStrip);
+        #[unsafe(method(quicknoteSinglestrip:))]
+        fn singlestrip_geklickt(&self, _absender: Option<&AnyObject>) {
+            self.geklickt(Kommando::QuicknoteSinglestrip);
         }
 
         /// Die Schaltflaeche „Format".
@@ -382,7 +382,7 @@ impl Quicknote {
             (Text::QuicknoteLeeren, sel!(quicknoteLeeren:)),
             (Text::BlattSchliessen, sel!(quicknoteSchliessen:)),
             (Text::QuicknoteKopieren, sel!(quicknoteKopieren:)),
-            (Text::QuicknoteStrip, sel!(quicknoteStrip:)),
+            (Text::QuicknoteSinglestrip, sel!(quicknoteSinglestrip:)),
             (Text::QuicknoteFormat, sel!(quicknoteFormat:)),
         ];
         let mut links = KNOPFABSTAND;
@@ -483,7 +483,7 @@ impl Quicknote {
     /// Flaeche die Aenderung abgewiesen hat (ueber der Grenze, oder vor dem
     /// Einlesen nicht bearbeitbar).
     ///
-    /// **Der eine Ersetzungsweg der Quicknote**, fuer Leeren, Strip und
+    /// **Der eine Ersetzungsweg der Quicknote**, fuer Leeren, Singlestrip und
     /// Format. Angemeldet ueber `shouldChangeTextInRange:replacementString:`
     /// und `didChangeText`, dieselben zwei Rufe, mit denen die Flaeche das
     /// Tippen anmeldet; die Grenzpruefung des Delegierten gilt damit auch hier,
@@ -598,7 +598,7 @@ mod tests {
             ("leeren_geklickt", "Kommando::QuicknoteLeeren"),
             ("schliessen_geklickt", "Kommando::QuicknoteUmschalten"),
             ("kopieren_geklickt", "Kommando::QuicknoteKopieren"),
-            ("strip_geklickt", "Kommando::QuicknoteStrip"),
+            ("singlestrip_geklickt", "Kommando::QuicknoteSinglestrip"),
             ("format_geklickt", "Kommando::QuicknoteFormat"),
         ] {
             let rumpf = rumpf(&quelle, aktion);
@@ -624,11 +624,11 @@ mod tests {
     // im laufenden Programm gemessen
     // (`messungen/261031-1300-quicknote-textdidchange.txt`).
 
-    /// Strip, Format und Leeren sind eine Handlung, die `cmd+z` zuruecknimmt,
+    /// Singlestrip, Format und Leeren sind eine Handlung, die `cmd+z` zuruecknimmt,
     /// ueber den einen Ersetzungsweg `ersetzen` (Entscheidung 12 des Plans der
     /// Sicherung), und einen zweiten gibt es in dieser Datei nicht.
     #[test]
-    fn strip_und_format_sind_eine_zuruecknehmbare_handlung() {
+    fn singlestrip_und_format_sind_eine_zuruecknehmbare_handlung() {
         let quelle = datei("krk-ui/src/appkit/quicknote.rs");
         let ersetzen = rumpf(&quelle, "ersetzen");
         let folge = [

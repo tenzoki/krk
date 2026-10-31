@@ -1152,7 +1152,7 @@ mod tests {
     /// Reihenfolge der Auslieferungsbelegung, zwei mit Kuerzel und „Quicknote
     /// leeren" ohne (Schritt 1 des Plans
     /// `260927-0110_*_plan-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`),
-    /// dahinter Strip und Format ebenso ohne (Entscheidung 13 des Plans
+    /// dahinter Singlestrip und Format ebenso ohne (Entscheidung 13 des Plans
     /// `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`).
     #[test]
     fn die_quicknote_steht_mit_ihren_kuerzeln_im_menue_editor() {
@@ -1182,7 +1182,7 @@ mod tests {
                 ("quicknote_umschalten", Some(f10)),
                 ("quicknote_kopieren", Some(shift_f10)),
                 ("quicknote_leeren", None),
-                ("quicknote_strip", None),
+                ("quicknote_singlestrip", None),
                 ("quicknote_format", None),
             ]
         );

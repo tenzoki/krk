@@ -925,9 +925,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::QuicknoteKeineTextmarken => "In der Quicknote gibt es keine Textmarken.",
         Text::QuicknoteLeeren => "Leeren",
         Text::QuicknoteKopieren => "Kopieren",
-        Text::QuicknoteStrip => "Strip",
+        Text::QuicknoteSinglestrip => "Singlestrip",
         Text::QuicknoteFormat => "Format",
-        Text::QuicknoteStripUnveraendert => "Strip: nichts zu ändern.",
+        Text::QuicknoteSinglestripUnveraendert => "Singlestrip: nichts zu ändern.",
         Text::QuicknoteFormatUnveraendert => "Format: nichts zu ändern.",
         Text::QuicknoteOrdnerFehlt => {
             "Die Quicknote wird nicht gesichert: der Notizordner {ort} fehlt. F2 legt ihn an."
@@ -1489,7 +1489,7 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::QuicknoteUmschalten => "Quicknote öffnen und schließen",
         Kommando::QuicknoteKopieren => "Quicknote kopieren und schließen",
         Kommando::QuicknoteLeeren => "Quicknote leeren",
-        Kommando::QuicknoteStrip => "Quicknote: Befehl glätten (Strip)",
+        Kommando::QuicknoteSinglestrip => "Quicknote: Befehl auf eine Zeile bringen (Singlestrip)",
         Kommando::QuicknoteFormat => "Quicknote: Fließtext formatieren (Format)",
         Kommando::EintragHinzufuegen => "Eintrag hinzufügen",
         Kommando::EintragBearbeiten => "Eintrag bearbeiten",

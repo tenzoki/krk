@@ -1,5 +1,5 @@
 //! Die Textrechnung des Editors: Einlesen, Zeilenindex, Suche und Ersetzen,
-//! Sichern (C2, C4, C5, C6), dazu Strip und Format der Quicknote
+//! Sichern (C2, C4, C5, C6), dazu Singlestrip und Format der Quicknote
 //! ([`glaetten`]).
 //!
 //! ```text

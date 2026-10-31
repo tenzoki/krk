@@ -879,9 +879,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::QuicknoteKeineTextmarken => "There are no text bookmarks in the Quicknote.",
         Text::QuicknoteLeeren => "Clear",
         Text::QuicknoteKopieren => "Copy",
-        Text::QuicknoteStrip => "Strip",
+        Text::QuicknoteSinglestrip => "Singlestrip",
         Text::QuicknoteFormat => "Format",
-        Text::QuicknoteStripUnveraendert => "Strip: nothing to change.",
+        Text::QuicknoteSinglestripUnveraendert => "Singlestrip: nothing to change.",
         Text::QuicknoteFormatUnveraendert => "Format: nothing to change.",
         Text::QuicknoteOrdnerFehlt => {
             "The Quicknote is not being saved: the notes folder {ort} is missing. F2 creates it."
@@ -1421,7 +1421,7 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::QuicknoteUmschalten => "Open or Close Quicknote",
         Kommando::QuicknoteKopieren => "Copy Quicknote and Close",
         Kommando::QuicknoteLeeren => "Clear Quicknote",
-        Kommando::QuicknoteStrip => "Quicknote: Strip Command",
+        Kommando::QuicknoteSinglestrip => "Quicknote: Command on One Line (Singlestrip)",
         Kommando::QuicknoteFormat => "Quicknote: Format Text",
         Kommando::EintragHinzufuegen => "Add Entry",
         Kommando::EintragBearbeiten => "Edit Entry",

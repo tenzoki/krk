@@ -992,9 +992,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::QuicknoteKeineTextmarken => "Dans la Quicknote, il n’y a pas de signets de texte.",
         Text::QuicknoteLeeren => "Vider",
         Text::QuicknoteKopieren => "Copier",
-        Text::QuicknoteStrip => "Strip",
+        Text::QuicknoteSinglestrip => "Singlestrip",
         Text::QuicknoteFormat => "Format",
-        Text::QuicknoteStripUnveraendert => "Strip\u{a0}: rien à modifier.",
+        Text::QuicknoteSinglestripUnveraendert => "Singlestrip\u{a0}: rien à modifier.",
         Text::QuicknoteFormatUnveraendert => "Format\u{a0}: rien à modifier.",
         Text::QuicknoteOrdnerFehlt => {
             "La Quicknote n’est pas enregistrée\u{a0}: le dossier de notes {ort} n’existe pas. F2 le crée."
@@ -1585,7 +1585,7 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::QuicknoteUmschalten => "Ouvrir ou fermer la Quicknote",
         Kommando::QuicknoteKopieren => "Copier la Quicknote et la fermer",
         Kommando::QuicknoteLeeren => "Vider la Quicknote",
-        Kommando::QuicknoteStrip => "Quicknote\u{a0}: lisser la commande (Strip)",
+        Kommando::QuicknoteSinglestrip => "Quicknote\u{a0}: commande sur une ligne (Singlestrip)",
         Kommando::QuicknoteFormat => "Quicknote\u{a0}: mettre en forme le texte (Format)",
         Kommando::EintragHinzufuegen => "Ajouter une entrée",
         Kommando::EintragBearbeiten => "Modifier l’entrée",

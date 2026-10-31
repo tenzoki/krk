@@ -199,9 +199,9 @@ const OHNE_KOMBINATION_AB_WERK: [&str; 13] = [
     // Belegungsdatei dort steht.
     "trenntext_trennzeichen_wechseln",
     "quicknote_leeren",
-    // Strip und Format (Entscheidung 13 des Plans
+    // Singlestrip und Format (Entscheidung 13 des Plans
     // `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`).
-    "quicknote_strip",
+    "quicknote_singlestrip",
     "quicknote_format",
     "belegungsdatei_ansehen",
     "ort_waehlen",
@@ -1127,7 +1127,7 @@ fn eine_eigene_belegung_mit_und_ohne_die_neue_funktion_laedt() {
 // ---------------------------------------------------------------------------
 
 /// Die Befehle der Quicknote tragen ihre Bereiche und ihre Kennungen, und die
-/// Auslieferung legt F10 und `shift+f10` auf die ersten zwei; Strip und Format
+/// Auslieferung legt F10 und `shift+f10` auf die ersten zwei; Singlestrip und Format
 /// kamen am 261031 dazu.
 #[test]
 fn die_drei_befehle_der_quicknote_tragen_ihre_bereiche_und_kennungen() {
@@ -1148,8 +1148,8 @@ fn die_drei_befehle_der_quicknote_tragen_ihre_bereiche_und_kennungen() {
             Wirkungsbereich::Quicknote,
         ),
         (
-            Kommando::QuicknoteStrip,
-            "quicknote_strip",
+            Kommando::QuicknoteSinglestrip,
+            "quicknote_singlestrip",
             Wirkungsbereich::Quicknote,
         ),
         (
@@ -1212,7 +1212,7 @@ fn eine_eigene_belegung_ohne_die_quicknote_laedt_und_fuehrt_sie_unbelegt() {
         "quicknote_umschalten",
         "quicknote_kopieren",
         "quicknote_leeren",
-        "quicknote_strip",
+        "quicknote_singlestrip",
         "quicknote_format",
     ] {
         let funktion = geladen

@@ -5122,10 +5122,10 @@ impl Anwendungsdelegierter {
             // Kopieren und Leeren der Quicknote; gehalten von derselben Probe.
             Kommando::QuicknoteKopieren => self.quicknote_kopieren(),
             Kommando::QuicknoteLeeren => self.quicknote_leeren(),
-            // Strip und Format (Entscheidung 13 des Plans
+            // Singlestrip und Format (Entscheidung 13 des Plans
             // `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`);
             // gehalten von derselben Probe.
-            Kommando::QuicknoteStrip => self.quicknote_umformen(Umformung::Strip),
+            Kommando::QuicknoteSinglestrip => self.quicknote_umformen(Umformung::Singlestrip),
             Kommando::QuicknoteFormat => self.quicknote_umformen(Umformung::Format),
             Kommando::BelegungAnsehen => self.belegung_ansehen(),
             // Die Belegungsdatei aus dem Nutzerauftrag vom 260901. **Ein
@@ -12120,7 +12120,7 @@ impl Anwendungsdelegierter {
         true
     }
 
-    /// Strip oder Format an der Quicknote.
+    /// Singlestrip oder Format an der Quicknote.
     ///
     /// **Derselbe Zuschnitt wie [`Self::editorbefehl`], bis auf die Meldung**:
     /// eine gelungene Umformung zeigt ihr Ergebnis ausgewaehlt in der Flaeche
@@ -13877,7 +13877,7 @@ mod zweigproben {
         "QuicknoteUmschalten",
         "QuicknoteKopieren",
         "QuicknoteLeeren",
-        "QuicknoteStrip",
+        "QuicknoteSinglestrip",
         "QuicknoteFormat",
         "Werkseinstellungen",
         "BildVor",
