@@ -5138,7 +5138,13 @@ mod tests {
     ///   das Ueberschreiben und den Wechsel der PIN, alle hier;
     /// - der Klartextweg `datei::sichern` steht genau einmal da, im Sichern,
     ///   und hinter der Frage nach `secrets.txt`;
-    /// - in der ganzen Kiste ruft allein dieses Modul `datei::sichern`.
+    /// - in der ganzen Kiste rufen allein dieses Modul und die Sicherung der
+    ///   Quicknote `datei::sichern`. Die zweite schreibt seit dem 261031
+    ///   `scratch.txt` und keine Datei des Editors; ihren Pfad baut allein
+    ///   `Heimordner::quicknotedatei`, und dass sie der einzige Schreiber
+    ///   dieser Datei ist, haelt `scratch_txt_hat_genau_einen_schreiber` in
+    ///   `quicknotesicherung.rs`. Was das nicht ausschliesst: einen Pfad auf
+    ///   `secrets.txt`, den ein kuenftiger Rufer der Sicherung hereinreicht.
     #[test]
     fn kein_weg_schreibt_klartext_nach_secrets_txt() {
         let modell = code_vor_den_proben("krk-ui/src/editormodell.rs");
@@ -5224,7 +5230,13 @@ mod tests {
             })
             .map(|(name, _)| name)
             .collect();
-        assert_eq!(rufer, vec!["krk-ui/src/editormodell.rs".to_owned()]);
+        assert_eq!(
+            rufer,
+            vec![
+                "krk-ui/src/editormodell.rs".to_owned(),
+                "krk-ui/src/quicknotesicherung.rs".to_owned(),
+            ]
+        );
     }
 
     /// Der Betriebscode einer Datei: ihre Codezeilen bis zum ersten

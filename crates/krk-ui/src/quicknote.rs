@@ -18,6 +18,15 @@
 //! Editorbereich ausblendet, geht durch den Nachzug nach dem
 //! Sichtbarkeitswechsel beim Anwendungsdelegierten, der die Rueckkehr dort
 //! fallen laesst.
+//!
+//! # Der Puffer und die Platte
+//!
+//! Der Puffer ist der Textspeicher der Flaeche. Seit dem Plan
+//! `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`
+//! wird er in `scratch.txt` im Notizordner gesichert und ist nach einem
+//! Neustart wieder da; wer schreibt, wann gelesen wird und wann die
+//! Sicherung sich sperrt, steht in [`crate::quicknotesicherung`] und wird hier
+//! nicht wiederholt.
 
 use krk_core::text::datei::EDITORGRENZE;
 

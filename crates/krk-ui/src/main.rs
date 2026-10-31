@@ -117,6 +117,20 @@ mod pruefordner;
 #[cfg(test)]
 mod quellbaum;
 mod quicknote;
+// Bis der Editorbereich die Sicherung startet (Schritt 7 des Plans
+// `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`),
+// ruft sie ausserhalb ihrer Proben niemand. `expect` und nicht `allow`, damit
+// die Ausnahme ihr Ablaufdatum selbst durchsetzt: mit dem ersten Rufer wird
+// die Erwartung unerfuellt, und der Bau haelt unter `-D warnings` an, bis die
+// Zeile weg ist.
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "der Rufer kommt in Schritt 7 des Plans der Quicknote-Sicherung"
+    )
+)]
+mod quicknotesicherung;
 mod spalten;
 mod tabs;
 mod trenntextvorschau;
