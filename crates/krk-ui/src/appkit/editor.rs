@@ -3463,7 +3463,8 @@ impl Editorbereich {
     }
 
     // ------------------------------------------------------------------
-    // Die Quicknote (Plan `260927-0110_*_plan-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`)
+    // Die Quicknote (Plan `260927-0110_*_plan-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`,
+    // Sicherung, Strip und Format nach `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`)
     // ------------------------------------------------------------------
 
     /// Ob die Quicknote offen ist, also ob der Bereich ihre Rueckkehr haelt.

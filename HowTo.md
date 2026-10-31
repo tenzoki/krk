@@ -1100,12 +1100,13 @@ ohne Marke und mit `\n`.
 
 ## Die Quicknote
 
-`f10` öffnet im Editorbereich eine Quicknote: eine leere Schreibfläche für eine
-Notiz, die keine Datei braucht. Steht der Editor nicht am rechten Rand, kommt
-er hervor. Was dort vorher stand, die Vorschau oder der Git-Bereich, kommt beim
-Schließen zurück, und der Fokus geht dorthin, wo er vor `f10` stand. Solange
-die Quicknote offen ist, heißt der Kopf des Editors „Quicknote“, und mit dem
-Fokus darin auch der Fenstertitel.
+`f10` öffnet im Editorbereich eine Quicknote: eine Schreibfläche für eine
+Notiz, die man nicht erst als Datei anlegen muss. KRK sichert ihren Inhalt
+selbst, siehe „Wo der Text der Quicknote liegt“. Steht der Editor nicht am
+rechten Rand, kommt er hervor. Was dort vorher stand, die Vorschau oder der
+Git-Bereich, kommt beim Schließen zurück, und der Fokus geht dorthin, wo er
+vor `f10` stand. Solange die Quicknote offen ist, heißt der Kopf des Editors
+„Quicknote“, und mit dem Fokus darin auch der Fenstertitel.
 
 | Taste | Wirkung |
 |---|---|
@@ -1113,7 +1114,7 @@ Fokus darin auch der Fenstertitel.
 | `shift+f10` | kopieren und schließen, wie die Schaltfläche „Kopieren“ |
 | `esc`, `cmd+e` | schließen, wie die Schaltfläche „Schließen“ |
 
-Oben in der Fläche stehen drei Schaltflächen:
+Oben in der Fläche stehen fünf Schaltflächen:
 
 - **Leeren** löscht den ganzen Text. `cmd+z` nimmt das zurück, solange die
   Quicknote offen ist.
@@ -1125,14 +1126,17 @@ Oben in der Fläche stehen drei Schaltflächen:
   leere Quicknote kopiert nichts: sie schließt, und die Zwischenablage bleibt,
   wie sie war. Lässt sich der Text nicht kopieren, bleibt er stehen und die
   Quicknote offen.
+- **Strip** macht aus einem Shell-Befehl, der beim Kopieren aus einem Chat
+  umgebrochen und eingerückt wurde, wieder einen, der im Terminal läuft.
+- **Format** macht aus Fließtext, den das Terminal eines Chats umgebrochen
+  hat, wieder Absätze und Aufzählungspunkte auf je einer Zeile.
 
-Im Hauptmenü stehen die drei als „Quicknote öffnen und schließen“, „Quicknote
-kopieren und schließen“ und „Quicknote leeren“ unter „Editor“; „Quicknote
-leeren“ hat ab Werk keine Taste.
+Beide stehen unten unter „Strip und Format“ im Einzelnen.
 
-**Der Text liegt allein im Arbeitsspeicher.** KRK schreibt ihn nirgends hin,
-auch nicht in die Sitzung. Mit dem Beenden von KRK oder mit einem Absturz ist er
-verloren, und KRK fragt vorher nicht nach. Wer ihn behalten will, kopiert ihn.
+Im Hauptmenü stehen die fünf als „Quicknote öffnen und schließen“, „Quicknote
+kopieren und schließen“, „Quicknote leeren“, „Quicknote: Befehl glätten
+(Strip)“ und „Quicknote: Fließtext formatieren (Format)“ unter „Editor“; die
+letzten drei haben ab Werk keine Taste und lassen sich in **F1** belegen.
 
 **Eine im Editor offene Datei liegt unberührt darunter.** Ihr Stand, ihre
 Schreibmarke und ihr Rückgängig bleiben, wie sie waren, und nach dem Schließen
@@ -1156,12 +1160,121 @@ hineingezogen, unterbleibt ganz, und die Statuszeile sagt „Der Text ist zu gro
 für die Quicknote; eingefügt wurde nichts.“ Ist das Fenster zu schmal, um den
 Editor einzublenden, sagt sie „Für die Quicknote ist das Fenster zu schmal.“
 
-**Text aus `secrets.txt` darf in die Quicknote.** Wer ihn dorthin einfügt, hat
-ihn danach im Arbeitsspeicher stehen, bis er kopiert, geleert oder KRK beendet
-wird, und „Kopieren“ legt ihn ohne weitere Frage in die Zwischenablage, wie es
+### Wo der Text der Quicknote liegt
+
+**Der Text steht in `scratch.txt` im Notizordner**, neben `notes.txt`,
+`tasks.txt`, `secrets.txt` und `appointments.md` (ab Werk `~/krkhome`). KRK
+schreibt ihn ohne Zutun dorthin: eine Sekunde nach der letzten Änderung, beim
+Schließen der Quicknote und beim Beenden von KRK. Nach einem Neustart steht er
+beim ersten `f10` wieder da. Ein Absturz verliert höchstens die letzte Sekunde.
+Bis der Inhalt der Datei beim ersten `f10` gelesen ist, nimmt die Quicknote
+für einen Augenblick keine Eingabe an. **Leeren** und **Kopieren** leeren mit
+der Quicknote auch die Datei, und `cmd+z` nach dem Leeren bringt den Text in
+beide zurück.
+
+**`scratch.txt` ist eine gewöhnliche Textdatei** und keine der Dateien, die F2
+mit einer Tabelle zeigt. F2 legt sie nicht an; sie entsteht beim ersten
+Sichern, mit Rechten allein für das eigene Konto (`-rw-------`). Im Editor und
+in der Vorschau ist sie eine Datei wie jede andere.
+
+**Ohne Notizordner sichert die Quicknote nicht.** Fehlt der Ordner, legt die
+Quicknote ihn nicht selbst an und sagt „Die Quicknote wird nicht gesichert: der
+Notizordner … fehlt. F2 legt ihn an.“ Nach F2 sichert sie bei der nächsten
+Änderung von selbst.
+
+**Nach einer Änderung von außen sichert die Quicknote bis zum nächsten Start
+nicht mehr**: wenn eine zweite KRK-Instanz, der Editor von KRK oder ein anderes
+Programm `scratch.txt` geändert hat, seit die Quicknote sie gelesen oder
+zuletzt geschrieben hat. Die Datei bleibt dann, wie die andere Hand sie
+hinterlassen hat, und die Statuszeile sagt „scratch.txt wurde außerhalb der
+Quicknote geändert; die Quicknote sichert bis zum nächsten Start nicht mehr.“
+Der Text in der Quicknote bleibt stehen; wer ihn behalten will, kopiert ihn.
+Ebenso, wenn sich `scratch.txt` nicht lesen lässt, etwa weil sie zu groß oder
+kein Text ist: dann öffnet die Quicknote leer, die Datei bleibt Byte für Byte,
+und die Statuszeile nennt den Grund.
+
+**„Ort wählen…“ wirkt für die Quicknote erst nach dem nächsten Start.** Bis
+dahin sichert sie weiter in `scratch.txt` am bisherigen Ort, damit KRK am neuen
+Ort keine vorhandene Datei überschreibt oder ungefragt einliest.
+
+**Text aus `secrets.txt` darf in die Quicknote, und dann steht er im Klartext
+in `scratch.txt`.** Wer ein Passwort oder einen anderen Eintrag aus
+`secrets.txt` in die Quicknote einfügt, hat ihn eine Sekunde später
+unverschlüsselt im Notizordner liegen, lesbar allein für das eigene Konto, aber
+ohne PIN, bis er geleert oder kopiert wird; „Leeren“ und „Kopieren“ leeren die
+Datei mit. „Kopieren“ legt ihn ohne weitere Frage in die Zwischenablage, wie es
 ein Kopieren aus `secrets.txt` selbst täte.
 
-**Mit einer eigenen `keymap.toml` trägt keine der drei Funktionen eine
+### Strip und Format
+
+Beide wirken auf die Auswahl, und ohne Auswahl auf den ganzen Text. Das
+Ergebnis ist danach ausgewählt, und `cmd+z` nimmt die Umformung als eine
+Handlung zurück. Ändert sich nichts, bleibt der Text unberührt, und die
+Statuszeile sagt „Strip: nichts zu ändern.“ oder „Format: nichts zu ändern.“
+
+**Strip** nimmt nachlaufende Leerzeichen und die Einrückung, die das Kopieren
+hinzufügt, und verbindet Zeilen, die das Terminal des Chats umgebrochen hat, mit
+einem Leerzeichen. Eine Fortsetzung mit `\` am Zeilenende wird zu einer Zeile,
+wie die Shell sie liest. Was in Anführungszeichen oder in einem Heredoc steht,
+bleibt mit seinen Umbrüchen, wie es ist; kurze Befehle untereinander bleiben
+untereinander. Das Ergebnis endet ohne Zeilenumbruch, damit ein Einfügen ins
+Terminal nicht sofort ausführt.
+
+```
+cd ~/Projekte/krk && export PATH="$HOME/.cargo/bin:$PATH" && cargo test
+  --workspace -- --skip appkit::
+```
+
+wird zu
+
+```
+cd ~/Projekte/krk && export PATH="$HOME/.cargo/bin:$PATH" && cargo test --workspace -- --skip appkit::
+```
+
+**Format** verbindet Fließtext-Zeilen, die nur der Umbruch des Terminals
+getrennt hat, nimmt die Einrückung und lässt Überschriften, Leerzeilen und
+Aufzählungspunkte (`-`, `*`, `•`, `1.`, `1)`) auf eigener Zeile beginnen. Ein
+Aufzählungspunkt steht danach mit einem führenden Leerzeichen da, und ein Block
+zwischen drei Backticks bleibt wörtlich.
+
+```
+Das ist ein langer Absatz aus dem Chat, den das Terminal bei seiner Breite
+  umgebrochen hat.
+
+  Eine Überschrift
+  - Ein Punkt, der ebenfalls so lang ist, dass das Terminal ihn umbrechen
+    musste.
+  - Ein kurzer Punkt.
+```
+
+wird zu
+
+```
+Das ist ein langer Absatz aus dem Chat, den das Terminal bei seiner Breite umgebrochen hat.
+
+Eine Überschrift
+ - Ein Punkt, der ebenfalls so lang ist, dass das Terminal ihn umbrechen musste.
+ - Ein kurzer Punkt.
+```
+
+**Ob ein Zeilenumbruch vom Terminal stammt oder gewollt ist, lässt sich am Text
+allein nicht sicher sagen**, denn die Breite des Terminals reist nicht mit. KRK
+schätzt sie aus der längsten Zeile und verbindet eine Zeile mit der nächsten
+nur, wenn das erste Wort der nächsten nicht mehr in die Zeile gepasst hätte und
+die nächste eingerückt ist. Text ohne Einrückung und Text, dessen längste
+Zeile kürzer als 40 Zeichen ist, wird deshalb nie verbunden, außer bei einer
+Fortsetzung mit `\` in Strip. Zwei Fälle sind so
+nicht zu entscheiden, und `cmd+z` nimmt sie zurück:
+
+- Ein Wort, das breiter ist als die Zeile und das der Chat mitten im Wort
+  getrennt hat, etwa ein sehr langer Pfad, bekommt beim Verbinden ein
+  Leerzeichen zu viel.
+- Zwei getrennte Befehle, deren erster fast die ganze Breite einnimmt und deren
+  zweiter eingerückt ist, verbindet Strip zu einer Zeile.
+
+### Mit einer eigenen `keymap.toml`
+
+**Mit einer eigenen `keymap.toml` trägt keine der fünf Funktionen eine
 Taste.** KRK hängt sie beim Start unbelegt an; über das Hauptmenü „Editor“ und
 die Schaltflächen wirken sie trotzdem. `f10` und `shift+f10` weist man einzeln
 zu: **F1**, „Quicknote öffnen und schließen“ wählen, **Zuweisen** (`cmd+t`),
