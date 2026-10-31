@@ -19,17 +19,29 @@
 //! eingefuegten Text einer des Terminals oder ein gewollter? **Aus dem Text
 //! allein ist sie nicht entscheidbar**, denn die Breite des Terminals reist
 //! nicht mit. Beantwortet wird sie deshalb an genau einer Stelle,
-//! `umgebrochen`, mit zwei Signalen:
+//! `umgebrochen`, mit drei Bedingungen:
 //!
 //! - **Breite** `B` ist die laengste Zeile der Eingabe in Zeichen
 //!   (Unicode-Skalarwerte, Einrueckung mitgezaehlt; nachlaufender Leerraum
-//!   faellt vorher). Unter [`MINDESTBREITE`] wird nichts verbunden.
-//! - Eine Zeile ist **umgebrochen** zu ihrer Folgezeile, wenn die Folgezeile
-//!   nicht leer und mit mindestens einem Leerzeichen eingerueckt ist (der Chat
-//!   rueckt jede Folgezeile ein) **und** das erste Wort der Folgezeile nicht
-//!   mehr in die Zeile gepasst haette: `laenge(zeile) + 1 + laenge(wort) > B -
-//!   B / NACHLASS_TEILER`. Der Nachlass von einem Zehntel deckt die Abweichung
-//!   des Umbruchs im Chat von der gemessenen laengsten Zeile.
+//!   faellt vorher). Sie gilt erst als **belegt**, wenn mindestens
+//!   [`MINDESTZAHL_VOLLER_ZEILEN`] Zeilen sie bis auf den Nachlass erreichen
+//!   (`laenge >= B - B / NACHLASS_TEILER`), und unter [`MINDESTBREITE`] nie.
+//!   Ohne belegte Breite wird nichts verbunden.
+//! - Die Folgezeile ist nicht leer und mit mindestens einem Leerzeichen
+//!   eingerueckt.
+//! - Das erste Wort der Folgezeile haette nicht mehr in die Zeile gepasst:
+//!   `laenge(zeile) + 1 + laenge(wort) > B - B / NACHLASS_TEILER`.
+//!
+//! **Warum die Breite belegt sein muss.** Bei Text aus dem Chat ist die
+//! Einrueckung kein Signal, denn der Chat rueckt jede Zeile nach der ersten
+//! ein. Bliebe allein die Laenge, erfuellte die laengste Zeile die dritte
+//! Bedingung fuer jedes Folgewort, denn sie ist die Breite: ein Kommentar ueber
+//! einem Befehl verschluckte den Befehl, und von zwei Befehlen untereinander
+//! wuerde der laengere mit dem naechsten verbunden. Ein Umbruch des Terminals
+//! laesst dagegen eine Spur, die eine einzelne lange Zeile nicht hat: er
+//! erzeugt mehrere Zeilen nahe derselben Breite. Erst diese Spur belegt die
+//! Breite. Der Preis: ein Text, den das Terminal genau einmal umgebrochen hat,
+//! hat nur eine volle Zeile und bleibt, wie er ist.
 //!
 //! Ein Text ohne Einrueckung wird so nie verbunden, und ein schon geglaetteter
 //! auch nicht; beide Umformungen sind dadurch idempotent. Jede Umformung ist in
@@ -39,11 +51,16 @@
 //!
 //! # Was nicht entscheidbar ist und deshalb hier steht
 //!
+//! - **Ein einmal umgebrochener Text** (eine volle Zeile und ihr Rest) wird
+//!   nicht verbunden, denn eine einzelne lange Zeile belegt keine Breite. Ein
+//!   so umgebrochener Befehl bleibt nach Strip auf zwei Zeilen.
+//! - **Zwei getrennte Zeilen, die beide fast die volle Breite einnehmen**,
+//!   belegen sie, und die erste wird mit der zweiten verbunden, wenn die zweite
+//!   eingerueckt ist. In Strip gilt das nicht nach einer Kommentarzeile (siehe
+//!   dort).
 //! - **Ein Wort, das breiter ist als die Zeile** und das der Chat mitten im Wort
 //!   trennt (ein sehr langer Pfad), bekommt beim Verbinden ein Leerzeichen zu
 //!   viel.
-//! - **Zwei getrennte Befehle**, deren erster fast die volle Breite einnimmt und
-//!   deren zweiter eingerueckt ist, verbindet Strip zu einem.
 //! - **Breite Zeichen** (CJK, Emoji) zaehlen als eines; die Regel schaetzt die
 //!   Breite dann zu klein und verbindet eher seltener.
 //!
@@ -59,7 +76,16 @@
 //! ihre Einrueckung die Textspalte des laufenden Eintrags erreicht (die erste
 //! Zeile eines Absatzes, die Spalte hinter Zeichen und Leerzeichen eines
 //! Punkts). **Ueberschriften brauchen keine eigene Regel**: eine kurze Zeile ist
-//! nie umgebrochen, also beginnt die Zeile danach neu. Zeilen in einem
+//! nie umgebrochen, also beginnt die Zeile danach neu. **Eine Geruestzeile**
+//! (eine Zeile mit Kasten- oder Blockzeichen von `U+2500` bis `U+259F`, also
+//! Tabellen in Kastenzeichen und Baumskizzen mit `├──`, oder eine, deren Text
+//! mit `|` beginnt wie eine Markdown-Tabelle, oder eine aus `+`, `-`, `=`, `|`
+//! und `:` wie der Rahmen einer ASCII-Tabelle) wird nie verbunden, weder an die
+//! Zeile davor noch mit der danach: in einer Tabelle sind alle Zeilen gleich
+//! lang und belegen die Breite, also ist sie der eine Fall, den die Breite
+//! nicht trennt. Sie verliert allein die kleinste Einrueckung der Geruestzeilen
+//! ab der zweiten Zeile, die erste Zeile der Eingabe ihre ganze; so bleibt die
+//! Ausrichtung der Skizze stehen. Zeilen in einem
 //! Code-Zaun (drei Backticks bis zu den naechsten) bleiben woertlich und
 //! verlieren allein die Einrueckung der oeffnenden Zaunzeile. Ein Schlussumbruch
 //! der Eingabe bleibt.
@@ -76,7 +102,12 @@
 //! `'…'`, `"…"`, `$'…'`, ein Kommentar ab `#` am Wortanfang und Heredocs
 //! (`<<WORT`, `<<-WORT`, `<<'WORT'`, `<<"WORT"`, mehrere je Zeile; `<<<` ist
 //! keiner). Endet eine Zeile in einem offenen Anfuehrungszeichen oder in einem
-//! Heredoc-Rumpf, bleibt ihr Umbruch, denn er ist Inhalt. Endet sie ausserhalb
+//! Heredoc-Rumpf, bleibt ihr Umbruch, denn er ist Inhalt. **Endet eine Zeile in
+//! einem Kommentar, bleibt ihr Umbruch immer**: was danach steht, waere sonst
+//! Teil des Kommentars und liefe nicht. Ein Kommentar, den der Chat umbrochen
+//! hat, bleibt dafuer auf mehreren Zeilen, und die Shell liest jede weitere als
+//! Befehl; Strip laesst den Text damit sichtbar unfertig, statt still einen
+//! Befehl zu verschlucken. Endet sie ausserhalb
 //! auf ein unmaskiertes `\`, fallen `\` und Umbruch, wie die Shell sie
 //! entfernt; stand auf einer Seite Leerraum, steht dazwischen genau ein
 //! Leerzeichen, sonst keins. Sonst wird die Folgezeile angehaengt, wenn
@@ -92,6 +123,11 @@ use std::collections::VecDeque;
 /// schmaler Text kommt aus keinem Terminalumbruch des Chats.
 pub const MINDESTBREITE: usize = 40;
 
+/// So viele Zeilen muessen die laengste bis auf den Nachlass erreichen, bevor
+/// ihre Laenge als Breite eines Terminalumbruchs gilt: ein Umbruch erzeugt
+/// mehrere fast volle Zeilen, eine einzelne lange Zeile belegt keinen.
+pub const MINDESTZAHL_VOLLER_ZEILEN: usize = 2;
+
 /// Der Nachlass auf die Breite ist `B / NACHLASS_TEILER`, ein Zehntel. Ohne ihn
 /// bliebe im Beispiel des Nutzers die erste Zeile unverbunden, deren Folgewort
 /// gerade noch in die gemessene laengste Zeile gepasst haette.
@@ -102,7 +138,14 @@ const NACHLASS_TEILER: usize = 10;
 #[must_use]
 pub fn fliesstext(eingabe: &str) -> String {
     let (zeilen, schluss) = zerlegen(eingabe);
-    let breite = breite_von(&zeilen);
+    let breite = belegte_breite(&zeilen);
+    let geruestabzug = zeilen
+        .iter()
+        .skip(1)
+        .filter(|zeile| ist_geruest(text_von(zeile)))
+        .map(|zeile| einrueckung(zeile))
+        .min()
+        .unwrap_or(0);
     let flachster_punkt = zeilen
         .iter()
         .filter(|zeile| punktzeichen(text_von(zeile)).is_some())
@@ -117,7 +160,7 @@ pub fn fliesstext(eingabe: &str) -> String {
     // Die Einrueckung der oeffnenden Zaunzeile, solange ein Zaun offen ist.
     let mut zaun: Option<usize> = None;
 
-    for zeile in &zeilen {
+    for (nummer, zeile) in zeilen.iter().enumerate() {
         let zeile = zeile.as_str();
         let text = text_von(zeile);
         if let Some(abzug) = zaun {
@@ -135,6 +178,16 @@ pub fn fliesstext(eingabe: &str) -> String {
         if ist_zaun(text) {
             zaun = Some(einrueckung(zeile));
             aus.push(text.to_owned());
+            laufend = None;
+            continue;
+        }
+        if ist_geruest(text) {
+            let abzug = if nummer == 0 {
+                einrueckung(zeile)
+            } else {
+                geruestabzug.min(einrueckung(zeile))
+            };
+            aus.push(zeile[abzug..].to_owned());
             laufend = None;
             continue;
         }
@@ -178,7 +231,7 @@ pub fn befehl(eingabe: &str) -> String {
         .rposition(|zeile| !zeile.is_empty())
         .map_or(anfang, |stelle| stelle + 1);
     let zeilen = &alle[anfang..ende];
-    let breite = breite_von(zeilen);
+    let breite = belegte_breite(zeilen);
     let kopiereinrueckung = zeilen[1..]
         .iter()
         .filter(|zeile| !zeile.is_empty())
@@ -225,14 +278,17 @@ pub fn befehl(eingabe: &str) -> String {
                 Trenner::Umbruch
             }
             Lage::Normal | Lage::Einfach | Lage::Doppelt | Lage::Ansi => {
-                let fortsetzung = zeile_lesen(zeile, &mut lage, &mut wartend);
+                let ende = zeile_lesen(zeile, &mut lage, &mut wartend);
                 if let Some(heredoc) = wartend.pop_front() {
                     lage = Lage::Heredoc(heredoc);
                     Trenner::Umbruch
                 } else if !matches!(lage, Lage::Normal) {
                     Trenner::Umbruch
-                } else if fortsetzung {
+                } else if ende == Zeilenende::Fortsetzung {
                     Trenner::Fortsetzung
+                } else if ende == Zeilenende::Kommentar {
+                    // Was angehaengt wuerde, stuende im Kommentar und liefe nicht.
+                    Trenner::Umbruch
                 } else if umgebrochen(&zeilen[nummer], &zeilen[nummer + 1], breite) {
                     Trenner::Verbinden
                 } else {
@@ -275,6 +331,18 @@ enum Trenner {
     Fortsetzung,
 }
 
+/// Wie eine Zeile ausserhalb jeder Anfuehrung endet, gelesen von
+/// [`zeile_lesen`].
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Zeilenende {
+    /// Auf etwas anderes als die zwei Faelle darunter.
+    Gewoehnlich,
+    /// Auf ein unmaskiertes `\`.
+    Fortsetzung,
+    /// In einem Kommentar ab `#` am Wortanfang.
+    Kommentar,
+}
+
 /// Die Lage der Shell am Ende einer gelesenen Zeile.
 enum Lage {
     Normal,
@@ -310,8 +378,8 @@ impl Heredoc {
 /// Liest eine Zeile ausserhalb eines Heredoc-Rumpfs Zeichen fuer Zeichen,
 /// fuehrt `lage` fort und haengt jeden in ihr geoeffneten Heredoc an
 /// `wartend`. Antwortet, ob die Zeile ausserhalb jeder Anfuehrung auf ein
-/// unmaskiertes `\` endet, also eine Fortsetzung ist.
-fn zeile_lesen(zeile: &str, lage: &mut Lage, wartend: &mut VecDeque<Heredoc>) -> bool {
+/// unmaskiertes `\` oder in einem Kommentar endet.
+fn zeile_lesen(zeile: &str, lage: &mut Lage, wartend: &mut VecDeque<Heredoc>) -> Zeilenende {
     let zeichen: Vec<char> = zeile.chars().collect();
     let mut stelle = 0;
     let mut nach_dollar = false;
@@ -324,7 +392,7 @@ fn zeile_lesen(zeile: &str, lage: &mut Lage, wartend: &mut VecDeque<Heredoc>) ->
                 match jetzt {
                     '\\' => {
                         if stelle + 1 == zeichen.len() {
-                            return true;
+                            return Zeilenende::Fortsetzung;
                         }
                         stelle += 1;
                         nach_dollar = false;
@@ -332,7 +400,7 @@ fn zeile_lesen(zeile: &str, lage: &mut Lage, wartend: &mut VecDeque<Heredoc>) ->
                     '\'' if dollar_davor => *lage = Lage::Ansi,
                     '\'' => *lage = Lage::Einfach,
                     '"' => *lage = Lage::Doppelt,
-                    '#' if am_wortanfang(&zeichen, stelle) => return false,
+                    '#' if am_wortanfang(&zeichen, stelle) => return Zeilenende::Kommentar,
                     '<' if zeichen.get(stelle + 1) == Some(&'<') => {
                         stelle = heredoc_lesen(&zeichen, stelle, wartend);
                         nach_dollar = false;
@@ -358,11 +426,11 @@ fn zeile_lesen(zeile: &str, lage: &mut Lage, wartend: &mut VecDeque<Heredoc>) ->
                     *lage = Lage::Normal;
                 }
             }
-            Lage::Heredoc(_) => return false,
+            Lage::Heredoc(_) => return Zeilenende::Gewoehnlich,
         }
         stelle += 1;
     }
-    false
+    Zeilenende::Gewoehnlich
 }
 
 /// Ob ein `#` an `stelle` ein Wort beginnt und damit einen Kommentar.
@@ -445,8 +513,20 @@ fn zerlegen(eingabe: &str) -> (Vec<String>, bool) {
     (zeilen, schluss)
 }
 
-fn breite_von(zeilen: &[String]) -> usize {
-    zeilen.iter().map(|zeile| laenge(zeile)).max().unwrap_or(0)
+/// Die laengste Zeile als Breite, wenn sie belegt ist (Modulkopf), sonst 0,
+/// womit `umgebrochen` nie gilt.
+fn belegte_breite(zeilen: &[String]) -> usize {
+    let breite = zeilen.iter().map(|zeile| laenge(zeile)).max().unwrap_or(0);
+    let schwelle = breite - breite / NACHLASS_TEILER;
+    let volle = zeilen
+        .iter()
+        .filter(|zeile| laenge(zeile) >= schwelle)
+        .count();
+    if volle >= MINDESTZAHL_VOLLER_ZEILEN {
+        breite
+    } else {
+        0
+    }
 }
 
 fn laenge(text: &str) -> usize {
@@ -460,6 +540,20 @@ fn einrueckung(zeile: &str) -> usize {
 
 fn text_von(zeile: &str) -> &str {
     zeile.trim_start_matches(' ')
+}
+
+/// Eine Zeile einer Tabelle oder Skizze, die Format nie verbindet (Modulkopf).
+fn ist_geruest(text: &str) -> bool {
+    if text.starts_with('|') {
+        return true;
+    }
+    if text.chars().any(|z| ('\u{2500}'..='\u{259F}').contains(&z)) {
+        return true;
+    }
+    text.starts_with('+')
+        && text
+            .chars()
+            .all(|z| matches!(z, '+' | '-' | '=' | '|' | ':' | ' '))
 }
 
 fn ist_zaun(text: &str) -> bool {

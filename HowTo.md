@@ -1216,26 +1216,31 @@ Statuszeile sagt „Strip: nichts zu ändern.“ oder „Format: nichts zu ände
 hinzufügt, und verbindet Zeilen, die das Terminal des Chats umgebrochen hat, mit
 einem Leerzeichen. Eine Fortsetzung mit `\` am Zeilenende wird zu einer Zeile,
 wie die Shell sie liest. Was in Anführungszeichen oder in einem Heredoc steht,
-bleibt mit seinen Umbrüchen, wie es ist; kurze Befehle untereinander bleiben
-untereinander. Das Ergebnis endet ohne Zeilenumbruch, damit ein Einfügen ins
+bleibt mit seinen Umbrüchen, wie es ist; Befehle untereinander bleiben
+untereinander, und nach einer Kommentarzeile (`# …`) beginnt immer eine neue
+Zeile, damit kein Befehl im Kommentar landet. Das Ergebnis endet ohne Zeilenumbruch, damit ein Einfügen ins
 Terminal nicht sofort ausführt.
 
 ```
 cd ~/Projekte/krk && export PATH="$HOME/.cargo/bin:$PATH" && cargo test
-  --workspace -- --skip appkit::
+  --workspace -- --skip appkit:: && cargo clippy --workspace --all-targets
+  -- -D warnings
 ```
 
 wird zu
 
 ```
-cd ~/Projekte/krk && export PATH="$HOME/.cargo/bin:$PATH" && cargo test --workspace -- --skip appkit::
+cd ~/Projekte/krk && export PATH="$HOME/.cargo/bin:$PATH" && cargo test --workspace -- --skip appkit:: && cargo clippy --workspace --all-targets -- -D warnings
 ```
 
 **Format** verbindet Fließtext-Zeilen, die nur der Umbruch des Terminals
 getrennt hat, nimmt die Einrückung und lässt Überschriften, Leerzeilen und
 Aufzählungspunkte (`-`, `*`, `•`, `1.`, `1)`) auf eigener Zeile beginnen. Ein
 Aufzählungspunkt steht danach mit einem führenden Leerzeichen da, und ein Block
-zwischen drei Backticks bleibt wörtlich.
+zwischen drei Backticks bleibt wörtlich. Tabellen und Skizzen bleiben Zeile für
+Zeile stehen, mit ihrer Ausrichtung: jede Zeile mit Kasten- oder Rahmenzeichen
+(`┌ │ ├ └ ─`), jede, die mit `|` beginnt wie eine Markdown-Tabelle, und jeder
+Rahmen einer Tabelle aus `+` und `-`.
 
 ```
 Das ist ein langer Absatz aus dem Chat, den das Terminal bei seiner Breite
@@ -1259,18 +1264,28 @@ Eine Überschrift
 
 **Ob ein Zeilenumbruch vom Terminal stammt oder gewollt ist, lässt sich am Text
 allein nicht sicher sagen**, denn die Breite des Terminals reist nicht mit. KRK
-schätzt sie aus der längsten Zeile und verbindet eine Zeile mit der nächsten
-nur, wenn das erste Wort der nächsten nicht mehr in die Zeile gepasst hätte und
-die nächste eingerückt ist. Text ohne Einrückung und Text, dessen längste
-Zeile kürzer als 40 Zeichen ist, wird deshalb nie verbunden, außer bei einer
-Fortsetzung mit `\` in Strip. Zwei Fälle sind so
-nicht zu entscheiden, und `cmd+z` nimmt sie zurück:
+nimmt die längste Zeile als Breite, aber erst, wenn mindestens zwei Zeilen sie
+fast erreichen: ein Umbruch des Terminals hinterlässt mehrere gleich lange
+Zeilen, eine einzelne lange Zeile beweist keinen. Dann verbindet es eine Zeile
+mit der nächsten nur, wenn das erste Wort der nächsten nicht mehr in die Zeile
+gepasst hätte und die nächste eingerückt ist. Text ohne Einrückung und Text,
+dessen längste Zeile kürzer als 40 Zeichen ist, wird deshalb nie verbunden,
+außer bei einer Fortsetzung mit `\` in Strip. Diese Fälle sind so nicht zu
+entscheiden:
 
+- **Ein Text, den das Terminal genau einmal umgebrochen hat**, hat nur eine
+  volle Zeile und bleibt, wie er ist; ein so umgebrochener Befehl steht nach
+  Strip weiter auf zwei Zeilen. Vor dem Einfügen ins Terminal von Hand
+  verbinden.
+- **Zwei getrennte Zeilen, die beide fast die volle Breite einnehmen**, werden
+  verbunden, wenn die zweite eingerückt ist; `cmd+z` nimmt das zurück. Nach
+  einer Kommentarzeile verbindet Strip nie.
+- **Ein Kommentar, den das Terminal umgebrochen hat**, bleibt nach Strip auf
+  mehreren Zeilen, und die Shell liest jede weitere als Befehl. Vor dem Einfügen
+  prüfen.
 - Ein Wort, das breiter ist als die Zeile und das der Chat mitten im Wort
   getrennt hat, etwa ein sehr langer Pfad, bekommt beim Verbinden ein
   Leerzeichen zu viel.
-- Zwei getrennte Befehle, deren erster fast die ganze Breite einnimmt und deren
-  zweiter eingerückt ist, verbindet Strip zu einer Zeile.
 
 ### Mit einer eigenen `keymap.toml`
 
