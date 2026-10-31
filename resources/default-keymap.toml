@@ -1175,7 +1175,7 @@ tasten = []
 # ── Die Quicknote ────────────────────────────────────────────────────────────
 # Drei Funktionen aus dem Spec
 # `260926-2300_*_spec-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`, dazu
-# Strip und Format aus dem Arbeitspaket
+# Singlestrip und Format aus dem Arbeitspaket
 # `261031-1024-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format`. Die
 # nackte F10 ist auf Apple-Tastaturen "Ton aus"; KRK bekommt den Tastencode
 # dann erst mit gehaltener fn-Taste (siehe den Absatz ueber die fn-Taste im
@@ -1201,7 +1201,7 @@ tasten = []
 # ihre Schaltflaeche und das Menue.
 
 [[funktion]]
-id = "quicknote_strip"
+id = "quicknote_singlestrip"
 tasten = []
 # Ab Werk unbelegt (E13): ein seltener Befehl, der einen umbrochen
 # eingefuegten Befehl wieder auf eine Zeile bringt. Erreichbar ueber seine

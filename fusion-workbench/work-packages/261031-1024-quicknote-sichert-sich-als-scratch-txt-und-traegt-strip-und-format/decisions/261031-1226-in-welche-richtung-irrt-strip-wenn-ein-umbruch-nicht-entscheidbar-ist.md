@@ -34,3 +34,5 @@ Seit `b21ca032` gilt: verbunden wird erst, wenn zwei Zeilen die längste bis auf
 ## Recommendation
 
 inference: Möglichkeit 4 mit 3 als Rückfall. Sie ist die einzige, die einen Teil der Frage entscheidbar macht, statt eine Schätzung zu verschieben. Ob der entscheidbare Teil die gewöhnlichen Fälle trägt, muss eine Messung an echten kopierten Befehlen zeigen, bevor gebaut wird. Bis dahin ist Möglichkeit 1 mit richtiger Dokumentation der Stand, den die zwei Issues vom 261031-1226 verlangen.
+
+**Answered:** 261031 by user: „ok, wir nennen strip in singlestrip um, und gehen davon aus, dass die eingabe ein einzelner befehl ist, nicht eine liste. dann kann das strippen auch die umbrüche entfernen“. Keine der vier Möglichkeiten: Strip heisst Singlestrip, die Eingabe gilt als ein einzelner Befehl, und jeder Umbruch ausserhalb von Anfuehrungen und Heredocs wird entfernt; die Breitenschaetzung entfaellt fuer diesen Befehl.
