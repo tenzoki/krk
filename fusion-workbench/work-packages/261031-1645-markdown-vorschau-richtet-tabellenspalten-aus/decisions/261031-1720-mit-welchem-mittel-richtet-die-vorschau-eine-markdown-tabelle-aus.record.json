@@ -17,9 +17,9 @@
   },
   "extensions": {},
   "control": {
-    "state": "answered",
+    "state": "implemented",
     "answer_ref": "261031-1720-mit-welchem-mittel-richtet-die-vorschau-eine-markdown-tabelle-aus.md",
-    "implementation_ref": null,
+    "implementation_ref": "fe3303c1",
     "superseded_by": null,
     "deferral": null
   }

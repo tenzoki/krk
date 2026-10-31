@@ -61,4 +61,4 @@ rührt sie nicht an.
 Answered: dieser Datensatz, Abschnitt `## Antwort 260812` — Nutzerentscheid vom 260812.
 Implemented: `a9e1149` — `Auszeichnung::Listenzeile { tiefe }` in `crates/krk-ui/src/hervorhebung.rs`, gezählt in `crates/krk-ui/src/markdown.rs` aus den offenen Elementen, umgesetzt in `einzugsmerkmal` (`crates/krk-ui/src/appkit/textmerkmale.rs`), gedeckelt bei acht Ebenen.
 Deferred:
-Superseded by:
+Superseded by: nur die Tabellenhälfte, durch `work-packages/261031-1645-markdown-vorschau-richtet-tabellenspalten-aus/decisions/261031-1720-mit-welchem-mittel-richtet-die-vorschau-eine-markdown-tabelle-aus.md` (Nutzerentscheid 261031, umgesetzt in `fe3303c1`); Bilder bleiben draußen, wie dieser Datensatz sagt.

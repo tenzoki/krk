@@ -42,3 +42,5 @@ Der Begründung von damals ist inzwischen der Boden entzogen. Sie lautete, eine 
 **Was die Antwort zusätzlich überholt:** die Tabellenhälfte von `260812-1851_*_…-mit-verschachtelten-listen.md`. Bilder bleiben draußen; ihre Begründung (L7, weitere Lesevorgänge) berührt dieser Datensatz nicht. Wer die Antwort schreibt, trägt in jenen Datensatz die Zeile `Superseded by:` mit dem Hinweis ein, dass nur die Tabellenhälfte ersetzt ist. So hat es die Runde 6 schon einmal gehalten.
 
 **Answered:** 261031 by user: „1“ auf die Vorlage mit A1 (echte Tabelle, NSTextTable), B1 (kein Messlauf) und C1 (Plan frei). Möglichkeit 1: NSTextTable mit einem NSTextTableBlock je Zelle. Die Tabellenhälfte von `260812-1851_*_…-mit-verschachtelten-listen.md` ist damit überholt, E17 gilt nur noch für Tabellen, die die ganze Datei sind.
+
+**Implemented:** `83ee19dc` (NSTextTable je Tabelle, NSTextTableBlock je Zelle in `appkit/textmerkmale.rs`) und `fe3303c1` (ENABLE_TABLES und Tabellenzellen in `markdown.rs`). Die Tabellenhälfte von `260812-1851_*_welchen-umfang-von-markdown-rendert-die-vorschau-mit-verschachtelten-listen.md` trägt die Zeile `Superseded by:`.
