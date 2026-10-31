@@ -343,13 +343,6 @@ pub enum Auszeichnung {
     /// an der Breite der Flaeche, und beides kennt erst
     /// `crate::appkit::textmerkmale`, das je Tabellennummer (`tabelle`) genau
     /// ein `NSTextTable` baut.
-    #[cfg_attr(
-        not(test),
-        expect(
-            dead_code,
-            reason = "erzeugt wird die Zelle von crate::markdown in Schritt 2 des Plans 261031-1720"
-        )
-    )]
     Tabellenzelle {
         /// Die laufende Nummer der Tabelle im Dokument, von 0 an. Zellen mit
         /// derselben Nummer gehoeren zu derselben Tabelle.
@@ -378,13 +371,6 @@ pub enum Auszeichnung {
 /// Trennzeile ohne Doppelpunkt**, und der Name sagt, dass die Quelle nichts
 /// vorgibt: die Spalte folgt dann der Schreibrichtung ihres Textes und nicht
 /// fest dem linken Rand.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "erzeugt wird die Ausrichtung von crate::markdown in Schritt 2 des Plans 261031-1720"
-    )
-)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Spaltenausrichtung {
     /// Die Trennzeile gibt nichts vor (`---`).

@@ -36,6 +36,8 @@
 //!   │ Betonung       ──> Auszeichnung::Betonung                     │
 //!   │ starke Bet.    ──> Auszeichnung::StarkeBetonung               │
 //!   │ Verweis        ──> Einfaerbung (Farbe der Tafel, unterstr.)   │
+//!   │ Tabellenzelle  ──> eigener Absatz + Tabellenzelle { .. }      │
+//!   │   (Kopfzeile)  ──>   dazu StarkeBetonung                      │
 //!   │ weicher/harter                                                │
 //!   │   Umbruch      ──> "\\n"                                       │
 //!   │ alles Uebrige  ──> der Quellbereich, woertlich                │
@@ -49,11 +51,8 @@
 //! dritte Abnahmekriterium von C4 verlangt genau eine Regel dafuer und nicht
 //! eine je Fall.
 //!
-//! **Eine Tabelle faellt nicht unter die Auffangregel, sondern kommt von
-//! selbst richtig heraus.** Ohne das Merkmal `ENABLE_TABLES` sieht die Kiste in
-//! den drei Zeilen einer Tabelle einen gewoehnlichen Absatz mit weichen
-//! Umbruechen; die Zwischenraeume bleiben stehen, und das Quelltextraster aus
-//! dem Datensatz vom 260812-1105 entsteht ohne Sonderregel.
+//! **Eine Tabelle faellt nicht unter die Auffangregel**, sondern hat ihren
+//! eigenen Abschnitt weiter unten („Tabellen").
 //!
 //! # Die Deckung: was aus der Quelle herausfaellt, und was nicht
 //!
@@ -90,12 +89,17 @@
 //!    Auszeichnungszeichen und gehoeren weg: das `[` und das `][ref]` eines
 //!    Verweises. Hat es **kein** Zeichen geliefert, gibt es beim Schliessen
 //!    seinen Quellbereich woertlich heraus; so bleibt
-//!    `[](https://example.com)` stehen, statt zu verschwinden.
+//!    `[](https://example.com)` stehen, statt zu verschwinden. **Traegt jener
+//!    Quellbereich nichts als Leerraum, gibt es nichts heraus**: Leerraum ist
+//!    keine Auszeichnung und kein Inhalt, dieselbe Antwort, die
+//!    [`klammer_der_raender`] gibt. Getroffen wird davon die leere Zelle
+//!    `|  |`; ein Absatz oder eine Ueberschrift ohne Zeichen hat keinen
+//!    Quellbereich aus reinem Leerraum.
 //!
 //! Die drei Saetze zaehlen keine Faelle auf: der erste fragt allein, ob
 //! [`Zerlegung::offen`] leer ist, der zweite und der dritte allein nach
 //! [`Offen::inhalt`], und der letzte Halbsatz allein danach, ob die Laenge
-//! null ist. Eine kuenftige Fassung der Kiste, die ein Element anders meldet,
+//! null ist und was der Quellbereich ausser Leerraum traegt. Eine kuenftige Fassung der Kiste, die ein Element anders meldet,
 //! aendert daran nichts.
 //!
 //! **Wo die Deckung endet, und das ist genau eine Stelle:** der **Vorspann**
@@ -124,6 +128,59 @@
 //! **aufgefuellt statt angehaengt**. So traegt ein Block, dessen Quelltext
 //! schon mit einem Umbruch endet, hinterher keine Leerzeile zuviel, und zwei
 //! Wuensche hintereinander werden nicht zu vier Zeilen.
+//!
+//! # Tabellen
+//!
+//! Mit `ENABLE_TABLES` meldet die Kiste eine Tabelle als `Table` mit den
+//! Ausrichtungen ihrer Spalten, darin `TableHead` mit den Zellen der
+//! Kopfzeile und je weitere Zeile ein `TableRow`, darin die `TableCell`s.
+//! Gemessen an `pulldown-cmark 0.13.4`: der Bereich einer Zeile schliesst die
+//! `|` und den Zeilenumbruch ein, der einer Zelle die `|` aus und den Leerraum
+//! innen ein; die Trennzeile meldet die Kiste nicht, sie liegt als Luecke
+//! zwischen Kopf und erster Zeile; einer zu kurzen Zeile haengt sie leere
+//! Zellen mit leerem Bereich an, eine zu lange schneidet sie auf die
+//! Spaltenzahl des Kopfes und laesst den Rest ungemeldet stehen.
+//!
+//! **Jede Zelle wird ein eigener Absatz, in Zeilenfolge**: ihr Inhalt, dann
+//! genau ein `\n`, und darueber [`Auszeichnung::Tabellenzelle`] mit Tabelle,
+//! Zeile, Spalte, Spaltenzahl, Ausrichtung und Tiefe. Die Zerlegung rechnet
+//! die Struktur und nichts von der Gestalt; wo eine Spalte beginnt und wie
+//! breit sie ist, rechnet der Satzspiegel von AppKit in
+//! `crate::appkit::textmerkmale`, denn nur er kennt Schriftmasse und Breite
+//! der Flaeche. Die Zellen der Kopfzeile tragen dazu
+//! [`Auszeichnung::StarkeBetonung`] ueber ihren Inhalt ohne das `\n`, die
+//! eine Fettregel und keine zweite.
+//!
+//! **Das Zellende ist geschrieben und kein Wunsch** ([`ZELLENENDE`]). Der
+//! Wunsch [`Zerlegung::trennung`] fuellt auf, statt anzuhaengen: zwei Zellenden
+//! hintereinander wuerden darin zu einem, und eine leere Zelle verschwaende
+//! samt ihrer Spalte. Geschrieben wird es auch hinter der letzten Zelle der
+//! Datei, und so deckt die Auszeichnung jeder Zelle mindestens ein Zeichen;
+//! ein Bereich der Laenge null koennte in AppKit kein Absatzmerkmal tragen.
+//!
+//! **Tabelle, Zeile und Zelle tragen ihre eigenen Zeichen**
+//! ([`Inhaltsart::Zeichen`]), also sind ihre Luecken Auszeichnungszeichen: die
+//! `|`, die Trennzeile, der Rueckstrich vor `\|`, das `> ` eines Zitats vor
+//! jeder Zeile und die ueberzaehligen Zellen einer zu langen Zeile. Sie fallen
+//! aus der Anzeige und bleiben in der Kachelung, wie `**` und `# `.
+//!
+//! **Was eine Auswahl liefert, folgt aus der Klammerregel, so wie sie steht.**
+//! Kopf und Zeile tragen ihre `|` am Rand und damit eine Klammer; Zelle und
+//! Tabelle tragen am Rand nur Leerraum und keine. Ein Wort in einer Zelle
+//! liefert deshalb die ganze Quellzeile seiner Zeile samt Strichen und
+//! Umbruch, eine Auswahl ueber Kopf und erste Zeile die Trennzeile dazwischen
+//! mit, und die Auswahl ueber alles die Datei. Damit das Wort an einer
+//! Zeilengrenze nicht die Nachbarzeile mitbringt, steht das Ende der letzten
+//! Zelle einer Zeile fuer deren Rest samt Trennzeile
+//! ([`Zerlegung::zelle_oeffnen`]). Das Ergebnis laesst sich wieder
+//! als Tabelle einfuegen (Frage 1 des Plans
+//! `261031-1720-plan-markdown-vorschau-richtet-tabellenspalten-aus.md`). Eine
+//! Tabelle ohne aeussere Striche traegt an ihren Zeilen keine Klammer, dort
+//! liefert ein Wort das Wort.
+//!
+//! **Steht die Tabelle am Anfang eines Listenpunktes**, bekommt dessen
+//! Merkzeichen eine eigene Zeile davor ([`Zerlegung::tabelle_oeffnen`]), und
+//! die Zellen tragen die Tiefe des Punktes.
 //!
 //! # Die Einrueckebenen einer Liste
 //!
@@ -164,11 +221,13 @@
 //!
 //! # Zwei Lesarten, und die zweite gilt zwei Dateien
 //!
-//! [`Lesart::Markdown`] ist der Grundumfang von CommonMark ohne jedes Merkmal
-//! der Kiste, und so bleibt es fuer jede Markdown-Datei. [`Lesart::Eintragsdatei`]
-//! gilt allein `notes.txt` und `tasks.txt` im erkannten `~/krkhome/` (C4 des
+//! [`Lesart::Markdown`] ist der Grundumfang von CommonMark mit genau einem
+//! Merkmal der Kiste, `ENABLE_TABLES` (seit dem Arbeitspaket
+//! `261031-1645-markdown-vorschau-richtet-tabellenspalten-aus`), und so bleibt
+//! es fuer jede Markdown-Datei. [`Lesart::Eintragsdatei`] gilt allein
+//! `notes.txt` und `tasks.txt` im erkannten `~/krkhome/` (C4 des
 //! Arbeitspakets `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`) und
-//! schaltet genau ein Merkmal hinzu, `ENABLE_TASKLISTS`. **Welche Lesart gilt,
+//! schaltet dazu genau ein Merkmal hinzu, `ENABLE_TASKLISTS`. **Welche Lesart gilt,
 //! entscheidet der Dateityp und nicht diese Datei** ([`Lesart::von_dateityp`]);
 //! eine `.md` mit `- [ ]` an anderem Ort erscheint deshalb wie vor dieser
 //! Arbeit.
@@ -261,12 +320,12 @@ use std::ops::Range;
 use std::sync::Arc;
 
 use krk_core::heimordner::Sonderdatei;
-use pulldown_cmark::{Event, Options, Parser, Tag};
+use pulldown_cmark::{Alignment, Event, Options, Parser, Tag};
 
 use crate::editormodell::Dateityp;
 use crate::hervorhebung::{
-    Auszeichnung, Auszeichnungsstelle, Darstellungsart, Einfaerbung, Farbe, Formatierung, Tafel,
-    linkfarbe,
+    Auszeichnung, Auszeichnungsstelle, Darstellungsart, Einfaerbung, Farbe, Formatierung,
+    Spaltenausrichtung, Tafel, linkfarbe,
 };
 
 /// Wie eine Quelle gelesen wird: als Markdown oder als Eintragsdatei.
@@ -275,7 +334,7 @@ use crate::hervorhebung::{
 /// Merkmalssaetze gibt; ein dritter kaeme mit einem dritten Satz.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Lesart {
-    /// Der Grundumfang von CommonMark, fuer jede Markdown-Datei.
+    /// Der Grundumfang von CommonMark mit Tabellen, fuer jede Markdown-Datei.
     Markdown,
     /// Dazu die Aufgabenkaestchen, allein fuer `notes.txt` und `tasks.txt` im
     /// erkannten Ordner.
@@ -290,7 +349,7 @@ impl Lesart {
     /// Dateityp haelt den Bau hier an und erzwingt die Antwort, ob er
     /// Kaestchen zeigt. `Sonstiges` erreicht das Rendern nie, weil
     /// `hervorhebung::art` ihn nicht als Markdown einordnet; er steht beim
-    /// Grundumfang, weil das die Lesart ohne jede Zutat ist.
+    /// Grundumfang, weil das die Lesart ohne Kaestchen ist.
     ///
     /// **`secrets.txt` steht aus demselben Grund beim Grundumfang und nicht
     /// bei den Eintragsdateien.** Sie ist dem Dateityp nach eine, aber
@@ -315,12 +374,18 @@ impl Lesart {
 
     /// Die Merkmale der Kiste, die diese Lesart einschaltet.
     ///
-    /// `ENABLE_TASKLISTS` fuegt keinen Containerblock hinzu; die Frage in
-    /// [`Inhaltsart::deckt_luecken`] bleibt davon unberuehrt.
+    /// **Tabellen gelten in beiden Lesarten**, denn eine Tabelle in
+    /// `notes.txt` sieht aus wie in jeder `.md` (Frage 2 des Plans
+    /// `261031-1720-plan-markdown-vorschau-richtet-tabellenspalten-aus.md`).
+    /// Die Eintragsdatei bekommt dazu ihre Kaestchen.
+    ///
+    /// Weder `ENABLE_TABLES` noch `ENABLE_TASKLISTS` fuegt einen Containerblock
+    /// hinzu: der Inhalt einer Zelle ist eine Zeile und kein Block. Die Frage
+    /// in [`Inhaltsart::deckt_luecken`] bleibt davon unberuehrt.
     fn optionen(self) -> Options {
         match self {
-            Lesart::Markdown => Options::empty(),
-            Lesart::Eintragsdatei => Options::ENABLE_TASKLISTS,
+            Lesart::Markdown => Options::ENABLE_TABLES,
+            Lesart::Eintragsdatei => Options::ENABLE_TABLES | Options::ENABLE_TASKLISTS,
         }
     }
 }
@@ -719,6 +784,11 @@ pub fn rendern(quelle: &str, tafel: Tafel, lesart: Lesart) -> Gerendert {
                 Behandlung::Verweis => {
                     zerlegung.oeffnen(bereich, Abschluss::Verweis, 0, None, Inhaltsart::Zeichen);
                 }
+                Behandlung::Tabelle(ausrichtungen) => {
+                    zerlegung.tabelle_oeffnen(bereich, ausrichtungen);
+                }
+                Behandlung::Tabellenzeile { kopf } => zerlegung.zeile_oeffnen(bereich, kopf),
+                Behandlung::Tabellenzelle => zerlegung.zelle_oeffnen(bereich),
                 // Die eine Auffangregel: der Quelltext, woertlich, und das
                 // Element danach uebersprungen. Ein Bild, das hier
                 // hindurchgeht, wird damit auch nicht geladen — das sechste
@@ -742,9 +812,7 @@ pub fn rendern(quelle: &str, tafel: Tafel, lesart: Lesart) -> Gerendert {
                 zerlegung.schreiben(&inhalt, ende);
                 zerlegung.schliessen();
             }
-            // Die Zeile, an der das Quelltextraster einer Tabelle haengt: die
-            // drei Zeilen einer Tabelle sind ein Absatz mit weichen
-            // Umbruechen, und der Umbruch bleibt einer.
+            // Ein Umbruch in einem Absatz bleibt einer.
             Event::SoftBreak | Event::HardBreak => zerlegung.schreiben("\n", bereich.end),
             // Das Kaestchen eines Aufgabenpunktes. Die Kiste liefert das
             // Ereignis allein unter `Lesart::Eintragsdatei`, denn nur dort ist
@@ -804,6 +872,18 @@ enum Behandlung {
     /// die erste offene Frage des Web-Betrachter-Circles; sie hier nebenbei zu
     /// beantworten naehme jenem Circle seine Klaerungsrunde.
     Verweis,
+    /// Eine Tabelle mit der Ausrichtung jeder ihrer Spalten, laut Trennzeile.
+    ///
+    /// Sie setzt sich wie ein Absatz von ihren Nachbarn ab und traegt selbst
+    /// nichts; siehe den Modulkopf unter „Tabellen".
+    Tabelle(Vec<Spaltenausrichtung>),
+    /// Die Kopfzeile (`kopf`) oder eine weitere Zeile einer Tabelle.
+    Tabellenzeile {
+        /// Ob es die Kopfzeile ist; ihre Zellen setzen fett.
+        kopf: bool,
+    },
+    /// Eine Zelle: ein eigener Absatz mit [`Auszeichnung::Tabellenzelle`].
+    Tabellenzelle,
     /// Die eine Auffangregel: der Quellbereich, woertlich.
     Woertlich,
 }
@@ -856,9 +936,39 @@ fn behandlung(tag: &Tag<'_>) -> Behandlung {
         Tag::Emphasis => Behandlung::Stueck(Auszeichnung::Betonung),
         Tag::Strong => Behandlung::Stueck(Auszeichnung::StarkeBetonung),
         Tag::Link { .. } => Behandlung::Verweis,
+        Tag::Table(ausrichtungen) => Behandlung::Tabelle(
+            ausrichtungen
+                .iter()
+                .map(|a| spaltenausrichtung(*a))
+                .collect(),
+        ),
+        Tag::TableHead => Behandlung::Tabellenzeile { kopf: true },
+        Tag::TableRow => Behandlung::Tabellenzeile { kopf: false },
+        Tag::TableCell => Behandlung::Tabellenzelle,
         _ => Behandlung::Woertlich,
     }
 }
+
+/// Die Ausrichtung einer Spalte, wie die Trennzeile sie vorgibt.
+///
+/// Vollstaendig und ohne Auffangzweig: eine fuenfte Ausrichtung der Kiste
+/// haelt den Bau hier an.
+fn spaltenausrichtung(ausrichtung: Alignment) -> Spaltenausrichtung {
+    match ausrichtung {
+        Alignment::None => Spaltenausrichtung::Ohne,
+        Alignment::Left => Spaltenausrichtung::Links,
+        Alignment::Center => Spaltenausrichtung::Mitte,
+        Alignment::Right => Spaltenausrichtung::Rechts,
+    }
+}
+
+/// Das Ende einer Zelle: der Umbruch, der sie zum eigenen Absatz macht.
+///
+/// **Geschrieben und nicht gewuenscht** ([`Zerlegung::trennung`]): ein Wunsch
+/// fuellt auf, statt anzuhaengen, also wuerden zwei Zellenden hintereinander
+/// zu einem, und eine leere Zelle verschwaende samt ihrer Spalte. Siehe den
+/// Modulkopf unter „Tabellen".
+const ZELLENENDE: &str = "\n";
 
 /// Verwirft die Ereignisse bis zum Ende des gerade begonnenen Elements.
 ///
@@ -941,6 +1051,19 @@ enum Abschluss {
     Auszeichnung(Auszeichnung),
     /// Farbe und Unterstreichung eines Verweises.
     Verweis,
+    /// Eine Tabellenzelle: ihr [`ZELLENENDE`], dann ihre Auszeichnung ueber
+    /// Inhalt und Ende, in der Kopfzeile dazu [`Auszeichnung::StarkeBetonung`]
+    /// ueber den Inhalt allein.
+    Zelle {
+        /// Die [`Auszeichnung::Tabellenzelle`] dieser Zelle.
+        art: Auszeichnung,
+        /// Ob sie in der Kopfzeile steht.
+        kopf: bool,
+        /// Bis wohin die letzte Zelle einer Zeile die Quelle vor ihrem Ende
+        /// abtraegt; `None` fuer jede andere Zelle. Siehe
+        /// [`Zerlegung::zelle_oeffnen`].
+        nachlauf_bis: Option<usize>,
+    },
 }
 
 impl Abschluss {
@@ -1131,6 +1254,40 @@ struct Zerlegung<'q> {
     /// Angelegt wird ein Eintrag in [`Zerlegung::oeffnen`], seine Klammer
     /// eingetragen in [`Zerlegung::schliessen`].
     elemente: Vec<Quellelement>,
+    /// Wie viele Tabellen bisher geoeffnet wurden; die naechste bekommt diese
+    /// Zahl als Nummer.
+    tabellen: usize,
+    /// Die zuletzt geoeffnete Tabelle; `None` vor der ersten.
+    ///
+    /// **Eine und kein Stapel**, weil eine Zelle nur Zeileninhalt traegt und
+    /// keine Tabelle in einer Tabelle stehen kann. Sie bleibt nach ihrem Ende
+    /// stehen, bis die naechste sie ersetzt; eine Zelle ausserhalb einer
+    /// Tabelle meldet die Kiste nicht.
+    tabelle: Option<Tabellenlage>,
+}
+
+/// Was die Zerlegung ueber die Tabelle weiss, in der sie gerade steht.
+struct Tabellenlage {
+    /// Ihre laufende Nummer im Dokument.
+    nummer: usize,
+    /// Die Ausrichtung jeder Spalte; ihre Laenge ist die Spaltenzahl.
+    ausrichtungen: Vec<Spaltenausrichtung>,
+    /// Die Einruecktiefe beim Oeffnen der Tabelle.
+    tiefe: u8,
+    /// Das Ende ihres Quellbereichs, in Bytes.
+    ende: usize,
+    /// Bis wohin die laufende Zeile die Quelle abtraegt, bevor ihre letzte
+    /// Zelle ihr Ende schreibt: das Ende der Zeile, beim Kopf das Ende der
+    /// Trennzeile dahinter.
+    nachlauf_bis: usize,
+    /// Die Zeile, in der die Zerlegung steht; 0 ist die Kopfzeile.
+    zeile: usize,
+    /// Die Nummer, die die naechste Zeile bekommt.
+    naechste_zeile: usize,
+    /// Ob die laufende Zeile die Kopfzeile ist.
+    kopf: bool,
+    /// Die Spalte, die die naechste Zelle bekommt.
+    naechste_spalte: usize,
 }
 
 impl<'q> Zerlegung<'q> {
@@ -1147,6 +1304,8 @@ impl<'q> Zerlegung<'q> {
             auszeichnungen: Vec::new(),
             abschnitte: Vec::new(),
             elemente: Vec::new(),
+            tabellen: 0,
+            tabelle: None,
         }
     }
 
@@ -1647,6 +1806,129 @@ impl<'q> Zerlegung<'q> {
         );
     }
 
+    /// Beginnt eine Tabelle: sie setzt sich ab wie ein Absatz und merkt sich
+    /// Nummer, Ausrichtungen und Tiefe fuer ihre Zellen.
+    ///
+    /// **Ein ausstehendes Merkzeichen wird vorher eingeloest, auf einer
+    /// eigenen Zeile.** Steht die Tabelle am Anfang eines Listenpunktes,
+    /// loeste sonst die erste Zelle das `• ` ein, und es stuende im Absatz
+    /// dieser Zelle, aber ausserhalb ihrer Auszeichnung. Ein Absatz traegt in
+    /// AppKit genau einen Absatzstil; der des Punktes truege dann den Absatz,
+    /// und die erste Zelle fiele aus der Tabelle. Auf eigener Zeile behaelt
+    /// der Punkt sein Merkzeichen, und die Tabelle steht eingerueckt darunter.
+    ///
+    /// Die Tiefe ist die beim Oeffnen: die Tabelle legt selbst keine
+    /// [`Ebene`] an.
+    fn tabelle_oeffnen(&mut self, quelle: Range<usize>, ausrichtungen: Vec<Spaltenausrichtung>) {
+        if self
+            .offen
+            .iter()
+            .any(|eintrag| eintrag.merkzeichen.is_some())
+        {
+            self.absetzen();
+            self.merkzeichen_einloesen();
+            self.trennen(PUNKTABSTAND);
+        } else {
+            self.trennen(ABSATZABSTAND);
+        }
+        let nummer = self.tabellen;
+        self.tabellen += 1;
+        self.tabelle = Some(Tabellenlage {
+            nummer,
+            ausrichtungen,
+            tiefe: self.tiefe(),
+            ende: quelle.end,
+            nachlauf_bis: quelle.start,
+            zeile: 0,
+            naechste_zeile: 0,
+            kopf: false,
+            naechste_spalte: 0,
+        });
+        self.oeffnen(
+            quelle,
+            Abschluss::Nichts,
+            ABSATZABSTAND,
+            None,
+            Inhaltsart::Zeichen,
+        );
+    }
+
+    /// Beginnt die Kopfzeile oder eine weitere Zeile der laufenden Tabelle.
+    ///
+    /// Die Zeile traegt nichts und trennt nichts: ihre Zellen schreiben ihr
+    /// Ende selbst. Ihre Luecken sind die `|` zwischen den Zellen und, hinter
+    /// der letzten gemeldeten, die Zellen, die ueber die Spaltenzahl des
+    /// Kopfes hinausgehen; sie fallen als Auszeichnungszeichen aus der Anzeige.
+    ///
+    /// **Die Trennzeile ist genau eine Zeile**, so verlangt es GFM; ihr Ende
+    /// ist deshalb der erste Umbruch hinter dem Kopf, und ohne einen das Ende
+    /// der Tabelle.
+    fn zeile_oeffnen(&mut self, quelle: Range<usize>, kopf: bool) {
+        let text = self.quelle;
+        if let Some(lage) = &mut self.tabelle {
+            lage.zeile = lage.naechste_zeile;
+            lage.naechste_zeile += 1;
+            lage.kopf = kopf;
+            lage.naechste_spalte = 0;
+            lage.nachlauf_bis = if kopf {
+                let rest = quelle.end.min(lage.ende)..lage.ende;
+                text[rest.clone()]
+                    .find('\n')
+                    .map_or(rest.end, |umbruch| rest.start + umbruch + 1)
+            } else {
+                quelle.end
+            };
+        }
+        self.oeffnen(quelle, Abschluss::Nichts, 0, None, Inhaltsart::Zeichen);
+    }
+
+    /// Beginnt eine Zelle der laufenden Zeile.
+    ///
+    /// Ihr Ende schreibt [`Zerlegung::schliessen`] ueber [`Abschluss::Zelle`].
+    ///
+    /// **Das Ende der letzten Zelle einer Zeile steht fuer den Rest der
+    /// Zeile**: das schliessende `|`, den Umbruch und ueberzaehlige Zellen,
+    /// beim Kopf dazu die Trennzeile. Es wird ein Abschnitt der Art
+    /// [`Abschnittsart::Ersetzt`] mit einem Textzeichen, statt dass jene Bytes
+    /// einen Abschnitt ohne Textzeichen bekaemen. Ein solcher laege am Ende
+    /// des letzten Wortes der Zeile und am Anfang der naechsten, und eine
+    /// Auswahl an einer der beiden Stellen naehme ihn nach der Halbregel an
+    /// [`Quellbezug::quelltext`] mit: ein Wort der zweiten Zeile brachte das
+    /// `|\n` der ersten und damit deren Klammer mit, das letzte Wort des Kopfes
+    /// die Trennzeile. Ein Abschnitt mit einem Zeichen wird nur von einer
+    /// Auswahl beruehrt, die dieses Zeichen schneidet. Dass die Kiste jede
+    /// Zeile auf die Spaltenzahl des Kopfes auffuellt oder schneidet, macht
+    /// die letzte Zelle bestimmbar.
+    /// Steht keine Tabelle offen, was die Kiste nicht meldet, wird die Zelle
+    /// ein Element ohne Auszeichnung und nichts bricht ab.
+    fn zelle_oeffnen(&mut self, quelle: Range<usize>) {
+        let was = match &mut self.tabelle {
+            Some(lage) => {
+                let spalte = lage.naechste_spalte;
+                lage.naechste_spalte += 1;
+                let letzte = spalte + 1 >= lage.ausrichtungen.len();
+                Abschluss::Zelle {
+                    nachlauf_bis: letzte.then_some(lage.nachlauf_bis),
+                    art: Auszeichnung::Tabellenzelle {
+                        tabelle: lage.nummer,
+                        zeile: lage.zeile,
+                        spalte,
+                        spalten: lage.ausrichtungen.len(),
+                        ausrichtung: lage
+                            .ausrichtungen
+                            .get(spalte)
+                            .copied()
+                            .unwrap_or(Spaltenausrichtung::Ohne),
+                        tiefe: lage.tiefe,
+                    },
+                    kopf: lage.kopf,
+                }
+            }
+            None => Abschluss::Nichts,
+        };
+        self.oeffnen(quelle, was, 0, None, Inhaltsart::Zeichen);
+    }
+
     /// Beendet das zuletzt begonnene Element und traegt seine Stelle ein.
     ///
     /// **Der zweite Satz der Deckung steht hier.** Ein Element ohne ein
@@ -1716,15 +1998,34 @@ impl<'q> Zerlegung<'q> {
         };
         let laenge = self.stelle - letztes.anfang;
         let bereich = letztes.quelle.clone();
+        let (zelle, nachlauf_bis) = match letztes.was {
+            Abschluss::Zelle { nachlauf_bis, .. } => (true, nachlauf_bis),
+            _ => (false, None),
+        };
         // Das Merkzeichen faellt mit seinem Punkt weg, bevor der woertliche
         // Quelltext es einloesen koennte; in jenem Quelltext steht es schon.
         // Sonst stuende `• - [ref]: …` doppelt da. Bei einer Laenge groesser
         // null ist es ohnehin schon eingeloest.
         letztes.merkzeichen = None;
-        if laenge > 0 {
+        // Leerraum ist kein Quelltext, der herauszugeben waere: dieselbe
+        // Antwort, die [`klammer_der_raender`] gibt. Ohne sie stuende eine
+        // leere Zelle `|  |` mit ihren zwei Leerzeichen da.
+        if laenge > 0 || quelle[bereich.clone()].trim().is_empty() {
             self.gelesen_bis(bereich.end);
         } else {
             self.woertlich(bereich);
+        }
+        // Das Ende einer Zelle, geschrieben und nicht gewuenscht, und erst
+        // hinter dem woertlichen Zweig: sonst haette jede Zelle ein Zeichen,
+        // und `[](x)` in einer Zelle verschwaende.
+        let inhalt_bis = self.stelle;
+        if zelle {
+            self.absetzen();
+            self.merkzeichen_einloesen();
+            match nachlauf_bis {
+                Some(bis) => self.schreiben(ZELLENENDE, bis),
+                None => self.erzeugen(ZELLENENDE),
+            }
         }
         // Dieselbe Frage wie eben und dieselbe Antwort: steht nichts offen, ist
         // nichts zu schliessen. Der Zweig ist nicht erreichbar, denn zwischen
@@ -1735,6 +2036,13 @@ impl<'q> Zerlegung<'q> {
             return;
         };
         self.elemente[eintrag.rang].klammer = klammer_der_raender(quelle, &eintrag);
+        // Eine Zelle zaehlt ihr Ende mit und ist damit nie leer; ihr Anfang
+        // kann im woertlichen Zweig nachgerueckt sein.
+        let laenge = if zelle {
+            self.stelle - eintrag.anfang
+        } else {
+            laenge
+        };
         if laenge > 0 {
             match eintrag.was {
                 Abschluss::Nichts => {}
@@ -1754,6 +2062,30 @@ impl<'q> Zerlegung<'q> {
                             farbe,
                             unterstrichen: true,
                         });
+                    }
+                }
+                Abschluss::Zelle { art, kopf, .. } => {
+                    self.auszeichnungen.push((
+                        eintrag.rang,
+                        Auszeichnungsstelle {
+                            anfang: eintrag.anfang,
+                            laenge,
+                            art,
+                        },
+                    ));
+                    // Die Fettschrift der Kopfzeile ueber den Inhalt ohne sein
+                    // Ende; die Sortierung in [`Zerlegung::abschliessen`]
+                    // stellt die laengere Zelle davor.
+                    let inhalt = inhalt_bis.saturating_sub(eintrag.anfang);
+                    if kopf && inhalt > 0 {
+                        self.auszeichnungen.push((
+                            eintrag.rang,
+                            Auszeichnungsstelle {
+                                anfang: eintrag.anfang,
+                                laenge: inhalt,
+                                art: Auszeichnung::StarkeBetonung,
+                            },
+                        ));
                     }
                 }
             }
@@ -2403,17 +2735,290 @@ mod tests {
         );
     }
 
-    /// Das vierte Abnahmekriterium von C4: eine Tabelle steht Zeile fuer Zeile
-    /// mit ihren Zwischenraeumen da.
+    // ---------------------------------------------------------------------
+    // Tabellen (Schritt 2 des Plans
+    // `261031-1720-plan-markdown-vorschau-richtet-tabellenspalten-aus.md`)
+    // ---------------------------------------------------------------------
+
+    /// Eine Zelle, wie die Proben sie lesen: ihr Text samt Ende, Zeile,
+    /// Spalte, Spaltenzahl, Ausrichtung, Tabelle und Tiefe.
+    #[derive(Debug, PartialEq, Eq)]
+    struct Zelle {
+        text: String,
+        tabelle: usize,
+        zeile: usize,
+        spalte: usize,
+        spalten: usize,
+        ausrichtung: Spaltenausrichtung,
+        tiefe: u8,
+    }
+
+    /// Die Zellen eines gerenderten Textes, in der Reihenfolge der Stellen.
+    fn zellen(gerendert: &Gerendert) -> Vec<Zelle> {
+        gerendert
+            .formatierung
+            .auszeichnungen
+            .iter()
+            .filter_map(|stelle| match stelle.art {
+                Auszeichnung::Tabellenzelle {
+                    tabelle,
+                    zeile,
+                    spalte,
+                    spalten,
+                    ausrichtung,
+                    tiefe,
+                } => Some(Zelle {
+                    text: stueck(&gerendert.text, stelle.anfang, stelle.laenge),
+                    tabelle,
+                    zeile,
+                    spalte,
+                    spalten,
+                    ausrichtung,
+                    tiefe,
+                }),
+                _ => None,
+            })
+            .collect()
+    }
+
+    /// Die Beispieltabelle des Plans: zwei Spalten, links und rechts, mit
+    /// einer leeren Zelle als letzter der Datei.
+    const PLANTABELLE: &str = "| A | Bb |\n|:--|--:|\n| 1 |  |\n";
+
+    /// Jede Zelle ein eigener Absatz, in Zeilenfolge, mit ihrer Zeile und
+    /// Spalte; ersetzt die Probe `eine_tabelle_bleibt_ein_quelltextraster`,
+    /// die das Quelltextraster vom 260812-1105 hielt.
     #[test]
-    fn eine_tabelle_bleibt_ein_quelltextraster() {
-        let quelle = "| Spalte A | Spalte B |\n|----------|----------|\n| 1        | 2        |\n";
-        let ergebnis = gerendert(quelle);
+    fn eine_tabelle_steht_zelle_fuer_zelle_in_zeilenfolge() {
+        let ergebnis = kachelung_pruefen(PLANTABELLE);
+        assert_eq!(ergebnis.text, "A\nBb\n1\n\n");
+        let gefunden: Vec<(String, usize, usize, usize, usize)> = zellen(&ergebnis)
+            .into_iter()
+            .map(|z| (z.text, z.zeile, z.spalte, z.tabelle, z.spalten))
+            .collect();
         assert_eq!(
-            ergebnis.text,
-            "| Spalte A | Spalte B |\n|----------|----------|\n| 1        | 2        |",
-            "die Zeilen bleiben Zeilen und die Zwischenraeume stehen"
+            gefunden,
+            vec![
+                ("A\n".to_owned(), 0, 0, 0, 2),
+                ("Bb\n".to_owned(), 0, 1, 0, 2),
+                ("1\n".to_owned(), 1, 0, 0, 2),
+                ("\n".to_owned(), 1, 1, 0, 2),
+            ]
         );
+    }
+
+    /// `:--`, `:-:`, `--:` und `---` werden `Links`, `Mitte`, `Rechts` und
+    /// `Ohne`, je fuer jede Zelle ihrer Spalte.
+    #[test]
+    fn die_trennzeile_gibt_jeder_spalte_ihre_ausrichtung() {
+        let ergebnis =
+            kachelung_pruefen("| a | b | c | d |\n|:--|:-:|--:|---|\n| 1 | 2 | 3 | 4 |\n");
+        let ausrichtungen: Vec<Spaltenausrichtung> = zellen(&ergebnis)
+            .into_iter()
+            .map(|z| z.ausrichtung)
+            .collect();
+        let reihe = [
+            Spaltenausrichtung::Links,
+            Spaltenausrichtung::Mitte,
+            Spaltenausrichtung::Rechts,
+            Spaltenausrichtung::Ohne,
+        ];
+        assert_eq!(ausrichtungen, [reihe, reihe].concat());
+    }
+
+    /// Fett ist der Inhalt der Kopfzellen ohne ihr Ende, und keine Zelle
+    /// einer weiteren Zeile.
+    #[test]
+    fn die_kopfzeile_traegt_starke_betonung_und_die_zeilen_nicht() {
+        let ergebnis = kachelung_pruefen(PLANTABELLE);
+        let fett: Vec<String> = stellen(&ergebnis, Auszeichnung::StarkeBetonung)
+            .into_iter()
+            .map(|(anfang, laenge)| stueck(&ergebnis.text, anfang, laenge))
+            .collect();
+        assert_eq!(fett, vec!["A".to_owned(), "Bb".to_owned()]);
+        // Die Zelle steht vor ihrer Betonung: aussen vor innen.
+        let erste_zwei: Vec<Auszeichnung> = ergebnis.formatierung.auszeichnungen[..2]
+            .iter()
+            .map(|stelle| stelle.art)
+            .collect();
+        assert!(matches!(erste_zwei[0], Auszeichnung::Tabellenzelle { .. }));
+        assert_eq!(erste_zwei[1], Auszeichnung::StarkeBetonung);
+    }
+
+    /// Eine leere Zelle behaelt ihren Absatz, mitten in der Tabelle wie als
+    /// letzte Zelle der Datei, und ihre Leerzeichen erscheinen nicht.
+    #[test]
+    fn eine_leere_zelle_behaelt_ihren_absatz() {
+        let ergebnis = kachelung_pruefen("| a | b | c |\n|---|---|---|\n|  | x |  |");
+        let texte: Vec<String> = zellen(&ergebnis).into_iter().map(|z| z.text).collect();
+        assert_eq!(texte, ["a\n", "b\n", "c\n", "\n", "x\n", "\n"]);
+        assert_eq!(ergebnis.text, "a\nb\nc\n\nx\n\n");
+        let mitte = kachelung_pruefen("| a | b |\n|---|---|\n|   | x |\n");
+        assert_eq!(mitte.text, "a\nb\n\nx\n");
+    }
+
+    /// Einer zu kurzen Zeile haengt die Kiste leere Zellen an, und jede
+    /// bekommt ihren Absatz und ihre Spalte.
+    #[test]
+    fn eine_kurze_zeile_bekommt_leere_zellen() {
+        let ergebnis = kachelung_pruefen("| a | b | c |\n|---|---|---|\n| 1 |\n");
+        let gefunden: Vec<(String, usize, usize)> = zellen(&ergebnis)
+            .into_iter()
+            .map(|z| (z.text, z.zeile, z.spalte))
+            .collect();
+        assert_eq!(
+            gefunden[3..],
+            [
+                ("1\n".to_owned(), 1, 0),
+                ("\n".to_owned(), 1, 1),
+                ("\n".to_owned(), 1, 2),
+            ]
+        );
+    }
+
+    /// Eine zu lange Zeile zeigt so viele Zellen, wie der Kopf Spalten hat;
+    /// die uebrigen bleiben Quelle ohne Anzeige.
+    #[test]
+    fn eine_lange_zeile_zeigt_so_viele_zellen_wie_der_kopf() {
+        let ergebnis = kachelung_pruefen("| a | b |\n|---|---|\n| 1 | 2 | 3 |\n");
+        assert_eq!(ergebnis.text, "a\nb\n1\n2\n");
+        assert!(
+            zellen(&ergebnis)
+                .iter()
+                .all(|z| z.spalte < 2 && z.spalten == 2)
+        );
+    }
+
+    /// `\|` in einer Zelle zeigt den Strich und nicht den Rueckstrich.
+    #[test]
+    fn ein_maskierter_strich_steht_in_seiner_zelle() {
+        let ergebnis = kachelung_pruefen("| x \\| y | z |\n|---|---|\n");
+        let texte: Vec<String> = zellen(&ergebnis).into_iter().map(|z| z.text).collect();
+        assert_eq!(texte, ["x | y\n", "z\n"]);
+    }
+
+    /// Eine Betonung in einer Zelle bleibt eine Betonung, feste Schrift und
+    /// ein Verweis ebenso.
+    #[test]
+    fn eine_betonung_in_einer_zelle_bleibt_eine_betonung() {
+        let ergebnis = kachelung_pruefen("| h | i |\n|---|---|\n| *k* | `c` |\n| [v](x) | ü😀 |\n");
+        assert_eq!(ergebnis.text, "h\ni\nk\nc\nv\nü😀\n");
+        let kursiv = stellen(&ergebnis, Auszeichnung::Betonung);
+        assert_eq!(kursiv.len(), 1);
+        assert_eq!(stueck(&ergebnis.text, kursiv[0].0, kursiv[0].1), "k");
+        let fest = stellen(&ergebnis, Auszeichnung::FesteSchrift);
+        assert_eq!(stueck(&ergebnis.text, fest[0].0, fest[0].1), "c");
+        assert_eq!(ergebnis.formatierung.einfaerbungen.len(), 1, "der Verweis");
+    }
+
+    /// Eine Tabelle in einem Listenpunkt traegt seine Tiefe, und sein
+    /// Merkzeichen steht auf eigener Zeile davor.
+    #[test]
+    fn eine_tabelle_im_listenpunkt_traegt_die_tiefe_des_punktes() {
+        let ergebnis = kachelung_pruefen("- | a |\n  |---|\n  | 1 |\n\ntext\n");
+        assert_eq!(ergebnis.text, "• \na\n1\n\ntext");
+        let alle = zellen(&ergebnis);
+        assert_eq!(alle.len(), 2);
+        assert!(alle.iter().all(|z| z.tiefe == 1), "{alle:?}");
+        // Im Zitat ebenso, und das `> ` jeder Zeile faellt.
+        let zitat = kachelung_pruefen("> | a |\n> |---|\n> | 1 |\n");
+        assert_eq!(zitat.text, "a\n1\n");
+        assert!(zellen(&zitat).iter().all(|z| z.tiefe == 1));
+        // Auf Dokumentebene keine Tiefe.
+        assert!(zellen(&gerendert(PLANTABELLE)).iter().all(|z| z.tiefe == 0));
+    }
+
+    /// Zwei Tabellen eines Dokuments tragen verschiedene Nummern, und die
+    /// zweite zaehlt ihre Zeilen von vorn.
+    #[test]
+    fn zwei_tabellen_tragen_verschiedene_nummern() {
+        let ergebnis =
+            kachelung_pruefen("| a |\n|---|\n| 1 |\n\nDazwischen.\n\n| b | c |\n|---|---|\n");
+        let gefunden: Vec<(String, usize, usize, usize)> = zellen(&ergebnis)
+            .into_iter()
+            .map(|z| (z.text, z.tabelle, z.zeile, z.spalten))
+            .collect();
+        assert_eq!(
+            gefunden,
+            vec![
+                ("a\n".to_owned(), 0, 0, 1),
+                ("1\n".to_owned(), 0, 1, 1),
+                ("b\n".to_owned(), 1, 0, 2),
+                ("c\n".to_owned(), 1, 0, 2),
+            ]
+        );
+    }
+
+    /// GFM verlangt die aeusseren Striche nicht.
+    #[test]
+    fn eine_tabelle_ohne_aeussere_striche_ist_eine_tabelle() {
+        let ergebnis = kachelung_pruefen("a | b\n--|--\n1 | 2");
+        assert_eq!(ergebnis.text, "a\nb\n1\n2\n");
+        assert_eq!(zellen(&ergebnis).len(), 4);
+    }
+
+    /// Ein Absatz hinter einer Tabelle steht hinter einer Leerzeile, und
+    /// einer davor ebenso.
+    #[test]
+    fn ein_absatz_nach_einer_tabelle_steht_hinter_einer_leerzeile() {
+        let ergebnis = kachelung_pruefen("Davor.\n\n| a |\n|---|\n| 1 |\n\nDanach.\n");
+        assert_eq!(ergebnis.text, "Davor.\n\na\n1\n\nDanach.");
+    }
+
+    /// Eine Kopfzeile ohne gueltige Trennzeile ist keine Tabelle und bleibt
+    /// der woertliche Absatz von vorher.
+    #[test]
+    fn eine_unvollstaendige_tabelle_bleibt_ein_absatz() {
+        for quelle in ["| a | b |\n| 1 | 2 |\n", "| a | b |\n|---|\n| 1 | 2 |\n"] {
+            let ergebnis = kachelung_pruefen(quelle);
+            assert!(zellen(&ergebnis).is_empty(), "{quelle:?}");
+            assert_eq!(ergebnis.text, quelle.trim_end(), "{quelle:?}");
+        }
+    }
+
+    /// Frage 1 des Plans: ein Wort in einer Zelle liefert die ganze
+    /// Quellzeile seiner Zeile, mit Strichen und Umbruch.
+    #[test]
+    fn ein_wort_in_einer_zelle_kopiert_seine_quellzeile() {
+        let quelle = "| Name | Wert |\n|:--|--:|\n| alpha | 1 |\n| beta | 2 |\n";
+        assert_eq!(kopiert(quelle, "beta"), "| beta | 2 |\n");
+        assert_eq!(kopiert(quelle, "alpha"), "| alpha | 1 |\n");
+        assert_eq!(kopiert(quelle, "Name"), "| Name | Wert |\n");
+        assert_eq!(
+            kopiert(quelle, "Wert"),
+            "| Name | Wert |\n",
+            "das letzte Wort des Kopfes bringt die Trennzeile nicht mit"
+        );
+        assert_eq!(kopiert(quelle, "2"), "| beta | 2 |\n");
+    }
+
+    /// Frage 1 des Plans: eine Auswahl ueber Kopf und erste Zeile liefert die
+    /// Trennzeile dazwischen mit.
+    #[test]
+    fn eine_auswahl_ueber_kopf_und_zeile_liefert_die_trennzeile_mit() {
+        let quelle = "| Name | Wert |\n|:--|--:|\n| alpha | 1 |\n| beta | 2 |\n";
+        assert_eq!(
+            kopiert(quelle, "Name\nWert\nalpha"),
+            "| Name | Wert |\n|:--|--:|\n| alpha | 1 |\n"
+        );
+    }
+
+    /// Frage 1 des Plans: die Auswahl ueber alles liefert die Datei
+    /// vollstaendig (C2.8 der Runde 14), auch um die Tabelle herum.
+    #[test]
+    fn die_auswahl_ueber_eine_tabelle_liefert_die_datei() {
+        for quelle in [
+            PLANTABELLE,
+            "Davor.\n\n| a | b |\n|---|---|\n| 1 |\n| x \\| y | 2 | 3 |\n\nDanach.\n",
+        ] {
+            let ergebnis = kachelung_pruefen(quelle);
+            assert_eq!(
+                ergebnis
+                    .quellbezug
+                    .quelltext(0..ergebnis.formatierung.laenge),
+                quelle
+            );
+        }
     }
 
     /// Das dritte Abnahmekriterium von C4, erster Fall: ein Bild erscheint als
@@ -2743,7 +3348,7 @@ mod tests {
     /// ueber `nur_das_merkzeichen`, und der harte Umbruch ueber
     /// `Event::HardBreak`. Jeder von ihnen traegt Quelltext auf einem anderen
     /// Pfad ab als die zehn davor.
-    const KACHELBEISPIELE: [&str; 16] = [
+    const KACHELBEISPIELE: [&str; 22] = [
         "Ein gewoehnlicher Absatz. Und noch ein Satz dahinter.\n",
         "# Titel\n\nDarunter steht ein Absatz.\n",
         "Ein **fetter** Text mit [Verweis](https://example.com) darin.\n",
@@ -2760,6 +3365,12 @@ mod tests {
         "- \n",
         "> eins\n>\n> zwei\n",
         "a  \nb\n",
+        "| A | Bb |\n|:--|--:|\n| 1 |  |\n",
+        "| a | b | c |\n|---|---|---|\n| 1 |\n| 1 | 2 | 3 | 4 |\n",
+        "| x \\| y | **f** |\n|---|---|\n| [](x) | `c` |",
+        "| Grüße | 😀 |\n|:-:|---|\n| ä | ö😀ü |\n",
+        "- | a |\n  |---|\n  | 1 |\n\n> | b |\n> |---|\n",
+        "a | b\n--|--\n1 | 2",
     ];
 
     /// Misst die beiden Zusagen der Kachelung an einer Quelle nach.
