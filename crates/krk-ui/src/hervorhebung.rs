@@ -329,6 +329,72 @@ pub enum Auszeichnung {
     /// Fett und nicht groesser: die Groesse gehoert den Ueberschriften, und
     /// eine starke Betonung, die eine Zeile hoeher machte, saehe aus wie eine.
     StarkeBetonung,
+    /// Eine Zelle einer Markdown-Tabelle: ein eigener Absatz, den der
+    /// Satzspiegel von AppKit in seine Zeile und Spalte stellt.
+    ///
+    /// **Ein ganzer Absatz und kein Stueck darin**, aus dem Grund von
+    /// [`Auszeichnung::Listenzeile`]: die Zelle ist ein Merkmal des Absatzes,
+    /// und ihr Bereich deckt den Inhalt der Zelle samt dem abschliessenden
+    /// `\n`, ist also nie leer. **Sie entsteht allein in [`crate::markdown`]**;
+    /// die Formatansicht des Editors zeigt eine Tabelle als Quelltext.
+    ///
+    /// **Die Zerlegung rechnet die Struktur und nichts von der Gestalt.** Wo
+    /// eine Spalte beginnt und wie breit sie ist, haengt an Schriftmassen und
+    /// an der Breite der Flaeche, und beides kennt erst
+    /// `crate::appkit::textmerkmale`, das je Tabellennummer (`tabelle`) genau
+    /// ein `NSTextTable` baut.
+    #[cfg_attr(
+        not(test),
+        expect(
+            dead_code,
+            reason = "erzeugt wird die Zelle von crate::markdown in Schritt 2 des Plans 261031-1720"
+        )
+    )]
+    Tabellenzelle {
+        /// Die laufende Nummer der Tabelle im Dokument, von 0 an. Zellen mit
+        /// derselben Nummer gehoeren zu derselben Tabelle.
+        tabelle: usize,
+        /// Die Zeile in der Tabelle, von 0 an; 0 ist die Kopfzeile.
+        zeile: usize,
+        /// Die Spalte in der Zeile, von 0 an.
+        spalte: usize,
+        /// Wie viele Spalten die Tabelle laut Trennzeile hat.
+        spalten: usize,
+        /// Wie die Trennzeile diese Spalte ausrichtet.
+        ausrichtung: Spaltenausrichtung,
+        /// Die Einruecktiefe der umgebenden Liste oder des Zitats, 0 fuer
+        /// keine.
+        ///
+        /// **Die Zelle traegt sie selbst**, weil ihr Absatzstil den einer
+        /// aeusseren [`Auszeichnung::Listenzeile`] ersetzt: ohne sie stuende
+        /// eine Tabelle in einem Listenpunkt am linken Rand.
+        tiefe: u8,
+    },
+}
+
+/// Wie die Trennzeile einer Markdown-Tabelle eine Spalte ausrichtet.
+///
+/// `:--` ist links, `:-:` mittig, `--:` rechts. **`Ohne` steht fuer eine
+/// Trennzeile ohne Doppelpunkt**, und der Name sagt, dass die Quelle nichts
+/// vorgibt: die Spalte folgt dann der Schreibrichtung ihres Textes und nicht
+/// fest dem linken Rand.
+#[cfg_attr(
+    not(test),
+    expect(
+        dead_code,
+        reason = "erzeugt wird die Ausrichtung von crate::markdown in Schritt 2 des Plans 261031-1720"
+    )
+)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Spaltenausrichtung {
+    /// Die Trennzeile gibt nichts vor (`---`).
+    Ohne,
+    /// Links (`:--`).
+    Links,
+    /// Mittig (`:-:`).
+    Mitte,
+    /// Rechts (`--:`).
+    Rechts,
 }
 
 /// Wo eine [`Auszeichnung`] steht.

@@ -122,6 +122,31 @@
 //! `bestMatchFromAppearancesWithNames:` (`:56`) und `NSAppearanceNameDarkAqua`
 //! (`:64`) — die beiden juengsten Angaben im Kopf dieser Datei.
 //!
+//! **Die Markdown-Tabelle (261031) liegt ebenso unter dem Zielsystem**, mit
+//! einer Ausnahme, die gerade deshalb nicht angesprochen wird. Die drei
+//! Klassen `NSTextBlock` (`NSTextTable.h:107`), `NSTextTableBlock` (`:151`)
+//! und `NSTextTable` (`:166`) tragen `macos(10.0)`, ebenso die Aufzaehlungen
+//! `NSTextBlockValueType` (`:27`, `:35`), `NSTextBlockLayer` (`:64`, `:75`)
+//! und `NSTextTableLayoutAlgorithm` (`:95`, `:103`). An ihnen stehen ohne
+//! eigene Angabe `initWithTable:startingRow:rowSpan:startingColumn:columnSpan:`
+//! (`:152`), `numberOfColumns` (`:168`), `layoutAlgorithm` (`:169`),
+//! `collapsesBorders` (`:170`), `setWidth:type:forLayer:` (`:122`) und
+//! `setBorderColor:` (`:135`), dazu die Leser der Probe `table`,
+//! `startingRow` und `startingColumn` (`:156`, `:157`, `:159`).
+//! `setWidth:type:forLayer:edge:` (`:127`) steht seit 10.0 und traegt
+//! `API_TO_BE_DEPRECATED`; **die Fassungen mit `rectEdge:` tragen
+//! `macos(27.0)`** (`:123`, `:136`) und stehen deshalb nirgends in dieser
+//! Datei. `textBlocks` (`NSParagraphStyle.h:320`) und `setTextBlocks:` an
+//! `NSMutableParagraphStyle` (`:542`) tragen `macos(10.0)`, `alignment` und
+//! `setAlignment:` keine eigene Angabe (`:384`, der Leser an
+//! `NSParagraphStyle` `:166`), die Aufzaehlung `NSTextAlignment`
+//! `macos(10.0)` (`NSText.h:31`). `NSRectEdge` aus Foundation ist eine
+//! Aufzaehlung ohne Angabe (`NSGeometry.h:59`), und `separatorColor` an
+//! `NSColor` steht seit macOS 10.14 (`NSColor.h:213`), gleichauf mit den
+//! juengsten Angaben des Absatzes davor. `AnyThread` ist das Merkmal von
+//! `objc2`, das `alloc` liefert, und spricht selbst keine Methode an. Alle
+//! Zahlen am SDK 27 gelesen.
+//!
 //! **Was die `use`-Zeilen daneben hereinholen, und warum keines davon die
 //! Untergrenze dieser Datei anhebt:** `NSRange` ist eine C-Struktur
 //! (`NSRange.h:12`); die Klassen `NSString` (`NSString.h:103`), `NSNumber`
@@ -143,21 +168,26 @@
 
 use std::collections::HashMap;
 
+use objc2::AnyThread;
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
 use objc2_app_kit::{
     NSAppearanceCustomization, NSAppearanceNameAqua, NSAppearanceNameDarkAqua, NSColor, NSFont,
     NSFontAttributeName, NSFontDescriptorSymbolicTraits, NSForegroundColorAttributeName,
-    NSMutableParagraphStyle, NSParagraphStyleAttributeName, NSStringDrawing, NSTextView,
-    NSUnderlineStyle, NSUnderlineStyleAttributeName, NSView,
+    NSMutableParagraphStyle, NSParagraphStyleAttributeName, NSStringDrawing, NSTextAlignment,
+    NSTextBlock, NSTextBlockLayer, NSTextBlockValueType, NSTextTable, NSTextTableBlock,
+    NSTextTableLayoutAlgorithm, NSTextView, NSUnderlineStyle, NSUnderlineStyleAttributeName,
+    NSView,
 };
 use objc2_foundation::{
     NSArray, NSDictionary, NSMutableAttributedString, NSMutableCopying, NSNumber, NSRange,
-    NSString, ns_string,
+    NSRectEdge, NSString, ns_string,
 };
 
 use crate::editormodell::Ansicht;
-use crate::hervorhebung::{Auszeichnung, Darstellungsart, Farbe, Formatierung, Tafel};
+use crate::hervorhebung::{
+    Auszeichnung, Darstellungsart, Farbe, Formatierung, Spaltenausrichtung, Tafel,
+};
 
 /// Um wie viele Punkte die Formatansicht ihre Grundschrift ueber die der
 /// Rohansicht hebt (C3).
@@ -297,7 +327,53 @@ pub fn anwenden(
         return false;
     }
     zuruecksetzen(text, ansicht, art);
+    auszeichnungen_legen(&speicher, formatierung, art, ansicht);
 
+    // Die voruebergehenden Merkmale: was die Auslegung nicht anfasst.
+    let strich = NSNumber::numberWithInteger(NSUnderlineStyle::Single.0);
+    let mut farben: HashMap<Farbe, Retained<NSColor>> = HashMap::new();
+    // SAFETY: Die Laengenpruefung oben deckt auch diese Schleife; der Verwalter gehoert
+    // dieser Flaeche. Geleert ist die Liste schon: das tut `zuruecksetzen`
+    // weiter oben, und ein zweites Leeren hier waere die zweite Stelle mit einer
+    // Meinung darueber, was zurueckzunehmen ist.
+    unsafe {
+        for stueck in &formatierung.einfaerbungen {
+            let bereich = NSRange::new(stueck.anfang, stueck.laenge);
+            let farbe = farben
+                .entry(stueck.farbe)
+                .or_insert_with(|| nsfarbe(stueck.farbe));
+            verwalter.addTemporaryAttribute_value_forCharacterRange(
+                NSForegroundColorAttributeName,
+                farbe,
+                bereich,
+            );
+            if stueck.unterstrichen {
+                verwalter.addTemporaryAttribute_value_forCharacterRange(
+                    NSUnderlineStyleAttributeName,
+                    &strich,
+                    bereich,
+                );
+            }
+        }
+    }
+
+    true
+}
+
+/// Legt die Auszeichnungen einer Formatierung in den Textspeicher: der Teil von
+/// [`anwenden`], der auf die Auslegung wirkt.
+///
+/// Eine eigene Funktion und nicht der Rumpf von [`anwenden`], weil sie allein
+/// den Speicher braucht: die Probe `zwei_zellen_einer_tabelle_teilen_ihr_nstexttable`
+/// faehrt sie an einem Speicher ohne Flaeche, aus dem Grund von [`grund_legen`].
+/// Die Pruefung der Laenge und das Zuruecksetzen bleiben bei [`anwenden`]; wer
+/// sie hier ruft, hat beides vorher getan.
+fn auszeichnungen_legen(
+    speicher: &NSMutableAttributedString,
+    formatierung: &Formatierung,
+    art: Darstellungsart,
+    ansicht: Ansicht,
+) {
     // Die Merkmale des Textspeichers: was auf die Auslegung wirkt.
     //
     // **Die Groesse kommt aus derselben Stelle wie die Grundschrift** und wird
@@ -307,6 +383,11 @@ pub fn anwenden(
     // damit auf einer anderen Grundlage auf als der Text, ueber dem sie steht,
     // sobald jemand die Grundlage aendert.
     let grundgroesse = grundgroesse(ansicht, art);
+    // Je Tabelle genau ein `NSTextTable`, fuer die Dauer dieses Rufs gehalten
+    // wie die Farben in `anwenden`: der Satzspiegel erkennt die Zellen einer
+    // Tabelle allein daran, dass ihre Bloecke auf **dasselbe** Objekt zeigen.
+    // Zwei gleich eingestellte Tabellen waeren zwei Tabellen.
+    let mut tabellen: HashMap<usize, Retained<NSTextTable>> = HashMap::new();
     speicher.beginEditing();
     for stelle in &formatierung.auszeichnungen {
         let bereich = NSRange::new(stelle.anfang, stelle.laenge);
@@ -323,9 +404,28 @@ pub fn anwenden(
             Auszeichnung::StarkeBetonung => {
                 schriftmerkmal(&NSFont::boldSystemFontOfSize(grundgroesse))
             }
+            Auszeichnung::Tabellenzelle {
+                tabelle,
+                zeile,
+                spalte,
+                spalten,
+                ausrichtung,
+                tiefe,
+            } => {
+                let tafel = tabellen
+                    .entry(tabelle)
+                    .or_insert_with(|| texttabelle(spalten, tiefe));
+                zellenmerkmal(
+                    tafel,
+                    zeile,
+                    spalte,
+                    ausrichtung,
+                    &grundschrift(ansicht, art),
+                )
+            }
         };
         // SAFETY: Der Bereich liegt im Text, und das ist die ganze
-        // Bedingung: die Laenge ist oben geprueft, und jede Stelle der
+        // Bedingung: die Laenge hat `anwenden` vor dem Ruf geprueft, und jede Stelle der
         // Formatierung liegt nach dem Modulkopf von `crate::hervorhebung`
         // innerhalb dieser Laenge.
         //
@@ -345,6 +445,11 @@ pub fn anwenden(
         // `StarkeBetonung` —, und verschachtelte Listenzeilen setzen
         // einander ueberlappend denselben Absatzstil. `addAttributes:`
         // ersetzt bei gleichem Namen, statt zusammenzulegen.
+        //
+        // **`Tabellenzelle` setzt ebenso `NSParagraphStyleAttributeName`**
+        // und ersetzt damit den Absatzstil einer aeusseren `Listenzeile`,
+        // samt ihrem Einzug. Genau deshalb traegt die Zelle ihre Tiefe selbst,
+        // und `texttabelle` rueckt die ganze Tabelle um sie ein.
         //
         // Getragen wird das von der Sortierung in
         // `crate::markdown::Zerlegung::abschliessen`: aussen vor innen, bei
@@ -378,36 +483,6 @@ pub fn anwenden(
         unsafe { speicher.addAttributes_range(&merkmale, bereich) };
     }
     speicher.endEditing();
-
-    // Die voruebergehenden Merkmale: was die Auslegung nicht anfasst.
-    let strich = NSNumber::numberWithInteger(NSUnderlineStyle::Single.0);
-    let mut farben: HashMap<Farbe, Retained<NSColor>> = HashMap::new();
-    // SAFETY: Dieselbe Pruefung deckt beide Schleifen; der Verwalter gehoert
-    // dieser Flaeche. Geleert ist die Liste schon: das tut `zuruecksetzen`
-    // weiter oben, und ein zweites Leeren hier waere die zweite Stelle mit einer
-    // Meinung darueber, was zurueckzunehmen ist.
-    unsafe {
-        for stueck in &formatierung.einfaerbungen {
-            let bereich = NSRange::new(stueck.anfang, stueck.laenge);
-            let farbe = farben
-                .entry(stueck.farbe)
-                .or_insert_with(|| nsfarbe(stueck.farbe));
-            verwalter.addTemporaryAttribute_value_forCharacterRange(
-                NSForegroundColorAttributeName,
-                farbe,
-                bereich,
-            );
-            if stueck.unterstrichen {
-                verwalter.addTemporaryAttribute_value_forCharacterRange(
-                    NSUnderlineStyleAttributeName,
-                    &strich,
-                    bereich,
-                );
-            }
-        }
-    }
-
-    true
 }
 
 /// Nimmt jede gesetzte Auszeichnung wieder heraus und stellt die Grundschrift
@@ -698,6 +773,122 @@ fn einzugsmerkmal(tiefe: u8, schrift: &NSFont) -> Retained<NSDictionary<NSString
     NSDictionary::from_slices(&schluessel, &werte)
 }
 
+/// Die Staerke der Linie um jede Zelle einer Markdown-Tabelle, in Punkt.
+///
+/// Gewaehlt und nicht abgeleitet: ein halber Punkt ist auf einem Schirm mit
+/// doppelter Dichte genau eine Bildpunktreihe, also die duennste Linie, die
+/// eine Spalte noch sichtbar von der naechsten trennt. Wer die Gestalt der
+/// Tabelle aendern will, aendert diese Zahl und [`ZELLENABSTAND`] und keinen
+/// Plan (Frage 3 des Plans 261031-1720).
+const ZELLENLINIE: f64 = 0.5;
+
+/// Der Innenabstand jeder Zelle zwischen Linie und Text, in Punkt.
+///
+/// Gewaehlt und nicht abgeleitet: drei Punkte lassen den Text nicht an der
+/// Linie kleben und kosten bei 160 Punkten Vorschaubreite (der Mindestbreite
+/// eines Bereichs, siehe [`EINZUGSGRENZE`]) je Spalte sechs Punkt Breite.
+const ZELLENABSTAND: f64 = 3.0;
+
+/// Das eine `NSTextTable` einer Markdown-Tabelle mit `spalten` Spalten.
+///
+/// **Die Breiten rechnet der automatische Satzalgorithmus**, denn er hat, was
+/// der Zerlegung fehlt: die Schriftmasse und die Breite der Flaeche. Eine lange
+/// Zelle bricht damit innerhalb ihrer Spalte um, statt die Tabelle ueber den
+/// Rand zu schieben. Die Linien benachbarter Zellen fallen zusammen
+/// (`collapsesBorders`), sonst stuende zwischen zwei Zellen eine doppelte.
+///
+/// **Ist `tiefe > 0`, steht die Tabelle in einer Liste oder einem Zitat** und
+/// bekommt links denselben Rand, den [`einzugsmerkmal`] einer Listenzeile
+/// dieser Tiefe gibt, gedeckelt bei [`EINZUGSGRENZE`]. Gesetzt wird er mit
+/// `setWidth:type:forLayer:edge:`, der Fassung fuer eine einzelne Kante. Das
+/// SDK fuehrt sie als `API_TO_BE_DEPRECATED` (`NSTextTable.h:127`), und ihr
+/// Nachfolger mit `rectEdge:` steht erst ab macOS 27 (`:123`), also ueber dem
+/// Zielsystem; sie bleibt deshalb die Fassung dieser Datei, bis das Zielsystem
+/// 27 erreicht. Markiert der Uebersetzer sie einmal als veraltet, ist das der
+/// Anlass, hier nachzusehen.
+fn texttabelle(spalten: usize, tiefe: u8) -> Retained<NSTextTable> {
+    let tafel = NSTextTable::new();
+    tafel.setNumberOfColumns(spalten.max(1));
+    tafel.setLayoutAlgorithm(NSTextTableLayoutAlgorithm::AutomaticLayoutAlgorithm);
+    tafel.setCollapsesBorders(true);
+    if tiefe > 0 {
+        let rand = LISTENEINZUG * f64::from(tiefe.clamp(1, EINZUGSGRENZE));
+        tafel.setWidth_type_forLayer_edge(
+            rand,
+            NSTextBlockValueType::AbsoluteValueType,
+            NSTextBlockLayer::Margin,
+            NSRectEdge::MinX,
+        );
+    }
+    tafel
+}
+
+/// Ein Merkmalsverzeichnis mit dem Absatzstil einer Tabellenzelle darin.
+///
+/// **Auf dem [`grundabsatz`]**, aus dem Grund von [`einzugsmerkmal`]: ohne ihn
+/// fielen die Tabulatoren in einer Zelle auf die 28 Punkt des Systems zurueck.
+/// Der Stil traegt genau einen Block, die Zelle an (`zeile`, `spalte`) mit den
+/// Spannen 1, und die Ausrichtung der Spalte.
+///
+/// **Die Linienfarbe ist `separatorColor` und keine Farbe der Tafel**, weil sie
+/// dynamisch ist: sie folgt dem Wechsel auf Dunkel, ohne dass jemand die
+/// Merkmale neu setzt. Eine feste Farbe an dieser Stelle braechte den Defekt
+/// zurueck, nach dem gerendertes Markdown die Farbe der hellen Tafel behielt
+/// (`260812-1701_*_ein-gerendertes-markdown-behaelt-nach-dem-wechsel-auf-dunkel-die-verweisfarbe-der-hellen-tafel.md`).
+fn zellenmerkmal(
+    tafel: &NSTextTable,
+    zeile: usize,
+    spalte: usize,
+    ausrichtung: Spaltenausrichtung,
+    schrift: &NSFont,
+) -> Retained<NSDictionary<NSString, AnyObject>> {
+    // Eine Tabelle mit mehr als `isize::MAX` Zeilen passt in keinen Speicher;
+    // die Saettigung steht da, damit die Umwandlung keinen Abbruchpfad hat.
+    let zeile = isize::try_from(zeile).unwrap_or(isize::MAX);
+    let spalte = isize::try_from(spalte).unwrap_or(isize::MAX);
+    let zelle = NSTextTableBlock::initWithTable_startingRow_rowSpan_startingColumn_columnSpan(
+        NSTextTableBlock::alloc(),
+        tafel,
+        zeile,
+        1,
+        spalte,
+        1,
+    );
+    zelle.setWidth_type_forLayer(
+        ZELLENLINIE,
+        NSTextBlockValueType::AbsoluteValueType,
+        NSTextBlockLayer::Border,
+    );
+    zelle.setWidth_type_forLayer(
+        ZELLENABSTAND,
+        NSTextBlockValueType::AbsoluteValueType,
+        NSTextBlockLayer::Padding,
+    );
+    zelle.setBorderColor(Some(&NSColor::separatorColor()));
+    let block: &NSTextBlock = &zelle;
+    let stil = grundabsatz(schrift);
+    stil.setTextBlocks(&NSArray::from_slice(&[block]));
+    stil.setAlignment(textausrichtung(ausrichtung));
+    // SAFETY: Ein Fremdsymbol von AppKit, der Merkmalsname des Absatzstils.
+    let schluessel = unsafe { [NSParagraphStyleAttributeName] };
+    let werte: [&AnyObject; 1] = [&stil];
+    NSDictionary::from_slices(&schluessel, &werte)
+}
+
+/// Die Ausrichtung einer Spalte als Ausrichtung ihres Absatzes.
+///
+/// `Ohne` wird `Natural` und nicht `Left`: die Quelle gibt nichts vor, und ein
+/// Absatz in einer Schrift, die von rechts nach links laeuft, soll dann rechts
+/// stehen, wie jeder andere Absatz der Vorschau.
+fn textausrichtung(ausrichtung: Spaltenausrichtung) -> NSTextAlignment {
+    match ausrichtung {
+        Spaltenausrichtung::Ohne => NSTextAlignment::Natural,
+        Spaltenausrichtung::Links => NSTextAlignment::Left,
+        Spaltenausrichtung::Mitte => NSTextAlignment::Center,
+        Spaltenausrichtung::Rechts => NSTextAlignment::Right,
+    }
+}
+
 /// Eine Farbe der Tafel als `NSColor`.
 ///
 /// Im sRGB-Farbraum, weil die Tafeln ihre Werte darin angeben. Ohne Angabe des
@@ -719,6 +910,7 @@ mod proben {
     use objc2_foundation::NSSize;
 
     use super::*;
+    use crate::hervorhebung::Auszeichnungsstelle;
 
     /// Legt den Grund ueber einen Speicher ohne Flaeche und liefert ihn mit
     /// der waagrechten Lage jedes Zeichens.
@@ -864,6 +1056,125 @@ mod proben {
             2,
             "die Vorgabe hat mehr als den Absatz geaendert"
         );
+    }
+
+    /// Zwei Zellen derselben Tabelle zeigen auf dasselbe `NSTextTable`, eine
+    /// Zelle einer zweiten Tabelle auf ein anderes, und jede steht an ihrer
+    /// Zeile und Spalte mit der Ausrichtung ihrer Spalte (Plan 261031-1720,
+    /// Schritt 1).
+    ///
+    /// **Ohne `NSTextView`**, aus dem Grund von [`gelegt`]: gefahren wird
+    /// [`auszeichnungen_legen`], der Teil von [`anwenden`], der den Speicher
+    /// beschreibt. **Was sie faengt:** ein `NSTextTable` je Zelle statt je
+    /// Tabelle, das jede Zelle als eigene Tabelle untereinander setzte, und
+    /// eine vertauschte Ausrichtung. **Was sie nicht sieht:** ob der
+    /// Satzspiegel die Spalten wirklich nebeneinander stellt; das zeigt allein
+    /// das laufende Buendel.
+    #[test]
+    fn zwei_zellen_einer_tabelle_teilen_ihr_nstexttable() {
+        let text = "A\nB\nC\n";
+        let zelle = |anfang, tabelle, zeile, spalte, spalten, ausrichtung| Auszeichnungsstelle {
+            anfang,
+            laenge: 2,
+            art: Auszeichnung::Tabellenzelle {
+                tabelle,
+                zeile,
+                spalte,
+                spalten,
+                ausrichtung,
+                tiefe: 0,
+            },
+        };
+        let formatierung = Formatierung {
+            art: Darstellungsart::Markdown,
+            laenge: text.len(),
+            einfaerbungen: Vec::new(),
+            auszeichnungen: vec![
+                zelle(0, 0, 0, 0, 2, Spaltenausrichtung::Links),
+                zelle(2, 0, 0, 1, 2, Spaltenausrichtung::Rechts),
+                zelle(4, 1, 1, 0, 3, Spaltenausrichtung::Mitte),
+            ],
+        };
+        let (speicher, _) = gelegt(text, Ansicht::Format, Darstellungsart::Markdown);
+        auszeichnungen_legen(
+            &speicher,
+            &formatierung,
+            Darstellungsart::Markdown,
+            Ansicht::Format,
+        );
+
+        // (Zeichenstelle, Zeile, Spalte, Ausrichtung)
+        let erwartet = [
+            (0, 0, 0, NSTextAlignment::Left),
+            (2, 0, 1, NSTextAlignment::Right),
+            (4, 1, 0, NSTextAlignment::Center),
+        ];
+        let mut tafeln = Vec::new();
+        for (stelle, zeile, spalte, ausrichtung) in erwartet {
+            // SAFETY: Ein Fremdsymbol von AppKit, der Merkmalsname des
+            // Absatzstils; die Stelle liegt im Text.
+            let stil = unsafe {
+                speicher.attribute_atIndex_effectiveRange(
+                    NSParagraphStyleAttributeName,
+                    stelle,
+                    std::ptr::null_mut(),
+                )
+            }
+            .expect("die Zelle traegt einen Absatzstil")
+            .downcast::<NSParagraphStyle>()
+            .expect("unter dem Namen des Absatzstils steht ein Absatzstil");
+            let bloecke = stil.textBlocks();
+            assert_eq!(bloecke.count(), 1, "Stelle {stelle}: nicht genau ein Block");
+            let block = bloecke
+                .objectAtIndex(0)
+                .downcast::<NSTextTableBlock>()
+                .expect("der Block ist eine Tabellenzelle");
+            assert_eq!(block.startingRow(), zeile, "Stelle {stelle}: falsche Zeile");
+            assert_eq!(
+                block.startingColumn(),
+                spalte,
+                "Stelle {stelle}: falsche Spalte"
+            );
+            assert_eq!(
+                stil.alignment(),
+                ausrichtung,
+                "Stelle {stelle}: falsche Ausrichtung"
+            );
+            tafeln.push(block.table());
+        }
+        assert!(
+            std::ptr::eq(Retained::as_ptr(&tafeln[0]), Retained::as_ptr(&tafeln[1])),
+            "zwei Zellen derselben Tabelle zeigen auf zwei NSTextTable"
+        );
+        assert!(
+            !std::ptr::eq(Retained::as_ptr(&tafeln[0]), Retained::as_ptr(&tafeln[2])),
+            "zwei Tabellen teilen ein NSTextTable"
+        );
+        assert_eq!(
+            tafeln[0].numberOfColumns(),
+            2,
+            "die erste Tabelle hat zwei Spalten"
+        );
+        assert_eq!(
+            tafeln[2].numberOfColumns(),
+            3,
+            "die zweite Tabelle hat drei Spalten"
+        );
+    }
+
+    /// Jede der vier Spaltenausrichtungen hat ihre Ausrichtung des Absatzes,
+    /// und `Ohne` folgt der Schreibrichtung statt fest dem linken Rand.
+    #[test]
+    fn jede_spaltenausrichtung_hat_ihre_absatzausrichtung() {
+        let faelle = [
+            (Spaltenausrichtung::Ohne, NSTextAlignment::Natural),
+            (Spaltenausrichtung::Links, NSTextAlignment::Left),
+            (Spaltenausrichtung::Mitte, NSTextAlignment::Center),
+            (Spaltenausrichtung::Rechts, NSTextAlignment::Right),
+        ];
+        for (spalte, absatz) in faelle {
+            assert_eq!(textausrichtung(spalte), absatz, "{spalte:?}");
+        }
     }
 
     /// Editor und Quicknote nehmen Schrift und Grundabsatz aus
