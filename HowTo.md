@@ -1180,7 +1180,10 @@ in der Vorschau ist sie eine Datei wie jede andere.
 **Ohne Notizordner sichert die Quicknote nicht.** Fehlt der Ordner, legt die
 Quicknote ihn nicht selbst an und sagt „Die Quicknote wird nicht gesichert: der
 Notizordner … fehlt. F2 legt ihn an.“ Nach F2 sichert sie bei der nächsten
-Änderung von selbst.
+Änderung von selbst, und ohne weitere Änderung beim Schließen der Quicknote
+oder beim Beenden von KRK. Dasselbe gilt, wenn ein Schreiben gescheitert ist,
+etwa an einem vollen Datenträger: ist die Ursache behoben, landet der letzte
+Stand spätestens beim Schließen oder Beenden in `scratch.txt`.
 
 **Nach einer Änderung von außen sichert die Quicknote bis zum nächsten Start
 nicht mehr**: wenn eine zweite KRK-Instanz, der Editor von KRK oder ein anderes

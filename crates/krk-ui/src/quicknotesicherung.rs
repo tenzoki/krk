@@ -43,7 +43,8 @@
 //! - **Der Notizordner fehlt** ([`Sicherungsmeldung::OrdnerFehlt`]): das sperrt
 //!   nicht. Geschrieben wird nichts und kein Ordner angelegt, denn allein F2
 //!   legt ihn an und entscheidet dabei ueber die Uebernahme der alten Zettel;
-//!   die naechste Aenderung versucht es wieder. Ohne Heimordner (kein
+//!   die naechste Aenderung, das Verlassen und das Beenden versuchen es
+//!   wieder ([`Vormerkung`]). Ohne Heimordner (kein
 //!   Benutzerverzeichnis) gilt dasselbe.
 //!
 //! Jede Meldung kommt einmal je Uebergang und nicht je Auftrag: eine
@@ -63,6 +64,21 @@
 //!
 //! Warten tut allein [`Sicherung::abschliessen`], beim Beenden und mit einer
 //! Hoechstzeit; jeder andere Weg ist auf dem Hauptfaden ohne Systemaufruf.
+//!
+//! # Wann der Editorbereich einen Auftrag gibt
+//!
+//! Die Vormerk- und Abgabelogik steht in [`Vormerkung`] und nicht im
+//! AppKit-Teil, damit eine Probe sie ohne Flaeche faehrt. **„Faellig“ und
+//! „ungesichert“ sind zwei Felder**: faellig ist eine Sicherung
+//! `QUICKNOTE_RUHE` nach der letzten Aenderung, und das faellt mit der Abgabe;
+//! ungesichert ist der Text seit der letzten Aenderung, und das faellt erst,
+//! wenn der Faden fuer den Auftrag mit dem juengsten Text `Gesichert` gemeldet
+//! hat ([`Sicherung::gesichert_bis`]). Verlassen und Beenden geben einen
+//! Auftrag, solange der Text ungesichert ist, auch ohne Vormerkung; nach
+//! `OrdnerFehlt` oder `Gescheitert` landet der letzte Stand damit, sobald die
+//! Ursache behoben ist, und nicht erst nach einer weiteren Aenderung. Bis zum
+//! 261031 teilten beide Zustaende ein Feld, und das Beenden nach F2 verlor den
+//! Text.
 
 use std::fs::OpenOptions;
 use std::io::{self, ErrorKind};
@@ -70,7 +86,7 @@ use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver, Sender, SyncSender, TryRecvError};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use krk_core::text::datei::{self, Dateiform, Lesehindernis, Platzhalterregel, Zeilenenden};
 
@@ -164,6 +180,14 @@ pub struct Sicherung {
     stand: std::cell::Cell<Sicherungsstand>,
     /// Gesendete Schreibauftraege, deren Antwort noch nicht abgeholt ist.
     unterwegs: std::cell::Cell<usize>,
+    /// Wie viele Schreibauftraege gesendet sind; die Nummer des juengsten.
+    gesendet: std::cell::Cell<u64>,
+    /// Wie viele Schreibauftraege beantwortet sind, zusammengefasste
+    /// eingerechnet.
+    beantwortet: std::cell::Cell<u64>,
+    /// Bis zu welcher Auftragsnummer der Text auf der Platte steht: der Stand
+    /// von `beantwortet` bei der letzten Meldung `Gesichert`.
+    gesichert_bis: std::cell::Cell<u64>,
 }
 
 impl Sicherung {
@@ -192,6 +216,9 @@ impl Sicherung {
             antworten,
             stand: std::cell::Cell::new(Sicherungsstand::Ungelesen),
             unterwegs: std::cell::Cell::new(0),
+            gesendet: std::cell::Cell::new(0),
+            beantwortet: std::cell::Cell::new(0),
+            gesichert_bis: std::cell::Cell::new(0),
         }
     }
 
@@ -222,7 +249,23 @@ impl Sicherung {
             return false;
         }
         self.unterwegs.set(self.unterwegs.get() + 1);
+        self.gesendet.set(self.gesendet.get() + 1);
         true
+    }
+
+    /// Die Nummer des zuletzt angenommenen Schreibauftrags; 0 vor dem ersten.
+    #[must_use]
+    pub fn gesendet(&self) -> u64 {
+        self.gesendet.get()
+    }
+
+    /// Bis zu welcher Auftragsnummer der Text nach den abgeholten Meldungen auf
+    /// der Platte steht. Der Faden bedient die Auftraege in ihrer Reihenfolge
+    /// und schreibt von wartenden den juengsten, also deckt ein `Gesichert`
+    /// jeden Auftrag bis zu dem, den es beantwortet.
+    #[must_use]
+    pub fn gesichert_bis(&self) -> u64 {
+        self.gesichert_bis.get()
     }
 
     /// Holt die Meldungen des Fadens ab, ohne zu warten, und fuehrt den Stand
@@ -235,6 +278,11 @@ impl Sicherung {
                 Ok(antwort) => {
                     self.unterwegs
                         .set(self.unterwegs.get().saturating_sub(antwort.erledigt));
+                    self.beantwortet
+                        .set(self.beantwortet.get() + antwort.erledigt as u64);
+                    if antwort.meldung == Some(Sicherungsmeldung::Gesichert) {
+                        self.gesichert_bis.set(self.beantwortet.get());
+                    }
                     if let Some(meldung) = antwort.meldung {
                         self.stand.set(stand_nach(self.stand.get(), &meldung));
                         meldungen.push(meldung);
@@ -266,6 +314,79 @@ impl Sicherung {
             return false;
         }
         eingang.recv_timeout(warten).is_ok()
+    }
+}
+
+/// Wann der Editorbereich der [`Sicherung`] einen Schreibauftrag gibt
+/// (Modulkopf, „Wann der Editorbereich einen Auftrag gibt“); ohne AppKit und
+/// ohne Uhr, die Zeit kommt herein.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct Vormerkung {
+    /// Wann die naechste Abgabe am Takt faellig ist.
+    faellig: Option<Instant>,
+    /// Ob der Text seit der letzten Aenderung nicht bestaetigt auf der Platte
+    /// steht.
+    ungesichert: bool,
+    /// Die Nummer des Auftrags mit dem juengsten Text, solange seine Antwort
+    /// aussteht und keine Aenderung dazwischenkam.
+    offen: Option<u64>,
+}
+
+impl Vormerkung {
+    /// Eine Aenderung am Text: ungesichert, und faellig `ruhe` nach `jetzt`.
+    /// Nimmt die Sicherung keine Auftraege, wird nichts vorgemerkt.
+    pub fn geaendert(&mut self, sicherung: &Sicherung, jetzt: Instant, ruhe: Duration) {
+        if !sicherung.stand().nimmt_auftraege() {
+            return;
+        }
+        self.ungesichert = true;
+        self.offen = None;
+        self.faellig = Some(jetzt + ruhe);
+    }
+
+    /// Am Takt: ist die Vormerkung faellig, geht der Text als Auftrag.
+    pub fn am_takt(
+        &mut self,
+        sicherung: &Sicherung,
+        jetzt: Instant,
+        text: impl FnOnce() -> String,
+    ) {
+        if self.faellig.is_some_and(|faellig| jetzt >= faellig) {
+            self.abgeben(sicherung, text);
+        }
+    }
+
+    /// Beim Verlassen und beim Beenden: solange der Text ungesichert ist,
+    /// geht er als Auftrag, gleich ob eine Vormerkung laeuft.
+    pub fn sofort(&mut self, sicherung: &Sicherung, text: impl FnOnce() -> String) {
+        if self.ungesichert {
+            self.abgeben(sicherung, text);
+        }
+    }
+
+    fn abgeben(&mut self, sicherung: &Sicherung, text: impl FnOnce() -> String) {
+        self.faellig = None;
+        if sicherung.schreiben(text()) {
+            self.offen = Some(sicherung.gesendet());
+        }
+    }
+
+    /// Nach dem Abholen der Meldungen: steht der Auftrag mit dem juengsten
+    /// Text auf der Platte, ist der Text gesichert.
+    pub fn nach_dem_einziehen(&mut self, sicherung: &Sicherung) {
+        if self
+            .offen
+            .is_some_and(|nummer| sicherung.gesichert_bis() >= nummer)
+        {
+            self.ungesichert = false;
+            self.offen = None;
+        }
+    }
+
+    /// Ob eine Abgabe am Takt aussteht.
+    #[must_use]
+    pub fn wartet(&self) -> bool {
+        self.faellig.is_some()
     }
 }
 
@@ -492,7 +613,6 @@ fn ordner_fehlt(pfad: &Path) -> bool {
 #[cfg(test)]
 mod proben {
     use std::os::unix::fs::PermissionsExt;
-    use std::time::Instant;
 
     use super::*;
     use crate::pruefordner::Pruefordner;
@@ -689,6 +809,154 @@ mod proben {
         );
         assert_eq!(std::fs::read(&pfad).expect("gelesen"), b"drei");
         assert_eq!(sicherung.stand(), Sicherungsstand::Bereit);
+    }
+
+    /// Was der Takt des Editorbereichs nach jeder Abgabe tut, hier ohne Takt:
+    /// auf den Faden warten, die Meldungen abholen und die Vormerkung
+    /// nachfuehren.
+    fn abholen_und_nachfuehren(
+        sicherung: &Sicherung,
+        vormerkung: &mut Vormerkung,
+    ) -> Vec<Sicherungsmeldung> {
+        assert!(sicherung.abschliessen(Duration::from_secs(5)));
+        let meldungen = sicherung.einziehen();
+        vormerkung.nach_dem_einziehen(sicherung);
+        meldungen
+    }
+
+    const RUHE: Duration = Duration::from_secs(1);
+
+    #[test]
+    fn nach_fehlendem_ordner_sichert_der_abschluss_ohne_weitere_aenderung() {
+        let ordner = Pruefordner::neu("qn-vormerkung-ordner");
+        let heim = ordner.unter("krkhome");
+        let pfad = heim.join("scratch.txt");
+        let sicherung = gestartet(&pfad);
+        assert_eq!(abholen(&sicherung), vec![Sicherungsmeldung::Fehlt]);
+        let mut vormerkung = Vormerkung::default();
+
+        let beginn = Instant::now();
+        vormerkung.geaendert(&sicherung, beginn, RUHE);
+        vormerkung.am_takt(&sicherung, beginn + RUHE, || "der Text".to_owned());
+        assert_eq!(
+            abholen_und_nachfuehren(&sicherung, &mut vormerkung),
+            vec![Sicherungsmeldung::OrdnerFehlt]
+        );
+        assert!(vormerkung.ungesichert, "nichts steht auf der Platte");
+        assert!(!vormerkung.wartet(), "der Takt darf ruhen");
+
+        std::fs::create_dir(&heim).expect("Ordner wie nach F2");
+        // Der Abschluss beim Beenden, ohne weitere Aenderung.
+        vormerkung.sofort(&sicherung, || "der Text".to_owned());
+        assert_eq!(
+            abholen_und_nachfuehren(&sicherung, &mut vormerkung),
+            vec![Sicherungsmeldung::Gesichert]
+        );
+        assert_eq!(std::fs::read(&pfad).expect("gelesen"), b"der Text");
+        assert!(!vormerkung.ungesichert);
+        // Danach gibt das Verlassen keinen weiteren Auftrag.
+        let gesendet = sicherung.gesendet();
+        vormerkung.sofort(&sicherung, || unreachable!("gesichert"));
+        assert_eq!(sicherung.gesendet(), gesendet);
+    }
+
+    #[test]
+    fn nach_gescheitertem_schreiben_sichert_der_abschluss_ohne_weitere_aenderung() {
+        let ordner = Pruefordner::neu("qn-vormerkung-gescheitert");
+        let heim = ordner.ordner("krkhome");
+        let pfad = heim.join("scratch.txt");
+        let sicherung = gestartet(&pfad);
+        assert_eq!(abholen(&sicherung), vec![Sicherungsmeldung::Fehlt]);
+        let mut vormerkung = Vormerkung::default();
+
+        // Ein Ordner ohne Schreibrecht laesst das Anlegen scheitern, ohne dass
+        // der Ordner fehlt.
+        let erlaubt = std::fs::metadata(&heim).expect("Ordner").permissions();
+        std::fs::set_permissions(&heim, std::fs::Permissions::from_mode(0o500))
+            .expect("Rechte entzogen");
+        let beginn = Instant::now();
+        vormerkung.geaendert(&sicherung, beginn, RUHE);
+        vormerkung.am_takt(&sicherung, beginn + RUHE, || "der Text".to_owned());
+        let meldungen = abholen_und_nachfuehren(&sicherung, &mut vormerkung);
+        std::fs::set_permissions(&heim, erlaubt).expect("Rechte zurueck");
+        assert!(
+            matches!(meldungen.as_slice(), [Sicherungsmeldung::Gescheitert(_)]),
+            "{meldungen:?}"
+        );
+        assert!(vormerkung.ungesichert);
+
+        vormerkung.sofort(&sicherung, || "der Text".to_owned());
+        assert_eq!(
+            abholen_und_nachfuehren(&sicherung, &mut vormerkung),
+            vec![Sicherungsmeldung::Gesichert]
+        );
+        assert_eq!(std::fs::read(&pfad).expect("gelesen"), b"der Text");
+        assert!(!vormerkung.ungesichert);
+    }
+
+    #[test]
+    fn vor_der_ruhe_wird_nichts_abgegeben_und_danach_genau_einmal() {
+        let ordner = Pruefordner::neu("qn-vormerkung-ruhe");
+        let pfad = ordner.unter("scratch.txt");
+        let sicherung = gestartet(&pfad);
+        assert_eq!(abholen(&sicherung), vec![Sicherungsmeldung::Fehlt]);
+        let mut vormerkung = Vormerkung::default();
+
+        let beginn = Instant::now();
+        vormerkung.geaendert(&sicherung, beginn, RUHE);
+        assert!(vormerkung.wartet());
+        vormerkung.am_takt(&sicherung, beginn + RUHE / 2, || "eins".to_owned());
+        assert_eq!(sicherung.gesendet(), 0, "vor der Ruhe geht nichts");
+        vormerkung.am_takt(&sicherung, beginn + RUHE, || "eins".to_owned());
+        assert_eq!(sicherung.gesendet(), 1);
+        vormerkung.am_takt(&sicherung, beginn + RUHE * 3, || "eins".to_owned());
+        assert_eq!(sicherung.gesendet(), 1, "genau einmal");
+        assert!(!vormerkung.wartet());
+        assert_eq!(
+            abholen_und_nachfuehren(&sicherung, &mut vormerkung),
+            vec![Sicherungsmeldung::Gesichert]
+        );
+        assert!(!vormerkung.ungesichert);
+    }
+
+    #[test]
+    fn eine_aenderung_nach_der_abgabe_bleibt_ungesichert_bis_ihr_auftrag_gesichert_ist() {
+        let ordner = Pruefordner::neu("qn-vormerkung-spaet");
+        let pfad = ordner.unter("scratch.txt");
+        let sicherung = gestartet(&pfad);
+        assert_eq!(abholen(&sicherung), vec![Sicherungsmeldung::Fehlt]);
+        let mut vormerkung = Vormerkung::default();
+
+        let beginn = Instant::now();
+        vormerkung.geaendert(&sicherung, beginn, RUHE);
+        vormerkung.am_takt(&sicherung, beginn + RUHE, || "eins".to_owned());
+        // Getippt, waehrend der erste Auftrag unterwegs ist.
+        vormerkung.geaendert(&sicherung, beginn + RUHE, RUHE);
+        assert_eq!(
+            abholen_und_nachfuehren(&sicherung, &mut vormerkung),
+            vec![Sicherungsmeldung::Gesichert]
+        );
+        assert!(vormerkung.ungesichert, "„zwei“ steht nicht auf der Platte");
+        vormerkung.sofort(&sicherung, || "zwei".to_owned());
+        assert_eq!(
+            abholen_und_nachfuehren(&sicherung, &mut vormerkung),
+            vec![Sicherungsmeldung::Gesichert]
+        );
+        assert_eq!(std::fs::read(&pfad).expect("gelesen"), b"zwei");
+        assert!(!vormerkung.ungesichert);
+    }
+
+    #[test]
+    fn eine_gesperrte_sicherung_merkt_nichts_vor() {
+        let ordner = Pruefordner::neu("qn-vormerkung-ungelesen");
+        let pfad = ordner.datei("scratch.txt", "vorhanden");
+        let sicherung = gestartet(&pfad);
+        let mut vormerkung = Vormerkung::default();
+        // Vor dem Abholen der Antwort auf das Lesen nimmt die Sicherung nichts.
+        vormerkung.geaendert(&sicherung, Instant::now(), RUHE);
+        assert_eq!(vormerkung, Vormerkung::default());
+        vormerkung.sofort(&sicherung, || unreachable!("nichts vorgemerkt"));
+        assert_eq!(sicherung.gesendet(), 0);
     }
 
     #[test]

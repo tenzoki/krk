@@ -574,7 +574,9 @@ use crate::hervorhebung::{
 };
 use crate::kommandos::zulaessigkeit::Editorform;
 use crate::quicknote::{QUICKNOTEGRENZE, Rueckkehr};
-use crate::quicknotesicherung::{Sicherung, Sicherungsmeldung, Sicherungsstand, Unlesbar};
+use crate::quicknotesicherung::{
+    Sicherung, Sicherungsmeldung, Sicherungsstand, Unlesbar, Vormerkung,
+};
 use crate::tresorweg;
 
 use super::bereichsleiste::Kommandomelder;
@@ -3089,10 +3091,10 @@ pub struct EditorIvars {
     /// Flaeche in [`Editorbereich::quicknote`]; leer, solange die Quicknote nie
     /// offen war oder der Faden nicht starten konnte.
     quicknote_ablage: OnceCell<Quicknoteablage>,
-    /// Wann die naechste Sicherung der Quicknote faellig ist; gesetzt von
-    /// [`Editorbereich::quicknote_vormerken`], genommen von
-    /// [`Editorbereich::quicknote_sichern`].
-    quicknote_faellig: Cell<Option<Instant>>,
+    /// Wann die naechste Sicherung der Quicknote faellig ist und ob ihr Text
+    /// ungesichert ist; die Regeln stehen in [`Vormerkung`], hier wird sie
+    /// allein gehalten und mit den Ereignissen des Bereichs beschickt.
+    quicknote_vormerkung: Cell<Vormerkung>,
     /// Was der Editor ueber die gehaltene CSV- oder TSV-Datei weiss: ihr
     /// Dialekt und die zuletzt gebildete Sicht (Schritt 3 des Plans der
     /// CSV-Tabelle); `None` fuer jede andere Datei.
@@ -3273,7 +3275,7 @@ impl Editorbereich {
             quicknote: OnceCell::new(),
             quicknote_rueckkehr: Cell::new(None),
             quicknote_ablage: OnceCell::new(),
-            quicknote_faellig: Cell::new(None),
+            quicknote_vormerkung: Cell::new(Vormerkung::default()),
             trenntext: RefCell::new(None),
             trenntextgeneration: Cell::new(0),
             trenntextpfad: RefCell::new(None),
@@ -3585,36 +3587,36 @@ impl Editorbereich {
     /// den Takt; gerufen vom Aenderungsmelder der Flaeche (Entscheidung 4a).
     ///
     /// **Nichts wird vorgemerkt, solange die Sicherung keine Auftraege nimmt**:
-    /// vor der Antwort auf das Lesen und nach einer Sperre.
+    /// vor der Antwort auf das Lesen und nach einer Sperre
+    /// ([`Vormerkung::geaendert`]).
     fn quicknote_vormerken(&self) {
         let Some(ablage) = self.ivars().quicknote_ablage.get() else {
             return;
         };
-        if !ablage.sicherung.stand().nimmt_auftraege() {
-            return;
+        let mut vormerkung = self.ivars().quicknote_vormerkung.get();
+        vormerkung.geaendert(&ablage.sicherung, Instant::now(), QUICKNOTE_RUHE);
+        self.ivars().quicknote_vormerkung.set(vormerkung);
+        if vormerkung.wartet() {
+            self.takt_starten();
         }
-        self.ivars()
-            .quicknote_faellig
-            .set(Some(Instant::now() + QUICKNOTE_RUHE));
-        self.takt_starten();
     }
 
-    /// Gibt eine vorgemerkte Sicherung sofort als Schreibauftrag mit dem ganzen
-    /// Text; ohne Vormerkung tut es nichts (Entscheidung 4b).
+    /// Gibt den ganzen Text sofort als Schreibauftrag, solange er ungesichert
+    /// ist, auch ohne laufende Vormerkung und nach `OrdnerFehlt` oder
+    /// `Gescheitert` (Entscheidung 4b; [`Vormerkung::sofort`]).
     fn quicknote_sichern(&self) {
-        if self.ivars().quicknote_faellig.take().is_none() {
-            return;
-        }
         let (Some(ablage), Some(quicknote)) = (
             self.ivars().quicknote_ablage.get(),
             self.ivars().quicknote.get(),
         ) else {
             return;
         };
-        // `let _ =`: abgewiesen heisst ungelesen oder gesperrt, und die
-        // Meldung dazu ist schon gegangen oder kommt mit dem Lesen.
-        let _ = ablage.sicherung.schreiben(quicknote.text());
-        self.takt_starten();
+        let mut vormerkung = self.ivars().quicknote_vormerkung.get();
+        vormerkung.sofort(&ablage.sicherung, || quicknote.text());
+        self.ivars().quicknote_vormerkung.set(vormerkung);
+        if ablage.sicherung.unterwegs() {
+            self.takt_starten();
+        }
     }
 
     /// Der vierte Teil von [`Self::einziehen`]: eine faellige Sicherung geben,
@@ -3628,13 +3630,10 @@ impl Editorbereich {
         let Some(ablage) = self.ivars().quicknote_ablage.get() else {
             return;
         };
-        if self
-            .ivars()
-            .quicknote_faellig
-            .get()
-            .is_some_and(|faellig| Instant::now() >= faellig)
-        {
-            self.quicknote_sichern();
+        if let Some(quicknote) = self.ivars().quicknote.get() {
+            let mut vormerkung = self.ivars().quicknote_vormerkung.get();
+            vormerkung.am_takt(&ablage.sicherung, Instant::now(), || quicknote.text());
+            self.ivars().quicknote_vormerkung.set(vormerkung);
         }
         let vorher = ablage.sicherung.stand();
         for meldung in ablage.sicherung.einziehen() {
@@ -3661,6 +3660,11 @@ impl Editorbereich {
                 self.meldung_melden(anzeige);
             }
         }
+        // Erst nach der Senke gelesen, damit eine Aenderung, die sie ausloeste,
+        // nicht ueberschrieben wird.
+        let mut vormerkung = self.ivars().quicknote_vormerkung.get();
+        vormerkung.nach_dem_einziehen(&ablage.sicherung);
+        self.ivars().quicknote_vormerkung.set(vormerkung);
         // Freigegeben wird mit dem ersten Stand nach dem Lesen, auch wenn der
         // Faden ohne Antwort gefallen ist und die Sicherung sich gesperrt hat.
         if vorher == Sicherungsstand::Ungelesen
@@ -3675,7 +3679,7 @@ impl Editorbereich {
     /// das Lesen steht aus, eine Sicherung ist faellig oder unterwegs.
     fn quicknote_sicherung_laeuft(&self) -> bool {
         self.ivars().quicknote_ablage.get().is_some_and(|ablage| {
-            self.ivars().quicknote_faellig.get().is_some()
+            self.ivars().quicknote_vormerkung.get().wartet()
                 || ablage.sicherung.unterwegs()
                 || ablage.sicherung.stand() == Sicherungsstand::Ungelesen
         })
@@ -3776,8 +3780,8 @@ impl Editorbereich {
     #[must_use = "die Rueckkehr sagt, was am Rand und beim Fokus zurueckzustellen ist"]
     pub fn quicknote_verlassen(&self) -> Option<Rueckkehr> {
         let rueckkehr = self.ivars().quicknote_rueckkehr.take()?;
-        // Eine vorgemerkte Sicherung geht sofort (Entscheidung 4b des Plans
-        // der Sicherung), auf jedem Weg hinaus.
+        // Ein ungesicherter Text geht sofort (Entscheidung 4b des Plans der
+        // Sicherung), auf jedem Weg hinaus.
         self.quicknote_sichern();
         self.flaeche_waehlen();
         self.kopf_nachziehen();
