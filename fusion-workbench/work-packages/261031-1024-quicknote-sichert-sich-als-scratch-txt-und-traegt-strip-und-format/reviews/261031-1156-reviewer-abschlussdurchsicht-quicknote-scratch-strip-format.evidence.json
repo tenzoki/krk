@@ -1,0 +1,28 @@
+{
+  "schema": "fusion.evidence/v1",
+  "id": "7ee7289e-f28e-497d-9af4-e3156618207b",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "subject": {
+    "git_tree": "25b0bbd588f5dda3928e8b53819efd3106300b5c",
+    "git_range": null
+  },
+  "brief_revision": "sha256:e1c94a2e52879d1863ab41d7736ebd0953cf2ee74f02e12eed615c6f2ed1f340",
+  "plan_revision": "sha256:1089bf2f2ed09feb7ff58a0b365db78cc923f1d7de4f611d6d95a1e0e4348ab0",
+  "role": {
+    "profile": "reviewer",
+    "version": "13.3.7"
+  },
+  "host": "claude-code",
+  "execution_policy": "claude-guided",
+  "verdict": "revise",
+  "uncertainties": [],
+  "checks": [],
+  "report": {
+    "path": "work-packages/261031-1024-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format/reviews/261031-1156-reviewer-abschlussdurchsicht-quicknote-scratch-strip-format.md",
+    "sha256": "sha256:2fcf589500a028639aee23e2f354648f9bbcd49d82ba8d11fa54200bb1e8f2f5",
+    "kind": "review"
+  },
+  "predecessor": null,
+  "accepted_at": "2026-10-31T11:00:40Z",
+  "extensions": {}
+}
