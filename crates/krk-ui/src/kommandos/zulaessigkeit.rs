@@ -2828,7 +2828,12 @@ mod tests {
                 "{kommando:?} wirkt durch die Quicknote hindurch"
             );
         }
-        for kommando in [Kommando::QuicknoteKopieren, Kommando::QuicknoteLeeren] {
+        for kommando in [
+            Kommando::QuicknoteKopieren,
+            Kommando::QuicknoteLeeren,
+            Kommando::QuicknoteStrip,
+            Kommando::QuicknoteFormat,
+        ] {
             assert!(zulaessig(kommando, quicknote), "{kommando:?} wirkt nicht");
             for form in JEDE_FORM {
                 if form == Editorform::Quicknote {

@@ -1201,6 +1201,23 @@ pub enum Kommando {
     /// Traegt [`Wirkungsbereich::Quicknote`] wie das Kopieren und ist ab Werk
     /// unbelegt; erreichbar ist er ueber die Schaltflaeche und das Menue.
     QuicknoteLeeren,
+    /// Strip: aus einem aus dem Chat kopierten Shell-Befehl einen
+    /// lauffaehigen machen, an der Auswahl der Quicknote oder sonst am ganzen
+    /// Text, mit `cmd+z` zuruecknehmbar (`crate::text::glaetten::befehl`;
+    /// Plan `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`,
+    /// Entscheidung 13).
+    ///
+    /// Traegt [`Wirkungsbereich::Quicknote`] wie das Leeren und ist ab Werk
+    /// unbelegt; erreichbar ueber die Schaltflaeche und das Menue.
+    QuicknoteStrip,
+    /// Format: terminal-umbrochenen Fliesstext der Quicknote zu Absaetzen und
+    /// Aufzaehlungspunkten auf je einer Zeile machen, an der Auswahl oder sonst
+    /// am ganzen Text, mit `cmd+z` zuruecknehmbar
+    /// (`crate::text::glaetten::fliesstext`).
+    ///
+    /// Traegt [`Wirkungsbereich::Quicknote`] und ist ab Werk unbelegt wie
+    /// [`Kommando::QuicknoteStrip`].
+    QuicknoteFormat,
     /// Am Ende der Eintragstabelle einen leeren Eintrag anlegen und seine
     /// Zelle in Bearbeitung setzen (C6 des Spec
     /// `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
@@ -1457,7 +1474,7 @@ const _: () = assert!(Kommando::KENNUNGEN.len() <= u16::MAX as usize);
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 110] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 112] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -1559,6 +1576,8 @@ impl Kommando {
         (Kommando::QuicknoteUmschalten, "quicknote_umschalten"),
         (Kommando::QuicknoteKopieren, "quicknote_kopieren"),
         (Kommando::QuicknoteLeeren, "quicknote_leeren"),
+        (Kommando::QuicknoteStrip, "quicknote_strip"),
+        (Kommando::QuicknoteFormat, "quicknote_format"),
         (Kommando::EintragHinzufuegen, "eintrag_hinzufuegen"),
         (Kommando::EintragBearbeiten, "eintrag_bearbeiten"),
         (Kommando::EintragHoch, "eintrag_hoch"),
@@ -1904,7 +1923,10 @@ impl Kommando {
             Kommando::TermineRichtungUmkehren => Wirkungsbereich::Termine,
             // Allein am Puffer der offenen Quicknote (Q2 des Spec der
             // Quicknote); ob sie offen ist, fragt `krk_ui` ueber die Form.
-            Kommando::QuicknoteKopieren | Kommando::QuicknoteLeeren => Wirkungsbereich::Quicknote,
+            Kommando::QuicknoteKopieren
+            | Kommando::QuicknoteLeeren
+            | Kommando::QuicknoteStrip
+            | Kommando::QuicknoteFormat => Wirkungsbereich::Quicknote,
             // Die Leiste (C5).
             Kommando::LesezeichenUmbenennen
             | Kommando::LesezeichenLoeschen
@@ -2169,6 +2191,8 @@ impl Kommando {
             | Kommando::QuicknoteUmschalten
             | Kommando::QuicknoteKopieren
             | Kommando::QuicknoteLeeren
+            | Kommando::QuicknoteStrip
+            | Kommando::QuicknoteFormat
             | Kommando::EintragHinzufuegen
             | Kommando::EintragBearbeiten
             | Kommando::EintragHoch

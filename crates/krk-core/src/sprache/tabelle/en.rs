@@ -1421,6 +1421,8 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::QuicknoteUmschalten => "Open or Close Quicknote",
         Kommando::QuicknoteKopieren => "Copy Quicknote and Close",
         Kommando::QuicknoteLeeren => "Clear Quicknote",
+        Kommando::QuicknoteStrip => "Quicknote: Strip Command",
+        Kommando::QuicknoteFormat => "Quicknote: Format Text",
         Kommando::EintragHinzufuegen => "Add Entry",
         Kommando::EintragBearbeiten => "Edit Entry",
         Kommando::EintragHoch => "Move Entry Up",

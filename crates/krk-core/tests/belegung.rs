@@ -187,7 +187,7 @@ fn kennungen(belegung: &Belegung) -> Vec<&str> {
 /// einer Datei. Die zweite Quelle ist hier `resources/default-keymap.toml`,
 /// und die liest [`ab_werk_traegt_genau_diese_liste_keine_kombination`] ueber
 /// [`Belegung::auslieferung`].
-const OHNE_KOMBINATION_AB_WERK: [&str; 11] = [
+const OHNE_KOMBINATION_AB_WERK: [&str; 13] = [
     "spalte_groesse_umschalten",
     "spalte_datum_umschalten",
     "spalte_typ_umschalten",
@@ -199,6 +199,10 @@ const OHNE_KOMBINATION_AB_WERK: [&str; 11] = [
     // Belegungsdatei dort steht.
     "trenntext_trennzeichen_wechseln",
     "quicknote_leeren",
+    // Strip und Format (Entscheidung 13 des Plans
+    // `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`).
+    "quicknote_strip",
+    "quicknote_format",
     "belegungsdatei_ansehen",
     "ort_waehlen",
     "werkseinstellungen",
@@ -1122,8 +1126,9 @@ fn eine_eigene_belegung_mit_und_ohne_die_neue_funktion_laedt() {
 // `260927-0110_*_plan-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`)
 // ---------------------------------------------------------------------------
 
-/// Die drei Befehle tragen ihre Bereiche und ihre Kennungen, und die
-/// Auslieferung legt F10 und `shift+f10` auf die ersten zwei.
+/// Die Befehle der Quicknote tragen ihre Bereiche und ihre Kennungen, und die
+/// Auslieferung legt F10 und `shift+f10` auf die ersten zwei; Strip und Format
+/// kamen am 261031 dazu.
 #[test]
 fn die_drei_befehle_der_quicknote_tragen_ihre_bereiche_und_kennungen() {
     let faelle = [
@@ -1140,6 +1145,16 @@ fn die_drei_befehle_der_quicknote_tragen_ihre_bereiche_und_kennungen() {
         (
             Kommando::QuicknoteLeeren,
             "quicknote_leeren",
+            Wirkungsbereich::Quicknote,
+        ),
+        (
+            Kommando::QuicknoteStrip,
+            "quicknote_strip",
+            Wirkungsbereich::Quicknote,
+        ),
+        (
+            Kommando::QuicknoteFormat,
+            "quicknote_format",
             Wirkungsbereich::Quicknote,
         ),
     ];
@@ -1197,6 +1212,8 @@ fn eine_eigene_belegung_ohne_die_quicknote_laedt_und_fuehrt_sie_unbelegt() {
         "quicknote_umschalten",
         "quicknote_kopieren",
         "quicknote_leeren",
+        "quicknote_strip",
+        "quicknote_format",
     ] {
         let funktion = geladen
             .wert

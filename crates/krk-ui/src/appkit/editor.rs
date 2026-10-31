@@ -587,6 +587,15 @@ use super::teilen;
 use super::textautomatik;
 use super::textmerkmale;
 
+/// Welche der zwei Umformungen der Quicknote: Strip
+/// (`krk_core::text::glaetten::befehl`) oder Format
+/// (`krk_core::text::glaetten::fliesstext`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Umformung {
+    Strip,
+    Format,
+}
+
 /// Was der Editor dem Nutzer zu sagen hat (C1, C2, C6).
 ///
 /// **Ein Wert und keine Zeichenkette am Meldeort.** Jede Meldung des Editors
@@ -775,6 +784,10 @@ pub enum Editormeldung {
     /// Der Puffer der Quicknote war leer; die Zwischenablage bleibt, wie sie
     /// war (A12).
     QuicknoteLeer,
+    /// Strip oder Format haben am Text der Quicknote nichts geaendert
+    /// (Entscheidung 12 des Plans
+    /// `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`).
+    QuicknoteUnveraendert(Umformung),
     /// Die Zwischenablage hat den Text der Quicknote nicht angenommen; er
     /// bleibt stehen.
     QuicknoteNichtKopiert,
@@ -973,6 +986,12 @@ impl Editormeldung {
                 &[],
             ),
             Self::QuicknoteLeer => text(Text::QuicknoteLeer).to_owned(),
+            Self::QuicknoteUnveraendert(Umformung::Strip) => {
+                text(Text::QuicknoteStripUnveraendert).to_owned()
+            }
+            Self::QuicknoteUnveraendert(Umformung::Format) => {
+                text(Text::QuicknoteFormatUnveraendert).to_owned()
+            }
             Self::QuicknoteNichtKopiert => text(Text::QuicknoteNichtKopiert).to_owned(),
             Self::QuicknoteZuGross => text(Text::QuicknoteZuGross).to_owned(),
             Self::Trennzeichen(dialekt) => satz(
@@ -3418,6 +3437,18 @@ impl Editorbereich {
             .quicknote
             .get()
             .map_or_else(String::new, |quicknote| quicknote.text())
+    }
+
+    /// Strip oder Format am Text der Quicknote (Entscheidung 12 des Plans
+    /// `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`).
+    ///
+    /// **Bis Schritt 7 jenes Plans aendert dieser Weg nichts** und meldet das
+    /// auch so; Schritt 5 legt allein die Signatur an, damit der
+    /// Ausfuehrungszweig beim Anwendungsdelegierten schon uebersetzt. Erreichbar
+    /// ist er bis dahin ueber das Hauptmenue, sobald die Auslieferungsbelegung
+    /// die zwei Funktionen fuehrt (Schritt 6).
+    pub fn quicknote_umformen(&self, art: Umformung) -> Editormeldung {
+        Editormeldung::QuicknoteUnveraendert(art)
     }
 
     /// Leert den Puffer der Quicknote als zuruecknehmbare Handlung (A13).

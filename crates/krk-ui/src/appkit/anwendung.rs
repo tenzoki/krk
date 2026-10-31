@@ -352,7 +352,7 @@ use super::blaetter::{
     startmeldungen, uebersprungen,
 };
 use super::editor::{
-    Editorbereich, Editormeldung, Oeffnungsherkunft, Tabellenhandlung, Zellenausgang,
+    Editorbereich, Editormeldung, Oeffnungsherkunft, Tabellenhandlung, Umformung, Zellenausgang,
 };
 use super::eintragsansicht;
 use super::ereignisse::{self, Anschlag, Eingabe, Tastenabgriff};
@@ -5116,6 +5116,11 @@ impl Anwendungsdelegierter {
             // Kopieren und Leeren der Quicknote; gehalten von derselben Probe.
             Kommando::QuicknoteKopieren => self.quicknote_kopieren(),
             Kommando::QuicknoteLeeren => self.quicknote_leeren(),
+            // Strip und Format (Entscheidung 13 des Plans
+            // `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`);
+            // gehalten von derselben Probe.
+            Kommando::QuicknoteStrip => self.quicknote_umformen(Umformung::Strip),
+            Kommando::QuicknoteFormat => self.quicknote_umformen(Umformung::Format),
             Kommando::BelegungAnsehen => self.belegung_ansehen(),
             // Die Belegungsdatei aus dem Nutzerauftrag vom 260901. **Ein
             // eigener Zweig, und der Uebersetzer haette ihn nicht verlangt**:
@@ -12109,6 +12114,18 @@ impl Anwendungsdelegierter {
         true
     }
 
+    /// Strip oder Format an der Quicknote, ueber [`Self::editorbefehl`].
+    fn quicknote_umformen(&self, art: Umformung) -> bool {
+        match art {
+            Umformung::Strip => {
+                self.editorbefehl(|editor| editor.quicknote_umformen(Umformung::Strip))
+            }
+            Umformung::Format => {
+                self.editorbefehl(|editor| editor.quicknote_umformen(Umformung::Format))
+            }
+        }
+    }
+
     /// Fuehrt einen Editorbefehl aus, der genau eine Meldung liefert.
     ///
     /// **Die eine Stelle fuer die Befehle ohne Blatt**, die so antworten, von
@@ -13831,7 +13848,7 @@ mod zweigproben {
     ///
     /// `NeuerungenZeigen` ist der erste, und bis zur krkhome-Arbeit hielt ihn
     /// eine eigene Probe im Pruefmodul der Neuerungen.
-    const BEFEHLE: [&str; 24] = [
+    const BEFEHLE: [&str; 26] = [
         "NeuerungenZeigen",
         "Notizordner",
         "OrtWaehlen",
@@ -13851,6 +13868,8 @@ mod zweigproben {
         "QuicknoteUmschalten",
         "QuicknoteKopieren",
         "QuicknoteLeeren",
+        "QuicknoteStrip",
+        "QuicknoteFormat",
         "Werkseinstellungen",
         "BildVor",
         "BildZurueck",

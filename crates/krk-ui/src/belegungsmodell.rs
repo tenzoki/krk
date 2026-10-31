@@ -523,7 +523,9 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         | Kommando::TrenntextTrennzeichenWechseln
         | Kommando::QuicknoteUmschalten
         | Kommando::QuicknoteKopieren
-        | Kommando::QuicknoteLeeren => Funktionsbereich::Editor,
+        | Kommando::QuicknoteLeeren
+        | Kommando::QuicknoteStrip
+        | Kommando::QuicknoteFormat => Funktionsbereich::Editor,
         // Der Notizordner und alles, was an ihm haengt: F2, „Ort waehlen…",
         // die sechs Befehle der Eintragstabelle und „PIN ändern".
         //
@@ -1532,8 +1534,10 @@ mod tests {
         // Plans `260927-0110_*_plan-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`);
         // „Quicknote leeren" ist ab Werk unbelegt und steht deshalb auch in
         // `UNBELEGT_AB_WERK`, der einen Ausnahme von der Pruefung auf eine
-        // Kombination.
-        const EDITORBEFEHLE: [&str; 21] = [
+        // Kombination. Strip und Format kamen am 261031 dazu, ebenso ab Werk
+        // unbelegt (Entscheidung 13 des Plans
+        // `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`).
+        const EDITORBEFEHLE: [&str; 23] = [
             "bearbeiten",
             "editor_rundweg",
             "fokus_editor",
@@ -1558,8 +1562,15 @@ mod tests {
             "quicknote_umschalten",
             "quicknote_kopieren",
             "quicknote_leeren",
+            "quicknote_strip",
+            "quicknote_format",
         ];
-        const UNBELEGT_AB_WERK: [&str; 2] = ["trenntext_trennzeichen_wechseln", "quicknote_leeren"];
+        const UNBELEGT_AB_WERK: [&str; 4] = [
+            "trenntext_trennzeichen_wechseln",
+            "quicknote_leeren",
+            "quicknote_strip",
+            "quicknote_format",
+        ];
 
         let belegung = Belegung::auslieferung();
         let modell = Belegungsmodell::neu(Belegung::auslieferung());
