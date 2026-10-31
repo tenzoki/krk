@@ -17,9 +17,9 @@
   },
   "extensions": {},
   "control": {
-    "state": "answered",
+    "state": "implemented",
     "answer_ref": "261031-1226-in-welche-richtung-irrt-strip-wenn-ein-umbruch-nicht-entscheidbar-ist.md",
-    "implementation_ref": null,
+    "implementation_ref": "780d6870",
     "superseded_by": null,
     "deferral": null
   }

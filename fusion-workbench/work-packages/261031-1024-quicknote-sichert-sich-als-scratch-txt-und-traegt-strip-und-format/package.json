@@ -3,7 +3,7 @@
   "id": "0205ae84-91f0-4c51-8f59-e64716fd1df3",
   "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
   "domain": "code",
-  "status": "claimed",
+  "status": "done",
   "claim": {
     "checkout_id": "9be83618",
     "person": "Kai Stalmann <ks@qantr.com>",
@@ -44,7 +44,11 @@
   ],
   "references": [],
   "evidence": [],
-  "outcome": null,
+  "outcome": {
+    "class": "completed",
+    "reason": "Quicknote sichert sich in scratch.txt und traegt Singlestrip und Format; Nutzerabnahme am Buendel steht aus",
+    "evidence": []
+  },
   "provenance": {
     "source": "created",
     "legacy_fields": {}

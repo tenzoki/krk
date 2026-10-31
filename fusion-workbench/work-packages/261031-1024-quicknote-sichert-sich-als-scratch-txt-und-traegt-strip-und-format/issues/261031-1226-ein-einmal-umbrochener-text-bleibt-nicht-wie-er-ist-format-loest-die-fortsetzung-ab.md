@@ -39,3 +39,5 @@ Befehle zwischen einer und zwei Terminalbreiten werden genau einmal umbrochen. i
 - Eine Probe in `crates/krk-core/tests/glaetten.rs` hält, was Format mit einem einmal umbrochenen Punkt und einem einmal umbrochenen Absatz macht, jeweils allein als Eingabe.
 - `HowTo.md` und der Modulkopf von `glaetten.rs` beschreiben diesen Fall für Format und für Strip so, wie die Probe ihn festhält, und für Strip auch, dass die erste Zeile eingefügt als eigener Befehl läuft.
 - `eine_einzelne_lange_zeile_belegt_keinen_umbruch`, `strip_ist_idempotent` und `das_beispiel_des_nutzers_wird_zeichen_fuer_zeichen_zur_erwarteten_ausgabe` bleiben grün. Die Erwartung der ersten ändert sich nur, wenn der Schritt das nennt.
+
+**Resolved:** 261031, fixed in `f39e14fb`: Format behaelt einer nicht verbundenen Fortsetzung die Einrueckung, Singlestrip verbindet einen einmal umbrochenen Befehl.

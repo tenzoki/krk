@@ -43,3 +43,5 @@ git log --oneline 129d8d71..c1c2b7f8 -- crates/krk-core
 - `HowTo.md` (Abschnitt „Strip und Format“) und der Modulkopf von `glaetten.rs` behaupten nicht mehr, dass Befehle untereinander stehen bleiben oder dass die Schätzung nur in der Richtung irrt, die nichts verbindet. Sie nennen den Fall zweier getrennter Befehle ähnlicher Länge so, wie er auftritt, und sagen, dass das Ergebnis den zweiten als Argumente des ersten ausführt.
 - Eine Probe in `crates/krk-core/tests/glaetten.rs` hält das Verhalten für zwei getrennte Befehle ähnlicher Länge fest (etwa die `rm`/`ls`-Eingabe oben), mit der Erwartung, die aus der Antwort auf die Entscheidungsfrage folgt.
 - `das_beispiel_des_nutzers_wird_zeichen_fuer_zeichen_zur_erwarteten_ausgabe` und `die_beispiele_der_anleitung_stimmen` bleiben grün und unverändert.
+
+**Resolved:** 261031, durch die Antwort des Nutzers ueberholt: Singlestrip nimmt die Eingabe als einen Befehl und verbindet jeden Umbruch (`f39e14fb`, `46abb49a`); `HowTo.md` sagt, dass es fuer mehrere Befehle untereinander nicht gedacht ist, mit dem `rm`-Fall als Beispiel.
