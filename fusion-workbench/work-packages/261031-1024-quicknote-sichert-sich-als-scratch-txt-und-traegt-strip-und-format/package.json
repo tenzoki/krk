@@ -1,0 +1,53 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "0205ae84-91f0-4c51-8f59-e64716fd1df3",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "claimed",
+  "claim": {
+    "checkout_id": "9be83618",
+    "person": "Kai Stalmann <ks@qantr.com>",
+    "claimed_at": "2026-10-31T09:25:34Z"
+  },
+  "mode": {
+    "value": "autonomous",
+    "source": {
+      "kind": "user-word",
+      "ref": {
+        "path": "work-packages/261031-1024-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format/261031-1024-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md",
+        "sha256": "sha256:e1c94a2e52879d1863ab41d7736ebd0953cf2ee74f02e12eed615c6f2ed1f340",
+        "kind": "other"
+      }
+    }
+  },
+  "origin": {
+    "kind": "user-request",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "user",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "narrative": {
+    "path": "work-packages/261031-1024-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format/261031-1024-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md"
+  },
+  "depends_on": [],
+  "active_documents": [
+    {
+      "ref": {
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "record_id": "9c87d2b8-3e47-423d-a2e3-7af784ece31a"
+      },
+      "role": "plan",
+      "revision": "sha256:1089bf2f2ed09feb7ff58a0b365db78cc923f1d7de4f611d6d95a1e0e4348ab0"
+    }
+  ],
+  "references": [],
+  "evidence": [],
+  "outcome": null,
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {}
+}

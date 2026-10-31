@@ -1,0 +1,64 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "9c87d2b8-3e47-423d-a2e3-7af784ece31a",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "plan",
+  "narrative": {
+    "path": "work-packages/261031-1024-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format/plans/261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md"
+  },
+  "filed_by": {
+    "actor": "implementation-planner",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "steps": [
+      {
+        "id": "1",
+        "state": "open"
+      },
+      {
+        "id": "2",
+        "state": "open"
+      },
+      {
+        "id": "3",
+        "state": "open"
+      },
+      {
+        "id": "4",
+        "state": "open"
+      },
+      {
+        "id": "5",
+        "state": "open"
+      },
+      {
+        "id": "6",
+        "state": "open"
+      },
+      {
+        "id": "7",
+        "state": "open"
+      },
+      {
+        "id": "8",
+        "state": "open"
+      }
+    ],
+    "criteria": [],
+    "acceptance": {
+      "ref": {
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "record_id": "0205ae84-91f0-4c51-8f59-e64716fd1df3"
+      },
+      "revision": "sha256:1089bf2f2ed09feb7ff58a0b365db78cc923f1d7de4f611d6d95a1e0e4348ab0"
+    }
+  }
+}
