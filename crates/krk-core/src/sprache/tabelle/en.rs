@@ -879,6 +879,26 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::QuicknoteKeineTextmarken => "There are no text bookmarks in the Quicknote.",
         Text::QuicknoteLeeren => "Clear",
         Text::QuicknoteKopieren => "Copy",
+        Text::QuicknoteStrip => "Strip",
+        Text::QuicknoteFormat => "Format",
+        Text::QuicknoteStripUnveraendert => "Strip: nothing to change.",
+        Text::QuicknoteFormatUnveraendert => "Format: nothing to change.",
+        Text::QuicknoteOrdnerFehlt => {
+            "The Quicknote is not being saved: the notes folder {ort} is missing. F2 creates it."
+        }
+        Text::QuicknoteKeinNotizordner => {
+            "The Quicknote is not being saved: there is no notes folder."
+        }
+        Text::QuicknoteFremdGeaendert => {
+            "scratch.txt was changed outside the Quicknote; the Quicknote stops saving until the next start."
+        }
+        Text::QuicknoteNichtGelesen => {
+            "scratch.txt could not be read ({grund}); the Quicknote does not save until the next start."
+        }
+        Text::QuicknoteNichtGesichert => "The Quicknote could not be saved: {fehler}.",
+        Text::QuicknoteGrundZuGross => "it is too large for the Quicknote",
+        Text::QuicknoteGrundKeinText => "it is not readable as text",
+        Text::QuicknoteGrundLesefehler => "the system reports a read error",
         Text::EintragKeineAufgabentabelle => "the Editor shows no task table",
         Text::EintragKeineNotiztabelle => "the Editor shows no note table",
         Text::EintragKeineTermintabelle => "the Editor shows no appointment table",

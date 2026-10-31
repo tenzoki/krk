@@ -992,6 +992,28 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::QuicknoteKeineTextmarken => "Dans la Quicknote, il n’y a pas de signets de texte.",
         Text::QuicknoteLeeren => "Vider",
         Text::QuicknoteKopieren => "Copier",
+        Text::QuicknoteStrip => "Strip",
+        Text::QuicknoteFormat => "Format",
+        Text::QuicknoteStripUnveraendert => "Strip\u{a0}: rien à modifier.",
+        Text::QuicknoteFormatUnveraendert => "Format\u{a0}: rien à modifier.",
+        Text::QuicknoteOrdnerFehlt => {
+            "La Quicknote n’est pas enregistrée\u{a0}: le dossier de notes {ort} n’existe pas. F2 le crée."
+        }
+        Text::QuicknoteKeinNotizordner => {
+            "La Quicknote n’est pas enregistrée\u{a0}: il n’y a pas de dossier de notes."
+        }
+        Text::QuicknoteFremdGeaendert => {
+            "scratch.txt a été modifié en dehors de la Quicknote\u{202f}; la Quicknote ne l’enregistre plus jusqu’au prochain démarrage."
+        }
+        Text::QuicknoteNichtGelesen => {
+            "scratch.txt n’a pas pu être lu ({grund})\u{202f}; la Quicknote ne l’enregistre pas jusqu’au prochain démarrage."
+        }
+        Text::QuicknoteNichtGesichert => {
+            "La Quicknote n’a pas pu être enregistrée\u{a0}: {fehler}."
+        }
+        Text::QuicknoteGrundZuGross => "il est trop volumineux pour la Quicknote",
+        Text::QuicknoteGrundKeinText => "il n’est pas lisible comme texte",
+        Text::QuicknoteGrundLesefehler => "le système signale une erreur de lecture",
         Text::EintragKeineAufgabentabelle => "l’Éditeur n’affiche pas de tableau des tâches",
         Text::EintragKeineNotiztabelle => "l’Éditeur n’affiche pas de tableau des notes",
         Text::EintragKeineTermintabelle => "l’Éditeur n’affiche pas de tableau des rendez-vous",

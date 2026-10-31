@@ -925,6 +925,26 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::QuicknoteKeineTextmarken => "In der Quicknote gibt es keine Textmarken.",
         Text::QuicknoteLeeren => "Leeren",
         Text::QuicknoteKopieren => "Kopieren",
+        Text::QuicknoteStrip => "Strip",
+        Text::QuicknoteFormat => "Format",
+        Text::QuicknoteStripUnveraendert => "Strip: nichts zu ändern.",
+        Text::QuicknoteFormatUnveraendert => "Format: nichts zu ändern.",
+        Text::QuicknoteOrdnerFehlt => {
+            "Die Quicknote wird nicht gesichert: der Notizordner {ort} fehlt. F2 legt ihn an."
+        }
+        Text::QuicknoteKeinNotizordner => {
+            "Die Quicknote wird nicht gesichert: es gibt keinen Notizordner."
+        }
+        Text::QuicknoteFremdGeaendert => {
+            "scratch.txt wurde außerhalb der Quicknote geändert; die Quicknote sichert bis zum nächsten Start nicht mehr."
+        }
+        Text::QuicknoteNichtGelesen => {
+            "scratch.txt ließ sich nicht lesen ({grund}); die Quicknote sichert bis zum nächsten Start nicht."
+        }
+        Text::QuicknoteNichtGesichert => "Die Quicknote ließ sich nicht sichern: {fehler}.",
+        Text::QuicknoteGrundZuGross => "sie ist zu groß für die Quicknote",
+        Text::QuicknoteGrundKeinText => "sie ist nicht als Text lesbar",
+        Text::QuicknoteGrundLesefehler => "das System meldet einen Lesefehler",
         Text::EintragKeineAufgabentabelle => "der Editor zeigt keine Aufgabentabelle",
         Text::EintragKeineNotiztabelle => "der Editor zeigt keine Notiztabelle",
         Text::EintragKeineTermintabelle => "der Editor zeigt keine Termintabelle",

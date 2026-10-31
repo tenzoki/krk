@@ -1408,6 +1408,34 @@ pub enum Text {
     /// Schluessel neben `VorgangsartKopieren`, weil die Ueberschrift eines
     /// laufenden Vorgangs in Englisch ein anderes Wort traegt.
     QuicknoteKopieren,
+    /// Die Schaltflaeche „Strip“ der Quicknote; ein Name, in jeder Sprache
+    /// derselbe (Entscheidung 13 des Plans der Quicknote-Sicherung).
+    QuicknoteStrip,
+    /// Die Schaltflaeche „Format“ der Quicknote; ein Name wie „Strip“.
+    QuicknoteFormat,
+    /// Strip hat am Text nichts geaendert.
+    QuicknoteStripUnveraendert,
+    /// Format hat am Text nichts geaendert.
+    QuicknoteFormatUnveraendert,
+    /// Die Sicherung der Quicknote findet den Notizordner nicht; `{ort}`.
+    QuicknoteOrdnerFehlt,
+    /// Die Sicherung der Quicknote hat keinen Notizordner, weil das System
+    /// kein Benutzerverzeichnis nennt.
+    QuicknoteKeinNotizordner,
+    /// `scratch.txt` wurde von aussen geaendert; die Sicherung ist gesperrt.
+    QuicknoteFremdGeaendert,
+    /// `scratch.txt` liess sich nicht lesen; `{grund}`, die Sicherung ist
+    /// gesperrt.
+    QuicknoteNichtGelesen,
+    /// Das Sichern der Quicknote ist gescheitert; `{fehler}` vom System.
+    QuicknoteNichtGesichert,
+    /// Grund zu `QuicknoteNichtGelesen`: `Lesehindernis::ZuGross`.
+    QuicknoteGrundZuGross,
+    /// Grund zu `QuicknoteNichtGelesen`: kein gueltiges UTF-8.
+    QuicknoteGrundKeinText,
+    /// Grund zu `QuicknoteNichtGelesen`: `Lesehindernis::Fehler` und die
+    /// zwei unter `Laden` unerreichbaren Gruende.
+    QuicknoteGrundLesefehler,
     /// `Eintragsantwort::KeineTabelle` in der Aufgabentabelle.
     EintragKeineAufgabentabelle,
     /// `Eintragsantwort::KeineTabelle` in der Notiztabelle.
@@ -1911,7 +1939,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 781] = [
+    pub const ALLE: [Text; 793] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -2493,6 +2521,18 @@ impl Text {
         Text::QuicknoteKeineTextmarken,
         Text::QuicknoteLeeren,
         Text::QuicknoteKopieren,
+        Text::QuicknoteStrip,
+        Text::QuicknoteFormat,
+        Text::QuicknoteStripUnveraendert,
+        Text::QuicknoteFormatUnveraendert,
+        Text::QuicknoteOrdnerFehlt,
+        Text::QuicknoteKeinNotizordner,
+        Text::QuicknoteFremdGeaendert,
+        Text::QuicknoteNichtGelesen,
+        Text::QuicknoteNichtGesichert,
+        Text::QuicknoteGrundZuGross,
+        Text::QuicknoteGrundKeinText,
+        Text::QuicknoteGrundLesefehler,
         Text::EintragKeineAufgabentabelle,
         Text::EintragKeineNotiztabelle,
         Text::EintragKeineTermintabelle,
