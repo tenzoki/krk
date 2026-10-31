@@ -1,0 +1,46 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "0fe17357-f258-430a-bfff-8756b293dc88",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "claimed",
+  "claim": {
+    "checkout_id": "9be83618",
+    "person": "Kai Stalmann <ks@qantr.com>",
+    "claimed_at": "2026-10-31T16:13:10Z"
+  },
+  "mode": {
+    "value": "ordinary",
+    "source": null
+  },
+  "origin": {
+    "kind": "user-request",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "user",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "narrative": {
+    "path": "work-packages/261031-1645-markdown-vorschau-richtet-tabellenspalten-aus/261031-1645-markdown-vorschau-richtet-tabellenspalten-aus.md"
+  },
+  "depends_on": [],
+  "active_documents": [
+    {
+      "ref": {
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "record_id": "8420c22f-0e50-44e2-bf34-db5cea4b796c"
+      },
+      "role": "plan",
+      "revision": "sha256:5d2a5d0299f339c2a906fb73f34fc7cb57784543fd6074867eda8fb828306b33"
+    }
+  ],
+  "references": [],
+  "evidence": [],
+  "outcome": null,
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {}
+}

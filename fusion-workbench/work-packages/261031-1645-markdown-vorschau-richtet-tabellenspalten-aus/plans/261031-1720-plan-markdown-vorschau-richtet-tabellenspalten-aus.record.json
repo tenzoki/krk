@@ -1,0 +1,44 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "8420c22f-0e50-44e2-bf34-db5cea4b796c",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "plan",
+  "narrative": {
+    "path": "work-packages/261031-1645-markdown-vorschau-richtet-tabellenspalten-aus/plans/261031-1720-plan-markdown-vorschau-richtet-tabellenspalten-aus.md"
+  },
+  "filed_by": {
+    "actor": "implementation-planner",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "steps": [
+      {
+        "id": "1",
+        "state": "open"
+      },
+      {
+        "id": "2",
+        "state": "open"
+      },
+      {
+        "id": "3",
+        "state": "open"
+      }
+    ],
+    "criteria": [],
+    "acceptance": {
+      "ref": {
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "record_id": "0fe17357-f258-430a-bfff-8756b293dc88"
+      },
+      "revision": "sha256:5d2a5d0299f339c2a906fb73f34fc7cb57784543fd6074867eda8fb828306b33"
+    }
+  }
+}
