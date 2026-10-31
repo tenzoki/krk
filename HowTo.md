@@ -1216,13 +1216,14 @@ Handlung zurück. Ändert sich nichts, bleibt der Text unberührt, und die
 Statuszeile sagt „Strip: nichts zu ändern.“ oder „Format: nichts zu ändern.“
 
 **Strip** nimmt nachlaufende Leerzeichen und die Einrückung, die das Kopieren
-hinzufügt, und verbindet Zeilen, die das Terminal des Chats umgebrochen hat, mit
-einem Leerzeichen. Eine Fortsetzung mit `\` am Zeilenende wird zu einer Zeile,
-wie die Shell sie liest. Was in Anführungszeichen oder in einem Heredoc steht,
-bleibt mit seinen Umbrüchen, wie es ist; Befehle untereinander bleiben
-untereinander, und nach einer Kommentarzeile (`# …`) beginnt immer eine neue
-Zeile, damit kein Befehl im Kommentar landet. Das Ergebnis endet ohne Zeilenumbruch, damit ein Einfügen ins
-Terminal nicht sofort ausführt.
+hinzufügt, und verbindet Zeilen, die das Terminal des Chats umgebrochen hat,
+mit einem Leerzeichen. Eine Fortsetzung mit `\` am Zeilenende wird zu einer
+Zeile, wie die Shell sie liest. Was in Anführungszeichen oder in einem Heredoc
+steht, bleibt mit seinen Umbrüchen und mit dem Leerraum am Zeilenende, wie es
+ist; Befehle untereinander bleiben untereinander, und nach einer Kommentarzeile
+(`# …`) beginnt immer eine neue Zeile, damit kein Befehl im Kommentar landet.
+Das Ergebnis endet ohne Zeilenumbruch, damit ein Einfügen ins Terminal nicht
+sofort ausführt.
 
 ```
 cd ~/Projekte/krk && export PATH="$HOME/.cargo/bin:$PATH" && cargo test

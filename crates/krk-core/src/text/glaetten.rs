@@ -92,8 +92,9 @@
 //!
 //! # Strip
 //!
-//! Nachlaufender Leerraum faellt in jeder Zeile, Leerzeilen am Anfang und am
-//! Ende fallen, und die Ausgabe endet ohne `\n`, damit ein Einfuegen ins
+//! Nachlaufender Leerraum faellt in jeder Zeile ausser im Heredoc-Rumpf und am
+//! Ende einer Zeile in offener Anfuehrung (siehe unten), Leerzeilen am Anfang
+//! und am Ende fallen, und die Ausgabe endet ohne `\n`, damit ein Einfuegen ins
 //! Terminal nicht sofort ausfuehrt. Die erste Zeile verliert ihren ganzen
 //! fuehrenden Leerraum, jede weitere die kleinste Einrueckung der nicht leeren
 //! Zeilen ab der zweiten (die Kopiereinrueckung); mehr Einrueckung bleibt.
@@ -101,8 +102,14 @@
 //! Ein kleiner Automat liest die Lage der Shell je Zeichen: ausserhalb,
 //! `'…'`, `"…"`, `$'…'`, ein Kommentar ab `#` am Wortanfang und Heredocs
 //! (`<<WORT`, `<<-WORT`, `<<'WORT'`, `<<"WORT"`, mehrere je Zeile; `<<<` ist
-//! keiner). Endet eine Zeile in einem offenen Anfuehrungszeichen oder in einem
-//! Heredoc-Rumpf, bleibt ihr Umbruch, denn er ist Inhalt. **Endet eine Zeile in
+//! keiner, und `<<` in einer Arithmetik `$(( … ))` oder `(( … ))` auch nicht,
+//! solange sie auf derselben Zeile schliesst). Endet eine Zeile in einem
+//! offenen Anfuehrungszeichen oder in einem Heredoc-Rumpf, bleibt ihr Umbruch,
+//! denn er ist Inhalt, und mit ihm ihr nachlaufender Leerraum, etwa die zwei
+//! Leerzeichen eines harten Umbruchs in Markdown; die Endzeile eines Heredocs
+//! verliert ihn, damit sie ihn beendet. Ob der Chat nachlaufenden Leerraum
+//! hinzufuegt, ist nicht entscheidbar; gekuerzt wird deshalb allein dort, wo er
+//! fuer die Shell keine Bedeutung hat, und vor allem hinter einem `\`. **Endet eine Zeile in
 //! einem Kommentar, bleibt ihr Umbruch immer**: was danach steht, waere sonst
 //! Teil des Kommentars und liefe nicht. Ein Kommentar, den der Chat umbrochen
 //! hat, bleibt dafuer auf mehreren Zeilen, und die Shell liest jede weitere als
@@ -138,6 +145,10 @@ const NACHLASS_TEILER: usize = 10;
 #[must_use]
 pub fn fliesstext(eingabe: &str) -> String {
     let (zeilen, schluss) = zerlegen(eingabe);
+    let zeilen: Vec<String> = zeilen
+        .iter()
+        .map(|zeile| zeile.trim_end().to_owned())
+        .collect();
     let breite = belegte_breite(&zeilen);
     let geruestabzug = zeilen
         .iter()
@@ -222,7 +233,13 @@ pub fn fliesstext(eingabe: &str) -> String {
 /// Terminal laeuft. Die Regeln stehen im Modulkopf.
 #[must_use]
 pub fn befehl(eingabe: &str) -> String {
-    let (alle, _) = zerlegen(eingabe);
+    let (roh_alle, _) = zerlegen(eingabe);
+    // Gekuerzt fuer die Lage, die Breite und die Frage nach leeren Zeilen; roh,
+    // wo der nachlaufende Leerraum Inhalt ist (Modulkopf).
+    let alle: Vec<String> = roh_alle
+        .iter()
+        .map(|zeile| zeile.trim_end().to_owned())
+        .collect();
     let Some(anfang) = alle.iter().position(|zeile| !zeile.is_empty()) else {
         return String::new();
     };
@@ -241,13 +258,12 @@ pub fn befehl(eingabe: &str) -> String {
     let bereinigt: Vec<&str> = zeilen
         .iter()
         .enumerate()
-        .map(|(nummer, zeile)| {
-            if nummer == 0 {
-                zeile.trim_start()
-            } else {
-                &zeile[kopiereinrueckung.min(einrueckung(zeile))..]
-            }
-        })
+        .map(|(nummer, zeile)| ohne_kopiereinrueckung(nummer, zeile, kopiereinrueckung))
+        .collect();
+    let roh: Vec<&str> = roh_alle[anfang..ende]
+        .iter()
+        .enumerate()
+        .map(|(nummer, zeile)| ohne_kopiereinrueckung(nummer, zeile, kopiereinrueckung))
         .collect();
 
     let mut aus = String::new();
@@ -256,46 +272,53 @@ pub fn befehl(eingabe: &str) -> String {
     // Ob die naechste Zeile ohne ihren fuehrenden Leerraum angehaengt wird.
     let mut naechste_kuerzen = false;
 
-    for (nummer, zeile) in bereinigt.iter().enumerate() {
-        let zeile = if naechste_kuerzen {
-            zeile.trim_start()
+    for (nummer, (zeile, roh)) in bereinigt.iter().zip(&roh).enumerate() {
+        let (zeile, roh) = if naechste_kuerzen {
+            (zeile.trim_start(), roh.trim_start())
         } else {
-            zeile
+            (*zeile, *roh)
         };
         naechste_kuerzen = false;
-        aus.push_str(zeile);
         let Some(folgezeile) = bereinigt.get(nummer + 1) else {
+            // Die Ausgabe endet ohne nachlaufenden Leerraum (Modulkopf).
+            aus.push_str(zeile);
             break;
         };
 
-        let trenner = match &lage {
+        // Ob der nachlaufende Leerraum dieser Zeile Inhalt ist: im Rumpf eines
+        // Heredocs und am Ende in einer offenen Anfuehrung.
+        let (trenner, leerraum_bleibt) = match &lage {
             Lage::Heredoc(heredoc) => {
+                // Die Endzeile eines Heredocs steht immer auf eigener Zeile und
+                // ohne nachlaufenden Leerraum, damit sie ihn beendet; der Rumpf
+                // ist Inhalt.
                 if heredoc.endet_mit(zeile) {
                     lage = wartend.pop_front().map_or(Lage::Normal, Lage::Heredoc);
+                    (Trenner::Umbruch, false)
+                } else {
+                    (Trenner::Umbruch, true)
                 }
-                // Die Endzeile eines Heredocs steht immer auf eigener Zeile,
-                // und der Rumpf ist Inhalt.
-                Trenner::Umbruch
             }
             Lage::Normal | Lage::Einfach | Lage::Doppelt | Lage::Ansi => {
                 let ende = zeile_lesen(zeile, &mut lage, &mut wartend);
                 if let Some(heredoc) = wartend.pop_front() {
                     lage = Lage::Heredoc(heredoc);
-                    Trenner::Umbruch
+                    (Trenner::Umbruch, false)
                 } else if !matches!(lage, Lage::Normal) {
-                    Trenner::Umbruch
+                    (Trenner::Umbruch, true)
                 } else if ende == Zeilenende::Fortsetzung {
-                    Trenner::Fortsetzung
+                    (Trenner::Fortsetzung, false)
                 } else if ende == Zeilenende::Kommentar {
                     // Was angehaengt wuerde, stuende im Kommentar und liefe nicht.
-                    Trenner::Umbruch
+                    (Trenner::Umbruch, false)
                 } else if umgebrochen(&zeilen[nummer], &zeilen[nummer + 1], breite) {
-                    Trenner::Verbinden
+                    (Trenner::Verbinden, false)
                 } else {
-                    Trenner::Umbruch
+                    (Trenner::Umbruch, false)
                 }
             }
         };
+        aus.push_str(if leerraum_bleibt { roh } else { zeile });
 
         match trenner {
             Trenner::Umbruch => aus.push('\n'),
@@ -318,6 +341,17 @@ pub fn befehl(eingabe: &str) -> String {
         }
     }
     aus
+}
+
+/// Die Zeile `nummer` ohne die Kopiereinrueckung: die erste verliert ihren
+/// ganzen fuehrenden Leerraum, jede weitere hoechstens `kopiereinrueckung`
+/// Leerzeichen.
+fn ohne_kopiereinrueckung(nummer: usize, zeile: &str, kopiereinrueckung: usize) -> &str {
+    if nummer == 0 {
+        zeile.trim_start()
+    } else {
+        &zeile[kopiereinrueckung.min(einrueckung(zeile))..]
+    }
 }
 
 /// Was zwischen einer Zeile und ihrer Folgezeile in der Ausgabe von
@@ -383,6 +417,9 @@ fn zeile_lesen(zeile: &str, lage: &mut Lage, wartend: &mut VecDeque<Heredoc>) ->
     let zeichen: Vec<char> = zeile.chars().collect();
     let mut stelle = 0;
     let mut nach_dollar = false;
+    // Offene Klammern einer Arithmetik `$(( … ))` oder `(( … ))`; darin ist
+    // `<<` eine Verschiebung und kein Heredoc. Gezaehlt wird je Zeile.
+    let mut arithmetik: usize = 0;
     while stelle < zeichen.len() {
         let jetzt = zeichen[stelle];
         match lage {
@@ -401,7 +438,22 @@ fn zeile_lesen(zeile: &str, lage: &mut Lage, wartend: &mut VecDeque<Heredoc>) ->
                     '\'' => *lage = Lage::Einfach,
                     '"' => *lage = Lage::Doppelt,
                     '#' if am_wortanfang(&zeichen, stelle) => return Zeilenende::Kommentar,
-                    '<' if zeichen.get(stelle + 1) == Some(&'<') => {
+                    '$' if zeichen.get(stelle + 1) == Some(&'(')
+                        && zeichen.get(stelle + 2) == Some(&'(') =>
+                    {
+                        arithmetik += 2;
+                        stelle += 2;
+                        nach_dollar = false;
+                    }
+                    '(' if arithmetik > 0 => arithmetik += 1,
+                    ')' if arithmetik > 0 => arithmetik -= 1,
+                    '(' if zeichen.get(stelle + 1) == Some(&'(')
+                        && am_wortanfang(&zeichen, stelle) =>
+                    {
+                        arithmetik = 2;
+                        stelle += 1;
+                    }
+                    '<' if arithmetik == 0 && zeichen.get(stelle + 1) == Some(&'<') => {
                         stelle = heredoc_lesen(&zeichen, stelle, wartend);
                         nach_dollar = false;
                         continue;
@@ -499,8 +551,9 @@ fn umgebrochen(zeile: &str, folgezeile: &str, breite: usize) -> bool {
     laenge(zeile) + 1 + laenge(wort) > breite - breite / NACHLASS_TEILER
 }
 
-/// Zerlegt in Zeilen ohne nachlaufenden Leerraum, mit `\r\n` und `\r` als
-/// `\n`, und sagt, ob die Eingabe auf einen Umbruch endete.
+/// Zerlegt in Zeilen mit `\r\n` und `\r` als `\n`, und sagt, ob die
+/// Eingabe auf einen Umbruch endete. Den nachlaufenden Leerraum nimmt der
+/// Rufer, denn ob er Inhalt ist, weiss allein [`befehl`].
 fn zerlegen(eingabe: &str) -> (Vec<String>, bool) {
     let text = eingabe.replace("\r\n", "\n").replace('\r', "\n");
     let rumpf = text.strip_suffix('\n');
@@ -508,7 +561,7 @@ fn zerlegen(eingabe: &str) -> (Vec<String>, bool) {
     let zeilen = rumpf
         .unwrap_or(&text)
         .split('\n')
-        .map(|zeile| zeile.trim_end().to_owned())
+        .map(str::to_owned)
         .collect();
     (zeilen, schluss)
 }

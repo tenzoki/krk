@@ -398,3 +398,56 @@ fn die_beispiele_der_anleitung_stimmen() {
         "Das ist ein langer Absatz aus dem Chat, den das Terminal bei seiner Breite umgebrochen hat.\n\nEine Überschrift\n - Ein Punkt, der ebenfalls so lang ist, dass das Terminal ihn umbrechen musste.\n - Ein kurzer Punkt.\n"
     );
 }
+
+#[test]
+fn strip_laesst_nachlaufenden_leerraum_im_heredoc_rumpf_und_in_anfuehrung_stehen() {
+    // Die zwei Leerzeichen eines harten Umbruchs in Markdown sind Inhalt; die
+    // Endzeile verliert ihren Leerraum, damit sie den Rumpf beendet.
+    assert_eq!(
+        befehl("cat <<EOF > a.md\n  zeile mit hartem Umbruch  \n  weiter\n  EOF  "),
+        "cat <<EOF > a.md\nzeile mit hartem Umbruch  \nweiter\nEOF"
+    );
+    // Endet eine Zeile in offener Anfuehrung, gehoert ihr Leerraum zum Wert.
+    assert_eq!(
+        befehl("echo 'wert mit leerraum  \n  zweite zeile'  \n  ls  "),
+        "echo 'wert mit leerraum  \nzweite zeile'\nls"
+    );
+    // Ausserhalb faellt er weiter, auch vor der Endzeile und hinter einem `\`.
+    assert_eq!(befehl("ls -la   \n  pwd  "), "ls -la\npwd");
+    assert_eq!(befehl("ls \\  \n  -la"), "ls -la");
+}
+
+#[test]
+fn eine_arithmetik_oeffnet_keinen_heredoc() {
+    let lang = reihe('w', 60);
+    for anfang in [
+        "echo $((1 << 4))",
+        "(( x = 1 << 4 ))",
+        "echo $(( (1 << 2) + 1 ))",
+    ] {
+        // Hinter der Arithmetik wird ein Terminalumbruch weiter verbunden.
+        let text = format!("{anfang}\n  echo {lang}\n  {}\n  -n", reihe('v', 63));
+        assert_eq!(
+            befehl(&text),
+            format!("{anfang}\necho {lang} {} -n", reihe('v', 63)),
+            "an {anfang}"
+        );
+    }
+    // Ausserhalb einer Arithmetik bleibt `<<` ein Heredoc.
+    assert_eq!(
+        befehl("cat <<E\n  $((1 << 4))\n  E"),
+        "cat <<E\n$((1 << 4))\nE"
+    );
+}
+
+#[test]
+fn strip_bleibt_mit_erhaltenem_leerraum_idempotent() {
+    for text in [
+        "cat <<EOF > a.md\n  zeile mit hartem Umbruch  \n  weiter\n  EOF",
+        "echo 'wert  \n  zweite'\n  ls",
+        "echo $((1 << 4))\n  ls",
+    ] {
+        let einmal = befehl(text);
+        assert_eq!(befehl(&einmal), einmal, "an {text:?}");
+    }
+}
