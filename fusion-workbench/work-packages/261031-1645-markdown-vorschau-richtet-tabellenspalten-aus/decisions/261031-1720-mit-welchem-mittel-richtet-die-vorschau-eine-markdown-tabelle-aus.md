@@ -44,3 +44,5 @@ Der Begründung von damals ist inzwischen der Boden entzogen. Sie lautete, eine 
 **Answered:** 261031 by user: „1“ auf die Vorlage mit A1 (echte Tabelle, NSTextTable), B1 (kein Messlauf) und C1 (Plan frei). Möglichkeit 1: NSTextTable mit einem NSTextTableBlock je Zelle. Die Tabellenhälfte von `260812-1851_*_…-mit-verschachtelten-listen.md` ist damit überholt, E17 gilt nur noch für Tabellen, die die ganze Datei sind.
 
 **Implemented:** `83ee19dc` (NSTextTable je Tabelle, NSTextTableBlock je Zelle in `appkit/textmerkmale.rs`) und `fe3303c1` (ENABLE_TABLES und Tabellenzellen in `markdown.rs`). Die Tabellenhälfte von `260812-1851_*_welchen-umfang-von-markdown-rendert-die-vorschau-mit-verschachtelten-listen.md` trägt die Zeile `Superseded by:`.
+
+**Begrenzt durch:** `261101-0015-ab-welcher-groesse-zeigt-die-vorschau-eine-markdown-tabelle-nicht-mehr-als-eine-nstexttable.md` (Nutzerantwort 261101, Möglichkeit 3): „ein NSTextTable je Tabelle“ heißt dort „je Abschnitt zu 100 Zeilen“, und eine Datei über 20 000 Tabellenzellen zeigt die Vorschau als Quelltext.

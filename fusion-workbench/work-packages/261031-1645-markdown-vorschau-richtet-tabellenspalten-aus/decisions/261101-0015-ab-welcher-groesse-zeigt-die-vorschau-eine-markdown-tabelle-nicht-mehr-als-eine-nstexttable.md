@@ -90,3 +90,7 @@ Die Ursache ist eine Last je Bild, die mit der Größe **einer** Tabelle wächst
 Ob über der Grenze ein Hinweis erscheint, ist eine Teilfrage, die der Nutzer mitbeantwortet. Wir empfehlen keinen: der Quelltext einer Tabelle ist lesbar und als das zu erkennen, was er ist, und ein Hinweis kostet drei Tabelleneinträge und eine Probe.
 
 Möglichkeit 3 überholt nichts. Sie begrenzt die Reichweite von `261031-1720-mit-welchem-mittel-richtet-die-vorschau-eine-markdown-tabelle-aus.md` auf Tabellen unter der Grenze und schreibt aus, dass „ein `NSTextTable` je Tabelle“ dort „je Abschnitt“ heißt. Wer die Antwort einträgt, ergänzt jenen Datensatz um eine Zeile, die darauf verweist.
+
+**Answered:** 261101 by user: „3“. Möglichkeit 3: die Tabelle wird in Abschnitte zu 100 Zeilen geteilt, je Abschnitt ein NSTextTable, und eine Datei mit mehr als 20 000 Tabellenzellen zeigt die Vorschau als Quelltext, ohne Hinweis. Die Stoppbedingung des Plans 261031-1720 („endet ohne Abhilfe“) ist damit auf Wort des Nutzers durch diese Abhilfe ersetzt.
+
+**Implemented:** `75850c88` — ABSCHNITTSZEILEN = 100 und ZELLENGRENZE = 20 000 in `crates/krk-ui/src/markdown.rs`; über der Grenze die Tabellen als wörtliche Absätze wie vor dem Paket, ohne Hinweis.

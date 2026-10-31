@@ -13,3 +13,5 @@ Das Setzen der Tabellenmerkmale baut je Zelle die Grundschrift neu und misst die
 ## Abnahme
 
 `auszeichnungen_legen` bestimmt Grundschrift und Grundabsatz höchstens einmal je Ruf und nicht je Stelle. Die Probe `zwei_zellen_einer_tabelle_teilen_ihr_nstexttable` bleibt grün, und jede Zelle trägt weiter einen eigenen Absatzstil mit ihrem eigenen Block. Ob der Absatzstil geteilt wird, entscheidet der Bau; ein `NSMutableParagraphStyle` je Zelle bleibt nötig, weil jeder seinen eigenen `NSTextTableBlock` trägt.
+
+**Resolved:** `75850c88` — `auszeichnungen_legen` misst den Tabschritt einmal je Ruf (`tabschritt`, `absatz_mit_schritt`), Probe `auszeichnungen_legen_misst_den_tabschritt_einmal_je_ruf`.
