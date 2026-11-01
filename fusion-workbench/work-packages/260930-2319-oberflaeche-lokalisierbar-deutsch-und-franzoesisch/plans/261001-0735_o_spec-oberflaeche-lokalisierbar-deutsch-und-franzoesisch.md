@@ -205,3 +205,11 @@ Keine der zehn Zusagen misst einen Text. Betroffen sind zwei Stellen, an denen d
 - Welche der 76 Wortlautproben auf den Tabelleneintrag umgestellt werden und welche den Wortlaut weiter als Literal halten dürfen (eine Probe, die den deutschen Wortlaut hält, ist keine Verletzung von C5, weil sie im Prüfmodul steht).
 - Die Teststrategie für die Vollständigkeit der drei Tabellen und für die Senkenprobe aus C5.
 - Wie die Abnahme der Übersetzungen durch den Nutzer organisiert wird: eine Anleitung, mit der er KRK über die Systemeinstellung in jeder der drei Sprachen startet und die Flächen aus C2 abgeht.
+
+## Reconciliation Log
+
+**261101, state-auditor.** Gebaut; das Anforderungsdokument wird geschlossen, nach der Lesart „der Zustand folgt der belegten Bauarbeit“ (`260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md`, beantwortet). Abgenommen ist es damit nicht.
+
+- Sprachtabellen `crates/krk-core/src/sprache/tabelle/de.rs`, `fr.rs`, `en.rs`; `resources/de.lproj`, `fr.lproj`, `en.lproj`; `CFBundleDevelopmentRegion` `en` in `resources/Info.plist`.
+- Durchsicht von `fr.rs` und `en.rs`: `8fa6d6dc`, `56e1348f`. Das Paket steht auf `done`.
+- Nicht gefahren: die Durchsicht in der laufenden Anwendung und die zwei Nutzerarbeiten am Bündel (Abschlussnotiz des Pakets). Die zwei offenen Entscheide des Pakets (`261014-1646-…`, `261014-1711-…`) bleiben offen.

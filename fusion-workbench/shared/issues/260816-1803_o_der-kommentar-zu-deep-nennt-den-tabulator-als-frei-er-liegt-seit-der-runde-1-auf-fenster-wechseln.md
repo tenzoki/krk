@@ -38,3 +38,6 @@ Antwortzeile eines geschlossenen Entscheids nachgezogen wird, ist die zweite
 Frage: sie ist die Aufzeichnung eines damaligen Standes, und die Aussage war
 schon damals falsch. Eine Berichtigungsnotiz darunter träfe es besser als eine
 stille Änderung.
+
+---
+Reconciliation 261101 (state-auditor): Weiter offen: `resources/default-keymap.toml:467-468` nennt „der nackte Tabulator“ weiter als frei.

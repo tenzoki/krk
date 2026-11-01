@@ -17,3 +17,6 @@ Zeilennummern Stand `8278e685`.
 Gefunden vom code-implementer beim Umbau von „Im Finder öffnen“, am Quelltext gelesen am 261030, nicht an einer hängenden Freigabe gemessen. Abgelegt auf Wunsch des Nutzers als ein Sammeldefekt.
 
 Vorbild für die Behebung: `terminal::ordner_pruefen_lassen` (Faden `krk-terminal`, Rückweg über `DispatchQueue::main`) und die Quelltextproben `ctrl_o_stellt_auf_dem_hauptfaden_keinen_systemaufruf` und `im_finder_oeffnen_stellt_auf_dem_hauptfaden_keinen_systemaufruf`; für `fileURLWithPath:` genügt, wo die Art des Pfades schon bekannt ist, `fileURLWithPath:isDirectory:`. Der Umfang spricht für ein eigenes Arbeitspaket mit Plan.
+
+---
+Reconciliation 261101 (state-auditor): Weiter offen: `appkit/finder.rs:93` und `appkit/standardprogramm.rs:108` rufen `fileURLWithPath:` ohne `isDirectory:`; seit `8278e685` hat kein Commit diese Dateien oder `kommandos/pfadeingabe.rs` berührt.

@@ -454,3 +454,13 @@ Die Namen sind Vorschläge. Bindend sind die Fälle, wer welchen Wert hält, das
 - [ ] **Tasten der neuen Befehle (E14):** `opt+cmd+return`, `ctrl+cmd+return`, `ctrl+shift+cmd+return`, `ctrl+shift+cmd+delete`, „Trennzeichen wechseln“ ohne Taste. Empfehlung: so. Die Alternative nach Numbers (`opt` mit Pfeilen) teilte `opt+up` und `opt+down` mit dem Verschieben der Lesezeichen und kostete im Menü die Anzeige des Kürzels.
 - [ ] **Windows-1252 (E4):** Ein Folgepaket „CSV aus älterem Excel lesen und schreiben“ anlegen? Empfehlung: ja, getrennt, weil es eine Kodierung im Editormodell braucht.
 - [ ] **Kopf umschaltbar (E6):** Der Plan zeigt den Text der ersten Zeile immer im Spaltenkopf und macht daraus nie einen Kopf. Ein Umschalter „Erste Zeile ist Kopf“ wäre ein weiterer Befehl. Empfehlung: ohne Umschalter bauen und nach dem Test am Bündel entscheiden.
+
+## Reconciliation Log
+
+**261101, state-auditor.** Alle sieben Schritte stehen auf `done`, das Paket auf `done`; der Plan stand noch auf `in_progress` und wird geschlossen.
+
+- Kern: `crates/krk-core/src/trenntext/` mit `bereich.rs`, `dialekt.rs`, `feld.rs`, `handlung.rs`, `index.rs`.
+- Befehle: `Wirkungsbereich::Trenntext` und `Wirkungsbereich::Csv` in `crates/krk-core/src/tasten/belegung.rs`; Eintragsart `Trenntext` in `crates/krk-ui/src/appkit/eintragsansicht.rs`.
+- Sicherungsform (Schritt 6): `c97e264e`, `ff2d7b76`; Nachbesserung `80c2bc01`; Schließung des Pakets `dd65d51c`.
+- Doku (Schritt 7): `HowTo.md` beschreibt CSV und TSV.
+- Offen bleibt laut Abschlussnotiz des Pakets der Defekt zu „Spalte einfügen an 16 MiB“; er hält den Plan nicht.

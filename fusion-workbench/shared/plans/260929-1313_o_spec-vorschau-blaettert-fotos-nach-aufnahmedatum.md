@@ -151,3 +151,10 @@ Weiter offen sind der Faden, auf dem die Daten gelesen werden, und der Weg des A
 ## User Decisions Pending
 
 - [ ] Keine. Die Punkte unter „Stops when“ werden erst dann zu Fragen, wenn ihr Anlass eintritt.
+
+## Reconciliation Log
+
+**261101, state-auditor.** Gebaut; das Anforderungsdokument wird geschlossen, nach der Lesart „der Zustand folgt der belegten Bauarbeit“ (`260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md`, beantwortet). Abgenommen ist es damit nicht.
+
+- `crates/krk-core/src/bild/aufnahmedatum.rs`, `kamadak-exif` in der Wurzel-`Cargo.toml` (Begründung ab Zeile 734); Blättern `56183220`, Return zum Foto `75468b74`, Messweg `e9b3b5a6`, Doku `f72f2db0`, Abschluss `84049f23` („gebaut, nicht abgenommen“).
+- Das Arbeitspaket `260929-1415-vorschau-blaettert-fotos-nach-aufnahmedatum` steht auf `done`, sein Plan `260929-1423_*_plan-vorschau-blaettert-fotos-nach-aufnahmedatum.md` ist geschlossen.

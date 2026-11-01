@@ -22,3 +22,6 @@ die Tabellenzeilen die Tabelle unter `## Die mitgelieferten Leseprofile`.
 **Gefunden am 260916** bei der Durchsicht der übrigen Tabellenzeilen im Zuge von `260916-2021`.
 
 **Cross-references:** 260916-2021_*_zwei-zeilen-der-profiltabelle-in-howto-md-versprechen-angaben-die-kein-profil-mehr-fuehrt.md
+
+---
+Reconciliation 261101 (state-auditor): Weiter offen: die Tabelle unter `### Was die mitgelieferten Profile für eine fusion-Werkbank tun` (`HowTo.md`, ab Zeile 1566) führt den Forum-Speicher nicht, `resources/default-readers.toml:605` führt ihn.

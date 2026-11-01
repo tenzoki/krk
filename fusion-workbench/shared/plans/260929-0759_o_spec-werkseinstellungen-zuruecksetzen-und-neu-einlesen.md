@@ -157,3 +157,10 @@ Wir halten fest, was der Code heute tut, weil mehrere Festlegungen unten darauf 
 ## User Decisions Pending
 
 - [ ] Keine offene Entscheidung. Die Vorgaben dieses Dokuments sind: keine Tastenkombination, Rückfrage mit „Abbrechen“ vorbelegt, die Rückfrage sagt, dass der Notizordner bleibt, `keymap.toml` wird entfernt statt als Auslieferungstext geschrieben, der Wert von `notizordner` bleibt in alter Schreibweise, bei beschädigter oder unlesbarer `settings.toml` wird nichts zurückgesetzt, alles oder nichts beim Beiseitelegen, keine Schaltfläche im Neuerungen-Blatt, keine Abstimmung mit einer zweiten Instanz. Jede davon kann der Nutzer bei der Durchsicht ändern.
+
+## Reconciliation Log
+
+**261101, state-auditor.** Gebaut; das Anforderungsdokument wird geschlossen, nach der Lesart „der Zustand folgt der belegten Bauarbeit“ (`260819-1440_*_was-sagt-der-marker-c-an-einem-spec-gebaut-oder-abgenommen.md`, beantwortet). Abgenommen ist es damit nicht.
+
+- `Kommando::Werkseinstellungen` (`crates/krk-core/src/tasten/belegung.rs:1438`, Kennung `werkseinstellungen` an `:1636`), Eintrag `id = "werkseinstellungen"` in `resources/default-keymap.toml:1564`.
+- Das Arbeitspaket `260929-1015-werkseinstellungen-zuruecksetzen-und-neu-einlesen` steht auf `done`, sein Plan `260929-1025_*_plan-werkseinstellungen-zuruecksetzen-und-neu-einlesen.md` ist geschlossen.

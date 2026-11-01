@@ -40,3 +40,7 @@ Möglichkeit 1.
 
 ---
 Answered: Der Nutzer am 260918-0842 wörtlich: „ändere die regel so, dass sie sinn macht, natürlich kannst die release nummer nach der definierten vorgabe vergeben und das release dann auch ausführen, inklusive apple zertifizierung etc." Damit gilt Möglichkeit 1: ein Agent leitet die Zahl aus den Stufen ab, nennt sie vor dem Lauf, und fährt die Auslieferung samt Beglaubigung und Veröffentlichung auf ausdrücklichen Auftrag. Ruled by user, Kai Stalmann <kai@stalmann.org>.
+
+---
+Reconciliation 261101 (state-auditor): Die Antwort steht auf der Platte: `6f82761f` („die Versionszahl folgt den Stufen, nicht der Hand am Argument“), `README.md` `### Versionsstufen` und `CLAUDE.md` `## Bauen und prüfen` zitieren den Datensatz. Kein Übergang geschrieben; der Übergang nach `implemented` gehört dem Orchestrator.
+Implemented: `6f82761f` — README.md `### Versionsstufen` und CLAUDE.md `## Bauen und prüfen` sagen, dass ein Agent die Zahl aus den Stufen ableitet, vor dem Lauf nennt und die Auslieferung auf ausdrücklichen Auftrag fährt (Orchestrator, 261101).

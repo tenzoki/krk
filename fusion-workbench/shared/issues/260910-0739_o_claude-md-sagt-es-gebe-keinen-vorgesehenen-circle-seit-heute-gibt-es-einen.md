@@ -36,3 +36,6 @@ Web-Betrachter als letzten vorgesehenen. Das stimmt nicht mehr.
 Der Abschnitt nennt kein Ergebnis des Kommandos mehr, oder er nennt eines, das der Baum
 trägt. Der Absatz über den abgesagten Web-Betrachter bleibt als Aufzeichnung stehen, verliert
 aber die Behauptung, er sei der letzte vorgesehene.
+
+---
+Reconciliation 261101 (state-auditor): Halb behoben: `CLAUDE.md` Zeile 160 erklärt, warum der Glob über `_a_circle.md` nichts mehr ausgeben kann, und verweist auf die Steuerdatei. Weiter offen: derselbe Absatz nennt den Web-Betrachter „den letzten vorgesehenen“, während `work-packages/261006-1916-fensterlage-und-groesse-ueberstehen-den-neustart/package.json` auf `open` steht.

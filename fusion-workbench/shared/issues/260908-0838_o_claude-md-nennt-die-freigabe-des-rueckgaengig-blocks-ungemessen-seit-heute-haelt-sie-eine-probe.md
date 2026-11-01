@@ -44,3 +44,6 @@ nicht: er kehrt ohne Eingabequelle sofort zurück.
 Der Absatz in `CLAUDE.md` sagt, wo die Messung steht, oder nennt die Freigabe nicht mehr
 ungemessen. Der Verweis auf `260810-1341` darf bleiben — er hält den Stand von damals fest —,
 sagt dann aber, dass die Lage sich geändert hat.
+
+---
+Resolved: Der Absatz ist mit `e6867fa3` nach `.claude/rules/coding-was-man-nicht-sieht.md` gezogen und sagt dort (Absatz „Der Rückgängigstapel des Editors trägt ein Budget in Bytes, keine Tiefengrenze“): „Die Freigabe eines angemeldeten Blocks ist seit dem 260907 gemessen“, mit der Probe `der_verwalter_gibt_den_block_auf_allen_vier_wegen_frei` (`crates/krk-ui/src/appkit/editor.rs`). Der Satz „durch nichts gemessen“ steht weder in `CLAUDE.md` noch in der Regeldatei. Festgestellt vom state-auditor am 261101.

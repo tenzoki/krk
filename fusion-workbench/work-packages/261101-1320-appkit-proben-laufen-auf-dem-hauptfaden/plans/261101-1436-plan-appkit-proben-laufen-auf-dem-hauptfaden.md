@@ -222,3 +222,12 @@ Keine an KRK. Neu ist allein das Prüfziel `hauptfaden` in `crates/krk-ui/Cargo.
 - [ ] Wie kommen die AppKit-Proben auf den Hauptfaden: `261101-1436-wie-kommen-die-appkit-proben-auf-den-hauptfaden.md`. Wir empfehlen Möglichkeit 1. Dieser Plan setzt sie voraus.
 - [ ] Laufen die zwei Messproben (`messung_der_csv_tabelle_an_16_mib`, `messung_der_breitesten_tabelle`) wie bisher nur auf ausdrücklichen Wunsch? Vorgabe: ja, über `--ignored` wie unter `libtest`.
 - [ ] Der Doc-Kommentar in `tabelle.rs` begründet das Fehlen dreier Proben für die laufende Bearbeitung damit, dass `NSWindow` außerhalb des Hauptfadens wirft. Auf dem Hauptfaden fällt dieser Grund. Ob solche Proben jetzt kommen, gehört nicht in dieses Paket. Vorgabe: Schritt 2 korrigiert den Satz, und neue Proben baut niemand nebenbei.
+
+## Reconciliation Log
+
+**261101, state-auditor.** Alle drei Schritte stehen im Baum; der Plan wird geschlossen.
+
+- Schritt 1: `crates/krk-ui/Cargo.toml` Zeilen 24 bis 25 (`[[test]] name = "hauptfaden"`, `path = "src/hauptfaden.rs"`), Läufer `crates/krk-ui/src/appkit/hauptfaden.rs`, Wurzel `crates/krk-ui/src/hauptfaden.rs`; `0a21d901`.
+- Schritt 2: `alle()` hängt `editor`, `tabelle` und `blaetter` an (`appkit/hauptfaden.rs:112-114`); `grep -rn 'new_unchecked()' crates/krk-ui/src` und `grep -rn 'fn an_einer_flaeche' crates/krk-ui/src` finden nichts; `b8966f9c`.
+- Schritt 3: `.claude/rules/coding-was-man-nicht-sieht.md` und `CLAUDE.md` (Absatz über `#![deny(unsafe_code)]`, „`krk-ui` trägt zwei“) nachgezogen; `0067f466`. Die drei Defekte der Schlussprüfung sind geschlossen (`04bc7a76`, `e7e09416`), der Entscheid `261101-1436-wie-kommen-die-appkit-proben-auf-den-hauptfaden.md` steht auf `implemented`.
+- Das Paket steht auf `done`; `make check` ist laut Abschlussnotiz grün, in diesem Abgleich nicht erneut gefahren.

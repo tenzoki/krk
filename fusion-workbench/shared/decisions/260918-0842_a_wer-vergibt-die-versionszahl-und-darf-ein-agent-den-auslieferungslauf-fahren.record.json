@@ -29,13 +29,13 @@
   },
   "extensions": {},
   "control": {
-    "state": "answered",
+    "state": "implemented",
     "answer_ref": {
       "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
       "record_id": "f36c8a8d-7a28-4384-8668-df450ced564a",
       "display": "260918-0842_a_wer-vergibt-die-versionszahl-und-darf-ein-agent-den-auslieferungslauf-fahren.md"
     },
-    "implementation_ref": null,
+    "implementation_ref": "6f82761f",
     "superseded_by": null,
     "deferral": null
   }

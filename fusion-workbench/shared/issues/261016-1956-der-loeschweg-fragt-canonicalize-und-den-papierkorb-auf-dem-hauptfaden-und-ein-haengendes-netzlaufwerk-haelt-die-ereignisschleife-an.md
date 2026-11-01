@@ -9,3 +9,6 @@ Gefunden beim Planen des Pakets `261016-1945-sftp-ordner-im-dateifenster-wie-lok
 Beleg: am Quelltext gelesen (Stand `c461b3a1`), nicht an einer hängenden Freigabe gemessen.
 
 Abnahme: Keiner der drei Aufrufe (`canonicalize`, `fuehrt_einen_papierkorb`, `umfang::zaehlen`) steht im Rumpf eines Weges, der vom Tastendruck bis zum Blatt auf dem Hauptfaden läuft, gehalten von einer Quelltextprobe nach dem Muster `der_verbindungsweg_stellt_auf_dem_hauptfaden_nur_den_einen_stat`. Danach schuldet die Änderung einen Abnahmelauf gegen L1 und L9.
+
+---
+Reconciliation 261101 (state-auditor): Weiter offen: `std::fs::canonicalize` steht weiter im Löschweg von `crates/krk-ui/src/appkit/anwendung.rs` (um Zeile 8050).

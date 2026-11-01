@@ -49,3 +49,6 @@ nichts" ist eine ehrliche Auskunft, „der Datensatz sagt etwas Falsches" ist ke
 Die zwei Kopfzeilen auf den Zustand setzen, den der Dateiname trägt — oder sie streichen, dann
 steht dort wie bei den neun anderen der Platzhalter. Welches von beidem, hängt daran, ob diese
 zwei Datensätze als Aufzeichnung gelten oder als lebende Einträge; das entscheidet der Nutzer.
+
+---
+Reconciliation 261101 (state-auditor): Weiter offen: beide Datensätze (`260809-2040-…/_b_circle.md`, `260804-0933-…/_d_circle.md`) tragen weiter `**Status:** anticipated`.

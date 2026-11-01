@@ -26,3 +26,6 @@ Die einzige offene Arbeitseinheit, `261006-1916-fensterlage-und-groesse-ueberste
 Ein `feld`-Baustein liest Text aus einer Markdown-Datei; ob er die `package.json` lesen kann oder ein anderer Baustein dafür nötig ist, ist nicht geprüft.
 
 **Abnahme:** an einem Arbeitspaket mit `status` `open` in seiner `package.json` und ohne Kopfzeile `**Status:**` im Datensatz zeigt die Vorschau `open` und nicht den Platzhalter; der Modulkopf über dem Profil nennt die Quelle des Zustands so, wie sie seit fusion 13 ist. Ausführender: `data-implementer` (Profil in `resources/default-readers.toml`), `code-implementer`, falls ein neuer Baustein nötig ist.
+
+---
+Reconciliation 261101 (state-auditor): Weiter offen: der Modulkopf in `resources/default-readers.toml` (um Zeile 627) nennt weiter die Kopfzeile `**Status:**` als Quelle des Zustands.

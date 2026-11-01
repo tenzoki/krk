@@ -54,3 +54,6 @@ Drei Möglichkeiten, in aufsteigendem Aufwand:
 Zu wählen ist zwischen 1 und 2; das ist eine Nutzerfrage, weil sie bestimmt, wie weit die Grenze reichen soll.
 
 Gefunden bei der Vollbaum-Durchsicht R6 der dreizehn übrigen Probendateien des Kerns, HEAD `4a57028`.
+
+---
+Reconciliation 261101 (state-auditor): Weiter offen: `crates/krk-core/tests/textkopien.rs:61-71` führt die `unsafe`-Stellen, keine Datei unter `crates/krk-core/tests/` trägt `deny(unsafe_code)`.
