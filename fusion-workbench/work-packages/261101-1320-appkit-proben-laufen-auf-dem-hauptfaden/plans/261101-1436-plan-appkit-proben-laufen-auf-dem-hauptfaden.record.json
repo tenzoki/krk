@@ -1,0 +1,44 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "c3d23a59-9e35-490d-9c66-8cf2f9ec9970",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "plan",
+  "narrative": {
+    "path": "work-packages/261101-1320-appkit-proben-laufen-auf-dem-hauptfaden/plans/261101-1436-plan-appkit-proben-laufen-auf-dem-hauptfaden.md"
+  },
+  "filed_by": {
+    "actor": "implementation-planner",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "steps": [
+      {
+        "id": "1",
+        "state": "open"
+      },
+      {
+        "id": "2",
+        "state": "open"
+      },
+      {
+        "id": "3",
+        "state": "open"
+      }
+    ],
+    "criteria": [],
+    "acceptance": {
+      "ref": {
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "record_id": "c7ab8720-27e0-4875-917d-cfa0a66d25a9"
+      },
+      "revision": "sha256:4d895f22c68a3a1c88c4346fc2d143f3c88e7c591d8da7b840ff5dc04528869c"
+    }
+  }
+}

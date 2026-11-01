@@ -3,8 +3,12 @@
   "id": "c7ab8720-27e0-4875-917d-cfa0a66d25a9",
   "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
   "domain": "code",
-  "status": "open",
-  "claim": null,
+  "status": "claimed",
+  "claim": {
+    "checkout_id": "9be83618",
+    "person": "Kai Stalmann <ks@qantr.com>",
+    "claimed_at": "2026-11-01T13:20:49Z"
+  },
   "mode": {
     "value": "ordinary",
     "source": null
@@ -21,7 +25,16 @@
     "path": "work-packages/261101-1320-appkit-proben-laufen-auf-dem-hauptfaden/261101-1320-appkit-proben-laufen-auf-dem-hauptfaden.md"
   },
   "depends_on": [],
-  "active_documents": [],
+  "active_documents": [
+    {
+      "ref": {
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "record_id": "c3d23a59-9e35-490d-9c66-8cf2f9ec9970"
+      },
+      "role": "plan",
+      "revision": "sha256:4d895f22c68a3a1c88c4346fc2d143f3c88e7c591d8da7b840ff5dc04528869c"
+    }
+  ],
   "references": [],
   "evidence": [],
   "outcome": null,
