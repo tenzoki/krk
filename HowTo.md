@@ -880,6 +880,21 @@ sagt in der ersten Zeile, dass gekürzt ist. Der Editor zeigt dieselbe Datei
 unverändert, eine Zeile je Datensatz. Dasselbe gilt für eine `.jsonl` in einem
 Archiv, auch in einer `.jsonl.gz`.
 
+**Eine Tabelle in einer Markdown-Datei zeigt die Vorschau mit ausgerichteten
+Spalten**, anders als eine CSV-Datei, die dort als ausgerichteter Text in
+Festbreitenschrift steht und waagerecht rollt. Die Kopfzeile ist fett, und
+jede Spalte richtet sich nach ihrer Trennzeile: `:--` links, `:-:` mittig,
+`--:` rechts. Ist die Vorschau schmal, bricht eine lange Zelle in ihrer Spalte
+um. Kopiert wird der Quelltext: ein Wort in einer Zelle bringt die ganze Zeile
+der Tabelle mit, samt ihren Strichen, und eine Auswahl über Kopf und erste
+Zeile die Trennzeile dazwischen; allein in einer Tabelle ohne äußere Striche
+liefert ein Wort nur das Wort. Eine lange Tabelle steht in Stücken zu je 100
+Zeilen, und an der Grenze zweier Stücke können die Spaltenbreiten springen.
+Trägt eine Datei mehr als 20 000 Tabellenzellen, zeigt die Vorschau ihre
+Tabellen als Quelltext, ohne Hinweis; der übrige Text bleibt gerendert.
+Beginnt ein Listenpunkt mit einer Tabelle, steht sein `•` auf eigener Zeile
+davor.
+
 **Eine Datei, die auf einem Cloudlaufwerk wie Google Drive oder iCloud Drive
 nur in der Cloud liegt, lädt die Vorschau erst, wenn die Auswahl 0,2 Sekunden
 auf ihr steht.** Bis dahin und während des Ladens zeigt sie die Angaben der
