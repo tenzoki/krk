@@ -9363,9 +9363,10 @@ mod tests {
     // Teile, die sich ohne ihn fahren lassen: die reinen Regeln, die Tabelle,
     // den Tausch an echten Rollen, den gemeinsamen Verwalter an echten
     // Flaechen und die Ruempfe. Was dabei offen bleibt, ist Nutzerarbeit am
-    // laufenden Buendel; die Ausweichform waere ein Pruefziel ohne `libtest`,
-    // und das haengt an `decisions/260810-1044_*_ziehen-die-vier-instanzproben-in-ein-pruefziel-ohne-libtest-harness-um.md`
-    // (zurueckgestellt).
+    // laufenden Buendel. Seit dem 261101 faehrt das Pruefziel `hauptfaden`
+    // diese Proben auf dem wirklichen Hauptfaden, und der Grund, der Faden von
+    // `libtest`, faellt; ob ein ganzer Editorbereich dort eine Probe bekommt,
+    // ist nicht entschieden.
 
     /// `tasks.txt` der Proben: Vorspann, zwei Aufgaben, eine fremde Zeile an
     /// der ersten.
@@ -9562,9 +9563,11 @@ mod tests {
     /// (Entscheidung 3 des Plans der Sicherung).
     ///
     /// **Am Quelltext und nicht an einer Flaeche**, aus dem Grund ueber den
-    /// Proben des Umbauwegs: eine `NSTextView`, deren Text sich aendert, laesst
+    /// Proben des Umbauwegs: eine `NSTextView`, deren Text sich aendert, liess
     /// sich unter `libtest` nicht fahren (am 261031 wieder gemessen: der
-    /// Prueflauf haengt). Was sie nicht sieht, ist, ob AppKit eine nicht
+    /// Prueflauf hing). Seit dem 261101 laeuft die Probe im Pruefziel
+    /// `hauptfaden` auf dem wirklichen Hauptfaden, und dieser Grund faellt; ob
+    /// sie dort eine Flaeche bekommt, ist nicht entschieden. Was sie nicht sieht, ist, ob AppKit eine nicht
     /// bearbeitbare Flaeche wirklich unberuehrt laesst; das ist am 261031 im
     /// laufenden Programm gemessen
     /// (`messungen/261031-1300-quicknote-textdidchange.txt`).
@@ -13240,12 +13243,14 @@ mod tests {
     /// Die Zeiten der Tabelle einer CSV an einer erzeugten Datei von 16 MiB
     /// (E9): der Index, eine Zellaenderung samt Umkehrpunkt, neuer Sicht und
     /// der Abschrift, die `stand_einsetzen` an die Textflaeche reicht, und eine
-    /// Spalteneinfuegung. `setString:` selbst misst sie nicht: eine
-    /// `NSTextView` laesst sich unter `libtest` nicht beschreiben (Kopf der
-    /// Proben zum Umbauweg).
+    /// Spalteneinfuegung. `setString:` selbst misst sie nicht: entstanden ist
+    /// sie unter `libtest`, wo sich eine `NSTextView` nicht beschreiben liess
+    /// (Kopf der Proben zum Umbauweg). Seit dem 261101 laeuft sie im Pruefziel
+    /// `hauptfaden` auf dem wirklichen Hauptfaden; ob sie dort auch
+    /// `setString:` misst, ist nicht entschieden.
     ///
     /// `cargo test --release -p krk-ui -- --ignored --nocapture messung_der_csv_tabelle_an_16_mib`
-    fn messung_der_csv_tabelle_an_16_mib(mtm: MainThreadMarker) {
+    fn messung_der_csv_tabelle_an_16_mib(_mtm: MainThreadMarker) {
         use std::time::Instant;
         let grenze = 16 * 1024 * 1024 - 1024;
         let mut text = String::with_capacity(grenze + 256);
@@ -13362,10 +13367,10 @@ mod tests {
             panic!("ein Bereich");
         };
 
-        // Der Textspeicher allein, ohne Flaeche: eine `NSTextView` laesst sich
-        // unter `libtest` nicht beschreiben, ein nackter Speicher vielleicht.
+        // Der Textspeicher allein, ohne Flaeche: so ist die Messung unter
+        // `libtest` entstanden, wo sich eine `NSTextView` nicht beschreiben
+        // liess, ein nackter Speicher aber schon (Kopf dieser Probe).
         let (im_speicher, ganz_im_speicher) = {
-            let _ = mtm;
             let speicher = objc2_app_kit::NSTextStorage::new();
             speicher.replaceCharactersInRange_withString(
                 NSRange::new(0, 0),

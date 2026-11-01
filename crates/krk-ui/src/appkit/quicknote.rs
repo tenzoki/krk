@@ -33,7 +33,8 @@
 //! Schluesselfenster ist, und anders erreicht `cmd+z` sie nicht (gemessen am
 //! 261031, `messungen/261031-1300-quicknote-textdidchange.txt`; ohne
 //! Schluesselfenster meldet ein Rueckgaengig sich nicht, und das ist die Lage
-//! unter `libtest`). **Zwei Wege schreiben an
+//! der Proben, unter `libtest` wie seit dem 261101 im Pruefziel `hauptfaden`,
+//! solange keine ein Fenster zum Schluesselfenster macht). **Zwei Wege schreiben an
 //! ihr vorbei**, beide ueber `setString:`: [`Quicknote::nach_kopie_leeren`],
 //! das deshalb den Melder selbst ruft, und
 //! [`Quicknote::einsetzen_ohne_rueckgaengig`], das den gelesenen Inhalt von
@@ -618,9 +619,12 @@ mod tests {
     }
 
     // Die vier Proben darunter lesen den Quelltext und nicht eine Flaeche:
-    // eine `NSTextView`, deren Text sich aendert, laesst sich unter `libtest`
+    // eine `NSTextView`, deren Text sich aendert, liess sich unter `libtest`
     // nicht fahren (Kommentar ueber den Proben des Umbauwegs im Editor; am
-    // 261031 wieder gemessen, der Prueflauf haengt). Was AppKit dabei tut, ist
+    // 261031 wieder gemessen, der Prueflauf hing). Seit dem 261101 faehrt das
+    // Pruefziel `hauptfaden` AppKit-Proben auf dem wirklichen Hauptfaden, und
+    // dieser Grund faellt; ob die vier dort eine Flaeche bekommen, ist nicht
+    // entschieden. Was AppKit dabei tut, ist
     // im laufenden Programm gemessen
     // (`messungen/261031-1300-quicknote-textdidchange.txt`).
 

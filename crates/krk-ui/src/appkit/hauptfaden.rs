@@ -48,6 +48,7 @@
 //! macOS-Alter. Keine Beruehrung dieser Datei liegt ueber macOS 15.
 
 use std::collections::BTreeSet;
+use std::io::Write;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::time::{Duration, Instant};
@@ -336,6 +337,8 @@ pub(crate) fn laufen(argumente: impl IntoIterator<Item = String>) -> Ausgang {
             ignoriert += 1;
             continue;
         }
+        probe_ansagen(&mut std::io::stdout(), name)
+            .expect("die Standardausgabe nimmt die Ansage einer Probe");
         let mit_frist = probe.ignoriert.is_none();
         if mit_frist {
             wache
@@ -349,10 +352,10 @@ pub(crate) fn laufen(argumente: impl IntoIterator<Item = String>) -> Ausgang {
                 .expect("der Wachfaden lebt, solange der Laeufer laeuft");
         }
         if ergebnis.is_ok() {
-            println!("test {name} ... ok");
+            println!("ok");
             gruen += 1;
         } else {
-            println!("test {name} ... FAILED");
+            println!("FAILED");
             gescheitert.push(name);
         }
     }
@@ -453,6 +456,21 @@ fn beschreibung(wert: &AnyObject) -> String {
     text.to_string()
 }
 
+/// Kuendigt eine Probe an, bevor sie laeuft: `test <name> ... ` ohne
+/// Zeilenende, gespuelt, und das Ergebnis folgt auf derselben Zeile, wie
+/// `libtest` es tut.
+///
+/// **Warum vorher.** `catch_unwind` faengt allein eine Panik in Rust. Eine
+/// Ausnahme von Objective-C, ein `SIGSEGV` an einer `NSTextView` oder eine
+/// Panik ueber eine `extern "C"`-Grenze beenden den Prozess, und stuende der
+/// Name erst nach der Probe da, naennte die letzte Zeile die vorige Probe mit
+/// `ok`. Gespuelt wird, weil die Standardausgabe an einer Roehre
+/// blockgepuffert ist und ein Abbruch den Puffer nicht mehr schreibt.
+fn probe_ansagen(aus: &mut impl Write, name: &str) -> std::io::Result<()> {
+    write!(aus, "test {name} ... ")?;
+    aus.flush()
+}
+
 /// Was der Laeufer dem Wachfaden meldet.
 enum Wachruf {
     Beginn(&'static str),
@@ -493,6 +511,41 @@ fn wachfaden_starten(frist: Duration) -> std::io::Result<Sender<Wachruf>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Eine Standardausgabe zum Mitlesen: was geschrieben ist und wie viel
+    /// davon beim letzten Spuelen stand.
+    #[derive(Default)]
+    struct Mitschrift {
+        geschrieben: Vec<u8>,
+        gespuelt_bis: Option<usize>,
+    }
+
+    impl Write for Mitschrift {
+        fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+            self.geschrieben.extend_from_slice(bytes);
+            Ok(bytes.len())
+        }
+
+        fn flush(&mut self) -> std::io::Result<()> {
+            self.gespuelt_bis = Some(self.geschrieben.len());
+            Ok(())
+        }
+    }
+
+    /// Die Ansage ist `test <name> ... ` ohne Zeilenende, und sie ist ganz
+    /// gespuelt, bevor `laufen` die Probe ruft. Dass `laufen` sie vor
+    /// `probe.lauf` ruft, sieht diese Probe nicht; das sagt der Rumpf.
+    #[test]
+    fn die_ansage_steht_ohne_zeilenende_und_ist_gespuelt() {
+        let mut aus = Mitschrift::default();
+        probe_ansagen(&mut aus, "appkit::editor::tests::die_sammeltuer")
+            .expect("eine Mitschrift scheitert nicht");
+        assert_eq!(
+            aus.geschrieben,
+            b"test appkit::editor::tests::die_sammeltuer ... "
+        );
+        assert_eq!(aus.gespuelt_bis, Some(aus.geschrieben.len()));
+    }
 
     fn woerter(zeile: &str) -> Vec<String> {
         zeile.split_whitespace().map(str::to_owned).collect()
