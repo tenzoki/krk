@@ -1,0 +1,28 @@
+{
+  "schema": "fusion.evidence/v1",
+  "id": "7b924e6e-bb47-41d8-935f-8bbef4cbf310",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "subject": {
+    "git_tree": "71b66c76feaf29e0b5522adba3534e844e77eb7c",
+    "git_range": null
+  },
+  "brief_revision": "sha256:b4e660286d62051df5750643c9ff67e66bd2c30b28549aef6c0b08b5c74e771b",
+  "plan_revision": "sha256:4d895f22c68a3a1c88c4346fc2d143f3c88e7c591d8da7b840ff5dc04528869c",
+  "role": {
+    "profile": "reviewer",
+    "version": "13.3.7"
+  },
+  "host": "claude-code",
+  "execution_policy": "claude-guided",
+  "verdict": "revise",
+  "uncertainties": [],
+  "checks": [],
+  "report": {
+    "path": "work-packages/261101-1320-appkit-proben-laufen-auf-dem-hauptfaden/reviews/261101-1953-reviewer-appkit-proben-hauptfaden.md",
+    "sha256": "sha256:a8a40d7534fa6fe3d4e69611867ec518c3754bc415977fed12bd65a6c325277e",
+    "kind": "review"
+  },
+  "predecessor": null,
+  "accepted_at": "2026-11-01T18:55:44Z",
+  "extensions": {}
+}

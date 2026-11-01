@@ -17,9 +17,9 @@
   },
   "extensions": {},
   "control": {
-    "state": "answered",
+    "state": "implemented",
     "answer_ref": "261101-1436-wie-kommen-die-appkit-proben-auf-den-hauptfaden.md",
-    "implementation_ref": null,
+    "implementation_ref": "0067f466",
     "superseded_by": null,
     "deferral": null
   }

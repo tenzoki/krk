@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "4a1eab67-c031-4640-8c74-02928cde95c5",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261101-1320-appkit-proben-laufen-auf-dem-hauptfaden/issues/261101-1953-die-regeldatei-verortet-die-rekursionsgrenze-in-define-class-an-der-falschen-stelle.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}
