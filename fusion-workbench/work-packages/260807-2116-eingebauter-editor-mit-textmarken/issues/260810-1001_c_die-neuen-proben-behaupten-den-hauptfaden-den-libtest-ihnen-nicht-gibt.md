@@ -162,3 +162,5 @@ Der Befund selbst bleibt richtig und ist am Code sichtbar: der Doc-Kommentar von
 `an_einer_flaeche` benennt die Behauptung. Bricht sie auf einem Gerät, fällt der
 Prüflauf aus und nicht die Anwendung — das ist der Preis, der hier bewusst
 gezahlt wird. Wer `krk-ui` aus einem anderen Grund umbaut, nimmt beides mit.
+
+Revised by: 261101-1436-wie-kommen-die-appkit-proben-auf-den-hauptfaden.md — die Proben laufen im Prüfziel hauptfaden auf dem Hauptfaden; Weg 1 ist nicht mehr die Lage
