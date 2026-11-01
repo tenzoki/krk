@@ -7081,7 +7081,6 @@ mod tests {
     use std::io::Write;
     use std::path::PathBuf;
     use std::rc::Rc;
-    use std::sync::Mutex;
 
     use krk_core::text::marke::wiederfinden;
     use krk_core::text::suche;
@@ -7108,6 +7107,58 @@ mod tests {
         hauptfadenprobe!(die_flaeche_der_quicknote_ist_reiner_text_mit_eigenem_verwalter),
         hauptfadenprobe!(die_abgeschalteten_stehen_an_der_gebauten_flaeche_auf_aus),
         hauptfadenprobe!(die_sammeltuer_ist_eine_sicht_auf_dieselben_bits),
+        hauptfadenprobe!(ein_geleerter_stapel_traegt_keine_rueckgaengig_handlung_mehr),
+        hauptfadenprobe!(ein_geleerter_stapel_traegt_auch_eine_offene_gruppe_nicht_mehr),
+        hauptfadenprobe!(ein_geleerter_stapel_ueberlebt_auch_die_ereignisgruppierung),
+        hauptfadenprobe!(eine_anmeldung_nach_dem_leeren_steht_im_stapel),
+        hauptfadenprobe!(der_verwalter_gibt_den_block_auf_allen_vier_wegen_frei),
+        hauptfadenprobe!(
+            eine_anmeldung_waehrend_eines_rueckgaengig_landet_im_wiederherstellungsstapel
+        ),
+        hauptfadenprobe!(der_zelleneditor_schaltet_die_automatiken_bei_jedem_beginn_wieder_ab),
+        hauptfadenprobe!(die_gegenstandslosen_stehen_unberuehrt_und_ihr_traeger_steht_aus),
+        hauptfadenprobe!(die_gebaute_flaeche_steht_auf_textkit_1),
+        hauptfadenprobe!(jede_zweite_tuer_und_ihre_erste_legen_einander_um),
+        hauptfadenprobe!(die_erste_tuer_kann_default_weder_herstellen_noch_anzeigen),
+        hauptfadenprobe!(der_vorgabewert_der_schreibwerkzeuge_ueberlaesst_dem_system_die_wahl),
+        hauptfadenprobe!(die_tabelle_zeigt_die_zeilen_des_standes),
+        hauptfadenprobe!(textflaeche_und_tabelle_finden_denselben_verwalter),
+        hauptfadenprobe!(
+            die_laufende_zelle_wird_vor_dem_ersten_zeichen_erkannt_und_ein_fremdes_feld_nicht
+        ),
+        hauptfadenprobe!(
+            eine_endende_zelle_wird_geprueft_einmal_festgeschrieben_und_zeigt_die_ableitung
+        ),
+        hauptfadenprobe!(esc_verwirft_die_aufgabenzelle_und_laesst_den_stand),
+        hauptfadenprobe!(
+            das_ankreuzfeld_ruft_abhaken_mit_seiner_zeile_und_zeigt_danach_die_ableitung
+        ),
+        hauptfadenprobe!(der_klick_ins_ankreuzfeld_holt_den_fokus_in_die_tabelle),
+        hauptfadenprobe!(nach_dem_neuladen_ist_eine_zeile_gewaehlt),
+        hauptfadenprobe!(ein_doppelklick_unter_die_zeilen_legt_an_und_die_kopfzeile_nicht),
+        hauptfadenprobe!(den_eigenen_feldeditor_bekommen_allein_die_felder_der_eintragstabelle),
+        hauptfadenprobe!(cmd_z_in_der_zelle_endet_am_anfang_der_zelle_und_laesst_den_umbau),
+        hauptfadenprobe!(umkehren_und_eine_eingetroffene_datei_lassen_keine_offene_zelle_stehen),
+        hauptfadenprobe!(die_notiztabelle_leitet_zwei_zeilen_mit_thema_und_mehrzeiligem_text_ab),
+        hauptfadenprobe!(die_termintabelle_loescht_aendert_und_legt_an_der_stelle_der_zeile_an),
+        hauptfadenprobe!(eine_csv_oeffnet_als_tabelle_mit_spalten_aus_der_datei),
+        hauptfadenprobe!(
+            der_kopf_zeigt_buchstabe_und_text_der_ersten_zeile_und_die_erste_zeile_bleibt_zeile
+        ),
+        hauptfadenprobe!(nur_die_trenntextform_rollt_waagerecht),
+        hauptfadenprobe!(
+            messung_der_csv_tabelle_an_16_mib,
+            ignoriert = "Messprobe, im Bericht von Schritt 3 genannt"
+        ),
+        hauptfadenprobe!(
+            messung_der_breitesten_tabelle,
+            ignoriert = "Messprobe, im Bericht von Schritt 3 genannt"
+        ),
+        hauptfadenprobe!(ein_klick_auf_den_kopf_waehlt_die_spalte_und_auf_die_nummer_die_zeile),
+        hauptfadenprobe!(cmd_c_legt_den_bereich_als_tsv_ab),
+        hauptfadenprobe!(die_uebrigen_arten_behalten_ihre_zeilenauswahl),
+        hauptfadenprobe!(eine_neue_csv_beginnt_mit_anfangsbreiten_und_bei_a1),
+        hauptfadenprobe!(die_pfeile_bewegen_die_auswahl_und_return_oeffnet_ihre_zelle),
     ];
 
     fn pfad() -> PathBuf {
@@ -7705,34 +7756,17 @@ mod tests {
 
     /// Ein Verwalter fuer sich, ohne Flaeche und ohne Fenster.
     ///
-    /// **Warum das `new_unchecked` hier traegt.** Der
-    /// Pruefstand von Rust laesst jede Pruefung auf einem eigenen Faden laufen,
-    /// und `MainThreadMarker::new()` gaebe dort `None`. Was der Marker
-    /// absichert, ist die Fadenbindung von AppKits Fensterwerkzeug; ein
-    /// `NSUndoManager` haengt an keinem Fenster, sondern an der
-    /// Ereignisschleife seines Fadens, und die ist hier mit
-    /// `setGroupsByEvent(false)` abgewaehlt. Der Verwalter dieser Pruefung
-    /// wird ausserdem auf demselben Faden erzeugt, benutzt und fallengelassen.
-    ///
-    /// **„Hier vertretbar und sonst nirgends" stand bis zum 260907 an dieser
-    /// Stelle und war falsch.** Der Teilbaum `appkit/` behauptet den Hauptfaden
-    /// an drei Stellen, alle unter `#[cfg(test)]`, und jede mit einer eigenen
-    /// Begruendung: diese hier, [`an_einer_flaeche`] weiter unten (die einzige,
-    /// die eine AppKit-**Ansicht** baut, und die einzige mit einer Sperre) und
-    /// `super::blaetter::tests::ein_blatt_ohne_ungefaehrlichen_ausgang_fliegt_auf`.
-    /// Erhoben werden sie mit `grep -rn new_unchecked crates/krk-ui/src`, das
-    /// ausserhalb der Pruefmodule keinen Treffer liefert; eine Zahl steht
-    /// deshalb weder hier noch in CLAUDE.md
-    /// (`issues/260826-1327_*_verwalter-ohne-fenster-sagt-new-unchecked-sei-hier-vertretbar-und-sonst-nirgends-an-einer-flaeche-nimmt-es-daneben.md`).
-    ///
-    /// **Ob die Verwalterproben unter dieselbe Sperre gehoeren wie
-    /// [`an_einer_flaeche`], ist offen** und haengt an
-    /// `260810-1044_*_ziehen-die-vier-instanzproben-in-ein-pruefziel-ohne-libtest-harness-um.md`
-    /// (zurueckgestellt). Sie bauen keine Ansicht, also greift die Begruendung
-    /// der Sperre — zwei gleichzeitig gebaute AppKit-Ansichten — fuer sie
-    /// nicht.
-    fn verwalter_ohne_fenster() -> Retained<NSUndoManager> {
-        NSUndoManager::new(unsafe { MainThreadMarker::new_unchecked() })
+    /// Den Marker bekommt er von der Probe, und die bekommt ihn vom Laeufer des
+    /// Pruefziels `hauptfaden`, der den Hauptfaden mit `MainThreadMarker::new()`
+    /// fragt, statt ihn zu behaupten. Bis zum 261101 nahm diese Stelle den
+    /// Marker mit `new_unchecked` auf dem Faden von `libtest`; warum das endete,
+    /// steht im Kopf von `super::super::hauptfaden`. Ein `NSUndoManager` haengt
+    /// an keinem Fenster, sondern an der Laufschleife seines Fadens, und die
+    /// Proben waehlen sie mit `setGroupsByEvent(false)` ab, wo es darauf
+    /// ankommt; auf dem Hauptfaden laeuft diese Laufschleife waehrend des
+    /// Pruefziels nicht.
+    fn verwalter_ohne_fenster(mtm: MainThreadMarker) -> Retained<NSUndoManager> {
+        NSUndoManager::new(mtm)
     }
 
     /// Meldet eine Rueckgaengig-Handlung an, wie eine `NSTextView` es beim
@@ -7779,9 +7813,8 @@ mod tests {
     /// steht fuer sich und braucht weder Flaeche noch Fenster. Gemessen wird
     /// der Schritt, den [`Editorbereich::stand_einsetzen`] seit diesem Defekt
     /// hinter `setString:` setzt.
-    #[test]
-    fn ein_geleerter_stapel_traegt_keine_rueckgaengig_handlung_mehr() {
-        let verwalter = verwalter_ohne_fenster();
+    fn ein_geleerter_stapel_traegt_keine_rueckgaengig_handlung_mehr(mtm: MainThreadMarker) {
+        let verwalter = verwalter_ohne_fenster(mtm);
         let ziel = NSObject::new();
         stapel_fuellen(&verwalter, &ziel);
 
@@ -7809,9 +7842,8 @@ mod tests {
     /// wie die Gruppe, die der Verwalter in der Betriebsart der Laufzeit selbst
     /// oeffnet; siehe [`stapel_fuellen`] und
     /// [`ein_geleerter_stapel_ueberlebt_auch_die_ereignisgruppierung`].
-    #[test]
-    fn ein_geleerter_stapel_traegt_auch_eine_offene_gruppe_nicht_mehr() {
-        let verwalter = verwalter_ohne_fenster();
+    fn ein_geleerter_stapel_traegt_auch_eine_offene_gruppe_nicht_mehr(mtm: MainThreadMarker) {
+        let verwalter = verwalter_ohne_fenster(mtm);
         let ziel = NSObject::new();
         stapel_fuellen(&verwalter, &ziel);
 
@@ -7848,14 +7880,14 @@ mod tests {
     ///
     /// **Der Umlauf der Laufschleife ist der Kern dieser Pruefung.** Ohne ihn
     /// kommt der Beobachter nicht zum Zug, und dann misst sie nichts, was die
-    /// beiden anderen nicht schon messen. `libtest` fuehrt seine Proben auf
-    /// eigenen Faeden ohne laufende Schleife; `NSRunLoop::currentRunLoop` legt
-    /// dem Faden eine an, und der Verwalter haengt seinen Beobachter beim
-    /// Anmelden in genau diese ein. Ein Umlauf ohne Quelle kehrt sofort zurueck,
+    /// beiden anderen nicht schon messen. Der Laeufer des Pruefziels
+    /// `hauptfaden` faehrt seine Proben auf dem Hauptfaden, dessen Schleife
+    /// zwischen den Proben niemand dreht; `NSRunLoop::currentRunLoop` liefert
+    /// diese Schleife, und der Verwalter haengt seinen Beobachter beim Anmelden
+    /// in genau sie ein. Ein Umlauf ohne Quelle kehrt sofort zurueck,
     /// die Zeitgrenze ist deshalb keine Wartezeit, sondern eine Obergrenze.
-    #[test]
-    fn ein_geleerter_stapel_ueberlebt_auch_die_ereignisgruppierung() {
-        let verwalter = verwalter_ohne_fenster();
+    fn ein_geleerter_stapel_ueberlebt_auch_die_ereignisgruppierung(mtm: MainThreadMarker) {
+        let verwalter = verwalter_ohne_fenster(mtm);
         assert!(
             verwalter.groupsByEvent(),
             "der Werkswert von groupsByEvent ist true; steht er auf false, misst diese \
@@ -7929,9 +7961,8 @@ mod tests {
     /// Die Probe faehrt die Betriebsart der Laufzeit, samt Umlauf der
     /// Laufschleife danach: der Beobachter, der die Gruppe schliesst, kommt damit
     /// zum Zug.
-    #[test]
-    fn eine_anmeldung_nach_dem_leeren_steht_im_stapel() {
-        let verwalter = verwalter_ohne_fenster();
+    fn eine_anmeldung_nach_dem_leeren_steht_im_stapel(mtm: MainThreadMarker) {
+        let verwalter = verwalter_ohne_fenster(mtm);
         assert!(
             verwalter.groupsByEvent(),
             "diese Probe misst die Betriebsart der Laufzeit"
@@ -8045,11 +8076,10 @@ mod tests {
     /// Jeder Weg bekommt einen eigenen Verwalter: sie wirken auf denselben
     /// Stapel, und zwei Wege an einem Verwalter maessen nicht mehr, welcher von
     /// beiden freigegeben hat.
-    #[test]
-    fn der_verwalter_gibt_den_block_auf_allen_vier_wegen_frei() {
+    fn der_verwalter_gibt_den_block_auf_allen_vier_wegen_frei(mtm: MainThreadMarker) {
         // Weg 3: `removeAllActions` raeumt beide Stapel.
         {
-            let verwalter = verwalter_ohne_fenster();
+            let verwalter = verwalter_ohne_fenster(mtm);
             let ziel = NSObject::new();
             let zaehler = autoreleasepool(|_| {
                 let zaehler = last_anmelden(&verwalter, &ziel);
@@ -8065,7 +8095,7 @@ mod tests {
 
         // Weg 1: die Handlung wird ausgefuehrt.
         {
-            let verwalter = verwalter_ohne_fenster();
+            let verwalter = verwalter_ohne_fenster(mtm);
             let ziel = NSObject::new();
             let zaehler = autoreleasepool(|_| {
                 let zaehler = last_anmelden(&verwalter, &ziel);
@@ -8087,7 +8117,7 @@ mod tests {
         // erste Anmeldung geht dorthin, weil `undo` sie ausfuehrt; damit misst
         // dieser Block einen anderen Stapel als der darueber.
         {
-            let verwalter = verwalter_ohne_fenster();
+            let verwalter = verwalter_ohne_fenster(mtm);
             let ziel = NSObject::new();
             let (erster, zweiter) = autoreleasepool(|_| {
                 let erster = last_anmelden(&verwalter, &ziel);
@@ -8118,7 +8148,7 @@ mod tests {
         {
             let ziel = NSObject::new();
             let zaehler = autoreleasepool(|_| {
-                let verwalter = verwalter_ohne_fenster();
+                let verwalter = verwalter_ohne_fenster(mtm);
                 verwalter.setGroupsByEvent(false);
                 verwalter.beginUndoGrouping();
                 let zaehler = last_anmelden(&verwalter, &ziel);
@@ -8171,9 +8201,10 @@ mod tests {
     /// eine offene Gruppe der obersten Ebene selbst, also braucht diese Probe
     /// keinen Umlauf der Laufschleife und keine Abschaltung — sie laeuft in
     /// derselben Betriebsart wie der Editor.
-    #[test]
-    fn eine_anmeldung_waehrend_eines_rueckgaengig_landet_im_wiederherstellungsstapel() {
-        let verwalter = verwalter_ohne_fenster();
+    fn eine_anmeldung_waehrend_eines_rueckgaengig_landet_im_wiederherstellungsstapel(
+        mtm: MainThreadMarker,
+    ) {
+        let verwalter = verwalter_ohne_fenster(mtm);
         let ziel = NSObject::new();
         // 2 ist der Stand nach dem Ersetzen, 1 der davor.
         let wert = Rc::new(Cell::new(2u8));
@@ -8676,72 +8707,6 @@ mod tests {
         }
     }
 
-    /// Der eine Ort, an dem eine Probe eine AppKit-Ansicht baut.
-    ///
-    /// **Hier steht eine Notluege, und sie steht genau hier.**
-    /// `MainThreadMarker::new_unchecked` behauptet den Hauptfaden, und `libtest`
-    /// fuehrt seine Proben auf eigenen Faeden. Was die Proben darunter tun,
-    /// traegt die Behauptung: sie bauen eine `NSTextView`, lesen und setzen
-    /// Merkmale und lassen sie fallen. Kein Fenster, keine Zeichnung, keine
-    /// Ereignisschlange, kein Ersthelfer — nichts, was AppKit an den Hauptfaden
-    /// bindet. Nachgemessen: sechs vollstaendige Laeufe von
-    /// `cargo test --workspace` nach dem Umbau, ohne Absturz und ohne Meldung.
-    /// Was das **nicht** belegt, gehoert dazu: Apple sagt fuer eine `NSView`
-    /// den Hauptfaden zu, und diese Zusage nimmt die Probe nicht in Anspruch,
-    /// sondern umgeht sie. Wer hier eine Probe dazulegt, die zeichnet, ein
-    /// Fenster anfasst oder einen Ersthelfer setzt, verlaesst den gemessenen
-    /// Bereich.
-    ///
-    /// **Die Sperre serialisiert sie.** Mehrere Proben, die gleichzeitig auf
-    /// verschiedenen Faeden AppKit-Objekte bauen, waeren eine zweite Behauptung
-    /// ueber AppKit, die niemand geprueft hat; unter der Sperre baut zu jeder
-    /// Zeit hoechstens eine. Ein Fehlschlag vergiftet die Sperre, und die
-    /// naechste Probe nimmt sie trotzdem: der Fehlschlag steht schon in der
-    /// Reihe, und ein zweiter Name daneben verdeckte ihn nur.
-    ///
-    /// # Der Ausweg ist gemessen und noch nicht gebaut
-    ///
-    /// Die Notluege ist zu ersetzen, nicht zu rechtfertigen, und drei Wege
-    /// stehen dafuer im Datensatz
-    /// `issues/260810-1001_*_die-neuen-proben-behaupten-den-hauptfaden-den-libtest-ihnen-nicht-gibt.md`.
-    /// Zwei Messungen vom 260810 schneiden die Wahl unter ihnen zu, beide auf
-    /// macOS 15.7.7 (Build 24G720) mit Rust 1.97.1:
-    ///
-    /// ```text
-    ///   cargo test                          MainThreadMarker::new() ─> None
-    ///   cargo test -- --test-threads=1      MainThreadMarker::new() ─> None
-    ///   [[test]] mit harness = false        MainThreadMarker::new() ─> Some
-    /// ```
-    ///
-    /// **`libtest` gibt den Hauptfaden auch bei einem Prueffaden nicht her** —
-    /// die naheliegende Abhilfe ist gemessen und traegt nicht. **Ein Pruefziel
-    /// mit `harness = false` traegt**, und zwar ohne ein zweites Pruefkommando:
-    /// `cargo test` fuehrt es mit, `make check` bleibt unveraendert. Beides ist
-    /// am 260810-1139 in diesem Projekt nachgemessen und nicht uebernommen.
-    ///
-    /// **Und doch fehlt dem zweiten Weg mehr als zwei Dateien**, wie es hier bis
-    /// zum 260810-1139 stand: `krk-ui` hat **kein Bibliotheksziel**. Die Kiste
-    /// fuehrt allein `[[bin]] name = "krk"`, und eine Prueflaufdatei unter
-    /// `tests/` ist eine eigene Kiste — sie erreicht nichts aus `krk-ui`, gleich
-    /// ob [`textflaeche_bauen`] und [`EINSTELLUNGEN`] `pub` sind oder nicht.
-    /// Gemessen als Uebersetzungsfehler `E0433`. Es fehlt also ein `src/lib.rs`
-    /// samt Umbau von `main.rs`, oder ein zweiter Kistenkopf unter `src/`, der
-    /// die Oberflaeche ein zweites Mal uebersetzt und `cfg(test)` verliert. Beide
-    /// Wege und die geaenderte Empfehlung stehen im Datensatz
-    /// `decisions/260810-1044_*_ziehen-die-vier-instanzproben-in-ein-pruefziel-ohne-libtest-harness-um.md`.
-    ///
-    /// Bis dahin steht die Notluege hier — nicht weil sie zulaessig waere,
-    /// sondern weil der Rueckbau die vier Messungen kostete, die
-    /// `260810-0748`, `260810-0750`, `260810-0746` und `260810-0512` in den Baum
-    /// gebracht haben.
-    fn an_einer_flaeche<T>(arbeit: impl FnOnce(MainThreadMarker) -> T) -> T {
-        static SPERRE: Mutex<()> = Mutex::new(());
-        let _wache = SPERRE
-            .lock()
-            .unwrap_or_else(|vergiftet| vergiftet.into_inner());
-        arbeit(unsafe { MainThreadMarker::new_unchecked() })
-    }
-
     /// Der Rahmen, in dem die Proben ihre Flaechen bauen. Die Groesse spielt
     /// keine Rolle: gelesen werden Merkmale und nicht Masse.
     fn probenrahmen() -> NSRect {
@@ -8994,42 +8959,39 @@ mod tests {
     /// **Was sie nicht sieht:** eine kuenftige Fassung von AppKit, die eine
     /// weitere Einstellung beim Einrichten zuruecksetzt, oder eine, die es erst
     /// **nach** `becomeFirstResponder` tut. Beides zeigte sich nur am Buendel.
-    #[test]
-    fn der_zelleneditor_schaltet_die_automatiken_bei_jedem_beginn_wieder_ab() {
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
-            let (feld, _) = felder_der_zeile(&eintraege, 0);
-            let zelleneditor = eintraege
-                .feldeditor_fuer(&feld)
-                .expect("ein Feld der Tabelle bekommt den eigenen Feldeditor");
+    fn der_zelleneditor_schaltet_die_automatiken_bei_jedem_beginn_wieder_ab(mtm: MainThreadMarker) {
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+        let (feld, _) = felder_der_zeile(&eintraege, 0);
+        let zelleneditor = eintraege
+            .feldeditor_fuer(&feld)
+            .expect("ein Feld der Tabelle bekommt den eigenen Feldeditor");
 
-            // Der eine gemessene Schritt des Einrichtens durch AppKit.
-            zelleneditor.setWritingToolsBehavior(NSWritingToolsBehavior::Limited);
-            // SAFETY: `becomeFirstResponder` von NSResponder nimmt kein
-            // Argument und liefert ein BOOL.
-            let angenommen: bool = unsafe { msg_send![&*zelleneditor, becomeFirstResponder] };
-            assert!(
-                angenommen,
-                "ohne Fenster nimmt der Feldeditor den Rang an; sonst misst diese Probe nichts"
-            );
+        // Der eine gemessene Schritt des Einrichtens durch AppKit.
+        zelleneditor.setWritingToolsBehavior(NSWritingToolsBehavior::Limited);
+        // SAFETY: `becomeFirstResponder` von NSResponder nimmt kein
+        // Argument und liefert ein BOOL.
+        let angenommen: bool = unsafe { msg_send![&*zelleneditor, becomeFirstResponder] };
+        assert!(
+            angenommen,
+            "ohne Fenster nimmt der Feldeditor den Rang an; sonst misst diese Probe nichts"
+        );
 
-            for (setzer, einordnung) in EINSTELLUNGEN {
-                if *einordnung != Einordnung::Abgeschaltet {
-                    continue;
-                }
-                let name = merkmalsname(setzer);
-                let Some(wert) = merkmal_falls_vorhanden(&zelleneditor, &name) else {
-                    continue;
-                };
-                assert_eq!(
-                    wert,
-                    aus_bedeutet(setzer),
-                    "{setzer} steht nach dem Beginn einer Bearbeitung nicht auf aus — \
-                     die Zelle veraenderte Getipptes, in secrets.txt vor dem Verschluesseln"
-                );
+        for (setzer, einordnung) in EINSTELLUNGEN {
+            if *einordnung != Einordnung::Abgeschaltet {
+                continue;
             }
-        });
+            let name = merkmalsname(setzer);
+            let Some(wert) = merkmal_falls_vorhanden(&zelleneditor, &name) else {
+                continue;
+            };
+            assert_eq!(
+                wert,
+                aus_bedeutet(setzer),
+                "{setzer} steht nach dem Beginn einer Bearbeitung nicht auf aus — \
+                 die Zelle veraenderte Getipptes, in secrets.txt vor dem Verschluesseln"
+            );
+        }
     }
 
     /// Die beiden gegenstandslosen Einstellungen stehen an KRKs Flaeche
@@ -9054,8 +9016,7 @@ mod tests {
     /// Die dritte — dass der genannte Traeger wirklich aus ist — steht nicht hier,
     /// sondern in [`jeder_verweis_zeigt_auf_beantwortete_einstellungen`], das sie
     /// fuer alle drei verweisenden Antworten in einem Zug prueft.
-    #[test]
-    fn die_gegenstandslosen_stehen_unberuehrt_und_ihr_traeger_steht_aus() {
+    fn die_gegenstandslosen_stehen_unberuehrt_und_ihr_traeger_steht_aus(mtm: MainThreadMarker) {
         let gegenstandslos: Vec<&str> = EINSTELLUNGEN
             .iter()
             .filter(|(_, einordnung)| matches!(einordnung, Einordnung::Gegenstandslos(_)))
@@ -9066,35 +9027,33 @@ mod tests {
             "ohne eine gegenstandslose Einstellung misst diese Probe nichts"
         );
 
-        an_einer_flaeche(|mtm| {
-            let (_rolle, unsere) = textflaeche_bauen(mtm, probenrahmen());
-            let frische = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
-            for setzer in gegenstandslos {
-                let name = merkmalsname(setzer);
-                let Some(unser_wert) = merkmal_falls_vorhanden(&unsere, &name) else {
-                    let _ = writeln!(
-                        std::io::stderr(),
-                        "Hinweis aus {}: diese Laufzeit fuehrt {setzer} nicht. Eine \
-                         Einstellung, die es nicht gibt, laesst auch nichts zu.",
-                        module_path!()
-                    );
-                    continue;
-                };
-                assert_eq!(
-                    unser_wert,
-                    merkmal(&frische, &name),
-                    "{setzer} steht an KRKs Flaeche anders als an einer frischen — dann setzt \
-                     textflaeche_bauen sie doch, und sie gehoert nicht mehr auf \
-                     Gegenstandslos"
+        let (_rolle, unsere) = textflaeche_bauen(mtm, probenrahmen());
+        let frische = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
+        for setzer in gegenstandslos {
+            let name = merkmalsname(setzer);
+            let Some(unser_wert) = merkmal_falls_vorhanden(&unsere, &name) else {
+                let _ = writeln!(
+                    std::io::stderr(),
+                    "Hinweis aus {}: diese Laufzeit fuehrt {setzer} nicht. Eine \
+                     Einstellung, die es nicht gibt, laesst auch nichts zu.",
+                    module_path!()
                 );
-                assert_eq!(
-                    unser_wert, 0,
-                    "{setzer} steht nicht mehr auf seinem Vorgabewert Null. Die Einordnung \
-                     Gegenstandslos haengt daran, dass die Null 'das System waehlt' heisst \
-                     und es keinen Wert gibt, der nichts zulaesst — das ist nachzupruefen"
-                );
-            }
-        });
+                continue;
+            };
+            assert_eq!(
+                unser_wert,
+                merkmal(&frische, &name),
+                "{setzer} steht an KRKs Flaeche anders als an einer frischen — dann setzt \
+                 textflaeche_bauen sie doch, und sie gehoert nicht mehr auf \
+                 Gegenstandslos"
+            );
+            assert_eq!(
+                unser_wert, 0,
+                "{setzer} steht nicht mehr auf seinem Vorgabewert Null. Die Einordnung \
+                 Gegenstandslos haengt daran, dass die Null 'das System waehlt' heisst \
+                 und es keinen Wert gibt, der nichts zulaesst — das ist nachzupruefen"
+            );
+        }
     }
 
     /// Die gebaute Flaeche steht auf TextKit 1, und daran haengt der Rueckweg des
@@ -9113,25 +9072,21 @@ mod tests {
     /// Text sichert, weil `Editormodell::sichern` den nie nachgezogenen Stand
     /// schreibt.
     ///
-    /// Sie liest zwei Merkmale und baut kein Fenster; damit bleibt sie in dem
-    /// Bereich, den [`an_einer_flaeche`] gemessen hat.
-    #[test]
-    fn die_gebaute_flaeche_steht_auf_textkit_1() {
-        an_einer_flaeche(|mtm| {
-            let (_rolle, unsere) = textflaeche_bauen(mtm, probenrahmen());
-            assert!(
-                unsere.textLayoutManager().is_none(),
-                "die Flaeche aus textflaeche_bauen steht auf TextKit 2. Dann verschickt ein \
-                 `undo` kein textDidChange:, der Rueckweg ins Editormodell faellt aus, und ein \
-                 cmd+s sichert den zurueckgenommenen Text (260810-1243). Der Rueckfall auf \
-                 TextKit 1 gehoert in textflaeche_bauen und ist dort begruendet"
-            );
-            // SAFETY: Der Verwalter gehoert der Flaeche; er wird nur erfragt.
-            assert!(
-                unsafe { unsere.layoutManager() }.is_some(),
-                "die Flaeche fuehrt weder den einen noch den anderen Layoutverwalter"
-            );
-        });
+    /// Sie liest zwei Merkmale und baut kein Fenster.
+    fn die_gebaute_flaeche_steht_auf_textkit_1(mtm: MainThreadMarker) {
+        let (_rolle, unsere) = textflaeche_bauen(mtm, probenrahmen());
+        assert!(
+            unsere.textLayoutManager().is_none(),
+            "die Flaeche aus textflaeche_bauen steht auf TextKit 2. Dann verschickt ein \
+             `undo` kein textDidChange:, der Rueckweg ins Editormodell faellt aus, und ein \
+             cmd+s sichert den zurueckgenommenen Text (260810-1243). Der Rueckfall auf \
+             TextKit 1 gehoert in textflaeche_bauen und ist dort begruendet"
+        );
+        // SAFETY: Der Verwalter gehoert der Flaeche; er wird nur erfragt.
+        assert!(
+            unsafe { unsere.layoutManager() }.is_some(),
+            "die Flaeche fuehrt weder den einen noch den anderen Layoutverwalter"
+        );
     }
 
     /// Die Kopplung der zehn Paare, nachgemessen statt behauptet.
@@ -9146,8 +9101,7 @@ mod tests {
     ///
     /// Je Paar zwei Richtungen und je Richtung eine eigene Flaeche, damit die
     /// zweite Messung nicht auf dem Ergebnis der ersten sitzt.
-    #[test]
-    fn jede_zweite_tuer_und_ihre_erste_legen_einander_um() {
+    fn jede_zweite_tuer_und_ihre_erste_legen_einander_um(mtm: MainThreadMarker) {
         let paare: Vec<(&str, &str)> = EINSTELLUNGEN
             .iter()
             .filter_map(|(name, einordnung)| match einordnung {
@@ -9157,31 +9111,29 @@ mod tests {
             .collect();
         assert_eq!(paare.len(), 10, "die Aufstellung fuehrt zehn Paare");
 
-        an_einer_flaeche(|mtm| {
-            for (zweite, erste) in paare {
-                let zweite_tuer = merkmalsname(zweite);
-                let erste_tuer = merkmalsname(erste);
+        for (zweite, erste) in paare {
+            let zweite_tuer = merkmalsname(zweite);
+            let erste_tuer = merkmalsname(erste);
 
-                let hin = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
-                merkmal_setzen(&hin, &erste_tuer, aus_bedeutet(erste));
-                assert_eq!(
-                    merkmal(&hin, &zweite_tuer),
-                    NSTextInputTraitType::No.0,
-                    "{erste} auf aus laesst {zweite} nicht auf No stehen — die beiden sind \
-                     entkoppelt, und dann braucht {zweite} eine eigene Zeile in \
-                     textflaeche_bauen"
-                );
+            let hin = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
+            merkmal_setzen(&hin, &erste_tuer, aus_bedeutet(erste));
+            assert_eq!(
+                merkmal(&hin, &zweite_tuer),
+                NSTextInputTraitType::No.0,
+                "{erste} auf aus laesst {zweite} nicht auf No stehen — die beiden sind \
+                 entkoppelt, und dann braucht {zweite} eine eigene Zeile in \
+                 textflaeche_bauen"
+            );
 
-                let her = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
-                merkmal_setzen(&her, &zweite_tuer, NSTextInputTraitType::No.0);
-                assert_eq!(
-                    merkmal(&her, &erste_tuer),
-                    aus_bedeutet(erste),
-                    "{zweite} auf No laesst {erste} nicht auf aus stehen — die Kopplung \
-                     traegt nur in eine Richtung, und die Aufstellung behauptet beide"
-                );
-            }
-        });
+            let her = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
+            merkmal_setzen(&her, &zweite_tuer, NSTextInputTraitType::No.0);
+            assert_eq!(
+                merkmal(&her, &erste_tuer),
+                aus_bedeutet(erste),
+                "{zweite} auf No laesst {erste} nicht auf aus stehen — die Kopplung \
+                 traegt nur in eine Richtung, und die Aufstellung behauptet beide"
+            );
+        }
     }
 
     /// Zwei Tueren zu einer Einstellung sind nicht derselbe Speicher, und diese
@@ -9201,8 +9153,7 @@ mod tests {
     /// Die erste Messung prueft die Probe daran, dass die Vorgabe **nicht bei
     /// allen Paaren gleich** ausfaellt; welche zwei aus der Reihe fallen, ist
     /// eine Systemeigenschaft und nicht Gegenstand einer Zusicherung.
-    #[test]
-    fn die_erste_tuer_kann_default_weder_herstellen_noch_anzeigen() {
+    fn die_erste_tuer_kann_default_weder_herstellen_noch_anzeigen(mtm: MainThreadMarker) {
         let paare: Vec<(&str, &str)> = EINSTELLUNGEN
             .iter()
             .filter_map(|(name, einordnung)| match einordnung {
@@ -9211,7 +9162,7 @@ mod tests {
             })
             .collect();
 
-        let vorgaben = an_einer_flaeche(|mtm| {
+        let vorgaben = {
             let mut vorgaben = Vec::new();
             for (zweite, erste) in paare {
                 let zweite_tuer = merkmalsname(zweite);
@@ -9231,7 +9182,7 @@ mod tests {
                 vorgaben.push(gelesen);
             }
             vorgaben
-        });
+        };
 
         assert!(
             vorgaben.iter().any(|wert| *wert != vorgaben[0]),
@@ -9349,37 +9300,34 @@ mod tests {
     /// [`std::io::stderr`] und nicht ueber `eprintln!`, aus demselben Grund wie bei
     /// [`keine_unbekannte_einstellung_steht_an_der_textflaeche`]: `libtest` faengt
     /// die Druckmakros ab und gibt sie bei einer gruenen Probe nicht aus.
-    #[test]
-    fn der_vorgabewert_der_schreibwerkzeuge_ueberlaesst_dem_system_die_wahl() {
-        an_einer_flaeche(|mtm| {
-            let frische = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
-            assert_eq!(
-                merkmal(&frische, "writingToolsBehavior"),
-                NSWritingToolsBehavior::Default.0,
-                "eine frische NSTextView steht nicht mehr auf Default. Stuende sie ab Werk \
-                 auf None, waere die Zeile in automatiken_abschalten ueberfluessig und die \
-                 Entscheidung aus dem Datensatz gegenstandslos geworden"
-            );
-            match merkmal_falls_vorhanden(&frische, "allowsWritingToolsAffordance") {
-                Some(angebotsflaeche) => assert_ne!(
-                    angebotsflaeche, 0,
-                    "die Angebotsflaeche steht an einer frischen Flaeche schon aus — dann \
-                     nimmt die Zeile in automatiken_abschalten nichts fort, und der Grund, aus \
-                     dem der Datensatz sie mitfuehrt, ist ein anderer geworden"
-                ),
-                None => {
-                    let _ = writeln!(
-                        std::io::stderr(),
-                        "Hinweis aus {}: diese Laufzeit fuehrt allowsWritingToolsAffordance an \
-                         NSTextView nicht. Das SDK fuehrt sie nur an NSTextField und erst ab \
-                         macOS 15.4; die Untergrenze des Buendels ist 15.0. C4 ist davon nicht \
-                         beruehrt — was es nicht gibt, bietet nichts an. Wer aufraeumt, streicht \
-                         den Eintrag aus EINSTELLUNGEN.",
-                        module_path!()
-                    );
-                }
+    fn der_vorgabewert_der_schreibwerkzeuge_ueberlaesst_dem_system_die_wahl(mtm: MainThreadMarker) {
+        let frische = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
+        assert_eq!(
+            merkmal(&frische, "writingToolsBehavior"),
+            NSWritingToolsBehavior::Default.0,
+            "eine frische NSTextView steht nicht mehr auf Default. Stuende sie ab Werk \
+             auf None, waere die Zeile in automatiken_abschalten ueberfluessig und die \
+             Entscheidung aus dem Datensatz gegenstandslos geworden"
+        );
+        match merkmal_falls_vorhanden(&frische, "allowsWritingToolsAffordance") {
+            Some(angebotsflaeche) => assert_ne!(
+                angebotsflaeche, 0,
+                "die Angebotsflaeche steht an einer frischen Flaeche schon aus — dann \
+                 nimmt die Zeile in automatiken_abschalten nichts fort, und der Grund, aus \
+                 dem der Datensatz sie mitfuehrt, ist ein anderer geworden"
+            ),
+            None => {
+                let _ = writeln!(
+                    std::io::stderr(),
+                    "Hinweis aus {}: diese Laufzeit fuehrt allowsWritingToolsAffordance an \
+                     NSTextView nicht. Das SDK fuehrt sie nur an NSTextField und erst ab \
+                     macOS 15.4; die Untergrenze des Buendels ist 15.0. C4 ist davon nicht \
+                     beruehrt — was es nicht gibt, bietet nichts an. Wer aufraeumt, streicht \
+                     den Eintrag aus EINSTELLUNGEN.",
+                    module_path!()
+                );
             }
-        });
+        }
     }
 
     /// Die beiden Defekte, an der Stelle festgehalten, an der sie entstanden
@@ -9940,40 +9888,37 @@ mod tests {
     /// Die Tabelle leitet ihre Zeilen aus dem Stand ab, beschneidet die
     /// Auswahl, wenn eine Zeile faellt, und nimmt keine Stelle hinter der
     /// letzten an.
-    #[test]
-    fn die_tabelle_zeigt_die_zeilen_des_standes() {
+    fn die_tabelle_zeigt_die_zeilen_des_standes(mtm: MainThreadMarker) {
         use krk_core::heimordner::eintraege::aufgaben;
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            assert!(eintraege.rolle().isHidden(), "sie entsteht ausgeblendet");
-            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
-            assert_eq!(
-                eintraege.tabelle().numberOfRows(),
-                2,
-                "Vorspann und fremde Zeile sind keine Zeilen"
-            );
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        assert!(eintraege.rolle().isHidden(), "sie entsteht ausgeblendet");
+        eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+        assert_eq!(
+            eintraege.tabelle().numberOfRows(),
+            2,
+            "Vorspann und fremde Zeile sind keine Zeilen"
+        );
 
-            eintraege.auswahl_setzen(Some(1));
-            assert_eq!(eintraege.tabelle().selectedRow(), 1);
-            eintraege.auswahl_setzen(Some(2));
-            assert_eq!(
-                eintraege.tabelle().selectedRow(),
-                1,
-                "eine Stelle hinter der letzten Zeile laesst die Auswahl stehen"
-            );
+        eintraege.auswahl_setzen(Some(1));
+        assert_eq!(eintraege.tabelle().selectedRow(), 1);
+        eintraege.auswahl_setzen(Some(2));
+        assert_eq!(
+            eintraege.tabelle().selectedRow(),
+            1,
+            "eine Stelle hinter der letzten Zeile laesst die Auswahl stehen"
+        );
 
-            let ohne_letzte = aufgaben::loeschen(AUFGABEN, 1).expect("die zweite Aufgabe steht");
-            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(&ohne_letzte.text));
-            assert_eq!(eintraege.tabelle().numberOfRows(), 1);
-            assert_eq!(
-                eintraege.tabelle().selectedRow(),
-                0,
-                "die Auswahl rueckt auf die neue letzte Zeile"
-            );
+        let ohne_letzte = aufgaben::loeschen(AUFGABEN, 1).expect("die zweite Aufgabe steht");
+        eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(&ohne_letzte.text));
+        assert_eq!(eintraege.tabelle().numberOfRows(), 1);
+        assert_eq!(
+            eintraege.tabelle().selectedRow(),
+            0,
+            "die Auswahl rueckt auf die neue letzte Zeile"
+        );
 
-            eintraege.zeilen_zeigen(Zeilen::Aufgaben(Vec::new()));
-            assert_eq!(eintraege.tabelle().numberOfRows(), 0);
-        });
+        eintraege.zeilen_zeigen(Zeilen::Aufgaben(Vec::new()));
+        assert_eq!(eintraege.tabelle().numberOfRows(), 0);
     }
 
     /// Textflaeche und Tabelle finden ueber die Antwortkette **denselben**
@@ -9982,47 +9927,44 @@ mod tests {
     /// jeden Umbau zuruecknimmt: `NSWindow` beantwortet `undo:` mit dem
     /// Verwalter des Ersthelfers (Kopf von `rueckgaengigstapel_leeren`), und es
     /// gibt nur einen.
-    #[test]
-    fn textflaeche_und_tabelle_finden_denselben_verwalter() {
-        an_einer_flaeche(|mtm| {
-            let sicht = Editorsicht::neu(mtm, probenrahmen());
-            let (textrolle, text) = textflaeche_bauen(mtm, probenrahmen());
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            sicht.addSubview(&textrolle);
-            sicht.addSubview(eintraege.rolle());
-            assert!(
-                text.undoManager().is_none(),
-                "die Voraussetzung: ohne Kette gibt es keinen Verwalter"
-            );
+    fn textflaeche_und_tabelle_finden_denselben_verwalter(mtm: MainThreadMarker) {
+        let sicht = Editorsicht::neu(mtm, probenrahmen());
+        let (textrolle, text) = textflaeche_bauen(mtm, probenrahmen());
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        sicht.addSubview(&textrolle);
+        sicht.addSubview(eintraege.rolle());
+        assert!(
+            text.undoManager().is_none(),
+            "die Voraussetzung: ohne Kette gibt es keinen Verwalter"
+        );
 
-            let verwalter = NSUndoManager::new(mtm);
-            let halter = Verwalterhalter::alloc(mtm).set_ivars(verwalter.clone());
-            // SAFETY: `init` von NSObject, die NSResponder erbt, hat die hier
-            // angenommene Signatur.
-            let halter: Retained<Verwalterhalter> = unsafe { msg_send![super(halter), init] };
-            // SAFETY: Die Sicht hat keine Oberansicht und damit kein naechstes
-            // Glied; der Halter hat selbst keines, ein Ring entsteht nicht, und
-            // er lebt bis zum Ende dieser Probe.
-            unsafe { sicht.setNextResponder(Some(&halter)) };
+        let verwalter = NSUndoManager::new(mtm);
+        let halter = Verwalterhalter::alloc(mtm).set_ivars(verwalter.clone());
+        // SAFETY: `init` von NSObject, die NSResponder erbt, hat die hier
+        // angenommene Signatur.
+        let halter: Retained<Verwalterhalter> = unsafe { msg_send![super(halter), init] };
+        // SAFETY: Die Sicht hat keine Oberansicht und damit kein naechstes
+        // Glied; der Halter hat selbst keines, ein Ring entsteht nicht, und
+        // er lebt bis zum Ende dieser Probe.
+        unsafe { sicht.setNextResponder(Some(&halter)) };
 
-            let von_text = text.undoManager().expect("die Textflaeche findet ihn");
-            let von_tabelle = eintraege
-                .tabelle()
-                .undoManager()
-                .expect("die Tabelle findet ihn");
-            assert!(von_text.isEqual(Some(&verwalter)));
-            assert!(
-                von_tabelle.isEqual(Some(&verwalter)),
-                "ein Verwalter und kein zweiter Stapel"
-            );
-            eintraege.rolle().setHidden(false);
-            textrolle.setHidden(true);
-            assert!(
-                text.undoManager()
-                    .is_some_and(|v| v.isEqual(Some(&verwalter))),
-                "auch ausgeblendet bleibt die Textflaeche an demselben Verwalter"
-            );
-        });
+        let von_text = text.undoManager().expect("die Textflaeche findet ihn");
+        let von_tabelle = eintraege
+            .tabelle()
+            .undoManager()
+            .expect("die Tabelle findet ihn");
+        assert!(von_text.isEqual(Some(&verwalter)));
+        assert!(
+            von_tabelle.isEqual(Some(&verwalter)),
+            "ein Verwalter und kein zweiter Stapel"
+        );
+        eintraege.rolle().setHidden(false);
+        textrolle.setHidden(true);
+        assert!(
+            text.undoManager()
+                .is_some_and(|v| v.isEqual(Some(&verwalter))),
+            "auch ausgeblendet bleibt die Textflaeche an demselben Verwalter"
+        );
     }
 
     /// Jede Handlung des Kerns an `tasks.txt` ist ueber einen [`Umkehrpunkt`]
@@ -10386,39 +10328,38 @@ mod tests {
     /// nicht nach einer Meldung ueber den Beginn. Der Feldeditor eines fremden
     /// Textfeldes, eine gewoehnliche Textflaeche mit demselben Delegierten und
     /// die Textflaeche des Editors werden nicht erkannt.
-    #[test]
-    fn die_laufende_zelle_wird_vor_dem_ersten_zeichen_erkannt_und_ein_fremdes_feld_nicht() {
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
-            let (feld, _) = felder_der_zeile(&eintraege, 1);
+    fn die_laufende_zelle_wird_vor_dem_ersten_zeichen_erkannt_und_ein_fremdes_feld_nicht(
+        mtm: MainThreadMarker,
+    ) {
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+        let (feld, _) = felder_der_zeile(&eintraege, 1);
 
-            let feldeditor = feldeditor_fuer(mtm, &feld);
-            assert_eq!(
-                eintraege.laufende_zelle(&feldeditor),
-                Some(eintragsansicht::Zelle {
-                    stelle: 1,
-                    spalte: 0
-                }),
-                "ein Feldeditor, dessen Delegierter das Feld der zweiten Zeile ist"
-            );
+        let feldeditor = feldeditor_fuer(mtm, &feld);
+        assert_eq!(
+            eintraege.laufende_zelle(&feldeditor),
+            Some(eintragsansicht::Zelle {
+                stelle: 1,
+                spalte: 0
+            }),
+            "ein Feldeditor, dessen Delegierter das Feld der zweiten Zeile ist"
+        );
 
-            let fremd = NSTextField::textFieldWithString(ns_string!("Blatt"), mtm);
-            let fremder_editor = feldeditor_fuer(mtm, &fremd);
-            assert_eq!(
-                eintraege.laufende_zelle(&fremder_editor),
-                None,
-                "ein Textfeld ausserhalb der Tabelle, etwa in einem Blatt"
-            );
+        let fremd = NSTextField::textFieldWithString(ns_string!("Blatt"), mtm);
+        let fremder_editor = feldeditor_fuer(mtm, &fremd);
+        assert_eq!(
+            eintraege.laufende_zelle(&fremder_editor),
+            None,
+            "ein Textfeld ausserhalb der Tabelle, etwa in einem Blatt"
+        );
 
-            let keine_feldeditorin = feldeditor_fuer(mtm, &feld);
-            keine_feldeditorin.setFieldEditor(false);
-            assert_eq!(eintraege.laufende_zelle(&keine_feldeditorin), None);
+        let keine_feldeditorin = feldeditor_fuer(mtm, &feld);
+        keine_feldeditorin.setFieldEditor(false);
+        assert_eq!(eintraege.laufende_zelle(&keine_feldeditorin), None);
 
-            let (_rolle, textflaeche) = textflaeche_bauen(mtm, probenrahmen());
-            assert_eq!(eintraege.laufende_zelle(&textflaeche), None);
-            assert_eq!(eintraege.laufende_zelle(eintraege.tabelle()), None);
-        });
+        let (_rolle, textflaeche) = textflaeche_bauen(mtm, probenrahmen());
+        assert_eq!(eintraege.laufende_zelle(&textflaeche), None);
+        assert_eq!(eintraege.laufende_zelle(eintraege.tabelle()), None);
     }
 
     /// Die Spalte im Buch der aufzeichnenden Wege: nichts fuer die erste,
@@ -10479,40 +10420,39 @@ mod tests {
     /// Die zwei Delegiertenwege: die Pruefung fragt mit Zeile und getipptem
     /// Text, ihr Nein bleibt ein Nein; das Ende schreibt genau einmal fest und
     /// zeigt danach die Ableitung, nicht den getippten Text.
-    #[test]
-    fn eine_endende_zelle_wird_geprueft_einmal_festgeschrieben_und_zeigt_die_ableitung() {
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
-            let (feld, _) = felder_der_zeile(&eintraege, 0);
+    fn eine_endende_zelle_wird_geprueft_einmal_festgeschrieben_und_zeigt_die_ableitung(
+        mtm: MainThreadMarker,
+    ) {
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+        let (feld, _) = felder_der_zeile(&eintraege, 0);
 
-            let (wege, buch) = aufzeichnende_wege(false);
-            eintraege.wege_setzen(wege);
-            assert!(
-                !eintraege.zelle_darf_enden(&feld, "a\nb"),
-                "ein Nein der Pruefung laesst die Zelle in Bearbeitung"
-            );
+        let (wege, buch) = aufzeichnende_wege(false);
+        eintraege.wege_setzen(wege);
+        assert!(
+            !eintraege.zelle_darf_enden(&feld, "a\nb"),
+            "ein Nein der Pruefung laesst die Zelle in Bearbeitung"
+        );
 
-            let (wege, buch_ja) = aufzeichnende_wege(true);
-            eintraege.wege_setzen(wege);
-            assert!(eintraege.zelle_darf_enden(&feld, "Brot und Butter"));
-            feld.setStringValue(ns_string!("Brot und Butter"));
-            eintraege.zelle_geendet(&feld);
-            assert_eq!(*buch.borrow(), vec!["pruefen 0 a\nb".to_owned()]);
-            assert_eq!(
-                *buch_ja.borrow(),
-                vec![
-                    "pruefen 0 Brot und Butter".to_owned(),
-                    "festschreiben 0 Brot und Butter".to_owned()
-                ],
-                "genau ein Festschreiben, mit dem Text des Feldes"
-            );
-            assert_eq!(
-                feld.stringValue().to_string(),
-                "Brot",
-                "ohne Umbau zeigt die Zelle den abgeleiteten Text"
-            );
-        });
+        let (wege, buch_ja) = aufzeichnende_wege(true);
+        eintraege.wege_setzen(wege);
+        assert!(eintraege.zelle_darf_enden(&feld, "Brot und Butter"));
+        feld.setStringValue(ns_string!("Brot und Butter"));
+        eintraege.zelle_geendet(&feld);
+        assert_eq!(*buch.borrow(), vec!["pruefen 0 a\nb".to_owned()]);
+        assert_eq!(
+            *buch_ja.borrow(),
+            vec![
+                "pruefen 0 Brot und Butter".to_owned(),
+                "festschreiben 0 Brot und Butter".to_owned()
+            ],
+            "genau ein Festschreiben, mit dem Text des Feldes"
+        );
+        assert_eq!(
+            feld.stringValue().to_string(),
+            "Brot",
+            "ohne Umbau zeigt die Zelle den abgeleiteten Text"
+        );
     }
 
     /// `zelle_abbrechen` verwirft die Aufgabenzelle (Moeglichkeit 2 von
@@ -10524,8 +10464,7 @@ mod tests {
     /// ohne zu fragen, und das Ende schreibt nichts fest. **Gelesen am Rumpf**,
     /// weil der Wechsel ein Fenster braucht; ausserhalb des Wechsels gilt die
     /// Pruefung wieder, und das faehrt der zweite Teil an einem echten Feld.
-    #[test]
-    fn esc_verwirft_die_aufgabenzelle_und_laesst_den_stand() {
+    fn esc_verwirft_die_aufgabenzelle_und_laesst_den_stand(mtm: MainThreadMarker) {
         use super::super::anwendung::quelltextproben::{datei, rumpf};
         let quelle = datei("krk-ui/src/appkit/eintragsansicht.rs");
         let verwerfen = rumpf(&quelle, "bearbeitung_verwerfen");
@@ -10588,45 +10527,42 @@ mod tests {
             );
         }
 
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
-            let (feld, _) = felder_der_zeile(&eintraege, 1);
-            let (wege, buch) = aufzeichnende_wege(false);
-            eintraege.wege_setzen(wege);
-            assert!(
-                !eintraege.zelle_darf_enden(&feld, "vertippt"),
-                "ausserhalb des Verwerfens fragt die Pruefung, und ihr Nein gilt"
-            );
-            assert_eq!(buch.borrow().len(), 1);
-        });
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+        let (feld, _) = felder_der_zeile(&eintraege, 1);
+        let (wege, buch) = aufzeichnende_wege(false);
+        eintraege.wege_setzen(wege);
+        assert!(
+            !eintraege.zelle_darf_enden(&feld, "vertippt"),
+            "ausserhalb des Verwerfens fragt die Pruefung, und ihr Nein gilt"
+        );
+        assert_eq!(buch.borrow().len(), 1);
     }
 
     /// Das Ankreuzfeld ist eingeschaltet, zielt auf die Ansicht und ruft den
     /// Weg `abhaken` mit **seiner** Zeile; danach zeigt es die Ableitung und
     /// nicht den Klick.
-    #[test]
-    fn das_ankreuzfeld_ruft_abhaken_mit_seiner_zeile_und_zeigt_danach_die_ableitung() {
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
-            let (_, kasten) = felder_der_zeile(&eintraege, 1);
-            assert!(kasten.isEnabled(), "das Kaestchen ist bedienbar");
-            assert_eq!(kasten.action(), Some(sel!(kastenGeklickt:)));
-            let (wege, buch) = aufzeichnende_wege(true);
-            eintraege.wege_setzen(wege);
+    fn das_ankreuzfeld_ruft_abhaken_mit_seiner_zeile_und_zeigt_danach_die_ableitung(
+        mtm: MainThreadMarker,
+    ) {
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+        let (_, kasten) = felder_der_zeile(&eintraege, 1);
+        assert!(kasten.isEnabled(), "das Kaestchen ist bedienbar");
+        assert_eq!(kasten.action(), Some(sel!(kastenGeklickt:)));
+        let (wege, buch) = aufzeichnende_wege(true);
+        eintraege.wege_setzen(wege);
 
-            kasten.setState(objc2_app_kit::NSControlStateValueOff);
-            // SAFETY: Die Aktion nimmt den Absender; das ist der Weg, den AppKit
-            // beim Klick nimmt.
-            let _: () = unsafe { msg_send![&*eintraege, kastenGeklickt: &*kasten] };
-            assert_eq!(*buch.borrow(), vec!["abhaken 1".to_owned()]);
-            assert_eq!(
-                kasten.state(),
-                objc2_app_kit::NSControlStateValueOn,
-                "die zweite Aufgabe ist erledigt, und das zeigt das Kaestchen wieder"
-            );
-        });
+        kasten.setState(objc2_app_kit::NSControlStateValueOff);
+        // SAFETY: Die Aktion nimmt den Absender; das ist der Weg, den AppKit
+        // beim Klick nimmt.
+        let _: () = unsafe { msg_send![&*eintraege, kastenGeklickt: &*kasten] };
+        assert_eq!(*buch.borrow(), vec!["abhaken 1".to_owned()]);
+        assert_eq!(
+            kasten.state(),
+            objc2_app_kit::NSControlStateValueOn,
+            "die zweite Aufgabe ist erledigt, und das zeigt das Kaestchen wieder"
+        );
     }
 
     /// Der Klick ins Ankreuzfeld holt den Fokus in die Tabelle, wie ein Klick
@@ -10641,8 +10577,7 @@ mod tests {
     /// schon bei der Tabelle liegt. Dort sagt sie ja fuer die Tabelle und
     /// alles unter ihr, das Kaestchen eingeschlossen, und nein fuer jede
     /// fremde Ansicht und fuer keinen Ersthelfer.
-    #[test]
-    fn der_klick_ins_ankreuzfeld_holt_den_fokus_in_die_tabelle() {
+    fn der_klick_ins_ankreuzfeld_holt_den_fokus_in_die_tabelle(mtm: MainThreadMarker) {
         use super::super::anwendung::quelltextproben::{datei, rumpf};
         let quelle = datei("krk-ui/src/appkit/eintragsansicht.rs");
         let klick = rumpf(&quelle, "kasten_geklickt");
@@ -10663,23 +10598,21 @@ mod tests {
         assert!(frage < wechsel);
         assert!(!holen.contains(concat!("set", "Hidden(")));
 
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
-            let (feld, kasten) = felder_der_zeile(&eintraege, 1);
-            let tabelle: &NSResponder = eintraege.tabelle();
-            let (kasten, feld): (&NSResponder, &NSResponder) = (&kasten, &feld);
-            assert!(eintraege.haelt_den_fokus(Some(tabelle)));
-            assert!(eintraege.haelt_den_fokus(Some(kasten)));
-            assert!(eintraege.haelt_den_fokus(Some(feld)));
-            let fremd = NSView::initWithFrame(NSView::alloc(mtm), probenrahmen());
-            let fremd: &NSResponder = &fremd;
-            assert!(
-                !eintraege.haelt_den_fokus(Some(fremd)),
-                "eine Ansicht ausserhalb, etwa die Dateiliste, haelt ihn nicht"
-            );
-            assert!(!eintraege.haelt_den_fokus(None));
-        });
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+        let (feld, kasten) = felder_der_zeile(&eintraege, 1);
+        let tabelle: &NSResponder = eintraege.tabelle();
+        let (kasten, feld): (&NSResponder, &NSResponder) = (&kasten, &feld);
+        assert!(eintraege.haelt_den_fokus(Some(tabelle)));
+        assert!(eintraege.haelt_den_fokus(Some(kasten)));
+        assert!(eintraege.haelt_den_fokus(Some(feld)));
+        let fremd = NSView::initWithFrame(NSView::alloc(mtm), probenrahmen());
+        let fremd: &NSResponder = &fremd;
+        assert!(
+            !eintraege.haelt_den_fokus(Some(fremd)),
+            "eine Ansicht ausserhalb, etwa die Dateiliste, haelt ihn nicht"
+        );
+        assert!(!eintraege.haelt_den_fokus(None));
     }
 
     /// Nach dem Neuladen ist eine Zeile gewaehlt, sobald es eine gibt: die
@@ -10688,53 +10621,50 @@ mod tests {
     /// (`issues/260926-1737_*_…`). Die Regel selbst haelt
     /// `ohne_auswahl_ist_nach_dem_neuladen_die_erste_zeile_gewaehlt` in
     /// [`super::super::eintragsansicht`]; hier wird sie an der Tabelle gefahren.
-    #[test]
-    fn nach_dem_neuladen_ist_eine_zeile_gewaehlt() {
+    fn nach_dem_neuladen_ist_eine_zeile_gewaehlt(mtm: MainThreadMarker) {
         use krk_core::heimordner::eintraege::aufgaben;
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
-            assert_eq!(
-                eintraege.tabelle().selectedRow(),
-                0,
-                "nach dem Oeffnen ist die erste Zeile gewaehlt"
-            );
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+        assert_eq!(
+            eintraege.tabelle().selectedRow(),
+            0,
+            "nach dem Oeffnen ist die erste Zeile gewaehlt"
+        );
 
-            eintraege.auswahl_setzen(Some(1));
-            let abgehakt = aufgaben::abhaken(AUFGABEN, 0).expect("die erste Aufgabe steht");
-            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(&abgehakt.text));
-            assert_eq!(
-                eintraege.tabelle().selectedRow(),
-                1,
-                "eine bestehende Auswahl bleibt"
-            );
+        eintraege.auswahl_setzen(Some(1));
+        let abgehakt = aufgaben::abhaken(AUFGABEN, 0).expect("die erste Aufgabe steht");
+        eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(&abgehakt.text));
+        assert_eq!(
+            eintraege.tabelle().selectedRow(),
+            1,
+            "eine bestehende Auswahl bleibt"
+        );
 
-            let neustand = aufgaben::abhaken(&abgehakt.text, 1).expect("die zweite Aufgabe steht");
-            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(&neustand.text));
-            eintraege.auswahl_setzen(neustand.auswahl);
-            assert_eq!(
-                eintraege.tabelle().selectedRow(),
-                1,
-                "die Auswahl der Handlung gilt"
-            );
+        let neustand = aufgaben::abhaken(&abgehakt.text, 1).expect("die zweite Aufgabe steht");
+        eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(&neustand.text));
+        eintraege.auswahl_setzen(neustand.auswahl);
+        assert_eq!(
+            eintraege.tabelle().selectedRow(),
+            1,
+            "die Auswahl der Handlung gilt"
+        );
 
-            eintraege
-                .tabelle()
-                .selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::new(), false);
-            eintraege.zeilen_zeigen(Zeilen::Notizen(eintragsansicht::notizzeilen(NOTIZEN)));
-            assert_eq!(
-                eintraege.tabelle().selectedRow(),
-                0,
-                "auch nach einem Wechsel der Art"
-            );
+        eintraege
+            .tabelle()
+            .selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::new(), false);
+        eintraege.zeilen_zeigen(Zeilen::Notizen(eintragsansicht::notizzeilen(NOTIZEN)));
+        assert_eq!(
+            eintraege.tabelle().selectedRow(),
+            0,
+            "auch nach einem Wechsel der Art"
+        );
 
-            eintraege.zeilen_zeigen(Zeilen::Aufgaben(Vec::new()));
-            assert_eq!(
-                eintraege.tabelle().selectedRow(),
-                -1,
-                "die leere Tabelle waehlt nichts"
-            );
-        });
+        eintraege.zeilen_zeigen(Zeilen::Aufgaben(Vec::new()));
+        assert_eq!(
+            eintraege.tabelle().selectedRow(),
+            -1,
+            "die leere Tabelle waehlt nichts"
+        );
     }
 
     /// Ein Doppelklick unter die Zeilen, auch in die leere Tabelle, ruft den
@@ -10744,32 +10674,29 @@ mod tests {
     /// Ohne diesen Weg hatte eine leere `tasks.txt` oder `secrets.txt` fuer
     /// die Maus nichts anzuklicken, und mit einer `keymap.toml` von vor diesen
     /// Befehlen auch keine Taste.
-    #[test]
-    fn ein_doppelklick_unter_die_zeilen_legt_an_und_die_kopfzeile_nicht() {
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            eintraege.zeilen_zeigen(Zeilen::Notizen(Vec::new()));
-            assert_eq!(
-                eintraege.tabelle().numberOfRows(),
-                0,
-                "die Tabelle ist leer"
-            );
-            let (wege, buch) = aufzeichnende_wege(true);
-            eintraege.wege_setzen(wege);
+    fn ein_doppelklick_unter_die_zeilen_legt_an_und_die_kopfzeile_nicht(mtm: MainThreadMarker) {
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        eintraege.zeilen_zeigen(Zeilen::Notizen(Vec::new()));
+        assert_eq!(
+            eintraege.tabelle().numberOfRows(),
+            0,
+            "die Tabelle ist leer"
+        );
+        let (wege, buch) = aufzeichnende_wege(true);
+        eintraege.wege_setzen(wege);
 
-            eintraege.doppelklick_ausfuehren(eintragsansicht::doppelklick(None, -1, true));
-            assert_eq!(*buch.borrow(), vec!["anlegen".to_owned()]);
+        eintraege.doppelklick_ausfuehren(eintragsansicht::doppelklick(None, -1, true));
+        assert_eq!(*buch.borrow(), vec!["anlegen".to_owned()]);
 
-            eintraege.doppelklick_ausfuehren(eintragsansicht::doppelklick(None, 1, false));
-            assert_eq!(buch.borrow().len(), 1, "die Kopfzeile legt nichts an");
+        eintraege.doppelklick_ausfuehren(eintragsansicht::doppelklick(None, 1, false));
+        assert_eq!(buch.borrow().len(), 1, "die Kopfzeile legt nichts an");
 
-            // Der Weg ueber den Selektor ohne laufendes Ereignis: keine Zeile,
-            // kein Ort in der Tabelle, also nichts.
-            // SAFETY: Die Aktion nimmt einen optionalen Absender; das ist der
-            // Weg, den die Tabelle beim Doppelklick nimmt.
-            let _: () = unsafe { msg_send![&*eintraege, zeileDoppelt: Option::<&AnyObject>::None] };
-            assert_eq!(buch.borrow().len(), 1, "ohne Ereignis kein Eintrag");
-        });
+        // Der Weg ueber den Selektor ohne laufendes Ereignis: keine Zeile,
+        // kein Ort in der Tabelle, also nichts.
+        // SAFETY: Die Aktion nimmt einen optionalen Absender; das ist der
+        // Weg, den die Tabelle beim Doppelklick nimmt.
+        let _: () = unsafe { msg_send![&*eintraege, zeileDoppelt: Option::<&AnyObject>::None] };
+        assert_eq!(buch.borrow().len(), 1, "ohne Ereignis kein Eintrag");
     }
 
     /// Der Weg `anlegen` des Editorbereichs ist die Handlung „Eintrag
@@ -11141,59 +11068,58 @@ mod tests {
     /// Eintragstabelle: nicht ein fremdes Textfeld, nicht die Tabelle selbst,
     /// nicht die Textflaeche des Editors. Er ist ein Feldeditor, fuer jede Zelle
     /// derselbe, und hat einen eigenen Verwalter.
-    #[test]
-    fn den_eigenen_feldeditor_bekommen_allein_die_felder_der_eintragstabelle() {
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
-            let (erstes, _) = felder_der_zeile(&eintraege, 0);
-            let (zweites, _) = felder_der_zeile(&eintraege, 1);
+    fn den_eigenen_feldeditor_bekommen_allein_die_felder_der_eintragstabelle(
+        mtm: MainThreadMarker,
+    ) {
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+        let (erstes, _) = felder_der_zeile(&eintraege, 0);
+        let (zweites, _) = felder_der_zeile(&eintraege, 1);
 
-            let editor = eintraege
-                .feldeditor_fuer(&erstes)
-                .expect("ein Feld der Tabelle bekommt den eigenen");
-            assert!(editor.isFieldEditor(), "AppKit erkennt ihn als Feldeditor");
-            assert!(editor.allowsUndo(), "sonst naehme er nichts zurueck");
-            assert!(
-                eintraege
-                    .feldeditor_fuer(&zweites)
-                    .is_some_and(|zweiter| std::ptr::eq(&*zweiter, &*editor)),
-                "einer fuer alle Zellen"
-            );
+        let editor = eintraege
+            .feldeditor_fuer(&erstes)
+            .expect("ein Feld der Tabelle bekommt den eigenen");
+        assert!(editor.isFieldEditor(), "AppKit erkennt ihn als Feldeditor");
+        assert!(editor.allowsUndo(), "sonst naehme er nichts zurueck");
+        assert!(
+            eintraege
+                .feldeditor_fuer(&zweites)
+                .is_some_and(|zweiter| std::ptr::eq(&*zweiter, &*editor)),
+            "einer fuer alle Zellen"
+        );
 
-            let fremd = NSTextField::textFieldWithString(ns_string!("Blatt"), mtm);
-            assert!(eintraege.feldeditor_fuer(&fremd).is_none());
-            assert!(
-                eintraege.feldeditor_fuer(eintraege.tabelle()).is_none(),
-                "die Tabelle ist kein Feld, obwohl isDescendantOf: fuer sie ja sagt"
-            );
-            let (_rolle, textflaeche) = textflaeche_bauen(mtm, probenrahmen());
-            assert!(eintraege.feldeditor_fuer(&textflaeche).is_none());
+        let fremd = NSTextField::textFieldWithString(ns_string!("Blatt"), mtm);
+        assert!(eintraege.feldeditor_fuer(&fremd).is_none());
+        assert!(
+            eintraege.feldeditor_fuer(eintraege.tabelle()).is_none(),
+            "die Tabelle ist kein Feld, obwohl isDescendantOf: fuer sie ja sagt"
+        );
+        let (_rolle, textflaeche) = textflaeche_bauen(mtm, probenrahmen());
+        assert!(eintraege.feldeditor_fuer(&textflaeche).is_none());
 
-            let eigener = editor
+        let eigener = editor
+            .undoManager()
+            .expect("er bringt seinen Verwalter mit");
+        let (rolle, textflaeche) = textflaeche_bauen(mtm, probenrahmen());
+        let sicht = Editorsicht::neu(mtm, probenrahmen());
+        sicht.addSubview(&rolle);
+        let fensterverwalter = NSUndoManager::new(mtm);
+        let halter = Verwalterhalter::alloc(mtm).set_ivars(fensterverwalter.clone());
+        // SAFETY: `init` von NSObject, die NSResponder erbt, hat die hier
+        // angenommene Signatur.
+        let halter: Retained<Verwalterhalter> = unsafe { msg_send![super(halter), init] };
+        // SAFETY: wie in `textflaeche_und_tabelle_finden_denselben_verwalter`.
+        unsafe { sicht.setNextResponder(Some(&halter)) };
+        assert!(
+            textflaeche
                 .undoManager()
-                .expect("er bringt seinen Verwalter mit");
-            let (rolle, textflaeche) = textflaeche_bauen(mtm, probenrahmen());
-            let sicht = Editorsicht::neu(mtm, probenrahmen());
-            sicht.addSubview(&rolle);
-            let fensterverwalter = NSUndoManager::new(mtm);
-            let halter = Verwalterhalter::alloc(mtm).set_ivars(fensterverwalter.clone());
-            // SAFETY: `init` von NSObject, die NSResponder erbt, hat die hier
-            // angenommene Signatur.
-            let halter: Retained<Verwalterhalter> = unsafe { msg_send![super(halter), init] };
-            // SAFETY: wie in `textflaeche_und_tabelle_finden_denselben_verwalter`.
-            unsafe { sicht.setNextResponder(Some(&halter)) };
-            assert!(
-                textflaeche
-                    .undoManager()
-                    .is_some_and(|v| v.isEqual(Some(&fensterverwalter))),
-                "die Voraussetzung: die Textflaeche findet den Verwalter der Kette"
-            );
-            assert!(
-                !eigener.isEqual(Some(&fensterverwalter)),
-                "der Feldeditor der Zellen fuehrt einen anderen Stapel als der Umbau"
-            );
-        });
+                .is_some_and(|v| v.isEqual(Some(&fensterverwalter))),
+            "die Voraussetzung: die Textflaeche findet den Verwalter der Kette"
+        );
+        assert!(
+            !eigener.isEqual(Some(&fensterverwalter)),
+            "der Feldeditor der Zellen fuehrt einen anderen Stapel als der Umbau"
+        );
     }
 
     /// `undo:` und `redo:` am Zelleneditor gehen an seinen Verwalter und an
@@ -11202,63 +11128,60 @@ mod tests {
     /// der Zweitlesung ohne Fenster: "B doppelklicken, ohne Tippen `cmd+z`".
     /// Dass die Klasse `undo:` selbst beantwortet, ist die Bedingung dafuer,
     /// dass die Nachricht nicht bis `NSWindow` weiterlaeuft.
-    #[test]
-    fn cmd_z_in_der_zelle_endet_am_anfang_der_zelle_und_laesst_den_umbau() {
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
-            let (feld, _) = felder_der_zeile(&eintraege, 0);
-            let editor = eintraege
-                .feldeditor_fuer(&feld)
-                .expect("ein Feld der Tabelle bekommt den eigenen");
-            for aktion in [sel!(undo:), sel!(redo:)] {
-                assert!(
-                    editor.class().responds_to(aktion),
-                    "der Zelleneditor beantwortet {aktion} selbst"
-                );
-            }
-            let eigener = editor
-                .undoManager()
-                .expect("er bringt seinen Verwalter mit");
-            let rueckgaengig = || {
-                // SAFETY: `undo:` ist eine Aktion mit einem optionalen Absender
-                // und ohne Rueckgabe.
-                let _: () = unsafe { msg_send![&*editor, undo: Option::<&AnyObject>::None] };
-            };
-            let wiederholen = || {
-                // SAFETY: wie `undo:`.
-                let _: () = unsafe { msg_send![&*editor, redo: Option::<&AnyObject>::None] };
-            };
-
-            // Der Umbau steht im Verwalter des Fensters.
-            let fensterverwalter = NSUndoManager::new(mtm);
-            let ziel = NSObject::new();
-            let umbau = Rc::new(Cell::new(2u8));
-            wert_anmelden(&fensterverwalter, &ziel, Rc::clone(&umbau), 1);
-
-            rueckgaengig();
-            assert_eq!(
-                umbau.get(),
-                2,
-                "am Anfang der Zelle bleibt der Umbau stehen"
+    fn cmd_z_in_der_zelle_endet_am_anfang_der_zelle_und_laesst_den_umbau(mtm: MainThreadMarker) {
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+        let (feld, _) = felder_der_zeile(&eintraege, 0);
+        let editor = eintraege
+            .feldeditor_fuer(&feld)
+            .expect("ein Feld der Tabelle bekommt den eigenen");
+        for aktion in [sel!(undo:), sel!(redo:)] {
+            assert!(
+                editor.class().responds_to(aktion),
+                "der Zelleneditor beantwortet {aktion} selbst"
             );
-            assert!(fensterverwalter.canUndo(), "und zuruecknehmbar");
+        }
+        let eigener = editor
+            .undoManager()
+            .expect("er bringt seinen Verwalter mit");
+        let rueckgaengig = || {
+            // SAFETY: `undo:` ist eine Aktion mit einem optionalen Absender
+            // und ohne Rueckgabe.
+            let _: () = unsafe { msg_send![&*editor, undo: Option::<&AnyObject>::None] };
+        };
+        let wiederholen = || {
+            // SAFETY: wie `undo:`.
+            let _: () = unsafe { msg_send![&*editor, redo: Option::<&AnyObject>::None] };
+        };
 
-            // Getipptes in der Zelle: eine Handlung am eigenen Verwalter.
-            let getippt = Rc::new(Cell::new(2u8));
-            wert_anmelden(&eigener, &ziel, Rc::clone(&getippt), 1);
-            rueckgaengig();
-            assert_eq!(getippt.get(), 1, "das Getippte ist zurueckgenommen");
-            rueckgaengig();
-            assert_eq!(
-                (getippt.get(), umbau.get()),
-                (1, 2),
-                "ein zweites cmd+z tut nichts, auch am Umbau nicht"
-            );
-            wiederholen();
-            assert_eq!(getippt.get(), 2, "shift+cmd+z bringt es zurueck");
-            assert!(fensterverwalter.canUndo());
-        });
+        // Der Umbau steht im Verwalter des Fensters.
+        let fensterverwalter = NSUndoManager::new(mtm);
+        let ziel = NSObject::new();
+        let umbau = Rc::new(Cell::new(2u8));
+        wert_anmelden(&fensterverwalter, &ziel, Rc::clone(&umbau), 1);
+
+        rueckgaengig();
+        assert_eq!(
+            umbau.get(),
+            2,
+            "am Anfang der Zelle bleibt der Umbau stehen"
+        );
+        assert!(fensterverwalter.canUndo(), "und zuruecknehmbar");
+
+        // Getipptes in der Zelle: eine Handlung am eigenen Verwalter.
+        let getippt = Rc::new(Cell::new(2u8));
+        wert_anmelden(&eigener, &ziel, Rc::clone(&getippt), 1);
+        rueckgaengig();
+        assert_eq!(getippt.get(), 1, "das Getippte ist zurueckgenommen");
+        rueckgaengig();
+        assert_eq!(
+            (getippt.get(), umbau.get()),
+            (1, 2),
+            "ein zweites cmd+z tut nichts, auch am Umbau nicht"
+        );
+        wiederholen();
+        assert_eq!(getippt.get(), 2, "shift+cmd+z bringt es zurueck");
+        assert!(fensterverwalter.canUndo());
     }
 
     /// Jede Zelle beginnt mit leerem Stapel: `becomeFirstResponder` fragt
@@ -11290,8 +11213,9 @@ mod tests {
     /// Die Kette ist am Rumpf gelesen, weil das Verwerfen ein Fenster braucht;
     /// die Frage, ob verworfen wird, ist an einer echten Zelle gefahren, auch
     /// im eigenen Ende.
-    #[test]
-    fn umkehren_und_eine_eingetroffene_datei_lassen_keine_offene_zelle_stehen() {
+    fn umkehren_und_eine_eingetroffene_datei_lassen_keine_offene_zelle_stehen(
+        mtm: MainThreadMarker,
+    ) {
         use super::super::anwendung::quelltextproben::{datei, rumpf};
         let editor = datei("krk-ui/src/appkit/editor.rs");
         for name in ["umkehren", "ladeausgang_einziehen"] {
@@ -11344,49 +11268,47 @@ mod tests {
             .expect("die Marke wird geloescht");
         assert!(an < fest && fest < ab);
 
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
-            let (feld, _) = felder_der_zeile(&eintraege, 0);
-            let feldeditor = feldeditor_fuer(mtm, &feld);
-            assert!(
-                eintraege.zelle_unter_fremdem_stand(&feldeditor),
-                "eine offene Zelle vor einem Neuladen wird verworfen"
-            );
-            let (_rolle, textflaeche) = textflaeche_bauen(mtm, probenrahmen());
-            assert!(!eintraege.zelle_unter_fremdem_stand(&textflaeche));
-            assert!(!eintraege.zelle_unter_fremdem_stand(eintraege.tabelle()));
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+        let (feld, _) = felder_der_zeile(&eintraege, 0);
+        let feldeditor = feldeditor_fuer(mtm, &feld);
+        assert!(
+            eintraege.zelle_unter_fremdem_stand(&feldeditor),
+            "eine offene Zelle vor einem Neuladen wird verworfen"
+        );
+        let (_rolle, textflaeche) = textflaeche_bauen(mtm, probenrahmen());
+        assert!(!eintraege.zelle_unter_fremdem_stand(&textflaeche));
+        assert!(!eintraege.zelle_unter_fremdem_stand(eintraege.tabelle()));
 
-            // Im eigenen Ende fragt das Festschreiben ueber den Umbau dieselbe
-            // Frage, und dort ist die Antwort nein.
-            let im_ende = Rc::new(Cell::new(None));
-            let schwach = Weak::from_retained(&eintraege);
-            let editor_schwach = Weak::from_retained(&feldeditor);
-            let antwort = Rc::clone(&im_ende);
-            eintraege.wege_setzen(Zellenwege {
-                pruefen: Box::new(|_, _| true),
-                festschreiben: Box::new(move |_, _| {
-                    if let (Some(ansicht), Some(editor)) = (schwach.load(), editor_schwach.load()) {
-                        antwort.set(Some(ansicht.zelle_unter_fremdem_stand(&editor)));
-                    }
-                }),
-                abhaken: Box::new(|_| {}),
-                anlegen: Box::new(|| {}),
-                kopf_geklickt: Box::new(|| {}),
-                einfuegen: Box::new(|_| {}),
-            });
-            feld.setStringValue(ns_string!("Brot und Butter"));
-            eintraege.zelle_geendet(&feld);
-            assert_eq!(
-                im_ende.get(),
-                Some(false),
-                "das eigene Festschreiben verwirft seine Zelle nicht"
-            );
-            assert!(
-                eintraege.zelle_unter_fremdem_stand(&feldeditor),
-                "nach dem Ende gilt die Frage wieder"
-            );
+        // Im eigenen Ende fragt das Festschreiben ueber den Umbau dieselbe
+        // Frage, und dort ist die Antwort nein.
+        let im_ende = Rc::new(Cell::new(None));
+        let schwach = Weak::from_retained(&eintraege);
+        let editor_schwach = Weak::from_retained(&feldeditor);
+        let antwort = Rc::clone(&im_ende);
+        eintraege.wege_setzen(Zellenwege {
+            pruefen: Box::new(|_, _| true),
+            festschreiben: Box::new(move |_, _| {
+                if let (Some(ansicht), Some(editor)) = (schwach.load(), editor_schwach.load()) {
+                    antwort.set(Some(ansicht.zelle_unter_fremdem_stand(&editor)));
+                }
+            }),
+            abhaken: Box::new(|_| {}),
+            anlegen: Box::new(|| {}),
+            kopf_geklickt: Box::new(|| {}),
+            einfuegen: Box::new(|_| {}),
         });
+        feld.setStringValue(ns_string!("Brot und Butter"));
+        eintraege.zelle_geendet(&feld);
+        assert_eq!(
+            im_ende.get(),
+            Some(false),
+            "das eigene Festschreiben verwirft seine Zelle nicht"
+        );
+        assert!(
+            eintraege.zelle_unter_fremdem_stand(&feldeditor),
+            "nach dem Ende gilt die Frage wieder"
+        );
     }
 
     // ------------------------------------------------------------------
@@ -11407,8 +11329,9 @@ mod tests {
     /// mehrzeiligem Text; die Tabelle traegt dann zwei Spalten mit Kopfzeile
     /// und Zeilenhoehe nach dem Inhalt, und mit Aufgaben wieder eine ohne
     /// Kopfzeile in fester Hoehe.
-    #[test]
-    fn die_notiztabelle_leitet_zwei_zeilen_mit_thema_und_mehrzeiligem_text_ab() {
+    fn die_notiztabelle_leitet_zwei_zeilen_mit_thema_und_mehrzeiligem_text_ab(
+        mtm: MainThreadMarker,
+    ) {
         use eintragsansicht::Notizzeile;
         assert_eq!(
             eintragsansicht::notizzeilen(NOTIZEN),
@@ -11424,31 +11347,29 @@ mod tests {
             ],
             "der Vorspann ist keine Zeile, der Trenner gehoert nicht zum Text"
         );
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            let tabelle = eintraege.tabelle();
-            assert_eq!(tabelle.numberOfColumns(), 1);
-            assert!(tabelle.headerView().is_none());
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        let tabelle = eintraege.tabelle();
+        assert_eq!(tabelle.numberOfColumns(), 1);
+        assert!(tabelle.headerView().is_none());
 
-            eintraege.zeilen_zeigen(eintragsansicht::notizzeilen(NOTIZEN));
-            assert_eq!(eintraege.art(), Eintragsart::Notizen);
-            assert_eq!(tabelle.numberOfRows(), 2);
-            assert_eq!(tabelle.numberOfColumns(), 2, "Thema und Notiz");
-            assert!(
-                tabelle.headerView().is_some(),
-                "die Spalten tragen ihre Namen"
-            );
-            assert!(
-                tabelle.usesAutomaticRowHeights(),
-                "die Zeile waechst mit dem Text"
-            );
+        eintraege.zeilen_zeigen(eintragsansicht::notizzeilen(NOTIZEN));
+        assert_eq!(eintraege.art(), Eintragsart::Notizen);
+        assert_eq!(tabelle.numberOfRows(), 2);
+        assert_eq!(tabelle.numberOfColumns(), 2, "Thema und Notiz");
+        assert!(
+            tabelle.headerView().is_some(),
+            "die Spalten tragen ihre Namen"
+        );
+        assert!(
+            tabelle.usesAutomaticRowHeights(),
+            "die Zeile waechst mit dem Text"
+        );
 
-            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
-            assert_eq!(eintraege.art(), Eintragsart::Aufgaben);
-            assert_eq!(tabelle.numberOfColumns(), 1);
-            assert!(tabelle.headerView().is_none());
-            assert!(!tabelle.usesAutomaticRowHeights());
-        });
+        eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+        assert_eq!(eintraege.art(), Eintragsart::Aufgaben);
+        assert_eq!(tabelle.numberOfColumns(), 1);
+        assert!(tabelle.headerView().is_none());
+        assert!(!tabelle.usesAutomaticRowHeights());
     }
 
     /// Die Zellen der Notiztabelle, **am Rumpf gelesen**: eine Zelle mit Auto
@@ -11976,159 +11897,158 @@ mod tests {
     /// T3.1 bis T3.5 und T4.2 an einer gebauten Tabelle mit umgekehrter
     /// Folge: gewaehlt, geloescht, geaendert und angelegt wird an der Stelle,
     /// die die Zeile zeigt, und nie an der Stelle, die ihre Nummer waere.
-    #[test]
-    fn die_termintabelle_loescht_aendert_und_legt_an_der_stelle_der_zeile_an() {
+    fn die_termintabelle_loescht_aendert_und_legt_an_der_stelle_der_zeile_an(
+        mtm: MainThreadMarker,
+    ) {
         use Eintragsantwort as A;
         use eintragsansicht::{DATUMSSPALTE, TERMINSPALTE, Zelle};
         let antwort = |antwort| Editormeldung::Eintrag(Eintragsart::Termine, antwort);
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            let tabelle = eintraege.tabelle();
-            termine_zeigen(&eintraege, TERMINE, None);
-            assert_eq!(eintraege.art(), Eintragsart::Termine);
-            assert_eq!(tabelle.numberOfRows(), 3);
-            assert_eq!(tabelle.numberOfColumns(), 2, "Datum und Termin");
-            assert!(
-                tabelle.headerView().is_some(),
-                "die Spalten tragen ihre Namen"
-            );
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        let tabelle = eintraege.tabelle();
+        termine_zeigen(&eintraege, TERMINE, None);
+        assert_eq!(eintraege.art(), Eintragsart::Termine);
+        assert_eq!(tabelle.numberOfRows(), 3);
+        assert_eq!(tabelle.numberOfColumns(), 2, "Datum und Termin");
+        assert!(
+            tabelle.headerView().is_some(),
+            "die Spalten tragen ihre Namen"
+        );
 
-            // Auswahl: die erste Zeile ist gewaehlt und zeigt den fruehesten
-            // Termin, der in der Datei an letzter Stelle steht.
-            assert_eq!(tabelle.selectedRow(), 0);
-            assert_eq!(eintraege.gewaehlte_stelle(), Some(2));
-            eintraege.auswahl_setzen(Some(0));
-            assert_eq!(
-                tabelle.selectedRow(),
-                2,
-                "die Stelle 0 steht in der letzten Zeile"
-            );
-            eintraege.auswahl_setzen(Some(1));
-            assert_eq!(tabelle.selectedRow(), 1);
+        // Auswahl: die erste Zeile ist gewaehlt und zeigt den fruehesten
+        // Termin, der in der Datei an letzter Stelle steht.
+        assert_eq!(tabelle.selectedRow(), 0);
+        assert_eq!(eintraege.gewaehlte_stelle(), Some(2));
+        eintraege.auswahl_setzen(Some(0));
+        assert_eq!(
+            tabelle.selectedRow(),
+            2,
+            "die Stelle 0 steht in der letzten Zeile"
+        );
+        eintraege.auswahl_setzen(Some(1));
+        assert_eq!(tabelle.selectedRow(), 1);
 
-            // Bearbeitungsbeginn: die Datumszelle der Zeile, die die Stelle zeigt.
-            assert_eq!(
-                eintraege.ziel_der_zelle(Zelle {
-                    stelle: 2,
-                    spalte: DATUMSSPALTE
-                }),
-                Some((0, 0))
-            );
-            assert_eq!(
-                eintraege.ziel_der_zelle(Zelle {
-                    stelle: 0,
-                    spalte: TERMINSPALTE
-                }),
-                Some((2, 1))
-            );
-            assert_eq!(
-                eintraege.ziel_der_zelle(Zelle {
-                    stelle: 3,
-                    spalte: 0
-                }),
-                None
-            );
+        // Bearbeitungsbeginn: die Datumszelle der Zeile, die die Stelle zeigt.
+        assert_eq!(
+            eintraege.ziel_der_zelle(Zelle {
+                stelle: 2,
+                spalte: DATUMSSPALTE
+            }),
+            Some((0, 0))
+        );
+        assert_eq!(
+            eintraege.ziel_der_zelle(Zelle {
+                stelle: 0,
+                spalte: TERMINSPALTE
+            }),
+            Some((2, 1))
+        );
+        assert_eq!(
+            eintraege.ziel_der_zelle(Zelle {
+                stelle: 3,
+                spalte: 0
+            }),
+            None
+        );
 
-            // Loeschen der gewaehlten Zeile 0: der frueheste Termin und kein
-            // anderer.
-            zeile_waehlen(&eintraege, 0);
-            let (meldung, neu) = handlung_rechnen(
-                TERMINE,
-                Eintragsart::Termine,
-                Handlung::Loeschen,
-                eintraege.gewaehlte_stelle(),
-                None,
-            );
-            assert_eq!(meldung, antwort(A::Geloescht));
-            let neu = neu.expect("geloescht ist ein Umbau");
-            assert_eq!(
-                neu.text,
-                "Vorspann\n## 261003\ndrei\n## 261002 09:30\nzwei\n"
-            );
-            termine_zeigen(&eintraege, &neu.text, neu.auswahl);
-            assert_eq!(tabelle.numberOfRows(), 2);
+        // Loeschen der gewaehlten Zeile 0: der frueheste Termin und kein
+        // anderer.
+        zeile_waehlen(&eintraege, 0);
+        let (meldung, neu) = handlung_rechnen(
+            TERMINE,
+            Eintragsart::Termine,
+            Handlung::Loeschen,
+            eintraege.gewaehlte_stelle(),
+            None,
+        );
+        assert_eq!(meldung, antwort(A::Geloescht));
+        let neu = neu.expect("geloescht ist ein Umbau");
+        assert_eq!(
+            neu.text,
+            "Vorspann\n## 261003\ndrei\n## 261002 09:30\nzwei\n"
+        );
+        termine_zeigen(&eintraege, &neu.text, neu.auswahl);
+        assert_eq!(tabelle.numberOfRows(), 2);
 
-            // Aendern des Datums des obersten Termins auf einen spaeteren Tag:
-            // allein seine Kopfzeile aendert sich, und nach dem Umbau steht er
-            // an seiner neuen Zeile und ist gewaehlt.
-            termine_zeigen(&eintraege, TERMINE, None);
-            zeile_waehlen(&eintraege, 0);
-            let stelle = eintraege
-                .gewaehlte_stelle()
-                .expect("eine Zeile ist gewaehlt");
-            let neu = zellenrechnung(
-                Editorform::Termine,
-                TERMINE,
-                Zelle {
-                    stelle,
-                    spalte: DATUMSSPALTE,
-                },
-                " 261005 ",
-            )
-            .expect("ein gueltiges Datum")
-            .expect("das Datum ist neu");
-            assert_eq!(
-                neu.text,
-                "Vorspann\n## 261003\ndrei\n## 261002 09:30\nzwei\n## 261005\neins\n"
-            );
-            termine_zeigen(&eintraege, &neu.text, neu.auswahl);
-            assert_eq!(tabelle.selectedRow(), 2, "er steht jetzt zuunterst");
-            assert_eq!(
-                eintraege.gewaehlte_stelle(),
-                Some(2),
-                "und ist derselbe Termin"
-            );
+        // Aendern des Datums des obersten Termins auf einen spaeteren Tag:
+        // allein seine Kopfzeile aendert sich, und nach dem Umbau steht er
+        // an seiner neuen Zeile und ist gewaehlt.
+        termine_zeigen(&eintraege, TERMINE, None);
+        zeile_waehlen(&eintraege, 0);
+        let stelle = eintraege
+            .gewaehlte_stelle()
+            .expect("eine Zeile ist gewaehlt");
+        let neu = zellenrechnung(
+            Editorform::Termine,
+            TERMINE,
+            Zelle {
+                stelle,
+                spalte: DATUMSSPALTE,
+            },
+            " 261005 ",
+        )
+        .expect("ein gueltiges Datum")
+        .expect("das Datum ist neu");
+        assert_eq!(
+            neu.text,
+            "Vorspann\n## 261003\ndrei\n## 261002 09:30\nzwei\n## 261005\neins\n"
+        );
+        termine_zeigen(&eintraege, &neu.text, neu.auswahl);
+        assert_eq!(tabelle.selectedRow(), 2, "er steht jetzt zuunterst");
+        assert_eq!(
+            eintraege.gewaehlte_stelle(),
+            Some(2),
+            "und ist derselbe Termin"
+        );
 
-            // Aendern des Textes der mittleren Zeile: allein ihre Textzeilen.
-            termine_zeigen(&eintraege, TERMINE, None);
-            zeile_waehlen(&eintraege, 1);
-            let stelle = eintraege
-                .gewaehlte_stelle()
-                .expect("eine Zeile ist gewaehlt");
-            let neu = zellenrechnung(
-                Editorform::Termine,
-                TERMINE,
-                Zelle {
-                    stelle,
-                    spalte: TERMINSPALTE,
-                },
-                "zwei\nmit Absatz",
-            )
-            .expect("ein Text ohne Kopfzeile")
-            .expect("der Text ist neu");
-            assert_eq!(
-                neu.text,
-                "Vorspann\n## 261003\ndrei\n## 261002 09:30\nzwei\nmit Absatz\n## 261001\neins\n"
-            );
+        // Aendern des Textes der mittleren Zeile: allein ihre Textzeilen.
+        termine_zeigen(&eintraege, TERMINE, None);
+        zeile_waehlen(&eintraege, 1);
+        let stelle = eintraege
+            .gewaehlte_stelle()
+            .expect("eine Zeile ist gewaehlt");
+        let neu = zellenrechnung(
+            Editorform::Termine,
+            TERMINE,
+            Zelle {
+                stelle,
+                spalte: TERMINSPALTE,
+            },
+            "zwei\nmit Absatz",
+        )
+        .expect("ein Text ohne Kopfzeile")
+        .expect("der Text ist neu");
+        assert_eq!(
+            neu.text,
+            "Vorspann\n## 261003\ndrei\n## 261002 09:30\nzwei\nmit Absatz\n## 261001\neins\n"
+        );
 
-            // Hinzufuegen mit festem Tag: am Ende der Datei, gewaehlt, und auf
-            // dem Schirm dort, wo sein Datum ihn einordnet; seine Datumszelle
-            // ist die Zelle, die danach in Bearbeitung geht.
-            let (meldung, neu) = handlung_rechnen(
-                TERMINE,
-                Eintragsart::Termine,
-                Handlung::Hinzufuegen,
-                None,
-                Some(tag(2026, 10, 2)),
-            );
-            assert_eq!(meldung, antwort(A::Hinzugefuegt));
-            let neu = neu.expect("hinzugefuegt ist ein Umbau");
-            assert_eq!(neu.text, format!("{TERMINE}## 261002\n"));
-            assert_eq!(neu.auswahl, Some(3));
-            termine_zeigen(&eintraege, &neu.text, neu.auswahl);
-            assert_eq!(
-                tabelle.selectedRow(),
-                1,
-                "ohne Uhrzeit vor 09:30 desselben Tages, nach dem Vortag"
-            );
-            assert_eq!(
-                eintraege.ziel_der_zelle(Zelle {
-                    stelle: 3,
-                    spalte: DATUMSSPALTE
-                }),
-                Some((1, 0))
-            );
-        });
+        // Hinzufuegen mit festem Tag: am Ende der Datei, gewaehlt, und auf
+        // dem Schirm dort, wo sein Datum ihn einordnet; seine Datumszelle
+        // ist die Zelle, die danach in Bearbeitung geht.
+        let (meldung, neu) = handlung_rechnen(
+            TERMINE,
+            Eintragsart::Termine,
+            Handlung::Hinzufuegen,
+            None,
+            Some(tag(2026, 10, 2)),
+        );
+        assert_eq!(meldung, antwort(A::Hinzugefuegt));
+        let neu = neu.expect("hinzugefuegt ist ein Umbau");
+        assert_eq!(neu.text, format!("{TERMINE}## 261002\n"));
+        assert_eq!(neu.auswahl, Some(3));
+        termine_zeigen(&eintraege, &neu.text, neu.auswahl);
+        assert_eq!(
+            tabelle.selectedRow(),
+            1,
+            "ohne Uhrzeit vor 09:30 desselben Tages, nach dem Vortag"
+        );
+        assert_eq!(
+            eintraege.ziel_der_zelle(Zelle {
+                stelle: 3,
+                spalte: DATUMSSPALTE
+            }),
+            Some((1, 0))
+        );
     }
 
     /// Das Loeschen ist in jeder der vier Tabellen ueber einen
@@ -12675,8 +12595,7 @@ mod tests {
     /// Eine `.csv`, `.tsv` oder `.tab` oeffnet in der Formatansicht als
     /// Tabelle und in der Rohansicht als Text; die Tabelle traegt so viele
     /// Spalten, wie der laengste Satz Felder hat, und davor die Nummernspalte.
-    #[test]
-    fn eine_csv_oeffnet_als_tabelle_mit_spalten_aus_der_datei() {
+    fn eine_csv_oeffnet_als_tabelle_mit_spalten_aus_der_datei(mtm: MainThreadMarker) {
         for (name, art) in [
             ("preise.csv", Some(trenntext::Art::Csv)),
             ("PREISE.TSV", Some(trenntext::Art::Tsv)),
@@ -12719,26 +12638,25 @@ mod tests {
             }
         }
 
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
-            let tabelle = eintraege.tabelle();
-            assert_eq!(eintraege.art(), Eintragsart::Trenntext);
-            assert_eq!(tabelle.numberOfRows(), 4, "vier Saetze, vier Zeilen");
-            assert_eq!(
-                tabelle.numberOfColumns(),
-                4,
-                "die Nummernspalte und drei Felder, die der laengste Satz traegt"
-            );
-            let erste = tabelle.tableColumns().iter().next().expect("eine Spalte");
-            assert_eq!(erste.identifier().to_string(), "trenntextnummer");
-        });
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
+        let tabelle = eintraege.tabelle();
+        assert_eq!(eintraege.art(), Eintragsart::Trenntext);
+        assert_eq!(tabelle.numberOfRows(), 4, "vier Saetze, vier Zeilen");
+        assert_eq!(
+            tabelle.numberOfColumns(),
+            4,
+            "die Nummernspalte und drei Felder, die der laengste Satz traegt"
+        );
+        let erste = tabelle.tableColumns().iter().next().expect("eine Spalte");
+        assert_eq!(erste.identifier().to_string(), "trenntextnummer");
     }
 
     /// Der Kopf zeigt je Feld den Buchstaben und den Text der ersten Zeile,
     /// und die erste Zeile bleibt Zeile 1 der Tabelle (E6).
-    #[test]
-    fn der_kopf_zeigt_buchstabe_und_text_der_ersten_zeile_und_die_erste_zeile_bleibt_zeile() {
+    fn der_kopf_zeigt_buchstabe_und_text_der_ersten_zeile_und_die_erste_zeile_bleibt_zeile(
+        mtm: MainThreadMarker,
+    ) {
         assert_eq!(eintragsansicht::kopftitel(0, Some("Name")), "A  Name");
         assert_eq!(eintragsansicht::kopftitel(27, Some("")), "AB");
         assert_eq!(eintragsansicht::kopftitel(1, None), "B");
@@ -12746,41 +12664,39 @@ mod tests {
             eintragsansicht::kopftitel(2, Some("eine sehr lange Ueberschrift ohne Ende")),
             "C  eine sehr lange Uebersch…"
         );
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
-            let tabelle = eintraege.tabelle();
-            let titel: Vec<String> = tabelle
-                .tableColumns()
-                .iter()
-                .map(|spalte| spalte.title().to_string())
-                .collect();
-            assert_eq!(titel, ["", "A  Name", "B  Preis", "C  Menge"]);
-            assert!(tabelle.headerView().is_some(), "der Kopf ist zu sehen");
-            let text = |spalte: objc2_foundation::NSInteger, zeile: objc2_foundation::NSInteger| {
-                tabelle
-                    .viewAtColumn_row_makeIfNecessary(spalte, zeile, true)
-                    .and_then(|zelle| zelle.downcast::<objc2_app_kit::NSTableCellView>().ok())
-                    .and_then(|zelle| unsafe { zelle.textField() })
-                    .map(|feld| feld.stringValue().to_string())
-            };
-            assert_eq!(
-                text(0, 0).as_deref(),
-                Some("1"),
-                "die Nummer der ersten Zeile"
-            );
-            assert_eq!(
-                text(1, 0).as_deref(),
-                Some("Name"),
-                "die erste Zeile ist Zeile 1"
-            );
-            assert_eq!(text(1, 1).as_deref(), Some("\u{c4}pfel"));
-            assert_eq!(
-                text(3, 3).as_deref(),
-                Some(""),
-                "ein fehlendes Feld ist leer"
-            );
-        });
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
+        let tabelle = eintraege.tabelle();
+        let titel: Vec<String> = tabelle
+            .tableColumns()
+            .iter()
+            .map(|spalte| spalte.title().to_string())
+            .collect();
+        assert_eq!(titel, ["", "A  Name", "B  Preis", "C  Menge"]);
+        assert!(tabelle.headerView().is_some(), "der Kopf ist zu sehen");
+        let text = |spalte: objc2_foundation::NSInteger, zeile: objc2_foundation::NSInteger| {
+            tabelle
+                .viewAtColumn_row_makeIfNecessary(spalte, zeile, true)
+                .and_then(|zelle| zelle.downcast::<objc2_app_kit::NSTableCellView>().ok())
+                .and_then(|zelle| unsafe { zelle.textField() })
+                .map(|feld| feld.stringValue().to_string())
+        };
+        assert_eq!(
+            text(0, 0).as_deref(),
+            Some("1"),
+            "die Nummer der ersten Zeile"
+        );
+        assert_eq!(
+            text(1, 0).as_deref(),
+            Some("Name"),
+            "die erste Zeile ist Zeile 1"
+        );
+        assert_eq!(text(1, 1).as_deref(), Some("\u{c4}pfel"));
+        assert_eq!(
+            text(3, 3).as_deref(),
+            Some(""),
+            "ein fehlendes Feld ist leer"
+        );
     }
 
     /// Eine geaenderte Zelle ersetzt allein die Bytes ihres Feldes, und der
@@ -13050,46 +12966,43 @@ mod tests {
     /// Allein die Tabelle einer CSV rollt waagerecht und richtet ihre Spalten
     /// nicht nach der Rolle; jede andere Art behaelt `LastColumnOnly` ohne
     /// waagerechten Rollbalken, auch nach einem Wechsel zurueck (E8).
-    #[test]
-    fn nur_die_trenntextform_rollt_waagerecht() {
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            let pruefen = |art: Eintragsart| {
-                let tabelle = eintraege.tabelle();
-                let waagerecht = art == Eintragsart::Trenntext;
-                assert_eq!(eintraege.art(), art);
-                assert_eq!(
-                    eintraege.rolle().hasHorizontalScroller(),
-                    waagerecht,
-                    "{art:?}"
-                );
-                assert_eq!(
-                    tabelle.columnAutoresizingStyle(),
-                    if waagerecht {
-                        objc2_app_kit::NSTableViewColumnAutoresizingStyle::NoColumnAutoresizing
-                    } else {
-                        objc2_app_kit::NSTableViewColumnAutoresizingStyle::LastColumnOnlyAutoresizingStyle
-                    },
-                    "{art:?}"
-                );
-                assert_eq!(tabelle.allowsColumnReordering(), !waagerecht, "{art:?}");
-            };
-            pruefen(Eintragsart::Aufgaben);
-            eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
-            pruefen(Eintragsart::Trenntext);
-            eintraege.zeilen_zeigen(eintragsansicht::notizzeilen(NOTIZEN));
-            pruefen(Eintragsart::Notizen);
-            eintraege.zeilen_zeigen(eintragsansicht::geheimniszeilen(GEHEIMNISSE));
-            pruefen(Eintragsart::Geheimnisse);
-            eintraege.zeilen_zeigen(eintragsansicht::terminzeilen(
-                TERMINE,
-                Sortierrichtung::Aufsteigend,
-                None,
-            ));
-            pruefen(Eintragsart::Termine);
-            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
-            pruefen(Eintragsart::Aufgaben);
-        });
+    fn nur_die_trenntextform_rollt_waagerecht(mtm: MainThreadMarker) {
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        let pruefen = |art: Eintragsart| {
+            let tabelle = eintraege.tabelle();
+            let waagerecht = art == Eintragsart::Trenntext;
+            assert_eq!(eintraege.art(), art);
+            assert_eq!(
+                eintraege.rolle().hasHorizontalScroller(),
+                waagerecht,
+                "{art:?}"
+            );
+            assert_eq!(
+                tabelle.columnAutoresizingStyle(),
+                if waagerecht {
+                    objc2_app_kit::NSTableViewColumnAutoresizingStyle::NoColumnAutoresizing
+                } else {
+                    objc2_app_kit::NSTableViewColumnAutoresizingStyle::LastColumnOnlyAutoresizingStyle
+                },
+                "{art:?}"
+            );
+            assert_eq!(tabelle.allowsColumnReordering(), !waagerecht, "{art:?}");
+        };
+        pruefen(Eintragsart::Aufgaben);
+        eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
+        pruefen(Eintragsart::Trenntext);
+        eintraege.zeilen_zeigen(eintragsansicht::notizzeilen(NOTIZEN));
+        pruefen(Eintragsart::Notizen);
+        eintraege.zeilen_zeigen(eintragsansicht::geheimniszeilen(GEHEIMNISSE));
+        pruefen(Eintragsart::Geheimnisse);
+        eintraege.zeilen_zeigen(eintragsansicht::terminzeilen(
+            TERMINE,
+            Sortierrichtung::Aufsteigend,
+            None,
+        ));
+        pruefen(Eintragsart::Termine);
+        eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+        pruefen(Eintragsart::Aufgaben);
         for art in [
             Eintragsart::Aufgaben,
             Eintragsart::Notizen,
@@ -13332,9 +13245,7 @@ mod tests {
     /// Proben zum Umbauweg).
     ///
     /// `cargo test --release -p krk-ui -- --ignored --nocapture messung_der_csv_tabelle_an_16_mib`
-    #[test]
-    #[ignore = "Messprobe, im Bericht von Schritt 3 genannt"]
-    fn messung_der_csv_tabelle_an_16_mib() {
+    fn messung_der_csv_tabelle_an_16_mib(mtm: MainThreadMarker) {
         use std::time::Instant;
         let grenze = 16 * 1024 * 1024 - 1024;
         let mut text = String::with_capacity(grenze + 256);
@@ -13453,7 +13364,7 @@ mod tests {
 
         // Der Textspeicher allein, ohne Flaeche: eine `NSTextView` laesst sich
         // unter `libtest` nicht beschreiben, ein nackter Speicher vielleicht.
-        let (im_speicher, ganz_im_speicher) = an_einer_flaeche(|mtm| {
+        let (im_speicher, ganz_im_speicher) = {
             let _ = mtm;
             let speicher = objc2_app_kit::NSTextStorage::new();
             speicher.replaceCharactersInRange_withString(
@@ -13471,7 +13382,7 @@ mod tests {
                 &NSString::from_str(&neu.text),
             );
             (im_speicher, start.elapsed())
-        });
+        };
 
         println!("--- seit 261019 ---");
         println!("Bereich und NSString dafuer   {:8.2} ms", ms(bereich));
@@ -13501,9 +13412,7 @@ mod tests {
     /// Grundlage fuer die Zahl der Spalten.
     ///
     /// `cargo test --release -p krk-ui -- --ignored --nocapture messung_der_breitesten_tabelle`
-    #[test]
-    #[ignore = "Messprobe, im Bericht von Schritt 3 genannt"]
-    fn messung_der_breitesten_tabelle() {
+    fn messung_der_breitesten_tabelle(mtm: MainThreadMarker) {
         use std::time::Instant;
         let spalten = trenntext::HOECHSTENS_SPALTEN;
         let zeile: String = (0..spalten)
@@ -13511,26 +13420,24 @@ mod tests {
             .collect::<Vec<_>>()
             .join(",");
         let text: String = std::iter::repeat_n(format!("{zeile}\n"), 1000).collect();
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            let start = Instant::now();
-            eintraege.zeilen_zeigen(csv_sicht(&text, 1));
-            let eingerichtet = start.elapsed();
-            let mut zweiter = text.clone();
-            zweiter.replace_range(0..2, "xx");
-            let start = Instant::now();
-            eintraege.zeilen_zeigen(csv_sicht(&zweiter, 2));
-            let nachgezogen = start.elapsed();
-            assert_eq!(
-                usize::try_from(eintraege.tabelle().numberOfColumns()).ok(),
-                Some(spalten + 1)
-            );
-            println!(
-                "{spalten} Spalten, 1000 Zeilen: einrichten {:.2} ms, nachziehen {:.2} ms",
-                eingerichtet.as_secs_f64() * 1000.0,
-                nachgezogen.as_secs_f64() * 1000.0
-            );
-        });
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        let start = Instant::now();
+        eintraege.zeilen_zeigen(csv_sicht(&text, 1));
+        let eingerichtet = start.elapsed();
+        let mut zweiter = text.clone();
+        zweiter.replace_range(0..2, "xx");
+        let start = Instant::now();
+        eintraege.zeilen_zeigen(csv_sicht(&zweiter, 2));
+        let nachgezogen = start.elapsed();
+        assert_eq!(
+            usize::try_from(eintraege.tabelle().numberOfColumns()).ok(),
+            Some(spalten + 1)
+        );
+        println!(
+            "{spalten} Spalten, 1000 Zeilen: einrichten {:.2} ms, nachziehen {:.2} ms",
+            eingerichtet.as_secs_f64() * 1000.0,
+            nachgezogen.as_secs_f64() * 1000.0
+        );
     }
 
     // ------------------------------------------------------------------
@@ -13558,8 +13465,9 @@ mod tests {
     /// jede Zelle (E10). Die Spaltennummer von AppKit geht dabei durch die
     /// Umrechnung: die Tabellenspalte 2 zeigt das Feld B. Gewaehlte Zellen
     /// zeigen sich ueber ihren Hintergrund, und nur sie.
-    #[test]
-    fn ein_klick_auf_den_kopf_waehlt_die_spalte_und_auf_die_nummer_die_zeile() {
+    fn ein_klick_auf_den_kopf_waehlt_die_spalte_und_auf_die_nummer_die_zeile(
+        mtm: MainThreadMarker,
+    ) {
         use eintragsansicht::{
             Klickort, Tabellenmass, Zellauswahl, Ziehart, klick_waehlen, klickort,
         };
@@ -13636,93 +13544,88 @@ mod tests {
             "allein die Tabelle einer CSV traegt eine Zellauswahl"
         );
 
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
-            assert_eq!(
-                eintraege.gewaehlter_bereich(),
-                Some(Zellbereich::zelle(0, 0)),
-                "nach dem Oeffnen ist A1 gewaehlt"
-            );
-            eintraege.kopf_angeklickt(2, false);
-            assert_eq!(
-                eintraege.gewaehlter_bereich(),
-                Some(Zellbereich {
-                    zeilen: 0..4,
-                    spalten: 1..2
-                }),
-                "der Kopf der Tabellenspalte 2 waehlt die Spalte B"
-            );
-            assert!(als_gewaehlt_gefaerbt(&eintraege, 2, 3));
-            assert!(!als_gewaehlt_gefaerbt(&eintraege, 1, 0));
-            assert!(!als_gewaehlt_gefaerbt(&eintraege, 0, 0), "die Nummer nie");
-            eintraege.klick(Some(Klickort::Nummer { zeile: 1 }), false);
-            assert_eq!(
-                eintraege.gewaehlter_bereich(),
-                Some(Zellbereich {
-                    zeilen: 1..2,
-                    spalten: 0..3
-                })
-            );
-            assert!(als_gewaehlt_gefaerbt(&eintraege, 1, 1));
-            assert!(!als_gewaehlt_gefaerbt(&eintraege, 2, 3));
-            assert_eq!(eintraege.gewaehlte_stelle(), Some(1));
-            eintraege.kopf_angeklickt(0, false);
-            assert_eq!(
-                eintraege.gewaehlter_bereich(),
-                Some(Zellbereich {
-                    zeilen: 0..4,
-                    spalten: 0..3
-                }),
-                "der Kopf der Nummernspalte waehlt jede Zelle"
-            );
-            assert!(
-                eintraege.alles_waehlen(),
-                "cmd+a beantwortet die Tabelle einer CSV"
-            );
-        });
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
+        assert_eq!(
+            eintraege.gewaehlter_bereich(),
+            Some(Zellbereich::zelle(0, 0)),
+            "nach dem Oeffnen ist A1 gewaehlt"
+        );
+        eintraege.kopf_angeklickt(2, false);
+        assert_eq!(
+            eintraege.gewaehlter_bereich(),
+            Some(Zellbereich {
+                zeilen: 0..4,
+                spalten: 1..2
+            }),
+            "der Kopf der Tabellenspalte 2 waehlt die Spalte B"
+        );
+        assert!(als_gewaehlt_gefaerbt(&eintraege, 2, 3));
+        assert!(!als_gewaehlt_gefaerbt(&eintraege, 1, 0));
+        assert!(!als_gewaehlt_gefaerbt(&eintraege, 0, 0), "die Nummer nie");
+        eintraege.klick(Some(Klickort::Nummer { zeile: 1 }), false);
+        assert_eq!(
+            eintraege.gewaehlter_bereich(),
+            Some(Zellbereich {
+                zeilen: 1..2,
+                spalten: 0..3
+            })
+        );
+        assert!(als_gewaehlt_gefaerbt(&eintraege, 1, 1));
+        assert!(!als_gewaehlt_gefaerbt(&eintraege, 2, 3));
+        assert_eq!(eintraege.gewaehlte_stelle(), Some(1));
+        eintraege.kopf_angeklickt(0, false);
+        assert_eq!(
+            eintraege.gewaehlter_bereich(),
+            Some(Zellbereich {
+                zeilen: 0..4,
+                spalten: 0..3
+            }),
+            "der Kopf der Nummernspalte waehlt jede Zelle"
+        );
+        assert!(
+            eintraege.alles_waehlen(),
+            "cmd+a beantwortet die Tabelle einer CSV"
+        );
     }
 
     /// `cmd+c` legt den gewaehlten Bereich als TSV ab: Zeilen durch `\n`,
     /// Zellen durch Tabulator, jede Zelle mit Tabulator als Trennzeichen
     /// kodiert; eine Zelle hinter dem Satzende ist leer (E11). Geschrieben
     /// wird ueber die eine Huelle an eine eigene Ablage.
-    #[test]
-    fn cmd_c_legt_den_bereich_als_tsv_ab() {
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            let stand = "Name;Wert;Notiz\nA;1,5;\"mit\ttab\"\nB;2\n";
-            eintraege.zeilen_zeigen(csv_sicht(stand, 1));
-            eintraege.klick(
-                Some(eintragsansicht::Klickort::Zelle { zeile: 1, feld: 0 }),
-                false,
-            );
-            eintraege.klick(
-                Some(eintragsansicht::Klickort::Zelle { zeile: 2, feld: 2 }),
-                true,
-            );
-            let tsv = eintraege
-                .gewaehlter_text()
-                .expect("ein Bereich ist gewaehlt");
-            assert_eq!(tsv, "A\t1,5\t\"mit\ttab\"\nB\t2\t");
-            let ablage = super::super::zwischenablage::proben::probenablage();
-            assert!(super::super::zwischenablage::text_auf_ablage_schreiben(
-                &ablage, &tsv
-            ));
-            assert_eq!(
-                super::super::zwischenablage::nur_text_lesen_aus(&ablage).as_deref(),
-                Some(tsv.as_str())
-            );
-            eintraege.klick(
-                Some(eintragsansicht::Klickort::Zelle { zeile: 0, feld: 1 }),
-                false,
-            );
-            assert_eq!(
-                eintraege.gewaehlter_text().as_deref(),
-                Some("Wert"),
-                "eine einzelne Zelle ist ihr blosser Wert"
-            );
-        });
+    fn cmd_c_legt_den_bereich_als_tsv_ab(mtm: MainThreadMarker) {
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        let stand = "Name;Wert;Notiz\nA;1,5;\"mit\ttab\"\nB;2\n";
+        eintraege.zeilen_zeigen(csv_sicht(stand, 1));
+        eintraege.klick(
+            Some(eintragsansicht::Klickort::Zelle { zeile: 1, feld: 0 }),
+            false,
+        );
+        eintraege.klick(
+            Some(eintragsansicht::Klickort::Zelle { zeile: 2, feld: 2 }),
+            true,
+        );
+        let tsv = eintraege
+            .gewaehlter_text()
+            .expect("ein Bereich ist gewaehlt");
+        assert_eq!(tsv, "A\t1,5\t\"mit\ttab\"\nB\t2\t");
+        let ablage = super::super::zwischenablage::proben::probenablage();
+        assert!(super::super::zwischenablage::text_auf_ablage_schreiben(
+            &ablage, &tsv
+        ));
+        assert_eq!(
+            super::super::zwischenablage::nur_text_lesen_aus(&ablage).as_deref(),
+            Some(tsv.as_str())
+        );
+        eintraege.klick(
+            Some(eintragsansicht::Klickort::Zelle { zeile: 0, feld: 1 }),
+            false,
+        );
+        assert_eq!(
+            eintraege.gewaehlter_text().as_deref(),
+            Some("Wert"),
+            "eine einzelne Zelle ist ihr blosser Wert"
+        );
         use super::super::anwendung::quelltextproben::{datei, rumpf};
         let ansicht = datei("krk-ui/src/appkit/eintragsansicht.rs");
         assert!(
@@ -13894,53 +13797,50 @@ mod tests {
     /// hervor wie vorher, waehlen ueber AppKits Zeilenauswahl und tragen keine
     /// Zellauswahl; allein die Tabelle einer CSV schaltet die Hervorhebung ab
     /// und waehlt ein Rechteck (E10).
-    #[test]
-    fn die_uebrigen_arten_behalten_ihre_zeilenauswahl() {
+    fn die_uebrigen_arten_behalten_ihre_zeilenauswahl(mtm: MainThreadMarker) {
         use objc2_app_kit::NSTableViewSelectionHighlightStyle as Hervorhebung;
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        let tabelle = eintraege.tabelle();
+        let zeilenweise = |eintraege: &Eintragsansicht, art: Eintragsart| {
             let tabelle = eintraege.tabelle();
-            let zeilenweise = |eintraege: &Eintragsansicht, art: Eintragsart| {
-                let tabelle = eintraege.tabelle();
-                assert_eq!(eintraege.art(), art);
-                assert_eq!(
-                    tabelle.selectionHighlightStyle(),
-                    Hervorhebung::Regular,
-                    "{art:?}"
-                );
-                assert!(!tabelle.allowsMultipleSelection(), "{art:?}");
-                assert_eq!(eintraege.zellauswahl(), None, "{art:?}");
-                assert_eq!(eintraege.gewaehlter_bereich(), None, "{art:?}");
-                eintraege.auswahl_setzen(Some(1));
-                assert_eq!(tabelle.selectedRow(), 1, "{art:?} waehlt ueber AppKit");
-                assert_eq!(eintraege.gewaehlte_stelle(), Some(1), "{art:?}");
-                assert!(!eintraege.alles_waehlen(), "{art:?}: cmd+a geht an AppKit");
-            };
-            eintraege.zeilen_zeigen(eintragsansicht::notizzeilen(NOTIZEN));
-            zeilenweise(&eintraege, Eintragsart::Notizen);
-            eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
-            assert_eq!(tabelle.selectionHighlightStyle(), Hervorhebung::None);
+            assert_eq!(eintraege.art(), art);
             assert_eq!(
-                eintraege.gewaehlter_bereich(),
-                Some(Zellbereich::zelle(0, 0))
+                tabelle.selectionHighlightStyle(),
+                Hervorhebung::Regular,
+                "{art:?}"
             );
-            eintraege.auswahl_setzen(Some(2));
-            assert_eq!(
-                eintraege.gewaehlter_bereich(),
-                Some(Zellbereich::zelle(2, 0)),
-                "in der Tabelle einer CSV die Zelle der Zeile"
-            );
-            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
-            zeilenweise(&eintraege, Eintragsart::Aufgaben);
-            eintraege.zeilen_zeigen(eintragsansicht::geheimniszeilen(GEHEIMNISSE));
-            zeilenweise(&eintraege, Eintragsart::Geheimnisse);
-            eintraege.zeilen_zeigen(eintragsansicht::terminzeilen(
-                TERMINE,
-                Sortierrichtung::Aufsteigend,
-                None,
-            ));
-            zeilenweise(&eintraege, Eintragsart::Termine);
-        });
+            assert!(!tabelle.allowsMultipleSelection(), "{art:?}");
+            assert_eq!(eintraege.zellauswahl(), None, "{art:?}");
+            assert_eq!(eintraege.gewaehlter_bereich(), None, "{art:?}");
+            eintraege.auswahl_setzen(Some(1));
+            assert_eq!(tabelle.selectedRow(), 1, "{art:?} waehlt ueber AppKit");
+            assert_eq!(eintraege.gewaehlte_stelle(), Some(1), "{art:?}");
+            assert!(!eintraege.alles_waehlen(), "{art:?}: cmd+a geht an AppKit");
+        };
+        eintraege.zeilen_zeigen(eintragsansicht::notizzeilen(NOTIZEN));
+        zeilenweise(&eintraege, Eintragsart::Notizen);
+        eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
+        assert_eq!(tabelle.selectionHighlightStyle(), Hervorhebung::None);
+        assert_eq!(
+            eintraege.gewaehlter_bereich(),
+            Some(Zellbereich::zelle(0, 0))
+        );
+        eintraege.auswahl_setzen(Some(2));
+        assert_eq!(
+            eintraege.gewaehlter_bereich(),
+            Some(Zellbereich::zelle(2, 0)),
+            "in der Tabelle einer CSV die Zelle der Zeile"
+        );
+        eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+        zeilenweise(&eintraege, Eintragsart::Aufgaben);
+        eintraege.zeilen_zeigen(eintragsansicht::geheimniszeilen(GEHEIMNISSE));
+        zeilenweise(&eintraege, Eintragsart::Geheimnisse);
+        eintraege.zeilen_zeigen(eintragsansicht::terminzeilen(
+            TERMINE,
+            Sortierrichtung::Aufsteigend,
+            None,
+        ));
+        zeilenweise(&eintraege, Eintragsart::Termine);
         for art in [
             Eintragsart::Aufgaben,
             Eintragsart::Notizen,
@@ -13958,50 +13858,47 @@ mod tests {
     /// Eine neue CSV beginnt mit Anfangsbreiten und bei A1, auch wenn die
     /// Tabelle eben eine andere zeigte und ihre Spalten gezogen waren; ein
     /// neuer Stand derselben Datei behaelt beides.
-    #[test]
-    fn eine_neue_csv_beginnt_mit_anfangsbreiten_und_bei_a1() {
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
-            let breite = || {
-                eintraege
-                    .tabelle()
-                    .tableColumns()
-                    .iter()
-                    .nth(1)
-                    .map(|spalte| spalte.width())
-            };
-            let anfang = breite().expect("die Spalte A");
-            if let Some(spalte) = eintraege.tabelle().tableColumns().iter().nth(1) {
-                spalte.setWidth(anfang + 77.0);
-            }
-            eintraege.klick(
-                Some(eintragsansicht::Klickort::Zelle { zeile: 2, feld: 2 }),
-                false,
-            );
-            let geaendert = CSV.replace("Kiwi", "Kiwis");
-            eintraege.zeilen_zeigen(csv_sicht(&geaendert, 2));
-            assert_eq!(
-                breite(),
-                Some(anfang + 77.0),
-                "derselbe Datei bleibt die Breite"
-            );
-            assert_eq!(
-                eintraege.gewaehlter_bereich(),
-                Some(Zellbereich::zelle(2, 2))
-            );
-            eintraege.neue_datei();
-            eintraege.zeilen_zeigen(csv_sicht(CSV, 3));
-            assert_eq!(
-                breite(),
-                Some(anfang),
-                "die neue Datei beginnt mit der Anfangsbreite"
-            );
-            assert_eq!(
-                eintraege.gewaehlter_bereich(),
-                Some(Zellbereich::zelle(0, 0))
-            );
-        });
+    fn eine_neue_csv_beginnt_mit_anfangsbreiten_und_bei_a1(mtm: MainThreadMarker) {
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
+        let breite = || {
+            eintraege
+                .tabelle()
+                .tableColumns()
+                .iter()
+                .nth(1)
+                .map(|spalte| spalte.width())
+        };
+        let anfang = breite().expect("die Spalte A");
+        if let Some(spalte) = eintraege.tabelle().tableColumns().iter().nth(1) {
+            spalte.setWidth(anfang + 77.0);
+        }
+        eintraege.klick(
+            Some(eintragsansicht::Klickort::Zelle { zeile: 2, feld: 2 }),
+            false,
+        );
+        let geaendert = CSV.replace("Kiwi", "Kiwis");
+        eintraege.zeilen_zeigen(csv_sicht(&geaendert, 2));
+        assert_eq!(
+            breite(),
+            Some(anfang + 77.0),
+            "derselbe Datei bleibt die Breite"
+        );
+        assert_eq!(
+            eintraege.gewaehlter_bereich(),
+            Some(Zellbereich::zelle(2, 2))
+        );
+        eintraege.neue_datei();
+        eintraege.zeilen_zeigen(csv_sicht(CSV, 3));
+        assert_eq!(
+            breite(),
+            Some(anfang),
+            "die neue Datei beginnt mit der Anfangsbreite"
+        );
+        assert_eq!(
+            eintraege.gewaehlter_bereich(),
+            Some(Zellbereich::zelle(0, 0))
+        );
         use super::super::anwendung::quelltextproben::{datei, rumpf};
         let quelle = datei("krk-ui/src/appkit/editor.rs");
         assert!(
@@ -14013,8 +13910,7 @@ mod tests {
     /// Die Pfeile und `return` sind die Tabellentasten, ohne Befehls-, Wahl-
     /// und Steuerungstaste; mit der Umschalttaste dehnt ein Pfeil das Rechteck
     /// aus (E10, E16). Gefangen werden sie an der einen Stelle des Abgriffs.
-    #[test]
-    fn die_pfeile_bewegen_die_auswahl_und_return_oeffnet_ihre_zelle() {
+    fn die_pfeile_bewegen_die_auswahl_und_return_oeffnet_ihre_zelle(mtm: MainThreadMarker) {
         use eintragsansicht::{Pfeil, Tabellentaste, tabellentaste};
         use krk_core::tasten::{Kombination, Tastendruck};
         let druck = |schreibweise: &str| -> Tastendruck {
@@ -14042,25 +13938,23 @@ mod tests {
         ] {
             assert_eq!(tabellentaste(druck(anderer)), None, "{anderer}");
         }
-        an_einer_flaeche(|mtm| {
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
-            eintraege.tabellentaste_ausfuehren(Tabellentaste::Pfeil(Pfeil::Rechts, false));
-            eintraege.tabellentaste_ausfuehren(Tabellentaste::Pfeil(Pfeil::Runter, true));
-            eintraege.tabellentaste_ausfuehren(Tabellentaste::Pfeil(Pfeil::Rechts, true));
-            assert_eq!(
-                eintraege.gewaehlter_bereich(),
-                Some(Zellbereich {
-                    zeilen: 0..2,
-                    spalten: 1..3
-                })
-            );
-            eintraege.tabellentaste_ausfuehren(Tabellentaste::Pfeil(Pfeil::Hoch, false));
-            assert_eq!(
-                eintraege.gewaehlter_bereich(),
-                Some(Zellbereich::zelle(0, 2))
-            );
-        });
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
+        eintraege.tabellentaste_ausfuehren(Tabellentaste::Pfeil(Pfeil::Rechts, false));
+        eintraege.tabellentaste_ausfuehren(Tabellentaste::Pfeil(Pfeil::Runter, true));
+        eintraege.tabellentaste_ausfuehren(Tabellentaste::Pfeil(Pfeil::Rechts, true));
+        assert_eq!(
+            eintraege.gewaehlter_bereich(),
+            Some(Zellbereich {
+                zeilen: 0..2,
+                spalten: 1..3
+            })
+        );
+        eintraege.tabellentaste_ausfuehren(Tabellentaste::Pfeil(Pfeil::Hoch, false));
+        assert_eq!(
+            eintraege.gewaehlter_bereich(),
+            Some(Zellbereich::zelle(0, 2))
+        );
         use super::super::anwendung::quelltextproben::{datei, rumpf};
         let anwendung = datei("krk-ui/src/appkit/anwendung.rs");
         assert!(

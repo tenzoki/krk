@@ -5828,14 +5828,13 @@ define_class!(
     /// eine Weg in die Bearbeitung, gleich ob sie vom Tastenbefehl oder vom
     /// Klick ins Feld ausgeht: AppKit haengt den Feldeditor genau dort ein.
     ///
-    /// **Keine der drei Zusagen dieser Klasse steht in einer Probe, und der
-    /// Grund ist nicht Nachlaessigkeit:** eine laufende Bearbeitung braucht
-    /// einen Feldeditor, ein Feldeditor braucht ein Fenster, und `NSWindow`
-    /// wirft ausserhalb des Hauptfadens. `libtest` gibt ihn nicht her
-    /// (`issues/260810-1001_*_die-neuen-proben-behaupten-den-hauptfaden-den-libtest-ihnen-nicht-gibt.md`),
-    /// und `MainThreadMarker::new_unchecked` behauptet ihn nur gegenueber
-    /// Rust, nicht gegenueber AppKit — die Behauptung traegt eine
-    /// `NSTextView`, ein `NSWindow` nicht. Gemessen wurde am 260815 mit einem
+    /// **Keine der drei Zusagen dieser Klasse steht in einer Probe.** Eine
+    /// laufende Bearbeitung braucht ein Fenster, und `NSWindow` wirft ausserhalb
+    /// des Hauptfadens, den `libtest` bis zum 261101 nicht hergab
+    /// (`issues/260810-1001_*_die-neuen-proben-behaupten-den-hauptfaden-den-libtest-ihnen-nicht-gibt.md`).
+    /// Seitdem faehrt das Pruefziel `hauptfaden` Proben auf dem wirklichen
+    /// Hauptfaden, und dieser Grund faellt; ob die drei Zusagen dort eine
+    /// Probe bekommen, ist nicht entschieden. Gemessen wurde am 260815 mit einem
     /// weggeworfenen Programm auf dem wirklichen Hauptfaden; in `cargo test`
     /// stehen allein die reinen Regeln [`namensform`] und
     /// [`ohne_ordnerzeichen`]. Was die Anwendung am Ende zeigt, nimmt der
@@ -6583,9 +6582,39 @@ pub(super) fn typ_beschriften(typ: Typ) -> &'static str {
 }
 
 #[cfg(test)]
+pub(super) use tests::HAUPTFADENPROBEN;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::quellbaum::{aufrufstellen, quelldateien};
+
+    use super::super::hauptfaden::{Probe, hauptfadenprobe};
+
+    /// Die Proben dieses Moduls, die eine Datenquelle samt Tabelle bauen und
+    /// deshalb im Pruefziel `hauptfaden` auf dem Hauptfaden laufen und nicht
+    /// unter `libtest`.
+    ///
+    /// Eine Funktion `fn(MainThreadMarker)` dieses Moduls, die hier fehlt, ist im
+    /// Bau von `libtest` toter Code und macht `make lint` rot.
+    pub(crate) const HAUPTFADENPROBEN: &[Probe] = &[
+        hauptfadenprobe!(der_aufstieg_haelt_die_tabliste_nicht_geliehen),
+        hauptfadenprobe!(aufwaerts_an_der_wurzel_des_archivs_waehlt_die_archivdatei),
+        hauptfadenprobe!(
+            ein_archiv_im_archiv_und_ein_archiv_am_fernen_ort_melden_statt_einzusteigen
+        ),
+        hauptfadenprobe!(
+            eine_verknuepfung_auf_ein_archiv_wird_ueber_den_namen_ihres_ziels_betreten
+        ),
+        hauptfadenprobe!(
+            in_einer_datenbank_zeigt_die_groessenspalte_zeilen_und_fuer_eine_sicht_striche
+        ),
+        hauptfadenprobe!(
+            die_ersatzangaben_einer_tabelle_nennen_zeilen_und_einer_sicht_keine_groesse
+        ),
+        hauptfadenprobe!(der_markierungsstand_einer_datenbank_zaehlt_zeilen),
+        hauptfadenprobe!(die_groessenspalte_eines_zip_und_eines_ordners_bleibt_bei_bytes),
+    ];
 
     /// Der Pfad dieser Datei in dem Baum, den [`quelldateien`] liest.
     const DIESE_DATEI: &str = "krk-ui/src/appkit/tabelle.rs";
@@ -7240,11 +7269,10 @@ mod tests {
     /// sie darin mit `borrow_mut`; `RefCell already borrowed` beendete den
     /// Prozess, gleich welcher Eintrag gewaehlt war
     /// (`261017-1039-pfeil-links-im-dateifenster-beendet-krk-mit-refcell-already-borrowed.md`).
-    /// Gebaut wird wie in den Proben des Editors auf dem Faden der Probe, mit
-    /// behauptetem Hauptfaden. Geprueft werden beide Zweige, der lokale und
-    /// der ferne.
-    #[test]
-    fn der_aufstieg_haelt_die_tabliste_nicht_geliehen() {
+    /// Gebaut wird wie in den Proben des Editors im Pruefziel `hauptfaden`, auf
+    /// dem Hauptfaden und mit dem Marker des Laeufers. Geprueft werden beide
+    /// Zweige, der lokale und der ferne.
+    fn der_aufstieg_haelt_die_tabliste_nicht_geliehen(mtm: MainThreadMarker) {
         let ordner = crate::pruefordner::Pruefordner::neu("aufstieg");
         let unten = ordner.unter("unten");
         std::fs::create_dir(&unten).expect("der Unterordner laesst sich anlegen");
@@ -7253,10 +7281,6 @@ mod tests {
             tabs: vec![krk_core::ablage::Tab::auf(&unten)],
         };
         let tabs = Tabliste::aus_zustand(&zustand, crate::heimgriff::ungelesen());
-        // SAFETY: `libtest` gibt den Hauptfaden nicht her; die Probe baut ihre
-        // Ansichten allein auf ihrem eigenen Faden und reicht keine weiter,
-        // wie `an_einer_flaeche` im Pruefmodul des Editors.
-        let mtm = unsafe { MainThreadMarker::new_unchecked() };
         // Allein die Datenquelle mit ihrer Tabelle und nicht das ganze
         // Dateifenster: `Dateifenster::bauen` wartet ohne laufenden
         // Hauptfaden zehn Sekunden, und die Tableiste, der Delegierte und der
@@ -7295,14 +7319,12 @@ mod tests {
 
     /// Eine Datenquelle auf `ordner`, gebaut wie in
     /// `der_aufstieg_haelt_die_tabliste_nicht_geliehen`, und fertig gelesen.
-    fn gelesene_quelle(ordner: &Path) -> Retained<DateifensterQuelle> {
+    fn gelesene_quelle(mtm: MainThreadMarker, ordner: &Path) -> Retained<DateifensterQuelle> {
         let zustand = krk_core::ablage::Dateifenster {
             aktiver_tab: 0,
             tabs: vec![krk_core::ablage::Tab::auf(ordner)],
         };
         let tabs = Tabliste::aus_zustand(&zustand, crate::heimgriff::ungelesen());
-        // SAFETY: wie in `der_aufstieg_haelt_die_tabliste_nicht_geliehen`.
-        let mtm = unsafe { MainThreadMarker::new_unchecked() };
         let rahmen = NSRect::new(NSPoint::ZERO, NSSize::ZERO);
         let tabelle = Dateiliste::neu(mtm, rahmen);
         let sicht = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), rahmen);
@@ -7370,13 +7392,12 @@ mod tests {
     /// des Archivs in den Ordner der Archivdatei, wo die Archivdatei gewaehlt
     /// ist (E8 des Plans der Archive). An der gebauten Datenquelle, damit auch
     /// die Ausleihen der Tabliste zur Laufzeit gehen.
-    #[test]
-    fn aufwaerts_an_der_wurzel_des_archivs_waehlt_die_archivdatei() {
+    fn aufwaerts_an_der_wurzel_des_archivs_waehlt_die_archivdatei(mtm: MainThreadMarker) {
         let ordner = crate::pruefordner::Pruefordner::neu("archiv-aufstieg");
         ordner.ordner("inhalt/unter");
         ordner.datei("inhalt/unter/x.txt", "x");
         ordner.zip_packen("paket.zip", "inhalt");
-        let quelle = gelesene_quelle(ordner.pfad());
+        let quelle = gelesene_quelle(mtm, ordner.pfad());
 
         let zeile = zeile_von(&quelle, "paket.zip");
         assert_eq!(
@@ -7412,8 +7433,9 @@ mod tests {
     /// nicht betreten; der Einstieg meldet und der Tab bleibt, wo er war (E7,
     /// E15 des Plans der Archive). Eine gewoehnliche Datei im Archiv ist kein
     /// Einstieg, wie lokal.
-    #[test]
-    fn ein_archiv_im_archiv_und_ein_archiv_am_fernen_ort_melden_statt_einzusteigen() {
+    fn ein_archiv_im_archiv_und_ein_archiv_am_fernen_ort_melden_statt_einzusteigen(
+        mtm: MainThreadMarker,
+    ) {
         let ordner = crate::pruefordner::Pruefordner::neu("archiv-im-archiv");
         ordner.ordner("innen");
         ordner.datei("innen/x.txt", "x");
@@ -7421,7 +7443,7 @@ mod tests {
         ordner.zip_packen("aussen/klein.zip", "innen");
         ordner.datei("aussen/text.txt", "t");
         ordner.zip_packen("gross.zip", "aussen");
-        let quelle = gelesene_quelle(ordner.pfad());
+        let quelle = gelesene_quelle(mtm, ordner.pfad());
 
         let zeile = zeile_von(&quelle, "gross.zip");
         assert_eq!(
@@ -7463,14 +7485,15 @@ mod tests {
     /// Archiv: der Einstieg antwortet `Ausstehend`, und der Einzug betritt es,
     /// sobald der Faden den Namen des Ziels genannt hat (E8 des Plans der
     /// Archive).
-    #[test]
-    fn eine_verknuepfung_auf_ein_archiv_wird_ueber_den_namen_ihres_ziels_betreten() {
+    fn eine_verknuepfung_auf_ein_archiv_wird_ueber_den_namen_ihres_ziels_betreten(
+        mtm: MainThreadMarker,
+    ) {
         let ordner = crate::pruefordner::Pruefordner::neu("archiv-verweis");
         ordner.ordner("inhalt");
         ordner.datei("inhalt/x.txt", "x");
         ordner.zip_packen("paket.zip", "inhalt");
         std::os::unix::fs::symlink("paket.zip", ordner.unter("aktuell")).expect("Verweis");
-        let quelle = gelesene_quelle(ordner.pfad());
+        let quelle = gelesene_quelle(mtm, ordner.pfad());
 
         let zeile = zeile_von(&quelle, "aktuell");
         assert_eq!(
@@ -7730,11 +7753,12 @@ mod tests {
     /// **Was sie nicht sieht:** eine Tabelle mit unbekannter Zeilenzahl; sie
     /// nimmt im Rumpf denselben Arm wie die Sicht (`Some(None)`), und eine
     /// solche Datei baut `/usr/bin/sqlite3` nicht ohne fremdes Modul.
-    #[test]
-    fn in_einer_datenbank_zeigt_die_groessenspalte_zeilen_und_fuer_eine_sicht_striche() {
+    fn in_einer_datenbank_zeigt_die_groessenspalte_zeilen_und_fuer_eine_sicht_striche(
+        mtm: MainThreadMarker,
+    ) {
         let ordner = crate::pruefordner::Pruefordner::neu("db-groessenspalte");
         datenbank_anlegen(&ordner, "daten.db", DATENBANK);
-        let quelle = gelesene_quelle(ordner.pfad());
+        let quelle = gelesene_quelle(mtm, ordner.pfad());
         datenbank_betreten(&quelle, "daten.db");
 
         assert_eq!(quelle.masseinheit(), Masseinheit::Zeilen);
@@ -7756,14 +7780,15 @@ mod tests {
     /// **Was sie nicht sieht:** die Zeile, die `Vorschaufenster::angabenzeilen`
     /// daraus schreibt; der Arm fuer `Groessenangabe::Zeilen` dort nimmt das
     /// Zahlwort und nie den Byteformatierer, und das haelt der Typ.
-    #[test]
-    fn die_ersatzangaben_einer_tabelle_nennen_zeilen_und_einer_sicht_keine_groesse() {
+    fn die_ersatzangaben_einer_tabelle_nennen_zeilen_und_einer_sicht_keine_groesse(
+        mtm: MainThreadMarker,
+    ) {
         let ordner = crate::pruefordner::Pruefordner::neu("db-ersatzangaben");
         datenbank_anlegen(&ordner, "daten.db", DATENBANK);
         ordner.ordner("inhalt");
         ordner.datei("inhalt/zwoelf.txt", "zwoelf Bytes");
         ordner.zip_packen("paket.zip", "inhalt");
-        let quelle = gelesene_quelle(ordner.pfad());
+        let quelle = gelesene_quelle(mtm, ordner.pfad());
         datenbank_betreten(&quelle, "daten.db");
 
         let angaben_von = |quelle: &DateifensterQuelle, name: &str| {
@@ -7795,7 +7820,7 @@ mod tests {
         assert_eq!(angaben_von(&quelle, "sicht").groesse, None);
 
         // In einem Zip bleiben es Bytes.
-        let quelle = gelesene_quelle(ordner.pfad());
+        let quelle = gelesene_quelle(mtm, ordner.pfad());
         let zeile = zeile_von(&quelle, "paket.zip");
         assert_eq!(
             quelle.in_zeile_einsteigen(zeile, false),
@@ -7818,11 +7843,10 @@ mod tests {
     /// markierten Tabellen und sagt Zeilen; die Sicht zaehlt als Eintrag mit
     /// und traegt keine Zeile bei. Ueber den Tastenbefehl „Alles markieren“
     /// und den Weg, auf dem die Statuszeile ihn liest.
-    #[test]
-    fn der_markierungsstand_einer_datenbank_zaehlt_zeilen() {
+    fn der_markierungsstand_einer_datenbank_zaehlt_zeilen(mtm: MainThreadMarker) {
         let ordner = crate::pruefordner::Pruefordner::neu("db-markierungsstand");
         datenbank_anlegen(&ordner, "daten.sqlite", DATENBANK);
-        let quelle = gelesene_quelle(ordner.pfad());
+        let quelle = gelesene_quelle(mtm, ordner.pfad());
         datenbank_betreten(&quelle, "daten.sqlite");
 
         assert!(quelle.kommando_ausfuehren(Kommando::AlleMarkieren));
@@ -7837,14 +7861,13 @@ mod tests {
     /// ist die Antwort desselben `NSByteCountFormatter`, den die Spalte vor
     /// den Datenbanken fragte, und kein festgeschriebener Text, damit die
     /// Probe nicht von der Spracheinstellung des Systems abhaengt.
-    #[test]
-    fn die_groessenspalte_eines_zip_und_eines_ordners_bleibt_bei_bytes() {
+    fn die_groessenspalte_eines_zip_und_eines_ordners_bleibt_bei_bytes(mtm: MainThreadMarker) {
         let ordner = crate::pruefordner::Pruefordner::neu("db-bytes");
         ordner.datei("zwoelf.txt", "zwoelf Bytes");
         ordner.ordner("inhalt/unter");
         ordner.datei("inhalt/fuenf.txt", "fuenf");
         ordner.zip_packen("paket.zip", "inhalt");
-        let quelle = gelesene_quelle(ordner.pfad());
+        let quelle = gelesene_quelle(mtm, ordner.pfad());
         let bytes = |menge: i64| {
             quelle
                 .ivars()

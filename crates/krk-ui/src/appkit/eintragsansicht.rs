@@ -1947,10 +1947,10 @@ pub struct EintragsansichtIvars {
     frisch: Cell<bool>,
     /// Der Hauptfadenbeweis vom Aufbau.
     ///
-    /// Gemerkt und nicht mit `mtm()` erfragt, weil `mtm()` den wirklichen
-    /// Hauptfaden prueft und die Proben unter `libtest` ihn nur behaupten
-    /// (`an_einer_flaeche` in [`super::editor`]); im Programm sind beide
-    /// Antworten dieselbe.
+    /// Gemerkt und nicht mit `mtm()` erfragt, weil die Proben den Hauptfaden
+    /// bis zum 261101 unter `libtest` nur behaupteten. Seitdem laufen sie im
+    /// Pruefziel `hauptfaden` auf dem wirklichen, und beide Antworten sind in
+    /// Programm und Probe dieselbe.
     mtm: MainThreadMarker,
 }
 

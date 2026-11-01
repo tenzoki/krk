@@ -107,7 +107,14 @@ pub(crate) use hauptfadenprobe;
 
 /// Jede Probe des Pruefziels, in der Reihenfolge der Listen.
 fn alle() -> Vec<&'static Probe> {
-    super::editor::HAUPTFADENPROBEN.iter().collect()
+    [
+        super::editor::HAUPTFADENPROBEN,
+        super::tabelle::HAUPTFADENPROBEN,
+        super::blaetter::HAUPTFADENPROBEN,
+    ]
+    .into_iter()
+    .flatten()
+    .collect()
 }
 
 /// Die Frist, in der eine Probe enden muss.
@@ -611,6 +618,51 @@ mod tests {
                 "{name} steht nicht in einem Pruefmodul unter appkit"
             );
         }
+    }
+
+    /// Keine Codezeile unter `krk-ui/src` behauptet den Hauptfaden mit
+    /// `MainThreadMarker::new_unchecked`.
+    ///
+    /// Eine Probe, die AppKit baut, bekommt ihren Marker vom Laeufer auf dem
+    /// Hauptfaden; eine, die wieder als `#[test]` geschrieben wird, erreicht
+    /// AppKit nur ueber diese Behauptung und macht diese Probe rot. Gelesen
+    /// werden die Codezeilen ([`crate::quellbaum::codezeilen`]), also nennt ein
+    /// Kommentar den Namen ungestraft. Die Nadel ist zusammengesetzt, damit die
+    /// Probe sich nicht selbst findet.
+    ///
+    /// **Was sie nicht sieht:** einen Marker, den eine Probe auf anderem Weg
+    /// erfindet, etwa ueber `transmute` oder `MainThreadMarker::from` an einem
+    /// Wert, der selbst nur behauptet ist, und eine Zeile, die den Aufruf hinter
+    /// einen Kommentar auf derselben Zeile stellt. Sie liest allein `krk-ui`; die
+    /// uebrigen Kisten duerfen `objc2` nicht kennen.
+    #[test]
+    fn kein_pruefcode_in_krk_ui_behauptet_den_hauptfaden() {
+        let nadel = concat!("new_", "unchecked");
+        let dateien = crate::quellbaum::quelldateien();
+        let gelesen: Vec<&(String, String)> = dateien
+            .iter()
+            .filter(|(name, _)| name.starts_with("krk-ui/src/"))
+            .collect();
+        assert!(
+            gelesen
+                .iter()
+                .any(|(name, _)| name == "krk-ui/src/appkit/hauptfaden.rs"),
+            "die Lesart findet die Dateien von krk-ui nicht"
+        );
+        let fundstellen: Vec<String> = gelesen
+            .iter()
+            .flat_map(|(name, inhalt)| {
+                crate::quellbaum::codezeilen(inhalt)
+                    .filter(|zeile| zeile.contains(nadel))
+                    .map(move |zeile| format!("{name}: {}", zeile.trim()))
+            })
+            .collect();
+        assert!(
+            fundstellen.is_empty(),
+            "diese Zeilen behaupten den Hauptfaden, statt den Marker vom Laeufer des \
+             Pruefziels hauptfaden zu nehmen:\n{}",
+            fundstellen.join("\n")
+        );
     }
 
     /// Die `mod`-Zeilen einer Kistenwurzel samt der Attributzeile unmittelbar

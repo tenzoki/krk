@@ -652,9 +652,8 @@ pub(crate) mod proben {
     /// eine, nicht eine je Probe: `objc2-app-kit 0.3.2` bindet
     /// `releaseGlobally` nicht, also kann keine Probe ihre Ablage wieder
     /// abgeben. Deshalb teilen sich alle Proben **eine** und laufen unter einer
-    /// Sperre nacheinander — dieselbe Form, mit der `super::editor` seine
-    /// AppKit-Proben serialisiert, und aus demselben Grund: ohne sie sind die
-    /// Proben untereinander, was zwei Prozesse vorher gegeneinander waren.
+    /// Sperre nacheinander: ohne sie sind die Proben untereinander, was zwei
+    /// Prozesse vorher gegeneinander waren.
     /// Zurueck bleibt eine geleerte Ablage ohne Besitzer.
     ///
     /// Ein vergifteter Riegel wird trotzdem genommen: der Fehlschlag steht

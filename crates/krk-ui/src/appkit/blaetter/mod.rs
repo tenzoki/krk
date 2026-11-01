@@ -1230,10 +1230,24 @@ fn antwort_von_stelle(stelle: usize) -> NSModalResponse {
 }
 
 #[cfg(test)]
+pub(super) use tests::HAUPTFADENPROBEN;
+
+#[cfg(test)]
 mod tests {
     use crate::quellbaum::{aufrufstellen, quelldateien};
 
+    use super::super::hauptfaden::{Probe, hauptfadenprobe};
     use super::*;
+
+    /// Die Proben dieses Moduls, die einen `MainThreadMarker` brauchen und
+    /// deshalb im Pruefziel `hauptfaden` auf dem Hauptfaden laufen und nicht
+    /// unter `libtest`.
+    ///
+    /// Eine Funktion `fn(MainThreadMarker)` dieses Moduls, die hier fehlt, ist im
+    /// Bau von `libtest` toter Code und macht `make lint` rot.
+    pub(crate) const HAUPTFADENPROBEN: &[Probe] = &[hauptfadenprobe!(
+        ein_blatt_ohne_ungefaehrlichen_ausgang_fliegt_auf
+    )];
 
     /// Die Tafel von [`abbruchstelle`], Zeile fuer Zeile.
     ///
@@ -1495,21 +1509,22 @@ mod tests {
     /// **AppKit wird dabei nicht angefasst, und darauf beruht die Probe.** Die
     /// Zusicherung steht als erste Anweisung des Rumpfes, vor `NSAlert::new`;
     /// die Pruefung stuerzt ab, bevor eine Klasse von AppKit angesprochen ist.
-    /// Der Einwand „ein Blatt bauen braucht den Hauptfaden" trifft den Zweig,
-    /// den diese Probe gar nicht erreicht. Das `new_unchecked` ist aus
-    /// demselben Grund vertretbar wie in `crate::appkit::editor`, und aus einem
-    /// staerkeren: der Marker wird weitergereicht und nie eingeloest.
+    /// Den Marker bekommt die Probe seit dem 261101 vom Laeufer des Pruefziels
+    /// `hauptfaden`, auf dem wirklichen Hauptfaden; bis dahin nahm sie ihn mit
+    /// `new_unchecked` auf dem Faden von `libtest`, und das trug nur, weil er
+    /// nie eingeloest wird.
+    ///
+    /// **Sie faengt den Abbruch selbst**, statt ihn mit `#[should_panic]` zu
+    /// erwarten, das es ausserhalb von `libtest` nicht gibt: `catch_unwind` um
+    /// den Aufruf, dann die Meldung gegen „traegt keine Schaltflaeche, die alles
+    /// liegen laesst". Den Haken fuer Abbrueche stellt sie fuer diesen einen
+    /// Aufruf still, damit der erwartete Abbruch nicht als Meldung im Lauf
+    /// steht, und setzt ihn danach zurueck.
     ///
     /// **Wie sie rot wird, wenn jemand die Zusicherung herausnimmt:** dann
-    /// laeuft sie in `NSAlert::new` auf einem Nebenfaden, AppKit wirft eine
-    /// Ausnahme von Objective-C, und der Probenlauf bricht mit
-    /// „Rust cannot catch foreign exceptions" ab. Ein Fehlschlag ist das, aber
-    /// ein harter: der Abbruch nimmt den ganzen Probenlauf mit, statt eine
-    /// Zeile zu melden. Wer ihn sieht, sucht hier und nicht bei der Probe, die
-    /// zuletzt gemeldet hat.
-    #[test]
-    #[should_panic(expected = "traegt keine Schaltflaeche, die alles liegen laesst")]
-    fn ein_blatt_ohne_ungefaehrlichen_ausgang_fliegt_auf() {
+    /// baut `mit_schaltflaechen` auf dem Hauptfaden ein `NSAlert` und kehrt
+    /// ohne Abbruch zurueck, und genau das ist der Fehlschlag.
+    fn ein_blatt_ohne_ungefaehrlichen_ausgang_fliegt_auf(mtm: MainThreadMarker) {
         let ohne_ausgang = [
             Schaltflaeche::neu("Löschen", Taste::Eingabe, Wirkung::Ausfuehren),
             Schaltflaeche::neu("Ersetzen", Taste::EingabeMitBefehl, Wirkung::Ausfuehren),
@@ -1520,10 +1535,23 @@ mod tests {
                 .all(|schaltflaeche| schaltflaeche.wirkung == Wirkung::Ausfuehren),
             "die Probe prueft nicht, was sie pruefen soll: hier laesst eine Schaltflaeche liegen"
         );
-        // SAFETY: Der Marker wird an `mit_schaltflaechen` weitergereicht und
-        // dort nie eingeloest: die Zusicherung, die diese Probe messen soll,
-        // steht vor dem ersten Aufruf an AppKit und bricht davor ab.
-        let mtm = unsafe { MainThreadMarker::new_unchecked() };
-        let _ = Blatt::mit_schaltflaechen(mtm, "Was soll geschehen?", &ohne_ausgang);
+        let haken = std::panic::take_hook();
+        std::panic::set_hook(Box::new(|_| {}));
+        let ausgang = std::panic::catch_unwind(|| {
+            let _ = Blatt::mit_schaltflaechen(mtm, "Was soll geschehen?", &ohne_ausgang);
+        });
+        std::panic::set_hook(haken);
+        let Err(abbruch) = ausgang else {
+            panic!("ein Blatt ohne ungefaehrlichen Ausgang ist gebaut, statt aufzufliegen");
+        };
+        let meldung = abbruch
+            .downcast_ref::<String>()
+            .map(String::as_str)
+            .or_else(|| abbruch.downcast_ref::<&str>().copied())
+            .unwrap_or_default();
+        assert!(
+            meldung.contains("traegt keine Schaltflaeche, die alles liegen laesst"),
+            "das Blatt fliegt auf, aber mit einer anderen Meldung: {meldung}"
+        );
     }
 }

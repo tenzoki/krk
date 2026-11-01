@@ -1290,8 +1290,8 @@ mod proben {
     ///
     /// **Ohne AppKit-Objekt und ohne Hauptfaden.** `smallSystemFontSize` ist
     /// eine Klassenangabe von `NSFont` und baut nichts; die Probe fasst keine
-    /// Ansicht an und braucht deshalb weder Fenster noch
-    /// `MainThreadMarker::new_unchecked`. Gemessen wird die
+    /// Ansicht an und braucht deshalb weder Fenster noch einen
+    /// `MainThreadMarker`. Gemessen wird die
     /// Fallunterscheidung und nicht die Zahl: welche Grundlage die kleine
     /// Systemschriftgroesse ist, entscheidet das System.
     ///
