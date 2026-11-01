@@ -888,7 +888,8 @@ jede Spalte richtet sich nach ihrer Trennzeile: `:--` links, `:-:` mittig,
 um. Kopiert wird der Quelltext: ein Wort in einer Zelle bringt die ganze Zeile
 der Tabelle mit, samt ihren Strichen, und eine Auswahl über Kopf und erste
 Zeile die Trennzeile dazwischen; allein in einer Tabelle ohne äußere Striche
-liefert ein Wort nur das Wort. Eine lange Tabelle steht in Stücken zu je 100
+liefert ein Wort nur sich selbst, mit dem Leerraum seiner Zelle und dem Strich
+davor. Eine lange Tabelle steht in Stücken zu je 100
 Zeilen, und an der Grenze zweier Stücke können die Spaltenbreiten springen.
 Trägt eine Datei mehr als 20 000 Tabellenzellen, zeigt die Vorschau ihre
 Tabellen als Quelltext, ohne Hinweis; der übrige Text bleibt gerendert.

@@ -176,7 +176,10 @@
 //! als Tabelle einfuegen (Frage 1 des Plans
 //! `261031-1720-plan-markdown-vorschau-richtet-tabellenspalten-aus.md`). Eine
 //! Tabelle ohne aeussere Striche traegt an ihren Zeilen keine Klammer, dort
-//! liefert ein Wort das Wort.
+//! liefert ein Wort nicht seine Zeile, sondern sich selbst mit dem Leerraum
+//! seiner Zelle und dem Strich davor: in `a | b` liefert „a" `a ` und „b"
+//! `| b`. Der Strich faehrt nach der Halbregel von [`Quellbezug::quelltext`]
+//! mit, denn er ist ein Abschnitt ohne Textzeichen am Anfang des Wortes.
 //!
 //! **Steht die Tabelle am Anfang eines Listenpunktes**, bekommt dessen
 //! Merkzeichen eine eigene Zeile davor ([`Zerlegung::tabelle_oeffnen`]), und
@@ -1359,6 +1362,15 @@ struct Zerlegung<'q> {
     /// Ein Wunsch und kein geschriebener Text; eingeloest wird er in
     /// [`Zerlegung::absetzen`], und dort wird aufgefuellt statt angehaengt.
     trennung: usize,
+    /// Ab welchem Byte von [`Zerlegung::text`] ein Umbruch am Ende als
+    /// Abstand zaehlt.
+    ///
+    /// **Ein Zellende ist kein Abstand.** Es rueckt diese Stelle vor sich,
+    /// also zaehlt es selbst als Ende seines Absatzes und jedes Zellende davor
+    /// nicht mehr. Ohne das truege eine leere letzte Zelle zusammen mit der
+    /// Zelle davor zwei Umbrueche, und [`Zerlegung::absetzen`] hielte die
+    /// Leerzeile zum naechsten Block fuer schon geschrieben.
+    abstand_ab: usize,
     offen: Vec<Offen>,
     einfaerbungen: Vec<Einfaerbung>,
     /// Die Auszeichnungen mit dem Rang ihres Elements ([`Offen::rang`]).
@@ -1427,6 +1439,7 @@ impl<'q> Zerlegung<'q> {
             text: String::new(),
             stelle: 0,
             trennung: 0,
+            abstand_ab: 0,
             offen: Vec::new(),
             einfaerbungen: Vec::new(),
             auszeichnungen: Vec::new(),
@@ -1527,11 +1540,18 @@ impl<'q> Zerlegung<'q> {
     /// **Ein Element, das noch kein Zeichen bekommen hat, rueckt mit.** Sonst
     /// truege sein Bereich die Umbrueche des vorigen Absatzes, und ein
     /// Absatzmerkmal — der Einzug einer Listenzeile — schluege auf jenen durch.
+    ///
+    /// **Gezaehlt wird nur bis zum letzten Zellende** ([`Zerlegung::abstand_ab`]):
+    /// das Ende einer leeren Zelle ist ihr Absatz und keine Leerzeile.
     fn absetzen(&mut self) {
         if self.trennung == 0 {
             return;
         }
-        let vorhanden = self.text.chars().rev().take_while(|z| *z == '\n').count();
+        let vorhanden = self.text[self.abstand_ab..]
+            .chars()
+            .rev()
+            .take_while(|z| *z == '\n')
+            .count();
         let fehlend = self.trennung.saturating_sub(vorhanden);
         self.trennung = 0;
         if fehlend == 0 {
@@ -2172,6 +2192,7 @@ impl<'q> Zerlegung<'q> {
                 Some(bis) => self.schreiben(ZELLENENDE, bis),
                 None => self.erzeugen(ZELLENENDE),
             }
+            self.abstand_ab = self.text.len() - ZELLENENDE.len();
         }
         // Dieselbe Frage wie eben und dieselbe Antwort: steht nichts offen, ist
         // nichts zu schliessen. Der Zweig ist nicht erreichbar, denn zwischen
@@ -3111,6 +3132,18 @@ mod tests {
         assert_eq!(ergebnis.text, "Davor.\n\na\n1\n\nDanach.");
     }
 
+    /// Dasselbe hinter einer leeren letzten Zelle: ihr Ende ist ihr Absatz und
+    /// keine Leerzeile, also steht der naechste Block hinter derselben
+    /// Leerzeile wie hinter einer gefuellten. Das gilt auch fuer eine zweite
+    /// Tabelle direkt dahinter.
+    #[test]
+    fn ein_block_nach_einer_leeren_letzten_zelle_steht_hinter_einer_leerzeile() {
+        let ergebnis = kachelung_pruefen("| a | b |\n|---|---|\n| 1 |  |\n\nDanach.\n");
+        assert_eq!(ergebnis.text, "a\nb\n1\n\n\nDanach.");
+        let ergebnis = kachelung_pruefen("| a |\n|---|\n|  |\n\n| b |\n|---|\n| 2 |\n");
+        assert_eq!(ergebnis.text, "a\n\n\nb\n2\n");
+    }
+
     /// Eine Kopfzeile ohne gueltige Trennzeile ist keine Tabelle und bleibt
     /// der woertliche Absatz von vorher.
     #[test]
@@ -3136,6 +3169,18 @@ mod tests {
             "das letzte Wort des Kopfes bringt die Trennzeile nicht mit"
         );
         assert_eq!(kopiert(quelle, "2"), "| beta | 2 |\n");
+    }
+
+    /// Ohne aeussere Striche hat die Zeile keine Klammer: ein Wort liefert
+    /// sich selbst mit dem Leerraum seiner Zelle und dem Strich davor, und
+    /// nicht die Quellzeile. So steht es im Modulkopf unter „Tabellen".
+    #[test]
+    fn ein_wort_ohne_aeussere_striche_kopiert_sich_mit_strich_und_leerraum() {
+        let quelle = "a | b\n--|--\n1 | 2\n";
+        assert_eq!(kopiert(quelle, "a"), "a ");
+        assert_eq!(kopiert(quelle, "b"), "| b");
+        assert_eq!(kopiert(quelle, "1"), "1 ");
+        assert_eq!(kopiert(quelle, "2"), "| 2");
     }
 
     /// Frage 1 des Plans: eine Auswahl ueber Kopf und erste Zeile liefert die
@@ -3694,7 +3739,7 @@ mod tests {
     /// ueber `nur_das_merkzeichen`, und der harte Umbruch ueber
     /// `Event::HardBreak`. Jeder von ihnen traegt Quelltext auf einem anderen
     /// Pfad ab als die zehn davor.
-    const KACHELBEISPIELE: [&str; 22] = [
+    const KACHELBEISPIELE: [&str; 23] = [
         "Ein gewoehnlicher Absatz. Und noch ein Satz dahinter.\n",
         "# Titel\n\nDarunter steht ein Absatz.\n",
         "Ein **fetter** Text mit [Verweis](https://example.com) darin.\n",
@@ -3717,6 +3762,7 @@ mod tests {
         "| Grüße | 😀 |\n|:-:|---|\n| ä | ö😀ü |\n",
         "- | a |\n  |---|\n  | 1 |\n\n> | b |\n> |---|\n",
         "a | b\n--|--\n1 | 2",
+        "| a | b |\n|---|---|\n| 1 |  |\n\nDanach.\n",
     ];
 
     /// Misst die beiden Zusagen der Kachelung an einer Quelle nach.

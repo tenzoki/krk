@@ -440,8 +440,8 @@ two-face = { version = "0.5.2", default-features = false, features = ["syntect-f
 # sortiert, `signal-hook` faengt Signale, die `objc2`-Kisten reichen AppKit
 # durch, und `syntect` faerbt ein, statt Auszeichnungszeichen zu entfernen.
 #
-# **Vier Zahlen, am 260812 auf diesem Geraet erhoben und nicht uebernommen**,
-# und eine fuenfte vom 261031 beim Merkmal fuer Tabellen unten.
+# **Am 260812 auf diesem Geraet erhoben und nicht uebernommen**; die
+# Messungen zu den Tabellen stehen unten beim Merkmal fuer Tabellen.
 #
 # - **Drei Abhaengigkeiten, davon zwei schon im Baum.** Ohne Vorgabemerkmale
 #   fuehrt die Kiste `bitflags`, `memchr` und `unicase`; `bitflags 2.13.1` und
@@ -480,15 +480,17 @@ two-face = { version = "0.5.2", default-features = false, features = ["syntect-f
 # ihrer Zeile und Spalte, und die Breiten rechnet der Satzspiegel von AppKit
 # ueber `NSTextTable` (`crates/krk-ui/src/appkit/textmerkmale.rs`).
 #
-# **Die fuenfte Zahl, am 261031 auf diesem Geraet erhoben:** ueber eine Datei
-# von 1,05 MB, die allein aus einer Tabelle besteht (vier Spalten, kurze
+# **Am 261031 auf diesem Geraet erhoben, als Stand vor der Zellengrenze:**
+# ueber eine Datei von 1,05 MB, die allein aus einer Tabelle besteht (vier Spalten, kurze
 # Zellen, 31 462 Zeilen), kostet `markdown::rendern` im Profil `release` in
 # drei Laeufen nach einem Vorlauf 18,8 ms, 19,0 ms und 19,2 ms, kopflos und
 # mit einer Probe gemessen, die nicht eingecheckt ist. Das liegt bei den
 # 19 bis 30 ms der gemischten Datei oben und deutlich unter den 100 ms von
 # L7. Gemessen ist allein die Zerlegung auf dem Faden `krk-vorschau`; was die
 # Breitenrechnung von `NSTextTable` auf dem Hauptfaden kostet, sagt erst der
-# Blick am Buendel.
+# Blick am Buendel. Diese Datei traegt 125 848 Zellen und liegt seit dem
+# 261101 ueber der Zellengrenze darunter; den gemessenen Weg faehrt sie nicht
+# mehr, und es gilt die Messung vom 261101.
 #
 # **Der Blick hat es gesagt, und seit dem 261101 gilt eine Zellengrenze**
 # (`markdown::ZELLENGRENZE`, Entscheid
