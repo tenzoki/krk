@@ -21,3 +21,5 @@ Die erste Spalte bringt keinen Strich mit. Die Probe `ein_wort_ohne_aeussere_str
 
 - `HowTo.md` und der Modulkopf sagen, dass der Strich davor nur ab der zweiten Spalte mitkommt, oder sie sagen es so, dass es für jede Spalte stimmt (etwa: „mit dem Leerraum seiner Zelle und dem Strich, der sie von der vorigen trennt“).
 - Nur Prosa. `cargo test -p krk-ui --bin krk markdown::` bleibt grün.
+
+Resolved: HowTo.md und der Modulkopf von markdown.rs sagen jetzt „mit dem Leerraum seiner Zelle und dem Strich, der sie von der vorigen Spalte trennt, in der ersten Spalte also ohne Strich“; make check grün (Orchestrator, 261101).

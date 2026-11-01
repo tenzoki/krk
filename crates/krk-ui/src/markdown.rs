@@ -177,7 +177,8 @@
 //! `261031-1720-plan-markdown-vorschau-richtet-tabellenspalten-aus.md`). Eine
 //! Tabelle ohne aeussere Striche traegt an ihren Zeilen keine Klammer, dort
 //! liefert ein Wort nicht seine Zeile, sondern sich selbst mit dem Leerraum
-//! seiner Zelle und dem Strich davor: in `a | b` liefert „a" `a ` und „b"
+//! seiner Zelle und dem Strich, der sie von der vorigen Spalte trennt, in der
+//! ersten Spalte also ohne Strich: in `a | b` liefert „a" `a ` und „b"
 //! `| b`. Der Strich faehrt nach der Halbregel von [`Quellbezug::quelltext`]
 //! mit, denn er ist ein Abschnitt ohne Textzeichen am Anfang des Wortes.
 //!
