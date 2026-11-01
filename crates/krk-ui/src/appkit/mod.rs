@@ -263,6 +263,11 @@ mod fenster;
 mod finder;
 mod fsevents;
 mod git;
+/// Der Laeufer des Pruefziels `hauptfaden`: er faehrt die Proben, die AppKit
+/// bauen, auf dem Hauptfaden. Nur im Probenbau uebersetzt; die zweite
+/// Kistenwurzel `src/hauptfaden.rs` ruft ihn.
+#[cfg(test)]
+pub(crate) mod hauptfaden;
 mod hinweis;
 mod koordinaten;
 mod leiste;

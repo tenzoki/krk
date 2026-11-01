@@ -7069,6 +7069,9 @@ fn rueckgaengigstapel_leeren(verwalter: Option<&NSUndoManager>) {
     }
 }
 
+#[cfg(test)]
+pub(super) use tests::HAUPTFADENPROBEN;
+
 /// Die Meldungen sind reine Werte und brauchen kein Fenster; deshalb stehen die
 /// Pruefungen hier und nicht unter `Nutzerarbeit`.
 #[cfg(test)]
@@ -7092,6 +7095,20 @@ mod tests {
     // Die lesende Seite der Merkmalsfrage bildet denselben Setzernamen wie die
     // setzende; seit der Runde 9 wohnt er in `super::super::textautomatik`.
     use super::super::textautomatik::setzername;
+
+    use super::super::hauptfaden::{Probe, hauptfadenprobe};
+
+    /// Die Proben dieses Moduls, die AppKit bauen und deshalb im Pruefziel
+    /// `hauptfaden` auf dem Hauptfaden laufen und nicht unter `libtest`.
+    ///
+    /// Eine Funktion `fn(MainThreadMarker)` dieses Moduls, die hier fehlt, ist im
+    /// Bau von `libtest` toter Code und macht `make lint` rot.
+    pub(crate) const HAUPTFADENPROBEN: &[Probe] = &[
+        hauptfadenprobe!(beim_tausch_ist_die_neue_flaeche_sichtbar_bevor_der_ersthelfer_uebergeht),
+        hauptfadenprobe!(die_flaeche_der_quicknote_ist_reiner_text_mit_eigenem_verwalter),
+        hauptfadenprobe!(die_abgeschalteten_stehen_an_der_gebauten_flaeche_auf_aus),
+        hauptfadenprobe!(die_sammeltuer_ist_eine_sicht_auf_dieselben_bits),
+    ];
 
     fn pfad() -> PathBuf {
         PathBuf::from("/tmp/probe.txt")
@@ -8888,8 +8905,15 @@ mod tests {
     /// Zuschnitt, den `260810-0417` fuer die Gegenrichtung des Stolperdrahts
     /// gewaehlt hat — Hinweis statt Fehlschlag —, und aus demselben Grund geht der
     /// Hinweis ueber [`std::io::stderr`] und nicht ueber `eprintln!`.
-    #[test]
-    fn die_abgeschalteten_stehen_an_der_gebauten_flaeche_auf_aus() {
+    ///
+    /// # Der Zeuge traegt die Werkseinstellung
+    ///
+    /// Die frische Flaeche ist der Zeuge, und sie liest die Automatiken aus den
+    /// Vorgaben des Nutzers. Dass sie trotzdem die Werkseinstellung traegt, gleich
+    /// was der Nutzer global eingestellt hat, legt der Laeufer des Pruefziels
+    /// `hauptfaden` vor der ersten Probe im fluechtigen Argumentbereich fest
+    /// (`WERKSVORGABEN` in `super::super::hauptfaden`); auf die Platte geht nichts.
+    fn die_abgeschalteten_stehen_an_der_gebauten_flaeche_auf_aus(mtm: MainThreadMarker) {
         let abgeschaltet: Vec<&str> = EINSTELLUNGEN
             .iter()
             .filter(|(_, einordnung)| *einordnung == Einordnung::Abgeschaltet)
@@ -8900,59 +8924,57 @@ mod tests {
             "ohne eine abgeschaltete Einstellung misst diese Probe nichts"
         );
 
-        an_einer_flaeche(|mtm| {
-            let (_rolle, editorflaeche) = textflaeche_bauen(mtm, probenrahmen());
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
-            let (feld, _) = felder_der_zeile(&eintraege, 0);
-            let zelleneditor = eintraege
-                .feldeditor_fuer(&feld)
-                .expect("ein Feld der Tabelle bekommt den eigenen Feldeditor");
-            let quicknote = Quicknote::bauen(mtm, probenrahmen());
-            let unsere = [
-                ("die Flaeche des Editors", editorflaeche),
-                ("dem Feldeditor der Eintragszellen", zelleneditor),
-                (
-                    "der Flaeche der Quicknote",
-                    quicknote.textflaeche().retain(),
-                ),
-            ];
-            let frische = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
-            for setzer in abgeschaltet {
-                let name = merkmalsname(setzer);
-                let aus = aus_bedeutet(setzer);
-                let mut gemessen = false;
-                for (woher, flaeche) in &unsere {
-                    let Some(unser_wert) = merkmal_falls_vorhanden(flaeche, &name) else {
-                        continue;
-                    };
-                    gemessen = true;
-                    assert_eq!(
-                        unser_wert, aus,
-                        "{setzer} steht an {woher} nicht auf aus — C4 verlangt, dass der \
-                         gesicherte Stand der getippte ist, und C3 der Runde 9, dass es \
-                         fuer jede bearbeitbare Flaeche gilt"
-                    );
-                }
-                if !gemessen {
-                    let _ = writeln!(
-                        std::io::stderr(),
-                        "Hinweis aus {}: diese Laufzeit fuehrt {setzer} nicht. Was es nicht \
-                         gibt, aendert kein Zeichen; C4 ist davon nicht beruehrt. Die \
-                         Untergrenze des Buendels ist macOS 15.0.",
-                        module_path!()
-                    );
+        let (_rolle, editorflaeche) = textflaeche_bauen(mtm, probenrahmen());
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
+        let (feld, _) = felder_der_zeile(&eintraege, 0);
+        let zelleneditor = eintraege
+            .feldeditor_fuer(&feld)
+            .expect("ein Feld der Tabelle bekommt den eigenen Feldeditor");
+        let quicknote = Quicknote::bauen(mtm, probenrahmen());
+        let unsere = [
+            ("die Flaeche des Editors", editorflaeche),
+            ("dem Feldeditor der Eintragszellen", zelleneditor),
+            (
+                "der Flaeche der Quicknote",
+                quicknote.textflaeche().retain(),
+            ),
+        ];
+        let frische = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
+        for setzer in abgeschaltet {
+            let name = merkmalsname(setzer);
+            let aus = aus_bedeutet(setzer);
+            let mut gemessen = false;
+            for (woher, flaeche) in &unsere {
+                let Some(unser_wert) = merkmal_falls_vorhanden(flaeche, &name) else {
                     continue;
-                }
-                assert_ne!(
-                    merkmal(&frische, &name),
-                    aus,
-                    "{setzer} steht schon ab Werk auf aus; dann sagt diese Probe ueber die \
-                     Zeile in der Abschaltung nichts, und der Vergleich braucht einen \
-                     anderen Zeugen"
+                };
+                gemessen = true;
+                assert_eq!(
+                    unser_wert, aus,
+                    "{setzer} steht an {woher} nicht auf aus — C4 verlangt, dass der \
+                     gesicherte Stand der getippte ist, und C3 der Runde 9, dass es \
+                     fuer jede bearbeitbare Flaeche gilt"
                 );
             }
-        });
+            if !gemessen {
+                let _ = writeln!(
+                    std::io::stderr(),
+                    "Hinweis aus {}: diese Laufzeit fuehrt {setzer} nicht. Was es nicht \
+                     gibt, aendert kein Zeichen; C4 ist davon nicht beruehrt. Die \
+                     Untergrenze des Buendels ist macOS 15.0.",
+                    module_path!()
+                );
+                continue;
+            }
+            assert_ne!(
+                merkmal(&frische, &name),
+                aus,
+                "{setzer} steht schon ab Werk auf aus; dann sagt diese Probe ueber die \
+                 Zeile in der Abschaltung nichts, und der Vergleich braucht einen \
+                 anderen Zeugen"
+            );
+        }
     }
 
     /// Der Feldeditor der Eintragszellen schaltet die Automatiken beim Beginn
@@ -9233,8 +9255,12 @@ mod tests {
     ///
     /// Die Zahlenwerte der Maske stehen bewusst nirgends: gemessen wird der
     /// Unterschied zwischen zwei Flaechen und nicht eine Konstante von Apple.
-    #[test]
-    fn die_sammeltuer_ist_eine_sicht_auf_dieselben_bits() {
+    ///
+    /// Die frische Flaeche traegt dabei die Werkseinstellung und nicht die
+    /// Vorgaben des Nutzers: der Laeufer des Pruefziels `hauptfaden` legt sie vor
+    /// der ersten Probe im fluechtigen Argumentbereich fest (`WERKSVORGABEN` in
+    /// `super::super::hauptfaden`).
+    fn die_sammeltuer_ist_eine_sicht_auf_dieselben_bits(mtm: MainThreadMarker) {
         let (sammeltuer, ziele) = EINSTELLUNGEN
             .iter()
             .find_map(|(name, einordnung)| match einordnung {
@@ -9247,37 +9273,35 @@ mod tests {
             "diese Probe kennt die Maske dieser einen Sammeltuer"
         );
 
-        an_einer_flaeche(|mtm| {
-            let (_rolle, unsere) = textflaeche_bauen(mtm, probenrahmen());
-            let frische = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
-            let werkswert = frische.enabledTextCheckingTypes();
-            let unsere_maske = unsere.enabledTextCheckingTypes();
-            assert_ne!(
-                unsere_maske, werkswert,
-                "die sieben Zeilen lassen die Maske unberuehrt — dann fuehrt sie andere \
-                 Bits als die Einstellungen, die die Aufstellung ihr zuschreibt"
-            );
-            assert_eq!(
-                unsere_maske & !werkswert,
-                0,
-                "unsere Maske traegt ein Bit, das die frische nicht hat — die sieben Zeilen \
-                 schalten dann etwas ein"
-            );
+        let (_rolle, unsere) = textflaeche_bauen(mtm, probenrahmen());
+        let frische = NSTextView::initWithFrame(NSTextView::alloc(mtm), probenrahmen());
+        let werkswert = frische.enabledTextCheckingTypes();
+        let unsere_maske = unsere.enabledTextCheckingTypes();
+        assert_ne!(
+            unsere_maske, werkswert,
+            "die sieben Zeilen lassen die Maske unberuehrt — dann fuehrt sie andere \
+             Bits als die Einstellungen, die die Aufstellung ihr zuschreibt"
+        );
+        assert_eq!(
+            unsere_maske & !werkswert,
+            0,
+            "unsere Maske traegt ein Bit, das die frische nicht hat — die sieben Zeilen \
+             schalten dann etwas ein"
+        );
 
-            let vorher: Vec<isize> = ziele
-                .iter()
-                .map(|ziel| merkmal(&unsere, &merkmalsname(ziel)))
-                .collect();
-            unsere.setEnabledTextCheckingTypes(werkswert);
-            for (ziel, alt) in ziele.iter().zip(vorher) {
-                assert_ne!(
-                    merkmal(&unsere, &merkmalsname(ziel)),
-                    alt,
-                    "der Werkswert der Maske laesst {ziel} unberuehrt — dann ist {ziel} kein \
-                     Ziel der Sammeltuer und die Aufstellung nennt es zu Unrecht"
-                );
-            }
-        });
+        let vorher: Vec<isize> = ziele
+            .iter()
+            .map(|ziel| merkmal(&unsere, &merkmalsname(ziel)))
+            .collect();
+        unsere.setEnabledTextCheckingTypes(werkswert);
+        for (ziel, alt) in ziele.iter().zip(vorher) {
+            assert_ne!(
+                merkmal(&unsere, &merkmalsname(ziel)),
+                alt,
+                "der Werkswert der Maske laesst {ziel} unberuehrt — dann ist {ziel} kein \
+                 Ziel der Sammeltuer und die Aufstellung nennt es zu Unrecht"
+            );
+        }
     }
 
     /// Der Vorgabewert der Schreibwerkzeuge ueberlaesst dem System die Wahl, und
@@ -9699,30 +9723,27 @@ mod tests {
     /// Quicknote und nicht der eines Fensters.
     ///
     /// **Sie steht hier und nicht im Pruefmodul von `super::quicknote`**, weil
-    /// sie eine Ansicht baut und dafuer [`an_einer_flaeche`] braucht, die eine
-    /// Stelle mit Sperre, die den Hauptfaden behauptet. Eine zweite daneben
-    /// waere eine weitere Behauptung desselben Fadens.
-    #[test]
-    fn die_flaeche_der_quicknote_ist_reiner_text_mit_eigenem_verwalter() {
-        an_einer_flaeche(|mtm| {
-            let quicknote = Quicknote::bauen(mtm, probenrahmen());
-            let flaeche = quicknote.textflaeche();
-            assert!(!flaeche.isRichText(), "die Quicknote nimmt Rich Text");
-            assert!(!flaeche.importsGraphics(), "die Quicknote nimmt Grafiken");
-            assert!(
-                flaeche.allowsUndo(),
-                "die Quicknote erlaubt kein Rueckgaengig"
-            );
-            assert!(flaeche.isEditable());
-            let verwalter = flaeche
-                .undoManager()
-                .expect("die Flaeche nennt ohne Fenster keinen Verwalter");
-            assert!(
-                verwalter.isEqual(Some(quicknote.verwalter())),
-                "der Verwalter der Flaeche ist nicht der eigene der Quicknote"
-            );
-            assert!(quicknote.rolle().isHidden(), "die Rolle entsteht sichtbar");
-        });
+    /// sie eine Ansicht baut und deshalb im Pruefziel `hauptfaden` laeuft; die
+    /// Liste [`HAUPTFADENPROBEN`] dieses Pruefmoduls fuehrt sie, und den Marker
+    /// bekommt sie vom Laeufer auf dem Hauptfaden. Unter `libtest` hing sie.
+    fn die_flaeche_der_quicknote_ist_reiner_text_mit_eigenem_verwalter(mtm: MainThreadMarker) {
+        let quicknote = Quicknote::bauen(mtm, probenrahmen());
+        let flaeche = quicknote.textflaeche();
+        assert!(!flaeche.isRichText(), "die Quicknote nimmt Rich Text");
+        assert!(!flaeche.importsGraphics(), "die Quicknote nimmt Grafiken");
+        assert!(
+            flaeche.allowsUndo(),
+            "die Quicknote erlaubt kein Rueckgaengig"
+        );
+        assert!(flaeche.isEditable());
+        let verwalter = flaeche
+            .undoManager()
+            .expect("die Flaeche nennt ohne Fenster keinen Verwalter");
+        assert!(
+            verwalter.isEqual(Some(quicknote.verwalter())),
+            "der Verwalter der Flaeche ist nicht der eigene der Quicknote"
+        );
+        assert!(quicknote.rolle().isHidden(), "die Rolle entsteht sichtbar");
     }
 
     /// Die Tabelle gehoert zu `tasks.txt` und seit Schritt 4.3 zu `notes.txt`
@@ -9879,42 +9900,41 @@ mod tests {
     /// Flaeche schon sichtbar und die alte noch nicht ausgeblendet, danach ist
     /// nur die neue zu sehen. Die Uebergabe selbst zeichnet die Probe auf, weil
     /// `makeFirstResponder:` ein Fenster braucht.
-    #[test]
-    fn beim_tausch_ist_die_neue_flaeche_sichtbar_bevor_der_ersthelfer_uebergeht() {
-        an_einer_flaeche(|mtm| {
-            let (textrolle, _text) = textflaeche_bauen(mtm, probenrahmen());
-            let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-            let quicknote = Quicknote::bauen(mtm, probenrahmen());
-            let rolle = |flaeche: Flaeche| -> &NSView {
-                match flaeche {
-                    Flaeche::Textflaeche => &textrolle,
-                    Flaeche::Tabelle => eintraege.rolle(),
-                    Flaeche::Quicknote => quicknote.rolle(),
-                }
-            };
-            // Eine Kette: jedes Paar beginnt bei der Flaeche, bei der das
-            // vorige geendet hat, denn nur die gezeigte Flaeche ist sichtbar.
-            for (alt, neu) in [
-                (Flaeche::Textflaeche, Flaeche::Tabelle),
-                (Flaeche::Tabelle, Flaeche::Textflaeche),
-                (Flaeche::Textflaeche, Flaeche::Quicknote),
-                (Flaeche::Quicknote, Flaeche::Tabelle),
-                (Flaeche::Tabelle, Flaeche::Quicknote),
-                (Flaeche::Quicknote, Flaeche::Textflaeche),
-            ] {
-                let mut uebergaben = Vec::new();
-                tausch_ausfuehren(&tauschschritte(alt, neu, true), rolle, |flaeche| {
-                    uebergaben.push((flaeche, rolle(neu).isHidden(), rolle(alt).isHidden()));
-                });
-                assert_eq!(
-                    uebergaben,
-                    vec![(neu, false, false)],
-                    "eine Uebergabe, an die sichtbare neue Flaeche, solange die alte noch steht"
-                );
-                assert!(!rolle(neu).isHidden(), "{neu:?} ist zu sehen");
-                assert!(rolle(alt).isHidden(), "{alt:?} ist ausgeblendet");
+    fn beim_tausch_ist_die_neue_flaeche_sichtbar_bevor_der_ersthelfer_uebergeht(
+        mtm: MainThreadMarker,
+    ) {
+        let (textrolle, _text) = textflaeche_bauen(mtm, probenrahmen());
+        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
+        let quicknote = Quicknote::bauen(mtm, probenrahmen());
+        let rolle = |flaeche: Flaeche| -> &NSView {
+            match flaeche {
+                Flaeche::Textflaeche => &textrolle,
+                Flaeche::Tabelle => eintraege.rolle(),
+                Flaeche::Quicknote => quicknote.rolle(),
             }
-        });
+        };
+        // Eine Kette: jedes Paar beginnt bei der Flaeche, bei der das
+        // vorige geendet hat, denn nur die gezeigte Flaeche ist sichtbar.
+        for (alt, neu) in [
+            (Flaeche::Textflaeche, Flaeche::Tabelle),
+            (Flaeche::Tabelle, Flaeche::Textflaeche),
+            (Flaeche::Textflaeche, Flaeche::Quicknote),
+            (Flaeche::Quicknote, Flaeche::Tabelle),
+            (Flaeche::Tabelle, Flaeche::Quicknote),
+            (Flaeche::Quicknote, Flaeche::Textflaeche),
+        ] {
+            let mut uebergaben = Vec::new();
+            tausch_ausfuehren(&tauschschritte(alt, neu, true), rolle, |flaeche| {
+                uebergaben.push((flaeche, rolle(neu).isHidden(), rolle(alt).isHidden()));
+            });
+            assert_eq!(
+                uebergaben,
+                vec![(neu, false, false)],
+                "eine Uebergabe, an die sichtbare neue Flaeche, solange die alte noch steht"
+            );
+            assert!(!rolle(neu).isHidden(), "{neu:?} ist zu sehen");
+            assert!(rolle(alt).isHidden(), "{alt:?} ist ausgeblendet");
+        }
     }
 
     /// Die Tabelle leitet ihre Zeilen aus dem Stand ab, beschneidet die

@@ -11,6 +11,20 @@ publish.workspace = true
 name = "krk"
 path = "src/main.rs"
 
+# Die Proben, die eine AppKit-Ansicht bauen oder einen `MainThreadMarker`
+# brauchen. `libtest` gibt den Hauptfaden nicht her: es legt jede Probe auf
+# einen eigenen Faden, auch mit `--test-threads=1`. Ein Ziel ohne Harness haelt
+# sein `main` selbst und laeuft damit auf dem Hauptfaden, uebersetzt trotzdem
+# mit `cfg(test)` und wird von `cargo test` mitgefahren; `make check` bleibt,
+# wie es ist. Die Wurzel `src/hauptfaden.rs` uebersetzt dieselben Module wie
+# `src/main.rs` ein drittes Mal. Entschieden im Datensatz
+# `261101-1436-wie-kommen-die-appkit-proben-auf-den-hauptfaden.md`
+# (Moeglichkeit 1), im Paket `261101-1320-appkit-proben-laufen-auf-dem-hauptfaden`.
+[[test]]
+name = "hauptfaden"
+path = "src/hauptfaden.rs"
+harness = false
+
 [dependencies]
 # Das Ordnermodell und der Verzeichnisleser wohnen im Kern. Die Oberflaeche
 # bindet ihn ueber den Pfad ein, weil beide im selben Workspace liegen und
