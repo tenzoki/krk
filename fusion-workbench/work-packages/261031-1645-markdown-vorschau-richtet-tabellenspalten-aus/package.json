@@ -3,8 +3,12 @@
   "id": "0fe17357-f258-430a-bfff-8756b293dc88",
   "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
   "domain": "code",
-  "status": "paused",
-  "claim": null,
+  "status": "done",
+  "claim": {
+    "checkout_id": "9be83618",
+    "person": "Kai Stalmann <ks@qantr.com>",
+    "claimed_at": "2026-11-01T21:26:20Z"
+  },
   "mode": {
     "value": "ordinary",
     "source": null
@@ -33,7 +37,20 @@
   ],
   "references": [],
   "evidence": [],
-  "outcome": null,
+  "outcome": {
+    "class": "completed",
+    "reason": "Markdown-Tabellen stehen in der Vorschau spaltenrichtig; Nutzer hat die Abnahmedateien am Buendel geprueft und alle neun Haltebedingungen am 261101 bestaetigt",
+    "evidence": [
+      {
+        "ref": {
+          "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+          "record_id": "b9ef6aeb-651b-4f35-9507-a2c853eb2722",
+          "revision": "sha256:a105e34bd04d6545b33c1eb1f830fef006017e39fa23f4c85a07070a3025e2d1"
+        },
+        "policy": "claude-guided"
+      }
+    ]
+  },
   "provenance": {
     "source": "created",
     "legacy_fields": {}

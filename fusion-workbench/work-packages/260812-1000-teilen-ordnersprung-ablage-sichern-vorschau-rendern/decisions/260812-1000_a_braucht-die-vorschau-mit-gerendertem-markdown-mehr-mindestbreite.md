@@ -73,3 +73,5 @@ Superseded by:
 
 ---
 Abgleich 260812-2253 (reconciler): Der Baum trägt die Antwort bereits — `crates/krk-ui/src/fenstermodell.rs:213` gibt `Bereich::Vorschau => 160.0`, unverändert über die ganze Runde. Der Marker bleibt trotzdem auf beantwortet und nicht auf umgesetzt, weil kein Commit die Antwort einlöst: sie besteht darin, nichts zu ändern. Der Auslöser, der die Frage wieder aufmacht, ist unverändert ein Lauf am laufenden Bündel (C4.14 des Plans). Wer den Datensatz auf umgesetzt zieht, nimmt ihn damit aus der Suche nach aktiver Grundlage heraus, und der Auslöser fiele mit ihm heraus — dieselbe Lage, die `CLAUDE.md` für die zurückgestellte L9-Frage beschreibt.
+
+Note (261101, orchestrator): Am Bündel mit Markdown-Tabellen (Paket `261031-1645-markdown-vorschau-richtet-tabellenspalten-aus`) ragt nach Auskunft des Nutzers bei 160 pt Vorschaubreite auch in Tabellen mit drei oder mehr Spalten kein Wort über den Zellrand. Der Zustand dieses Datensatzes bleibt unverändert.

@@ -1,0 +1,28 @@
+{
+  "schema": "fusion.evidence/v1",
+  "id": "b9ef6aeb-651b-4f35-9507-a2c853eb2722",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "subject": {
+    "git_tree": "f9960928dc46cebcc4c3bbd9a1b2ff549836b231",
+    "git_range": null
+  },
+  "brief_revision": "sha256:5510dd636e1cf6245502307ebcf6b67e50b82b82527b702fa6b342b3a5829025",
+  "plan_revision": "sha256:5d2a5d0299f339c2a906fb73f34fc7cb57784543fd6074867eda8fb828306b33",
+  "role": {
+    "profile": "reviewer",
+    "version": "13.3.7"
+  },
+  "host": "claude-code",
+  "execution_policy": "claude-guided",
+  "verdict": "revise",
+  "uncertainties": [],
+  "checks": [],
+  "report": {
+    "path": "work-packages/261031-1645-markdown-vorschau-richtet-tabellenspalten-aus/reviews/261101-2225-reviewer-nachpruefung-markdown-tabellen.md",
+    "sha256": "sha256:e74976384b32598272f9d0d78d0d0f484ab9ed1ec1dfdb7c9862bfab536e3290",
+    "kind": "review"
+  },
+  "predecessor": null,
+  "accepted_at": "2026-11-01T21:23:38Z",
+  "extensions": {}
+}
