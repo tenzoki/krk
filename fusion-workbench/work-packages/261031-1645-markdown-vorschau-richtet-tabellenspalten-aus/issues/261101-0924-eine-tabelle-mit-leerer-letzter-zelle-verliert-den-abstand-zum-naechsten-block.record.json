@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "ae7cca14-555c-46e2-bb6b-dc30478c0d1f",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261031-1645-markdown-vorschau-richtet-tabellenspalten-aus/issues/261101-0924-eine-tabelle-mit-leerer-letzter-zelle-verliert-den-abstand-zum-naechsten-block.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

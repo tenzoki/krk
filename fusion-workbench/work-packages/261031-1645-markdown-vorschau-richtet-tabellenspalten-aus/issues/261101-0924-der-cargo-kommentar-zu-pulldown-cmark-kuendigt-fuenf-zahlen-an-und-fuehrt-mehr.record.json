@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "c63e3371-0af6-40ad-8bb9-9f872b27d37c",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261031-1645-markdown-vorschau-richtet-tabellenspalten-aus/issues/261101-0924-der-cargo-kommentar-zu-pulldown-cmark-kuendigt-fuenf-zahlen-an-und-fuehrt-mehr.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}
