@@ -3,7 +3,7 @@
   "id": "c7ab8720-27e0-4875-917d-cfa0a66d25a9",
   "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
   "domain": "code",
-  "status": "claimed",
+  "status": "done",
   "claim": {
     "checkout_id": "9be83618",
     "person": "Kai Stalmann <ks@qantr.com>",
@@ -37,7 +37,20 @@
   ],
   "references": [],
   "evidence": [],
-  "outcome": null,
+  "outcome": {
+    "class": "completed",
+    "reason": "make check laeuft auf macOS 26.6.2 / SDK 27 gruen; alle 49 AppKit-Proben im Pruefziel hauptfaden auf dem Hauptfaden",
+    "evidence": [
+      {
+        "ref": {
+          "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+          "record_id": "7b924e6e-bb47-41d8-935f-8bbef4cbf310",
+          "revision": "sha256:812e3e41eba9b1446bb67ab1e79d2bf2d0baceb8373edbc39b6da16962513e1b"
+        },
+        "policy": "claude-guided"
+      }
+    ]
+  },
   "provenance": {
     "source": "created",
     "legacy_fields": {}
