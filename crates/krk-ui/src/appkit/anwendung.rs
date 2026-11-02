@@ -363,6 +363,7 @@ use super::git::Gitfenster;
 use super::hinweis;
 use super::leiste::Leiste;
 use super::menue;
+use super::nebenfaden::{self, PLATTENFRAGE};
 use super::oeffnenmit;
 use super::papierkorb::{self, Systempapierkorb};
 use super::statuszeile::{self, Statuszeile};
@@ -1689,6 +1690,35 @@ impl Schluesselfenster {
             Self::Fremd => false,
         }
     }
+}
+
+/// Was „Ort waehlen…“ nach den Schritten 1 und 2 am Wert weiss und mit der
+/// Frage an die Platte ueber den Faden `krk-plattenfrage` reisen laesst.
+///
+/// Gewoehnliche Rust-Werte, weil ein `Retained` nicht ueber die Fadengrenze
+/// geht; angewandt wird die Antwort gegen diese Werte und nicht gegen das,
+/// was bei ihrer Ankunft gerade gilt (Regel fuer veraltete Antworten im Plan
+/// `261102-1314-…`).
+struct Ortswahl {
+    /// Genau der Text, der danach in `settings.toml` steht.
+    text: String,
+    /// Der Pfad, den [`ort::ort_lesen`] aus `text` gemacht hat.
+    neuer_pfad: PathBuf,
+    /// Das Benutzerverzeichnis zur Zeit der Wahl.
+    zuhause: Option<PathBuf>,
+    /// Der Ablageordner zur Zeit der Wahl.
+    ablageordner: PathBuf,
+}
+
+/// Die Antwort der Platte auf „Ort waehlen…“: der gewaehlte Ort samt
+/// kanonischer Form und die kanonische Form des Ablageordners (Schritt 3 von
+/// [`Anwendungsdelegierter::ort_uebernehmen`]).
+struct Ortsaufloesung {
+    /// Der gewaehlte Ort; [`Heimordner::aufgeloest`] ist `None`, wenn sich
+    /// der Ort nicht aufloesen liess oder der Faden nicht startete.
+    neu: Heimordner,
+    /// Die kanonische Form des Ablageordners, wenn es eine gibt.
+    ablage_kanonisch: Option<PathBuf>,
 }
 
 impl Anwendungsdelegierter {
@@ -6379,6 +6409,18 @@ impl Anwendungsdelegierter {
     ///    schon den gewaehlten Ort nennt, entscheidet sich dort, am Stand der
     ///    Datei und nicht am Stand des Starts (S4).
     ///
+    /// **Auf welchem Faden** (Plan `261102-1314-…`, Schritt 6): die Schritte 1
+    /// und 2 stehen hier am Wert. Die Fragen an die Platte aus Schritt 3, der
+    /// Bau des gewaehlten Orts, sein Aufloesen und `canonicalize` des
+    /// Ablageordners, laufen in [`Self::ort_aufloesen`] auf dem Faden
+    /// [`PLATTENFRAGE`], ueber [`nebenfaden::fragen_lassen`]. Die Antwort nimmt
+    /// [`Self::ort_einziehen`] auf dem Hauptfaden entgegen, wiederholt Schritt 1
+    /// und fuehrt den Vergleich aus Schritt 3 und die Schritte 4 bis 6 aus.
+    /// **Scheitert der Fadenstart**, gilt der gewaehlte Ort als nicht
+    /// aufgeloest, derselbe Weg wie bei einem gescheiterten `canonicalize`.
+    /// Das Schreiben in `settings.toml` bleibt auf dem Hauptfaden: der
+    /// Ablageordner ist die Ablage dieses Geraets.
+    ///
     /// Danach entscheidet allein die Tafel aus Schritt 3.3 des Plans
     /// `260926-1506_*_plan-home-menue-und-einstellbarer-ort.md`, vollstaendig
     /// ueber Ausgang und Wechsel. **Angelegt wird nichts, und kein Tab
@@ -6386,11 +6428,11 @@ impl Anwendungsdelegierter {
     fn ort_uebernehmen(&self, pfad: &Path) {
         let aktiv = self.ivars().modell.borrow().aktiv();
         let melden = |text: &str| self.antwort_zeigen(aktiv, text);
-        let geltend = heimgriff::lage(&self.ivars().heim);
-        let regelort = heimgriff::lesen(&self.ivars().heim);
 
         // 1. Der geltende Ort, noch einmal.
-        if let Some(datei) = self.gehaltene_notizdatei(regelort.as_ref()) {
+        if let Some(datei) =
+            self.gehaltene_notizdatei(heimgriff::lesen(&self.ivars().heim).as_ref())
+        {
             melden(&ort::abweisungssatz(&datei));
             return;
         }
@@ -6412,10 +6454,103 @@ impl Anwendungsdelegierter {
             }
         };
 
-        // 3. Die kanonische Form, allein hier und bei F2 erhoben.
-        let neu = Heimordner::am_ort(neuer_pfad.clone(), zuhause.as_deref()).aufgeloest_erneuern();
+        // 3. Die Fragen an die Platte auf dem Faden; die Antwort zieht
+        // `ort_einziehen` ein.
+        let wahl = Ortswahl {
+            text,
+            neuer_pfad,
+            zuhause,
+            ablageordner,
+        };
+        let fuer_den_faden = (
+            wahl.neuer_pfad.clone(),
+            wahl.zuhause.clone(),
+            wahl.ablageordner.clone(),
+        );
+        let fuer_den_startfehler = (wahl.neuer_pfad.clone(), wahl.zuhause.clone());
+        nebenfaden::fragen_lassen(
+            PLATTENFRAGE,
+            move || {
+                let (neuer_pfad, zuhause, ablageordner) = fuer_den_faden;
+                Self::ort_aufloesen(neuer_pfad, zuhause.as_deref(), &ablageordner)
+            },
+            // Ohne Faden keine Frage: der Ort gilt als nicht aufgeloest, wie
+            // nach einem gescheiterten `canonicalize`, und der Fehler des
+            // Fadenstarts aendert daran nichts.
+            move |_fehler| {
+                let (neuer_pfad, zuhause) = fuer_den_startfehler;
+                Ortsaufloesung {
+                    neu: Heimordner::ohne_aufloesung(neuer_pfad, zuhause.as_deref()),
+                    ablage_kanonisch: None,
+                }
+            },
+            move |mtm, aufloesung| Self::ort_einziehen(mtm, wahl, aufloesung),
+        );
+    }
+
+    /// Schritt 3 von [`Self::ort_uebernehmen`], **auf dem Faden**
+    /// [`PLATTENFRAGE`]: der gewaehlte Ort samt kanonischer Form und die
+    /// kanonische Form des Ablageordners.
+    ///
+    /// Hier und bei F2 und nirgends sonst wird die kanonische Form erhoben.
+    /// Auch der Bau ueber [`Heimordner::am_ort`] gehoert hierher, denn fuer
+    /// einen Ort unmittelbar im Benutzerverzeichnis fragt er
+    /// `symlink_metadata`. Kein AppKit, nur Rust-Werte hinein und heraus.
+    fn ort_aufloesen(
+        neuer_pfad: PathBuf,
+        zuhause: Option<&Path>,
+        ablageordner: &Path,
+    ) -> Ortsaufloesung {
+        let neu = Heimordner::am_ort(neuer_pfad, zuhause).aufgeloest_erneuern();
+        let ablage_kanonisch = std::fs::canonicalize(ablageordner).ok();
+        Ortsaufloesung {
+            neu,
+            ablage_kanonisch,
+        }
+    }
+
+    /// Nimmt die Antwort aus [`Self::ort_aufloesen`] auf dem Hauptfaden
+    /// entgegen und fuehrt [`Self::ort_uebernehmen`] zu Ende.
+    ///
+    /// Den Delegierten sucht sie dort, wo er steht, wie
+    /// [`Self::terminalordner_einziehen`]. **Schritt 1 noch einmal**, am Wert:
+    /// in der Luecke kann der Editor eine Datei des geltenden Orts geoeffnet
+    /// haben. Danach der Vergleich aus Schritt 3 und die Schritte 4 bis 6,
+    /// gegen die gereiste [`Ortswahl`]; geltender Ort und Regelort werden
+    /// erst hier gelesen, denn sie entscheiden ueber den Stand, auf den die
+    /// Wahl jetzt trifft. **Sie stellt keinen Systemaufruf an die Platte des
+    /// gewaehlten Orts**; allein das Schreiben unter der Sperre beruehrt den
+    /// Ablageordner.
+    fn ort_einziehen(mtm: MainThreadMarker, wahl: Ortswahl, aufloesung: Ortsaufloesung) {
+        let Some(delegierter) = NSApplication::sharedApplication(mtm).delegate() else {
+            return;
+        };
+        let Ok(selbst) = delegierter.downcast::<Anwendungsdelegierter>() else {
+            return;
+        };
+        let aktiv = selbst.ivars().modell.borrow().aktiv();
+        let melden = |text: &str| selbst.antwort_zeigen(aktiv, text);
+        let geltend = heimgriff::lage(&selbst.ivars().heim);
+        let regelort = heimgriff::lesen(&selbst.ivars().heim);
+        let Ortswahl {
+            text,
+            neuer_pfad,
+            zuhause,
+            ablageordner,
+        } = wahl;
+        let Ortsaufloesung {
+            neu,
+            ablage_kanonisch,
+        } = aufloesung;
+
+        // 1. Der geltende Ort, noch einmal, denn die Antwort kam spaeter.
+        if let Some(datei) = selbst.gehaltene_notizdatei(regelort.as_ref()) {
+            melden(&ort::abweisungssatz(&datei));
+            return;
+        }
+
+        // 3. Die kanonische Form gegen den Ablageordner, in beiden Formen.
         if let Some(kanonisch) = neu.aufgeloest() {
-            let ablage_kanonisch = std::fs::canonicalize(&ablageordner).ok();
             let im_ablageordner = ort::im_ablageordner(kanonisch, &ablageordner)
                 || ablage_kanonisch
                     .as_deref()
@@ -6427,7 +6562,7 @@ impl Anwendungsdelegierter {
         }
 
         // 4. Der gewaehlte Ort (S1).
-        if let Some(datei) = self.gehaltene_notizdatei(Some(&neu)) {
+        if let Some(datei) = selbst.gehaltene_notizdatei(Some(&neu)) {
             melden(&ort::abweisungssatz(&datei));
             return;
         }
@@ -6444,7 +6579,7 @@ impl Anwendungsdelegierter {
         };
 
         // 6. Schreiben unter der Sperre; „derselbe Ort“ am Wert in der Datei.
-        let ausgang = self.unter_der_sperre(|zugang| {
+        let ausgang = selbst.unter_der_sperre(|zugang| {
             einstellungen::notizordner_schreiben(zugang, &text, |vorhanden| {
                 ort::ort_lesen(vorhanden, zuhause.as_deref(), Some(&ablageordner))
                     .is_ok_and(|vorhanden| vorhanden == neuer_pfad)
@@ -6473,7 +6608,7 @@ impl Anwendungsdelegierter {
                 melden(&ort::zurueckgeschrieben(neu.anzeigename()));
             }
             (Schreibausgang::Unveraendert | Schreibausgang::Geschrieben, true) => {
-                self.ort_wechseln(regelort.as_ref(), neu, text, zuhause.as_deref());
+                selbst.ort_wechseln(regelort.as_ref(), neu, text, zuhause.as_deref());
             }
         }
     }
@@ -14368,13 +14503,29 @@ mod notizordnerproben {
             1,
             "einer der Rufer des Aufloesens ist nicht {helfer}"
         );
+        // Seit Schritt 6 des Plans `261102-1314-…` steht der zweite Rufer
+        // in `ort_aufloesen`, der Arbeit auf dem Faden, die allein
+        // `ort_uebernehmen` stellt (`ort_waehlen_stellt_auf_dem_hauptfaden_keinen_systemaufruf`).
         assert_eq!(
             aufrufstellen(
-                &rumpf(&quelle, concat!("ort_", "uebernehmen")),
+                &rumpf(&quelle, concat!("ort_", "aufloesen")),
                 concat!("aufgeloest_", "erneuern")
             ),
             1,
-            "der zweite Rufer des Aufloesens ist nicht ort_uebernehmen"
+            "der zweite Rufer des Aufloesens ist nicht ort_aufloesen"
+        );
+        assert_eq!(
+            rufer(concat!("Self::ort_", "aufloesen")),
+            [(datei.clone(), 1)],
+            "die Arbeit des Aufloesens hat nicht genau einen Rufer"
+        );
+        assert_eq!(
+            aufrufstellen(
+                &rumpf(&quelle, concat!("ort_", "uebernehmen")),
+                concat!("Self::ort_", "aufloesen")
+            ),
+            1,
+            "der eine Rufer von ort_aufloesen ist nicht ort_uebernehmen"
         );
 
         assert_eq!(
@@ -14447,13 +14598,16 @@ mod notizordnerproben {
 
     /// „Ort waehlen…“ hat eine Rufkette ohne Start: `ort_uebernehmen` allein
     /// aus dem Abschlussblock in `ort_waehlen`, dieses allein aus dem Zweig in
-    /// `kommando_ausfuehren`, und das Schreiben in `settings.toml` allein aus
-    /// `ort_uebernehmen` (H3, Schritt 3.3).
+    /// `kommando_ausfuehren`, `ort_einziehen` allein aus dem Rueckweg in
+    /// `ort_uebernehmen`, und das Schreiben in `settings.toml` allein aus
+    /// `ort_einziehen` (H3, Schritt 3.3; seit Schritt 6 des Plans
+    /// `261102-1314-…` steht es in der Einzugsmethode).
     #[test]
     fn die_ortswahl_hat_genau_eine_rufkette() {
         let datei = "krk-ui/src/appkit/anwendung.rs".to_owned();
         let quelle = diese_datei();
         let uebernehmen = concat!("ort_", "uebernehmen");
+        let einziehen = concat!("ort_", "einziehen");
         let waehlen = concat!("ort_", "waehlen");
         let schreiben = concat!("notizordner_", "schreiben");
 
@@ -14466,16 +14620,20 @@ mod notizordnerproben {
         );
         assert_eq!(
             rufer(schreiben),
-            [(datei, 1)],
+            [(datei.clone(), 1)],
             "settings.toml hat nicht genau einen Schreiber im ausgelieferten Code"
         );
-        assert_eq!(aufrufstellen(&rumpf(&quelle, uebernehmen), schreiben), 1);
+        assert_eq!(rufer(einziehen), [(datei, 1)]);
+        assert_eq!(aufrufstellen(&rumpf(&quelle, uebernehmen), einziehen), 1);
+        assert_eq!(aufrufstellen(&rumpf(&quelle, einziehen), schreiben), 1);
+        assert_eq!(aufrufstellen(&rumpf(&quelle, uebernehmen), schreiben), 0);
     }
 
-    /// In `ort_uebernehmen` stehen beide Fragen nach der gehaltenen Datei vor
+    /// In `ort_einziehen` stehen beide Fragen nach der gehaltenen Datei vor
     /// dem Schreiben, und das Schreiben vor dem Wechsel; im Wechsel steht der
     /// Griff vor dem Nachzug von Tablisten und Vorschau (Schritte 3.3 und 3.4).
-    /// `ort_waehlen` fragt vor dem Dialog.
+    /// `ort_waehlen` fragt vor dem Dialog, `ort_uebernehmen` vor der Frage an
+    /// die Platte (Schritt 6 des Plans `261102-1314-…`).
     #[test]
     fn die_ortswahl_fragt_vor_dem_schreiben_und_setzt_den_griff_vor_dem_nachzug() {
         let quelle = diese_datei();
@@ -14488,10 +14646,26 @@ mod notizordnerproben {
         assert!(waehlen.find(frage).is_some_and(|stelle| stelle < dialog));
 
         let uebernehmen = rumpf(&quelle, concat!("ort_", "uebernehmen"));
-        let schreiben = uebernehmen
+        let faden = uebernehmen
+            .find(concat!("nebenfaden::", "fragen_lassen("))
+            .expect("ort_uebernehmen stellt die Frage nicht auf den Faden");
+        assert!(
+            uebernehmen.find(frage).is_some_and(|stelle| stelle < faden),
+            "ort_uebernehmen fragt nach der gehaltenen Datei nicht vor dem Faden"
+        );
+        assert!(
+            !uebernehmen.contains(concat!("heimgriff::", "ersetzen(")),
+            "der Griff wird ausserhalb des Wechsels ersetzt"
+        );
+
+        let einziehen = rumpf(&quelle, concat!("ort_", "einziehen"));
+        // Die Einzugsmethode ist eine zugeordnete Funktion und fragt am
+        // gesuchten Delegierten.
+        let frage = concat!("selbst.gehaltene_", "notizdatei(");
+        let schreiben = einziehen
             .find(concat!("notizordner_", "schreiben("))
-            .expect("ort_uebernehmen schreibt nicht");
-        let fragen: Vec<usize> = uebernehmen
+            .expect("ort_einziehen schreibt nicht");
+        let fragen: Vec<usize> = einziehen
             .match_indices(frage)
             .map(|(stelle, _)| stelle)
             .collect();
@@ -14501,12 +14675,12 @@ mod notizordnerproben {
             "nicht genau zwei Fragen nach der gehaltenen Datei"
         );
         assert!(fragen.iter().all(|stelle| *stelle < schreiben));
-        let wechsel = uebernehmen
-            .find(concat!("self.ort_", "wechseln("))
-            .expect("ort_uebernehmen wechselt nie");
+        let wechsel = einziehen
+            .find(concat!("selbst.ort_", "wechseln("))
+            .expect("ort_einziehen wechselt nie");
         assert!(schreiben < wechsel);
         assert!(
-            !uebernehmen.contains(concat!("heimgriff::", "ersetzen(")),
+            !einziehen.contains(concat!("heimgriff::", "ersetzen(")),
             "der Griff wird ausserhalb des Wechsels ersetzt"
         );
 
@@ -14527,6 +14701,71 @@ mod notizordnerproben {
         assert!(
             !wechseln.contains(concat!("bereit", "stellen(")) && !wechseln.contains("tab_oeffnen("),
             "der Wechsel legt an oder oeffnet einen Tab"
+        );
+    }
+
+    /// „Ort waehlen…“ stellt auf dem Hauptfaden keinen Systemaufruf (Plan
+    /// `261102-1314-…`, Schritt 6; Punkt 5 des Befunds `261030-1259-…`).
+    ///
+    /// Dieselbe Bauform wie `ctrl_o_stellt_auf_dem_hauptfaden_keinen_systemaufruf`:
+    /// in den Ruempfen des Ausloesers `ort_uebernehmen` und der Einzugsmethode
+    /// `ort_einziehen` steht keine Frage an die Platte, weder das Aufloesen am
+    /// gewaehlten Ort noch `canonicalize` des Ablageordners, die auf den Faden
+    /// `krk-plattenfrage` gehoeren, und auch nicht der Bau ueber
+    /// `Heimordner::am_ort`, der fuer einen Ort im Benutzerverzeichnis
+    /// `symlink_metadata` fragt. Daneben haelt sie die Kette: der Ausloeser
+    /// reicht die Frage an `nebenfaden::fragen_lassen` und die Antwort an die
+    /// Einzugsmethode, die Arbeit auf dem Faden loest auf, und die
+    /// Einzugsmethode schreibt `settings.toml` unter der Sperre.
+    ///
+    /// **Was sie nicht sieht:** einen Systemaufruf in einer tiefer gerufenen
+    /// Funktion. Das Schreiben unter der Sperre bleibt mit Absicht auf dem
+    /// Hauptfaden (Schritt 6 des Plans): der Ablageordner ist die Ablage
+    /// dieses Geraets.
+    #[test]
+    fn ort_waehlen_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
+        let quelle = diese_datei();
+        let ausloeser = concat!("ort_", "uebernehmen");
+        let einzug = concat!("ort_", "einziehen");
+        let arbeit = concat!("ort_", "aufloesen");
+
+        for name in [ausloeser, einzug] {
+            let rumpf = rumpf(&quelle, name);
+            for nadel in [
+                "canonicalize(",
+                concat!("aufgeloest_", "erneuern("),
+                "fs::",
+                concat!("am_", "ort("),
+            ] {
+                assert!(
+                    !rumpf.contains(nadel),
+                    "{name} enthaelt {nadel}: ein Systemaufruf auf dem Hauptfaden"
+                );
+            }
+        }
+        let ausloeserrumpf = rumpf(&quelle, ausloeser);
+        for nadel in [
+            concat!("nebenfaden::", "fragen_lassen("),
+            "PLATTENFRAGE",
+            concat!("Self::", "ort_aufloesen("),
+            concat!("Self::ort_", "einziehen("),
+        ] {
+            assert!(
+                ausloeserrumpf.contains(nadel),
+                "{ausloeser} enthaelt {nadel} nicht: die Frage geht nicht auf den Faden \
+                 oder ihre Antwort kommt nicht an"
+            );
+        }
+        let arbeitsrumpf = rumpf(&quelle, arbeit);
+        for nadel in [concat!("aufgeloest_", "erneuern("), "canonicalize("] {
+            assert!(
+                arbeitsrumpf.contains(nadel),
+                "{arbeit} enthaelt {nadel} nicht: die kanonische Form entsteht nirgends"
+            );
+        }
+        assert!(
+            rumpf(&quelle, einzug).contains(concat!("einstellungen::notizordner_", "schreiben(")),
+            "{einzug} schreibt settings.toml nicht"
         );
     }
 

@@ -237,11 +237,27 @@ impl Heimordner {
                 .ok()
                 .map(|ziel| lexikalisch_bereinigt(&zuhause.join(ziel)))
         });
+        Self {
+            aufgeloest,
+            ..Self::ohne_aufloesung(ort, benutzerverzeichnis)
+        }
+    }
+
+    /// Der Notizordner am genannten Ort **ohne** aufgeloeste Form, gebaut ohne
+    /// einen einzigen Systemaufruf.
+    ///
+    /// Fuer den Fall, dass die Frage an die Platte gar nicht gestellt werden
+    /// konnte: „Ort waehlen…“ loest den gewaehlten Ort auf einem eigenen Faden
+    /// auf, und scheitert schon dessen Start, gilt der Ort wie bei einem
+    /// gescheiterten `canonicalize` als nicht aufgeloest. Die Frage danach
+    /// auf dem Hauptfaden nachzuholen, waere genau der Systemaufruf, den der
+    /// Faden ihm abnimmt. Sonst gleicht der Wert dem aus [`Heimordner::am_ort`].
+    pub fn ohne_aufloesung(ort: PathBuf, benutzerverzeichnis: Option<&Path>) -> Self {
         let vorgabeort = benutzerverzeichnis.is_some_and(|zuhause| ort == zuhause.join(ORDNERNAME));
         let anzeige = pfade::gekuerzt_fuer_anzeige(&ort, benutzerverzeichnis);
         Self {
             geschrieben: ort,
-            aufgeloest,
+            aufgeloest: None,
             vorgabeort,
             anzeige,
         }

@@ -379,7 +379,7 @@ use crate::vorschaumodell::{Archivangaben, Beschreibung, Fernangaben, Groessenan
 use super::abwurf;
 use super::blaetter;
 use super::menue;
-use super::nebenfaden;
+use super::nebenfaden::{self, PLATTENFRAGE};
 use super::oeffnenmit;
 use super::standardprogramm;
 use super::statuszeile::{self, Filterstand, Quellen};
@@ -746,14 +746,6 @@ fn archivangaben_des_ordners(ort: &Archivort) -> Fernangaben {
         typ: Typ::Ordner,
     }
 }
-
-/// Der Name des Fadens, auf dem die Pfadeingabe die Platte fragt (Plan
-/// `261102-1314-plan-dateisystemfragen-vom-hauptfaden-nehmen.md`, Schritt 5).
-///
-/// Ein eigener Name und nicht `krk-terminal`: die Frage hat mit dem Terminal
-/// nichts zu tun, und im Fadenbild eines haengenden Prozesses soll stehen,
-/// welche Art Frage dort wartet.
-const PLATTENFRAGE: &str = "krk-plattenfrage";
 
 /// Wendet eine Pfadpruefung gegen den Ort an, gegen den sie gestellt wurde,
 /// und nicht gegen den, der jetzt sichtbar ist.

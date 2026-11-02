@@ -47,6 +47,16 @@ use std::sync::{Arc, Mutex};
 use dispatch2::DispatchQueue;
 use objc2_foundation::MainThreadMarker;
 
+/// Der Name des Fadens, auf dem eine Frage an die Platte gestellt wird, die
+/// mit dem Terminal nichts zu tun hat: die Pfadeingabe und „Ort waehlen…“
+/// (Plan `261102-1314-plan-dateisystemfragen-vom-hauptfaden-nehmen.md`,
+/// Schritte 5 und 6).
+///
+/// Ein eigener Name und nicht `krk-terminal`: im Fadenbild eines haengenden
+/// Prozesses soll stehen, welche Art Frage dort wartet. Er steht hier und
+/// nicht bei einem seiner Rufer, damit es ihn genau einmal gibt.
+pub(crate) const PLATTENFRAGE: &str = "krk-plattenfrage";
+
 /// `arbeit` laeuft auf einem eigenen Faden namens `fadenname`, ihr Ergebnis
 /// geht ueber `DispatchQueue::main()` an `fertig`.
 ///
