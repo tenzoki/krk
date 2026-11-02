@@ -3179,8 +3179,11 @@ define_class!(
             _ereignis: &NSEvent,
             _stelle: NSUInteger,
         ) -> Option<Retained<NSMenu>> {
-            let pfade: Vec<PathBuf> = self.pfad().into_iter().collect();
-            teilen::eintrag_anfuegen(menue, &pfade, self.mtm());
+            // Der Editor haelt immer eine Datei und nie einen Ordner; die
+            // Adresse entsteht damit ohne Frage an die Platte.
+            let pfad = self.pfad();
+            let adressen = pfad.as_deref().map(|pfad| (pfad, false));
+            teilen::eintrag_anfuegen(menue, adressen.as_slice(), self.mtm());
             Some(menue.retain())
         }
     }

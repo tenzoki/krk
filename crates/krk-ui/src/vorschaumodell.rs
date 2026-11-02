@@ -1807,6 +1807,42 @@ impl Vorschaumodell {
         self.tabs[self.aktiv].pfad.clone()
     }
 
+    /// Welche Datei oder welchen Ordner der aktive Tab zeigt, und ob es ein
+    /// Ordner ist; `None` wie bei [`Self::aktiver_pfad`].
+    ///
+    /// **Die Art ist die, die der Tab schon haelt, und keine neue Frage an die
+    /// Platte.** Der Lesefaden hat sie in [`laden`] mit `symlink_metadata`
+    /// erhoben, und sie steht im [`Inhalt`], der mit dem Pfad im selben Schritt
+    /// wechselt (`einziehen`). Wer daraus eine Dateiadresse ueber
+    /// `fileURLWithPath:isDirectory:` baut, etwa das Teilen, fragt damit auf
+    /// dem Hauptfaden nichts.
+    ///
+    /// Ein Ordner zeigt sich als [`Inhalt::Zusammenfassung`],
+    /// [`Inhalt::Bildfolge`] oder als [`Inhalt::Metadaten`] mit
+    /// [`Typ::Ordner`]; eine Verknuepfung zaehlt, wie im Ordnermodell, nicht als
+    /// Ordner. **[`Inhalt::Hinweis`] zaehlt als Nicht-Ordner, und das ist eine
+    /// Folgerung und kein Befund:** ein Ordner, dessen `symlink_metadata`
+    /// gelingt, verlaesst [`laden`] immer ueber den Ordnerzweig und nie als
+    /// Hinweis; ein Hinweis mit Pfad steht damit fuer eine Datei (Lesefehler,
+    /// `secrets.txt`) oder fuer einen Pfad, den `symlink_metadata` nicht
+    /// erreicht hat und dessen Art niemand kennt.
+    #[must_use]
+    pub fn aktive_adresse(&self) -> Option<(PathBuf, bool)> {
+        let tab = &self.tabs[self.aktiv];
+        let ist_ordner = match &tab.inhalt {
+            Inhalt::Zusammenfassung(_) | Inhalt::Bildfolge(_) => true,
+            Inhalt::Metadaten { metadaten, .. } => metadaten.typ == Typ::Ordner,
+            Inhalt::Leer
+            | Inhalt::Text(_)
+            | Inhalt::Trenntext(_)
+            | Inhalt::Markdown(_)
+            | Inhalt::Bild { .. }
+            | Inhalt::Pdf { .. }
+            | Inhalt::Hinweis(_) => false,
+        };
+        tab.pfad.clone().map(|pfad| (pfad, ist_ordner))
+    }
+
     /// Woran die Darstellung des Textes im aktiven Tab haengt: der Pfad der
     /// angezeigten Datei, oder der Name einer Datei in einem Archiv. Allein
     /// fuer Endung und Nummernspalte; wer eine Datei auf der Platte braucht,
@@ -4861,6 +4897,44 @@ pfad = 'fusion-workbench$'
             rechte: 0o644,
             typ: Typ::Datei,
         }
+    }
+
+    /// Die Art des angezeigten Eintrags kommt aus dem Inhalt des Tabs: ein
+    /// Ordner ist einer, eine Datei und eine Verknuepfung sind keiner, und ohne
+    /// Pfad gibt es keine Adresse (261102, Punkt 3c von `261030-1259`).
+    #[test]
+    fn die_aktive_adresse_traegt_die_art_aus_dem_inhalt() {
+        let mit_typ = |typ| Inhalt::Metadaten {
+            metadaten: Metadaten {
+                typ,
+                ..probenmetadaten()
+            },
+            zaehlzeilen: Vec::new(),
+            cloud: None,
+        };
+        assert_eq!(
+            tab_setzen(mit_typ(Typ::Ordner), Some("/tmp/unten")).aktive_adresse(),
+            Some((PathBuf::from("/tmp/unten"), true)),
+            "ein Ordner in den Metadaten ist ein Ordner"
+        );
+        assert_eq!(
+            tab_setzen(mit_typ(Typ::Verknuepfung), Some("/tmp/zeiger")).aktive_adresse(),
+            Some((PathBuf::from("/tmp/zeiger"), false)),
+            "eine Verknuepfung ist, wie im Ordnermodell, kein Ordner"
+        );
+        assert_eq!(
+            tab_setzen(mit_typ(Typ::Datei), Some("/tmp/probe.txt")).aktive_adresse(),
+            Some((PathBuf::from("/tmp/probe.txt"), false)),
+        );
+        assert_eq!(
+            tab_setzen(Inhalt::Text("eins".to_owned()), Some("/tmp/probe.txt")).aktive_adresse(),
+            Some((PathBuf::from("/tmp/probe.txt"), false)),
+        );
+        assert_eq!(
+            tab_setzen(Inhalt::Text("aus der Ablage".to_owned()), None).aktive_adresse(),
+            None,
+            "ohne Pfad keine Adresse"
+        );
     }
 
     /// Das zweite und das dritte Abnahmekriterium von C10: die Nummern stehen

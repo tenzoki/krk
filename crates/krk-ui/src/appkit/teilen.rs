@@ -4,7 +4,7 @@
 //! ```text
 //!  Fokus ──> worauf ──> Quelle (drei Werte, ohne Auffangzweig)
 //!                          │
-//!  Pfade ──> NSURL::fileURLWithPath: ──> NSSharingServicePicker
+//!  (Pfad, Art) ──> NSURL::fileURLWithPath:isDirectory: ──> NSSharingServicePicker
 //!                          │                    │
 //!                          │                    ├─> anbieten ──> showRelativeToRect:
 //!                          │                    └─> eintrag_anfuegen ──> standardShareMenuItem
@@ -107,11 +107,12 @@
 //! unter der Klassenangabe). **Die hoechste Untergrenze dieser Datei ist
 //! `standardShareMenuItem` mit 13.0** (`:281`). `NSURL`, `NSArray`, `NSString`,
 //! `NSView` und `NSMenu` tragen keine eigene Angabe und stehen damit seit
-//! macOS 10.0, ebenso `fileURLWithPath:`, `NSView.bounds` (`NSView.h:139`),
+//! macOS 10.0, ebenso `NSView.bounds` (`NSView.h:139`),
 //! `NSMenu.insertItem:atIndex:` (`NSMenu.h:89`), `NSMenu.numberOfItems`
 //! (`NSMenu.h:118`) und `NSMenuItem.separatorItem` (`NSMenuItem.h:27`).
 //! `NSRectEdge` ist eine Aufzaehlung aus Foundation (`NSGeometry.h:38`) und
-//! traegt ebenfalls keine Angabe. Das Buendel zielt auf 15.0
+//! traegt ebenfalls keine Angabe. `fileURLWithPath:isDirectory:` steht seit
+//! macOS 10.5. Das Buendel zielt auf 15.0
 //! (`.cargo/config.toml`); keine von ihnen ist nach macOS 15 hinzugekommen,
 //! und keine Beruehrung in dieser Datei braucht deshalb eine
 //! Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
@@ -124,7 +125,7 @@
 //! 10.0.
 
 use std::cell::RefCell;
-use std::path::PathBuf;
+use std::path::Path;
 
 use objc2::rc::Retained;
 use objc2::runtime::AnyObject;
@@ -272,17 +273,20 @@ pub fn worauf(fokus: Fokus) -> Quelle {
 /// und fuenf Dialoge hintereinander waeren kein Teilen, sondern fuenfmal
 /// dasselbe Fenster.
 ///
+/// Je Eintrag reist seine Art mit (`true` fuer einen Ordner); warum, steht an
+/// [`auswaehler_bauen`].
+///
 /// Der Anker ist ein Rechteck in den Koordinaten von `flaeche`; der Aufrufer
 /// gibt deren `bounds`, und der Dialog haengt sich mit
 /// [`NSRectEdge::MinY`] darunter.
 #[must_use]
-pub fn anbieten(pfade: &[PathBuf], flaeche: &NSView, rechteck: NSRect) -> bool {
-    if pfade.is_empty() {
+pub fn anbieten(adressen: &[(&Path, bool)], flaeche: &NSView, rechteck: NSRect) -> bool {
+    if adressen.is_empty() {
         return false;
     }
     // `None` heisst hier dasselbe wie eine leere Liste: kein Dialog, und der
     // Rufer meldet es. Die Begruendung steht an [`auswaehler_bauen`].
-    let Some(auswaehler) = auswaehler_bauen(pfade) else {
+    let Some(auswaehler) = auswaehler_bauen(adressen) else {
         return false;
     };
     auswaehler.showRelativeToRect_ofView_preferredEdge(rechteck, flaeche, NSRectEdge::MinY);
@@ -333,13 +337,17 @@ pub fn anbieten(pfade: &[PathBuf], flaeche: &NSView, rechteck: NSRect) -> bool {
 /// `menuNeedsUpdate:` die Dateiliste, die Bildansicht der Vorschau und deren
 /// Inhaltsflaeche. Auf dem zweiten Weg leert der Aufrufer das Menue vorher,
 /// auf dem ersten nicht — dort ist der Bestand das, was AppKit gebaut hat.
-pub fn eintrag_anfuegen(menue: &NSMenu, pfade: &[PathBuf], mtm: MainThreadMarker) {
-    if pfade.is_empty() {
+///
+/// Je Eintrag reist seine Art mit, wie bei [`anbieten`]. **Dieser Weg laeuft
+/// bei jedem Rechtsklick**, und eine Adresse, die die Platte fragte, hielte das
+/// Menue auf einer haengenden Freigabe an, bevor es aufgeht.
+pub fn eintrag_anfuegen(menue: &NSMenu, adressen: &[(&Path, bool)], mtm: MainThreadMarker) {
+    if adressen.is_empty() {
         return;
     }
     // `None` heisst hier dasselbe wie eine leere Liste: kein Eintrag. Die
     // Begruendung steht an [`auswaehler_bauen`].
-    let Some(auswaehler) = auswaehler_bauen(pfade) else {
+    let Some(auswaehler) = auswaehler_bauen(adressen) else {
         return;
     };
     let eintrag = auswaehler.standardShareMenuItem(mtm);
@@ -360,10 +368,17 @@ pub fn eintrag_anfuegen(menue: &NSMenu, pfade: &[PathBuf], mtm: MainThreadMarker
 /// Umwandlungen nebeneinander waeren zwei Wahrheiten darueber, was KRK dem
 /// System uebergibt.
 ///
-/// **`fileURLWithPath:` fragt das Dateisystem nicht**, und diese Stelle fragt
-/// es auch nicht: ein Eintrag, den es nicht mehr gibt, geht bis zum Dienst
+/// **Die Adresse fragt das Dateisystem nicht**, und diese Stelle fragt es
+/// auch nicht: ein Eintrag, den es nicht mehr gibt, geht bis zum Dienst
 /// durch, und was der dazu sagt, ist seine Sache. Dieselbe Zurueckhaltung wie
-/// in [`super::standardprogramm`].
+/// in [`super::standardprogramm`]. Dafuer kommt je Pfad seine Art herein, und
+/// die Adresse entsteht ueber `fileURLWithPath:isDirectory:`;
+/// `fileURLWithPath:` ohne die Art fragte das Dateisystem, ob der Pfad ein
+/// Ordner ist, und hielte auf einer haengenden Freigabe den Hauptfaden an. Die
+/// Art kommt aus dem Ordnermodell
+/// ([`crate::kommandos::operationen::Auswahl::adressen`]) oder aus dem, was
+/// Vorschau und Editor zeigen; eine Verknuepfung kommt als Datei herein, und
+/// das System loest sie selbst auf.
 ///
 /// **`None` fuer einen Pfad ohne gueltiges UTF-8**, und das ist keine Ausnahme
 /// von der Zurueckhaltung darueber, sondern ihr Gegenteil: `to_string_lossy`
@@ -376,11 +391,12 @@ pub fn eintrag_anfuegen(menue: &NSMenu, pfade: &[PathBuf], mtm: MainThreadMarker
 /// Abgewiesen wird die **ganze** Menge und nicht der einzelne Eintrag: ein
 /// Teilen, das stillschweigend weniger Dateien mitnimmt, als der Nutzer
 /// markiert hat, ist der Fehlschlag, den C1 ausschliesst.
-fn auswaehler_bauen(pfade: &[PathBuf]) -> Option<Retained<NSSharingServicePicker>> {
-    let eintraege: Vec<Retained<AnyObject>> = pfade
+fn auswaehler_bauen(adressen: &[(&Path, bool)]) -> Option<Retained<NSSharingServicePicker>> {
+    let eintraege: Vec<Retained<AnyObject>> = adressen
         .iter()
-        .map(|pfad| {
-            let adresse = NSURL::fileURLWithPath(&NSString::from_str(pfad.to_str()?));
+        .map(|&(pfad, ist_ordner)| {
+            let adresse =
+                NSURL::fileURLWithPath_isDirectory(&NSString::from_str(pfad.to_str()?), ist_ordner);
             Some(Retained::into_super(Retained::into_super(adresse)))
         })
         .collect::<Option<_>>()?;

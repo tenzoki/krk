@@ -1620,13 +1620,16 @@ define_class!(
             // An einem fernen Ort gibt es keine lokalen Pfade; die eigenen
             // Eintraege stehen trotzdem da und melden beim Klick, was dort
             // nicht geht, und Teilen faellt mit der leeren Liste weg.
-            let pfade = self
-                .betroffene_eintraege()
-                .map(|betroffen| betroffen.pfade)
+            // Je Pfad reist seine Art aus dem Ordnermodell mit, damit keine
+            // der Adressen, die das Menue baut, die Platte fragt.
+            let betroffen = self.betroffene_eintraege();
+            let adressen: Vec<(&Path, bool)> = betroffen
+                .as_ref()
+                .map(|betroffen| betroffen.adressen().collect())
                 .unwrap_or_default();
             menue.removeAllItems();
-            self.eigene_kontexteintraege_anfuegen(menue, &pfade);
-            teilen::eintrag_anfuegen(menue, &pfade, self.mtm());
+            self.eigene_kontexteintraege_anfuegen(menue, &adressen);
+            teilen::eintrag_anfuegen(menue, &adressen, self.mtm());
         }
     }
 );
@@ -2392,10 +2395,10 @@ impl DateifensterQuelle {
     /// Pfadliste in [`QuelleIvars::oeffnungsziele`] gelegt und beim Klick von
     /// dort gelesen; warum sie und nicht eine Aufzaehlung die Glieder haelt,
     /// steht im Modulkopf von [`crate::kommandos::kontextmenue`].
-    fn eigene_kontexteintraege_anfuegen(&self, menue: &NSMenu, betroffen: &[PathBuf]) {
+    fn eigene_kontexteintraege_anfuegen(&self, menue: &NSMenu, betroffen: &[(&Path, bool)]) {
         let mtm = self.mtm();
         let anwendungen = kontextmenue::oeffnungsbezug(betroffen)
-            .map(oeffnenmit::anwendungen_fuer)
+            .map(|(pfad, ist_ordner)| oeffnenmit::anwendungen_fuer(pfad, ist_ordner))
             .unwrap_or_default();
         // Die Ausleihe endet mit dieser Anweisung, vor dem ersten
         // Objective-C-Aufruf darunter; siehe den Modulkopf.
@@ -2699,7 +2702,8 @@ impl DateifensterQuelle {
             return;
         }
         let namen = operationen::namenszeilen(&betroffen.pfade);
-        if super::zwischenablage::dateiverweise_schreiben(&betroffen.pfade, &namen) {
+        let adressen: Vec<(&Path, bool)> = betroffen.adressen().collect();
+        if super::zwischenablage::dateiverweise_schreiben(&adressen, &namen) {
             self.befehlsantwort_zeigen(&operationen::ablagemeldung(befehl, &betroffen.pfade));
         } else {
             self.befehlsantwort_zeigen(&operationen::verweise_abgewiesen());

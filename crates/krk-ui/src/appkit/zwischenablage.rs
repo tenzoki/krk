@@ -214,9 +214,10 @@
 //! `NSPasteboard`, `NSWorkspace`, `NSString`, `NSURL`, `NSNumber`, `NSArray`,
 //! `NSDictionary` und `NSData` stehen seit macOS 10.0 zur Verfuegung, ebenso
 //! `setString:forType:`, `openURL:`, `path`, `pasteboardWithName:`
-//! (`NSPasteboard.h:160`) und `fileURLWithPath:` (`NSURL.h:52`, ohne
-//! `API_AVAILABLE`, am SDK 15 nachgelesen; die Fassung mit `isDirectory:`
-//! daneben steht seit 10.5 und wird nicht gerufen). Seit 10.6 stehen
+//! (`NSPasteboard.h:160`). `fileURLWithPath:isDirectory:` steht seit 10.5;
+//! die Fassung ohne `isDirectory:` (`NSURL.h:52`, ohne `API_AVAILABLE`, am
+//! SDK 15 nachgelesen) wird seit dem 261102 nicht mehr gerufen, weil sie die
+//! Platte fragt. Seit 10.6 stehen
 //! `clearContents`, `writeObjects:`, das Protokoll `NSPasteboardWriting`, das
 //! `NSURL` erfuellt (`NSPasteboard.h:386`, `:379`),
 //! `readObjectsForClasses:options:` (`NSPasteboard.h:190`), der
@@ -237,7 +238,7 @@
 //! Uebersetzer haelt die Untergrenze nicht; die Nennung hier ist die
 //! Gegenmassnahme.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use objc2::ClassType;
 use objc2::rc::Retained;
@@ -478,29 +479,39 @@ pub fn text_schreiben(text: &str) -> bool {
 /// `writeObjects:` steht und damit am ersten Eintrag landet, steht im
 /// Modulkopf unter „Seit der Runde 22 schreibt die Huelle zwei Sorten".
 ///
-/// **`fileURLWithPath:` kostet je Eintrag ein `stat(2)` und kein Oeffnen.**
-/// Der Erzeuger fragt das Dateisystem, ob der Pfad ein Verzeichnis ist, um
-/// den abschliessenden Schraegstrich zu setzen; eine Datei wird dabei nicht
-/// geoeffnet, und eine Verknuepfung nicht aufgeloest: der Verweis nennt den
-/// Pfad der Verknuepfung (A7 der Runde 22). Die Schreibseite ist fuer grosse
-/// Mengen ungemessen; die Leseseite in [`dateiverweise`] nennt ihre Zahlen.
+/// **Die Adressen kosten kein `stat(2)`, denn je Eintrag reist seine Art
+/// mit.** `fileURLWithPath:` ohne die Art fragte das Dateisystem je Eintrag,
+/// ob der Pfad ein Verzeichnis ist, um den abschliessenden Schraegstrich zu
+/// setzen, und hielte auf einer haengenden Freigabe den Hauptfaden an; so
+/// stand es hier bis zum 261102. Seitdem kommt die Art aus dem Ordnermodell
+/// herein ([`crate::kommandos::operationen::Auswahl::adressen`]), und die
+/// Adresse entsteht ueber `fileURLWithPath:isDirectory:`, ohne Frage an die
+/// Platte. Eine Datei wird dabei nicht geoeffnet, und eine Verknuepfung kommt
+/// als Datei herein und wird nicht aufgeloest: der Verweis nennt den Pfad der
+/// Verknuepfung (A7 der Runde 22). Die Schreibseite ist fuer grosse Mengen
+/// ungemessen; die Leseseite in [`dateiverweise`] nennt ihre Zahlen.
 ///
 /// **Die leere Menge entscheidet der Rufer und nicht die Huelle.** Mit leeren
-/// `pfade` legte `writeObjects:` keinen Eintrag an und `setString:forType:`
+/// `adressen` legte `writeObjects:` keinen Eintrag an und `setString:forType:`
 /// einen allein mit Text; das waere eine Textablage unter dem Namen einer
 /// Dateiablage. Der Rufer in `appkit/tabelle.rs` meldet die leere Menge
 /// vorher (C1.7 der Runde 22) und erreicht diese Funktion damit nicht.
 #[must_use]
 pub fn dateiverweise_auf_ablage_schreiben(
     ablage: &NSPasteboard,
-    pfade: &[PathBuf],
+    adressen: &[(&Path, bool)],
     namen: &str,
 ) -> bool {
     ablage.clearContents();
 
-    let verweise: Vec<Retained<NSURL>> = pfade
+    let verweise: Vec<Retained<NSURL>> = adressen
         .iter()
-        .map(|pfad| NSURL::fileURLWithPath(&NSString::from_str(&pfad.to_string_lossy())))
+        .map(|&(pfad, ist_ordner)| {
+            NSURL::fileURLWithPath_isDirectory(
+                &NSString::from_str(&pfad.to_string_lossy()),
+                ist_ordner,
+            )
+        })
         .collect();
     // `NSURL` erfuellt `NSPasteboardWriting` (`NSPasteboard.h:379`); die
     // Umwandlung steht hier und nicht beim Aufrufer, damit nichts anderes
@@ -540,8 +551,8 @@ pub fn dateiverweise_auf_ablage_schreiben(
 /// an der Ablage des angemeldeten Nutzers wuerfe bei jedem `make check` weg,
 /// was der Entwickler gerade kopiert hat. Der Modulkopf schreibt es aus.
 #[must_use]
-pub fn dateiverweise_schreiben(pfade: &[PathBuf], namen: &str) -> bool {
-    dateiverweise_auf_ablage_schreiben(&NSPasteboard::generalPasteboard(), pfade, namen)
+pub fn dateiverweise_schreiben(adressen: &[(&Path, bool)], namen: &str) -> bool {
+    dateiverweise_auf_ablage_schreiben(&NSPasteboard::generalPasteboard(), adressen, namen)
 }
 
 /// Uebergibt eine Web-Adresse an den Systembrowser (C10).
@@ -697,9 +708,14 @@ pub(crate) mod proben {
     /// Bis zur Runde 22 stand hier `dateien_ablegen`, ein eigener Schreiber
     /// ueber `writeObjects:` allein fuer die Proben; seit die Huelle selbst
     /// Verweise schreibt, ist er ein zweiter Schreiber neben ihr und faellt.
+    ///
+    /// **Jeder Pfad geht als Nicht-Ordner hinein**, wie das Ordnermodell eine
+    /// Datei und eine Verknuepfung fuehrt: die Proben legen allein solche ab.
     fn dateien_ablegen(ablage: &NSPasteboard, pfade: &[PathBuf], namen: &str) {
+        let adressen: Vec<(&Path, bool)> =
+            pfade.iter().map(|pfad| (pfad.as_path(), false)).collect();
         assert!(
-            dateiverweise_auf_ablage_schreiben(ablage, pfade, namen),
+            dateiverweise_auf_ablage_schreiben(ablage, &adressen, namen),
             "die Probenablage nimmt die Dateiverweise und die Namen an"
         );
     }

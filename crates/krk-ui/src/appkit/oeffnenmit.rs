@@ -2,12 +2,14 @@
 //! braucht (260918).
 //!
 //! ```text
-//!  ein Eintrag ──> NSURL ──> URLsForApplicationsToOpenURL: ──> Anwendung, Anwendung, …
-//!                                                                  │
-//!                                          displayNameAtPath: ─────┘
+//!  ein (Pfad, Art) ──> NSURL ──> URLsForApplicationsToOpenURL: ──> Anwendung, Anwendung, …
+//!                                                                      │
+//!                                              displayNameAtPath: ─────┘
 //!
-//!  alle Eintraege ──> NSArray<NSURL> ──┐
-//!  die gewaehlte Anwendung ──> NSURL ──┴─> openURLs:withApplicationAtURL:… ──> LaunchServices
+//!  alle (Pfad, Art) ──> NSArray<NSURL> ──┐
+//!  die gewaehlte Anwendung ──> NSURL ────┴─> openURLs:withApplicationAtURL:… ──> LaunchServices
+//!
+//!  jede NSURL ueber fileURLWithPath:isDirectory:, keine fragt die Platte
 //! ```
 //!
 //! Die eine Frage dieses Moduls: **welche Anwendungen nennt das System fuer
@@ -95,13 +97,13 @@
 //! (`NSFileManager.h:98`), `NSURL` (`NSURL.h:22`), `NSString` und `NSArray`
 //! (`NSArray.h:17`) stehen seit macOS 10.0 zur Verfuegung, ebenso
 //! `sharedWorkspace` (`NSWorkspace.h:31`), `defaultManager`
-//! (`NSFileManager.h:100`), `displayNameAtPath:` (`NSFileManager.h:254`),
-//! `fileURLWithPath:` (`NSURL.h:52`) und `NSURL`s Eigenschaft `path`
-//! (`NSURL.h:124`); keine dieser Deklarationen traegt im Kopf des Systems ein
-//! `API_AVAILABLE`.
+//! (`NSFileManager.h:100`), `displayNameAtPath:` (`NSFileManager.h:254`) und
+//! `NSURL`s Eigenschaft `path` (`NSURL.h:124`); keine dieser Deklarationen
+//! traegt im Kopf des Systems ein `API_AVAILABLE`.
 //!
-//! **Drei Beruehrungen sind juenger, und die juengste ist `12.0`:**
+//! **Vier Beruehrungen sind juenger, und die juengste ist `12.0`:**
 //!
+//! - 10.5: `fileURLWithPath:isDirectory:`.
 //! - 10.15: `NSWorkspaceOpenConfiguration` (`NSWorkspace.h:150-151`), sein
 //!   Erzeuger `configuration` (`:153`) und
 //!   `openURLs:withApplicationAtURL:configuration:completionHandler:` (`:43`),
@@ -141,9 +143,14 @@ use crate::kommandos::kontextmenue::Anwendung;
 /// zwei Texten, wie sie [`super::standardprogramm`] fuer sein `false` seit der
 /// Runde 4 ablehnt.
 ///
-/// **Vorher geprueft wird nichts.** `fileURLWithPath:` fragt das Dateisystem
-/// nicht, und diese Huelle fragt es auch nicht; ob der Eintrag noch dasteht,
-/// beantwortet die Liste selbst, indem sie leer bleibt.
+/// **Vorher geprueft wird nichts, und die Adresse fragt die Platte nicht.**
+/// Die Art des Eintrags kommt herein (`ist_ordner`, aus dem Ordnermodell, siehe
+/// [`crate::kommandos::kontextmenue::oeffnungsbezug`]), und die Adresse
+/// entsteht ueber `fileURLWithPath:isDirectory:`. `fileURLWithPath:` ohne die
+/// Art fragte das Dateisystem, ob der Pfad ein Ordner ist, und hielte auf einer
+/// haengenden Freigabe den Hauptfaden an, und zwar bei jedem Rechtsklick. Eine
+/// Verknuepfung kommt als Datei herein; das System loest sie selbst auf. Ob der
+/// Eintrag noch dasteht, beantwortet die Liste selbst, indem sie leer bleibt.
 ///
 /// **Ein Pfad ohne gueltiges UTF-8 liefert die leere Liste**, statt mit dem
 /// Ersatzzeichen einen anderen Eintrag zu erfragen. Der Modulkopf sagt, warum.
@@ -152,11 +159,11 @@ use crate::kommandos::kontextmenue::Anwendung;
 /// wie in [`super::volumes::eingehaengte`]: aus einem `NSURL`, dessen `path`
 /// `nil` ist, laesst sich kein Programmbuendel machen.
 #[must_use]
-pub fn anwendungen_fuer(pfad: &Path) -> Vec<Anwendung> {
+pub fn anwendungen_fuer(pfad: &Path, ist_ordner: bool) -> Vec<Anwendung> {
     let Some(pfad) = pfad.to_str() else {
         return Vec::new();
     };
-    let eintrag = NSURL::fileURLWithPath(&NSString::from_str(pfad));
+    let eintrag = NSURL::fileURLWithPath_isDirectory(&NSString::from_str(pfad), ist_ordner);
     let verwalter = NSFileManager::defaultManager();
     NSWorkspace::sharedWorkspace()
         .URLsForApplicationsToOpenURL(&eintrag)
@@ -190,6 +197,13 @@ pub fn anwendungen_fuer(pfad: &Path) -> Vec<Anwendung> {
 /// entscheidet sie und nicht KRK. Dieselbe Zurueckhaltung wie bei
 /// [`super::standardprogramm::oeffnen`] und [`super::teilen::anbieten`].
 ///
+/// **Keine Adresse fragt die Platte.** Je Eintrag reist seine Art mit, wie sie
+/// das Ordnermodell fuehrt ([`crate::kommandos::operationen::Auswahl::adressen`]),
+/// und die Adresse entsteht ueber `fileURLWithPath:isDirectory:`; die Art formt
+/// allein die Adresse und verzweigt nichts. Das Programmbuendel ist ein Ordner,
+/// und seine Adresse entsteht deshalb mit `isDirectory: true`: so nennt es
+/// `URLsForApplicationsToOpenURL:`, aus dessen Antwort der Pfad stammt.
+///
 /// **Die Vorgabe-Zusammenstellung geht mit, und kein Wert daran wird
 /// gesetzt.** `NSWorkspaceOpenConfiguration::configuration` liefert sie mit den
 /// Vorgaben des Systems, und die sind genau das, was ein Nutzer vom Oeffnen
@@ -206,7 +220,7 @@ pub fn anwendungen_fuer(pfad: &Path) -> Vec<Anwendung> {
 /// vorher ab, denn ohne betroffene Eintraege traegt das Untermenue keine
 /// Anwendung.
 #[must_use = "die Antwort sagt, ob die Uebergabe stattgefunden hat; fallengelassen bleibt der Nutzer ohne Meldung vor einem Programm, das nicht aufgeht"]
-pub fn oeffnen_mit(pfade: &[PathBuf], anwendung: &Path) -> bool {
+pub fn oeffnen_mit(adressen: &[(&Path, bool)], anwendung: &Path) -> bool {
     // Erst die Anwendung: ohne sie gibt es keine Uebergabe, und die Liste
     // darunter braucht dann gar nicht erst zu entstehen.
     let Some(anwendung) = anwendung.to_str() else {
@@ -214,14 +228,19 @@ pub fn oeffnen_mit(pfade: &[PathBuf], anwendung: &Path) -> bool {
     };
     // **Kein `to_string_lossy`, und die ganze Menge faellt oder keine.** Die
     // Begruendung steht im Modulkopf.
-    let Some(ziele) = pfade
+    let Some(ziele) = adressen
         .iter()
-        .map(|pfad| Some(NSURL::fileURLWithPath(&NSString::from_str(pfad.to_str()?))))
+        .map(|&(pfad, ist_ordner)| {
+            Some(NSURL::fileURLWithPath_isDirectory(
+                &NSString::from_str(pfad.to_str()?),
+                ist_ordner,
+            ))
+        })
         .collect::<Option<Vec<Retained<NSURL>>>>()
     else {
         return false;
     };
-    let programm = NSURL::fileURLWithPath(&NSString::from_str(anwendung));
+    let programm = NSURL::fileURLWithPath_isDirectory(&NSString::from_str(anwendung), true);
     NSWorkspace::sharedWorkspace().openURLs_withApplicationAtURL_configuration_completionHandler(
         &NSArray::from_retained_slice(&ziele),
         &programm,
@@ -263,15 +282,18 @@ mod tests {
             "der Pfad der Probe ist gueltiges UTF-8 und misst damit nicht, was sie messen soll"
         );
         assert!(
-            !oeffnen_mit(&[gerade.clone(), krumm.clone()], &programm),
+            !oeffnen_mit(
+                &[(gerade.as_path(), false), (krumm.as_path(), false)],
+                &programm
+            ),
             "eine Menge mit einem krummen Pfad wird nicht abgewiesen"
         );
         assert!(
-            !oeffnen_mit(&[gerade], &krumm),
+            !oeffnen_mit(&[(gerade.as_path(), false)], &krumm),
             "eine krumme Anwendung wird nicht abgewiesen"
         );
         assert!(
-            !oeffnen_mit(std::slice::from_ref(&krumm), &krumm),
+            !oeffnen_mit(&[(krumm.as_path(), false)], &krumm),
             "zwei krumme Pfade werden nicht abgewiesen"
         );
     }
@@ -287,7 +309,7 @@ mod tests {
 
         let krumm = PathBuf::from(OsStr::from_bytes(b"/tmp/krk-oeffnenmit-\xffkrumm"));
         assert!(
-            anwendungen_fuer(&krumm).is_empty(),
+            anwendungen_fuer(&krumm, false).is_empty(),
             "fuer einen krummen Pfad kommt eine Anwendungsliste zurueck"
         );
     }

@@ -5460,7 +5460,23 @@ impl Anwendungsdelegierter {
     /// C1, sobald dessen Fokus in der Vorschau oder im Editor steht. Zwei
     /// Ablesungen nebeneinander waeren zwei Antworten auf eine Frage, und die
     /// zweite fiele erst am Buendel auf (C2, viertes Kriterium).
+    ///
+    /// Seit dem 261102 liest sie [`Self::angezeigte_adresse`] ab und laesst
+    /// die Art fallen; das Teilen fragt jene unmittelbar.
     fn angezeigte_datei(&self) -> Option<PathBuf> {
+        self.angezeigte_adresse().map(|(pfad, _)| pfad)
+    }
+
+    /// Wie [`Self::angezeigte_datei`], und dazu, ob der angezeigte Eintrag ein
+    /// Ordner ist (261102, Punkt 3c von `261030-1259`).
+    ///
+    /// **Die Art ist schon in der Hand und keine Frage an die Platte.** Die
+    /// Vorschau fuehrt sie in ihrem Modell
+    /// ([`crate::vorschaumodell::Vorschaumodell::aktive_adresse`]); der Editor
+    /// haelt immer eine Datei und nie einen Ordner. Wer daraus eine Adresse
+    /// ueber `fileURLWithPath:isDirectory:` baut, haelt den Hauptfaden auf
+    /// einer haengenden Freigabe nicht an.
+    fn angezeigte_adresse(&self) -> Option<(PathBuf, bool)> {
         let (vorschau_sichtbar, editor_sichtbar) = {
             let modell = self.ivars().modell.borrow();
             (
@@ -5472,14 +5488,16 @@ impl Anwendungsdelegierter {
             .ivars()
             .vorschau
             .get()
-            .and_then(|vorschau| vorschau.angezeigter_pfad());
+            .and_then(|vorschau| vorschau.angezeigte_adresse());
         // `angezeigter_pfad` und nicht `pfad`: bei offener Quicknote zeigt der
-        // Editor keine Datei (Entscheidung 9 des Plans der Quicknote).
+        // Editor keine Datei (Entscheidung 9 des Plans der Quicknote). Was er
+        // haelt, ist eine Datei und kein Ordner.
         let editor_pfad = self
             .ivars()
             .editor
             .get()
-            .and_then(|editor| editor.angezeigter_pfad());
+            .and_then(|editor| editor.angezeigter_pfad())
+            .map(|pfad| (pfad, false));
         angezeigtedatei::welche(
             vorschau_sichtbar,
             vorschau_pfad,
@@ -5656,19 +5674,32 @@ impl Anwendungsdelegierter {
     /// war zustaendig, auch wenn er nur etwas zu melden hatte.
     fn teilen(&self, fokus: Fokus) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
-        let (pfade, anker) = match teilen::worauf(fokus) {
+        // Je Pfad reist seine Art mit, damit die Adressen des Dialogs die
+        // Platte nicht fragen: aus dem Ordnermodell oder aus dem, was Vorschau
+        // und Editor halten.
+        let (adressen, anker): (Vec<(PathBuf, bool)>, _) = match teilen::worauf(fokus) {
             teilen::Quelle::BetroffeneEintraege => {
                 let Some(betroffen) = self.betroffene_oder_melden(aktiv) else {
                     return true;
                 };
-                (betroffen.pfade, self.fokusansicht(Fokus::Dateifenster))
+                (
+                    betroffen
+                        .adressen()
+                        .map(|(pfad, ist_ordner)| (pfad.to_path_buf(), ist_ordner))
+                        .collect(),
+                    self.fokusansicht(Fokus::Dateifenster),
+                )
             }
             teilen::Quelle::AngezeigteDatei => (
-                self.angezeigte_datei().into_iter().collect(),
+                self.angezeigte_adresse().into_iter().collect(),
                 self.fokusansicht(fokus),
             ),
             teilen::Quelle::Nichts => (Vec::new(), None),
         };
+        let adressen: Vec<(&Path, bool)> = adressen
+            .iter()
+            .map(|(pfad, ist_ordner)| (pfad.as_path(), *ist_ordner))
+            .collect();
         let gezeigt = match anker {
             // **`visibleRect` und nicht `bounds`.** Seit der Runde 14 liefert
             // `fokusansicht` fuer die Vorschau die Textanzeige, und die ist mit
@@ -5680,7 +5711,7 @@ impl Anwendungsdelegierter {
             // Fuer jede Ansicht, die ganz sichtbar ist, sind beide Rechtecke
             // dasselbe; die eine Zuordnung von Fokuswert auf Ansicht aus C1.8
             // bleibt unberuehrt, geaendert ist das Rechteck.
-            Some(flaeche) => teilen::anbieten(&pfade, flaeche, flaeche.visibleRect()),
+            Some(flaeche) => teilen::anbieten(&adressen, flaeche, flaeche.visibleRect()),
             None => false,
         };
         if !gezeigt {
@@ -9308,7 +9339,8 @@ impl Anwendungsdelegierter {
         let Some(betroffen) = self.betroffene_oder_melden(seite) else {
             return;
         };
-        let satz = if kontextmenue::oeffnungsbezug(&betroffen.pfade).is_some() {
+        let adressen: Vec<(&Path, bool)> = betroffen.adressen().collect();
+        let satz = if kontextmenue::oeffnungsbezug(&adressen).is_some() {
             operationen::keine_anwendung()
         } else {
             operationen::nichts_zu_oeffnen()
@@ -9354,7 +9386,8 @@ impl Anwendungsdelegierter {
             self.antwort_zeigen(seite, &operationen::nichts_zu_oeffnen());
             return;
         }
-        let satz = if oeffnenmit::oeffnen_mit(&betroffen.pfade, &anwendung.pfad) {
+        let adressen: Vec<(&Path, bool)> = betroffen.adressen().collect();
+        let satz = if oeffnenmit::oeffnen_mit(&adressen, &anwendung.pfad) {
             operationen::oeffnungsmeldung_an(&anwendung.name, &betroffen.pfade)
         } else {
             operationen::nicht_uebergeben(&anwendung.name)
@@ -14043,18 +14076,26 @@ mod quicknoteproben {
     }
 
     /// Teilen und „Ordner der Datei zeigen" sehen nicht durch die Quicknote:
-    /// `angezeigte_datei` fragt den Editor nach dem angezeigten und nicht nach
-    /// dem gehaltenen Pfad (Entscheidung 9 des Plans der Quicknote).
+    /// `angezeigte_adresse`, die eine Ablesung hinter `angezeigte_datei`, fragt
+    /// den Editor nach dem angezeigten und nicht nach dem gehaltenen Pfad
+    /// (Entscheidung 9 des Plans der Quicknote). Bis zum 261102 stand die
+    /// Ablesung in `angezeigte_datei` selbst; seitdem reist die Art des
+    /// Eintrags mit, und `angezeigte_datei` laesst sie fallen.
     #[test]
     fn die_angezeigte_datei_fragt_den_angezeigten_pfad_des_editors() {
-        let rumpf = rumpf(&diese_datei(), "angezeigte_datei");
+        let ablesung = rumpf(&diese_datei(), "angezeigte_adresse");
         assert!(
-            rumpf.contains(concat!("editor.angezeigter_", "pfad()")),
-            "angezeigte_datei fragt den Editor nicht nach dem angezeigten Pfad"
+            ablesung.contains(concat!("editor.angezeigter_", "pfad()")),
+            "angezeigte_adresse fragt den Editor nicht nach dem angezeigten Pfad"
         );
         assert!(
-            !rumpf.contains(concat!("editor.", "pfad()")),
-            "angezeigte_datei sieht durch die Quicknote auf die Datei darunter"
+            !ablesung.contains(concat!("editor.", "pfad()")),
+            "angezeigte_adresse sieht durch die Quicknote auf die Datei darunter"
+        );
+        assert!(
+            rumpf(&diese_datei(), "angezeigte_datei")
+                .contains(concat!("self.angezeigte_", "adresse()")),
+            "angezeigte_datei liest nicht aus angezeigte_adresse und hielte eine zweite Ablesung"
         );
     }
 

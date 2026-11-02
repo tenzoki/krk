@@ -412,15 +412,18 @@ define_class!(
             // demselben Argument und liefert ein optionales Menue.
             let bestand: Option<Retained<NSMenu>> =
                 unsafe { msg_send![super(self), menuForEvent: ereignis] };
-            let pfade = self.teilbare_pfade();
+            let adresse = self.teilbare_adresse();
+            let adressen = adresse
+                .as_ref()
+                .map(|(pfad, ist_ordner)| (pfad.as_path(), *ist_ordner));
             // Kein `return` in diesem Rumpf: `method_id` huellt den Wert.
             let menue = match bestand {
                 Some(menue) => Some(menue),
-                None if pfade.is_empty() => None,
+                None if adressen.is_none() => None,
                 None => Some(NSMenu::new(self.mtm())),
             };
             if let Some(menue) = &menue {
-                teilen::eintrag_anfuegen(menue, &pfade, self.mtm());
+                teilen::eintrag_anfuegen(menue, adressen.as_slice(), self.mtm());
             }
             menue
         }
@@ -639,13 +642,12 @@ impl Pdfbetrachter {
     ///
     /// Keine oder eine Datei, wie an den zwei anderen Ansichten der Vorschau:
     /// der aktive Tab zeigt hoechstens eine. Ohne Rueckverweis oder mit einem
-    /// Vorschaufenster, das nicht mehr steht, bleibt die Liste leer.
-    fn teilbare_pfade(&self) -> Vec<PathBuf> {
+    /// Vorschaufenster, das nicht mehr steht, bleibt die Antwort leer. Mit dem
+    /// Pfad reist seine Art aus dem Modell der Vorschau
+    /// ([`super::vorschau::Vorschaufenster::angezeigte_adresse`]).
+    fn teilbare_adresse(&self) -> Option<(PathBuf, bool)> {
         let vorschau = self.ivars().vorschau.borrow().as_ref().and_then(Weak::load);
-        vorschau
-            .and_then(|vorschau| vorschau.angezeigter_pfad())
-            .into_iter()
-            .collect()
+        vorschau.and_then(|vorschau| vorschau.angezeigte_adresse())
     }
 }
 

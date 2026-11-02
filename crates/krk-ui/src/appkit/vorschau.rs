@@ -797,7 +797,11 @@ define_class!(
             _ereignis: &NSEvent,
             _stelle: NSUInteger,
         ) -> Option<Retained<NSMenu>> {
-            teilen::eintrag_anfuegen(menue, &self.teilbare_pfade(), self.mtm());
+            let adresse = self.teilbare_adresse();
+            let adressen = adresse
+                .as_ref()
+                .map(|(pfad, ist_ordner)| (pfad.as_path(), *ist_ordner));
+            teilen::eintrag_anfuegen(menue, adressen.as_slice(), self.mtm());
             Some(menue.retain())
         }
     }
@@ -819,9 +823,12 @@ define_class!(
         // SAFETY: Die Signatur entspricht der des Protokolls.
         #[unsafe(method(menuNeedsUpdate:))]
         fn menue_auffrischen(&self, menue: &NSMenu) {
-            let pfade = self.teilbare_pfade();
+            let adresse = self.teilbare_adresse();
+            let adressen = adresse
+                .as_ref()
+                .map(|(pfad, ist_ordner)| (pfad.as_path(), *ist_ordner));
             menue.removeAllItems();
-            teilen::eintrag_anfuegen(menue, &pfade, self.mtm());
+            teilen::eintrag_anfuegen(menue, adressen.as_slice(), self.mtm());
         }
     }
 
@@ -1150,29 +1157,45 @@ impl Vorschaufenster {
     /// Nur zum Ablesen. Vier fragen danach: die Endbedingung von L7 im
     /// Messmodus, [`crate::angezeigtedatei::welche`] ueber den
     /// Anwendungsdelegierten, das Kontextmenue dieser Datei ueber
-    /// [`Self::teilbare_pfade`], und seit der Runde 20 das Kontextmenue des
+    /// [`Self::teilbare_adresse`], und seit der Runde 20 das Kontextmenue des
     /// Betrachters ueber seinen schwachen Rueckverweis (C5.8) — dieselbe Regel
-    /// „keine oder eine Datei", ohne dass [`Self::teilbare_pfade`] dafuer nach
-    /// aussen gehen muesste.
+    /// „keine oder eine Datei", ohne dass [`Self::teilbare_adresse`] dafuer
+    /// nach aussen gehen muesste. Seit dem 261102 fragen der
+    /// Anwendungsdelegierte und das Kontextmenue dieser Datei stattdessen
+    /// [`Self::angezeigte_adresse`], weil sie eine Dateiadresse bauen.
     #[must_use]
     pub fn angezeigter_pfad(&self) -> Option<std::path::PathBuf> {
         self.ivars().modell.borrow().aktiver_pfad()
+    }
+
+    /// Wie [`Self::angezeigter_pfad`], und dazu, ob der aktive Tab einen
+    /// Ordner zeigt ([`crate::vorschaumodell::Vorschaumodell::aktive_adresse`]).
+    ///
+    /// Gefragt von jedem, der aus dem Pfad eine Dateiadresse ueber
+    /// `fileURLWithPath:isDirectory:` baut: die Art steht schon im Modell, und
+    /// die Adresse fragt damit die Platte nicht. Die Ausleihe des Modells endet
+    /// mit dieser Zeile, vor jedem Objective-C-Aufruf.
+    #[must_use]
+    pub fn angezeigte_adresse(&self) -> Option<(PathBuf, bool)> {
+        self.ivars().modell.borrow().aktive_adresse()
     }
 
     /// Was ein Rechtsklick in der Vorschau zu teilen findet (C1 der Runde 6).
     ///
     /// Keine oder eine Datei, nie mehr: die Vorschau zeigt einen Tab, und der
     /// zeigt hoechstens eine Datei. Zeigt er etwas anderes — Metadaten, einen
-    /// Hinweis, den Inhalt der Zwischenablage, gar nichts —, bleibt die Liste
-    /// leer, und [`teilen::eintrag_anfuegen`] setzt dann keinen Eintrag.
+    /// Hinweis, den Inhalt der Zwischenablage, gar nichts —, bleibt die
+    /// Antwort leer, und [`teilen::eintrag_anfuegen`] setzt dann keinen
+    /// Eintrag. Mit dem Pfad reist seine Art, wie sie
+    /// [`Self::angezeigte_adresse`] beschreibt.
     ///
     /// **Die Sichtbarkeit der Vorschau wird hier nicht gefragt.** Das Menue
     /// geht nur auf, wo der Nutzer hinklickt, und geklickt hat er in die
     /// sichtbare Vorschau; [`crate::angezeigtedatei::welche`] beantwortete
     /// eine Frage, die der Klick schon beantwortet hat. Die Ausleihe des
     /// Modells endet mit dieser Zeile, vor jedem Objective-C-Aufruf.
-    fn teilbare_pfade(&self) -> Vec<PathBuf> {
-        self.angezeigter_pfad().into_iter().collect()
+    fn teilbare_adresse(&self) -> Option<(PathBuf, bool)> {
+        self.angezeigte_adresse()
     }
 
     /// Blaettert die Bildfolge des aktiven Tabs um ein Foto (C3 des Spec der

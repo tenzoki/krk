@@ -639,12 +639,18 @@ pub struct Anwendung {
 /// uebrig. Die Wahl zwischen beiden ist eine Nutzerfrage und liegt als
 /// `decisions/260918-0856_*_welche-anwendungen-zeigt-oeffnen-mit-bei-einer-gemischten-mehrfachauswahl.md`.
 ///
+/// **Die Art des Eintrags reist mit**, wie sie
+/// [`super::operationen::Auswahl::adressen`] aus dem Ordnermodell liefert: aus
+/// ihr entsteht die Adresse, nach der das System gefragt wird, ohne dass die
+/// Adresse selbst die Platte fragt
+/// (`crate::appkit::oeffnenmit::anwendungen_fuer`).
+///
 /// `None` heisst: es ist nichts betroffen. Dann gibt es keinen Dateityp, nach
 /// dem zu fragen waere, und der Eintrag meldet es
 /// ([`super::operationen::nichts_zu_oeffnen`]).
 #[must_use]
-pub fn oeffnungsbezug(betroffen: &[PathBuf]) -> Option<&Path> {
-    betroffen.first().map(PathBuf::as_path)
+pub fn oeffnungsbezug<'a>(betroffen: &[(&'a Path, bool)]) -> Option<(&'a Path, bool)> {
+    betroffen.first().copied()
 }
 
 /// Die Marke des Untermenue-Eintrags an der genannten Stelle.
@@ -1600,17 +1606,19 @@ mod tests {
     /// gewaehlten Anwendung danach **alle** betroffenen Eintraege zugehen.
     #[test]
     fn der_bezugseintrag_ist_der_erste_betroffene() {
-        let erster = PathBuf::from("/tmp/Projekte/bericht.txt");
-        let zweiter = PathBuf::from("/tmp/Projekte/bild.png");
+        let erster = Path::new("/tmp/Projekte/bericht.txt");
+        let zweiter = Path::new("/tmp/Projekte/Bilder");
         assert_eq!(oeffnungsbezug(&[]), None);
+        assert_eq!(oeffnungsbezug(&[(erster, false)]), Some((erster, false)));
         assert_eq!(
-            oeffnungsbezug(std::slice::from_ref(&erster)),
-            Some(erster.as_path())
+            oeffnungsbezug(&[(erster, false), (zweiter, true)]),
+            Some((erster, false)),
+            "bei mehreren betroffenen Eintraegen entscheidet nicht der erste"
         );
         assert_eq!(
-            oeffnungsbezug(&[erster.clone(), zweiter]),
-            Some(erster.as_path()),
-            "bei mehreren betroffenen Eintraegen entscheidet nicht der erste"
+            oeffnungsbezug(&[(zweiter, true), (erster, false)]),
+            Some((zweiter, true)),
+            "der Bezugseintrag verliert seine Art"
         );
     }
 

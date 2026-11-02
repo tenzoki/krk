@@ -19,8 +19,6 @@
 //! Rechnungen nebeneinander waeren zwei Antworten auf eine Frage, und die
 //! zweite fiele erst am Buendel auf.
 
-use std::path::PathBuf;
-
 /// Der Pfad der angezeigten Datei, oder `None`, wenn keine angezeigt wird.
 ///
 /// # Warum die Sichtbarkeit entscheidet und nicht das Halten
@@ -43,12 +41,17 @@ use std::path::PathBuf;
 /// Vorschau, die nichts haelt, laesst den Editor an die Reihe — der ist dann
 /// unsichtbar, haelt aber vielleicht etwas, und dieser Fall faellt trotzdem
 /// auf `None`, weil die zweite Bedingung ebenfalls die Sichtbarkeit fragt.
-pub fn welche(
+///
+/// **Was mit dem Pfad reist, entscheidet der Rufer** (`T`): der Ordnersprung
+/// braucht den Pfad allein, das Teilen dazu die Art des Eintrags, aus der es
+/// eine Dateiadresse ohne Frage an die Platte baut (261102). Die Regel ist fuer
+/// beide dieselbe eine, und sie fasst den Wert nicht an.
+pub fn welche<T>(
     vorschau_sichtbar: bool,
-    vorschau_pfad: Option<PathBuf>,
+    vorschau_pfad: Option<T>,
     editor_sichtbar: bool,
-    editor_pfad: Option<PathBuf>,
-) -> Option<PathBuf> {
+    editor_pfad: Option<T>,
+) -> Option<T> {
     if vorschau_sichtbar && let Some(pfad) = vorschau_pfad {
         return Some(pfad);
     }
@@ -60,6 +63,8 @@ pub fn welche(
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use super::*;
 
     fn vorschaudatei() -> PathBuf {
@@ -105,7 +110,7 @@ mod tests {
             None,
             "die sichtbare Vorschau ohne Datei laesst den unsichtbaren Editor nicht gewinnen"
         );
-        assert_eq!(welche(true, None, false, None), None);
+        assert_eq!(welche::<PathBuf>(true, None, false, None), None);
 
         // Der Editor ist sichtbar.
         assert_eq!(
@@ -123,7 +128,7 @@ mod tests {
             None,
             "der sichtbare Editor ohne Datei laesst die unsichtbare Vorschau nicht gewinnen"
         );
-        assert_eq!(welche(false, None, true, None), None);
+        assert_eq!(welche::<PathBuf>(false, None, true, None), None);
 
         // Keiner der beiden Bereiche steht. Die Funktion fragt in beiden
         // Zweigen zuerst die Sichtbarkeit, also fallen alle vier auf `None` —
@@ -135,7 +140,7 @@ mod tests {
         );
         assert_eq!(welche(false, Some(v), false, None), None);
         assert_eq!(welche(false, None, false, Some(e)), None);
-        assert_eq!(welche(false, None, false, None), None);
+        assert_eq!(welche::<PathBuf>(false, None, false, None), None);
     }
 
     /// Ein unsichtbarer Editor mit gehaltener Datei gewinnt nicht.
