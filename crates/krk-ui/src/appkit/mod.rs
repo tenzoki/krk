@@ -177,6 +177,11 @@
 //! eigenen Faden. Seine Antwort kommt wie die von [`auswurf`] spaeter ueber
 //! die Hauptschlange; sein Aufruf meldet daneben sofort, ob sich der Faden
 //! starten liess.
+//! [`nebenfaden`] haelt seit dem 261102 den einen Fadenweg, auf dem eine
+//! Frage an die Platte vom Hauptfaden genommen wird: ein benannter Faden, die
+//! Antwort ueber die Hauptschlange, `fertig` genau einmal. Er stand bis dahin
+//! privat in [`terminal`] und ist herausgehoben, damit weitere Wege ihn mit
+//! eigenem Fadennamen nehmen, statt einen zweiten daneben zu bauen.
 //! [`teilen`] haelt die eine aus C1 der Runde 6: die Uebergabe von Eintraegen
 //! an die Freigabedienste des Systems ueber `NSSharingServicePicker`, dazu den
 //! **einen** Menuebauer, den die drei Flaechen mit Kontextmenue rufen. Ein
@@ -272,6 +277,7 @@ mod hinweis;
 mod koordinaten;
 mod leiste;
 mod menue;
+mod nebenfaden;
 mod nummernspalte;
 mod oeffnenmit;
 mod papierkorb;

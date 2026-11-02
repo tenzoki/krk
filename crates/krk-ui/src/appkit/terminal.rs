@@ -48,9 +48,12 @@
 //! diesen Faden**: [`ordner_pruefen_lassen`] fragt dort, ob der angezeigte
 //! Ordner noch dasteht, und erst die Antwort auf dem Hauptfaden oeffnet ihn
 //! ueber [`ordner_oeffnen`]. Skript und Ordnerpruefung teilen den einen
-//! Fadenweg [`auf_dem_faden`]; einen zweiten Mechanismus daneben gibt es
-//! nicht. Der Faden heisst nach dem ersten Weg `krk-terminal`, auch wenn der
-//! Finder fragt, aus demselben Grund wie das Modul.
+//! Fadenweg [`super::nebenfaden::fragen_lassen`]; einen zweiten Mechanismus
+//! daneben gibt es nicht. Bis zum 261102 stand er privat in dieser Datei und
+//! ist seitdem ein eigenes Modul, damit weitere Wege ihn mit eigenem
+//! Fadennamen nehmen koennen; Halter, Rueckweg und das genau einmalige
+//! `fertig` stehen dort. Der Faden heisst nach dem ersten Weg `krk-terminal`,
+//! auch wenn der Finder fragt, aus demselben Grund wie das Modul.
 //!
 //! # Die eine Aufloesung, und ihr zweiter Frager
 //!
@@ -120,20 +123,24 @@
 //! nicht; die Nennung hier ist die Gegenmassnahme.
 //!
 //! **Was die `use`-Zeilen fuer den Faden `krk-terminal` hereinholen, und warum
-//! keines davon die Untergrenze dieser Datei anhebt:** `MainThreadMarker` ist
-//! ein Rust-Typ der Kiste und hat kein macOS-Alter; `DispatchQueue` aus
-//! `dispatch2` ist eine Rust-Huelle um `libdispatch`, seit 10.6 im System.
+//! es die Untergrenze dieser Datei nicht anhebt:** `MainThreadMarker` ist
+//! ein Rust-Typ der Kiste und hat kein macOS-Alter. Die Hauptschlange
+//! (`DispatchQueue`) spricht seit dem 261102 allein
+//! [`super::nebenfaden`] an, und ihre Untergrenze steht dort.
 
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
 
-use dispatch2::DispatchQueue;
 use krk_core::terminalskript::{self, Skriptfehler, Vorbereitet};
 use objc2::rc::Retained;
 use objc2_app_kit::{NSWorkspace, NSWorkspaceOpenConfiguration};
 use objc2_foundation::{MainThreadMarker, NSArray, NSString, NSURL};
 
+use super::nebenfaden;
 use crate::kommandos::operationen;
+
+/// Der Name des Fadens, auf dem dieses Modul seine Fragen an die Platte
+/// stellt; der Weg dorthin ist [`nebenfaden::fragen_lassen`].
+const FADENNAME: &str = "krk-terminal";
 
 /// Wo die Anwendung mit dieser Buendelkennung liegt, sofern eine installiert
 /// ist.
@@ -252,7 +259,8 @@ pub fn vorbereiten_lassen(
     datei: PathBuf,
     fertig: impl FnOnce(MainThreadMarker, Vorbereitung) + Send + 'static,
 ) {
-    auf_dem_faden(
+    nebenfaden::fragen_lassen(
+        FADENNAME,
         move || terminalskript::vorbereiten(&terminalskript::skriptverzeichnis(), &datei),
         |fehler| Err(Skriptfehler::Schreiben(fehler)),
         fertig,
@@ -281,7 +289,8 @@ pub fn ordner_pruefen_lassen(
     fertig: impl FnOnce(MainThreadMarker, Option<String>) + Send + 'static,
 ) {
     let fuer_den_startfehler = ordner.clone();
-    auf_dem_faden(
+    nebenfaden::fragen_lassen(
+        FADENNAME,
         move || operationen::ordner_fehlt(&ordner),
         move |fehler| {
             Some(operationen::ordner_unerreichbar(
@@ -291,65 +300,6 @@ pub fn ordner_pruefen_lassen(
         },
         fertig,
     );
-}
-
-/// Der eine Fadenweg dieses Moduls: `arbeit` laeuft auf dem Faden
-/// `krk-terminal`, ihr Ergebnis geht ueber `DispatchQueue::main()` an
-/// `fertig`.
-///
-/// Scheitert der Fadenstart, macht `startfehler` aus dem Fehler das Ergebnis,
-/// und `fertig` bekommt es ebenso ueber die Hauptschlange. Beide oeffentlichen
-/// Wege, [`vorbereiten_lassen`] und [`ordner_pruefen_lassen`], gehen hier
-/// durch, damit Halter, Fadenname und Rueckweg genau einmal dastehen.
-fn auf_dem_faden<T: Send + 'static>(
-    arbeit: impl FnOnce() -> T + Send + 'static,
-    startfehler: impl FnOnce(std::io::Error) -> T,
-    fertig: impl FnOnce(MainThreadMarker, T) + Send + 'static,
-) {
-    // `Builder::spawn` nimmt den Abschluss und gibt ihn bei einem Fehlschlag
-    // nicht zurueck; der Halter laesst `fertig` deshalb auch dann erreichbar,
-    // wenn kein Faden entsteht.
-    let halter = Arc::new(Mutex::new(Some(fertig)));
-    let auf_dem_faden = Arc::clone(&halter);
-    let gestartet = std::thread::Builder::new()
-        .name("krk-terminal".to_owned())
-        .spawn(move || {
-            let ergebnis = arbeit();
-            if let Some(fertig) = nehmen(&auf_dem_faden) {
-                auf_dem_hauptfaden(fertig, ergebnis);
-            }
-        });
-    if let Err(fehler) = gestartet
-        && let Some(fertig) = nehmen(&halter)
-    {
-        auf_dem_hauptfaden(fertig, startfehler(fehler));
-    }
-}
-
-/// Nimmt `fertig` aus dem Halter, auch aus einem vergifteten: der Wert darin
-/// ist trotzdem der richtige, und ihn liegen zu lassen hiesse, die Antwort zu
-/// verschlucken (dieselbe Ueberlegung wie in [`super::auswurf`]).
-fn nehmen<F>(halter: &Mutex<Option<F>>) -> Option<F> {
-    match halter.lock() {
-        Ok(mut fertig) => fertig.take(),
-        Err(vergiftet) => vergiftet.into_inner().take(),
-    }
-}
-
-/// Reicht das Ergebnis an den Hauptfaden weiter.
-fn auf_dem_hauptfaden<T: Send + 'static>(
-    fertig: impl FnOnce(MainThreadMarker, T) + Send + 'static,
-    ergebnis: T,
-) {
-    DispatchQueue::main().exec_async(move || {
-        let Some(mtm) = MainThreadMarker::new() else {
-            // Kann nicht eintreten: die Hauptschlange laeuft auf dem
-            // Hauptfaden. Ein angelegtes Skript bliebe hier liegen, mit `0700`
-            // im privaten `$TMPDIR`, und das ist der Rest, den E2 hinnimmt.
-            return;
-        };
-        fertig(mtm, ergebnis);
-    });
 }
 
 #[cfg(test)]
