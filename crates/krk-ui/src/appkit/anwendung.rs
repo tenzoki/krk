@@ -791,6 +791,132 @@ impl Loeschgegenstand {
     }
 }
 
+/// Was die Platte ueber ein lokales Loeschziel sagt, in einem Zug erhoben
+/// ([`lokaler_loeschbefund`]).
+///
+/// **Ein gewoehnlicher Rust-Wert und `Send`**, ohne AppKit-Objekt: die zwei
+/// Teile, die die Rueckfrage braucht, sind die Antwort auf die Papierkorbfrage
+/// fuer die Stufenregel und die Warngruende fuer die Texte. Der aufgeloeste
+/// Ordner, aus dem beide entstehen, reist nicht mit; nach dem Befund liest ihn
+/// niemand mehr. Dass der Wert `Send` bleibt, haelt
+/// `der_loeschbefund_ist_send` im Pruefmodul `loeschzielproben`.
+#[derive(Debug)]
+struct Loeschbefund {
+    /// Fuehrt der Datentraeger des aufgeloesten Ordners einen Papierkorb?
+    papierkorb: Erlaubnisbefund,
+    /// Die Warngruende des Ziels aus den fuenf Tatsachen, in der Rangfolge
+    /// von [`loeschwarnung::warngruende`].
+    gruende: Vec<loeschwarnung::Warngrund>,
+}
+
+impl Loeschbefund {
+    /// Der Befund aus der Papierkorbantwort und den fuenf Tatsachen ueber das
+    /// Ziel.
+    ///
+    /// **Die eine Stelle, die die Ausloesertafel fragt**
+    /// (`die_ausloesertafel_hat_genau_einen_aufrufer` in
+    /// `kommandos/loeschwarnung.rs`): der erhobene und der unentschiedene
+    /// Befund gehen beide hier durch, damit die Einordnung des Ziels einmal
+    /// geschieht.
+    fn aus(papierkorb: Erlaubnisbefund, ziel: &Loeschziel) -> Self {
+        Self {
+            papierkorb,
+            gruende: loeschwarnung::warngruende(ziel),
+        }
+    }
+
+    /// Der Befund, wenn die Platte nicht gefragt werden konnte: Papierkorb
+    /// unentschieden, und jeder der fuenf Eingaenge des Ziels offen, sodass
+    /// die Tafel [`loeschwarnung::Warngrund::Unentscheidbar`] liefert und nie
+    /// eine stille Entwarnung. Ohne Systemaufruf.
+    fn unentschieden() -> Self {
+        let ziel = Loeschziel {
+            ordner: None,
+            benutzerverzeichnis: None,
+            netzlaufwerk: Warnbefund::Unentschieden,
+            arbeitsbaum: Warnbefund::Unentschieden,
+            umfang: umfang::Umfang::Unentschieden,
+        };
+        Self::aus(Erlaubnisbefund::Unentschieden, &ziel)
+    }
+}
+
+/// Erhebt alle Fragen des lokalen Loeschwegs an die Platte in einem Zug.
+///
+/// Jede Tatsache kommt aus genau einer Quelle:
+///
+/// ```text
+/// ordner              std::fs::canonicalize, genau einmal
+/// papierkorb          super::papierkorb::fuehrt_einen_papierkorb
+/// benutzerverzeichnis krk_core::ablage::pfade::benutzerverzeichnis, aufgeloest
+/// netzlaufwerk        super::volumes::liegt_auf_netzlaufwerk
+/// arbeitsbaum         krk_core::verzeichnis::arbeitsbaum
+/// umfang              krk_core::verzeichnis::umfang::zaehlen
+/// ```
+///
+/// **Der Ordner wird einmal aufgeloest, und beide Fragen an den Datentraeger
+/// bekommen diese Fassung**: eine Verknuepfung meldete sonst den Datentraeger
+/// ihres eigenen Ortes statt den ihres Ziels. Ein Pfad, der sich nicht
+/// aufloesen laesst, ist keine Aussage ueber das Ziel, sondern eine ueber KRKs
+/// Kenntnis von ihm: der Papierkorb gilt dann als
+/// [`Erlaubnisbefund::Unentschieden`], und die Fragen an den Datentraeger
+/// liefern [`Warnbefund::Unentschieden`], nie eine stille Entwarnung.
+///
+/// **Das Benutzerverzeichnis hat weiterhin genau einen Frager.** Gefragt wird
+/// `pfade::benutzerverzeichnis` einmal je Befund, der Pfad wird einmal
+/// aufgeloest, und derselbe Wert geht an beide Stellen, die ihn brauchen: an
+/// das Feld des Ziels, aus dem [`loeschwarnung::warngruende`] die Ausloeser 1,
+/// 2 und 4 rechnet, und an die Grenze des Aufwaertsgangs der Git-Pruefung.
+/// Genommen wird **nicht** das freie [`benutzerverzeichnis`] dieses Moduls:
+/// es weicht auf `/` aus, wenn das System keines nennt, und ein `/` an
+/// dieser Stelle machte aus „KRK kennt den Benutzerordner nicht" die Aussage
+/// „der Ordner liegt darin". `None` heisst hier, dass die Frage offen ist,
+/// und die Tafel macht daraus [`loeschwarnung::Warngrund::Unentscheidbar`].
+///
+/// **Die Richtung steht seit dem 260907 im Typ.** `liegt_auf_netzlaufwerk`
+/// und `beruehrt_einen_arbeitsbaum` liefern einen [`Warnbefund`], bei dem `Ja`
+/// warnt; die Papierkorbfrage liefert einen [`Erlaubnisbefund`], bei dem `Ja`
+/// die Erlaubnis ist. Eine Vertauschung der beiden uebersetzt nicht; der
+/// Modulkopf von [`krk_core::verzeichnis::loeschzielbefund`] schreibt aus,
+/// was sie bis zu jenem Tag gekostet hat.
+///
+/// **Gerufen wird sie allein fuer einen lokalen Gegenstand und erst, wenn die
+/// billigen Stufen der Regel durch sind**
+/// ([`loeschwarnung::vor_der_rueckfrage`]); ein ferner Ort und ein Archiv
+/// kommen hier nie an. Sie haelt kein AppKit-Objekt und nimmt allein Werte,
+/// damit ihr Ruf den Faden wechseln kann; heute stellt sie ihre Fragen noch
+/// auf dem Hauptfaden, und eine haengende Freigabe haelt ihn dabei an
+/// (`261016-1956-der-loeschweg-fragt-canonicalize-und-den-papierkorb-auf-dem-hauptfaden-…`).
+fn lokaler_loeschbefund(ordner: &Path, auswahl: &Auswahl) -> Loeschbefund {
+    let aufgeloest = std::fs::canonicalize(ordner).ok();
+    let papierkorb = aufgeloest.as_deref().map_or(
+        Erlaubnisbefund::Unentschieden,
+        papierkorb::fuehrt_einen_papierkorb,
+    );
+    let zuhause = pfade::benutzerverzeichnis().and_then(|pfad| std::fs::canonicalize(pfad).ok());
+    let netzlaufwerk = aufgeloest
+        .as_deref()
+        .map_or(Warnbefund::Unentschieden, volumes::liegt_auf_netzlaufwerk);
+    let beruehrt_arbeitsbaum =
+        aufgeloest
+            .as_deref()
+            .map_or(Warnbefund::Unentschieden, |aufgeloester| {
+                arbeitsbaum::beruehrt_einen_arbeitsbaum(
+                    aufgeloester,
+                    zuhause.as_deref(),
+                    &auswahl.pfade,
+                )
+            });
+    let ziel = Loeschziel {
+        ordner: aufgeloest,
+        benutzerverzeichnis: zuhause,
+        netzlaufwerk,
+        arbeitsbaum: beruehrt_arbeitsbaum,
+        umfang: umfang::zaehlen(&auswahl.pfade),
+    };
+    Loeschbefund::aus(papierkorb, &ziel)
+}
+
 /// Ein laufender Dateivorgang, aus der Sicht des Hauptfadens (C4).
 ///
 /// **Es gibt hoechstens einen.** Bis S16 hielt die Tastensperre einen zweiten
@@ -7969,8 +8095,8 @@ impl Anwendungsdelegierter {
     /// Systemaufruf mit nein; seine Rueckfrage nennt allein die Zahl der
     /// gewaehlten Eintraege und ihrer Ordner, weil Arbeitsbaum und Umfang
     /// lokale Systemaufrufe braucheten. Ein lokaler Ort stellt seine Fragen an
-    /// die Platte weiter auf dem Hauptfaden, ausgelagert in
-    /// [`Self::lokaler_papierkorbbefund`] und [`Self::loeschtexte`]; das haelt
+    /// die Platte weiter auf dem Hauptfaden, gebuendelt in
+    /// [`lokaler_loeschbefund`]; das haelt
     /// der offene Defekt
     /// `shared/issues/261016-1956-der-loeschweg-fragt-canonicalize-und-den-papierkorb-auf-dem-hauptfaden-und-ein-haengendes-netzlaufwerk-haelt-die-ereignisschleife-an.md`
     /// fest.
@@ -8095,12 +8221,11 @@ impl Anwendungsdelegierter {
         // dieser Zweig braucht von ihrer Antwort allein, ob es sie gibt.
         let vorgang_laeuft = self.vorgang_laeuft().is_some();
 
-        // Der aufgeloeste Ordner, gemerkt fuer die zwei Zweige mit Blatt: die
+        // Der Befund der Platte, gemerkt fuer die zwei Zweige mit Blatt: die
         // Tafel ruft den Abschluss darunter allein im Feld `(false, false)`,
-        // und dann brauchen ihn beide Fragen an den Datentraeger. Aufgeloest
-        // wird deshalb genau einmal und nur dort, wo die Antwort gebraucht
-        // wird.
-        let mut aufgeloester_ordner: Option<PathBuf> = None;
+        // und dann brauchen ihn Papierkorbfrage und Texte. Erhoben wird er
+        // deshalb genau einmal und nur dort, wo die Antwort gebraucht wird.
+        let mut befund: Option<Loeschbefund> = None;
 
         match loeschwarnung::vor_der_rueckfrage(vorgang_laeuft, gegenstand.ist_leer(), || {
             match &gegenstand {
@@ -8110,10 +8235,11 @@ impl Anwendungsdelegierter {
                 // Ein Archiv ebenso nicht, am Wert und ohne Systemaufruf (E17
                 // des Plans der Archive).
                 Loeschgegenstand::Archiv { .. } => Erlaubnisbefund::Nein,
-                Loeschgegenstand::Lokal { ordner, .. } => {
-                    let (aufgeloest, befund) = Self::lokaler_papierkorbbefund(ordner);
-                    aufgeloester_ordner = aufgeloest;
-                    befund
+                Loeschgegenstand::Lokal { ordner, auswahl } => {
+                    let lokal = lokaler_loeschbefund(ordner, auswahl);
+                    let papierkorb = lokal.papierkorb;
+                    befund = Some(lokal);
+                    papierkorb
                 }
             }
         }) {
@@ -8140,19 +8266,19 @@ impl Anwendungsdelegierter {
                 Loeschweg::Papierkorb,
                 Endgueltiggrund::KeinPapierkorb,
                 gegenstand,
-                aufgeloester_ordner,
+                befund,
                 schaltflaeche,
             ),
             // Sicher kein Papierkorb, oder es liess sich nicht feststellen;
             // der Grund reist aus der Tafel mit und waehlt allein den ersten
             // Satz der Erlaeuterung (261019). Eine weitere Frage an die Platte
             // entsteht dabei nicht: der Befund kam aus dem einen
-            // `lokaler_papierkorbbefund` darueber.
+            // `lokaler_loeschbefund` darueber.
             Vorstufe::EndgueltigeRueckfrage(grund) => self.loeschblatt_zeigen(
                 Loeschweg::Endgueltig,
                 grund,
                 gegenstand,
-                aufgeloester_ordner,
+                befund,
                 schaltflaeche,
             ),
         }
@@ -8199,28 +8325,6 @@ impl Anwendungsdelegierter {
         })
     }
 
-    /// Die dritte Tatsache der Stufenregel fuer einen lokalen Ordner: der
-    /// aufgeloeste Ordner und ob sein Datentraeger einen Papierkorb fuehrt.
-    ///
-    /// `fuehrt_einen_papierkorb` fasst das Dateisystem nicht an und bekommt den
-    /// Ordner deshalb aufgeloest herein, sonst meldete eine Verknuepfung den
-    /// Papierkorb ihres eigenen Ortes statt den ihres Ziels. Ein Pfad, der sich
-    /// nicht aufloesen laesst, ist keine Aussage ueber das Ziel, sondern eine
-    /// ueber KRKs Kenntnis von ihm, und zaehlt darum als unentschieden.
-    ///
-    /// **Beide Fragen stellt der Hauptfaden**, und eine haengende Freigabe
-    /// haelt ihn dabei an; das haelt der offene Defekt
-    /// `261016-1956-der-loeschweg-fragt-canonicalize-und-den-papierkorb-auf-dem-hauptfaden-…`
-    /// fest. Ein ferner Ort kommt hier nie an.
-    fn lokaler_papierkorbbefund(ordner: &Path) -> (Option<PathBuf>, Erlaubnisbefund) {
-        let aufgeloest = std::fs::canonicalize(ordner).ok();
-        let befund = aufgeloest.as_deref().map_or(
-            Erlaubnisbefund::Unentschieden,
-            papierkorb::fuehrt_einen_papierkorb,
-        );
-        (aufgeloest, befund)
-    }
-
     /// Zeigt die Rueckfrage in der Gestalt des Loeschwegs und stellt auf ein
     /// Ja den Auftrag mit dem gezeigten Gegenstand.
     ///
@@ -8230,6 +8334,11 @@ impl Anwendungsdelegierter {
     /// ([`Loeschgegenstand::weg`]): Blatt, Beschriftung und Auftrag entstehen
     /// alle aus diesem einen Wert und koennen nicht auseinanderlaufen.
     ///
+    /// `befund` ist der Befund der Platte fuer einen lokalen Gegenstand und
+    /// `None` fuer einen fernen und einen im Archiv. Kaeme ein lokaler ohne
+    /// ihn an, gilt er als unentschieden ([`Loeschbefund::unentschieden`]) und
+    /// nie als entwarnt; eine Frage an die Platte entsteht hier nicht.
+    ///
     /// Liefert `false` allein dann, wenn es kein Fenster gibt, an dem das
     /// Blatt haengen koennte.
     fn loeschblatt_zeigen(
@@ -8237,7 +8346,7 @@ impl Anwendungsdelegierter {
         weg: Loeschweg,
         grund: Endgueltiggrund,
         gegenstand: Loeschgegenstand,
-        aufgeloester_ordner: Option<PathBuf>,
+        befund: Option<Loeschbefund>,
         papierkorbschaltflaeche: &str,
     ) -> bool {
         let Some(fenster) = self.ivars().fenster.get() else {
@@ -8251,8 +8360,8 @@ impl Anwendungsdelegierter {
 
         let (frage, erlaeuterung, form) = match (&gegenstand, weg) {
             (Loeschgegenstand::Lokal { auswahl, ordner }, Loeschweg::Papierkorb) => {
-                let (frage, erlaeuterung, laut) =
-                    Self::loeschtexte(auswahl, ordner, aufgeloester_ordner);
+                let befund = befund.unwrap_or_else(Loeschbefund::unentschieden);
+                let (frage, erlaeuterung, laut) = Self::loeschtexte(auswahl, ordner, &befund);
                 (
                     frage,
                     erlaeuterung,
@@ -8260,8 +8369,9 @@ impl Anwendungsdelegierter {
                 )
             }
             (Loeschgegenstand::Lokal { auswahl, ordner }, Loeschweg::Endgueltig) => {
+                let befund = befund.unwrap_or_else(Loeschbefund::unentschieden);
                 let (frage, erlaeuterung) =
-                    Self::endgueltige_loeschtexte(grund, auswahl, ordner, aufgeloester_ordner);
+                    Self::endgueltige_loeschtexte(grund, auswahl, ordner, &befund);
                 (frage, erlaeuterung, loeschbestaetigung::Form::Endgueltig)
             }
             (
@@ -8334,50 +8444,14 @@ impl Anwendungsdelegierter {
         true
     }
 
-    /// Die beiden Zeilen der Rueckfrage und ihre Form, aus den fuenf Tatsachen
-    /// ueber das Ziel (C3).
+    /// Die beiden Zeilen der Rueckfrage und ihre Form, aus dem Befund der
+    /// Platte ueber das Ziel (C3).
     ///
-    /// **Hier stehen die fuenf Quellen und sonst nichts.** Was aus ihnen folgt,
-    /// entscheidet [`loeschwarnung::warngruende`] an einer Stelle, und wie es
-    /// dasteht, [`loeschwarnung::frage_und_erlaeuterung`]. Jede Tatsache kommt
-    /// aus genau einer Quelle:
-    ///
-    /// ```text
-    /// ordner              der angezeigte Ordner, hier schon aufgeloest
-    /// benutzerverzeichnis krk_core::ablage::pfade::benutzerverzeichnis
-    /// netzlaufwerk        super::volumes::liegt_auf_netzlaufwerk
-    /// arbeitsbaum         krk_core::verzeichnis::arbeitsbaum
-    /// umfang              krk_core::verzeichnis::umfang::zaehlen
-    /// ```
-    ///
-    /// **Das Benutzerverzeichnis hat weiterhin genau einen Frager.** Gefragt wird
-    /// `pfade::benutzerverzeichnis` einmal je Loeschbefehl, der Pfad wird einmal
-    /// aufgeloest, und derselbe Wert geht an beide Stellen, die ihn brauchen: an
-    /// das Feld des Ziels, aus dem [`loeschwarnung::warngruende`] die Ausloeser 1,
-    /// 2 und 4 rechnet, und an die Grenze des Aufwaertsgangs der Git-Pruefung.
-    /// Genommen wird **nicht** das freie [`benutzerverzeichnis`] dieses Moduls:
-    /// es weicht auf `/` aus, wenn das System keines nennt, und ein `/` an
-    /// dieser Stelle machte aus „KRK kennt den Benutzerordner nicht" die Aussage
-    /// „der Ordner liegt darin". `None` heisst hier, dass die Frage offen ist,
-    /// und die Tafel macht daraus [`loeschwarnung::Warngrund::Unentscheidbar`].
-    ///
-    /// **Der aufgeloeste Ordner kommt herein und wird nicht neu erfragt.** Der
-    /// Rumpf hat ihn fuer den Papierkorbtest schon aufgeloest, und beide Fragen
-    /// an den Datentraeger brauchen dieselbe Fassung: eine Verknuepfung meldete
-    /// sonst den Datentraeger ihres eigenen Ortes statt den ihres Ziels. Ein
-    /// `None` — der Ordner liess sich nicht aufloesen — fuehrt an allen drei
-    /// Stellen auf `Unentschieden` beziehungsweise `Unentscheidbar` und nie auf
-    /// eine stille Entwarnung.
-    ///
-    /// **Die Richtung steht seit dem 260907 im Typ und ist hier weder zu lesen
-    /// noch zu erschliessen.** `liegt_auf_netzlaufwerk` und
-    /// `beruehrt_einen_arbeitsbaum` liefern einen [`Warnbefund`], bei dem `Ja`
-    /// warnt und `Unentschieden` zu ihm gehoert; genau den nehmen die beiden
-    /// Felder des Ziels auf. Die Papierkorbfrage im Rumpf darueber liefert einen
-    /// [`Erlaubnisbefund`], bei dem `Ja` die Erlaubnis ist. Eine Vertauschung
-    /// der beiden uebersetzt nicht; bis zu jenem Tag tat sie es, und der
-    /// Modulkopf von [`krk_core::verzeichnis::loeschzielbefund`] schreibt aus,
-    /// was das gekostet hat.
+    /// **Hier steht keine Frage an die Platte.** Die fuenf Tatsachen ueber das
+    /// Ziel und die Warngruende daraus erhebt [`lokaler_loeschbefund`] in einem
+    /// Zug; welche Quelle welche Tatsache liefert, sagt sein Doc-Kommentar.
+    /// Was aus ihnen folgt, entscheidet [`loeschwarnung::warngruende`] an einer
+    /// Stelle, und wie es dasteht, [`loeschwarnung::frage_und_erlaeuterung`].
     ///
     /// Der dritte Rueckgabewert ist `laut`: die Liste der Warngruende ist nicht
     /// leer. Er gehoert hierher und nicht in
@@ -8387,52 +8461,20 @@ impl Anwendungsdelegierter {
     fn loeschtexte(
         auswahl: &Auswahl,
         quellordner: &Path,
-        aufgeloester_ordner: Option<PathBuf>,
+        befund: &Loeschbefund,
     ) -> (String, String, bool) {
-        let gruende = Self::loeschgruende(auswahl, aufgeloester_ordner);
         let (frage, erlaeuterung) =
-            loeschwarnung::frage_und_erlaeuterung(auswahl, quellordner, &gruende);
-        (frage, erlaeuterung, !gruende.is_empty())
-    }
-
-    /// Die Warngruende eines lokalen Loeschziels, aus den fuenf Tatsachen;
-    /// welche Quelle welche liefert, sagt [`Self::loeschtexte`].
-    fn loeschgruende(
-        auswahl: &Auswahl,
-        aufgeloester_ordner: Option<PathBuf>,
-    ) -> Vec<loeschwarnung::Warngrund> {
-        let zuhause =
-            pfade::benutzerverzeichnis().and_then(|pfad| std::fs::canonicalize(pfad).ok());
-        let netzlaufwerk = aufgeloester_ordner
-            .as_deref()
-            .map_or(Warnbefund::Unentschieden, volumes::liegt_auf_netzlaufwerk);
-        let beruehrt_arbeitsbaum =
-            aufgeloester_ordner
-                .as_deref()
-                .map_or(Warnbefund::Unentschieden, |ordner| {
-                    arbeitsbaum::beruehrt_einen_arbeitsbaum(
-                        ordner,
-                        zuhause.as_deref(),
-                        &auswahl.pfade,
-                    )
-                });
-        let ziel = Loeschziel {
-            ordner: aufgeloester_ordner,
-            benutzerverzeichnis: zuhause,
-            netzlaufwerk,
-            arbeitsbaum: beruehrt_arbeitsbaum,
-            umfang: umfang::zaehlen(&auswahl.pfade),
-        };
-        loeschwarnung::warngruende(&ziel)
+            loeschwarnung::frage_und_erlaeuterung(auswahl, quellordner, &befund.gruende);
+        (frage, erlaeuterung, !befund.gruende.is_empty())
     }
 
     /// Die zwei Zeilen der endgueltigen Rueckfrage an einem lokalen Ort ohne
     /// Papierkorb (Entscheidung 12) oder an einem, ueber dessen Papierkorb KRK
     /// nichts weiss (`grund`, Nutzerentscheid vom 261019).
     ///
-    /// Dieselben fuenf Tatsachen und dieselben Warngruende wie
-    /// [`Self::loeschtexte`], die lauten Warnungen der Runde 12 bleiben also
-    /// fuer einen lokalen Ort; der Wortlaut kommt aus
+    /// Derselbe Befund und dieselben Warngruende wie [`Self::loeschtexte`],
+    /// die lauten Warnungen der Runde 12 bleiben also fuer einen lokalen Ort;
+    /// der Wortlaut kommt aus
     /// [`loeschwarnung::endgueltig_frage_und_erlaeuterung`]. Laut ist diese
     /// Rueckfrage immer, deshalb gibt es keinen dritten Wert.
     #[must_use = "die zwei Werte sind der ganze Inhalt der Rueckfrage; fallengelassen erscheint sie leer"]
@@ -8440,15 +8482,14 @@ impl Anwendungsdelegierter {
         grund: Endgueltiggrund,
         auswahl: &Auswahl,
         quellordner: &Path,
-        aufgeloester_ordner: Option<PathBuf>,
+        befund: &Loeschbefund,
     ) -> (String, String) {
-        let gruende = Self::loeschgruende(auswahl, aufgeloester_ordner);
         loeschwarnung::endgueltig_frage_und_erlaeuterung(
             grund,
             auswahl.zahl(),
             auswahl.ordner,
             &operationen::pfadtext(quellordner),
-            &gruende,
+            &befund.gruende,
         )
     }
 
@@ -15659,11 +15700,14 @@ mod loeschzielproben {
     /// das ist teurer als die zwei Zeilen.
     const AUTOMATIK_HOME: &str = "/System/Volumes/Data/home";
 
-    /// Die drei Werte der Rueckfrage zu einem Ordner, mit aufgeloestem Pfad.
+    /// Die drei Werte der Rueckfrage zu einem Ordner.
     ///
-    /// Genau der Weg des Rumpfes: der Ordner wird einmal aufgeloest und geht
-    /// aufgeloest an [`Anwendungsdelegierter::loeschtexte`], das ihn von dort an
-    /// nicht mehr anfasst.
+    /// Genau der Weg des Rumpfes: [`lokaler_loeschbefund`] loest den Ordner
+    /// einmal auf und erhebt daraus den Befund, und
+    /// [`Anwendungsdelegierter::loeschtexte`] baut die Texte aus ihm, ohne die
+    /// Platte noch einmal zu fragen. Dass der Ordner sich aufloesen laesst,
+    /// prueft die Probe vorher, sonst maesse sie den unentschiedenen Fall statt
+    /// der Verdrahtung.
     fn texte(ordner: &Path, pfade: Vec<PathBuf>) -> (String, String, bool) {
         let ist_ordner = vec![false; pfade.len()];
         let auswahl = Auswahl {
@@ -15671,13 +15715,25 @@ mod loeschzielproben {
             ist_ordner,
             ordner: 0,
         };
-        let aufgeloest = std::fs::canonicalize(ordner).ok();
         assert!(
-            aufgeloest.is_some(),
+            std::fs::canonicalize(ordner).is_ok(),
             "{} liess sich nicht aufloesen, also misst diese Probe die Verdrahtung nicht",
             ordner.display()
         );
-        Anwendungsdelegierter::loeschtexte(&auswahl, ordner, aufgeloest)
+        let befund = lokaler_loeschbefund(ordner, &auswahl);
+        Anwendungsdelegierter::loeschtexte(&auswahl, ordner, &befund)
+    }
+
+    /// Der Befund des lokalen Loeschwegs ist `Send` und darf damit den Faden
+    /// wechseln, auf dem er erhoben wurde (Schritt 7 des Plans
+    /// `261102-1314-plan-dateisystemfragen-vom-hauptfaden-nehmen.md`).
+    ///
+    /// **Was sie nicht sieht:** ob der Befund wirklich auf einem anderen Faden
+    /// erhoben wird; das ist Sache des Rufers.
+    #[test]
+    fn der_loeschbefund_ist_send() {
+        fn verlangt_send<T: Send>() {}
+        verlangt_send::<Loeschbefund>();
     }
 
     /// Frage und Erlaeuterung in einem Stueck.
@@ -17953,8 +18009,7 @@ mod fernvorgangsproben {
     /// fernen Stuecke, dass weder `canonicalize(` noch
     /// `fuehrt_einen_papierkorb(` noch `umfang::zaehlen(` noch `fs::` darin
     /// steht: die lokalen Fragen an die Platte stehen in
-    /// `lokaler_papierkorbbefund`, `loeschtexte`, `loeschgruende` und
-    /// `endgueltige_loeschtexte`, und jede davon erreicht allein ein lokaler
+    /// `lokaler_loeschbefund`, und den erreicht allein ein lokaler
     /// Gegenstand. Dazu steht im Rumpf des Loeschwegs, dass ein ferner
     /// Gegenstand die Papierkorbfrage am Wert mit nein beantwortet.
     ///
