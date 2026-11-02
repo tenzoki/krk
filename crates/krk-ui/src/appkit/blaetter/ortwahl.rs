@@ -65,8 +65,8 @@
 //! `setPrompt:` und `setMessage:`. `setDirectoryURL:` steht seit 10.6, und
 //! `beginSheetModalForWindow:completionHandler:` (`NSSavePanel.h`) ebenfalls
 //! seit 10.6; der Abschlussblock aus `block2` ist dessen Argument und hat
-//! keine eigene Untergrenze. `NSWindow` steht seit 10.0, `NSURL` mit
-//! `fileURLWithPath:` und `path` ebenso, `NSString` auch; `NSModalResponse`
+//! keine eigene Untergrenze. `NSWindow` steht seit 10.0, `NSURL` mit `path`
+//! ebenso, `fileURLWithPath:isDirectory:` seit 10.5, `NSString` seit 10.0; `NSModalResponse`
 //! ist ein `typedef` auf `NSInteger` ohne Verfuegbarkeitsangabe, und
 //! `NSModalResponseOK` steht seit 10.9 und ist eine
 //! Uebersetzungszeitkonstante ohne eigenes Laufzeitsymbol. `MainThreadMarker`
@@ -96,6 +96,11 @@ use krk_core::sprache::{Text, text};
 /// `beginn` ist der geltende Ort. **Er wird vorher nicht geprueft**: H3
 /// verlangt, dass der Dialog dort beginnt, und fehlt der Ordner, beginnt
 /// AppKit an einem Ort seiner Wahl.
+///
+/// Die Startadresse entsteht ueber `fileURLWithPath:isDirectory:` mit `true`,
+/// denn `beginn` ist ein Ordner; `fileURLWithPath:` ohne die Art fragte das
+/// Dateisystem danach, und auf dem Hauptfaden haelt eine haengende Freigabe
+/// diese Frage auf.
 pub fn zeigen(
     mtm: MainThreadMarker,
     fenster: &NSWindow,
@@ -109,7 +114,7 @@ pub fn zeigen(
     dialog.setCanCreateDirectories(true);
     dialog.setResolvesAliases(true);
     if let Some(beginn) = beginn.and_then(Path::to_str) {
-        let adresse = NSURL::fileURLWithPath(&NSString::from_str(beginn));
+        let adresse = NSURL::fileURLWithPath_isDirectory(&NSString::from_str(beginn), true);
         dialog.setDirectoryURL(Some(&adresse));
     }
     // Die bestaetigende Schaltflaeche und die Zeile ueber der Ordnerliste

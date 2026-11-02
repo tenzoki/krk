@@ -93,9 +93,9 @@
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
 //! `NSArray`, `NSDictionary`, `NSString`, `NSNumber` und `NSURL` stehen seit
-//! macOS 10.0 zur Verfuegung, ebenso `fileURLWithPath:` (`NSURL.h:52`, die Form
-//! ohne weitere Argumente), `objectForKey:` (`NSDictionary.h:17`) und
-//! `boolValue` (`NSValue.h:73`). Ohne Verfuegbarkeitsangabe im Kopf und damit
+//! macOS 10.0 zur Verfuegung, ebenso `objectForKey:` (`NSDictionary.h:17`) und
+//! `boolValue` (`NSValue.h:73`). `fileURLWithPath:isDirectory:` (`NSURL.h`)
+//! steht seit 10.5. Ohne Verfuegbarkeitsangabe im Kopf und damit
 //! ebenfalls seit 10.0 stehen die vier Beruehrungen des Ziehvorgangs: die
 //! Aufzaehlung `NSDragOperation` (`NSDragging.h:25`) mit ihren Werten
 //! `NSDragOperationNone` (`:26`), `NSDragOperationCopy` (`:27`) und
@@ -216,6 +216,13 @@ pub fn sorten() -> Retained<NSArray<NSPasteboardType>> {
 /// eine Verknuepfung wird nicht verfolgt, und ein Pfad, den es nicht gibt,
 /// zaehlt als [`Schreibrecht::Unbekannt`].
 ///
+/// **Herein kommt ein Ordner, und die Adresse sagt das:** sie entsteht ueber
+/// `fileURLWithPath:isDirectory:` mit `true`. `fileURLWithPath:` ohne die Art
+/// fragte das Dateisystem, ob der Pfad ein Ordner ist, und dieselbe Antwort
+/// steht schon im Namen des Arguments. Die Frage nach dem Schreibrecht selbst
+/// (`resourceValuesForKeys:error:`) stellt diese Funktion weiter auf dem
+/// Faden ihres Aufrufers.
+///
 /// **Mit dieser Funktion ist die `expect(dead_code)`-Ausnahme an
 /// [`Schreibrecht`] gefallen**, denn hier entstehen die drei Werte. Der
 /// Uebersetzer hat das nicht eingefordert; warum nicht, steht am Doc-Kommentar
@@ -225,7 +232,7 @@ pub fn beschreibbarkeit(ordner: &Path) -> Schreibrecht {
     let Some(text) = ordner.to_str() else {
         return Schreibrecht::Unbekannt;
     };
-    let url = NSURL::fileURLWithPath(&NSString::from_str(text));
+    let url = NSURL::fileURLWithPath_isDirectory(&NSString::from_str(text), true);
     // SAFETY: Ein Fremdsymbol von Foundation, der Schluesselname des
     // Schreibrechts. Es wird gelesen und nicht geschrieben, ebenso wie der
     // Schluessel der Ortsangabe in `super::volumes`.

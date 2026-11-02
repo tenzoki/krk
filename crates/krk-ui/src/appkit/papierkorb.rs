@@ -96,8 +96,9 @@
 //!
 //! `NSFileManager`, `NSString`, `NSURL` und `NSError` stehen seit macOS 10.0 zur
 //! Verfuegung, ebenso `defaultManager`, `fileURLWithPath:`, `NSURL.path` und
-//! `localizedDescription`. Drei Beruehrungen sind juenger als ihre Klasse:
-//! `trashItemAtURL:resultingItemURL:error:` steht seit 10.8 (`NSFileManager.h`),
+//! `localizedDescription`. Vier Beruehrungen sind juenger als ihre Klasse:
+//! `fileURLWithPath:isDirectory:` steht seit 10.5 (`NSURL.h`),
+//! `trashItemAtURL:resultingItemURL:error:` seit 10.8 (`NSFileManager.h`),
 //! `URLForDirectory:inDomain:appropriateForURL:create:error:` seit 10.6
 //! (`NSFileManager.h:127`) und `NSTrashDirectory` seit 10.8
 //! (`NSPathUtilities.h:88`). Drei tragen im Kopf keine Angabe und stehen damit
@@ -133,6 +134,17 @@ use krk_core::verzeichnis::Erlaubnisbefund;
 pub struct Systempapierkorb;
 
 impl Papierkorb for Systempapierkorb {
+    /// Raeumt einen Eintrag in den Papierkorb.
+    ///
+    /// **Die Adresse entsteht hier als einzige im Betriebscode der Oberflaeche
+    /// ueber `fileURLWithPath:` ohne die Art**, und das ist gewollt: diese
+    /// Methode laeuft auf dem Arbeitsfaden der Operationsmaschine und nie auf
+    /// dem Hauptfaden, und ob der Eintrag ein Ordner ist, steht an dieser
+    /// Schnittstelle nicht in der Hand. Die Frage, die `fileURLWithPath:` dafuer
+    /// an die Platte stellt, haelt deshalb keine Ereignisschleife an. Die Probe
+    /// `kein_betriebscode_der_oberflaeche_baut_eine_dateiadresse_ohne_isdirectory`
+    /// (`crates/krk-core/tests/baum.rs`) fuehrt diesen Rumpf mit Namen als
+    /// ihre eine Ausnahme.
     fn in_den_papierkorb(&self, pfad: &Path) -> io::Result<PathBuf> {
         let Some(text) = pfad.to_str() else {
             return Err(io::Error::new(
@@ -187,6 +199,12 @@ impl Papierkorb for Systempapierkorb {
 /// sie aufloest, ist ihr Aufrufer, und ein Pfad, der sich nicht aufloesen laesst,
 /// zaehlt dort ebenfalls als [`Erlaubnisbefund::Unentschieden`].
 ///
+/// Die Adresse des Ordners entsteht ueber `fileURLWithPath:isDirectory:` mit
+/// `true`: `fileURLWithPath:` ohne die Art fragte das Dateisystem, ob der Pfad
+/// ein Ordner ist, und das steht schon fest. Die Frage nach dem Papierkorb
+/// selbst (`URLForDirectory:…`) stellt diese Funktion weiter auf dem Faden
+/// ihres Aufrufers.
+///
 /// **Ein Rest bleibt und ist benannt:** ein einzelner Eintrag kann trotz
 /// bestandener Pruefung scheitern, etwa weil unter dem angezeigten Ordner ein
 /// Einhaengepunkt eines anderen Datentraegers liegt. Dieser Rest wird
@@ -197,7 +215,7 @@ pub fn fuehrt_einen_papierkorb(ordner: &Path) -> Erlaubnisbefund {
     let Some(text) = ordner.to_str() else {
         return Erlaubnisbefund::Unentschieden;
     };
-    let url = NSURL::fileURLWithPath(&NSString::from_str(text));
+    let url = NSURL::fileURLWithPath_isDirectory(&NSString::from_str(text), true);
 
     match NSFileManager::defaultManager().URLForDirectory_inDomain_appropriateForURL_create_error(
         NSSearchPathDirectory::TrashDirectory,

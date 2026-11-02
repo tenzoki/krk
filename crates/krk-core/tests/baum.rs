@@ -2016,3 +2016,104 @@ fn known_hosts_hat_genau_einen_schreiber() {
         "rechnerschluessel::anhaengen hat nicht genau einen Rufer"
     );
 }
+
+/// Kein Betriebscode der Oberflaeche baut eine Dateiadresse ohne die Art:
+/// jede `NSURL` aus einem Pfad entsteht ueber `fileURLWithPath:isDirectory:`.
+///
+/// `fileURLWithPath:` ohne die Art fragt das Dateisystem, ob der Pfad ein
+/// Ordner ist, und auf dem Hauptfaden haelt eine haengende Freigabe diese
+/// Frage auf (`shared/issues/261030-1259-weitere-menue-und-tastenwege-fragen-das-dateisystem-auf-dem-hauptfaden.md`,
+/// Punkt 3). Die Art steht an jeder Stelle schon fest, im Ordnermodell oder im
+/// Wert, der hereinkommt; welche Stelle sie woher nimmt, sagt der jeweilige
+/// Doc-Kommentar. Diese eine Regel ersetzt die Einzelbefunde je Weg.
+///
+/// **Die eine Ausnahme fuehrt die Probe mit Namen:** der Rumpf von
+/// `in_den_papierkorb` in `krk-ui/src/appkit/papierkorb.rs`. Er laeuft auf dem
+/// Arbeitsfaden der Operationsmaschine, und an seiner Schnittstelle steht die
+/// Art nicht in der Hand. Traegt der Rumpf die Form ohne Art nicht mehr, wird
+/// die Probe rot, damit die Ausnahme mit ihrem Grund faellt und nicht still
+/// stehen bleibt.
+///
+/// Gelesen werden allein Codestuecke nach [`zerlegt`], also weder Kommentare
+/// noch Literale; die Doc-Kommentare des Baums nennen die Form ohne Art im
+/// Klartext, und das ist keine Fundstelle.
+///
+/// # Was diese Probe nicht sieht
+///
+/// Einen Aufruf unter anderem Namen (`use … as anders;`, ein `msg_send!` mit
+/// dem Selektor) und eine Adresse, die auf anderem Weg entsteht, etwa ueber
+/// `URLWithString:` mit einem `file://`-Text. Ebenso wenig die Fragen, die eine
+/// fertige Adresse an die Platte stellt (`resourceValuesForKeys:error:`,
+/// `URLForDirectory:…`); sie laufen nach Schritt 4 des Plans
+/// `261102-1314-plan-dateisystemfragen-vom-hauptfaden-nehmen` noch auf dem
+/// Hauptfaden.
+#[test]
+fn kein_betriebscode_der_oberflaeche_baut_eine_dateiadresse_ohne_isdirectory() {
+    let nadel = concat!("fileURLWith", "Path(");
+    let ausnahmedatei = "krk-ui/src/appkit/papierkorb.rs";
+    let ausnahmekopf = concat!("fn in_den_", "papierkorb(");
+
+    let mut fundstellen = Vec::new();
+    let mut ausnahme_gesehen = false;
+    let mut ausnahme_traegt_die_form = false;
+    for (name, text, nummern) in betriebscode_der_oberflaeche() {
+        // Der Rumpf der Ausnahme als Zeilenspanne des Betriebscodetextes: vom
+        // Kopf bis zur ersten Zeile, die allein seine schliessende Klammer in
+        // seiner Einrueckung traegt.
+        let ausnahme = if name == ausnahmedatei {
+            let zeilen: Vec<&str> = text.lines().collect();
+            let anfang = zeilen
+                .iter()
+                .position(|zeile| zeile.trim_start().starts_with(ausnahmekopf));
+            anfang.map(|anfang| {
+                let einrueckung = zeilen[anfang].len() - zeilen[anfang].trim_start().len();
+                let schluss = format!("{}}}", " ".repeat(einrueckung));
+                let ende = zeilen[anfang..]
+                    .iter()
+                    .position(|zeile| *zeile == schluss)
+                    .unwrap_or_else(|| panic!("der Rumpf von {ausnahmekopf} endet nicht"));
+                anfang..=anfang + ende
+            })
+        } else {
+            None
+        };
+        if ausnahme.is_some() {
+            ausnahme_gesehen = true;
+        }
+
+        for stueck in zerlegt(&text) {
+            let gemeinsam::Stueck::Code { text: code, zeile } = stueck else {
+                continue;
+            };
+            for (stelle, _) in code.match_indices(nadel) {
+                let textzeile = zeile + code[..stelle].matches('\n').count();
+                if ausnahme
+                    .as_ref()
+                    .is_some_and(|spanne| spanne.contains(&textzeile))
+                {
+                    ausnahme_traegt_die_form = true;
+                    continue;
+                }
+                fundstellen.push(format!("{name}:{}", nummern[textzeile]));
+            }
+        }
+    }
+
+    assert!(
+        ausnahme_gesehen,
+        "{ausnahmedatei} erklaert `{ausnahmekopf}` nicht mehr; die benannte Ausnahme der \
+         Probe zeigt ins Leere"
+    );
+    assert!(
+        ausnahme_traegt_die_form,
+        "der Rumpf von `{ausnahmekopf}` baut seine Adresse nicht mehr ohne die Art; die \
+         Ausnahme dieser Probe hat ihren Grund verloren und faellt mit ihm"
+    );
+    assert!(
+        fundstellen.is_empty(),
+        "diese Stellen des Betriebscodes bauen eine Dateiadresse ohne die Art und fragen \
+         damit die Platte, ob der Pfad ein Ordner ist; die Adresse entsteht ueber \
+         `fileURLWithPath:isDirectory:` mit der Art aus dem Modell oder dem Wert:\n{}",
+        fundstellen.join("\n")
+    );
+}

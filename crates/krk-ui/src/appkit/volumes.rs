@@ -129,8 +129,8 @@
 //! (`NSWorkspaceDidMountNotification`, `NSWorkspaceWillUnmountNotification`,
 //! `NSWorkspaceDidUnmountNotification`) und die Beruehrungen `sharedWorkspace`,
 //! `notificationCenter`, `addObserver:selector:name:object:`, `removeObserver:`,
-//! `userInfo`, `objectForKey:`, `fileURLWithPath:` (`NSURL.h:52`, die Form ohne
-//! weitere Argumente), `boolValue` (`NSValue.h:73`) und `NSURL.path`. Sieben
+//! `userInfo`, `objectForKey:`, `boolValue` (`NSValue.h:73`) und `NSURL.path`.
+//! `fileURLWithPath:isDirectory:` (`NSURL.h`) steht seit 10.5. Sieben weitere
 //! Beruehrungen sind juenger: `NSWorkspaceVolumeURLKey`,
 //! `NSWorkspaceVolumeLocalizedNameKey`,
 //! `mountedVolumeURLsIncludingResourceValuesForKeys:options:`,
@@ -279,12 +279,19 @@ fn namensteil(pfad: &Path) -> String {
 /// ihres Ziels. Diese Funktion ruft weder `canonicalize` noch sonst etwas am
 /// Dateisystem; ein Pfad, der sich nicht aufloesen laesst, zaehlt beim Aufrufer
 /// als [`Warnbefund::Unentschieden`].
+///
+/// **Herein kommt ein Ordner, und die Adresse sagt das:** sie entsteht ueber
+/// `fileURLWithPath:isDirectory:` mit `true`. `fileURLWithPath:` ohne die Art
+/// fragte das Dateisystem, ob der Pfad ein Ordner ist; der einzige Rufer
+/// reicht den aufgeloesten angezeigten Ordner herein. Die Frage nach dem
+/// Datentraeger selbst (`resourceValuesForKeys:error:`) stellt diese Funktion
+/// weiter auf dem Faden ihres Aufrufers.
 #[must_use = "der Befund entscheidet, ob die Rueckfrage das Netzlaufwerk nennt; fallengelassen bleibt sie darueber still"]
-pub fn liegt_auf_netzlaufwerk(pfad: &Path) -> Warnbefund {
-    let Some(text) = pfad.to_str() else {
+pub fn liegt_auf_netzlaufwerk(ordner: &Path) -> Warnbefund {
+    let Some(text) = ordner.to_str() else {
         return Warnbefund::Unentschieden;
     };
-    let url = NSURL::fileURLWithPath(&NSString::from_str(text));
+    let url = NSURL::fileURLWithPath_isDirectory(&NSString::from_str(text), true);
     // SAFETY: Ein Fremdsymbol von Foundation, der Schluesselname der
     // Ortsangabe des Datentraegers. Es wird gelesen und nicht geschrieben,
     // ebenso wie der Namensschluessel in `eingehaengte`.
