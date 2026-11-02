@@ -325,6 +325,7 @@ use std::cell::{Cell, RefCell};
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use dispatch2::MainThreadBound;
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::ProtocolObject;
 use objc2::{ClassType, DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
@@ -368,7 +369,9 @@ use crate::kommandos::kontextmenue::{
 };
 use crate::kommandos::navigation::{Bewegung, ersatzzeile, zielzeile};
 use crate::kommandos::operationen::{self, Dateiablage, Umbenennungswunsch};
-use crate::kommandos::pfadeingabe::{self, Ergebnis, FernErgebnis};
+use crate::kommandos::pfadeingabe::{
+    self, Ergebnis, FernErgebnis, pruefen, pruefen_fuer_archivtab,
+};
 use crate::spalten::Spalte;
 use crate::tabs::{Auswahlversuch, Tabliste, Tabort, Vormerkung};
 use crate::vorschaumodell::{Archivangaben, Beschreibung, Fernangaben, Groessenangabe};
@@ -376,6 +379,7 @@ use crate::vorschaumodell::{Archivangaben, Beschreibung, Fernangaben, Groessenan
 use super::abwurf;
 use super::blaetter;
 use super::menue;
+use super::nebenfaden;
 use super::oeffnenmit;
 use super::standardprogramm;
 use super::statuszeile::{self, Filterstand, Quellen};
@@ -740,6 +744,38 @@ fn archivangaben_des_ordners(ort: &Archivort) -> Fernangaben {
         groesse: None,
         geaendert: None,
         typ: Typ::Ordner,
+    }
+}
+
+/// Der Name des Fadens, auf dem die Pfadeingabe die Platte fragt (Plan
+/// `261102-1314-plan-dateisystemfragen-vom-hauptfaden-nehmen.md`, Schritt 5).
+///
+/// Ein eigener Name und nicht `krk-terminal`: die Frage hat mit dem Terminal
+/// nichts zu tun, und im Fadenbild eines haengenden Prozesses soll stehen,
+/// welche Art Frage dort wartet.
+const PLATTENFRAGE: &str = "krk-plattenfrage";
+
+/// Wendet eine Pfadpruefung gegen den Ort an, gegen den sie gestellt wurde,
+/// und nicht gegen den, der jetzt sichtbar ist.
+///
+/// **Allein [`Ergebnis::NurAuswahl`] haengt vom Stand ab**: es heisst, dass
+/// die Datei in genau dem Ordner der Frage liegt. Zeigt der Tab inzwischen
+/// einen anderen Ort, waehlte das Setzen der Auswahl dort einen Eintrag
+/// gleichen Namens im falschen Ordner; deshalb wird es zum Wechsel in den
+/// Ordner der Frage mit der Auswahl darauf. `Wechseln` traegt einen absoluten
+/// Ordner und `Meldung` einen Satz, beide gelten unabhaengig vom Stand. Rein
+/// und ohne Systemaufruf.
+fn gegen_den_ort_der_frage(
+    ergebnis: Ergebnis,
+    ordner_der_frage: Option<PathBuf>,
+    ort_unveraendert: bool,
+) -> Ergebnis {
+    match (ergebnis, ordner_der_frage) {
+        (Ergebnis::NurAuswahl { name }, Some(ordner)) if !ort_unveraendert => Ergebnis::Wechseln {
+            ordner,
+            auswahl: Some(name),
+        },
+        (ergebnis, _) => ergebnis,
     }
 }
 
@@ -3610,23 +3646,34 @@ impl DateifensterQuelle {
     /// entsteht nicht. Was geprueft wird, steht in
     /// [`crate::kommandos::pfadeingabe`] und ist ohne Fenster pruefbar.
     ///
+    /// **Dieser Rumpf stellt keinen Systemaufruf** (261102): die Pruefung
+    /// fragt die Platte, und auf einer haengenden Freigabe hielte sie die
+    /// Ereignisschleife bis zum Zeitlimit des Dateisystems an. Sie geht ueber
+    /// [`Self::pfad_pruefen_lassen`] auf den Faden `krk-plattenfrage`, und die
+    /// Antwort nimmt [`Self::pfadpruefung_einziehen`] entgegen.
+    ///
     /// In einem fernen Tab ist der Text der Pfadeingabe ein Pfad auf
     /// demselben Server, und [`Self::fern_pfad_anspringen`] wendet ihn an.
     fn pfad_anspringen(&self, pfad: &Path) {
-        let angezeigt = match self.angezeigter_ort() {
-            Ort::Lokal(ordner) => ordner,
-            Ort::Fern(ort) => return self.fern_pfad_anspringen(pfad, ort),
+        let ort = self.angezeigter_ort();
+        let angezeigt = match &ort {
+            Ort::Lokal(ordner) => ordner.clone(),
+            Ort::Fern(fern) => return self.fern_pfad_anspringen(pfad, fern.clone()),
             // Im Archiv ist der Text ein lokaler Pfad wie in einem lokalen Tab,
             // gelesen gegen den Ordner der Archivdatei (E16).
-            Ort::Archiv(ort) => archivordner(&ort),
+            Ort::Archiv(archiv) => archivordner(archiv),
         };
-        self.ergebnis_anwenden(pfadeingabe::pruefen(pfad, &angezeigt));
+        let gegen = angezeigt.clone();
+        self.pfad_pruefen_lassen(pfad, ort, Some(angezeigt), move |gefragt| {
+            pruefen(gefragt, &gegen)
+        });
     }
 
     /// Springt zu einem Pfad auf diesem Mac, auch aus einem Archivtab: der
     /// Weg der Zwischenablage. Lokal ist es [`Self::pfad_anspringen`]; in
     /// einem Archivtab prueft [`pfadeingabe::pruefen_fuer_archivtab`] den
-    /// Pfad, und ein Wechsel stellt den Tab auf den lokalen Ordner.
+    /// Pfad, auf dem Faden `krk-plattenfrage` wie die lokale Pruefung, und ein
+    /// Wechsel stellt den Tab auf den lokalen Ordner.
     ///
     /// **An einem fernen Ort ist der Befehl ausgegraut** (`Ortsbedarf::NichtFern`,
     /// 261019); kaeme er doch hierher, meldet der ferne Zweig das wie jeder
@@ -3636,13 +3683,90 @@ impl DateifensterQuelle {
             Ort::Lokal(_) => self.pfad_anspringen(pfad),
             // Im Archiv verlaesst der Pfad den Ort, und eine Datei fuehrt in
             // ihren Ordner.
-            Ort::Archiv(_) => {
-                self.ergebnis_anwenden(pfadeingabe::pruefen_fuer_archivtab(pfad));
+            ort @ Ort::Archiv(_) => {
+                self.pfad_pruefen_lassen(pfad, ort, None, |gefragt| {
+                    pruefen_fuer_archivtab(gefragt)
+                });
             }
             Ort::Fern(_) => {
                 self.befehlsantwort_zeigen(text(Text::AmFernenOrtNichtVerfuegbar));
             }
         }
+    }
+
+    /// Stellt die Pruefung eines lokalen Pfades auf den Faden
+    /// `krk-plattenfrage` (Plan `261102-1314-…`, Schritt 5).
+    ///
+    /// `pruefung` ist [`pfadeingabe::pruefen`] gegen den angezeigten Ordner
+    /// oder [`pfadeingabe::pruefen_fuer_archivtab`]; der Ausloeser waehlt sie
+    /// als Abschluss, und **sie laeuft allein auf dem Faden**. Der Ausloeser
+    /// nennt sie, weil er weiss, gegen welchen Ort geprueft wird; die Probe
+    /// `die_pfadeingabe_stellt_auf_dem_hauptfaden_keinen_systemaufruf` haelt,
+    /// dass er ihr Ergebnis nicht selbst anwendet. `ordner_der_frage` ist der
+    /// Ordner, gegen den die Pruefung liest, sofern sie gegen einen liest; ihn
+    /// braucht [`gegen_den_ort_der_frage`]. **Mit der
+    /// Frage reisen diese Quelle und der Ort, den sie beim Fragen zeigte**,
+    /// beide an den Hauptfaden gebunden (`MainThreadBound`), weil ein
+    /// AppKit-Objekt nicht ueber die Fadengrenze geht. Die Quelle reist selbst
+    /// und nicht ihre Fensterseite: sie kennt ihre Seite nicht, und eine
+    /// Suche ueber den Delegierten haette sie am Zeiger wiedererkennen
+    /// muessen.
+    ///
+    /// **Scheitert der Fadenstart**, kommt das als [`Ergebnis::Meldung`] mit
+    /// dem Satz fuer einen Pfad, den es nicht gibt, und dem Fehler des Starts
+    /// zurueck: gefragt ist dann nichts, und ohne Frage zu springen hiesse die
+    /// Pruefung still auszulassen.
+    fn pfad_pruefen_lassen(
+        &self,
+        pfad: &Path,
+        ort: Ort,
+        ordner_der_frage: Option<PathBuf>,
+        pruefung: impl FnOnce(&Path) -> Ergebnis + Send + 'static,
+    ) {
+        let gefragt = pfad.to_path_buf();
+        let fuer_den_startfehler = gefragt.clone();
+        let rueckweg = MainThreadBound::new((Weak::from_retained(&self.retain()), ort), self.mtm());
+        nebenfaden::fragen_lassen(
+            PLATTENFRAGE,
+            move || pruefung(&gefragt),
+            move |fehler| {
+                Ergebnis::Meldung(satz(
+                    Text::PfadGibtEsNicht,
+                    &[
+                        ("pfad", &fuer_den_startfehler.display()),
+                        ("fehler", &fehler),
+                    ],
+                ))
+            },
+            move |mtm, ergebnis| {
+                let (quelle, ort_der_frage) = rueckweg.get(mtm);
+                if let Some(quelle) = quelle.load() {
+                    quelle.pfadpruefung_einziehen(ort_der_frage, ordner_der_frage, ergebnis);
+                }
+            },
+        );
+    }
+
+    /// Nimmt die Antwort der Pfadpruefung auf dem Hauptfaden entgegen und
+    /// wendet sie an.
+    ///
+    /// Gerufen aus [`Self::pfad_pruefen_lassen`]. **Angewandt wird gegen den
+    /// Ort der Frage** ([`gegen_den_ort_der_frage`]): zeigt der Tab inzwischen
+    /// einen anderen Ort, wird ein blosses Setzen der Auswahl zum Wechsel in
+    /// den Ordner der Frage. **Sie stellt keinen Systemaufruf**; die Frage an
+    /// die Platte ist auf dem Faden gestellt.
+    fn pfadpruefung_einziehen(
+        &self,
+        ort_der_frage: &Ort,
+        ordner_der_frage: Option<PathBuf>,
+        ergebnis: Ergebnis,
+    ) {
+        let ort_unveraendert = self.angezeigter_ort() == *ort_der_frage;
+        self.ergebnis_anwenden(gegen_den_ort_der_frage(
+            ergebnis,
+            ordner_der_frage,
+            ort_unveraendert,
+        ));
     }
 
     /// Wendet ein lokales Pruefergebnis an; die eine Stelle dafuer.
@@ -7986,6 +8110,116 @@ mod tests {
         assert!(
             rumpf_von(&code, "beschriften").contains("self.quelle().groessenzelle(eintrag)"),
             "die Zelle der Spalte Groesse geht durch groessenzelle"
+        );
+    }
+
+    /// Die Pfadeingabe stellt auf dem Hauptfaden keinen Systemaufruf (Plan
+    /// `261102-1314-…`, Schritt 5; Punkte 4 und 7 des Befunds
+    /// `261030-1259-…`).
+    ///
+    /// Dieselbe Bauform wie `ctrl_o_stellt_auf_dem_hauptfaden_keinen_systemaufruf`
+    /// in `appkit/anwendung.rs`: in den Ruempfen der zwei Ausloeser und der
+    /// Einzugsmethode steht keine Frage an die Platte, auch nicht die
+    /// Pruefung selbst, die auf den Faden `krk-plattenfrage` gehoert. Daneben
+    /// haelt sie die Kette: beide Ausloeser reichen an die Huelle, die Huelle
+    /// an `nebenfaden::fragen_lassen` und die Antwort an die Einzugsmethode,
+    /// und die wendet sie an.
+    ///
+    /// **Was sie nicht sieht:** einen Systemaufruf in einer tiefer gerufenen
+    /// Funktion. `angezeigter_ort` und `ergebnis_anwenden` fragen das Modell;
+    /// das Lesen nach einem Wechsel laeuft auf dem Lesefaden.
+    #[test]
+    fn die_pfadeingabe_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
+        let inhalt = diese_datei();
+        let code = vor_dem_pruefmodul(&inhalt);
+        let einzug = concat!("pfadpruefung_", "einziehen");
+        let huelle = concat!("pfad_pruefen_", "lassen");
+
+        for name in ["pfad_anspringen", "lokalen_pfad_anspringen", einzug] {
+            let rumpf = rumpf_von(code, name);
+            for nadel in [
+                "fs::",
+                "metadata(",
+                "read_dir(",
+                "canonicalize(",
+                concat!("pfadeingabe::", "pruefen"),
+            ] {
+                assert!(
+                    !rumpf.contains(nadel),
+                    "{name} enthaelt {nadel}: ein Systemaufruf auf dem Hauptfaden"
+                );
+            }
+        }
+        for name in ["pfad_anspringen", "lokalen_pfad_anspringen"] {
+            assert!(
+                rumpf_von(code, name).contains(&format!("self.{huelle}(")),
+                "{name} reicht die Pruefung nicht an {huelle}: sie bleibt auf dem Hauptfaden \
+                 oder findet nicht statt"
+            );
+            // Die Ausloeser nennen die Pruefung als Abschluss fuer den Faden
+            // (die Archivprobe in `kommandos/pfadeingabe.rs` verlangt den Namen
+            // im Archivzweig). Dass sie sie nicht selbst ausfuehren, haelt
+            // diese Nadel: ein Ergebnis, das der Ausloeser anwendet, ist auf
+            // dem Hauptfaden entstanden.
+            assert!(
+                !rumpf_von(code, name).contains(concat!("ergebnis_", "anwenden(")),
+                "{name} wendet ein Pruefergebnis selbst an: die Pruefung lief auf dem Hauptfaden"
+            );
+        }
+        let huellenrumpf = rumpf_von(code, huelle);
+        for nadel in [
+            concat!("nebenfaden::", "fragen_lassen("),
+            "PLATTENFRAGE",
+            concat!(".pfadpruefung_", "einziehen("),
+        ] {
+            assert!(
+                huellenrumpf.contains(nadel),
+                "{huelle} enthaelt {nadel} nicht: die Frage geht nicht auf den Faden \
+                 oder ihre Antwort kommt nicht an"
+            );
+        }
+        assert!(
+            rumpf_von(code, einzug).contains(concat!("self.ergebnis_", "anwenden(")),
+            "{einzug} wendet die Antwort nicht an"
+        );
+    }
+
+    /// Eine Antwort auf einen veralteten Stand wird gegen den Ort der Frage
+    /// angewandt: allein `NurAuswahl` haengt am Stand und wird zum Wechsel in
+    /// den Ordner der Frage, sobald der Tab etwas anderes zeigt.
+    #[test]
+    fn nur_auswahl_wird_nach_einem_ortswechsel_zum_wechsel_in_den_ordner_der_frage() {
+        let ordner = PathBuf::from("/Nutzer/k/Projekte");
+        let nur = || Ergebnis::NurAuswahl {
+            name: "idee.txt".to_owned(),
+        };
+        assert_eq!(
+            gegen_den_ort_der_frage(nur(), Some(ordner.clone()), true),
+            nur(),
+            "bei unveraendertem Ort bleibt es beim Setzen der Auswahl"
+        );
+        assert_eq!(
+            gegen_den_ort_der_frage(nur(), Some(ordner.clone()), false),
+            Ergebnis::Wechseln {
+                ordner: ordner.clone(),
+                auswahl: Some("idee.txt".to_owned()),
+            },
+            "nach einem Ortswechsel waehlte die Auswahl im falschen Ordner"
+        );
+        let wechseln = Ergebnis::Wechseln {
+            ordner: PathBuf::from("/tmp"),
+            auswahl: None,
+        };
+        assert_eq!(
+            gegen_den_ort_der_frage(wechseln.clone(), Some(ordner.clone()), false),
+            wechseln,
+            "ein Wechsel traegt einen absoluten Ordner und haengt nicht am Stand"
+        );
+        let meldung = Ergebnis::Meldung("x".to_owned());
+        assert_eq!(
+            gegen_den_ort_der_frage(meldung.clone(), Some(ordner), false),
+            meldung,
+            "eine Meldung haengt nicht am Stand"
         );
     }
 }

@@ -18,6 +18,21 @@
 //! Datei navigiert nicht, sie sagt der Ansicht, wohin. Angewandt wird das
 //! Ergebnis an genau einer Stelle in `crate::appkit::tabelle`.
 //!
+//! # Auf welchem Faden sie laeuft
+//!
+//! [`pruefen`] und [`pruefen_fuer_archivtab`] fragen die Platte
+//! (`metadata`, `read_dir`, `canonicalize` in `gleicher_ordner`) und laufen
+//! deshalb **nicht auf dem Hauptfaden**, sondern seit dem 261102 auf dem Faden
+//! `krk-plattenfrage`: `crate::appkit::tabelle` stellt sie ueber
+//! `crate::appkit::nebenfaden::fragen_lassen` dorthin, und die Antwort kommt
+//! ueber die Hauptschlange zurueck (Plan
+//! `261102-1314-plan-dateisystemfragen-vom-hauptfaden-nehmen.md`, Schritt 5).
+//! Auf einer haengenden Freigabe wartete jede dieser Fragen auf das Zeitlimit
+//! des Dateisystems und hielte so lange die Ereignisschleife an. Diese Datei
+//! selbst kennt keinen Faden; sie bleibt ohne Fenster pruefbar, und wer sie
+//! von einer neuen Stelle ruft, ruft sie ebenso abseits des Hauptfadens.
+//! [`fern_pruefen`] stellt keinen Systemaufruf und laeuft auf dem Hauptfaden.
+//!
 //! # In einem fernen Tab
 //!
 //! Steht das Dateifenster auf einem Ordner auf einem Server, ist der Text ein
