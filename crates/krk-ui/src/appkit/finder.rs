@@ -1,7 +1,7 @@
 //! Wie betroffene Eintraege im Finder aufgedeckt werden.
 //!
 //! ```text
-//! Pfade ──> NSURL::fileURLWithPath: ──> NSArray ──> activateFileViewerSelectingURLs:
+//! (Pfad, Art) ──> NSURL::fileURLWithPath:isDirectory: ──> NSArray ──> activateFileViewerSelectingURLs:
 //!                                                              │
 //!                                                              └──> nichts
 //! ```
@@ -53,7 +53,8 @@
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
 //! `NSWorkspace`, `NSArray`, `NSString` und `NSURL` stehen seit macOS 10.0 zur
-//! Verfuegung, ebenso `sharedWorkspace` und `fileURLWithPath:`.
+//! Verfuegung, ebenso `sharedWorkspace`; `fileURLWithPath:isDirectory:` steht
+//! seit macOS 10.5.
 //! **`activateFileViewerSelectingURLs:` ist die juengste Beruehrung dieser
 //! Datei und steht seit macOS 10.6** (`NSWorkspace.h`,
 //! `API_AVAILABLE(macos(10.6))` an der Methode). Das Buendel zielt auf 15.0
@@ -63,7 +64,7 @@
 //! Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die Untergrenze
 //! nicht; die Nennung hier ist die Gegenmassnahme.
 
-use std::path::PathBuf;
+use std::path::Path;
 
 use objc2_app_kit::NSWorkspace;
 use objc2_foundation::{NSArray, NSString, NSURL};
@@ -73,11 +74,16 @@ use objc2_foundation::{NSArray, NSString, NSURL};
 /// Jeder Pfad wird im Finder **ausgewaehlt**, nicht geoeffnet; liegen die
 /// Eintraege in verschiedenen Ordnern, oeffnet der Finder je ein Fenster.
 ///
-/// **Vorher geprueft wird nichts.** `fileURLWithPath:` fragt das Dateisystem
-/// nicht, und diese Huelle fragt es auch nicht — dieselbe Haltung wie in
-/// [`super::standardprogramm::oeffnen`], hier allerdings ohne dessen Antwort:
-/// was der Aufruf vorfindet, bleibt unbeantwortet. Der Modulkopf schreibt aus,
-/// was der Aufrufer stattdessen prueft und was offenbleibt.
+/// **Vorher geprueft wird nichts, und die Adresse fragt die Platte nicht.**
+/// Jeder Pfad kommt mit seiner Art herein, wie sie das Ordnermodell fuehrt
+/// ([`crate::kommandos::operationen::Auswahl::adressen`]), und die Adresse
+/// entsteht ueber `fileURLWithPath:isDirectory:`. `fileURLWithPath:` ohne die
+/// Art fragte das Dateisystem, ob der Pfad ein Ordner ist, und hielte auf einer
+/// haengenden Freigabe den Hauptfaden an. Eine Verknuepfung kommt als Datei
+/// herein; das System loest sie selbst auf. Was `activateFileViewerSelectingURLs:`
+/// danach vorfindet, bleibt unbeantwortet, anders als bei
+/// [`super::standardprogramm::oeffnen`]; der Modulkopf schreibt aus, was der
+/// Aufrufer stattdessen prueft und was offenbleibt.
 ///
 /// **Kein Rueckgabewert und damit kein `#[must_use]`.**
 /// `activateFileViewerSelectingURLs:` liefert `void`; es gibt nichts, dessen
@@ -87,10 +93,15 @@ use objc2_foundation::{NSArray, NSString, NSURL};
 /// vorher mit [`crate::kommandos::operationen::nichts_anzuzeigen`] ab. Kaeme
 /// sie doch an, holte `activateFileViewerSelectingURLs:` den Finder in den
 /// Vordergrund und waehlte nichts aus.
-pub fn aufdecken(pfade: &[PathBuf]) {
-    let ziele: Vec<_> = pfade
-        .iter()
-        .map(|pfad| NSURL::fileURLWithPath(&NSString::from_str(&pfad.to_string_lossy())))
+pub fn aufdecken<'a>(adressen: impl IntoIterator<Item = (&'a Path, bool)>) {
+    let ziele: Vec<_> = adressen
+        .into_iter()
+        .map(|(pfad, ist_ordner)| {
+            NSURL::fileURLWithPath_isDirectory(
+                &NSString::from_str(&pfad.to_string_lossy()),
+                ist_ordner,
+            )
+        })
         .collect();
     NSWorkspace::sharedWorkspace()
         .activateFileViewerSelectingURLs(&NSArray::from_retained_slice(&ziele));

@@ -1584,6 +1584,7 @@ mod tests {
             pfade: (0..anzahl)
                 .map(|nummer| PathBuf::from(format!("/Users/k1/Notizen/eintrag-{nummer}")))
                 .collect(),
+            ist_ordner: (0..anzahl).map(|nummer| nummer < ordner).collect(),
             ordner,
         }
     }

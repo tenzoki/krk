@@ -1,9 +1,9 @@
 //! Die eine Beruehrung mit dem System, die C3 der Runde 4 braucht.
 //!
 //! ```text
-//! Pfad ──> NSURL::fileURLWithPath: ──> openURL: ──> LaunchServices
-//!                                          │
-//!                                          └──> bool: angenommen, ja oder nein
+//! (Pfad, Art) ──> NSURL::fileURLWithPath:isDirectory: ──> openURL: ──> LaunchServices
+//!                                                              │
+//!                                                              └──> bool: angenommen, ja oder nein
 //! ```
 //!
 //! Die eine Frage dieses Moduls: **wie kommt ein Eintrag an das Programm, das
@@ -64,7 +64,8 @@
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
 //! `NSWorkspace`, `NSURL` und `NSString` stehen seit macOS 10.0 zur Verfuegung,
-//! ebenso `sharedWorkspace`, `fileURLWithPath:` und `openURL:`. Das Buendel
+//! ebenso `sharedWorkspace` und `openURL:`; `fileURLWithPath:isDirectory:`
+//! steht seit macOS 10.5. Das Buendel
 //! zielt auf 15.0 (`.cargo/config.toml`); keine von ihnen ist nach macOS 15
 //! hinzugekommen, und keine Beruehrung in dieser Datei braucht deshalb eine
 //! Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt keine
@@ -82,18 +83,23 @@ use objc2_foundation::{NSString, NSURL};
 /// Programm sie danach zeigt. Der Unterschied steht im Modulkopf, und die
 /// Meldung des Aufrufers haelt ihn ein.
 ///
-/// Der Typ des Eintrags wird nicht geprueft. Die Taste verzweigt nach der
-/// Nutzerantwort vom 260811-1505 ausdruecklich nicht, und ein Ordner geht damit
-/// an das System, das ihn im Finder zeigt.
+/// Nach dem Typ des Eintrags verzweigt die Huelle nicht; die Art formt allein
+/// die Adresse. Die Taste verzweigt nach der Nutzerantwort vom 260811-1505
+/// ausdruecklich nicht, und ein Ordner geht damit an das System, das ihn im
+/// Finder zeigt.
 ///
-/// **Vorher geprueft wird nichts.** `fileURLWithPath:` fragt das Dateisystem
-/// nicht, und diese Huelle fragt es auch nicht: ein Eintrag, den es nicht mehr
-/// gibt, geht bis zum Aufruf durch, und was das System dazu sagt, meldet der
-/// Aufrufer. Der Gegenentwurf waere eine Pruefung nach dem Vorbild von
+/// **Vorher geprueft wird nichts, und die Adresse fragt die Platte nicht.**
+/// Die Art des Eintrags kommt herein (`ist_ordner`, aus dem Ordnermodell), und
+/// die Adresse entsteht ueber `fileURLWithPath:isDirectory:`; `fileURLWithPath:`
+/// ohne die Art fragte das Dateisystem, ob der Pfad ein Ordner ist, und hielte
+/// auf einer haengenden Freigabe den Hauptfaden an. Eine Verknuepfung kommt
+/// als Datei herein; das System loest sie selbst auf. Ein Eintrag, den es nicht
+/// mehr gibt, geht bis zum Aufruf durch, und was das System dazu sagt, meldet
+/// der Aufrufer. Der Gegenentwurf waere eine Pruefung nach dem Vorbild von
 /// [`crate::kommandos::operationen::ordner_fehlt`]; die steht dort, weil
 /// jener Aufruf **keine** Antwort liefert, und hier liefert er eine.
 #[must_use = "die Antwort sagt, ob das System den Eintrag angenommen hat; fallengelassen bleibt der Nutzer ohne Meldung vor einem Programm, das nicht aufgeht"]
-pub fn oeffnen(pfad: &Path) -> bool {
+pub fn oeffnen(pfad: &Path, ist_ordner: bool) -> bool {
     // **Kein `to_string_lossy`.** Ein Pfad ohne gueltiges UTF-8 wuerde damit zu
     // einem Pfad mit `U+FFFD`, und das System bekaeme einen Eintrag, den es
     // nicht gibt — waehrend `openURL:` `true` lieferte oder sein Fehlschlag
@@ -105,7 +111,7 @@ pub fn oeffnen(pfad: &Path) -> bool {
     let Some(pfad) = pfad.to_str() else {
         return false;
     };
-    let ziel = NSURL::fileURLWithPath(&NSString::from_str(pfad));
+    let ziel = NSURL::fileURLWithPath_isDirectory(&NSString::from_str(pfad), ist_ordner);
     NSWorkspace::sharedWorkspace().openURL(&ziel)
 }
 
@@ -135,7 +141,7 @@ mod tests {
             "der Pfad der Probe ist gueltiges UTF-8 und misst damit nicht, was sie messen soll"
         );
         assert!(
-            !oeffnen(&krumm),
+            !oeffnen(&krumm, false),
             "ein Pfad ohne gueltiges UTF-8 wird nicht abgewiesen"
         );
     }

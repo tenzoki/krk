@@ -10605,7 +10605,7 @@ impl Anwendungsdelegierter {
             self.antwort_zeigen(seite, &operationen::kein_finder());
             return;
         }
-        finder::aufdecken(&betroffen.pfade);
+        finder::aufdecken(betroffen.adressen());
     }
 
     /// Startet einen fertigen Auftrag auf der Operationsmaschine.
@@ -15385,7 +15385,12 @@ mod loeschzielproben {
     /// aufgeloest an [`Anwendungsdelegierter::loeschtexte`], das ihn von dort an
     /// nicht mehr anfasst.
     fn texte(ordner: &Path, pfade: Vec<PathBuf>) -> (String, String, bool) {
-        let auswahl = Auswahl { pfade, ordner: 0 };
+        let ist_ordner = vec![false; pfade.len()];
+        let auswahl = Auswahl {
+            pfade,
+            ist_ordner,
+            ordner: 0,
+        };
         let aufgeloest = std::fs::canonicalize(ordner).ok();
         assert!(
             aufgeloest.is_some(),

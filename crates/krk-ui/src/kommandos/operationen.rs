@@ -159,6 +159,20 @@ pub fn anzeige_faellig(begonnen: Instant, jetzt: Instant) -> bool {
 pub struct Auswahl {
     /// Die vollen Pfade, in der Reihenfolge, in der sie auf dem Schirm stehen.
     pub pfade: Vec<PathBuf>,
+    /// Je Pfad, an derselben Stelle wie in [`Self::pfade`], ob er ein Ordner
+    /// ist, wie ihn das Ordnermodell fuehrt (`Eintrag::ist_ordner`).
+    ///
+    /// **Die Art reist mit, damit niemand sie auf dem Hauptfaden erfragen
+    /// muss.** Eine Dateiadresse ueber `fileURLWithPath:` ohne `isDirectory:`
+    /// fragt das Dateisystem, ob der Pfad ein Ordner ist; mit der Art aus dem
+    /// Modell entsteht sie ohne Frage ([`Self::adressen`]). Eine Verknuepfung
+    /// zaehlt, wie im Modell, nicht als Ordner: die Adresse ist dann die der
+    /// Verknuepfung, und das System loest sie selbst auf.
+    ///
+    /// Gefuellt wird die Liste allein in [`betroffene`], und dort waechst sie
+    /// mit [`Self::pfade`] im selben Schritt; die gleiche Laenge haelt dieser
+    /// eine Bauort, und eine Probe prueft sie.
+    pub ist_ordner: Vec<bool>,
     /// Wie viele davon Ordner sind. Die Rueckfrage vor dem Raeumen in den
     /// Papierkorb nennt die Zahl gesondert (C4).
     pub ordner: usize,
@@ -176,6 +190,21 @@ impl Auswahl {
     pub fn zahl(&self) -> usize {
         self.pfade.len()
     }
+
+    /// Je betroffenen Eintrag sein Pfad und ob er ein Ordner ist, in
+    /// Sichtreihenfolge: der Stoff einer Dateiadresse ueber
+    /// `fileURLWithPath:isDirectory:`, die das Dateisystem nicht fragt.
+    pub fn adressen(&self) -> impl Iterator<Item = (&Path, bool)> {
+        debug_assert_eq!(
+            self.pfade.len(),
+            self.ist_ordner.len(),
+            "die Auswahl fuehrt nicht je Pfad eine Art"
+        );
+        self.pfade
+            .iter()
+            .map(PathBuf::as_path)
+            .zip(self.ist_ordner.iter().copied())
+    }
 }
 
 /// Worauf ein Tastenbefehl im genannten Ordner wirkt (C4).
@@ -190,6 +219,7 @@ pub fn betroffene(modell: &Ordnermodell, ordner: &Path) -> Auswahl {
     let mut auswahl = Auswahl::default();
     for eintrag in betroffene_im_modell(modell) {
         auswahl.pfade.push(ordner.join(&eintrag.name));
+        auswahl.ist_ordner.push(eintrag.ist_ordner());
         auswahl.ordner += usize::from(eintrag.ist_ordner());
     }
     auswahl
@@ -2193,6 +2223,47 @@ mod tests {
     fn ohne_auswahl_und_ohne_markierung_ist_nichts_betroffen() {
         let modell = modell_mit(&[("a.txt", Typ::Datei)]);
         assert!(betroffene(&modell, Path::new("/tmp/x")).ist_leer());
+    }
+
+    /// Die Auswahl fuehrt je Pfad genau eine Art, an derselben Stelle, und die
+    /// Art ist die des Modells: ein Ordner ist ein Ordner, eine Verknuepfung
+    /// auf was auch immer ist keiner.
+    ///
+    /// Die gleiche Laenge haelt allein der Bauort [`betroffene`]; diese Probe
+    /// ist sein Zeuge, und [`Auswahl::adressen`] stuende ohne sie auf einem
+    /// stillschweigend kuerzeren `zip`.
+    #[test]
+    fn die_auswahl_fuehrt_je_pfad_seine_art_aus_dem_modell() {
+        let mut modell = modell_mit(&[
+            ("a.txt", Typ::Datei),
+            ("unten", Typ::Ordner),
+            ("zeiger", Typ::Verknuepfung),
+        ]);
+        for name in ["a.txt", "unten", "zeiger"] {
+            let index = modell.index_von_namen(name).expect("steht da");
+            modell.markierung_umschalten(index);
+        }
+
+        let auswahl = betroffene(&modell, Path::new("/tmp/x"));
+        assert_eq!(
+            auswahl.pfade.len(),
+            auswahl.ist_ordner.len(),
+            "je Pfad eine Art"
+        );
+        let adressen: Vec<(PathBuf, bool)> = auswahl
+            .adressen()
+            .map(|(pfad, ist_ordner)| (pfad.to_path_buf(), ist_ordner))
+            .collect();
+        assert_eq!(
+            adressen.len(),
+            auswahl.zahl(),
+            "keine Adresse geht verloren"
+        );
+        for (pfad, ist_ordner) in adressen {
+            let name = pfad.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            assert_eq!(ist_ordner, name == "unten", "{name} traegt die falsche Art");
+        }
+        assert_eq!(auswahl.ordner, 1);
     }
 
     // ------------------------------------------------------------------

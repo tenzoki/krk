@@ -2261,7 +2261,9 @@ impl DateifensterQuelle {
             Kommando::OrdnerpfadKopieren => self.ordnerpfad_kopieren(),
             Kommando::EintragspfadKopieren => self.eintragspfad_kopieren(),
             Kommando::MitStandardprogrammOeffnen => match self.betroffene_eintraege() {
-                Some(betroffen) => self.mit_standardprogramm_oeffnen(&betroffen.pfade),
+                Some(betroffen) => {
+                    self.mit_standardprogramm_oeffnen(&betroffen.adressen().collect::<Vec<_>>())
+                }
                 None => self.am_fernen_ort_melden(),
             },
             Kommando::Umbenennen => return self.umbenennung_beginnen(),
@@ -2782,18 +2784,22 @@ impl DateifensterQuelle {
     /// angenommen hat; ob ein Programm danach startet, weiss KRK nicht. Der
     /// Unterschied steht im Kopf jenes Moduls, und
     /// [`operationen::oeffnungsmeldung`] haelt ihn im Wortlaut ein.
-    fn mit_standardprogramm_oeffnen(&self, pfade: &[PathBuf]) {
-        if pfade.is_empty() {
+    ///
+    /// **Je Eintrag reist seine Art mit**, damit die Adresse ohne Frage an die
+    /// Platte entsteht: von der Taste aus [`operationen::Auswahl::adressen`],
+    /// vom Doppelklick die Art der angeklickten Zeile.
+    fn mit_standardprogramm_oeffnen(&self, adressen: &[(&Path, bool)]) {
+        if adressen.is_empty() {
             self.befehlsantwort_zeigen(&operationen::nichts_zu_oeffnen());
             return;
         }
         let mut uebergeben: Vec<PathBuf> = Vec::new();
         let mut abgewiesen: Vec<PathBuf> = Vec::new();
-        for pfad in pfade {
-            if standardprogramm::oeffnen(pfad) {
-                uebergeben.push(pfad.clone());
+        for &(pfad, ist_ordner) in adressen {
+            if standardprogramm::oeffnen(pfad, ist_ordner) {
+                uebergeben.push(pfad.to_path_buf());
             } else {
-                abgewiesen.push(pfad.clone());
+                abgewiesen.push(pfad.to_path_buf());
             }
         }
         self.befehlsantwort_zeigen(&operationen::oeffnungsmeldung(&uebergeben, &abgewiesen));
@@ -2874,7 +2880,7 @@ impl DateifensterQuelle {
             Einstieg::Eingestiegen | Einstieg::Gemeldet | Einstieg::Ausstehend => return,
             Einstieg::KeinOrdner => {}
         }
-        let Some((pfad, _)) = self.eintrag_in_zeile(zeile) else {
+        let Some((pfad, typ)) = self.eintrag_in_zeile(zeile) else {
             // Eine ferne Datei geht an kein Programm: sie liegt nicht auf
             // diesem Geraet (Entscheidung 13 des Plans der sftp-Ordner). Eine
             // Datei im Archiv ebenso wenig: sie liegt in keiner Datei auf der
@@ -2886,7 +2892,7 @@ impl DateifensterQuelle {
             }
             return;
         };
-        self.mit_standardprogramm_oeffnen(std::slice::from_ref(&pfad));
+        self.mit_standardprogramm_oeffnen(&[(pfad.as_path(), typ == Typ::Ordner)]);
     }
 
     /// Ein getipptes Zeichen fuer den Filtertext des sichtbaren Tabs (C1.1).
@@ -4795,7 +4801,9 @@ impl DateifensterQuelle {
         if let Some(verknuepfung) = &einzug.an_das_system {
             // Der Doppelklick auf eine Verknuepfung, die kein Archiv nennt,
             // endet hier, wo er sonst sofort geendet haette.
-            self.mit_standardprogramm_oeffnen(std::slice::from_ref(verknuepfung));
+            // Eine Verknuepfung ist, wie im Ordnermodell, kein Ordner: die
+            // Adresse ist die der Verknuepfung, und das System loest sie auf.
+            self.mit_standardprogramm_oeffnen(&[(verknuepfung.as_path(), false)]);
         }
         if einzug.fertig {
             // Erst jetzt steht die Sortierung. Die bisher angezeigten Zeilen
