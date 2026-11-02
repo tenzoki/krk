@@ -1,0 +1,46 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "815a6cf4-e740-40b1-8f65-38e907354031",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "claimed",
+  "claim": {
+    "checkout_id": "9be83618",
+    "person": "Kai Stalmann <ks@qantr.com>",
+    "claimed_at": "2026-11-02T12:04:23Z"
+  },
+  "mode": {
+    "value": "ordinary",
+    "source": null
+  },
+  "origin": {
+    "kind": "user-request",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "user",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "narrative": {
+    "path": "work-packages/261102-1304-dateisystemfragen-vom-hauptfaden-nehmen/261102-1304-dateisystemfragen-vom-hauptfaden-nehmen.md"
+  },
+  "depends_on": [],
+  "active_documents": [
+    {
+      "ref": {
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "record_id": "b572f4a0-1d20-4a10-96e1-1233854a7a90"
+      },
+      "role": "plan",
+      "revision": "sha256:cc21bfe172599f9720b3861bb447c753471836c9cbb203f442071cbe836d8b61"
+    }
+  ],
+  "references": [],
+  "evidence": [],
+  "outcome": null,
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {}
+}
