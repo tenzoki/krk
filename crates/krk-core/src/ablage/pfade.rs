@@ -303,7 +303,7 @@ const UNTERPFAD: [&str; 3] = ["Library", "Application Support", "KRK"];
 ///   `super::sitzung::standardordner` tut das, weil ein Dateifenster
 ///   trotzdem etwas anzeigen muss.
 /// - **Unentschieden bleiben**, wo aus dem Wert eine Aussage ueber ein Ziel
-///   wuerde: `Anwendungsdelegierter::loeschtexte` in `krk-ui` reicht das `None`
+///   wuerde: `lokaler_loeschbefund` in `krk-ui` reicht das `None`
 ///   als offene Frage weiter, und die Rueckfrage vor dem Raeumen in den
 ///   Papierkorb wird darauf laut.
 ///

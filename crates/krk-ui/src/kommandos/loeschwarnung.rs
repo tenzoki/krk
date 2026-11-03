@@ -260,12 +260,15 @@
 //! # Der eine Aufrufer, viermal
 //!
 //! Jedes Stueck dieses Moduls hat genau einen Aufrufer, und alle sitzen im
-//! Kommandoweg von `crate::appkit::anwendung`: der gemeinsame Rumpf
-//! `loeschen_nach_rueckfrage` ruft [`vor_der_rueckfrage`]; in ihren beiden
-//! Zweigen mit Blatt ruft er `Anwendungsdelegierter::loeschtexte`, und **dort**
-//! stehen [`warngruende`], [`frage_und_erlaeuterung`] und
-//! [`endgueltig_frage_und_erlaeuterung`]; der Abschluss des Blattes ruft
-//! [`nach_der_rueckfrage`]. Die Aufruferzaehlung
+//! Kommandoweg von `crate::appkit::anwendung`: die Einzugsmethode
+//! `loeschbefund_einziehen` ruft [`vor_der_rueckfrage`], unmittelbar aus dem
+//! gemeinsamen Rumpf `loeschen_nach_rueckfrage` oder mit der Antwort des
+//! Fadens `krk-plattenfrage` (Plan `261102-1314-…`, Schritt 8); [`warngruende`]
+//! steht in `Loeschbefund::aus`, das `lokaler_loeschbefund` auf jenem Faden
+//! erreicht; [`frage_und_erlaeuterung`] und
+//! [`endgueltig_frage_und_erlaeuterung`] stehen in
+//! `Anwendungsdelegierter::loeschtexte` und `endgueltige_loeschtexte`; der
+//! Abschluss des Blattes ruft [`nach_der_rueckfrage`]. Die Aufruferzaehlung
 //! `die_stufenregel_hat_genau_einen_aufrufer` haelt die Zahl fuer die Regel
 //! fest; sie steht in der Form von `die_regel_hat_genau_einen_aufrufer` in
 //! [`super::rueckschritt`], und die Zusage, die sie traegt, ist die dieser
@@ -1725,10 +1728,10 @@ mod tests {
     /// sagt.
     ///
     /// **Der eine Aufrufer ist seit dem elften Schritt dieser Runde da**, und
-    /// die Erwartung steht deshalb auf eins: `Anwendungsdelegierter::loeschtexte`
-    /// beschafft die fuenf Tatsachen und ruft die Tafel.
-    /// `loeschen_nach_rueckfrage` erreicht `loeschtexte` im vierten Zweig der
-    /// Stufenregel.
+    /// die Erwartung steht deshalb auf eins: heute ruft `Loeschbefund::aus` die
+    /// Tafel, und die fuenf Tatsachen beschafft `lokaler_loeschbefund` auf dem
+    /// Faden `krk-plattenfrage` (Plan `261102-1314-…`, Schritt 8), gestellt
+    /// aus `loeschen_nach_rueckfrage`, sobald dessen billige Stufen durch sind.
     /// Bis dahin hiess diese Probe `die_ausloesertafel_hat_noch_keinen_aufrufer`
     /// und zaehlte null; eine, die „hoechstens eins" erwartet haette, waere fuer
     /// immer gruen gewesen und haette nie etwas gemessen.

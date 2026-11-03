@@ -12,3 +12,4 @@ Abnahme: Keiner der drei Aufrufe (`canonicalize`, `fuehrt_einen_papierkorb`, `um
 
 ---
 Reconciliation 261101 (state-auditor): Weiter offen: `std::fs::canonicalize` steht weiter im Löschweg von `crates/krk-ui/src/appkit/anwendung.rs` (um Zeile 8050).
+Resolved: Der lokale Löschweg stellt `lokaler_loeschbefund` (Auflösen, Papierkorb, Netzlaufwerk, Arbeitsbaum, Umfang) über `nebenfaden::fragen_lassen` auf dem Faden `krk-plattenfrage`, und erst die Einzugsmethode `loeschbefund_einziehen` wertet auf dem Hauptfaden die Stufentafel aus und zeigt das Blatt, gehalten von `der_loeschweg_stellt_auf_dem_hauptfaden_keinen_systemaufruf` (Planschritt 8 des Pakets `261102-1304-dateisystemfragen-vom-hauptfaden-nehmen`).

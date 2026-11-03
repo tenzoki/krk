@@ -1730,6 +1730,10 @@ pub enum Text {
     /// Die Antwort auf einen Befehl im Dateifenster ohne Auswahl: der
     /// Loeschweg, das Stapel-Umbenennen, jeder Auftrag und F4.
     NichtsAusgewaehlt,
+    /// `loeschen_nach_rueckfrage`: die Fragen eines frueheren Loeschbefehls
+    /// an die Platte laufen noch auf dem Faden `krk-plattenfrage`, und ein
+    /// zweiter startet keine zweite Pruefung.
+    LoeschpruefungLaeuftNoch,
     /// `stapel_umbenennen_ausfuehren`: aus den Feldern liess sich keine Regel
     /// bauen.
     StapelKeineRegel,
@@ -1939,7 +1943,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 793] = [
+    pub const ALLE: [Text; 794] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -2653,6 +2657,7 @@ impl Text {
         Text::LoeschblattSchaltflaeche,
         Text::LoeschblattSchaltflaecheEndgueltig,
         Text::NichtsAusgewaehlt,
+        Text::LoeschpruefungLaeuftNoch,
         Text::StapelKeineRegel,
         Text::StapelJedeZeileMitHinweis,
         Text::QuelleUndZielDerselbeOrdner,

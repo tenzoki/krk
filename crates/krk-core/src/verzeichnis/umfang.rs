@@ -136,13 +136,13 @@
 //! # Wer sie ruft
 //!
 //! Genau einer, und er steht seit dem elften Schritt derselben Runde da:
-//! `Anwendungsdelegierter::loeschtexte` in `krk-ui` beschafft die Tatsachen
-//! fuer die Ausloesertafel, und die Zaehlung geschieht dabei einmal je
-//! Loeschbefehl. Der Rumpf, der `loeschtexte` ruft, ist
-//! `Anwendungsdelegierter::loeschen_nach_rueckfrage`, und er ruft es im
-//! **vierten** Zweig seiner Stufenregel. Die Zaehlung faellt deshalb erst an,
-//! wenn die beiden billigen Stufen jenes Rumpfes durch sind und das Blatt
-//! wirklich erscheint; ein Befehl, den ein laufender Vorgang oder eine leere
+//! `lokaler_loeschbefund` in `krk-ui` beschafft die Tatsachen fuer die
+//! Ausloesertafel, auf dem Faden `krk-plattenfrage` (Plan `261102-1314-…`,
+//! Schritt 8), und die Zaehlung geschieht dabei einmal je Loeschbefehl.
+//! Gestellt wird die Frage aus
+//! `Anwendungsdelegierter::loeschen_nach_rueckfrage`, und zwar erst, wenn die
+//! beiden billigen Stufen jenes Rumpfes durch sind. Die Zaehlung faellt
+//! deshalb nur an, wenn die Stufenregel den Papierkorbbefund braucht; ein Befehl, den ein laufender Vorgang oder eine leere
 //! Auswahl anhaelt, oeffnet hier kein Verzeichnis. `dead_code` traf das Modul
 //! auch vorher nicht, denn `krk-core` ist eine Bibliothek und alles hier ist
 //! von ihrer Wurzel aus erreichbar; eine Ausnahme nach dem Vorbild von

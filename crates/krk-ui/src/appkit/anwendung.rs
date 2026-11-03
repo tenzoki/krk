@@ -791,6 +791,24 @@ impl Loeschgegenstand {
     }
 }
 
+/// Was mit einer Loeschfrage reist (Plan `261102-1314-…`, Schritt 8): der
+/// Gegenstand, die Seite, an der der Befehl gegeben wurde, und die
+/// Beschriftung der Schaltflaeche des Befehls.
+///
+/// Die Einzugsmethode wendet die Antwort gegen diese Werte an und nicht gegen
+/// das, was gerade sichtbar ist. Ueber die Fadengrenze geht der Wert selbst
+/// nicht, sondern allein seine lokalen Teile, die gewoehnliche Rust-Werte sind
+/// ([`Anwendungsdelegierter::loeschbefund_erheben_lassen`]).
+struct Loeschanfrage {
+    /// Was geloescht wuerde.
+    gegenstand: Loeschgegenstand,
+    /// Das Dateifenster des Befehls; dorthin gehen Meldungen.
+    seite: Fensterseite,
+    /// Die Beschriftung, die der Befehl fuer den Weg in den Papierkorb
+    /// mitbringt.
+    schaltflaeche: &'static str,
+}
+
 /// Was die Platte ueber ein lokales Loeschziel sagt, in einem Zug erhoben
 /// ([`lokaler_loeschbefund`]).
 ///
@@ -884,9 +902,11 @@ impl Loeschbefund {
 /// billigen Stufen der Regel durch sind**
 /// ([`loeschwarnung::vor_der_rueckfrage`]); ein ferner Ort und ein Archiv
 /// kommen hier nie an. Sie haelt kein AppKit-Objekt und nimmt allein Werte,
-/// damit ihr Ruf den Faden wechseln kann; heute stellt sie ihre Fragen noch
-/// auf dem Hauptfaden, und eine haengende Freigabe haelt ihn dabei an
-/// (`261016-1956-der-loeschweg-fragt-canonicalize-und-den-papierkorb-auf-dem-hauptfaden-…`).
+/// damit ihr Ruf den Faden wechseln kann. **Sie laeuft auf dem Faden**
+/// [`PLATTENFRAGE`], gestellt allein von
+/// [`Anwendungsdelegierter::loeschbefund_erheben_lassen`] (Plan
+/// `261102-1314-…`, Schritt 8); eine haengende Freigabe haelt dann diesen
+/// Faden an und nicht die Ereignisschleife.
 fn lokaler_loeschbefund(ordner: &Path, auswahl: &Auswahl) -> Loeschbefund {
     let aufgeloest = std::fs::canonicalize(ordner).ok();
     let papierkorb = aufgeloest.as_deref().map_or(
@@ -1416,6 +1436,15 @@ pub struct AnwendungsIvars {
     /// ueberschriebe. Gesetzt beim Start eines Fadens, geloescht in seinem
     /// Ausgang auf dem Hauptfaden.
     tresorgang: Cell<bool>,
+    /// Ob die Fragen eines lokalen Loeschbefehls an die Platte auf dem Faden
+    /// `krk-plattenfrage` laufen (Plan `261102-1314-…`, Schritt 8).
+    ///
+    /// Gesetzt in [`Anwendungsdelegierter::loeschen_nach_rueckfrage`] beim
+    /// Start der Frage, geloescht als erste Handlung von
+    /// [`Anwendungsdelegierter::loeschbefund_einziehen`]. Solange es steht,
+    /// startet ein weiterer Loeschbefehl keine zweite Frage, sondern meldet
+    /// [`Text::LoeschpruefungLaeuftNoch`].
+    loeschpruefung: Cell<bool>,
     /// Die Zugaenge zu sftp-Servern, je Server einer (Entscheidung 3 des
     /// Plans `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`).
     ///
@@ -1912,6 +1941,7 @@ impl Anwendungsdelegierter {
             merker: Rc::new(RefCell::new(Schluesselmerker::neu())),
             ablaufwecker: RefCell::new(None),
             tresorgang: Cell::new(false),
+            loeschpruefung: Cell::new(false),
             fernzugaenge: Zugangsregister::neu(),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
@@ -8094,12 +8124,25 @@ impl Anwendungsdelegierter {
     /// Ein ferner Ort beantwortet die Papierkorbfrage am Wert und ohne
     /// Systemaufruf mit nein; seine Rueckfrage nennt allein die Zahl der
     /// gewaehlten Eintraege und ihrer Ordner, weil Arbeitsbaum und Umfang
-    /// lokale Systemaufrufe braucheten. Ein lokaler Ort stellt seine Fragen an
-    /// die Platte weiter auf dem Hauptfaden, gebuendelt in
-    /// [`lokaler_loeschbefund`]; das haelt
-    /// der offene Defekt
-    /// `shared/issues/261016-1956-der-loeschweg-fragt-canonicalize-und-den-papierkorb-auf-dem-hauptfaden-und-ein-haengendes-netzlaufwerk-haelt-die-ereignisschleife-an.md`
-    /// fest.
+    /// lokale Systemaufrufe braucheten.
+    ///
+    /// **Auf welchem Faden** (Plan `261102-1314-…`, Schritt 8): ein lokaler
+    /// Ort stellt seine Fragen an die Platte, gebuendelt in
+    /// [`lokaler_loeschbefund`], ueber [`Self::loeschbefund_erheben_lassen`]
+    /// auf dem Faden [`PLATTENFRAGE`], sobald seine billigen Tatsachen
+    /// (`vorgang_laeuft`, leer) keine Stufe vor dem Papierkorbtest ausloesen.
+    /// Mit der Frage reisen Gegenstand, Seite und Beschriftung
+    /// ([`Loeschanfrage`]); die Antwort zieht [`Self::loeschbefund_einziehen`]
+    /// auf dem Hauptfaden ein und wertet dort erst die Stufentafel aus, mit dem
+    /// dann gueltigen `vorgang_laeuft`. Ein ferner Gegenstand, einer im Archiv
+    /// und ein lokaler, den schon eine billige Stufe anhaelt, gehen ohne Faden
+    /// und sofort in dieselbe Einzugsmethode, ohne Befund. **Solange eine
+    /// lokale Frage laeuft, startet ein weiterer Loeschbefehl keine zweite**
+    /// und meldet [`Text::LoeschpruefungLaeuftNoch`]; die Sperre ist das Feld
+    /// `loeschpruefung`, und die Einzugsmethode loest sie. **Scheitert der
+    /// Fadenstart**, gilt der Befund als unentschieden
+    /// ([`Loeschbefund::unentschieden`]), und die Tafel fuehrt auf die
+    /// endgueltige Rueckfrage mit [`Endgueltiggrund::PapierkorbUngewiss`].
     ///
     /// **Die Reihenfolge steht seit dem 260817 nicht mehr hier, sondern in
     /// [`loeschwarnung::vor_der_rueckfrage`].** Sie ist eine Regel ueber drei
@@ -8197,8 +8240,14 @@ impl Anwendungsdelegierter {
     /// Liefert `true`, auch wenn nichts geschehen ist: der Tastendruck ist
     /// verbraucht, und die Statuszeile sagt warum. `false` allein dann, wenn es
     /// kein Fenster gibt, an dem das Blatt haengen koennte.
-    fn loeschen_nach_rueckfrage(&self, schaltflaeche: &str) -> bool {
+    fn loeschen_nach_rueckfrage(&self, schaltflaeche: &'static str) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
+        // Eine lokale Pruefung eines frueheren Befehls laeuft noch auf dem
+        // Faden: dieser startet keine zweite, sondern sagt es.
+        if self.ivars().loeschpruefung.get() {
+            self.antwort_zeigen(aktiv, text(Text::LoeschpruefungLaeuftNoch));
+            return true;
+        }
         // Was geloescht wuerde, am Wert des Tabs und ohne Systemaufruf: lokal
         // die Auswahl mit ihren Pfaden, fern und im Archiv die Namen unter dem
         // angezeigten Ort. Ein Archiv, das KRK allein lesen darf, loescht
@@ -8212,20 +8261,118 @@ impl Anwendungsdelegierter {
         };
 
         // Die beiden billigen Tatsachen der Regel, jede aus genau einer Quelle.
-        // Sie stehen im Speicher, und die Reihenfolge, in der sie hier
-        // anfallen, entscheidet nichts — welche Stufe daraus folgt, sagt
-        // `vor_der_rueckfrage`, und dass der Papierkorbtest vor der Rueckfrage
-        // steht, steht als Zeile in seiner Tafel und nicht als Zeilenfolge hier.
+        // Sie entscheiden hier allein, ob die Platte gefragt werden muss: das
+        // muss sie nur, wenn die Tafel den Papierkorbbefund ueberhaupt ruft,
+        // also ohne laufenden Vorgang und mit Gegenstand. **Welche Stufe
+        // folgt, entscheidet weiter allein `vor_der_rueckfrage`**, und die
+        // steht in der Einzugsmethode, auch fuer die Wege ohne Faden.
+        let vorgang_laeuft = self.vorgang_laeuft().is_some();
+        let leer = gegenstand.ist_leer();
+
+        match gegenstand {
+            // Ein lokaler Gegenstand, der die Platte braucht: die Fragen auf
+            // den Faden, die Antwort an `loeschbefund_einziehen`.
+            Loeschgegenstand::Lokal { ordner, auswahl } if !vorgang_laeuft && !leer => {
+                if self.ivars().fenster.get().is_none() {
+                    return false;
+                }
+                self.ivars().loeschpruefung.set(true);
+                Self::loeschbefund_erheben_lassen(ordner, auswahl, aktiv, schaltflaeche);
+                true
+            }
+            // Fern, im Archiv und lokal mit einer billigen Stufe: ohne Faden
+            // und ohne Befund in dieselbe Einzugsmethode.
+            gegenstand => self.loeschbefund_einziehen(
+                Loeschanfrage {
+                    gegenstand,
+                    seite: aktiv,
+                    schaltflaeche,
+                },
+                None,
+            ),
+        }
+    }
+
+    /// Stellt [`lokaler_loeschbefund`] **auf dem Faden** [`PLATTENFRAGE`] und
+    /// reicht die Antwort mit dem gereisten Gegenstand, der Seite und der
+    /// Beschriftung an [`Self::loeschbefund_einziehen`] (Plan `261102-1314-…`,
+    /// Schritt 8).
+    ///
+    /// Alles, was reist, ist ein gewoehnlicher Rust-Wert; ein AppKit-Objekt
+    /// geht nicht ueber die Fadengrenze. **Scheitert der Fadenstart**, gilt
+    /// der Befund als unentschieden ([`Loeschbefund::unentschieden`]), und
+    /// die Einzugsmethode bekommt ihn ebenso ueber die Hauptschlange; die
+    /// Tafel fuehrt dann auf die endgueltige Rueckfrage mit
+    /// [`Endgueltiggrund::PapierkorbUngewiss`], und die Sperre faellt dort.
+    fn loeschbefund_erheben_lassen(
+        ordner: PathBuf,
+        auswahl: Auswahl,
+        seite: Fensterseite,
+        schaltflaeche: &'static str,
+    ) {
+        let fuer_den_faden = (ordner.clone(), auswahl.clone());
+        nebenfaden::fragen_lassen(
+            PLATTENFRAGE,
+            move || {
+                let (ordner, auswahl) = fuer_den_faden;
+                lokaler_loeschbefund(&ordner, &auswahl)
+            },
+            // Ohne Faden keine Frage: unentschieden und nie entwarnt; der
+            // Fehler des Fadenstarts aendert daran nichts.
+            |_fehler| Loeschbefund::unentschieden(),
+            move |mtm, befund| {
+                let Some(delegierter) = NSApplication::sharedApplication(mtm).delegate() else {
+                    return;
+                };
+                let Ok(selbst) = delegierter.downcast::<Anwendungsdelegierter>() else {
+                    return;
+                };
+                let anfrage = Loeschanfrage {
+                    gegenstand: Loeschgegenstand::Lokal { ordner, auswahl },
+                    seite,
+                    schaltflaeche,
+                };
+                // Ohne Fenster gibt es kein Blatt; der Tastendruck ist
+                // laengst verbraucht, also bleibt die Antwort ungenutzt.
+                let _ = selbst.loeschbefund_einziehen(anfrage, Some(befund));
+            },
+        );
+    }
+
+    /// Wertet die Stufentafel [`loeschwarnung::vor_der_rueckfrage`] aus und
+    /// fuehrt aus, was sie sagt: Meldung oder Blatt mit dem gereisten
+    /// Gegenstand.
+    ///
+    /// **Die eine Stelle, die die Tafel fragt**
+    /// (`die_stufenregel_hat_genau_einen_aufrufer`). Zwei Wege kommen hier an:
+    /// die Antwort des Fadens aus [`Self::loeschbefund_erheben_lassen`] mit
+    /// dem Befund der Platte, und unmittelbar aus
+    /// [`Self::loeschen_nach_rueckfrage`] ohne Befund, fuer einen fernen
+    /// Gegenstand, einen im Archiv und einen lokalen, den eine billige Stufe
+    /// anhaelt. **`vorgang_laeuft` wird hier neu gefragt**, denn in der Luecke
+    /// des Fadens kann ein Vorgang begonnen haben; gegen den Stand, auf den die
+    /// Antwort trifft, und nicht gegen den des Tastendrucks (Abschnitt
+    /// Approach des Plans). Seite und Gegenstand sind die gereisten, nicht die
+    /// gerade sichtbaren.
+    ///
+    /// **Die Sperre `loeschpruefung` faellt als erste Handlung**, vor jedem
+    /// Ausstieg. Kaeme ein lokaler Gegenstand ohne Befund bis zur
+    /// Papierkorbfrage, gilt er als unentschieden und nie als entwarnt; eine
+    /// Frage an die Platte entsteht hier nicht.
+    ///
+    /// Liefert `false` allein dann, wenn es kein Fenster gibt, an dem das
+    /// Blatt haengen koennte.
+    fn loeschbefund_einziehen(&self, anfrage: Loeschanfrage, befund: Option<Loeschbefund>) -> bool {
+        self.ivars().loeschpruefung.set(false);
+        let Loeschanfrage {
+            gegenstand,
+            seite,
+            schaltflaeche,
+        } = anfrage;
         // Die Frage geht seit der Runde 13 durch `vorgang_laeuft` und nicht
         // mehr an `ivars().vorgang` heran: sie hat eine Antwortstelle, und
         // dieser Zweig braucht von ihrer Antwort allein, ob es sie gibt.
         let vorgang_laeuft = self.vorgang_laeuft().is_some();
-
-        // Der Befund der Platte, gemerkt fuer die zwei Zweige mit Blatt: die
-        // Tafel ruft den Abschluss darunter allein im Feld `(false, false)`,
-        // und dann brauchen ihn Papierkorbfrage und Texte. Erhoben wird er
-        // deshalb genau einmal und nur dort, wo die Antwort gebraucht wird.
-        let mut befund: Option<Loeschbefund> = None;
 
         match loeschwarnung::vor_der_rueckfrage(vorgang_laeuft, gegenstand.ist_leer(), || {
             match &gegenstand {
@@ -8235,12 +8382,10 @@ impl Anwendungsdelegierter {
                 // Ein Archiv ebenso nicht, am Wert und ohne Systemaufruf (E17
                 // des Plans der Archive).
                 Loeschgegenstand::Archiv { .. } => Erlaubnisbefund::Nein,
-                Loeschgegenstand::Lokal { ordner, auswahl } => {
-                    let lokal = lokaler_loeschbefund(ordner, auswahl);
-                    let papierkorb = lokal.papierkorb;
-                    befund = Some(lokal);
-                    papierkorb
-                }
+                // Der Befund kam vom Faden; fehlt er, ist nichts entschieden.
+                Loeschgegenstand::Lokal { .. } => befund
+                    .as_ref()
+                    .map_or(Erlaubnisbefund::Unentschieden, |befund| befund.papierkorb),
             }
         }) {
             // Die Meldung baut `vorgang_laeuft_schon`, die eine Stelle,
@@ -8250,11 +8395,11 @@ impl Anwendungsdelegierter {
             // Antwort, und `let _ =` heisst hier wie ueberall im Baum „ich
             // brauche den Wert nicht": entschieden ist die Stufe schon.
             Vorstufe::VorgangLaeuft => {
-                let _ = self.vorgang_laeuft_schon(aktiv);
+                let _ = self.vorgang_laeuft_schon(seite);
                 true
             }
             Vorstufe::NichtsAusgewaehlt => {
-                self.antwort_zeigen(aktiv, text(Text::NichtsAusgewaehlt));
+                self.antwort_zeigen(seite, text(Text::NichtsAusgewaehlt));
                 true
             }
             // Ein ferner Gegenstand erreicht diesen Zweig nicht, weil die
@@ -8272,8 +8417,7 @@ impl Anwendungsdelegierter {
             // Sicher kein Papierkorb, oder es liess sich nicht feststellen;
             // der Grund reist aus der Tafel mit und waehlt allein den ersten
             // Satz der Erlaeuterung (261019). Eine weitere Frage an die Platte
-            // entsteht dabei nicht: der Befund kam aus dem einen
-            // `lokaler_loeschbefund` darueber.
+            // entsteht dabei nicht: der Befund kam vom Faden.
             Vorstufe::EndgueltigeRueckfrage(grund) => self.loeschblatt_zeigen(
                 Loeschweg::Endgueltig,
                 grund,
@@ -18010,22 +18154,22 @@ mod fernvorgangsproben {
     /// `fuehrt_einen_papierkorb(` noch `umfang::zaehlen(` noch `fs::` darin
     /// steht: die lokalen Fragen an die Platte stehen in
     /// `lokaler_loeschbefund`, und den erreicht allein ein lokaler
-    /// Gegenstand. Dazu steht im Rumpf des Loeschwegs, dass ein ferner
+    /// Gegenstand. Dazu steht im Rumpf der Einzugsmethode, die seit Schritt 8
+    /// des Plans `261102-1314-…` die Stufentafel fragt, dass ein ferner
     /// Gegenstand die Papierkorbfrage am Wert mit nein beantwortet.
     ///
     /// **Was sie nicht sieht:** ob `loeschblatt_zeigen` einen fernen
     /// Gegenstand wirklich an `fern_loeschtexte` gibt und nicht an einen der
     /// lokalen Rufer; das sagt seine vollstaendige Verzweigung, die der
     /// Uebersetzer haelt, und keine Nadel. Und einen Systemaufruf in einer
-    /// tiefer gerufenen Funktion. **Der lokale Weg stellt seine Fragen weiter
-    /// auf dem Hauptfaden**; das haelt der offene Defekt
-    /// `261016-1956-der-loeschweg-fragt-canonicalize-…` fest, und diese Probe
-    /// sagt darueber nichts.
+    /// tiefer gerufenen Funktion. Den lokalen Weg haelt
+    /// `der_loeschweg_stellt_auf_dem_hauptfaden_keinen_systemaufruf`.
     #[test]
     fn der_ferne_loeschweg_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
         let datei = diese_datei();
         for name in [
             "loeschen_nach_rueckfrage",
+            "loeschbefund_einziehen",
             "loeschgegenstand",
             "loeschblatt_zeigen",
             "fern_loeschtexte",
@@ -18045,9 +18189,101 @@ mod fernvorgangsproben {
             }
         }
         assert!(
-            rumpf(&datei, "loeschen_nach_rueckfrage")
+            rumpf(&datei, "loeschbefund_einziehen")
                 .contains("Loeschgegenstand::Fern { .. } => Erlaubnisbefund::Nein"),
             "ein ferner Ort beantwortet die Papierkorbfrage nicht am Wert"
+        );
+    }
+
+    /// Der lokale Loeschweg stellt auf dem Hauptfaden keinen Systemaufruf (Plan
+    /// `261102-1314-…`, Schritt 8; Punkt 6 des Befunds `261030-1259-…` und der
+    /// Defekt `261016-1956-der-loeschweg-fragt-canonicalize-…`).
+    ///
+    /// Dieselbe Bauform wie `ctrl_o_stellt_auf_dem_hauptfaden_keinen_systemaufruf`:
+    /// in den Ruempfen des Ausloesers `loeschen_nach_rueckfrage`, der
+    /// Einzugsmethode `loeschbefund_einziehen`, des Blattes
+    /// `loeschblatt_zeigen` und der beiden Textfunktionen steht keine Frage an
+    /// die Platte und auch nicht `lokaler_loeschbefund`, der sie alle stellt.
+    /// Daneben haelt sie die Kette: der Ausloeser reicht die Frage an
+    /// `loeschbefund_erheben_lassen`, das sie ueber `nebenfaden::fragen_lassen`
+    /// auf den Faden `krk-plattenfrage` stellt und die Antwort an die
+    /// Einzugsmethode gibt, und erst die Einzugsmethode fragt die Stufentafel.
+    ///
+    /// **Was sie nicht sieht:** einen Systemaufruf in einer tiefer gerufenen
+    /// Funktion, und ob die Sperre auf jedem Weg faellt; dass sie die erste
+    /// Handlung der Einzugsmethode ist, prueft die Probe am Rumpf.
+    #[test]
+    fn der_loeschweg_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
+        let datei = diese_datei();
+        let ausloeser = concat!("loeschen_nach_", "rueckfrage");
+        let einzug = concat!("loeschbefund_", "einziehen");
+        let huelle = concat!("loeschbefund_", "erheben_lassen");
+        for name in [
+            ausloeser,
+            einzug,
+            concat!("loeschblatt_", "zeigen"),
+            concat!("loesch", "texte"),
+            concat!("endgueltige_", "loeschtexte"),
+        ] {
+            let rumpf = rumpf(&datei, name);
+            for nadel in [
+                "canonicalize(",
+                concat!("fuehrt_einen_", "papierkorb("),
+                concat!("liegt_auf_", "netzlaufwerk("),
+                concat!("beruehrt_einen_", "arbeitsbaum("),
+                concat!("umfang::", "zaehlen("),
+                concat!("lokaler_", "loeschbefund("),
+                "fs::",
+            ] {
+                assert!(
+                    !rumpf.contains(nadel),
+                    "{name} enthaelt {nadel}: ein Systemaufruf auf dem Hauptfaden"
+                );
+            }
+        }
+        let ausloeserrumpf = rumpf(&datei, ausloeser);
+        for nadel in [
+            concat!("Self::loeschbefund_", "erheben_lassen("),
+            concat!("self.loeschbefund_", "einziehen("),
+            concat!("loeschpruefung", ".set(true)"),
+            concat!("Text::Loeschpruefung", "LaeuftNoch"),
+        ] {
+            assert!(
+                ausloeserrumpf.contains(nadel),
+                "{ausloeser} enthaelt {nadel} nicht: die Frage geht nicht auf den Faden, \
+                 ihre Antwort kommt nicht an oder die Sperre fehlt"
+            );
+        }
+        let huellenrumpf = rumpf(&datei, huelle);
+        for nadel in [
+            concat!("nebenfaden::", "fragen_lassen("),
+            "PLATTENFRAGE",
+            concat!("lokaler_", "loeschbefund("),
+            concat!("Loeschbefund::", "unentschieden()"),
+            concat!("selbst.loeschbefund_", "einziehen("),
+        ] {
+            assert!(
+                huellenrumpf.contains(nadel),
+                "{huelle} enthaelt {nadel} nicht: der Befund entsteht nicht auf dem Faden \
+                 oder kommt nicht an"
+            );
+        }
+        let einzugsrumpf = rumpf(&datei, einzug);
+        assert!(
+            einzugsrumpf.contains(concat!("loeschwarnung::vor_der_", "rueckfrage(")),
+            "{einzug} fragt die Stufentafel nicht"
+        );
+        let sperre = einzugsrumpf
+            .find(concat!("loeschpruefung", ".set(false)"))
+            .unwrap_or_else(|| panic!("{einzug} loest die Sperre nicht"));
+        let erster_ausstieg = ["return", concat!("vor_der_", "rueckfrage(")]
+            .iter()
+            .filter_map(|nadel| einzugsrumpf.find(nadel))
+            .min()
+            .expect("die Einzugsmethode hat keinen Ausgang");
+        assert!(
+            sperre < erster_ausstieg,
+            "{einzug} loest die Sperre nicht vor jedem Ausstieg"
         );
     }
 
@@ -18099,8 +18335,10 @@ mod archivloeschproben {
         }
     }
 
-    /// Ein Gegenstand im Archiv nimmt immer den endgueltigen Weg, und der Rumpf
-    /// des Loeschwegs beantwortet seine Papierkorbfrage am Wert mit nein; was
+    /// Ein Gegenstand im Archiv nimmt immer den endgueltigen Weg, und die
+    /// Einzugsmethode des Loeschwegs (`loeschbefund_einziehen`, seit Schritt 8
+    /// des Plans `261102-1314-…`) beantwortet seine Papierkorbfrage am Wert
+    /// mit nein; was
     /// die Stufenregel daraus macht, haelt
     /// `im_archiv_folgt_die_endgueltige_rueckfrage_ohne_papierkorbfrage` an
     /// ihrer Tafel (`kommandos/loeschwarnung.rs`).
@@ -18118,7 +18356,7 @@ mod archivloeschproben {
             assert_eq!(voll.weg(gewuenscht), Loeschweg::Endgueltig);
         }
         assert!(
-            rumpf(&diese_datei(), "loeschen_nach_rueckfrage")
+            rumpf(&diese_datei(), "loeschbefund_einziehen")
                 .contains("Loeschgegenstand::Archiv { .. } => Erlaubnisbefund::Nein"),
             "ein Archiv beantwortet die Papierkorbfrage nicht am Wert"
         );
@@ -18140,6 +18378,7 @@ mod archivloeschproben {
         let datei = diese_datei();
         for name in [
             "loeschen_nach_rueckfrage",
+            "loeschbefund_einziehen",
             "loeschgegenstand",
             "loeschblatt_zeigen",
             "archiv_loeschtexte",
