@@ -8352,7 +8352,7 @@ mod tests {
     /// Mitglied von [`MERKMALSPROTOKOLL`] traegt, mit ihrer Antwort auf die
     /// Frage aus C4.
     ///
-    /// **Sechsunddreissig sind es, und die Aufstellung ist die Vorlage der
+    /// **Sechsunddreissig waren es auf macOS 15.7.7, und die Aufstellung ist die Vorlage der
     /// Messungen und nicht ihr Nachtrag.** Was hier als `Abgeschaltet`,
     /// `ZweiteTuerZu` oder `SammeltuerZu` steht, fahren die Proben weiter unten
     /// an einer eigens gebauten `NSTextView` nach. Eine Zeile, die etwas
@@ -8382,10 +8382,16 @@ mod tests {
     ///   gedacht ist, damit es Ausfuellvorschlaege machen kann. An KRKs Flaeche
     ///   steht sie ab Werk auf `nil`, es gibt also nichts vorzuschlagen; und
     ///   auch mit Wert traegt erst die Wahl des Nutzers Zeichen ein.
-    /// - Die sechs aus `NSView` und `NSResponder` gehoeren keiner Textklasse und
+    /// - Die sieben aus `NSView` und `NSResponder` gehoeren keiner Textklasse und
     ///   kennen keinen Textspeicher: welche Beruehrungsarten eine Ansicht
-    ///   annimmt, wie ihr Fokusring aussieht, ob Gestenerkenner anspringen, und
-    ///   drei Angaben fuer die Bedienungshilfen. Sie stehen hier, weil die
+    ///   annimmt, wie ihr Fokusring aussieht, ob Gestenerkenner anspringen, ob
+    ///   sie einander ausschliessen, und drei Angaben fuer die Bedienungshilfen.
+    ///   `setExclusiveGestureBehavior:` kam mit macOS 27 (`NSView.h`). Es regelt
+    ///   laut Kopf allein, ob ein zweites Eingabeereignis weitere Gestenerkenner
+    ///   anspringen laesst. Gemessen am 261104 auf 27.2 an einer `NSTextView`: alle
+    ///   drei Werte lassen Text, Automatiken, Sammeltuer und `gesturesEnabled`
+    ///   stehen, und `gesturesEnabled` legt es nicht um, also ist es auch keine
+    ///   weitere Tuer. KRK setzt es nicht. Sie stehen hier, weil die
     ///   Aufzaehlung ueber die ganze Vererbungskette laeuft und nicht, weil sie
     ///   je zur Frage aus C4 gehoert haetten
     ///   (Defekt 260810-0751).
@@ -8498,11 +8504,12 @@ mod tests {
             "setWritingToolsAllowedInputOptions:",
             Einordnung::Gegenstandslos("setWritingToolsBehavior:"),
         ),
-        // Die sechs aus `NSView` und `NSResponder`, die die Aufzaehlung ueber die
+        // Die sieben aus `NSView` und `NSResponder`, die die Aufzaehlung ueber die
         // Vererbungskette mitbringt. Keine fasst einen Textspeicher an.
         ("setAllowedTouchTypes:", Einordnung::Geduldet),
         ("setFocusRingType:", Einordnung::Geduldet),
         ("setGesturesEnabled:", Einordnung::Geduldet),
+        ("setExclusiveGestureBehavior:", Einordnung::Geduldet),
         ("setAccessibilityContainerType:", Einordnung::Geduldet),
         ("setAccessibilityEnabled:", Einordnung::Geduldet),
         ("setAccessibilityRulerMarkerType:", Einordnung::Geduldet),

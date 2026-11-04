@@ -745,8 +745,14 @@ pub fn uebergeben(url: &str) -> bool {
 /// (`nas.local/Daten Ordner`) wird hier prozentkodiert. `URLWithString:`
 /// tut das allein in Programmen, die gegen das SDK von macOS 14 oder spaeter
 /// gebunden sind, und hinge damit an der Bauumgebung. Was auch kodiert keine
-/// URL ergibt, etwa ein Leerzeichen im Rechnernamen oder ein Port aus
-/// Buchstaben, weist schon das Blatt „Verbinden“ ab, ueber dieselbe Funktion.
+/// URL ergibt, etwa ein Port aus Buchstaben, weist schon das Blatt „Verbinden“
+/// ab, ueber dieselbe Funktion.
+///
+/// **Den Rechnernamen prueft KRK selbst** ([`rechnername_taugt`]). Auf macOS
+/// 27.2 kodiert `NSURL` auch ihn und macht aus `smb://nas local/x` die URL
+/// `smb://nas%20local/x` (gemessen am 261104), wo die Probe unten `nil` festhielt.
+/// Gefragt wird das gelesene `host`, damit ein schon kodiert eingetragener Name
+/// (`nas%20local`) denselben Weg nimmt.
 ///
 /// **`#` und `?` kodiert diese Funktion nicht**, denn sie sind gueltige
 /// URL-Zeichen und beenden hier den Pfad. Auf dem Einhaengeweg kommen sie
@@ -756,7 +762,21 @@ pub fn uebergeben(url: &str) -> bool {
 /// und Fragment.
 #[must_use]
 pub fn url_aus(url: &str) -> Option<Retained<NSURL>> {
-    NSURL::URLWithString_encodingInvalidCharacters(&NSString::from_str(url), true)
+    let adresse = NSURL::URLWithString_encodingInvalidCharacters(&NSString::from_str(url), true)?;
+    let rechner = adresse.host().map(|rechner| rechner.to_string());
+    rechner
+        .as_deref()
+        .is_none_or(rechnername_taugt)
+        .then_some(adresse)
+}
+
+/// Ob ein gelesener Rechnername ohne Leerraum, Steuerzeichen und die ASCII-Zeichen
+/// ist, die RFC 3986 in einer URL nirgends kennt. Ein Name jenseits von ASCII
+/// (`büro.local`) bleibt zulaessig, wie ein Unterstrich und eine IPv6-Adresse.
+fn rechnername_taugt(rechner: &str) -> bool {
+    !rechner.chars().any(|zeichen| {
+        zeichen.is_whitespace() || zeichen.is_control() || "<>\"\\^`{|}".contains(zeichen)
+    })
 }
 
 #[cfg(test)]
@@ -787,6 +807,27 @@ mod tests {
         );
         assert_eq!(gezeigt("smb://nas local/x"), None);
         assert_eq!(gezeigt("smb://nas.local:abc/x"), None);
+        for ohne_rechner in [
+            "smb://nas%20local/x",
+            "smb://nas local:445/x",
+            "smb://konto@nas local/x",
+            "smb://nas\tlocal/x",
+            "smb://nas<local/x",
+            "smb://nas\\local/x",
+            "afp://nas local",
+            "http://nas local/",
+        ] {
+            assert_eq!(gezeigt(ohne_rechner), None, "{ohne_rechner:?}");
+        }
+        for mit_rechner in [
+            "smb://nas.local:445/x",
+            "smb://nas_1.local/x",
+            "smb://konto@nas.local/x",
+            "smb://[fe80::1]/x",
+            "smb://büro.local/x",
+        ] {
+            assert!(gezeigt(mit_rechner).is_some(), "{mit_rechner:?}");
+        }
     }
 
     /// `Passwort::preisgeben` hat genau zwei Rufer: [`einhaengen`] dieser

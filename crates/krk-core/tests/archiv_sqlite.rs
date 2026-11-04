@@ -816,8 +816,14 @@ fn ein_tabellenname_mit_anfuehrungszeichen_wird_als_bezeichner_gelesen() {
 /// Probe ihn abbricht oder der `Drop` von [`Schreiber`] ihn beendet, auch
 /// nach einer Panik.
 fn schreiber_bereit(pfad: &Path, sql: &str) -> Schreiber {
+    schreiber_bereit_mit(Some(pfad), sql)
+}
+
+/// Wie [`schreiber_bereit`], und ohne Pfad startet das Programm auf einer
+/// Datenbank im Speicher, sodass es keine Datei beruehrt, bevor `sql` es tut.
+fn schreiber_bereit_mit(pfad: Option<&Path>, sql: &str) -> Schreiber {
     let mut kind = Command::new("/usr/bin/sqlite3")
-        .arg(pfad)
+        .args(pfad)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
@@ -1238,12 +1244,25 @@ fn neben_einem_laufenden_exklusiven_schreiber_mit_leerem_wal_meldet_der_ort_bele
     if shm.exists() {
         fs::remove_file(&shm).expect("-shm geht fort");
     }
-    let schreiber = schreiber_bereit(
-        &datei,
-        "PRAGMA locking_mode = EXCLUSIVE;
-         PRAGMA journal_mode = WAL;
-         INSERT INTO t VALUES (3, 'drei');
-         PRAGMA wal_checkpoint(TRUNCATE);",
+    // **Ohne Datei gestartet und ueber `ATTACH`, denn mit der Datei als Argument
+    // entsteht das Bild nicht mehr.** Der `/usr/bin/sqlite3` von macOS 27.2
+    // (SQLite 3.54.0) liest eine genannte Datenbank schon beim Start, vor der
+    // ersten Anweisung, auch bei einem blossen `SELECT 1`; an einer WAL-Datei
+    // kaeme `locking_mode` also zu spaet, und die `-shm` steht. Ein Programm
+    // ueber die Bibliothek des Systems oeffnet weiter ohne zu lesen und legt im
+    // Sperrmodus `exclusive` keine `-shm` an (gemessen am 261104). `locking_mode`
+    // ohne Schema gilt auch fuer spaeter angehaengte Datenbanken, also steht der
+    // Sperrmodus hier wie dort vor dem ersten Zugriff.
+    let schreiber = schreiber_bereit_mit(
+        None,
+        &format!(
+            "PRAGMA locking_mode = EXCLUSIVE;
+             ATTACH '{}' AS w;
+             PRAGMA w.journal_mode = WAL;
+             INSERT INTO w.t VALUES (3, 'drei');
+             PRAGMA w.wal_checkpoint(TRUNCATE);",
+            datei.display().to_string().replace('\'', "''")
+        ),
     );
     let namen_vorher = ordnernamen(&db_ordner);
     assert_eq!(
@@ -1494,10 +1513,17 @@ fn kind_liest_die_blobtabellen() {
 /// `pfad`; zurueck kommen, ob es gelang, und die Fehlerausgabe. Die Wartezeit
 /// des Programms ist 0, eine fremde Sperre antwortet also sofort mit
 /// "database is locked".
+///
+/// **Genau eine Anweisung im Argument, und das `COMMIT` fehlt mit Absicht.** Der
+/// `/usr/bin/sqlite3` von macOS 27.2 (SQLite 3.54.0) faehrt die Anweisungen
+/// eines Arguments nach einem Fehler weiter, auch unter `-bail`, und meldet
+/// allein den letzten Fehler: aus `BEGIN EXCLUSIVE; COMMIT;` kaeme bei einer
+/// fremden Sperre "cannot commit - no transaction is active". Die Sperre gibt
+/// das Programm mit seinem Ende wieder her.
 fn fremdes_exklusiv(pfad: &Path) -> (bool, String) {
     let ausgabe = Command::new("/usr/bin/sqlite3")
         .arg(pfad)
-        .arg("BEGIN EXCLUSIVE; COMMIT;")
+        .arg("BEGIN EXCLUSIVE;")
         .output()
         .expect("/usr/bin/sqlite3 laesst sich nicht starten");
     (
