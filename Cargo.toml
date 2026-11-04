@@ -826,3 +826,35 @@ opt-level = 3
 
 [profile.dev.package.blake2]
 opt-level = 3
+
+# Die Bibliotheken und Skripte, die waehrend des Baus laufen, bleiben im Profil
+# `release` ungestrippt, sonst bricht der Kreuzbau ab. Ohne diese Zeile setzt
+# Cargo fuer sie `-C strip=debuginfo`. Der Abschnitt gilt allein fuer Bauskripte
+# und Makro-Bibliotheken; `[profile.release]` steht in dieser Datei nicht, und
+# fuer das ausgelieferte Binaerprogramm bleibt es bei Cargos Vorgabe.
+#
+# Gemessen am 261104 auf macOS 27.2 mit Xcode 27.2 und rustc 1.97.1, Host
+# `aarch64-apple-darwin`:
+# - Ohne die Einstellung bricht `cargo build --profile release --package arc-swap
+#   --target x86_64-apple-darwin` in einem frischen Zielordner mit E0463 ab
+#   (`can't find crate for rustversion`, dazu E0252), mit ihr laeuft derselbe Bau
+#   durch. Mit ihr als Umgebungsvariable ist v3.14.2 ausgeliefert (`48ebcb8f`).
+# - `make check` bleibt ohne sie gruen, weil es nicht im Profil `release` und ohne
+#   `--target` baut. Der Defekt zeigt sich erst in der Auslieferung.
+# - Der Abschnitt `__DATA,.rustc` der gestrippten `librustversion-*.dylib` ist
+#   unveraendert, ihre Signatur ist gueltig (`codesign --verify`), und der
+#   Kreuzbau liest ihre Metadaten. `dlopen` weist sie aber ab: `mis-aligned
+#   LINKEDIT string pool`. Die ungestrippte laedt.
+# - Dieselbe Meldung erzeugt `rust-objcopy --strip-debug` aus dem Werkzeugsatz,
+#   auf die ungestrippte Bibliothek angewandt; `/usr/bin/strip -S` erzeugt sie
+#   nicht.
+#
+# Nicht gemessen: ob die Abweisung durch `dlopen` der Weg zu E0463 ist (die
+# Meldung von rustc nennt sie nicht), welches Werkzeug rustc beim Bau dieser
+# Bibliothek ruft, und warum eine kleine Probe-Makrobibliothek mit
+# `-C strip=debuginfo` ladbar bleibt. Ebenso wenig, seit welcher Fassung von
+# macOS, Xcode oder rustc das so ist: ein Zusammenhang mit Xcode 27.2 ist
+# Vermutung, ein zweites Geraet zum Vergleich gab es nicht. Wer die Zeile
+# streichen will, faehrt zuerst den Bau oben im frischen Zielordner.
+[profile.release.build-override]
+strip = "none"
