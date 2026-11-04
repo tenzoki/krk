@@ -231,7 +231,13 @@
 //! und `tableView:acceptDrop:row:dropOperation:` (`NSTableView.h:783` und
 //! `:787`). Jede Zeilenangabe ist am 260818 in
 //! `$(xcrun --show-sdk-path)/System/Library/Frameworks/AppKit.framework/Headers/`
-//! nachgelesen, die neunte am 260819. Die uebrigen Beruehrungen jener Runde
+//! nachgelesen, die neunte am 260819. Seit dem 261102 kommen zwei
+//! Ueberschreibungen an der Tabellenklasse dazu, die den Merker des
+//! Schreibrechts raeumen: `draggingExited:` (`NSDragging.h:121`, ohne
+//! Verfuegbarkeitsangabe und damit seit 10.0) und `draggingEnded:`
+//! (`NSDragging.h:126`, laut dem Kommentar darueber seit 10.5), beide am
+//! 261103 nachgelesen. Ob die Oberklasse sie kennt, fragt die Laufzeit von
+//! Objective-C (`responds_to`), keine Klasse des Systems. Die uebrigen Beruehrungen jener Runde
 //! stehen im Kopf von
 //! [`super::abwurf`], das sie geschlossen fuehrt; hier stehen die, die diese
 //! Datei selbst anspricht.
@@ -1458,6 +1464,72 @@ pub struct QuelleIvars {
     /// `NSInteger`; dass sie innerhalb einer Anwendungssitzung ueberlaeuft, ist
     /// nicht anzunehmen.
     abwurfquellen: RefCell<Option<Abwurfquellen>>,
+    /// Das Schreibrecht des Zielordners unter dem Zeiger, gemessen auf dem
+    /// Faden `krk-plattenfrage` (Plan `261102-1314-…`, Schritt 9; Punkt 3g
+    /// des Befunds `261030-1259-…`).
+    ///
+    /// **Ein Ordner und seine Antwort, je Ziehvorgang.** Fehlt die Antwort fuer
+    /// den Ordner unter dem Zeiger, stellt [`DateifensterQuelle::schreibrecht_gemerkt`]
+    /// die Frage einmal und urteilt bis zur Antwort mit
+    /// [`Schreibrecht::Unbekannt`], das durchlaesst; die naechste
+    /// Zeigerbewegung urteilt mit der Antwort. Wechselt der Zeiger auf einen
+    /// anderen Ordner, ersetzt dessen Frage diesen Merker.
+    ///
+    /// **Die Loeschregel ist die entgegengesetzte von
+    /// [`QuelleIvars::abwurfquellen`]**, und mit Absicht: die Quellen haengen
+    /// an der Ablage und bleiben eine Ziehsitzung lang wahr, das Schreibrecht
+    /// haengt am Ordner und soll bei einem neuen Eintritt frisch gemessen
+    /// werden. Geraeumt wird es, wenn der Zug die Tabelle verlaesst
+    /// (`draggingExited:` an [`Dateiliste`]) oder endet (`draggingEnded:` dort
+    /// und das Loslassen in [`DateifensterQuelle::abwurf_annehmen`]). Die
+    /// Nummer der Ziehsitzung steht trotzdem darin, damit ein zweiter Zug ohne
+    /// eine dieser Kanten nicht die Antwort des ersten liest.
+    schreibrechtmerker: RefCell<Option<Schreibrechtmerker>>,
+}
+
+/// Der Inhalt von [`QuelleIvars::schreibrechtmerker`]: welcher Ordner in
+/// welchem Ziehvorgang gefragt ist, und was die Platte geantwortet hat.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Schreibrechtmerker {
+    /// `NSDraggingInfo::draggingSequenceNumber` des Zuges, fuer den gefragt ist.
+    folge: NSInteger,
+    /// Der Zielordner, nach dessen Schreibrecht gefragt ist.
+    ordner: PathBuf,
+    /// Die Antwort, `None`, solange die Frage auf dem Faden laeuft.
+    antwort: Option<Schreibrecht>,
+}
+
+impl Schreibrechtmerker {
+    /// Ob dieser Merker die Frage nach `ordner` im Zug `folge` traegt.
+    fn gilt_fuer(&self, folge: NSInteger, ordner: &Path) -> bool {
+        self.folge == folge && self.ordner == ordner
+    }
+}
+
+/// Was der Merker fuer den Ordner unter dem Zeiger sagt; eine reine Funktion,
+/// damit die drei Ausgaenge ohne AppKit pruefbar sind.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Merkerstand {
+    /// Die Platte hat geantwortet.
+    Antwort(Schreibrecht),
+    /// Die Frage laeuft; geurteilt wird mit `Unbekannt`.
+    Wartet,
+    /// Fuer diesen Ordner in diesem Zug ist noch nicht gefragt.
+    Fehlt,
+}
+
+fn merkerstand(
+    merker: Option<&Schreibrechtmerker>,
+    folge: NSInteger,
+    ordner: &Path,
+) -> Merkerstand {
+    match merker {
+        Some(merker) if merker.gilt_fuer(folge, ordner) => match merker.antwort {
+            Some(antwort) => Merkerstand::Antwort(antwort),
+            None => Merkerstand::Wartet,
+        },
+        _ => Merkerstand::Fehlt,
+    }
 }
 
 /// Was die Ablage eines Ziehvorgangs traegt, und zu welcher Ziehsitzung sie
@@ -1698,6 +1770,7 @@ impl DateifensterQuelle {
             gemeldeter_abwurfgrund: Cell::new(None),
             beschlossener_vorgang: Cell::new(None),
             abwurfquellen: RefCell::new(None),
+            schreibrechtmerker: RefCell::new(None),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
@@ -5211,10 +5284,14 @@ impl DateifensterQuelle {
     /// dann eine Vorhersage bliebe, denn zwischen der letzten Zeigerbewegung
     /// und dem Loslassen kann der Ordner ein anderer werden. Der Preis stand
     /// hier bis zum 260907 als erster Grund („ein Systemaufruf je
-    /// Zeigerbewegung") und trug nicht: dieselbe Funktion fragt drei Zeilen
-    /// tiefer `abwurf::beschreibbarkeit`, und das macht ueber
+    /// Zeigerbewegung") und trug nicht: dieselbe Funktion fragte damals drei
+    /// Zeilen tiefer nach dem Schreibrecht, und das machte ueber
     /// `resourceValuesForKeys:` genau so einen Aufruf, ebenfalls je Bewegung
     /// (`issues/260826-1327_*_abwurf-pruefen-nennt-einen-systemaufruf-je-zeigerbewegung-zu-teuer-und-macht-fuer-das-schreibrecht-einen.md`).
+    /// Seit dem 261102 stellt dieser Rumpf keinen Systemaufruf mehr: das
+    /// Schreibrecht kommt aus [`Self::schreibrecht_gemerkt`], gemessen auf dem
+    /// Faden `krk-plattenfrage` einmal je Ordner und Zug, und bis zur Antwort
+    /// urteilt die Regel mit `Unbekannt`, das durchlaesst.
     /// Entschieden wird sie deshalb dort, wo sie zu entscheiden ist: in
     /// `krk_core::operation`s `zielpfad`, im Augenblick des Zugriffs und ueber
     /// die Naemlichkeit statt ueber die Schreibweise. Was hier durchrutscht,
@@ -5252,7 +5329,7 @@ impl DateifensterQuelle {
         // fernen Ziel.
         let (schreibrecht, ziel_ist_quellordner) = match &ziel {
             Ort::Lokal(ordner) => (
-                abwurf::beschreibbarkeit(ordner),
+                self.schreibrecht_gemerkt(zug.draggingSequenceNumber(), ordner),
                 quellen.gemeinsamer_ordner.as_deref() == Some(ordner.as_path()),
             ),
             Ort::Fern(_) => (Schreibrecht::Unbekannt, false),
@@ -5318,6 +5395,87 @@ impl DateifensterQuelle {
         abwurf::zeiger(gefaellt)
     }
 
+    /// Das Schreibrecht des lokalen Zielordners, so weit es fuer diesen Zug
+    /// schon gemessen ist (C6, Lage 2; Plan `261102-1314-…`, Schritt 9).
+    ///
+    /// Drei Ausgaenge nach [`merkerstand`]: die gemerkte Antwort; waehrend die
+    /// Frage laeuft [`Schreibrecht::Unbekannt`]; und fehlt fuer diesen Ordner
+    /// in diesem Zug noch jede Frage, wird der Merker auf ihn gestellt, die
+    /// Frage ueber [`Self::schreibrecht_fragen_lassen`] gestartet und
+    /// ebenfalls `Unbekannt` geantwortet. Dass `Unbekannt` durchlaesst, ist
+    /// die Entscheidung `260818-1633_*_gilt-ein-unentscheidbares-schreibrecht-beim-abwurf-als-erlaubnis-oder-als-abweisung.md`,
+    /// umgesetzt in [`abwurfregel::urteil`].
+    ///
+    /// **Dieser Rumpf stellt keinen Systemaufruf**; die Probe
+    /// `der_abwurf_stellt_auf_dem_hauptfaden_keinen_systemaufruf` haelt das.
+    fn schreibrecht_gemerkt(&self, folge: NSInteger, ordner: &Path) -> Schreibrecht {
+        let stand = merkerstand(
+            self.ivars().schreibrechtmerker.borrow().as_ref(),
+            folge,
+            ordner,
+        );
+        match stand {
+            Merkerstand::Antwort(recht) => recht,
+            Merkerstand::Wartet => Schreibrecht::Unbekannt,
+            Merkerstand::Fehlt => {
+                *self.ivars().schreibrechtmerker.borrow_mut() = Some(Schreibrechtmerker {
+                    folge,
+                    ordner: ordner.to_path_buf(),
+                    antwort: None,
+                });
+                self.schreibrecht_fragen_lassen(folge, ordner.to_path_buf());
+                Schreibrecht::Unbekannt
+            }
+        }
+    }
+
+    /// Stellt die Frage nach dem Schreibrecht auf den Faden
+    /// `krk-plattenfrage`; die Huelle des Fadenwegs.
+    ///
+    /// [`abwurf::beschreibbarkeit`] laeuft allein auf dem Faden: sie spricht
+    /// Foundation an und kein AppKit, und der `NSURL` entsteht und vergeht
+    /// dort. Mit der Frage reisen Zug und Ordner als Werte und die Quelle als
+    /// schwacher Verweis, an den Hauptfaden gebunden. **Scheitert der
+    /// Fadenstart**, ist die Antwort `Unbekannt`: gemessen ist nichts, und
+    /// ein unentscheidbares Schreibrecht laesst durch, wie jedes andere.
+    fn schreibrecht_fragen_lassen(&self, folge: NSInteger, ordner: PathBuf) {
+        let gefragt = ordner.clone();
+        let rueckweg = MainThreadBound::new(Weak::from_retained(&self.retain()), self.mtm());
+        nebenfaden::fragen_lassen(
+            PLATTENFRAGE,
+            move || abwurf::beschreibbarkeit(&gefragt),
+            |_fehler| Schreibrecht::Unbekannt,
+            move |mtm, recht| {
+                if let Some(quelle) = rueckweg.get(mtm).load() {
+                    quelle.schreibrecht_einziehen(folge, &ordner, recht);
+                }
+            },
+        );
+    }
+
+    /// Nimmt die Antwort auf die Frage nach dem Schreibrecht entgegen.
+    ///
+    /// **Eingetragen wird sie allein, wenn der Merker noch dieselbe Frage
+    /// traegt**: ist der Zeiger inzwischen ueber einem anderen Ordner, hat der
+    /// Zug die Tabelle verlassen oder ist ein neuer Zug unterwegs, faellt die
+    /// Antwort weg. Ein Urteil faellt hier nicht; das naechste
+    /// `validateDrop:` urteilt mit ihr. **Sie stellt keinen Systemaufruf.**
+    fn schreibrecht_einziehen(&self, folge: NSInteger, ordner: &Path, recht: Schreibrecht) {
+        let mut merker = self.ivars().schreibrechtmerker.borrow_mut();
+        if let Some(merker) = merker.as_mut()
+            && merker.gilt_fuer(folge, ordner)
+        {
+            merker.antwort = Some(recht);
+        }
+    }
+
+    /// Raeumt den Merker des Schreibrechts: der Zug hat die Tabelle
+    /// verlassen oder ist zu Ende. Beim naechsten Eintritt wird frisch
+    /// gemessen.
+    fn schreibrechtmerker_raeumen(&self) {
+        self.ivars().schreibrechtmerker.borrow_mut().take();
+    }
+
     /// Gibt einen angenommenen Abwurf an den Anwendungsdelegierten weiter
     /// (C4 bis C6).
     ///
@@ -5368,6 +5526,9 @@ impl DateifensterQuelle {
     /// nichts geschehen"; AppKit laesst die Einträge dann an ihren Ort
     /// zurueckfliegen.
     fn abwurf_annehmen(&self, zug: &ProtocolObject<dyn NSDraggingInfo>, zeile: NSInteger) -> bool {
+        // Der Zug endet hier, angenommen oder nicht; das Schreibrecht gilt
+        // fuer den naechsten nicht mehr.
+        self.schreibrechtmerker_raeumen();
         let Some(vorgang) = self.ivars().beschlossener_vorgang.get() else {
             return false;
         };
@@ -6288,8 +6449,11 @@ define_class!(
     // - Die Oberklasse `NSTableView` stellt an eine Unterklasse keine
     //   Bedingung, die diese Klasse verletzt: sie ruft den bezeichneten
     //   Erzeuger `initWithFrame:` der Oberklasse, sie ist weder ihre eigene
-    //   Datenquelle noch ihr eigener Delegierter, und ihre eine
-    //   Ueberschreibung ruft die Fassung der Oberklasse.
+    //   Datenquelle noch ihr eigener Delegierter, und jede ihrer drei
+    //   Ueberschreibungen (`menuForEvent:`, seit dem 261102 auch
+    //   `draggingExited:` und `draggingEnded:`, die den Merker des
+    //   Schreibrechts raeumen) ruft die Fassung der Oberklasse, die beiden
+    //   letzten nachdem sie gefragt haben, ob es sie gibt.
     // - Die Klasse implementiert `Drop` nicht.
     #[unsafe(super = NSTableView)]
     #[thread_kind = MainThreadOnly]
@@ -6330,6 +6494,39 @@ define_class!(
             // SAFETY: Die Oberklasse beantwortet dieselbe Nachricht mit
             // demselben Argument und liefert ein optionales Menue.
             unsafe { msg_send![super(self), menuForEvent: ereignis] }
+        }
+
+        // Der Zug verlaesst die Tabelle: der Merker des Schreibrechts faellt
+        // (`QuelleIvars::schreibrechtmerker`), danach antwortet die Oberklasse,
+        // die damit ihre Abwurfmarke abnimmt. Gefragt wird vorher, ob sie die
+        // Nachricht kennt, denn die Methode ist im Protokoll optional.
+        // SAFETY: Die Signatur entspricht der von `NSDraggingDestination`
+        // (`NSDragging.h:121`): ein optionaler Zug, keine Rueckgabe.
+        #[unsafe(method(draggingExited:))]
+        fn zug_verlassen(&self, zug: Option<&ProtocolObject<dyn NSDraggingInfo>>) {
+            if let Some(quelle) = self.ivars().borrow().as_ref().and_then(Weak::load) {
+                quelle.schreibrechtmerker_raeumen();
+            }
+            if NSTableView::class().responds_to(sel!(draggingExited:)) {
+                // SAFETY: Die Oberklasse beantwortet dieselbe Nachricht, eben
+                // gefragt, mit demselben Argument und ohne Rueckgabe.
+                unsafe { msg_send![super(self), draggingExited: zug] }
+            }
+        }
+
+        // Der Zug ist zu Ende, gleich wo und wie: der Merker faellt wie beim
+        // Verlassen, und die Oberklasse antwortet, sofern sie die Nachricht kennt.
+        // SAFETY: Die Signatur entspricht der von `NSDraggingDestination`
+        // (`NSDragging.h:126`): ein Zug, keine Rueckgabe.
+        #[unsafe(method(draggingEnded:))]
+        fn zug_beendet(&self, zug: &ProtocolObject<dyn NSDraggingInfo>) {
+            if let Some(quelle) = self.ivars().borrow().as_ref().and_then(Weak::load) {
+                quelle.schreibrechtmerker_raeumen();
+            }
+            if NSTableView::class().responds_to(sel!(draggingEnded:)) {
+                // SAFETY: wie bei `draggingExited:`.
+                unsafe { msg_send![super(self), draggingEnded: zug] }
+            }
         }
     }
 );
@@ -8212,6 +8409,109 @@ mod tests {
             gegen_den_ort_der_frage(meldung.clone(), Some(ordner), false),
             meldung,
             "eine Meldung haengt nicht am Stand"
+        );
+    }
+
+    /// Der Abwurf stellt auf dem Hauptfaden keinen Systemaufruf (Plan
+    /// `261102-1314-…`, Schritt 9; Punkt 3g des Befunds `261030-1259-…`).
+    ///
+    /// Dieselbe Bauform wie `die_pfadeingabe_stellt_auf_dem_hauptfaden_keinen_systemaufruf`:
+    /// in den Ruempfen des Ausloesers `abwurf_pruefen`, des Merkers und der
+    /// Einzugsmethode steht keine Frage an die Platte, auch nicht die Messung
+    /// des Schreibrechts selbst, die auf den Faden `krk-plattenfrage` gehoert.
+    /// Daneben haelt sie die Kette: der Ausloeser fragt den Merker, der Merker
+    /// reicht eine fehlende Antwort an die Huelle, die Huelle stellt die
+    /// Messung ueber `nebenfaden::fragen_lassen` und gibt die Antwort an die
+    /// Einzugsmethode.
+    ///
+    /// **Was sie nicht sieht:** einen Systemaufruf in einer tiefer gerufenen
+    /// Funktion. `abwurfquellen`, `angebot` und `vorgang_laeuft_fragen` lesen
+    /// die Ablage des Zuges und das Modell und keine Platte.
+    #[test]
+    fn der_abwurf_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
+        let inhalt = diese_datei();
+        let code = vor_dem_pruefmodul(&inhalt);
+        let merker = concat!("schreibrecht_", "gemerkt");
+        let huelle = concat!("schreibrecht_fragen_", "lassen");
+        let einzug = concat!("schreibrecht_", "einziehen");
+
+        for name in ["abwurf_pruefen", merker, einzug] {
+            let rumpf = rumpf_von(code, name);
+            for nadel in [
+                concat!("beschreibbarkeit", "("),
+                "fs::",
+                concat!("resourceValues", "ForKeys"),
+            ] {
+                assert!(
+                    !rumpf.contains(nadel),
+                    "{name} enthaelt {nadel}: ein Systemaufruf auf dem Hauptfaden"
+                );
+            }
+        }
+        assert!(
+            rumpf_von(code, "abwurf_pruefen").contains(&format!("self.{merker}(")),
+            "abwurf_pruefen fragt das Schreibrecht nicht ueber {merker}"
+        );
+        assert!(
+            rumpf_von(code, merker).contains(&format!("self.{huelle}(")),
+            "{merker} reicht eine fehlende Antwort nicht an {huelle}: \
+             sie bleibt auf dem Hauptfaden oder wird nie gemessen"
+        );
+        let huellenrumpf = rumpf_von(code, huelle);
+        for nadel in [
+            concat!("nebenfaden::", "fragen_lassen("),
+            "PLATTENFRAGE",
+            concat!("abwurf::beschreibbarkeit", "("),
+            &format!(".{einzug}("),
+        ] {
+            assert!(
+                huellenrumpf.contains(nadel),
+                "{huelle} enthaelt {nadel} nicht: die Messung geht nicht auf den Faden \
+                 oder ihre Antwort kommt nicht an"
+            );
+        }
+    }
+
+    /// Der Merker des Schreibrechts antwortet je Zug und Ordner, und eine
+    /// fehlende Antwort heisst „fragen“ und nie „nein“.
+    #[test]
+    fn der_merker_des_schreibrechts_gilt_je_zug_und_ordner() {
+        let ordner = PathBuf::from("/Nutzer/k/Ziel");
+        let anderer = PathBuf::from("/Nutzer/k/Anderes");
+        let wartend = Schreibrechtmerker {
+            folge: 7,
+            ordner: ordner.clone(),
+            antwort: None,
+        };
+        let beantwortet = Schreibrechtmerker {
+            antwort: Some(Schreibrecht::Nein),
+            ..wartend.clone()
+        };
+
+        assert_eq!(
+            merkerstand(None, 7, &ordner),
+            Merkerstand::Fehlt,
+            "ohne Merker wird gefragt"
+        );
+        assert_eq!(
+            merkerstand(Some(&wartend), 7, &ordner),
+            Merkerstand::Wartet,
+            "eine laufende Frage wird kein zweites Mal gestellt"
+        );
+        assert_eq!(
+            merkerstand(Some(&beantwortet), 7, &ordner),
+            Merkerstand::Antwort(Schreibrecht::Nein),
+            "die Antwort der Platte urteilt bei der naechsten Zeigerbewegung"
+        );
+        assert_eq!(
+            merkerstand(Some(&beantwortet), 7, &anderer),
+            Merkerstand::Fehlt,
+            "ein anderer Ordner erbt die Antwort des vorigen"
+        );
+        assert_eq!(
+            merkerstand(Some(&beantwortet), 8, &ordner),
+            Merkerstand::Fehlt,
+            "ein neuer Zug erbt die Antwort des vorigen"
         );
     }
 }

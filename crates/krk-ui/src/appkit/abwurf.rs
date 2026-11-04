@@ -78,6 +78,29 @@
 //! demselben Weg, den F5 und F6 heute gehen; ein zweiter Weg dafuer entsteht
 //! nicht.
 //!
+//! # Auf welchem Faden das Schreibrecht gemessen wird
+//!
+//! **[`beschreibbarkeit`] laeuft seit dem 261102 auf dem Faden
+//! `krk-plattenfrage` und nicht mehr auf dem Hauptfaden** (Plan
+//! `261102-1314-plan-dateisystemfragen-vom-hauptfaden-nehmen.md`, Schritt 9;
+//! Punkt 3g des Befunds `261030-1259-…`). Sie spricht allein Foundation an und
+//! kein AppKit, also darf sie das. Die Quelle der Dateiliste haelt je Zug einen
+//! Merker aus Zielordner und Antwort (`QuelleIvars::schreibrechtmerker` in
+//! `super::tabelle`): fehlt die Antwort fuer den Ordner unter dem Zeiger,
+//! startet sie die Frage einmal und urteilt bis zur Antwort mit
+//! [`Schreibrecht::Unbekannt`], das durchlaesst; die naechste Zeigerbewegung
+//! urteilt mit der Antwort. Der Merker faellt, wenn der Zug die Tabelle
+//! verlaesst oder endet.
+//!
+//! **Die Zusage „ein frischer `NSURL` je Messung“ bleibt damit stehen**, und
+//! gemessen wird **einmal je Ordner und Zug** statt je Zeigerbewegung. Der
+//! Preis ist eine Luecke: bis die Antwort da ist, nimmt der Zeiger auch ueber
+//! einem schreibgeschuetzten Ordner an, und ein Abwurf in dieser Spanne steht
+//! danach mit seinem Grund in der Abschlussliste, auf dem Weg des vorigen
+//! Absatzes. Kehrt der Zeiger innerhalb desselben Zuges zu einem Ordner zurueck,
+//! nachdem er ueber einem anderen stand, wird neu gefragt, denn der Merker traegt
+//! einen Ordner und keine Liste.
+//!
 //! # Wer die vier Funktionen ruft
 //!
 //! Alle vier Aufrufer stehen seit Schritt 10 der Runde 13 und liegen in
@@ -89,6 +112,10 @@
 //! Ausnahme ihr Ablaufdatum selbst durchsetzt. Mit dem Aufrufer wurde die
 //! Erwartung unerfuellt, der Bau hielt unter `-D warnings` an, und die Zeilen
 //! sind gefallen.
+//!
+//! Seit dem 261102 ruft `abwurf_pruefen` [`beschreibbarkeit`] nicht mehr
+//! selbst; ihr Rufer ist `DateifensterQuelle::schreibrecht_fragen_lassen`, und
+//! sie laeuft im Abschluss, den jener auf den Faden `krk-plattenfrage` stellt.
 //!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
@@ -220,8 +247,10 @@ pub fn sorten() -> Retained<NSArray<NSPasteboardType>> {
 /// `fileURLWithPath:isDirectory:` mit `true`. `fileURLWithPath:` ohne die Art
 /// fragte das Dateisystem, ob der Pfad ein Ordner ist, und dieselbe Antwort
 /// steht schon im Namen des Arguments. Die Frage nach dem Schreibrecht selbst
-/// (`resourceValuesForKeys:error:`) stellt diese Funktion weiter auf dem
-/// Faden ihres Aufrufers.
+/// (`resourceValuesForKeys:error:`) stellt diese Funktion auf dem Faden
+/// ihres Aufrufers, und ihr einziger Rufer stellt sie auf den Faden
+/// `krk-plattenfrage` (Modulkopf, „Auf welchem Faden das Schreibrecht
+/// gemessen wird“).
 ///
 /// **Mit dieser Funktion ist die `expect(dead_code)`-Ausnahme an
 /// [`Schreibrecht`] gefallen**, denn hier entstehen die drei Werte. Der
