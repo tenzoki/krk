@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "8a237f3d-3927-4aac-8b03-1afe292ad53d",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261102-1304-dateisystemfragen-vom-hauptfaden-nehmen/issues/261104-2001-die-liste-der-uebergaben-in-der-regel-laesst-setdirectoryurl-und-readobjects-aus.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "f93c725e-7de5-4925-9723-bd628421352d",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261102-1304-dateisystemfragen-vom-hauptfaden-nehmen/issues/261104-1959-eine-spaete-antwort-der-pfadeingabe-stellt-den-gerade-sichtbaren-tab-um.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

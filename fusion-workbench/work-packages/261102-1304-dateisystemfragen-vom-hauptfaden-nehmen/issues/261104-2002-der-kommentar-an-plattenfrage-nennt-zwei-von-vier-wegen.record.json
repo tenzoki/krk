@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "f0a9f48a-6542-4c12-a54d-6eeb8b8a0e80",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261102-1304-dateisystemfragen-vom-hauptfaden-nehmen/issues/261104-2002-der-kommentar-an-plattenfrage-nennt-zwei-von-vier-wegen.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

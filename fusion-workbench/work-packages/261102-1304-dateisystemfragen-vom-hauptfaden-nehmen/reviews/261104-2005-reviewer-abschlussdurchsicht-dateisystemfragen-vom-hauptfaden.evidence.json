@@ -1,0 +1,28 @@
+{
+  "schema": "fusion.evidence/v1",
+  "id": "05f7f8d5-7e2d-4898-bea1-5327dcb4cd27",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "subject": {
+    "git_tree": "e4eec76c76acbb41e8e0a8dcf462394faaa4aeed",
+    "git_range": null
+  },
+  "brief_revision": "sha256:6953bcb58cbdc7eabbfda98f0a6b32cda16fe16d477c12931a12a91c5151eaa7",
+  "plan_revision": "sha256:cc21bfe172599f9720b3861bb447c753471836c9cbb203f442071cbe836d8b61",
+  "role": {
+    "profile": "reviewer",
+    "version": "13.3.7"
+  },
+  "host": "claude-code",
+  "execution_policy": "claude-guided",
+  "verdict": "revise",
+  "uncertainties": [],
+  "checks": [],
+  "report": {
+    "path": "work-packages/261102-1304-dateisystemfragen-vom-hauptfaden-nehmen/reviews/261104-2005-reviewer-abschlussdurchsicht-dateisystemfragen-vom-hauptfaden.md",
+    "sha256": "sha256:a05b0b4cbe9a7c64afbe34f0739a1acdd639294adf6ec0168d1d794a79dee138",
+    "kind": "review"
+  },
+  "predecessor": null,
+  "accepted_at": "2026-11-04T18:59:02Z",
+  "extensions": {}
+}

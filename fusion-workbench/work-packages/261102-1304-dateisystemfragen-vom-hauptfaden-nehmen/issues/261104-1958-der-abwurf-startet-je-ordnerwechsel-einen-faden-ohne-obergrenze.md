@@ -1,0 +1,15 @@
+Der Abwurf startet je Ordnerwechsel unter dem Zeiger einen Faden, ohne Obergrenze und auf einer hängenden Freigabe ohne Ende
+---
+Schwere: Mittel. Seit `63046f0d`, ausgeliefert in 3.14.2. Der Merker trägt einen Ordner, und jeder Wechsel startet eine neue Frage, auch wenn die vorige noch läuft.
+---
+**Filed by:** reviewer, Kai Stalmann <ks@qantr.com>
+
+**Beleg.** `crates/krk-ui/src/appkit/tabelle.rs:5411` `schreibrecht_gemerkt`: im Ausgang `Merkerstand::Fehlt` ersetzt es den Merker und ruft `schreibrecht_fragen_lassen`, das je Aufruf über `nebenfaden::fragen_lassen` einen Faden startet (`nebenfaden.rs`, `std::thread::Builder::spawn`). `merkerstand` antwortet `Fehlt` für jeden Ordner außer dem einen im Merker. Der Modulkopf `crates/krk-ui/src/appkit/abwurf.rs` sagt es selbst: „Kehrt der Zeiger innerhalb desselben Zuges zu einem Ordner zurück, nachdem er über einem anderen stand, wird neu gefragt, denn der Merker trägt einen Ordner und keine Liste.“ Der Plan sagte in Schritt 9 „einmal je Ordner“; gebaut ist einmal je Eintritt in einen Ordner. `draggingExited:` räumt den Merker ebenfalls, also fragt auch jeder neue Eintritt in die Tabelle neu.
+
+**Fehlerbild, aus dem Quelltext abgeleitet.** Der Nutzer zieht Dateien über eine Liste von Unterordnern auf einer hängenden Freigabe. Jede überstrichene Ordnerzeile startet einen Faden, der in `resourceValuesForKeys:error:` bis zum Zeitlimit des Dateisystems wartet. Pendelt der Zeiger, kommen dieselben Ordner erneut dran. Die Zahl der wartenden Fäden wächst mit der Zeigerbewegung. Scheitert irgendwann der Fadenstart, urteilt der Abwurf mit `Unbekannt`, aber dieselbe Grenze trifft dann die anderen Fadenwege des Programms. Auf einer gesunden Platte sind es kurzlebige Fäden, auch dort einer je überstrichener Zeile. **Nicht gemessen:** weder die Wartezeit in `resourceValuesForKeys:` noch die Zahl der Fäden.
+
+**Der eigentliche Zweck des Pakets ist davon nicht berührt:** die Ereignisschleife läuft weiter. Geprüft habe ich auch, dass keine alte Antwort einem falschen Ordner gilt (`schreibrecht_einziehen` vergleicht Zug und Ordner) und dass kein `RefCell`-Konflikt entsteht (jede Ausleihe endet vor dem nächsten Aufruf, der Rückweg läuft über die Hauptschlange und nie verschachtelt).
+
+**Richtung.** Eine laufende Frage je Zug: solange eine läuft, startet keine zweite, und wenn sie zurückkommt, wird der dann aktuelle Ordner gefragt. Oder eine kleine Tafel Ordner → Stand je Zug, wie der Plan es sagte. Das erste begrenzt auch den Fall, in dem die Frage hängt.
+
+**Abnahme.** Eine reine Probe am Merker: Bei laufender Frage führt ein Wechsel über beliebig viele Ordner zu keinem weiteren Start, und nach der Antwort urteilt der Abwurf am aktuellen Ordner. Der Modulkopf von `abwurf.rs` nennt das Verhalten.

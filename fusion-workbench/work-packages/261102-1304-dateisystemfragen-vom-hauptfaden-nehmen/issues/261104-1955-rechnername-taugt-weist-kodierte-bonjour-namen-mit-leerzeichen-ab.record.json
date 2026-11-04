@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "540dd9fb-5bd8-4044-aa28-51adb3fff7b7",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261102-1304-dateisystemfragen-vom-hauptfaden-nehmen/issues/261104-1955-rechnername-taugt-weist-kodierte-bonjour-namen-mit-leerzeichen-ab.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

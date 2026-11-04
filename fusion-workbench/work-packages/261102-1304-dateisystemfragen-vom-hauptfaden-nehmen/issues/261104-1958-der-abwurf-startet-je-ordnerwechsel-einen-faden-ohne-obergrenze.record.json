@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "a8b7a71d-6288-4535-b1e4-0d9508d3b766",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261102-1304-dateisystemfragen-vom-hauptfaden-nehmen/issues/261104-1958-der-abwurf-startet-je-ordnerwechsel-einen-faden-ohne-obergrenze.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}
