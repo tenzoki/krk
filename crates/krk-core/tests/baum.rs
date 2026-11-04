@@ -2044,9 +2044,11 @@ fn known_hosts_hat_genau_einen_schreiber() {
 /// dem Selektor) und eine Adresse, die auf anderem Weg entsteht, etwa ueber
 /// `URLWithString:` mit einem `file://`-Text. Ebenso wenig die Fragen, die eine
 /// fertige Adresse an die Platte stellt (`resourceValuesForKeys:error:`,
-/// `URLForDirectory:…`); sie laufen nach Schritt 4 des Plans
-/// `261102-1314-plan-dateisystemfragen-vom-hauptfaden-nehmen` noch auf dem
-/// Hauptfaden.
+/// `URLForDirectory:…`). Die des Loeschwegs und des Abwurfs laufen seit den
+/// Schritten 8 und 9 des Plans
+/// `261102-1314-plan-dateisystemfragen-vom-hauptfaden-nehmen` auf dem Faden
+/// `krk-plattenfrage`; `volumes::eingehaengte` ruft `resourceValuesForKeys:error:`
+/// weiter auf dem Hauptfaden, und das sagt diese Probe so wenig wie jenes.
 #[test]
 fn kein_betriebscode_der_oberflaeche_baut_eine_dateiadresse_ohne_isdirectory() {
     let nadel = concat!("fileURLWith", "Path(");
