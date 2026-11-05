@@ -1137,9 +1137,8 @@ pub enum Text {
     /// `frage_und_erlaeuterung`: der Absatz zu den Ordnern; `{ordner}` (ein
     /// `Zahlwort::Ordner`).
     LoeschenDarunterOrdner,
-    /// `blattmeldung::satz`: die abgewiesene Taste waehrend eines Blattes; und
-    /// `loeschbefund_einziehen`: die Antwort des Fadens, die auf ein stehendes
-    /// Blatt trifft und verfaellt.
+    /// Ein Anlass trifft auf ein stehendes Blatt und verfaellt: eine abgewiesene
+    /// Taste, oder die Antwort eines Fadens, die ein weiteres Blatt oeffnen wuerde.
     BlattSteht,
     /// `pfadeingabe::pruefen`; `{pfad}`.
     PfadNichtAbsolut,

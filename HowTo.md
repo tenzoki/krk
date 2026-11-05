@@ -1497,9 +1497,10 @@ daneben, welches Dateifenster das aktive ist.
 Die Leiste ganz links führt eine Liste mit bis zu drei Überschriften. Oben die
 Lesezeichen aus `bookmarks.toml`, in der Reihenfolge, in der sie dort stehen;
 darunter „Verbindungen“, ebenfalls aus `bookmarks.toml`, aber nur, sobald dort
-mindestens eine Verbindung steht; unten „Geräte und Orte", die bei jedem Aufbau
-frisch vom System kommen und nie abgelegt werden. Wie eine Verbindung entsteht
-und was ein Klick auf sie tut, steht unter „Verbindungen“ im Abschnitt über den
+mindestens eine Verbindung steht; unten „Geräte und Orte", die KRK beim System
+erfragt und nie ablegt: die Datenträger kommen kurz nach dem Start hinzu, und
+antwortet eine Platte nicht, bleibt die Liste beim letzten Stand. Wie eine
+Verbindung entsteht und was ein Klick auf sie tut, steht unter „Verbindungen“ im Abschnitt über den
 Notizordner.
 
 | Taste | Wirkung |

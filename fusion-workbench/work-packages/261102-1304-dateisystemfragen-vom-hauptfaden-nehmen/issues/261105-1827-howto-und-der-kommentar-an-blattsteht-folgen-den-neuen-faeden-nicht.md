@@ -11,3 +11,6 @@ Schwere: Niedrig. Zwei Stellen beschreiben den Stand vor dem Umbau oder lassen e
 **Richtung.** Den Satz in `HowTo.md` auf den Ablauf bringen, ohne Fachwort. Den dritten Rufer ergänzen, oder im Kommentar die Art der Lage statt der Rufer nennen, wie es `541fcd4b` an `PLATTENFRAGE` getan hat.
 
 **Abnahme.** Beide Stellen lesen sich gegen den Code richtig. Am Wortlaut hängt keine Probe, die rot würde; `grep -n 'BlattSteht' crates/krk-ui/src/appkit/anwendung.rs` zeigt die Rufer.
+
+---
+Resolved: `HowTo.md` `## Lesezeichen` sagt zu „Geräte und Orte“ den Ablauf: die Datenträger kommen kurz nach dem Start hinzu, und antwortet eine Platte nicht, bleibt die Liste beim letzten Stand. Der Kommentar an `Text::BlattSteht` (`crates/krk-core/src/sprache/schluessel.rs`) nennt die Art der Lage statt der Rufer.
