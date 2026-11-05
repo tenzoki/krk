@@ -191,6 +191,12 @@ use crate::leistenmodell::Ort;
 ///
 /// Ein Datentraeger ohne lesbaren Pfad wird uebergangen und nicht geraten,
 /// ebenfalls wie dort.
+///
+/// **Sie laeuft auf einem Faden und nicht auf dem Hauptfaden**: sie geht ueber
+/// alle Datentraeger, also auch ueber den, der gerade nicht antwortet.
+/// Gestellt allein von `Anwendungsdelegierter::geraete_aufzaehlen_lassen`; sie
+/// spricht allein Foundation an und kein AppKit, also darf sie das, wie
+/// `eingehaengte_freigabe` in [`super::verbinden`].
 #[must_use]
 pub fn eingehaengte() -> Vec<Ort> {
     // SAFETY: Ein Fremdsymbol von Foundation, der Schluesselname des

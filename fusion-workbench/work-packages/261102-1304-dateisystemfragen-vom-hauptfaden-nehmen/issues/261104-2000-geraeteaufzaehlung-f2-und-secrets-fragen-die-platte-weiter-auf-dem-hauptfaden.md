@@ -15,3 +15,6 @@ Schwere: Mittel. Die Stellen liegen außerhalb des Sammeldefekts. Sie sind die F
 **Richtung.** Der Nutzer entscheidet über den Umfang. Für Punkt 1 liegt der Mechanismus bereit, und die Liste kommt dann über die Hauptschlange an `geraete_uebernehmen`. Die Punkte 2 und 3 hängen an der Frage, ob ein Notizordner auf einer Freigabe zu den zugesagten Fällen gehört.
 
 **Abnahme.** Jede der drei Stellen läuft auf einem Nebenfaden mit einer Rumpfprobe oder steht mit Namen als Rest in der Regeldatei. Der Satz zu `eingehaengte` in `baum.rs` und die Regel sagen dasselbe.
+
+---
+Resolved: 261105. Alle drei Stellen auf dem Faden `krk-plattenfrage`, je mit Rumpfprobe: `eingehaengte` über `Geraetefrage` (eine Frage, eine Nachfrage; der Start zeigt zuerst allein das Benutzerverzeichnis), F2 über `notizordner_erheben` und `notizordner_einziehen` (Nummer und `Notizordnerstand`), die Größe von `secrets.txt` über `geheimnisgroesse_fragen_lassen` und `geheimnisgroesse_einziehen` (Nummer und `Oeffnungsstand`). Als Rest mit Namen in der Regeldatei: die Lesezeichenprüfung der Leiste, `sonderdatei_genau` bei einer dritten Schreibweise, der Helfer von „Verbinden…“ und die Sperre am Vorgabeort. Im Programm und an einer hängenden Freigabe nicht gefahren.

@@ -2047,8 +2047,9 @@ fn known_hosts_hat_genau_einen_schreiber() {
 /// `URLForDirectory:…`). Die des Loeschwegs und des Abwurfs laufen seit den
 /// Schritten 8 und 9 des Plans
 /// `261102-1314-plan-dateisystemfragen-vom-hauptfaden-nehmen` auf dem Faden
-/// `krk-plattenfrage`; `volumes::eingehaengte` ruft `resourceValuesForKeys:error:`
-/// weiter auf dem Hauptfaden, und das sagt diese Probe so wenig wie jenes.
+/// `krk-plattenfrage`, und seit dem 261105 auch `volumes::eingehaengte` mit ihrem
+/// `resourceValuesForKeys:error:`. Das sagt diese Probe so wenig wie jenes, sondern
+/// `die_geraeteaufzaehlung_stellt_auf_dem_hauptfaden_keinen_systemaufruf`.
 #[test]
 fn kein_betriebscode_der_oberflaeche_baut_eine_dateiadresse_ohne_isdirectory() {
     let nadel = concat!("fileURLWith", "Path(");

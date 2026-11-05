@@ -530,6 +530,7 @@ use std::rc::Rc;
 use std::time::{Duration, Instant};
 
 use block2::RcBlock;
+use dispatch2::MainThreadBound;
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
@@ -585,6 +586,7 @@ use super::eintragsansicht::{
     self, Eintragsansicht, Eintragsart, Trenntextsicht, Zeilen, Zelle, Zellenwege,
 };
 use super::koordinaten;
+use super::nebenfaden::{self, PLATTENFRAGE};
 use super::nummernspalte::{self, Nummernspalte};
 use super::quicknote::Quicknote;
 use super::statuszeile;
@@ -2539,6 +2541,24 @@ fn oeffnungsweg(
     }
 }
 
+/// Woran die Antwort auf die Groesse von `secrets.txt` ihre Frage wiedererkennt:
+/// beim Fragen festgehalten und bei der Antwort gegen den Stand von dann
+/// gehalten.
+///
+/// **Sie gilt, solange der Editor beim Stand der Frage ist:** seitdem wurde nichts
+/// geoeffnet oder neu geladen, und er haelt dieselbe Datei in derselben
+/// Betriebsart. Sonst waere die Datei inzwischen gewechselt, und das Blatt oder
+/// der Ladeauftrag zoege den Editor von ihr weg.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Oeffnungsstand {
+    /// Die Nummer des juengsten Oeffnens.
+    nummer: u64,
+    /// Die gehaltene Datei.
+    gehalten: Option<PathBuf>,
+    /// Ob die Quicknote offen ist.
+    quicknote: bool,
+}
+
 /// Die Flaeche, die eine Form zeigt.
 #[must_use]
 fn flaeche_der_form(form: Editorform) -> Flaeche {
@@ -2936,6 +2956,8 @@ pub struct EditorIvars {
     /// [`Editorbereich::zurueckgehaltenes_uebernehmen`] kehrt ohne
     /// zurueckgehaltene Datei um.
     herkunft: Cell<Oeffnungsherkunft>,
+    /// Die Nummer des juengsten Oeffnens ([`Oeffnungsstand`]).
+    oeffnungsnummer: Cell<u64>,
     /// Der geteilte Griff der Erkennung des Notizordners, derselbe, den das
     /// Modell haelt.
     ///
@@ -3264,6 +3286,7 @@ impl Editorbereich {
             takt: RefCell::new(None),
             melden: RefCell::new(None),
             herkunft: Cell::new(Oeffnungsherkunft::Befehl),
+            oeffnungsnummer: Cell::new(0),
             einfaerbung: RefCell::new(None),
             einfaerbungsstand: RefCell::new(None),
             einfaerbung_erneut: Cell::new(false),
@@ -4888,11 +4911,17 @@ impl Editorbereich {
     /// und Inode, damit auch eine dritte Schreibweise des Heimordners ueber das
     /// Blatt geht und nie ohne PIN in den Editor kommt.
     ///
-    /// **Die Groesse ist ein `stat(2)` auf dem Hauptfaden**, einer je Oeffnen
-    /// dieser einen Datei und keiner fuer jede andere. Gelesen wird damit
-    /// nichts; entschieden wird allein die Form des Blattes, und das Modell
-    /// entscheidet beim Lesen noch einmal an den gelesenen Bytes.
+    /// **Die Groesse ist ein `stat(2)` auf dem Faden**
+    /// ([`Self::geheimnisgroesse_fragen_lassen`]), einer je Oeffnen dieser einen
+    /// Datei und keiner fuer jede andere. Gelesen wird damit nichts; entschieden
+    /// wird allein die Form des Blattes, und das Modell entscheidet beim Lesen
+    /// noch einmal an den gelesenen Bytes. **Die genaue Erkennung darueber steht
+    /// weiter auf dem Hauptfaden**, und fuer eine dritte Schreibweise ist sie ein
+    /// `stat(2)` dort, wie beim Sichern; das ist ein benannter Rest in
+    /// `.claude/rules/coding-was-man-nicht-sieht.md`.
     pub fn datei_oeffnen(&self, pfad: &Path, herkunft: Oeffnungsherkunft) {
+        // Jedes Oeffnen ueberholt eine Frage, die noch nach der Groesse laeuft.
+        self.oeffnung_ueberholen();
         // Erst die laufende Zelle, dann der Wechsel: ein Oeffnen nach einer
         // abgewiesenen Zelle naehme ihr den getippten Text. Die Herkunft wird
         // trotzdem vor dem Melden gesetzt, weil `melden` sie liest.
@@ -4913,9 +4942,6 @@ impl Editorbereich {
         let sonderdatei =
             heimgriff::lesen(&self.ivars().heim).and_then(|heim| heim.sonderdatei_genau(pfad));
         let haelt_bereits = self.ivars().modell.borrow().haelt_bereits(pfad);
-        // Das Mittel des einen Ladeauftrags unten: keines fuer jede andere
-        // Datei, der gemerkte Schluessel fuer `secrets.txt`, wenn er gilt.
-        let mut mittel = None;
         match oeffnungsweg(herkunft, sonderdatei, haelt_bereits) {
             Oeffnungsweg::Laden => {}
             Oeffnungsweg::Unterlassen => return,
@@ -4924,32 +4950,108 @@ impl Editorbereich {
                 // das noch laeuft, gehoert niemandem mehr und kaeme sonst
                 // hinter dem Blatt an.
                 self.ivars().modell.borrow_mut().laden_aufgeben();
-                let groesse = std::fs::metadata(pfad).ok().map(|daten| daten.len());
-                // Ein gemerkter Schluessel oeffnet ohne Blatt, ausser an einer
-                // leeren Datei (Entscheidungen 3 und 6 des Plans der sechs
-                // Felder); gefragt wird er erst hier, damit ein Oeffnen ohne
-                // `secrets.txt` den Merker nicht beruehrt.
-                let gemerkt = tresorweg::gemerkter_schluessel(&self.ivars().merker);
-                match geheimnisweg(groesse, gemerkt) {
-                    Geheimnisweg::PinErfragen(form) => {
-                        self.melden(Ladeausgang::PinVerlangt {
-                            pfad: pfad.to_path_buf(),
-                            form,
-                        });
-                        return;
-                    }
-                    Geheimnisweg::Mittel(gemerkt) => mittel = Some(gemerkt),
-                }
+                self.geheimnisgroesse_fragen_lassen(pfad);
+                return;
             }
         }
-        // Ohne Mittel: fuer jede andere Datei der gewoehnliche Weg, und fuer
-        // die schon gehaltene `secrets.txt` die Abkuerzung `SchonOffen`, denn
-        // ihr Schluessel gilt, solange die Datei offen ist. Mit dem gemerkten
-        // Schluessel: `secrets.txt` ohne Blatt.
+        // Fuer jede andere Datei der gewoehnliche Weg, und fuer die schon
+        // gehaltene `secrets.txt` die Abkuerzung `SchonOffen`, denn ihr Schluessel
+        // gilt, solange die Datei offen ist.
+        self.ladeauftrag_erteilen(pfad, None);
+    }
+
+    /// Erteilt den einen Ladeauftrag eines Oeffnens und startet den Takt, falls
+    /// gelesen wird.
+    fn ladeauftrag_erteilen(&self, pfad: &Path, mittel: Option<Oeffnungsmittel>) {
         let sofort = self.ivars().modell.borrow_mut().oeffnen(pfad, mittel);
         match sofort {
             Some(ausgang) => self.melden(ausgang),
             None => self.takt_starten(),
+        }
+    }
+
+    /// Ueberholt eine Frage nach der Groesse von `secrets.txt`, die noch laeuft.
+    fn oeffnung_ueberholen(&self) {
+        let nummer = &self.ivars().oeffnungsnummer;
+        nummer.set(nummer.get() + 1);
+    }
+
+    /// Der Stand, gegen den die Antwort auf die Groesse gilt ([`Oeffnungsstand`]).
+    /// Fragt allein das Modell.
+    fn oeffnungsstand(&self) -> Oeffnungsstand {
+        Oeffnungsstand {
+            nummer: self.ivars().oeffnungsnummer.get(),
+            gehalten: self.ivars().modell.borrow().pfad().map(Path::to_path_buf),
+            quicknote: self.quicknote_offen(),
+        }
+    }
+
+    /// Fragt auf dem Faden [`PLATTENFRAGE`] nach der Groesse von `secrets.txt`;
+    /// die Antwort zieht [`Self::geheimnisgroesse_einziehen`] ein (Defekt
+    /// `261104-2000-geraeteaufzaehlung-f2-und-secrets-fragen-die-platte-weiter-auf-dem-hauptfaden.md`).
+    ///
+    /// Die Datei kann auf einer Freigabe liegen, seit sich der Notizordner dorthin
+    /// legen laesst. Ohne Antwort geschieht nichts, und auch ein weiteres F4 auf
+    /// sie startet einen weiteren Faden; **eine Obergrenze dafuer gibt es nicht**.
+    /// Der Nutzer arbeitet solange mit dem weiter, was der Editor haelt.
+    ///
+    /// **Ohne Faden oder nach einer Panik gilt die Groesse als unbekannt**, wie
+    /// nach einem gescheiterten `stat(2)`; das Blatt und das Modell entscheiden
+    /// damit wie bisher ([`geheimnisweg`]).
+    fn geheimnisgroesse_fragen_lassen(&self, pfad: &Path) {
+        let gefragt = pfad.to_path_buf();
+        let rueckweg = MainThreadBound::new(
+            (
+                Weak::from_retained(&self.retain()),
+                pfad.to_path_buf(),
+                self.oeffnungsstand(),
+            ),
+            self.mtm(),
+        );
+        nebenfaden::fragen_lassen(
+            PLATTENFRAGE,
+            move || std::fs::metadata(&gefragt).ok().map(|daten| daten.len()),
+            |_fehler| None,
+            move |mtm, groesse| {
+                let (editor, pfad, stand) = rueckweg.get(mtm);
+                if let Some(editor) = editor.load() {
+                    editor.geheimnisgroesse_einziehen(pfad, stand, groesse);
+                }
+            },
+        );
+    }
+
+    /// Nimmt die Groesse von `secrets.txt` auf dem Hauptfaden entgegen und
+    /// entscheidet, was [`Self::datei_oeffnen`] im Zweig des PIN-Bedarfs tut.
+    ///
+    /// **Eine ueberholte Antwort faellt ohne ein Wort** ([`Oeffnungsstand`]): der
+    /// letzte Befehl des Nutzers gilt inzwischen etwas anderem. Ein Ladeauftrag
+    /// und ein Blatt entstehen dann nicht. **Bleibt der Stand gleich, geht das
+    /// Blatt auch spaet noch auf**, wenn der Nutzer im Dateifenster weitergegangen
+    /// ist und dort nichts getan hat, was der Editor sieht; ob dann schon ein
+    /// anderes Blatt steht, fragt `pin_erfragen` im Delegierten.
+    fn geheimnisgroesse_einziehen(
+        &self,
+        pfad: &Path,
+        gefragt: &Oeffnungsstand,
+        groesse: Option<u64>,
+    ) {
+        if *gefragt != self.oeffnungsstand() {
+            return;
+        }
+        // Ein gemerkter Schluessel oeffnet ohne Blatt, ausser an einer
+        // leeren Datei (Entscheidungen 3 und 6 des Plans der sechs
+        // Felder); gefragt wird er erst hier, damit ein Oeffnen ohne
+        // `secrets.txt` den Merker nicht beruehrt.
+        let gemerkt = tresorweg::gemerkter_schluessel(&self.ivars().merker);
+        match geheimnisweg(groesse, gemerkt) {
+            Geheimnisweg::PinErfragen(form) => {
+                self.melden(Ladeausgang::PinVerlangt {
+                    pfad: pfad.to_path_buf(),
+                    form,
+                });
+            }
+            Geheimnisweg::Mittel(gemerkt) => self.ladeauftrag_erteilen(pfad, Some(gemerkt)),
         }
     }
 
@@ -4972,6 +5074,7 @@ impl Editorbereich {
     /// hat sie vor der Frage nach der PIN uebernommen, und solange das Blatt
     /// steht, bearbeitet niemand eine.
     pub fn geheimnisse_oeffnen(&self, pfad: &Path, pin: Pin) {
+        self.oeffnung_ueberholen();
         self.ivars().herkunft.set(Oeffnungsherkunft::Befehl);
         let sofort = self
             .ivars()
@@ -5194,6 +5297,7 @@ impl Editorbereich {
     /// **Die laufende Zelle wird nicht uebernommen**: ihr Text ist Teil des
     /// Standes, den der Nutzer eben verworfen hat.
     pub fn neu_laden(&self) {
+        self.oeffnung_ueberholen();
         self.ivars().herkunft.set(Oeffnungsherkunft::Befehl);
         let sofort = self.ivars().modell.borrow_mut().neu_laden();
         match sofort {
@@ -9674,7 +9778,7 @@ mod tests {
             .find(concat!("self.quicknote_", "verlassen()"))
             .expect("datei_oeffnen verlaesst die Quicknote nicht");
         let modell = rumpf
-            .find(concat!(".oeffnen(pfad, ", "mittel)"))
+            .find(concat!("self.ladeauftrag_", "erteilen(pfad, None)"))
             .expect("datei_oeffnen oeffnet nicht mehr ueber das Modell");
         assert!(zelle < abgewiesen && abgewiesen < verlassen && verlassen < modell);
     }
@@ -9811,14 +9915,14 @@ mod tests {
             .find("oeffnungsweg(herkunft")
             .expect("datei_oeffnen entscheidet den Weg nicht");
         let auftrag = oeffnen
-            .find(".oeffnen(pfad, mittel)")
+            .find("self.ladeauftrag_erteilen(pfad, None)")
             .expect("datei_oeffnen erteilt keinen Ladeauftrag");
         assert!(
             frage < weg && weg < auftrag,
             "die Frage steht nach dem Ladeauftrag"
         );
         assert_eq!(
-            oeffnen.matches(".oeffnen(pfad").count(),
+            oeffnen.matches("self.ladeauftrag_erteilen(").count(),
             1,
             "datei_oeffnen erteilt mehr als einen Ladeauftrag"
         );
@@ -9832,29 +9936,77 @@ mod tests {
             .and_then(|(_, rest)| rest.split_once("return;"))
             .map(|(zweig, _)| zweig)
             .expect("der Zweig des PIN-Bedarfs fehlt");
-        assert!(pin.contains("Ladeausgang::PinVerlangt"));
-        // Der gemerkte Schluessel wird allein fuer `secrets.txt` gefragt, im
-        // Zweig des PIN-Bedarfs und vor dem Blatt (Schritt 5d des Plans der
-        // sechs Felder).
-        let merker = pin
-            .find(concat!("tresorweg::gemerkter_", "schluessel("))
-            .expect("der PIN-Bedarf fragt den Merker");
-        assert!(merker < pin.find("Ladeausgang::PinVerlangt").unwrap_or(0));
-        assert_eq!(
-            oeffnen
-                .matches(concat!("gemerkter_", "schluessel("))
-                .count(),
-            1,
-            "der Merker wird einmal gefragt"
-        );
+        assert!(pin.contains("self.geheimnisgroesse_fragen_lassen(pfad)"));
         assert!(
-            !pin.contains(".oeffnen("),
+            !pin.contains(".oeffnen(") && !pin.contains("ladeauftrag_erteilen"),
             "der PIN-Bedarf erteilt einen Ladeauftrag"
         );
         assert!(
             !pin.contains("takt_starten"),
             "der PIN-Bedarf startet den Takt"
         );
+        // Der gemerkte Schluessel wird allein fuer `secrets.txt` gefragt, in der
+        // Einzugsmethode des PIN-Bedarfs und vor dem Blatt (Schritt 5d des Plans
+        // der sechs Felder).
+        let einzug = rumpf(&quelle, "geheimnisgroesse_einziehen");
+        let merker = einzug
+            .find(concat!("tresorweg::gemerkter_", "schluessel("))
+            .expect("der PIN-Bedarf fragt den Merker");
+        assert!(merker < einzug.find("Ladeausgang::PinVerlangt").unwrap_or(0));
+        assert_eq!(
+            quelle.matches(concat!("gemerkter_", "schluessel(")).count(),
+            1,
+            "der Merker wird nicht allein in der Einzugsmethode gefragt"
+        );
+    }
+
+    /// Die Groesse von `secrets.txt` steht auf dem Faden, und ihre Antwort fragt
+    /// den Stand vor allem anderen (Defekt `261104-2000-…`).
+    ///
+    /// Dieselbe Bauform wie
+    /// `der_loeschweg_stellt_auf_dem_hauptfaden_keinen_systemaufruf`. **Was sie
+    /// nicht sieht:** `sonderdatei_genau` in `datei_oeffnen`, das fuer eine dritte
+    /// Schreibweise ein `stat(2)` auf dem Hauptfaden stellt und ein benannter Rest
+    /// der Regeldatei ist.
+    #[test]
+    fn die_geheimnisgroesse_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        for name in [
+            "datei_oeffnen",
+            "geheimnisgroesse_einziehen",
+            "oeffnungsstand",
+        ] {
+            let rumpf = rumpf(&quelle, name);
+            for nadel in ["fs::", "metadata("] {
+                assert!(
+                    !rumpf.contains(nadel),
+                    "{name} enthaelt {nadel}: ein Systemaufruf auf dem Hauptfaden"
+                );
+            }
+        }
+        let huelle = rumpf(&quelle, "geheimnisgroesse_fragen_lassen");
+        for nadel in [
+            concat!("nebenfaden::", "fragen_lassen("),
+            "PLATTENFRAGE",
+            "metadata(",
+            "self.oeffnungsstand()",
+            "editor.geheimnisgroesse_einziehen(",
+        ] {
+            assert!(huelle.contains(nadel), "die Huelle enthaelt {nadel} nicht");
+        }
+        let einzug = rumpf(&quelle, "geheimnisgroesse_einziehen");
+        let stand = einzug.find("self.oeffnungsstand()").expect("kein Stand");
+        assert!(
+            stand < einzug.find("geheimnisweg(").expect("kein Weg"),
+            "die Einzugsmethode fragt den Stand zu spaet"
+        );
+        for name in ["datei_oeffnen", "geheimnisse_oeffnen", "neu_laden"] {
+            assert!(
+                rumpf(&quelle, name).contains("self.oeffnung_ueberholen()"),
+                "{name} ueberholt eine laufende Frage nicht"
+            );
+        }
     }
 
     /// Der Tausch an echten Rollen: im Augenblick der Uebergabe ist die neue

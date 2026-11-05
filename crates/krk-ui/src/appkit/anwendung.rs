@@ -334,7 +334,7 @@ use crate::leistenmodell::Ort;
 use crate::messmodus::{Anweisung, Aufgabe, Handlung, Messlauf, Sitzungslage, Zustand};
 use crate::quicknote::{self, F10Wirkung, Kopierausgang, Rueckkehr};
 use crate::spalten::Spalte;
-use crate::tabs::{Auswahlversuch, Tabliste, Vormerkung, Wunschmeldung};
+use crate::tabs::{Auswahlversuch, Tabliste, Tabstand, Vormerkung, Wunschmeldung};
 use crate::tresorweg::{self, Anhaengausgang, Verbindungsentwurf, Verbindungshindernis};
 use crate::vorschaumodell::{Beschreibung, Blaetterrichtung};
 use krk_core::ort::{Ort as Dateiort, Ortsart};
@@ -847,6 +847,143 @@ impl Loeschbefehle {
     }
 }
 
+/// Haelt die Aufzaehlung der Datentraeger bei hoechstens einem Faden, gleich wie
+/// viele Ein- und Aushaengemeldungen kommen (Defekt
+/// `261104-2000-geraeteaufzaehlung-f2-und-secrets-fragen-die-platte-weiter-auf-dem-hauptfaden.md`).
+///
+/// **Eine laufende Frage und eine Nachfrage nach ihrer Antwort**, wie beim
+/// Schreibrecht des Abwurfs: eine Meldung, die in eine laufende Frage faellt,
+/// merkt sich allein, dass nach ihrer Antwort noch einmal gefragt wird. Daraus
+/// folgt, dass **eine ueberholte Antwort keine neuere Liste ueberschreiben kann,
+/// und das ohne Nummer**: es laeuft nie mehr als eine Frage, jede beginnt erst
+/// nach der Antwort der vorigen, also kommen die Listen in der Reihenfolge an,
+/// in der sie erhoben sind. Eine Liste, die vor der letzten Meldung erhoben ist,
+/// gilt deshalb bis zur Antwort der Nachfrage; sie ist die neueste, die es gibt.
+///
+/// **Was das kostet: eine Aufzaehlung, die nie zurueckkommt, friert die Liste
+/// ein.** Leiste und Auswurfregel bleiben dann beim letzten Stand, nach einem
+/// Haenger schon beim ersten Mal also beim Benutzerverzeichnis ohne Datentraeger,
+/// bis der Faden antwortet oder der Prozess endet. Abbrechen laesst er sich nicht
+/// ([`super::nebenfaden`]), und eine zweite Frage daneben fragte dieselbe
+/// haengende Freigabe; das ist die Fadenzahl, die diese Regel begrenzt.
+///
+/// Ohne AppKit und ohne Systemaufruf, damit eine Probe die Regel ohne Fenster
+/// fahren kann.
+#[derive(Debug, Default)]
+struct Geraetefrage {
+    /// Steht eine Frage auf dem Faden?
+    laeuft: Cell<bool>,
+    /// Kam seit ihrem Beginn eine weitere Meldung?
+    nachfrage: Cell<bool>,
+}
+
+impl Geraetefrage {
+    /// Eine Meldung ist gekommen. `true` heisst: der Rufer stellt jetzt die Frage.
+    #[must_use = "bei true steht die Frage schon als laufend im Merker; ungestellt kaeme nie eine Antwort"]
+    fn anstossen(&self) -> bool {
+        if self.laeuft.replace(true) {
+            self.nachfrage.set(true);
+            return false;
+        }
+        true
+    }
+
+    /// Die Antwort ist da. `true` heisst: der Rufer fragt gleich noch einmal.
+    #[must_use = "bei true steht die Frage schon als laufend im Merker; ungestellt kaeme nie eine Antwort"]
+    fn antwort_da(&self) -> bool {
+        self.laeuft.set(false);
+        self.nachfrage.replace(false) && self.anstossen()
+    }
+}
+
+/// Zaehlt die F2-Befehle, damit eine doppelt gedrueckte F2 nichts doppelt oeffnet.
+///
+/// **Eine Nummer statt einer Sperre**, aus dem Grund von [`Loeschbefehle`]: eine
+/// Sperre fiele auf einer haengenden Freigabe nie, und F2 stuende dann auch fuer
+/// einen inzwischen anders gewaehlten Ort. Jeder Befehl startet deshalb seinen
+/// Faden; **eine Obergrenze dafuer gibt es nicht**, und auf einer haengenden
+/// Freigabe bleibt jeder dieser Faeden stehen, bis die Platte antwortet.
+///
+/// **Die Saetze einer ueberholten Antwort liegen hier, bis die juengste ankommt.**
+/// Zwei F2 kurz nacheinander legen zweimal an, und nur eine der beiden Antworten
+/// kann melden, was wirklich entstanden ist; verfiele sie, verschwaende etwa ein
+/// abgewiesener alter Zettel ohne ein Wort. Sofort gezeigt nuetzte das nichts,
+/// denn der Tabwechsel der juengsten raeumt die Statuszeile. Kommt die juengste
+/// nie an, bleiben sie liegen.
+#[derive(Debug, Default)]
+struct Notizordnerbefehle {
+    /// Die Nummer des juengsten Befehls.
+    juengster: Cell<u64>,
+    /// Die Saetze ueberholter Antworten.
+    liegend: RefCell<Vec<String>>,
+}
+
+impl Notizordnerbefehle {
+    /// Vergibt die Nummer eines neuen Befehls und ueberholt alle frueheren.
+    fn neuer(&self) {
+        self.juengster.set(self.juengster.get() + 1);
+    }
+
+    /// Legt die Saetze einer ueberholten Antwort bis zur juengsten beiseite.
+    fn zurueckstellen(&self, saetze: Vec<String>) {
+        self.liegend.borrow_mut().extend(saetze);
+    }
+
+    /// Die liegenden Saetze und danach `saetze`, in der Reihenfolge der Ankunft.
+    #[must_use]
+    fn saetze_mit(&self, saetze: Vec<String>) -> Vec<String> {
+        let mut alle = self.liegend.take();
+        alle.extend(saetze);
+        alle
+    }
+}
+
+/// Woran F2 seine Antwort wiedererkennt: beim Befehl festgehalten und bei der
+/// Antwort gegen den Stand von dann gehalten, wie `Pfadfrage` in
+/// [`super::tabelle`].
+///
+/// **Sie gilt, solange alles beim Stand des Befehls ist.** Faellt ein Feld
+/// auseinander, hat der Nutzer inzwischen etwas anderes getan, und ein spaeter
+/// Tab samt Fokus zoege ihn davon weg.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct Notizordnerstand {
+    /// Die Nummer des juengsten Befehls ([`Notizordnerbefehle`]).
+    nummer: u64,
+    /// Das aktive Dateifenster, auf das F2 wirkt.
+    seite: Fensterseite,
+    /// Der sichtbare Tab dort samt dem Ort, den er zeigt.
+    tab: Tabstand,
+    /// Der Bereich des Ersthelfers, den auch der Hintergrund nicht aendert.
+    ersthelfer: Fokus,
+    /// Ob ein Blatt steht; F2 kommt bei einem stehenden Blatt nicht durch.
+    blatt: bool,
+    /// Der geltende Ort in der geschriebenen Form; `None`, wenn keiner gilt.
+    ort: Option<PathBuf>,
+}
+
+/// Was die Arbeit von [`Anwendungsdelegierter::notizordner_erheben`] mitbekommt;
+/// allein Werte, damit sie den Faden wechseln kann.
+#[derive(Debug)]
+struct Notizordnerauftrag {
+    /// Der geltende Notizordner.
+    heim: Heimordner,
+    /// Der Ort der Ablage, wenn eine offen ist.
+    ablageort: Option<krk_core::ablage::Ablageort>,
+    /// Der Ordner der alten Zettel.
+    ablageordner: PathBuf,
+}
+
+/// Die Antwort von [`Anwendungsdelegierter::notizordner_erheben`].
+#[derive(Debug)]
+struct Notizordnerantwort {
+    /// Der Notizordner; nach einem gelungenen Anlegen mit erneuerter Aufloesung.
+    heim: Heimordner,
+    /// Was das Anlegen getan hat oder was es verhindert hat.
+    ausgang: Result<heimordner::Bereitstellung, heimordner::Hindernis>,
+    /// Der Satz, wenn die Sperre sich nicht nehmen liess.
+    sperrsatz: Option<String>,
+}
+
 /// Was die Platte ueber ein lokales Loeschziel sagt, in einem Zug erhoben
 /// ([`lokaler_loeschbefund`]).
 ///
@@ -1343,7 +1480,8 @@ pub struct AnwendungsIvars {
     ///
     /// Erneuert im selben Zug wie die Geraeteleiste, in
     /// [`Anwendungsdelegierter::geraete_uebernehmen`], also beim Start und
-    /// nach jeder Meldung der Datentraegerwache. Gelesen beim Klick auf
+    /// nach jeder Meldung der Datentraegerwache, sobald die Aufzaehlung von
+    /// ihrem Faden zurueck ist; bis zur ersten Antwort ist sie leer. Gelesen beim Klick auf
     /// „Auswerfen“, damit dort keine Frage an das System auf dem Hauptfaden
     /// steht; warum, steht im Modulkopf von [`kontextmenue`] unter „Was der
     /// 261016 hinzugelegt hat“.
@@ -1432,7 +1570,7 @@ pub struct AnwendungsIvars {
     /// Platzhalter ([`heimgriff::ungelesen`]); gesetzt wird der Ort in
     /// [`Anwendungsdelegierter::oberflaeche_aufbauen`] aus dem, was
     /// [`Anwendungsdelegierter::sitzung_laden`] auf jedem Ausgang liefert, und
-    /// erneuert in [`Anwendungsdelegierter::notizordner_oeffnen`]. Wer ihn
+    /// erneuert in [`Anwendungsdelegierter::notizordner_einziehen`]. Wer ihn
     /// braucht, bekommt eine Abschrift des `Rc` und sieht damit jede
     /// Erneuerung; der Modulkopf von [`crate::heimgriff`] sagt, warum es ein
     /// geteilter Griff ist.
@@ -1481,6 +1619,10 @@ pub struct AnwendungsIvars {
     /// [`Anwendungsdelegierter::loeschbefund_einziehen`], die jede Antwort
     /// eines aelteren Befehls verwirft.
     loeschbefehle: Loeschbefehle,
+    /// Die eine laufende Aufzaehlung der Datentraeger und ihre Nachfrage.
+    geraetefrage: Geraetefrage,
+    /// Die Nummer des juengsten F2 und die liegenden Saetze ueberholter.
+    notizordnerbefehle: Notizordnerbefehle,
     /// Die Zugaenge zu sftp-Servern, je Server einer (Entscheidung 3 des
     /// Plans `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`).
     ///
@@ -1978,6 +2120,8 @@ impl Anwendungsdelegierter {
             ablaufwecker: RefCell::new(None),
             tresorgang: Cell::new(false),
             loeschbefehle: Loeschbefehle::default(),
+            geraetefrage: Geraetefrage::default(),
+            notizordnerbefehle: Notizordnerbefehle::default(),
             fernzugaenge: Zugangsregister::neu(),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
@@ -2976,7 +3120,11 @@ impl Anwendungsdelegierter {
         };
         let leiste = self.leiste();
         leiste.quelle().lesezeichen_setzen(&geladen);
-        self.geraete_uebernehmen();
+        // Das Benutzerverzeichnis steht sofort, die Datentraeger kommen vom
+        // Faden nach: der Start wartet nicht auf die Aufzaehlung, und nichts
+        // beim Start setzt ihre Liste voraus.
+        self.geraete_uebernehmen(Vec::new());
+        self.geraete_nachfragen();
 
         // Der Rueckruf haelt den Delegierten **schwach**, sonst schloesse sich
         // der Ring Delegierter → Leiste → Quelle → Rueckruf → Delegierter.
@@ -3913,15 +4061,53 @@ impl Anwendungsdelegierter {
     ///
     /// Gerufen nach jedem Ein- und Aushaengen. Die Leiste prueft dabei zugleich
     /// die Gueltigkeit der Lesezeichen nach; ein eingehaengter Datentraeger
-    /// macht ein Lesezeichen darauf wieder erreichbar.
+    /// macht ein Lesezeichen darauf wieder erreichbar. Aufgezaehlt wird auf dem
+    /// Faden; die Leiste zieht nach, sobald die Antwort da ist.
     fn leiste_geraete_nachziehen(&self) {
         if self.ivars().leiste.get().is_none() {
             return;
         }
-        self.geraete_uebernehmen();
+        self.geraete_nachfragen();
     }
 
-    /// Zaehlt die Datentraeger auf und gibt sie an die Leiste und an die
+    /// Stellt die Frage nach den Datentraegern, sofern keine laeuft; laeuft eine,
+    /// wird nach ihrer Antwort noch einmal gefragt ([`Geraetefrage`]).
+    fn geraete_nachfragen(&self) {
+        if self.ivars().geraetefrage.anstossen() {
+            Self::geraete_aufzaehlen_lassen();
+        }
+    }
+
+    /// Zaehlt die Datentraeger auf dem Faden [`PLATTENFRAGE`] auf.
+    ///
+    /// **Die Aufzaehlung geht ueber alle Datentraeger, also auch ueber den, der
+    /// gerade nicht antwortet**, und deshalb steht sie nicht auf dem Hauptfaden.
+    /// `None` heisst: kein Faden oder eine Panik darin. Die Liste bleibt dann,
+    /// wie sie ist, denn eine leere nahme der Leiste jeden Datentraeger.
+    fn geraete_aufzaehlen_lassen() {
+        nebenfaden::fragen_lassen(
+            PLATTENFRAGE,
+            || Some(volumes::eingehaengte()),
+            |_fehler| None,
+            Self::geraete_einziehen,
+        );
+    }
+
+    /// Nimmt die Antwort der Aufzaehlung auf dem Hauptfaden entgegen und stellt
+    /// die Nachfrage, falls seitdem eine Meldung gekommen ist.
+    fn geraete_einziehen(mtm: MainThreadMarker, datentraeger: Option<Vec<Ort>>) {
+        let Some(selbst) = Self::delegierter(mtm) else {
+            return;
+        };
+        if let Some(datentraeger) = datentraeger {
+            selbst.geraete_uebernehmen(datentraeger);
+        }
+        if selbst.ivars().geraetefrage.antwort_da() {
+            Self::geraete_aufzaehlen_lassen();
+        }
+    }
+
+    /// Gibt die aufgezaehlten Datentraeger an die Leiste und an die
     /// Auswurfregel weiter (261016).
     ///
     /// **Eine Aufzaehlung fuer zwei Abnehmer**: die Geraeteleiste bekommt die
@@ -3936,8 +4122,14 @@ impl Anwendungsdelegierter {
     /// welche Geraetezeile Auswerfsinnbild und Kontextmenue traegt.
     /// Ausgeworfen wird trotzdem gegen die Liste hier, in
     /// [`Self::auswurf_beginnen`].
-    fn geraete_uebernehmen(&self) {
-        let datentraeger = volumes::eingehaengte();
+    ///
+    /// **Die Aufzaehlung steht nicht mehr hier**, sondern in
+    /// [`Self::geraete_aufzaehlen_lassen`]. **Die Leiste fragt dabei weiter die
+    /// Platte**: `Leistenmodell::orte_setzen` prueft die Lesezeichen mit einem
+    /// `is_dir`/`is_file` je Eintrag, auf dem Hauptfaden. Ein Lesezeichen auf einer
+    /// haengenden Freigabe haelt die Ereignisschleife also weiterhin an; das ist
+    /// der benannte Rest in `.claude/rules/coding-was-man-nicht-sieht.md`.
+    fn geraete_uebernehmen(&self, datentraeger: Vec<Ort>) {
         let einhaengepunkte: Vec<PathBuf> =
             datentraeger.iter().map(|ort| ort.pfad.clone()).collect();
         *self.ivars().einhaengepunkte.borrow_mut() = einhaengepunkte.clone();
@@ -6398,20 +6590,23 @@ impl Anwendungsdelegierter {
     /// Der Weg in vier Schritten, und jeder steht genau einmal im Baum:
     ///
     /// 1. **Anlegen**, ueber [`heimordner::bereitstellen`] in
-    ///    [`Self::notizordner_bereitstellen`]. Jene hat zwei Rufer, diese
-    ///    Funktion und seit dem 261016 „Verbinden…“, und diese Funktion hat
-    ///    ihrerseits genau einen, den Zweig in `kommando_ausfuehren`; die Probe
+    ///    [`Self::notizordner_erheben`], **auf dem Faden** [`PLATTENFRAGE`].
+    ///    Jene hat zwei Rufer, diese Funktion und den Helfer
+    ///    [`Self::notizordner_bereitstellen`] fuer „Verbinden…“; diese Funktion
+    ///    hat ihrerseits genau einen, den Zweig in `kommando_ausfuehren`; die Probe
     ///    `notizordnerproben::der_start_erreicht_weder_das_anlegen_noch_das_aufloesen`
     ///    haelt alles mit Namen. Damit legt der Start nichts an, auch nicht fuer
     ///    einen wiederhergestellten Tab auf den Ordner. Jede Meldung geht als
-    ///    Befehlsantwort in die Statuszeile des aktiven Dateifensters; ein
+    ///    Befehlsantwort in die Statuszeile des gefragten Dateifensters; ein
     ///    [`heimordner::Hindernis`] oeffnet keinen Tab.
     /// 2. **Aufloesen**, ueber [`Heimordner::aufgeloest_erneuern`], ebenfalls
-    ///    in [`Self::notizordner_bereitstellen`], und erst
+    ///    in [`Self::notizordner_erheben`], und erst
     ///    nach dem Anlegen: `canonicalize` beruehrt das Ziel eines Verweises,
-    ///    und das hat `bereitstellen` in diesem Augenblick ohnehin getan. Der
-    ///    erneuerte Wert geht in den [`Heimgriff`], damit jeder Frager ihn sieht.
-    /// 3. **Finden**: der erste Tab des aktiven Dateifensters, dessen Ordner
+    ///    und das hat das Anlegen in diesem Augenblick ohnehin getan. Der
+    ///    erneuerte Wert geht in [`Self::notizordner_einziehen`] in den
+    ///    [`Heimgriff`], damit jeder Frager ihn sieht.
+    /// 3. **Finden**, in [`Self::notizordner_einziehen`]: der erste Tab des
+    ///    gefragten Dateifensters, dessen Ordner
     ///    [`Heimordner::ist`] erkennt, wird sichtbar. Gleich wie der Nutzer in
     ///    den Ordner gekommen ist, zaehlt er als vorhanden
     ///    (`260926-0007_*_was-tut-f2-wenn-krkhome-schon-in-einem-tab-offen-ist.md`,
@@ -6423,44 +6618,125 @@ impl Anwendungsdelegierter {
     /// sichtbar war. Ein Blatt oeffnet sich auf keinem dieser Wege.
     fn notizordner_oeffnen(&self) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
-        let Some((heim, meldungen)) = self.notizordner_bereitstellen(aktiv) else {
+        let Some(auftrag) = self.notizordnerauftrag(aktiv) else {
             return true;
         };
+        self.ivars().notizordnerbefehle.neuer();
+        let gefragt = self.notizordnerstand();
+        let fuer_den_startfehler = auftrag.heim.clone();
+        nebenfaden::fragen_lassen(
+            PLATTENFRAGE,
+            move || Self::notizordner_erheben(auftrag),
+            // Ohne Faden geschah nichts auf der Platte, und das sagt das
+            // Hindernis, das auch eine unerreichbare Platte nennt.
+            move |fehler| Notizordnerantwort {
+                heim: fuer_den_startfehler,
+                ausgang: Err(heimordner::Hindernis::Unerreichbar(fehler.to_string())),
+                sperrsatz: None,
+            },
+            move |mtm, antwort| {
+                if let Some(selbst) = Self::delegierter(mtm) {
+                    selbst.notizordner_einziehen(gefragt, antwort);
+                }
+            },
+        );
+        true
+    }
 
-        let tabelle = self.dateifenster(aktiv).quelle();
-        let vorhanden = tabelle
-            .tabordner()
-            .iter()
-            .position(|ordner| ordner.as_deref().is_some_and(|ordner| heim.ist(ordner)));
-        match vorhanden {
-            Some(stelle) => tabelle.tab_waehlen(stelle),
-            None => tabelle.tab_oeffnen(heim.geschrieben()),
+    /// Der Stand, gegen den die Antwort von F2 gilt ([`Notizordnerstand`]).
+    /// Fragt allein die Modelle und AppKit und nicht die Platte.
+    fn notizordnerstand(&self) -> Notizordnerstand {
+        let seite = self.ivars().modell.borrow().aktiv();
+        Notizordnerstand {
+            nummer: self.ivars().notizordnerbefehle.juengster.get(),
+            seite,
+            tab: self.dateifenster(seite).quelle().tabstand(),
+            ersthelfer: self.ersthelferbereich(),
+            blatt: self.blatt_steht(),
+            ort: heimgriff::lage(&self.ivars().heim)
+                .ok()
+                .map(|heim| heim.geschrieben().to_path_buf()),
+        }
+    }
+
+    /// Nimmt die Antwort von [`Self::notizordner_erheben`] auf dem Hauptfaden
+    /// entgegen und fuehrt die Schritte 3 und 4 von [`Self::notizordner_oeffnen`]
+    /// aus, **sofern sie noch gilt**; einen Systemaufruf an die Platte stellt sie
+    /// nicht.
+    ///
+    /// Was aus der Antwort folgt, faellt je nach dem, was sich geaendert hat:
+    ///
+    /// - **Ein neuerer F2** ueberholt sie: kein Tab, kein Fokus, und ihre Saetze
+    ///   warten auf die juengste Antwort ([`Notizordnerbefehle`]).
+    /// - **Ein anderer Ort** gilt inzwischen: ihr [`Heimordner`] geht nicht in den
+    ///   Griff, denn er nennt den alten, und die neuere Wahl ueberschriebe er.
+    /// - **Ein anderer Stand** ([`Notizordnerstand`]): kein Tab und kein Fokus.
+    ///   Das Hindernis faellt mit, denn es gehoert zu dem Befehl, der nicht mehr
+    ///   gilt.
+    ///
+    /// **Die Saetze einer gelungenen Bereitstellung fallen in keinem dieser
+    /// Faelle**, anders als die Meldung der Pfadeingabe: sie antworten nicht auf
+    /// einen Befehl, sondern sagen, was auf der Platte entstanden ist, und tragen
+    /// ihren Gegenstand selbst.
+    fn notizordner_einziehen(&self, gefragt: Notizordnerstand, antwort: Notizordnerantwort) {
+        let jetzt = self.notizordnerstand();
+        let gilt = gefragt == jetzt;
+        let seite = gefragt.seite;
+        let Notizordnerantwort {
+            heim,
+            ausgang,
+            sperrsatz,
+        } = antwort;
+        let bereitstellung = match ausgang {
+            Ok(bereitstellung) => bereitstellung,
+            Err(hindernis) => {
+                if gilt {
+                    self.antwort_zeigen(seite, &hindernis.meldung(heim.anzeigename()));
+                }
+                return;
+            }
+        };
+        if gefragt.ort == jetzt.ort {
+            heimgriff::ersetzen(&self.ivars().heim, Notizlage::gilt(heim.clone()));
+        }
+        let mut saetze = bereitstellung.meldungen();
+        saetze.extend(sperrsatz);
+        let befehle = &self.ivars().notizordnerbefehle;
+        if gefragt.nummer != jetzt.nummer {
+            befehle.zurueckstellen(saetze);
+            return;
+        }
+        let saetze = befehle.saetze_mit(saetze);
+        if gilt {
+            let tabelle = self.dateifenster(seite).quelle();
+            let vorhanden = tabelle
+                .tabordner()
+                .iter()
+                .position(|ordner| ordner.as_deref().is_some_and(|ordner| heim.ist(ordner)));
+            match vorhanden {
+                Some(stelle) => tabelle.tab_waehlen(stelle),
+                None => tabelle.tab_oeffnen(heim.geschrieben()),
+            }
         }
         // **Die Meldungen erst nach dem Tabwechsel**, damit sie in der
         // Statuszeile des Tabs stehen, den der Nutzer jetzt ansieht. Mehrere
         // Saetze gingen nacheinander in dieselbe Zeile, und stehen bliebe der
         // letzte; zusammengefasst werden sie deshalb hier, in einer Antwort.
-        if !meldungen.is_empty() {
-            let antwort = meldungen.join("; ");
-            self.antwort_zeigen(aktiv, &antwort);
+        if !saetze.is_empty() {
+            let antwort = saetze.join("; ");
+            self.antwort_zeigen(seite, &antwort);
         }
-        let _ = self.fokus_holen(Fokus::Dateifenster);
-        true
+        if gilt {
+            let _ = self.fokus_holen(Fokus::Dateifenster);
+        }
     }
 
-    /// Die Schritte 1 und 2 von [`Self::notizordner_oeffnen`]: anlegen, was
-    /// fehlt, und aufloesen; liefert den erneuerten Notizordner und die Saetze
-    /// fuer die Statuszeile, oder `None`, nachdem der Grund in der Statuszeile
-    /// von `seite` steht.
+    /// Was die Schritte 1 und 2 von [`Self::notizordner_oeffnen`] brauchen, oder
+    /// `None`, nachdem der Grund in der Statuszeile von `seite` steht.
     ///
-    /// **Der eine Rufer von [`heimordner::bereitstellen`]**, und er selbst hat
-    /// zwei: F2 und, seit dem 261016, „Verbinden…“, wenn `secrets.txt` fehlt
-    /// (Entscheidung 14 des Plans der sechs Felder). Beide sind Befehle; der
-    /// Start erreicht keinen, und die Probe
-    /// `notizordnerproben::der_start_erreicht_weder_das_anlegen_noch_das_aufloesen`
-    /// haelt beides mit Namen. **Gilt kein Ort**, nennt die Statuszeile den
-    /// Grund aus [`heimgriff::lage`], und angelegt wird nichts.
-    fn notizordner_bereitstellen(&self, seite: Fensterseite) -> Option<(Heimordner, Vec<String>)> {
+    /// **Gilt kein Ort**, nennt die Statuszeile den Grund aus
+    /// [`heimgriff::lage`], und angelegt wird nichts. **Kein Systemaufruf.**
+    fn notizordnerauftrag(&self, seite: Fensterseite) -> Option<Notizordnerauftrag> {
         // **`lage` und nicht `lesen`**: gilt kein Ort, nennt F2 den Grund und
         // legt nichts an. Den Schutzort, den `lesen` dann liefert, darf F2
         // nicht sehen; an ihm anzulegen waere der stille Rueckfall, den H2
@@ -6472,24 +6748,98 @@ impl Anwendungsdelegierter {
                 return None;
             }
         };
-        // **Im Durchgang der Ablage, wenn es einen gibt**: der Merker der
-        // Uebernahme in `reported.toml` wird unter derselben Sperre gelesen
-        // und gesetzt, unter der `notes.txt` entsteht (Modulkopf von
-        // `krk_core::heimordner`, Abschnitt „Einmal heisst einmal“). Ohne
-        // Durchgang laeuft derselbe eine Aufruf ohne Zugang.
-        let ablageordner = self.ablageordner();
+        Some(Notizordnerauftrag {
+            heim,
+            ablageort: self
+                .ivars()
+                .ablage
+                .borrow()
+                .as_ref()
+                .map(|ablage| ablage.ort().clone()),
+            ablageordner: self.ablageordner(),
+        })
+    }
+
+    /// Die Schritte 1 und 2 von [`Self::notizordner_oeffnen`]: anlegen, was
+    /// fehlt, und aufloesen. Kein AppKit, nur Rust-Werte hinein und heraus; F2
+    /// ruft sie auf dem Faden [`PLATTENFRAGE`].
+    ///
+    /// **Der eine Rufer von [`heimordner::bereitstellen`]**, und er selbst hat
+    /// zwei: F2 und, seit dem 261016, ueber [`Self::notizordner_bereitstellen`]
+    /// „Verbinden…“, wenn `secrets.txt` fehlt (Entscheidung 14 des Plans der
+    /// sechs Felder). Beide sind Befehle; der Start erreicht keinen, und die Probe
+    /// `notizordnerproben::der_start_erreicht_weder_das_anlegen_noch_das_aufloesen`
+    /// haelt beides mit Namen.
+    ///
+    /// **Allein am Vorgabeort unter der Sperre der Ablage**: der Merker der
+    /// Uebernahme in `reported.toml` wird unter derselben Sperre gelesen und
+    /// gesetzt, unter der `notes.txt` entsteht (Modulkopf von
+    /// `krk_core::heimordner`, Abschnitt „Einmal heisst einmal“). An jedem anderen
+    /// Ort beruehrt das Anlegen den Merker nicht, und eine Freigabe, die dort
+    /// haengt, soll die Sperre nicht halten: jeder Durchgang des Hauptfadens
+    /// wartete sonst auf sie.
+    ///
+    /// **Die Ablage hier ist eine eigene**, ein zweiter Deskriptor auf dieselbe
+    /// Sperrdatei, denn die bleibende gehoert dem Hauptfaden und reist nicht. Die
+    /// beiden schliessen einander aus, wie zwei Prozesse (Modulkopf von
+    /// `krk_core::ablage::sperre`). **Solange dieser Faden die Sperre haelt, wartet
+    /// jeder Durchgang des Hauptfadens.** Haengt `~/krkhome` als Verweis an einer
+    /// Freigabe, soll der Faden deshalb schon vor dem Durchgang stehen bleiben:
+    /// dafuer die erste Zeile. Reisst die Freigabe erst danach ab, bleibt die
+    /// Sperre stehen, und das ist ein benannter Rest.
+    fn notizordner_erheben(auftrag: Notizordnerauftrag) -> Notizordnerantwort {
+        let Notizordnerauftrag {
+            heim,
+            ablageort,
+            ablageordner,
+        } = auftrag;
+        let _ = std::fs::metadata(heim.geschrieben());
         let anlegen =
             |zugang: Option<&Zugang<'_>>| heimordner::bereitstellen(&heim, &ablageordner, zugang);
         let mut sperrsatz = None;
-        let ausgang = match self.unter_der_sperre(|zugang| anlegen(Some(zugang))) {
-            Ok(ausgang) => ausgang,
-            // Der Start hat das Fehlen des Ablageordners schon gemeldet.
-            Err(Sperrhindernis::OhneOrdner) => anlegen(None),
-            Err(Sperrhindernis::Gesperrt(fehler)) => {
-                sperrsatz = Some(satz(Text::HeimOhneSperreAngelegt, &[("fehler", &fehler)]));
-                anlegen(None)
-            }
+        let ausgang = match ablageort.filter(|_| heim.ist_vorgabeort()) {
+            // Ohne Ablageordner: der Start hat sein Fehlen schon gemeldet.
+            None => anlegen(None),
+            Some(ort) => match Ablage::oeffnen(ort)
+                .and_then(|ablage| ablage.durchgang(|zugang| anlegen(Some(zugang))))
+            {
+                Ok(ausgang) => ausgang,
+                Err(fehler) => {
+                    sperrsatz = Some(satz(Text::HeimOhneSperreAngelegt, &[("fehler", &fehler)]));
+                    anlegen(None)
+                }
+            },
         };
+        let heim = if ausgang.is_ok() {
+            heim.aufgeloest_erneuern()
+        } else {
+            heim
+        };
+        Notizordnerantwort {
+            heim,
+            ausgang,
+            sperrsatz,
+        }
+    }
+
+    /// [`Self::notizordner_erheben`] fuer „Verbinden…“, **auf dem Hauptfaden**:
+    /// liefert den erneuerten Notizordner und die Saetze fuer die Statuszeile,
+    /// oder `None`, nachdem der Grund in der Statuszeile von `seite` steht.
+    ///
+    /// **Ihr einziger Rufer steht hinter dem einen `stat(2)` von
+    /// `verbindungsschluessel_holen`**: sie laeuft allein, wenn der geantwortet
+    /// hat, dass `secrets.txt` fehlt, also einmal vor der ersten Verbindung in
+    /// einem Notizordner und nur, wenn die Platte gerade antwortet. Einen Faden
+    /// wuerde sich hier allein lohnen, wenn auch jener `stat(2)` auf einem stuende.
+    /// Die Probe `der_verbindungsweg_stellt_auf_dem_hauptfaden_nur_den_einen_stat`
+    /// fuehrt sie als benannte Ausnahme.
+    fn notizordner_bereitstellen(&self, seite: Fensterseite) -> Option<(Heimordner, Vec<String>)> {
+        let auftrag = self.notizordnerauftrag(seite)?;
+        let Notizordnerantwort {
+            heim,
+            ausgang,
+            sperrsatz,
+        } = Self::notizordner_erheben(auftrag);
         let bereitstellung = match ausgang {
             Ok(bereitstellung) => bereitstellung,
             Err(hindernis) => {
@@ -6497,7 +6847,6 @@ impl Anwendungsdelegierter {
                 return None;
             }
         };
-        let heim = heim.aufgeloest_erneuern();
         heimgriff::ersetzen(&self.ivars().heim, Notizlage::gilt(heim.clone()));
         let mut meldungen = bereitstellung.meldungen();
         meldungen.extend(sperrsatz);
@@ -12007,6 +12356,14 @@ impl Anwendungsdelegierter {
             self.antwort_zeigen(aktiv, text(Text::EditorWartetAufTresorgang));
             return;
         }
+        // Der Bedarf kommt vom Faden und damit aus einer Luecke, in der der
+        // Nutzer ein Blatt geoeffnet haben kann; `beginSheet` reihte dieses
+        // dahinter ein, und sein Griff naehme dem sichtbaren den Abbruchweg.
+        if self.blatt_steht() {
+            let aktiv = self.ivars().modell.borrow().aktiv();
+            self.antwort_zeigen(aktiv, text(Text::BlattSteht));
+            return;
+        }
         let Some(fenster) = self.ivars().fenster.get() else {
             return;
         };
@@ -14603,6 +14960,71 @@ mod quicknoteproben {
     }
 }
 
+/// Die Aufzaehlung der Datentraeger steht auf dem Faden, und die Fadenzahl waechst
+/// nicht mit den Meldungen (Defekt `261104-2000-…`).
+#[cfg(test)]
+mod geraeteproben {
+    use super::Geraetefrage;
+    use super::quelltextproben::{diese_datei, rumpf};
+
+    /// Ein Sturm von Meldungen stellt eine Frage und danach eine Nachfrage, und
+    /// eine Frage, die nie zurueckkommt, stellt gar keine weitere.
+    #[test]
+    fn ein_sturm_von_meldungen_stellt_eine_frage_und_eine_nachfrage() {
+        let frage = Geraetefrage::default();
+        assert!(frage.anstossen(), "die erste Meldung stellt die Frage");
+        for _ in 0..100 {
+            assert!(!frage.anstossen(), "eine zweite Frage neben der laufenden");
+        }
+        assert!(
+            frage.antwort_da(),
+            "die Meldungen dazwischen bleiben unbeantwortet"
+        );
+        assert!(!frage.anstossen(), "die Nachfrage laeuft schon");
+        assert!(
+            frage.antwort_da(),
+            "die Meldung in die Nachfrage faellt nicht"
+        );
+        assert!(!frage.antwort_da(), "ohne Meldung keine weitere Frage");
+        assert!(frage.anstossen(), "danach stellt die naechste Meldung neu");
+    }
+
+    /// Weder die Ausloeser noch die Einzugsmethode stellen die Frage selbst; sie
+    /// steht in der Huelle auf dem Faden, und die Antwort kommt an.
+    ///
+    /// **Was sie nicht sieht:** den Weg der Liste danach, und dort fragt
+    /// `Leistenmodell::orte_setzen` die Lesezeichen ab. Das ist ein benannter
+    /// Rest der Regeldatei.
+    #[test]
+    fn die_geraeteaufzaehlung_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
+        let datei = diese_datei();
+        let nadel = concat!("volumes::", "eingehaengte(");
+        for name in [
+            "leiste_einrichten",
+            "leiste_geraete_nachziehen",
+            "geraete_nachfragen",
+            "geraete_einziehen",
+            "geraete_uebernehmen",
+        ] {
+            assert!(
+                !rumpf(&datei, name).contains(nadel),
+                "{name} zaehlt die Datentraeger auf dem Hauptfaden auf"
+            );
+        }
+        let huelle = rumpf(&datei, "geraete_aufzaehlen_lassen");
+        for nadel in [
+            nadel,
+            concat!("nebenfaden::", "fragen_lassen("),
+            "PLATTENFRAGE",
+            "Self::geraete_einziehen",
+        ] {
+            assert!(huelle.contains(nadel), "die Huelle enthaelt {nadel} nicht");
+        }
+        assert!(rumpf(&datei, "leiste_einrichten").contains("self.geraete_nachfragen()"));
+        assert!(rumpf(&datei, "leiste_geraete_nachziehen").contains("self.geraete_nachfragen()"));
+    }
+}
+
 /// Der Start erreicht weder das Anlegen von `~/krkhome` noch das Aufloesen am
 /// Ziel eines Verweises (C2 des Spec
 /// `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
@@ -14610,9 +15032,10 @@ mod quicknoteproben {
 /// **Gehalten ueber die Rufer, nicht ueber einen Lauf.** Ein Start laesst sich
 /// hier nicht fahren, und ein Lauf saehe ohnehin nur den einen Weg, den er
 /// nimmt. Die Kette ist deshalb am Quelltext festgehalten: das Anlegen hat im
-/// ausgelieferten Code genau einen Rufer, `notizordner_oeffnen`; dieses hat
-/// genau einen, den Zweig des Befehls in `kommando_ausfuehren`; und das
-/// Aufloesen hat ebenfalls allein `notizordner_oeffnen` als Rufer. Die
+/// ausgelieferten Code genau einen Rufer, `notizordner_erheben`; dieses hat
+/// zwei, `notizordner_oeffnen` und den Helfer von „Verbinden…“, und jene haben je
+/// einen Befehl als Rufer; das Aufloesen steht in `notizordner_erheben` und in
+/// der Arbeit von „Ort waehlen…“. Die
 /// Sitzungswiederherstellung kommt an keinem der drei vorbei, denn sie ist kein
 /// Befehl.
 ///
@@ -14704,34 +15127,45 @@ mod notizordnerproben {
         let datei = "krk-ui/src/appkit/anwendung.rs".to_owned();
         let quelle = diese_datei();
 
-        // Das Anlegen hat einen Rufer, den Helfer der Schritte 1 und 2, und
-        // der hat seit dem 261016 zwei, F2 und „Verbinden…“ bei fehlender
-        // `secrets.txt` (Akzeptanz (10) von Schritt 7 des Plans der sechs
-        // Felder). Beide sind Befehle; keiner ist der Start.
+        // Das Anlegen hat einen Rufer, die Arbeit der Schritte 1 und 2, und
+        // die hat zwei, F2 auf dem Faden und „Verbinden…“ bei fehlender
+        // `secrets.txt` ueber den Helfer (Akzeptanz (10) von Schritt 7 des Plans
+        // der sechs Felder). Beide sind Befehle; keiner ist der Start.
         let helfer = concat!("notizordner_", "bereitstellen");
+        let arbeit = concat!("notizordner_", "erheben");
         assert_eq!(
             rufer(concat!("bereit", "stellen")),
             [(datei.clone(), 1)],
             "das Anlegen von ~/krkhome hat nicht genau einen Rufer im ausgelieferten Code"
         );
         assert_eq!(
-            aufrufstellen(&rumpf(&quelle, helfer), concat!("bereit", "stellen")),
+            aufrufstellen(&rumpf(&quelle, arbeit), concat!("bereit", "stellen")),
             1,
-            "der eine Rufer des Anlegens ist nicht {helfer}"
+            "der eine Rufer des Anlegens ist nicht {arbeit}"
         );
         assert_eq!(
-            rufer(helfer),
+            rufer(arbeit),
             [(datei.clone(), 2)],
-            "{helfer} hat nicht genau zwei Rufer"
+            "{arbeit} hat nicht genau zwei Rufer"
         );
-        for befehl in [oeffnen, concat!("verbindungsschluessel_", "holen")] {
+        for befehl in [oeffnen, helfer] {
             assert_eq!(
-                aufrufstellen(&rumpf(&quelle, befehl), helfer),
+                aufrufstellen(&rumpf(&quelle, befehl), arbeit),
                 1,
-                "{befehl} ruft {helfer} nicht genau einmal"
+                "{befehl} ruft {arbeit} nicht genau einmal"
             );
         }
         let holen = concat!("verbindungsschluessel_", "holen");
+        assert_eq!(
+            rufer(helfer),
+            [(datei.clone(), 1)],
+            "{helfer} hat nicht genau einen Rufer"
+        );
+        assert_eq!(
+            aufrufstellen(&rumpf(&quelle, holen), helfer),
+            1,
+            "der eine Rufer von {helfer} ist nicht {holen}"
+        );
         assert_eq!(
             rufer(holen),
             [(datei.clone(), 1)],
@@ -14746,8 +15180,8 @@ mod notizordnerproben {
             "der eine Rufer von {holen} ist nicht der Rueckruf des Blattes „Verbinden“"
         );
 
-        // Zwei Rufer seit Stufe 3 des einstellbaren Orts: F2 ueber den
-        // Helfer und „Ort waehlen…“, und beide sind Befehle; keiner davon ist
+        // Zwei Rufer seit Stufe 3 des einstellbaren Orts: F2 ueber die
+        // Arbeit und „Ort waehlen…“, und beide sind Befehle; keiner davon ist
         // der Start.
         assert_eq!(
             rufer(concat!("aufgeloest_", "erneuern")),
@@ -14755,9 +15189,9 @@ mod notizordnerproben {
             "das Aufloesen am Ziel hat nicht genau zwei Rufer im ausgelieferten Code"
         );
         assert_eq!(
-            aufrufstellen(&rumpf(&quelle, helfer), concat!("aufgeloest_", "erneuern")),
+            aufrufstellen(&rumpf(&quelle, arbeit), concat!("aufgeloest_", "erneuern")),
             1,
-            "einer der Rufer des Aufloesens ist nicht {helfer}"
+            "einer der Rufer des Aufloesens ist nicht {arbeit}"
         );
         // Seit Schritt 6 des Plans `261102-1314-…` steht der zweite Rufer
         // in `ort_aufloesen`, der Arbeit auf dem Faden, die allein
@@ -14793,6 +15227,99 @@ mod notizordnerproben {
             aufrufstellen(&rumpf(&quelle, "kommando_ausfuehren_bei"), oeffnen),
             1,
             "der eine Rufer von {oeffnen} ist nicht der Zweig in kommando_ausfuehren"
+        );
+    }
+
+    /// F2 stellt auf dem Hauptfaden keinen Systemaufruf, und die Einzugsmethode
+    /// fragt ihren Stand vor dem Tab (Defekt `261104-2000-…`).
+    ///
+    /// Dieselbe Bauform wie
+    /// `der_loeschweg_stellt_auf_dem_hauptfaden_keinen_systemaufruf`. **Was sie
+    /// nicht sieht:** einen Systemaufruf in einer tiefer gerufenen Funktion, und
+    /// den Helfer von „Verbinden…“, der dieselbe Arbeit auf dem Hauptfaden ruft
+    /// und in `der_verbindungsweg_stellt_auf_dem_hauptfaden_nur_den_einen_stat`
+    /// benannt ist.
+    #[test]
+    fn f2_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
+        let datei = diese_datei();
+        for name in [
+            "notizordner_oeffnen",
+            "notizordner_einziehen",
+            "notizordnerstand",
+            "notizordnerauftrag",
+        ] {
+            let rumpf = rumpf(&datei, name);
+            for nadel in [
+                "fs::",
+                "metadata(",
+                "canonicalize(",
+                concat!("aufgeloest_", "erneuern("),
+                concat!("heimordner::", "bereitstellen("),
+                concat!("unter_der_", "sperre("),
+                concat!(".durch", "gang("),
+            ] {
+                assert!(
+                    !rumpf.contains(nadel),
+                    "{name} enthaelt {nadel}: ein Systemaufruf auf dem Hauptfaden"
+                );
+            }
+        }
+        let ausloeser = rumpf(&datei, "notizordner_oeffnen");
+        for nadel in [
+            concat!("nebenfaden::", "fragen_lassen("),
+            "PLATTENFRAGE",
+            concat!("Self::notizordner_", "erheben(auftrag)"),
+            concat!("selbst.notizordner_", "einziehen(gefragt, antwort)"),
+            concat!("notizordnerbefehle", ".neuer()"),
+        ] {
+            assert!(
+                ausloeser.contains(nadel),
+                "der Ausloeser enthaelt {nadel} nicht"
+            );
+        }
+        assert!(
+            !ausloeser.contains("tab_oeffnen"),
+            "der Ausloeser oeffnet den Tab vor der Antwort"
+        );
+        let einzug = rumpf(&datei, "notizordner_einziehen");
+        let stand = einzug.find("self.notizordnerstand()").expect("kein Stand");
+        let griff = einzug.find("heimgriff::ersetzen").expect("kein Griff");
+        let tab = einzug.find("tab_oeffnen").expect("kein Tab");
+        assert!(
+            stand < griff && griff < tab,
+            "der Stand wird zu spaet gefragt"
+        );
+        for nadel in [
+            "if gefragt.ort == jetzt.ort",
+            "gefragt.nummer != jetzt.nummer",
+            "if gilt {",
+        ] {
+            assert!(
+                einzug.contains(nadel),
+                "die Einzugsmethode enthaelt {nadel} nicht"
+            );
+        }
+    }
+
+    /// Eine ueberholte Antwort oeffnet nichts, und ihre Saetze gehen nicht
+    /// verloren, sondern kommen mit der juengsten.
+    #[test]
+    fn eine_doppelte_f2_verliert_keinen_satz() {
+        let befehle = super::Notizordnerbefehle::default();
+        befehle.neuer();
+        let erster = befehle.juengster.get();
+        befehle.neuer();
+        assert_ne!(
+            erster,
+            befehle.juengster.get(),
+            "der zweite ueberholt den ersten nicht"
+        );
+        befehle.zurueckstellen(vec!["alt".to_owned()]);
+        assert_eq!(befehle.saetze_mit(vec!["neu".to_owned()]), ["alt", "neu"]);
+        assert_eq!(
+            befehle.saetze_mit(Vec::new()),
+            Vec::<String>::new(),
+            "ein Satz kam zweimal"
         );
     }
 
@@ -15030,26 +15557,32 @@ mod notizordnerproben {
     #[test]
     fn f2_nennt_den_fehler_und_legt_ohne_ort_nichts_an() {
         let quelle = diese_datei();
-        // Seit dem 261016 stehen Lage und Anlegen im Helfer, den F2 und
-        // „Verbinden…“ teilen; F2 kehrt ohne Ergebnis des Helfers zurueck.
+        // Die Lage steht im Auftrag, den F2 und „Verbinden…“ teilen; F2 kehrt
+        // ohne Auftrag zurueck, bevor irgendetwas auf den Faden geht.
         let f2 = rumpf(&quelle, concat!("notizordner_", "oeffnen"));
-        let helfer_ruf = f2
-            .find(concat!("self.notizordner_", "bereitstellen("))
-            .expect("F2 ruft den Helfer");
+        let auftrag_ruf = f2
+            .find(concat!("self.notizordner", "auftrag("))
+            .expect("F2 holt den Auftrag");
         let zurueck_f2 = f2.find("return true;").expect("F2 kehrt ohne Ort zurueck");
-        assert!(helfer_ruf < zurueck_f2);
-        let helfer = rumpf(&quelle, concat!("notizordner_", "bereitstellen"));
+        let faden = f2
+            .find(concat!("nebenfaden::", "fragen_lassen("))
+            .expect("F2 stellt die Frage nicht auf den Faden");
+        assert!(auftrag_ruf < zurueck_f2 && zurueck_f2 < faden);
+        let auftrag = rumpf(&quelle, concat!("notizordner", "auftrag"));
         let stelle = |nadel: &str| {
-            helfer
+            auftrag
                 .find(nadel)
-                .unwrap_or_else(|| panic!("{nadel} steht nicht im Rumpf des Helfers"))
+                .unwrap_or_else(|| panic!("{nadel} steht nicht im Rumpf des Auftrags"))
         };
         let lage = stelle(concat!("heimgriff::", "lage("));
         let fehler = stelle("Err(fehler) =>");
         let zurueck = stelle("return None;");
-        let anlegen = stelle(concat!("heimordner::bereit", "stellen("));
-        assert!(lage < fehler && fehler < zurueck && zurueck < anlegen);
-        for rumpf in [&f2, &helfer] {
+        assert!(lage < fehler && fehler < zurueck);
+        assert!(
+            !auftrag.contains(concat!("heimordner::bereit", "stellen(")),
+            "der Auftrag legt selbst an"
+        );
+        for rumpf in [&f2, &auftrag] {
             assert!(
                 !rumpf.contains(concat!("heimgriff::", "lesen(")),
                 "F2 liest den Schutzort mit"
@@ -17101,9 +17634,10 @@ mod kontextproben {
     /// genau einmal:**
     ///
     /// - `notizordner_bereitstellen` in `verbindungsschluessel_holen`: fehlt
-    ///   `secrets.txt`, legt der Helfer sie wie F2 auf dem Hauptfaden an; das
-    ///   geschieht allein, wenn die Datei fehlt, also einmal vor jeder ersten
-    ///   Verbindung in einem Notizordner.
+    ///   `secrets.txt`, legt der Helfer sie auf dem Hauptfaden an, mit derselben
+    ///   Arbeit, die F2 auf einen Faden stellt; das geschieht allein, wenn die
+    ///   Datei fehlt, also einmal vor jeder ersten Verbindung in einem
+    ///   Notizordner.
     /// - `lesezeichen_aendern` in `verbindungsmarke_anlegen`, gerufen aus
     ///   `anhaengen_einziehen` (seit dem 261017 auch aus `cmd+d` in der
     ///   Tabelle von `secrets.txt`): das Lesezeichen der

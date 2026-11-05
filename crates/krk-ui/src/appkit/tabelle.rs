@@ -3891,8 +3891,15 @@ impl DateifensterQuelle {
     fn pfadstand(&self) -> Pfadfrage {
         Pfadfrage {
             sprung: self.ivars().pfadsprung.get(),
-            tab: self.ivars().tabs.borrow().aktiver().stand(),
+            tab: self.tabstand(),
         }
+    }
+
+    /// Der sichtbare Tab samt dem Ort, den er zeigt; auch der Stand, gegen den
+    /// `notizordner_einziehen` im Anwendungsdelegierten die Antwort von F2 haelt.
+    /// Fragt allein das Modell.
+    pub fn tabstand(&self) -> Tabstand {
+        self.ivars().tabs.borrow().aktiver().stand()
     }
 
     /// Nimmt die Antwort der Pfadpruefung auf dem Hauptfaden entgegen und

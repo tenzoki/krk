@@ -53,10 +53,16 @@
 //!   erneut aus; der `Drop` des inneren gaebe danach die Sperre des aeusseren
 //!   ab, und der Rest des aeusseren Durchgangs liefe ungeschuetzt.
 //! - **Zwei [`crate::ablage::Ablage`]-Werte eines Prozesses duerfen nicht
-//!   zugleich einen Durchgang fahren.** Sie halten zwei Deskriptoren auf
-//!   dieselbe Sperrdatei, und zwei Deskriptoren blockieren einander so wie zwei
-//!   Prozesse. Heute ist das erfuellt, weil `tasten::belegung::fuer_den_betrieb`
-//!   seine Ablage verwirft, bevor die Oberflaeche die bleibende oeffnet.
+//!   auf demselben Faden ineinander einen Durchgang fahren.** Sie halten zwei
+//!   Deskriptoren auf dieselbe Sperrdatei, und zwei Deskriptoren blockieren
+//!   einander so wie zwei Prozesse; der innere wartete auf den aeusseren, und der
+//!   kaeme nie dazu, ihn abzugeben. `tasten::belegung::fuer_den_betrieb` verwirft
+//!   seine Ablage deshalb, bevor die Oberflaeche die bleibende oeffnet. **Auf zwei
+//!   Faeden ist genau dieses Warten erwuenscht:** F2 faehrt seinen Durchgang am
+//!   Vorgabeort auf einem Faden und mit einer eigenen Ablage
+//!   (`notizordner_erheben` in `krk-ui/src/appkit/anwendung.rs`), und der
+//!   Hauptfaden wartet solange. Derselbe Deskriptor taete das nicht, siehe die
+//!   erste Regel.
 //!
 //! **Eine Verklemmung zwischen den beiden Sperren gibt es nicht.** Das
 //! Sitzungsrecht wird beim Start genommen und nie, waehrend ein Schreibgriff
