@@ -8355,6 +8355,18 @@ impl Anwendungsdelegierter {
     /// Approach des Plans). Seite und Gegenstand sind die gereisten, nicht die
     /// gerade sichtbaren.
     ///
+    /// **`blatt_steht` wird hier ebenso neu gefragt, und zwar allein dort, wo
+    /// die Tafel ein Blatt verlangt.** In der Luecke des Fadens laeuft die
+    /// Ereignisschleife, und der Nutzer kann ein anderes Blatt geoeffnet haben.
+    /// `beginSheet` reihte das Loeschblatt dahinter ein, und sein Griff naehme
+    /// dem sichtbaren Blatt im Schlitz den Abbruchweg ([`Self::blatt_oeffnet`]).
+    /// Die Meldungsstufen bleiben davon unberuehrt, denn sie oeffnen nichts.
+    /// **Die Antwort wird verworfen und nicht nachgeholt:** anders als bei
+    /// [`Self::vorgang_zeichnen`] wartet kein Arbeitsfaden auf sie, die
+    /// Eingabeblaetter melden ihr Schliessen nicht, und ein spaeter aufgehendes
+    /// Loeschblatt stuende ohne Zusammenhang mit dem, was der Nutzer dann tut.
+    /// Er drueckt die Taste neu und bekommt einen frischen Befund.
+    ///
     /// **Die Sperre `loeschpruefung` faellt als erste Handlung**, vor jedem
     /// Ausstieg. Kaeme ein lokaler Gegenstand ohne Befund bis zur
     /// Papierkorbfrage, gilt er als unentschieden und nie als entwarnt; eine
@@ -8400,6 +8412,13 @@ impl Anwendungsdelegierter {
             }
             Vorstufe::NichtsAusgewaehlt => {
                 self.antwort_zeigen(seite, text(Text::NichtsAusgewaehlt));
+                true
+            }
+            // Die Tafel verlangt ein Blatt, und es steht schon eines: kein
+            // zweites dahinter und kein zweiter Griff im Schlitz. Gemeldet wird
+            // auf der gereisten Seite, und die Antwort verfaellt.
+            Vorstufe::Rueckfrage | Vorstufe::EndgueltigeRueckfrage(_) if self.blatt_steht() => {
+                self.antwort_zeigen(seite, text(Text::BlattSteht));
                 true
             }
             // Ein ferner Gegenstand erreicht diesen Zweig nicht, weil die
@@ -8482,6 +8501,11 @@ impl Anwendungsdelegierter {
     /// `None` fuer einen fernen und einen im Archiv. Kaeme ein lokaler ohne
     /// ihn an, gilt er als unentschieden ([`Loeschbefund::unentschieden`]) und
     /// nie als entwarnt; eine Frage an die Platte entsteht hier nicht.
+    ///
+    /// **Ob schon ein Blatt steht, fragt der eine Rufer**
+    /// [`Self::loeschbefund_einziehen`] unmittelbar davor, im selben Durchgang
+    /// der Ereignisschleife; hier ist es entschieden
+    /// (`das_loeschblatt_oeffnet_nie_ueber_einem_stehenden_blatt`).
     ///
     /// Liefert `false` allein dann, wenn es kein Fenster gibt, an dem das
     /// Blatt haengen koennte.
@@ -18285,6 +18309,68 @@ mod fernvorgangsproben {
             sperre < erster_ausstieg,
             "{einzug} loest die Sperre nicht vor jedem Ausstieg"
         );
+    }
+
+    /// Das Loeschblatt geht nie ueber einem stehenden Blatt auf (Defekt
+    /// `261104-1956-das-loeschblatt-oeffnet-nach-der-antwort-…`).
+    ///
+    /// Gehalten wird am Rumpf der Einzugsmethode, dass der Zweig mit
+    /// `blatt_steht` beide Blattstufen der Tafel faengt, vor dem ersten Ruf von
+    /// `loeschblatt_zeigen` steht und auf der gereisten Seite meldet. Daneben
+    /// haelt sie, dass `loeschblatt_zeigen` nur diese zwei Rufe hat und in seinem
+    /// Rumpf genau ein Blatt und genau einen Griff entstehen.
+    ///
+    /// **Was sie nicht sieht:** was `attachedSheet` antwortet und ob die Meldung
+    /// in der Statuszeile zu lesen ist, solange das andere Blatt steht; das
+    /// zeigt allein das laufende Programm.
+    #[test]
+    fn das_loeschblatt_oeffnet_nie_ueber_einem_stehenden_blatt() {
+        let datei = diese_datei();
+        let einzugsrumpf = rumpf(&datei, concat!("loeschbefund_", "einziehen"));
+        let frage = einzugsrumpf
+            .find(concat!(
+                "Vorstufe::Rueckfrage | Vorstufe::EndgueltigeRueckfrage(_) ",
+                "if self.blatt_steht()"
+            ))
+            .expect("die Einzugsmethode faengt nicht beide Blattstufen mit blatt_steht");
+        let erster_ruf = einzugsrumpf
+            .find(concat!("self.loeschblatt_", "zeigen("))
+            .expect("die Einzugsmethode ruft das Blatt nicht");
+        assert!(
+            frage < erster_ruf,
+            "die Einzugsmethode fragt blatt_steht erst nach dem Blatt"
+        );
+        assert!(
+            einzugsrumpf.contains(concat!(
+                "self.antwort_zeigen(seite, text(Text::Blatt",
+                "Steht))"
+            )),
+            "ein stehendes Blatt wird nicht auf der gereisten Seite gemeldet"
+        );
+        assert_eq!(
+            datei.matches(concat!("loeschblatt_", "zeigen(")).count(),
+            3,
+            "loeschblatt_zeigen hat neben seinem Kopf nicht genau die zwei Rufe \
+             der Einzugsmethode"
+        );
+        assert_eq!(
+            einzugsrumpf
+                .matches(concat!("self.loeschblatt_", "zeigen("))
+                .count(),
+            2,
+            "die Einzugsmethode ruft das Blatt nicht aus genau zwei Stufen"
+        );
+        let blattrumpf = rumpf(&datei, concat!("loeschblatt_", "zeigen"));
+        for nadel in [
+            concat!("loeschbestaetigung::", "zeigen("),
+            concat!("self.blatt_", "oeffnet(griff)"),
+        ] {
+            assert_eq!(
+                blattrumpf.matches(nadel).count(),
+                1,
+                "loeschblatt_zeigen enthaelt {nadel} nicht genau einmal"
+            );
+        }
     }
 
     /// Ein Vorgang mit einer fernen Seite frischt nach dem Ende jeden seiner
