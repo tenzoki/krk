@@ -61,9 +61,9 @@ use krk_core::sprache::{Text, text};
 use objc2_foundation::MainThreadMarker;
 
 /// Der Name des Fadens, auf dem eine Frage an die Platte gestellt wird, die
-/// mit dem Terminal nichts zu tun hat: die Pfadeingabe und „Ort waehlen…“
-/// (Plan `261102-1314-plan-dateisystemfragen-vom-hauptfaden-nehmen.md`,
-/// Schritte 5 und 6).
+/// mit dem Terminal nichts zu tun hat: eine Frage, die ein Hauptfadenweg ueber
+/// [`fragen_lassen`] stellt, weil die Ereignisschleife nicht auf ihre Antwort
+/// warten darf.
 ///
 /// Ein eigener Name und nicht `krk-terminal`: im Fadenbild eines haengenden
 /// Prozesses soll stehen, welche Art Frage dort wartet. Er steht hier und
