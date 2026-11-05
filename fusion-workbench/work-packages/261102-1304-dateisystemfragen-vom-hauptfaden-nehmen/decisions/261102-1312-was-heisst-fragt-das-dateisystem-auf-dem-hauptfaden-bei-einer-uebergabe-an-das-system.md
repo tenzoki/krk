@@ -33,3 +33,5 @@ Möglichkeit 1. Sie ist die Frage, die der Quelltext beantwortet, und sie schlie
 
 ---
 Answered: Der Nutzer am 261102 mit „1“ auf die Vorlage „Plan freigeben, A und B wie vorgeschlagen“. Damit gilt Möglichkeit 1: die Zusage reicht bis zu KRKs eigenen Fragen; die Übergaben an das System bleiben als benannter Rest und werden an einer hängenden Freigabe gemessen. Ruled by user, Kai Stalmann <ks@qantr.com>.
+
+Nachtrag 261105: Der Lauf schließt auch `readObjectsForClasses:options:` und `setDirectoryURL:` mit dem Blatt dahinter ein (`261104-2001-die-liste-der-uebergaben-in-der-regel-laesst-setdirectoryurl-und-readobjects-aus.md`).

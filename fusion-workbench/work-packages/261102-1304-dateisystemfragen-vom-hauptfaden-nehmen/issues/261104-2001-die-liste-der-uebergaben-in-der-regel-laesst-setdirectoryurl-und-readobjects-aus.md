@@ -14,3 +14,6 @@ Nicht darin:
 Ob einer der zwei Aufrufe an einer hängenden Freigabe die Schleife anhält, ist nicht gemessen.
 
 **Abnahme.** Die Regeldatei führt beide als Teil des Rests oder sagt mit Beleg, warum nicht. Der Satz an der Probe sagt nichts über die Platte, was am Quelltext nicht zu sehen ist. Der Lauf, den `261102-1312-was-heisst-fragt-das-dateisystem-auf-dem-hauptfaden-bei-einer-uebergabe-an-das-system.md` dem Nutzer zuweist, schließt die zwei mit ein.
+
+---
+Resolved: `.claude/rules/coding-was-man-nicht-sieht.md` führt `readObjectsForClasses:options:` (`zwischenablage::dateiverweise`) und `setDirectoryURL:` mit dem Blatt dahinter (`blaetter/ortwahl.rs`) im benannten Rest der Übergaben, und der Lauf des Nutzers, von dem derselbe Absatz spricht, gilt damit auch für diese zwei. Der Kommentar an `der_abwurf_stellt_auf_dem_hauptfaden_keinen_systemaufruf` (`appkit/tabelle.rs`) sagt nicht mehr „keine Platte“, sondern dass KRK nicht sieht, was das System beim Lesen der Ablage fragt. Die Zeile `Resolved:` in `261030-1259-weitere-menue-und-tastenwege-fragen-das-dateisystem-auf-dem-hauptfaden.md` bleibt unverändert. Der Abschnitt `## Question` in `261102-1312-was-heisst-fragt-das-dateisystem-auf-dem-hauptfaden-bei-einer-uebergabe-an-das-system.md` zählt die zwei weiterhin nicht auf; dieser Datensatz ist hier nicht geändert. Gemessen ist weiterhin keine Übergabe.

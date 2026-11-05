@@ -8572,8 +8572,12 @@ mod tests {
     /// Einzugsmethode.
     ///
     /// **Was sie nicht sieht:** einen Systemaufruf in einer tiefer gerufenen
-    /// Funktion. `abwurfquellen`, `angebot` und `vorgang_laeuft_fragen` lesen
-    /// die Ablage des Zuges und das Modell und keine Platte.
+    /// Funktion. `abwurfquellen` liest die Ablage des Zuges ueber
+    /// `zwischenablage::dateiverweise`, `angebot` die Maske des Zuges, und
+    /// `vorgang_laeuft_fragen` ruft den hereingereichten Rueckruf. Was das
+    /// System beim Lesen der Ablage fragt, sieht KRK nicht:
+    /// `readObjectsForClasses:options:` gehoert zu den Uebergaben an das
+    /// System (`261102-1312-was-heisst-fragt-das-dateisystem-auf-dem-hauptfaden-bei-einer-uebergabe-an-das-system.md`).
     #[test]
     fn der_abwurf_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
         let inhalt = diese_datei();
