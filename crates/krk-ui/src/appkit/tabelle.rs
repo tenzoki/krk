@@ -1468,12 +1468,13 @@ pub struct QuelleIvars {
     /// Faden `krk-plattenfrage` (Plan `261102-1314-…`, Schritt 9; Punkt 3g
     /// des Befunds `261030-1259-…`).
     ///
-    /// **Ein Ordner und seine Antwort, je Ziehvorgang.** Fehlt die Antwort fuer
+    /// **Hoechstens eine laufende Frage je Tabelle.** Fehlt die Antwort fuer
     /// den Ordner unter dem Zeiger, stellt [`DateifensterQuelle::schreibrecht_gemerkt`]
-    /// die Frage einmal und urteilt bis zur Antwort mit
+    /// die Frage, sofern keine laeuft, und urteilt bis zur Antwort mit
     /// [`Schreibrecht::Unbekannt`], das durchlaesst; die naechste
-    /// Zeigerbewegung urteilt mit der Antwort. Wechselt der Zeiger auf einen
-    /// anderen Ordner, ersetzt dessen Frage diesen Merker.
+    /// Zeigerbewegung urteilt mit der Antwort. Laeuft schon eine, merkt sich
+    /// der Merker allein den Ordner, und kommt sie zurueck, wird dieser dann
+    /// aktuelle gefragt; die Regeln stehen an [`Schreibrechtmerker`].
     ///
     /// **Die Loeschregel ist die entgegengesetzte von
     /// [`QuelleIvars::abwurfquellen`]**, und mit Absicht: die Quellen haengen
@@ -1481,54 +1482,117 @@ pub struct QuelleIvars {
     /// haengt am Ordner und soll bei einem neuen Eintritt frisch gemessen
     /// werden. Geraeumt wird es, wenn der Zug die Tabelle verlaesst
     /// (`draggingExited:` an [`Dateiliste`]) oder endet (`draggingEnded:` dort
-    /// und das Loslassen in [`DateifensterQuelle::abwurf_annehmen`]). Die
-    /// Nummer der Ziehsitzung steht trotzdem darin, damit ein zweiter Zug ohne
-    /// eine dieser Kanten nicht die Antwort des ersten liest.
-    schreibrechtmerker: RefCell<Option<Schreibrechtmerker>>,
+    /// und das Loslassen in [`DateifensterQuelle::abwurf_annehmen`]). **Das
+    /// Raeumen nimmt Ordner und Antwort und nicht die laufende Frage**, denn
+    /// ihr Faden laeuft weiter, gleich was der Zug tut.
+    schreibrechtmerker: RefCell<Schreibrechtmerker>,
 }
 
-/// Der Inhalt von [`QuelleIvars::schreibrechtmerker`]: welcher Ordner in
-/// welchem Ziehvorgang gefragt ist, und was die Platte geantwortet hat.
+/// Eine Frage nach dem Schreibrecht: welcher Ordner in welchem Ziehvorgang.
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct Schreibrechtmerker {
+struct Schreibrechtfrage {
     /// `NSDraggingInfo::draggingSequenceNumber` des Zuges, fuer den gefragt ist.
     folge: NSInteger,
     /// Der Zielordner, nach dessen Schreibrecht gefragt ist.
     ordner: PathBuf,
-    /// Die Antwort, `None`, solange die Frage auf dem Faden laeuft.
+}
+
+/// Der Inhalt von [`QuelleIvars::schreibrechtmerker`]; rein, damit die Regeln
+/// ohne AppKit pruefbar sind.
+///
+/// **Die laufende Frage und der aktuelle Ordner sind zwei Felder**, weil der
+/// Zeiger weiterzieht, waehrend der Faden wartet: `laufend` sagt, wonach der
+/// Faden gerade fragt, `aktuell`, wofuer zuletzt ein Urteil verlangt war. Daraus
+/// folgen die drei Zusagen:
+///
+/// - **Es laeuft hoechstens eine Frage**, ueber beliebig viele Ordner, jeden
+///   neuen Eintritt und jeden neuen Zug hinweg; das begrenzt auch eine Frage,
+///   die haengt.
+/// - **Eine Antwort gilt allein der Frage, die sie beantwortet.** Zug und Ordner
+///   muessen beide stimmen: eine Antwort zu einem anderen Ordner oder aus einem
+///   frueheren Zug gilt dem aktuellen nicht, und dann wird der aktuelle gefragt.
+/// - **Eine Antwort gilt auch nach einem Hin und Her**: steht der Zeiger bei
+///   ihrer Ankunft wieder ueber dem gefragten Ordner, im selben Zug, nimmt der
+///   Merker sie, auch wenn der Zug die Tabelle dazwischen verlassen hat. Nach
+///   einem solchen Eintritt urteilt also eine Messung, die vor ihm begann; frisch
+///   gemessen wird er nur, wenn keine Frage mehr laeuft.
+///
+/// **Was das kostet: eine Frage, die nie zurueckkommt, laesst diese Tabelle fuer
+/// den Rest des Prozesses ohne Urteil.** Jeder weitere Zug ueber ihr, auch ueber
+/// einem Ordner auf einer gesunden Platte, bleibt bei
+/// [`Schreibrecht::Unbekannt`] und nimmt an, und was der Ordner verweigert, steht
+/// danach mit seinem Grund in der Abschlussliste. Das ist derselbe Preis wie die
+/// Luecke bis zur Antwort (Modulkopf von [`super::abwurf`]), nur ohne Ende; ein
+/// Abwurf bleibt moeglich, nur das Verbotszeichen fehlt. Die andere Tabelle hat
+/// ihren eigenen Merker und ist davon nicht betroffen.
+#[derive(Debug, Default)]
+struct Schreibrechtmerker {
+    /// Die eine Frage, die gerade auf dem Faden steht.
+    laufend: Option<Schreibrechtfrage>,
+    /// Der Ordner, fuer den zuletzt ein Urteil verlangt war; `None`, solange
+    /// kein Zug ueber der Tabelle steht.
+    aktuell: Option<Schreibrechtfrage>,
+    /// Die Antwort zu `aktuell`, `None`, solange keine da ist.
     antwort: Option<Schreibrecht>,
 }
 
 impl Schreibrechtmerker {
-    /// Ob dieser Merker die Frage nach `ordner` im Zug `folge` traegt.
-    fn gilt_fuer(&self, folge: NSInteger, ordner: &Path) -> bool {
-        self.folge == folge && self.ordner == ordner
+    /// Das Urteil fuer den Ordner unter dem Zeiger, und die Frage, die der
+    /// Rufer jetzt auf den Faden zu stellen hat, falls eine.
+    #[must_use = "eine zurueckgegebene Frage steht schon als laufend im Merker; ungestellt kaeme nie eine Antwort, und die Tabelle bliebe ohne Urteil"]
+    fn urteilen(
+        &mut self,
+        folge: NSInteger,
+        ordner: &Path,
+    ) -> (Schreibrecht, Option<Schreibrechtfrage>) {
+        let gilt_schon = self
+            .aktuell
+            .as_ref()
+            .is_some_and(|frage| frage.folge == folge && frage.ordner == ordner);
+        if !gilt_schon {
+            self.aktuell = Some(Schreibrechtfrage {
+                folge,
+                ordner: ordner.to_path_buf(),
+            });
+            self.antwort = None;
+        }
+        (
+            self.antwort.unwrap_or(Schreibrecht::Unbekannt),
+            self.naechste_frage(),
+        )
     }
-}
 
-/// Was der Merker fuer den Ordner unter dem Zeiger sagt; eine reine Funktion,
-/// damit die drei Ausgaenge ohne AppKit pruefbar sind.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum Merkerstand {
-    /// Die Platte hat geantwortet.
-    Antwort(Schreibrecht),
-    /// Die Frage laeuft; geurteilt wird mit `Unbekannt`.
-    Wartet,
-    /// Fuer diesen Ordner in diesem Zug ist noch nicht gefragt.
-    Fehlt,
-}
+    /// Nimmt die Antwort auf die laufende Frage entgegen und nennt die Frage,
+    /// die der Rufer jetzt auf den Faden zu stellen hat, falls eine.
+    #[must_use = "eine zurueckgegebene Frage steht schon als laufend im Merker; ungestellt kaeme nie eine Antwort, und die Tabelle bliebe ohne Urteil"]
+    fn antwort_nehmen(
+        &mut self,
+        frage: &Schreibrechtfrage,
+        recht: Schreibrecht,
+    ) -> Option<Schreibrechtfrage> {
+        self.laufend = None;
+        if self.aktuell.as_ref() == Some(frage) {
+            self.antwort = Some(recht);
+        }
+        self.naechste_frage()
+    }
 
-fn merkerstand(
-    merker: Option<&Schreibrechtmerker>,
-    folge: NSInteger,
-    ordner: &Path,
-) -> Merkerstand {
-    match merker {
-        Some(merker) if merker.gilt_fuer(folge, ordner) => match merker.antwort {
-            Some(antwort) => Merkerstand::Antwort(antwort),
-            None => Merkerstand::Wartet,
-        },
-        _ => Merkerstand::Fehlt,
+    /// Der Zug hat die Tabelle verlassen oder ist zu Ende. Die laufende Frage
+    /// bleibt stehen: ihr Faden wartet weiter, und ein neuer Eintritt darf
+    /// keine zweite daneben starten.
+    fn zug_vorbei(&mut self) {
+        self.aktuell = None;
+        self.antwort = None;
+    }
+
+    /// Die eine Stelle, die eine Frage in Gang setzt: keine laeuft, und zum
+    /// aktuellen Ordner fehlt die Antwort.
+    fn naechste_frage(&mut self) -> Option<Schreibrechtfrage> {
+        if self.laufend.is_some() || self.antwort.is_some() {
+            return None;
+        }
+        self.laufend = self.aktuell.clone();
+        self.laufend.clone()
     }
 }
 
@@ -1770,7 +1834,7 @@ impl DateifensterQuelle {
             gemeldeter_abwurfgrund: Cell::new(None),
             beschlossener_vorgang: Cell::new(None),
             abwurfquellen: RefCell::new(None),
-            schreibrechtmerker: RefCell::new(None),
+            schreibrechtmerker: RefCell::default(),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
@@ -5290,8 +5354,8 @@ impl DateifensterQuelle {
     /// (`issues/260826-1327_*_abwurf-pruefen-nennt-einen-systemaufruf-je-zeigerbewegung-zu-teuer-und-macht-fuer-das-schreibrecht-einen.md`).
     /// Seit dem 261102 stellt dieser Rumpf keinen Systemaufruf mehr: das
     /// Schreibrecht kommt aus [`Self::schreibrecht_gemerkt`], gemessen auf dem
-    /// Faden `krk-plattenfrage` einmal je Ordner und Zug, und bis zur Antwort
-    /// urteilt die Regel mit `Unbekannt`, das durchlaesst.
+    /// Faden `krk-plattenfrage`, hoechstens eine Frage zur Zeit, und bis zur
+    /// Antwort urteilt die Regel mit `Unbekannt`, das durchlaesst.
     /// Entschieden wird sie deshalb dort, wo sie zu entscheiden ist: in
     /// `krk_core::operation`s `zielpfad`, im Augenblick des Zugriffs und ueber
     /// die Naemlichkeit statt ueber die Schreibweise. Was hier durchrutscht,
@@ -5398,35 +5462,26 @@ impl DateifensterQuelle {
     /// Das Schreibrecht des lokalen Zielordners, so weit es fuer diesen Zug
     /// schon gemessen ist (C6, Lage 2; Plan `261102-1314-…`, Schritt 9).
     ///
-    /// Drei Ausgaenge nach [`merkerstand`]: die gemerkte Antwort; waehrend die
-    /// Frage laeuft [`Schreibrecht::Unbekannt`]; und fehlt fuer diesen Ordner
-    /// in diesem Zug noch jede Frage, wird der Merker auf ihn gestellt, die
-    /// Frage ueber [`Self::schreibrecht_fragen_lassen`] gestartet und
-    /// ebenfalls `Unbekannt` geantwortet. Dass `Unbekannt` durchlaesst, ist
-    /// die Entscheidung `260818-1633_*_gilt-ein-unentscheidbares-schreibrecht-beim-abwurf-als-erlaubnis-oder-als-abweisung.md`,
+    /// Die gemerkte Antwort, wenn sie zu diesem Ordner in diesem Zug da ist,
+    /// sonst [`Schreibrecht::Unbekannt`]. Ob dabei eine Frage ueber
+    /// [`Self::schreibrecht_fragen_lassen`] startet, sagt
+    /// [`Schreibrechtmerker::urteilen`]: nur, wenn keine laeuft. Dass
+    /// `Unbekannt` durchlaesst, ist die Entscheidung `260818-1633_*_gilt-ein-unentscheidbares-schreibrecht-beim-abwurf-als-erlaubnis-oder-als-abweisung.md`,
     /// umgesetzt in [`abwurfregel::urteil`].
     ///
     /// **Dieser Rumpf stellt keinen Systemaufruf**; die Probe
     /// `der_abwurf_stellt_auf_dem_hauptfaden_keinen_systemaufruf` haelt das.
     fn schreibrecht_gemerkt(&self, folge: NSInteger, ordner: &Path) -> Schreibrecht {
-        let stand = merkerstand(
-            self.ivars().schreibrechtmerker.borrow().as_ref(),
-            folge,
-            ordner,
-        );
-        match stand {
-            Merkerstand::Antwort(recht) => recht,
-            Merkerstand::Wartet => Schreibrecht::Unbekannt,
-            Merkerstand::Fehlt => {
-                *self.ivars().schreibrechtmerker.borrow_mut() = Some(Schreibrechtmerker {
-                    folge,
-                    ordner: ordner.to_path_buf(),
-                    antwort: None,
-                });
-                self.schreibrecht_fragen_lassen(folge, ordner.to_path_buf());
-                Schreibrecht::Unbekannt
-            }
+        // Die Ausleihe endet vor dem Fadenstart.
+        let (recht, zu_stellen) = self
+            .ivars()
+            .schreibrechtmerker
+            .borrow_mut()
+            .urteilen(folge, ordner);
+        if let Some(frage) = zu_stellen {
+            self.schreibrecht_fragen_lassen(frage);
         }
+        recht
     }
 
     /// Stellt die Frage nach dem Schreibrecht auf den Faden
@@ -5438,8 +5493,8 @@ impl DateifensterQuelle {
     /// schwacher Verweis, an den Hauptfaden gebunden. **Scheitert der
     /// Fadenstart**, ist die Antwort `Unbekannt`: gemessen ist nichts, und
     /// ein unentscheidbares Schreibrecht laesst durch, wie jedes andere.
-    fn schreibrecht_fragen_lassen(&self, folge: NSInteger, ordner: PathBuf) {
-        let gefragt = ordner.clone();
+    fn schreibrecht_fragen_lassen(&self, frage: Schreibrechtfrage) {
+        let gefragt = frage.ordner.clone();
         let rueckweg = MainThreadBound::new(Weak::from_retained(&self.retain()), self.mtm());
         nebenfaden::fragen_lassen(
             PLATTENFRAGE,
@@ -5447,7 +5502,7 @@ impl DateifensterQuelle {
             |_fehler| Schreibrecht::Unbekannt,
             move |mtm, recht| {
                 if let Some(quelle) = rueckweg.get(mtm).load() {
-                    quelle.schreibrecht_einziehen(folge, &ordner, recht);
+                    quelle.schreibrecht_einziehen(&frage, recht);
                 }
             },
         );
@@ -5455,25 +5510,29 @@ impl DateifensterQuelle {
 
     /// Nimmt die Antwort auf die Frage nach dem Schreibrecht entgegen.
     ///
-    /// **Eingetragen wird sie allein, wenn der Merker noch dieselbe Frage
-    /// traegt**: ist der Zeiger inzwischen ueber einem anderen Ordner, hat der
-    /// Zug die Tabelle verlassen oder ist ein neuer Zug unterwegs, faellt die
-    /// Antwort weg. Ein Urteil faellt hier nicht; das naechste
-    /// `validateDrop:` urteilt mit ihr. **Sie stellt keinen Systemaufruf.**
-    fn schreibrecht_einziehen(&self, folge: NSInteger, ordner: &Path, recht: Schreibrecht) {
-        let mut merker = self.ivars().schreibrechtmerker.borrow_mut();
-        if let Some(merker) = merker.as_mut()
-            && merker.gilt_fuer(folge, ordner)
-        {
-            merker.antwort = Some(recht);
+    /// **Eingetragen wird sie allein, wenn der aktuelle Ordner noch diese Frage
+    /// ist**: ist der Zeiger inzwischen ueber einem anderen Ordner oder ein
+    /// neuer Zug unterwegs, gilt sie ihm nicht, und jetzt, da der Faden frei
+    /// ist, wird er gefragt. Hat der Zug die Tabelle verlassen, faellt sie weg.
+    /// Ein Urteil faellt hier nicht; das naechste `validateDrop:` urteilt mit
+    /// ihr. **Sie stellt keinen Systemaufruf.**
+    fn schreibrecht_einziehen(&self, frage: &Schreibrechtfrage, recht: Schreibrecht) {
+        // Die Ausleihe endet vor dem Fadenstart.
+        let zu_stellen = self
+            .ivars()
+            .schreibrechtmerker
+            .borrow_mut()
+            .antwort_nehmen(frage, recht);
+        if let Some(frage) = zu_stellen {
+            self.schreibrecht_fragen_lassen(frage);
         }
     }
 
     /// Raeumt den Merker des Schreibrechts: der Zug hat die Tabelle
     /// verlassen oder ist zu Ende. Beim naechsten Eintritt wird frisch
-    /// gemessen.
+    /// gemessen, sobald keine Frage mehr laeuft.
     fn schreibrechtmerker_raeumen(&self) {
-        self.ivars().schreibrechtmerker.borrow_mut().take();
+        self.ivars().schreibrechtmerker.borrow_mut().zug_vorbei();
     }
 
     /// Gibt einen angenommenen Abwurf an den Anwendungsdelegierten weiter
@@ -8457,6 +8516,11 @@ mod tests {
             "{merker} reicht eine fehlende Antwort nicht an {huelle}: \
              sie bleibt auf dem Hauptfaden oder wird nie gemessen"
         );
+        assert!(
+            rumpf_von(code, einzug).contains(&format!("self.{huelle}(")),
+            "{einzug} stellt die Frage nach dem aktuellen Ordner nicht: \
+             nach einem Ordnerwechsel kaeme zu ihm nie eine Antwort"
+        );
         let huellenrumpf = rumpf_von(code, huelle);
         for nadel in [
             concat!("nebenfaden::", "fragen_lassen("),
@@ -8478,40 +8542,188 @@ mod tests {
     fn der_merker_des_schreibrechts_gilt_je_zug_und_ordner() {
         let ordner = PathBuf::from("/Nutzer/k/Ziel");
         let anderer = PathBuf::from("/Nutzer/k/Anderes");
-        let wartend = Schreibrechtmerker {
-            folge: 7,
-            ordner: ordner.clone(),
-            antwort: None,
-        };
-        let beantwortet = Schreibrechtmerker {
-            antwort: Some(Schreibrecht::Nein),
-            ..wartend.clone()
-        };
+        let mut merker = Schreibrechtmerker::default();
 
+        let (recht, frage) = merker.urteilen(7, &ordner);
         assert_eq!(
-            merkerstand(None, 7, &ordner),
-            Merkerstand::Fehlt,
-            "ohne Merker wird gefragt"
+            recht,
+            Schreibrecht::Unbekannt,
+            "ohne Antwort heisst es nicht nein"
         );
+        let frage = frage.expect("ohne Merker wird gefragt");
         assert_eq!(
-            merkerstand(Some(&wartend), 7, &ordner),
-            Merkerstand::Wartet,
+            merker.urteilen(7, &ordner),
+            (Schreibrecht::Unbekannt, None),
             "eine laufende Frage wird kein zweites Mal gestellt"
         );
         assert_eq!(
-            merkerstand(Some(&beantwortet), 7, &ordner),
-            Merkerstand::Antwort(Schreibrecht::Nein),
+            merker.antwort_nehmen(&frage, Schreibrecht::Nein),
+            None,
+            "die Antwort zum aktuellen Ordner verlangt keine weitere Frage"
+        );
+        assert_eq!(
+            merker.urteilen(7, &ordner),
+            (Schreibrecht::Nein, None),
             "die Antwort der Platte urteilt bei der naechsten Zeigerbewegung"
         );
+
+        let (recht, frage) = merker.urteilen(7, &anderer);
         assert_eq!(
-            merkerstand(Some(&beantwortet), 7, &anderer),
-            Merkerstand::Fehlt,
+            recht,
+            Schreibrecht::Unbekannt,
             "ein anderer Ordner erbt die Antwort des vorigen"
         );
+        assert!(frage.is_some(), "ein anderer Ordner wird gefragt");
+        let mut neuer_zug = Schreibrechtmerker::default();
+        let frage = neuer_zug.urteilen(7, &ordner).1.expect("gefragt");
+        assert_eq!(neuer_zug.antwort_nehmen(&frage, Schreibrecht::Nein), None);
+        let (recht, frage) = neuer_zug.urteilen(8, &ordner);
         assert_eq!(
-            merkerstand(Some(&beantwortet), 8, &ordner),
-            Merkerstand::Fehlt,
+            recht,
+            Schreibrecht::Unbekannt,
             "ein neuer Zug erbt die Antwort des vorigen"
         );
+        assert!(frage.is_some(), "ein neuer Zug wird gefragt");
+    }
+
+    /// Die Abnahme des Defekts: bei laufender Frage fuehrt ein Wechsel ueber
+    /// beliebig viele Ordner zu keinem weiteren Start, und nach der Antwort
+    /// urteilt der Abwurf am aktuellen Ordner.
+    #[test]
+    fn eine_laufende_frage_begrenzt_den_ordnerwechsel_und_die_antwort_urteilt_am_aktuellen() {
+        let erster = PathBuf::from("/Freigabe/erster");
+        let letzter = PathBuf::from("/Freigabe/letzter");
+        let mut merker = Schreibrechtmerker::default();
+
+        let erste_frage = merker
+            .urteilen(7, &erster)
+            .1
+            .expect("die erste Frage startet");
+        for nummer in 0..1000 {
+            let unterwegs = PathBuf::from(format!("/Freigabe/ordner-{nummer}"));
+            assert_eq!(
+                merker.urteilen(7, &unterwegs),
+                (Schreibrecht::Unbekannt, None),
+                "ein Ordnerwechsel startet neben der laufenden Frage eine zweite"
+            );
+        }
+        // Auch das Pendeln ueber den gefragten Ordner startet nichts.
+        assert_eq!(merker.urteilen(7, &erster), (Schreibrecht::Unbekannt, None));
+        assert_eq!(
+            merker.urteilen(7, &letzter),
+            (Schreibrecht::Unbekannt, None)
+        );
+
+        let zweite_frage = merker
+            .antwort_nehmen(&erste_frage, Schreibrecht::Nein)
+            .expect("kommt die Antwort zurueck, wird der aktuelle Ordner gefragt");
+        assert_eq!(
+            zweite_frage,
+            Schreibrechtfrage {
+                folge: 7,
+                ordner: letzter.clone()
+            },
+            "gefragt wird der Ordner, ueber dem der Zeiger jetzt steht"
+        );
+        assert_eq!(
+            merker.urteilen(7, &letzter),
+            (Schreibrecht::Unbekannt, None),
+            "die Antwort zu einem anderen Ordner gilt dem aktuellen nicht"
+        );
+        assert_eq!(
+            merker.antwort_nehmen(&zweite_frage, Schreibrecht::Nein),
+            None
+        );
+        assert_eq!(
+            merker.urteilen(7, &letzter),
+            (Schreibrecht::Nein, None),
+            "nach der Antwort urteilt der Abwurf am aktuellen Ordner"
+        );
+    }
+
+    /// Verlassen und Enden nehmen Ordner und Antwort und nicht die laufende
+    /// Frage: weder ein neuer Eintritt noch ein neuer Zug startet eine zweite.
+    #[test]
+    fn ein_neuer_eintritt_und_ein_neuer_zug_starten_keine_zweite_frage() {
+        let ordner = PathBuf::from("/Freigabe/ziel");
+        let mut merker = Schreibrechtmerker::default();
+        let frage = merker
+            .urteilen(7, &ordner)
+            .1
+            .expect("die erste Frage startet");
+
+        merker.zug_vorbei();
+        assert_eq!(
+            merker.urteilen(7, &ordner),
+            (Schreibrecht::Unbekannt, None),
+            "der neue Eintritt im selben Zug startet eine zweite Frage"
+        );
+        merker.zug_vorbei();
+        assert_eq!(
+            merker.urteilen(8, &ordner),
+            (Schreibrecht::Unbekannt, None),
+            "der neue Zug startet eine zweite Frage neben der laufenden"
+        );
+
+        let fuer_den_neuen_zug = merker
+            .antwort_nehmen(&frage, Schreibrecht::Nein)
+            .expect("derselbe Ordner im neuen Zug wird neu gefragt");
+        assert_eq!(fuer_den_neuen_zug.folge, 8);
+        assert_eq!(
+            merker.urteilen(8, &ordner),
+            (Schreibrecht::Unbekannt, None),
+            "die Antwort aus dem frueheren Zug gilt dem neuen nicht"
+        );
+    }
+
+    /// Ein Wiedereintritt im selben Zug ueber demselben Ordner nimmt die Antwort
+    /// der laufenden Frage; steht kein Zug mehr, faellt sie weg und nichts startet.
+    #[test]
+    fn die_antwort_nach_dem_verlassen_wird_genommen_oder_faellt_weg() {
+        let ordner = PathBuf::from("/Freigabe/ziel");
+
+        let mut wieder_drin = Schreibrechtmerker::default();
+        let frage = wieder_drin.urteilen(7, &ordner).1.expect("gefragt");
+        wieder_drin.zug_vorbei();
+        assert_eq!(wieder_drin.urteilen(7, &ordner).1, None);
+        assert_eq!(wieder_drin.antwort_nehmen(&frage, Schreibrecht::Nein), None);
+        assert_eq!(wieder_drin.urteilen(7, &ordner), (Schreibrecht::Nein, None));
+
+        let mut draussen = Schreibrechtmerker::default();
+        let frage = draussen.urteilen(7, &ordner).1.expect("gefragt");
+        draussen.zug_vorbei();
+        assert_eq!(
+            draussen.antwort_nehmen(&frage, Schreibrecht::Nein),
+            None,
+            "ohne Zug ueber der Tabelle gibt es nichts zu fragen"
+        );
+        let (recht, neu) = draussen.urteilen(7, &ordner);
+        assert_eq!(
+            recht,
+            Schreibrecht::Unbekannt,
+            "beim Eintritt wird frisch gemessen"
+        );
+        assert!(neu.is_some(), "beim Eintritt wird frisch gemessen");
+    }
+
+    /// Haelt den Preis fest, den der Doc-Kommentar von [`Schreibrechtmerker`]
+    /// nennt: kommt die Frage nie zurueck, bekommt keiner der folgenden Zuege
+    /// dieser Tabelle ein Urteil, auch nicht ueber einem anderen Ordner.
+    #[test]
+    fn eine_haengende_frage_laesst_die_tabelle_ohne_urteil_und_startet_nichts() {
+        let mut merker = Schreibrechtmerker::default();
+        let _haengt = merker
+            .urteilen(7, Path::new("/Freigabe/haengt"))
+            .1
+            .expect("die Frage startet");
+
+        for folge in 8..100 {
+            merker.zug_vorbei();
+            assert_eq!(
+                merker.urteilen(folge, Path::new("/Nutzer/k/gesund")),
+                (Schreibrecht::Unbekannt, None),
+                "neben der haengenden Frage startet eine zweite"
+            );
+        }
     }
 }

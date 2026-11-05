@@ -84,22 +84,32 @@
 //! `krk-plattenfrage` und nicht mehr auf dem Hauptfaden** (Plan
 //! `261102-1314-plan-dateisystemfragen-vom-hauptfaden-nehmen.md`, Schritt 9;
 //! Punkt 3g des Befunds `261030-1259-…`). Sie spricht allein Foundation an und
-//! kein AppKit, also darf sie das. Die Quelle der Dateiliste haelt je Zug einen
-//! Merker aus Zielordner und Antwort (`QuelleIvars::schreibrechtmerker` in
-//! `super::tabelle`): fehlt die Antwort fuer den Ordner unter dem Zeiger,
-//! startet sie die Frage einmal und urteilt bis zur Antwort mit
-//! [`Schreibrecht::Unbekannt`], das durchlaesst; die naechste Zeigerbewegung
-//! urteilt mit der Antwort. Der Merker faellt, wenn der Zug die Tabelle
-//! verlaesst oder endet.
+//! kein AppKit, also darf sie das. Die Quelle der Dateiliste haelt einen Merker
+//! (`QuelleIvars::schreibrechtmerker` in `super::tabelle`): fehlt die Antwort
+//! fuer den Ordner unter dem Zeiger, startet sie die Frage, sofern keine laeuft,
+//! und urteilt bis zur Antwort mit [`Schreibrecht::Unbekannt`], das durchlaesst;
+//! die naechste Zeigerbewegung urteilt mit der Antwort. Ordner und Antwort fallen,
+//! wenn der Zug die Tabelle verlaesst oder endet, die laufende Frage nicht.
 //!
 //! **Die Zusage „ein frischer `NSURL` je Messung“ bleibt damit stehen**, und
-//! gemessen wird **einmal je Ordner und Zug** statt je Zeigerbewegung. Der
-//! Preis ist eine Luecke: bis die Antwort da ist, nimmt der Zeiger auch ueber
-//! einem schreibgeschuetzten Ordner an, und ein Abwurf in dieser Spanne steht
-//! danach mit seinem Grund in der Abschlussliste, auf dem Weg des vorigen
-//! Absatzes. Kehrt der Zeiger innerhalb desselben Zuges zu einem Ordner zurueck,
-//! nachdem er ueber einem anderen stand, wird neu gefragt, denn der Merker traegt
-//! einen Ordner und keine Liste.
+//! gefragt wird **hoechstens einmal zur Zeit je Tabelle** statt je Zeigerbewegung.
+//! Solange eine Frage laeuft, startet weder ein Ordnerwechsel noch ein neuer
+//! Eintritt noch ein neuer Zug eine zweite. Kommt sie zurueck und steht der Zeiger
+//! inzwischen ueber einem anderen Ordner oder in einem neuen Zug, gilt ihre Antwort
+//! ihm nicht, und dieser dann aktuelle Ordner wird gefragt. Der Preis ist eine
+//! Luecke: bis die Antwort da ist, nimmt der Zeiger auch ueber einem
+//! schreibgeschuetzten Ordner an, und ein Abwurf in dieser Spanne steht danach mit
+//! seinem Grund in der Abschlussliste, auf dem Weg des vorigen Absatzes. Ein Ordner,
+//! den der Zeiger nur ueberstreicht, wird dabei nicht gemessen, und kehrt der Zeiger
+//! zu einem schon beantworteten zurueck, wird neu gefragt, denn der Merker traegt
+//! eine Antwort und keine Liste.
+//!
+//! **Eine Frage, die nie zurueckkommt, schliesst diese Luecke nie**: die Tabelle
+//! bleibt dann bis zum Ende des Prozesses bei `Unbekannt`, in jedem weiteren Zug
+//! und auch ueber einem Ordner auf einer gesunden Platte. Die andere Tabelle hat
+//! ihren eigenen Merker. Abbrechen laesst sich der wartende Faden nicht
+//! ([`super::nebenfaden`]), und eine zweite Frage daneben waere die Fadenzahl, die
+//! diese Regel begrenzt.
 //!
 //! # Wer die vier Funktionen ruft
 //!
