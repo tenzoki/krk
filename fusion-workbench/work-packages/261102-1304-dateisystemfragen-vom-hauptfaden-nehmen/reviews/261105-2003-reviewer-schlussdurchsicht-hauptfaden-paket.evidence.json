@@ -1,0 +1,28 @@
+{
+  "schema": "fusion.evidence/v1",
+  "id": "5c28634d-d7a1-4ee7-b9d9-0aef78415a1c",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "subject": {
+    "git_tree": "c11c3203fe20ffe84561ec058b787ab29fa3739a",
+    "git_range": null
+  },
+  "brief_revision": "sha256:6953bcb58cbdc7eabbfda98f0a6b32cda16fe16d477c12931a12a91c5151eaa7",
+  "plan_revision": "sha256:cc21bfe172599f9720b3861bb447c753471836c9cbb203f442071cbe836d8b61",
+  "role": {
+    "profile": "reviewer",
+    "version": "13.3.7"
+  },
+  "host": "claude-code",
+  "execution_policy": "claude-guided",
+  "verdict": "revise",
+  "uncertainties": [],
+  "checks": [],
+  "report": {
+    "path": "work-packages/261102-1304-dateisystemfragen-vom-hauptfaden-nehmen/reviews/261105-2003-reviewer-schlussdurchsicht-hauptfaden-paket.md",
+    "sha256": "sha256:8a2d5f08cfb4e55ecf8570eaecf4dabfe38c2e71c06661951df982dd0c568058",
+    "kind": "review"
+  },
+  "predecessor": null,
+  "accepted_at": "2026-11-05T19:02:03Z",
+  "extensions": {}
+}

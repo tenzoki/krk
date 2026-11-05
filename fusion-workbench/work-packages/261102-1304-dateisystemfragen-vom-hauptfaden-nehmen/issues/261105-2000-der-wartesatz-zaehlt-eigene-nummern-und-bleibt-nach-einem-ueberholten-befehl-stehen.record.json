@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "f7cf4442-fb2e-4cea-9a40-9539e91573c4",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261102-1304-dateisystemfragen-vom-hauptfaden-nehmen/issues/261105-2000-der-wartesatz-zaehlt-eigene-nummern-und-bleibt-nach-einem-ueberholten-befehl-stehen.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

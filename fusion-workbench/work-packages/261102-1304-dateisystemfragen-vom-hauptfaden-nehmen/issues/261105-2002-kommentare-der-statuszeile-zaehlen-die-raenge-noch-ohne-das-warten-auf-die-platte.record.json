@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "1aefedd8-82e0-4b9a-a286-466a00d2e026",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261102-1304-dateisystemfragen-vom-hauptfaden-nehmen/issues/261105-2002-kommentare-der-statuszeile-zaehlen-die-raenge-noch-ohne-das-warten-auf-die-platte.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

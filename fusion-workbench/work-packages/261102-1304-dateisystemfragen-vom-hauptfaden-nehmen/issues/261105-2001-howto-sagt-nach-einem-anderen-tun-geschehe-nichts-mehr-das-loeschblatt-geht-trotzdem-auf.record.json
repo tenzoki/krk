@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "c6be7f16-1868-45a0-8327-23a87e4655c6",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261102-1304-dateisystemfragen-vom-hauptfaden-nehmen/issues/261105-2001-howto-sagt-nach-einem-anderen-tun-geschehe-nichts-mehr-das-loeschblatt-geht-trotzdem-auf.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}
