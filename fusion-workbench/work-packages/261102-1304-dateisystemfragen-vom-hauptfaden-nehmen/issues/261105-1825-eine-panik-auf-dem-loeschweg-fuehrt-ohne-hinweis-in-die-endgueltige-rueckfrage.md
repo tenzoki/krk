@@ -13,3 +13,6 @@ Sicher im engeren Sinn bleibt es: nichts geschieht ohne Klick, die Vorgabe ist �
 **Richtung.** Ich schlage vor, Panik und Startfehler vom Befund zu trennen, etwa mit `T = Result<Loeschbefund, Fehler>`: kein Blatt, stattdessen `Text::FrageAbgebrochen` in der Statuszeile, und der Nutzer löst noch einmal aus. Wenn der Nutzer das endgültige Angebot auch hier will, genügt ein Satz am Entscheid.
 
 **Abnahme.** Eine Probe zeigt, dass ein abgebrochener Befund kein `PapierkorbUngewiss` ergibt, oder der Entscheid nennt den Fall ausdrücklich.
+
+---
+Resolved: Der Befund der Löschfrage reist als `Result<Loeschbefund, LoeschfrageAbgebrochen>` (`crates/krk-ui/src/appkit/anwendung.rs`, `loeschbefund_erheben_lassen`): Panik und Fadenstartfehler ergeben `Loeschausgang::FrageAbgebrochen`, kein Blatt, und `Text::FrageAbgebrochen` in der Statuszeile der gereisten Seite; eine überholte Nummer verwirft auch diesen Ausgang still. Der Grund steht auf der Standardfehlerausgabe. `Loeschbefund::unentschieden` und der Entscheid vom 261019 bleiben für die echten Fragen unberührt. Abnahme: Probe `eine_abgebrochene_frage_oeffnet_kein_blatt`. Der Satz über den Löschweg im Modulkopf von `appkit/nebenfaden.rs` stimmt weiter und ist nicht geändert. Im laufenden Programm nicht gefahren: eine Panik ist dort nicht auslösbar.

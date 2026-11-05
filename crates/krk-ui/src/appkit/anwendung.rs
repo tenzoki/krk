@@ -1057,6 +1057,17 @@ fn papierkorb_des_gegenstands(
     }
 }
 
+/// Die Frage an die Platte hat keinen Befund geliefert: der Faden liess sich nicht
+/// starten, oder die Arbeit auf ihm geriet in Panik.
+///
+/// **Ein eigener Wert und kein [`Loeschbefund::unentschieden`]**: ein
+/// unentschiedener Befund ist eine Antwort der Platte und fuehrt nach dem Entscheid
+/// vom 261019 auf die endgueltige Rueckfrage (Modulkopf von
+/// `kommandos/loeschwarnung.rs`). Ein interner Fehler sagt nichts ueber den Ort, und
+/// der Papierkorb kann laengst geklaert gewesen sein.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct LoeschfrageAbgebrochen;
+
 /// Was aus der Antwort eines Loeschbefehls folgt, der noch der juengste ist.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Loeschausgang {
@@ -1064,6 +1075,9 @@ enum Loeschausgang {
     VorgangLaeuft,
     /// Es ist nichts ausgewaehlt.
     NichtsAusgewaehlt,
+    /// Die Frage, die das Blatt entschiede, ist nicht ausgegangen
+    /// ([`LoeschfrageAbgebrochen`]). Kein Blatt; der Nutzer loest noch einmal aus.
+    FrageAbgebrochen,
     /// Die Tafel verlangt ein Blatt, und es steht schon eines.
     BlattSteht,
     /// Das Blatt geht auf, auf diesem Weg und mit diesem Grund.
@@ -1073,17 +1087,26 @@ enum Loeschausgang {
 /// Die Entscheidung ueber die Antwort eines Loeschbefehls, nach der Frage nach der
 /// Nummer ([`Loeschbefehle`]): die Stufentafel und das stehende Blatt. Rein und
 /// ohne Systemaufruf.
+///
+/// `antwort` ist `Ok(None)` auf dem Weg ohne Faden, `Ok(Some(_))` mit dem Befund der
+/// Platte und `Err` nach einer abgebrochenen Frage. **Die Stufen vor dem
+/// Papierkorbtest gelten auch dann**, denn sie brauchen keinen Befund; an der Stelle
+/// jedes Blattes steht die Meldung, auch vor einem schon stehenden Blatt, denn sie
+/// oeffnet nichts.
 fn loeschausgang(
     vorgang_laeuft: bool,
     gegenstand: &Loeschgegenstand,
-    befund: Option<&Loeschbefund>,
+    antwort: Result<Option<&Loeschbefund>, LoeschfrageAbgebrochen>,
     blatt_steht: bool,
 ) -> Loeschausgang {
     match loeschwarnung::vor_der_rueckfrage(vorgang_laeuft, gegenstand.ist_leer(), || {
-        papierkorb_des_gegenstands(gegenstand, befund)
+        papierkorb_des_gegenstands(gegenstand, antwort.ok().flatten())
     }) {
         Vorstufe::VorgangLaeuft => Loeschausgang::VorgangLaeuft,
         Vorstufe::NichtsAusgewaehlt => Loeschausgang::NichtsAusgewaehlt,
+        Vorstufe::Rueckfrage | Vorstufe::EndgueltigeRueckfrage(_) if antwort.is_err() => {
+            Loeschausgang::FrageAbgebrochen
+        }
         // Kein zweites Blatt dahinter und kein zweiter Griff im Schlitz.
         Vorstufe::Rueckfrage | Vorstufe::EndgueltigeRueckfrage(_) if blatt_steht => {
             Loeschausgang::BlattSteht
@@ -1138,7 +1161,9 @@ impl Loeschbefund {
         }
     }
 
-    /// Der Befund, wenn die Platte nicht gefragt werden konnte: Papierkorb
+    /// Der Befund fuer einen lokalen Gegenstand, der ohne Befund bis zum Blatt
+    /// kaeme (eine abgebrochene Frage kommt dort nicht an,
+    /// [`LoeschfrageAbgebrochen`]): Papierkorb
     /// unentschieden, und jeder der fuenf Eingaenge des Ziels offen, sodass
     /// die Tafel [`loeschwarnung::Warngrund::Unentscheidbar`] liefert und nie
     /// eine stille Entwarnung. Ohne Systemaufruf.
@@ -8774,9 +8799,9 @@ impl Anwendungsdelegierter {
     /// einer haengenden Freigabe bleibt jeder dieser Faeden stehen, bis die
     /// Platte antwortet; dass er wartet, sagt nach einer Frist die Statuszeile
     /// ([`crate::plattenwarte`]). **Scheitert der
-    /// Fadenstart**, gilt der Befund als unentschieden
-    /// ([`Loeschbefund::unentschieden`]), und die Tafel fuehrt auf die
-    /// endgueltige Rueckfrage mit [`Endgueltiggrund::PapierkorbUngewiss`].
+    /// Fadenstart oder geraet die Arbeit in Panik**, erscheint kein Blatt, sondern
+    /// [`Text::FrageAbgebrochen`] in der Statuszeile ([`LoeschfrageAbgebrochen`]),
+    /// und der Nutzer loest noch einmal aus.
     ///
     /// **Die Reihenfolge steht seit dem 260817 nicht mehr hier, sondern in
     /// [`loeschwarnung::vor_der_rueckfrage`].** Sie ist eine Regel ueber drei
@@ -8927,7 +8952,7 @@ impl Anwendungsdelegierter {
                     schaltflaeche,
                     nummer,
                 },
-                None,
+                Ok(None),
             ),
         }
     }
@@ -8938,12 +8963,11 @@ impl Anwendungsdelegierter {
     /// Schritt 8).
     ///
     /// Alles, was reist, ist ein gewoehnlicher Rust-Wert; ein AppKit-Objekt
-    /// geht nicht ueber die Fadengrenze. **Scheitert der Fadenstart**, gilt
-    /// der Befund als unentschieden ([`Loeschbefund::unentschieden`]), und
-    /// die Einzugsmethode bekommt ihn ebenso ueber die Hauptschlange; die
-    /// Tafel fuehrt dann auf die endgueltige Rueckfrage mit
-    /// [`Endgueltiggrund::PapierkorbUngewiss`]. Dasselbe gilt bei einer Panik
-    /// auf dem Faden ([`nebenfaden::befehl_fragen_lassen`]).
+    /// geht nicht ueber die Fadengrenze. **Scheitert der Fadenstart oder geraet
+    /// die Arbeit in Panik** ([`nebenfaden::befehl_fragen_lassen`]), bekommt die
+    /// Einzugsmethode ebenso ueber die Hauptschlange
+    /// [`LoeschfrageAbgebrochen`] und meldet [`Text::FrageAbgebrochen`], ohne Blatt.
+    /// Der Grund steht auf der Standardfehlerausgabe.
     fn loeschbefund_erheben_lassen(
         mtm: MainThreadMarker,
         ordner: PathBuf,
@@ -8959,12 +8983,16 @@ impl Anwendungsdelegierter {
             PLATTENFRAGE,
             move || {
                 let (ordner, auswahl) = fuer_den_faden;
-                lokaler_loeschbefund(&ordner, &auswahl)
+                Ok(lokaler_loeschbefund(&ordner, &auswahl))
             },
-            // Ohne Faden keine Frage: unentschieden und nie entwarnt; der
-            // Fehler des Fadenstarts aendert daran nichts.
-            |_fehler| Loeschbefund::unentschieden(),
-            move |mtm, befund| {
+            // Ohne Antwort gibt es nichts zu entscheiden, also auch kein Blatt.
+            // Die Statuszeile sagt allein, dass die Frage abbrach; der Grund
+            // ginge sonst verloren, wenn schon der Fadenstart scheiterte.
+            |fehler| {
+                eprintln!("krk: {fehler}");
+                Err(LoeschfrageAbgebrochen)
+            },
+            move |mtm, antwort: Result<Loeschbefund, LoeschfrageAbgebrochen>| {
                 let Some(delegierter) = NSApplication::sharedApplication(mtm).delegate() else {
                     return;
                 };
@@ -8979,7 +9007,7 @@ impl Anwendungsdelegierter {
                 };
                 // Ohne Fenster gibt es kein Blatt; der Tastendruck ist
                 // laengst verbraucht, also bleibt die Antwort ungenutzt.
-                let _ = selbst.loeschbefund_einziehen(anfrage, Some(befund));
+                let _ = selbst.loeschbefund_einziehen(anfrage, antwort.map(Some));
             },
         );
     }
@@ -8991,7 +9019,7 @@ impl Anwendungsdelegierter {
     /// **Die eine Stelle, die die Tafel fragt**
     /// (`die_stufenregel_hat_genau_einen_aufrufer`). Zwei Wege kommen hier an:
     /// die Antwort des Fadens aus [`Self::loeschbefund_erheben_lassen`] mit
-    /// dem Befund der Platte, und unmittelbar aus
+    /// dem Befund der Platte oder [`LoeschfrageAbgebrochen`], und unmittelbar aus
     /// [`Self::loeschen_nach_rueckfrage`] ohne Befund, fuer einen fernen
     /// Gegenstand, einen im Archiv und einen lokalen, den eine billige Stufe
     /// anhaelt. **`vorgang_laeuft` wird hier neu gefragt**, denn in der Luecke
@@ -9013,7 +9041,8 @@ impl Anwendungsdelegierter {
     /// Er drueckt die Taste neu und bekommt einen frischen Befund.
     ///
     /// **Die Nummer wird als erste Handlung gefragt**, vor der Tafel und vor
-    /// jeder Meldung: die Antwort eines ueberholten Befehls verfaellt still,
+    /// jeder Meldung: die Antwort eines ueberholten Befehls verfaellt still, auch
+    /// eine abgebrochene,
     /// denn der Nutzer hat inzwischen einen neueren gegeben ([`Loeschbefehle`]).
     /// Der Weg ohne Faden kommt mit der gerade vergebenen Nummer an und besteht
     /// die Frage immer. Kaeme ein lokaler Gegenstand ohne Befund bis zur
@@ -9022,7 +9051,11 @@ impl Anwendungsdelegierter {
     ///
     /// Liefert `false` allein dann, wenn es kein Fenster gibt, an dem das
     /// Blatt haengen koennte.
-    fn loeschbefund_einziehen(&self, anfrage: Loeschanfrage, befund: Option<Loeschbefund>) -> bool {
+    fn loeschbefund_einziehen(
+        &self,
+        anfrage: Loeschanfrage,
+        antwort: Result<Option<Loeschbefund>, LoeschfrageAbgebrochen>,
+    ) -> bool {
         if !self.ivars().loeschbefehle.ist_juengster(anfrage.nummer) {
             return true;
         }
@@ -9040,7 +9073,10 @@ impl Anwendungsdelegierter {
         match loeschausgang(
             vorgang_laeuft,
             &gegenstand,
-            befund.as_ref(),
+            antwort
+                .as_ref()
+                .map(Option::as_ref)
+                .map_err(|abgebrochen| *abgebrochen),
             self.blatt_steht(),
         ) {
             // Die Meldung baut `vorgang_laeuft_schon`, die eine Stelle,
@@ -9057,6 +9093,10 @@ impl Anwendungsdelegierter {
                 self.antwort_zeigen(seite, text(Text::NichtsAusgewaehlt));
                 true
             }
+            Loeschausgang::FrageAbgebrochen => {
+                self.antwort_zeigen(seite, text(Text::FrageAbgebrochen));
+                true
+            }
             // Gemeldet wird auf der gereisten Seite, und die Antwort verfaellt.
             Loeschausgang::BlattSteht => {
                 self.antwort_zeigen(seite, text(Text::BlattSteht));
@@ -9064,9 +9104,13 @@ impl Anwendungsdelegierter {
             }
             // Eine weitere Frage an die Platte entsteht dabei nicht: der Befund
             // kam vom Faden.
-            Loeschausgang::Blatt(weg, grund) => {
-                self.loeschblatt_zeigen(weg, grund, gegenstand, befund, schaltflaeche)
-            }
+            Loeschausgang::Blatt(weg, grund) => self.loeschblatt_zeigen(
+                weg,
+                grund,
+                gegenstand,
+                antwort.ok().flatten(),
+                schaltflaeche,
+            ),
         }
     }
 
@@ -19391,7 +19435,7 @@ mod fernvorgangsproben {
             concat!("nebenfaden::befehl_", "fragen_lassen("),
             "PLATTENFRAGE",
             concat!("lokaler_", "loeschbefund("),
-            concat!("Loeschbefund::", "unentschieden()"),
+            concat!("Err(Loeschfrage", "Abgebrochen)"),
             concat!("selbst.loeschbefund_", "einziehen("),
         ] {
             assert!(
@@ -19400,6 +19444,10 @@ mod fernvorgangsproben {
                  oder kommt nicht an"
             );
         }
+        assert!(
+            !huellenrumpf.contains(concat!("Loeschbefund::", "unentschieden()")),
+            "{huelle} macht aus einem internen Fehler einen unentschiedenen Befund"
+        );
         let einzugsrumpf = rumpf(&datei, einzug);
         assert!(
             einzugsrumpf.contains("match loeschausgang("),
@@ -19602,8 +19650,9 @@ mod loeschausgangproben {
     use krk_core::ort::Archivort;
 
     use super::{
-        Auswahl, Endgueltiggrund, Erlaubnisbefund, Loeschausgang, Loeschbefund, Loeschgegenstand,
-        Loeschweg, loeschausgang, papierkorb_des_gegenstands,
+        Auswahl, Endgueltiggrund, Erlaubnisbefund, Loeschausgang, Loeschbefund,
+        LoeschfrageAbgebrochen, Loeschgegenstand, Loeschweg, loeschausgang,
+        papierkorb_des_gegenstands,
     };
 
     fn lokal(namen: &[&str]) -> Loeschgegenstand {
@@ -19717,11 +19766,46 @@ mod loeschausgangproben {
             tafel.into_iter().enumerate()
         {
             assert_eq!(
-                loeschausgang(vorgang, gegenstand, mitgebracht, blatt),
+                loeschausgang(vorgang, gegenstand, Ok(mitgebracht), blatt),
                 erwartet,
                 "Zeile {stelle} der Tafel"
             );
         }
+    }
+
+    /// Eine abgebrochene Frage ist kein unentschiedener Befund: kein
+    /// `PapierkorbUngewiss`, kein Blatt, auch nicht vor einem stehenden. Die Stufen
+    /// davor antworten wie sonst, denn sie brauchen keinen Befund. Der echte
+    /// unentschiedene Befund bleibt auf der endgueltigen Rueckfrage, dieselbe
+    /// Eingabe bis auf `Err`.
+    ///
+    /// **Was sie nicht sieht:** dass die Meldung in der Statuszeile ankommt; die
+    /// Zuordnung steht im Rumpf der Einzugsmethode. Dass eine ueberholte Nummer auch
+    /// diesen Ausgang verwirft, haelt die Reihenfolge, die
+    /// `der_loeschweg_stellt_auf_dem_hauptfaden_keinen_systemaufruf` prueft.
+    #[test]
+    fn eine_abgebrochene_frage_oeffnet_kein_blatt() {
+        let abgebrochen = Err(LoeschfrageAbgebrochen);
+        let voll = lokal(&["a.txt"]);
+        for blatt in [false, true] {
+            assert_eq!(
+                loeschausgang(false, &voll, abgebrochen, blatt),
+                Loeschausgang::FrageAbgebrochen
+            );
+            assert_eq!(
+                loeschausgang(true, &voll, abgebrochen, blatt),
+                Loeschausgang::VorgangLaeuft
+            );
+            assert_eq!(
+                loeschausgang(false, &lokal(&[]), abgebrochen, blatt),
+                Loeschausgang::NichtsAusgewaehlt
+            );
+        }
+        let unklar = befund(Erlaubnisbefund::Unentschieden);
+        assert_eq!(
+            loeschausgang(false, &voll, Ok(Some(&unklar)), false),
+            Loeschausgang::Blatt(Loeschweg::Endgueltig, Endgueltiggrund::PapierkorbUngewiss)
+        );
     }
 }
 
