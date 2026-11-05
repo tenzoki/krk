@@ -4981,6 +4981,9 @@ impl Editorbereich {
     fn oeffnung_ueberholen(&self) {
         let nummer = &self.ivars().oeffnungsnummer;
         nummer.set(nummer.get() + 1);
+        // Damit faellt auch der Satz, dass sie auf die Platte wartet, wenn keine
+        // neue Frage folgt.
+        nebenfaden::nachsehen_lassen(self.mtm());
     }
 
     /// Der Stand, gegen den die Antwort auf die Groesse gilt ([`Oeffnungsstand`]).
@@ -5017,9 +5020,16 @@ impl Editorbereich {
             ),
             self.mtm(),
         );
+        let fuer_die_geltung = (Weak::from_retained(&self.retain()), self.oeffnungsstand());
         nebenfaden::befehl_fragen_lassen(
             self.mtm(),
             Plattenbefehl::Geheimnis,
+            move |_mtm| {
+                let (editor, gefragt) = &fuer_die_geltung;
+                editor
+                    .load()
+                    .is_some_and(|editor| geheimnisgroesse_gilt(gefragt, &editor.oeffnungsstand()))
+            },
             PLATTENFRAGE,
             move || std::fs::metadata(&gefragt).ok().map(|daten| daten.len()),
             |_fehler| None,
@@ -5502,6 +5512,9 @@ impl Editorbereich {
     /// zuletzt begonnenen Oeffnen und gilt bis zum naechsten; der Grund und die
     /// drei Aufrufer dieser Funktion stehen an [`EditorIvars::herkunft`].
     fn melden(&self, ausgang: Ladeausgang) {
+        // Ein Ausgang kann die gehaltene Datei geaendert haben, und daran haengt,
+        // ob die Frage nach der Groesse von `secrets.txt` noch gilt.
+        nebenfaden::nachsehen_lassen(self.mtm());
         let herkunft = self.ivars().herkunft.get();
         let melden = self.ivars().melden.borrow();
         if let Some(melden) = melden.as_ref() {

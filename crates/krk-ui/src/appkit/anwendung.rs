@@ -2315,10 +2315,12 @@ impl Anwendungsdelegierter {
             // ihn je Lesevorgang nach der Eigenschaft „ohne Inhaltsauftrag“ (5.2).
             Dateifenster::bauen(
                 mtm,
+                Fensterseite::Links,
                 Tabliste::aus_zustand(&sitzung.fenster[0], Rc::clone(&ivars.heim)),
             ),
             Dateifenster::bauen(
                 mtm,
+                Fensterseite::Rechts,
                 Tabliste::aus_zustand(&sitzung.fenster[1], Rc::clone(&ivars.heim)),
             ),
         ];
@@ -2490,6 +2492,10 @@ impl Anwendungsdelegierter {
         // angeht und keinen der beiden davor braucht; er ruft weder `anwenden`
         // noch `setHidden:` noch `makeFirstResponder:` und ueberspringt eine
         // laufende Zelle.
+        //
+        // **Der vierte stoesst das Nachsehen an, ob die wartenden Befehle noch
+        // gelten** ([`crate::plattenwarte`]): ein Blatt, die Quicknote und ein
+        // anderer Ersthelfer ueberholen welche, ohne dass die Zeile sich ruehrt.
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
         fenster.melder_setzen(Box::new(move || {
             if let Some(selbst) = schwach.load() {
@@ -2498,6 +2504,7 @@ impl Anwendungsdelegierter {
                 if let Some(editor) = selbst.ivars().editor.get() {
                     editor.heute_nachziehen();
                 }
+                nebenfaden::nachsehen_lassen(selbst.mtm());
             }
         }));
         // **Der Klick auf einen Schalter der Bereichsleiste geht denselben Weg
@@ -3332,6 +3339,8 @@ impl Anwendungsdelegierter {
     fn leistenauswahl_ausfuehren(&self, auswahl: &crate::leistenmodell::Auswahl) {
         let nummer = &self.ivars().leistenauswahl;
         nummer.set(nummer.get() + 1);
+        // Der Weg ohne Frage ueberholt eine haengende Auswahl, und der Satz faellt.
+        nebenfaden::nachsehen_lassen(self.mtm());
         if auswahl.fragt_die_platte {
             self.befehlsantwort_beidseitig_loeschen();
             Self::leistenauswahl_fragen_lassen(
@@ -3353,9 +3362,21 @@ impl Anwendungsdelegierter {
         stand: Leistenauswahlstand,
     ) {
         let ersatz = auswahl.clone();
+        let ziel = auswahl.ziel.clone();
         nebenfaden::befehl_fragen_lassen(
             mtm,
             Plattenbefehl::Lesezeichen,
+            move |mtm| {
+                Self::delegierter(mtm).is_some_and(|selbst| {
+                    let gewaehlt = selbst.leiste().quelle().gewaehlt();
+                    leistenauswahl_gilt(
+                        gewaehlt.as_ref().map(|gewaehlt| &gewaehlt.ziel),
+                        &ziel,
+                        stand,
+                        selbst.leistenauswahlstand(),
+                    )
+                })
+            },
             PLATTENFRAGE,
             move || auswahl.nachgefragt(),
             move |_fehler| ersatz,
@@ -6870,9 +6891,14 @@ impl Anwendungsdelegierter {
         self.ivars().notizordnerbefehle.neuer();
         let gefragt = self.notizordnerstand();
         let fuer_den_startfehler = auftrag.heim.clone();
+        let fuer_die_geltung = gefragt.clone();
         nebenfaden::befehl_fragen_lassen(
             self.mtm(),
             Plattenbefehl::Notizordner,
+            move |mtm| {
+                Self::delegierter(mtm)
+                    .is_some_and(|selbst| fuer_die_geltung == selbst.notizordnerstand())
+            },
             PLATTENFRAGE,
             move || Self::notizordner_erheben(auftrag),
             // Ohne Faden geschah nichts auf der Platte, und das sagt das
@@ -8353,10 +8379,10 @@ impl Anwendungsdelegierter {
     /// Schreibt die eine Statuszeile ueber die volle Fensterbreite (C5 der
     /// Runde 6).
     ///
-    /// **Der eine Schreiber, mit zwei Anlaessen.** Der erste ist der
+    /// **Der eine Schreiber.** Sein erster Anlass ist der
     /// Meldungswechsel eines der beiden Dateifenster: eine seiner sechs Quellen
     /// hat sich geaendert, und es sagt es ueber den Rueckruf aus dem Aufbau.
-    /// Der zweite ist [`Self::aufteilung_nachziehen`], weil die Zeile nicht nur
+    /// Ein weiterer ist [`Self::aufteilung_nachziehen`], weil die Zeile nicht nur
     /// von den Quellen der Dateifenster abhaengt, sondern auch davon, **welches**
     /// Dateifenster das aktive und **welches sichtbar** ist: der Rang der
     /// aktiven Seite entscheidet jeden Gleichstand, der Namenszusatz haengt an
@@ -8369,12 +8395,13 @@ impl Anwendungsdelegierter {
     /// **Sie entscheidet selbst nichts.** Die Auswahl unter allen Bewerbern
     /// trifft [`statuszeile::zeile`], den Satz formt
     /// [`statuszeile::zeilentext`]; beide sind reines Rust ohne AppKit und ohne
-    /// Fenster pruefbar. Diese Funktion holt die fuenf Eingaben und schreibt
-    /// das Ergebnis. Die fuenfte ist seit der Runde 20 der Seitenzaehler der
-    /// Vorschau, geholt ueber `Vorschaufenster::seitenzaehler`; er hat einen
-    /// dritten Anlass, den Seitenmelder aus dem Aufbau, der bei jedem
+    /// Fenster pruefbar. Diese Funktion holt die Eingaben und schreibt das
+    /// Ergebnis. Der Seitenzaehler der Vorschau, seit der Runde 20 eine davon,
+    /// kommt ueber `Vorschaufenster::seitenzaehler` und bringt einen eigenen
+    /// Anlass mit, den Seitenmelder aus dem Aufbau, der bei jedem
     /// Seitenwechsel, jedem neuen Inhalt und jedem Tabwechsel der Vorschau
-    /// ruft (C4.2, C4.7).
+    /// ruft (C4.2, C4.7). Ebenso das Warten auf die Platte: Eingabe ist
+    /// `nebenfaden::platte_wartet`, Anlass der Wartemelder aus dem Aufbau.
     ///
     /// **Auch das ausgeblendete Dateifenster wird gefragt**, und seine Antwort
     /// verwirft [`statuszeile::zeile`]. Die Bedingung hier zu ziehen waere
@@ -8424,6 +8451,8 @@ impl Anwendungsdelegierter {
         // Der Satz, solange ein Befehl ueber seine Frist hinaus auf die Platte
         // wartet; wann das gilt, steht in `crate::plattenwarte`.
         let platte = nebenfaden::platte_wartet(self.mtm()).then(|| text(Text::WartetAufDiePlatte));
+        // Jeder Anlass dieser Funktion kann einen wartenden Befehl ueberholt haben.
+        nebenfaden::nachsehen_lassen(self.mtm());
         let meldung = statuszeile::zeile(
             &links,
             &rechts,
@@ -8905,6 +8934,8 @@ impl Anwendungsdelegierter {
         // einem fernen Ort oder im Archiv steht und selbst keine stellt: sonst
         // ginge das Blatt des alten Befehls spaeter ohne Zusammenhang auf.
         let nummer = self.ivars().loeschbefehle.neuer();
+        // Damit faellt auch der Satz, wenn keine neue Frage folgt.
+        nebenfaden::nachsehen_lassen(self.mtm());
         // Was geloescht wuerde, am Wert des Tabs und ohne Systemaufruf: lokal
         // die Auswahl mit ihren Pfaden, fern und im Archiv die Namen unter dem
         // angezeigten Ort. Ein Archiv, das KRK allein lesen darf, loescht
@@ -8980,6 +9011,12 @@ impl Anwendungsdelegierter {
         nebenfaden::befehl_fragen_lassen(
             mtm,
             Plattenbefehl::Loeschen,
+            // Allein die Nummer, wie in `loeschbefund_einziehen`: das Blatt geht
+            // auch nach einem Tabwechsel auf, also wartet der Befehl weiter.
+            move |mtm| {
+                Self::delegierter(mtm)
+                    .is_some_and(|selbst| selbst.ivars().loeschbefehle.ist_juengster(nummer))
+            },
             PLATTENFRAGE,
             move || {
                 let (ordner, auswahl) = fuer_den_faden;

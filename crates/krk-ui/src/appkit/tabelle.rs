@@ -350,6 +350,7 @@ use objc2_foundation::{
 };
 
 use krk_core::ablage::Dateifenster as Fensterzustand;
+use krk_core::ablage::Fensterseite;
 use krk_core::archiv::Archivformat;
 use krk_core::fern::Fernzugang;
 use krk_core::git::Marke;
@@ -780,7 +781,13 @@ fn gegen_den_ort_der_frage(
     gefragt: Pfadfrage,
     jetzt: Pfadfrage,
 ) -> Option<Ergebnis> {
-    (gefragt == jetzt).then_some(ergebnis)
+    pfadfrage_gilt(gefragt, jetzt).then_some(ergebnis)
+}
+
+/// Die Frage dahinter: ist dieses Dateifenster noch beim Stand der Pfadpruefung?
+/// Auch der Satz in der Statuszeile haengt an ihr. Rein und ohne Systemaufruf.
+fn pfadfrage_gilt(gefragt: Pfadfrage, jetzt: Pfadfrage) -> bool {
+    gefragt == jetzt
 }
 
 /// Der Ordner der Archivdatei: dorthin fuehrt der Aufstieg aus der Wurzel,
@@ -1496,6 +1503,9 @@ pub struct QuelleIvars {
     /// hochgezaehlt allein in [`DateifensterQuelle::pfad_pruefen_lassen`] und
     /// gelesen als Teil von [`Pfadfrage`].
     pfadsprung: Cell<u64>,
+    /// Welches Dateifenster das ist, allein fuer den Stand des Wartens auf die
+    /// Platte ([`Plattenbefehl::pfadsprung`]); gesetzt beim Bau.
+    seite: Fensterseite,
 }
 
 /// Eine Frage nach dem Schreibrecht: welcher Ordner in welchem Ziehvorgang.
@@ -1812,6 +1822,7 @@ impl DateifensterQuelle {
     /// Eine Datenquelle fuer die genannte Tabelle.
     fn neu(
         mtm: MainThreadMarker,
+        seite: Fensterseite,
         tabelle: Retained<Dateiliste>,
         sicht: Retained<NSScrollView>,
         tabs: Tabliste,
@@ -1846,6 +1857,7 @@ impl DateifensterQuelle {
             abwurfquellen: RefCell::new(None),
             schreibrechtmerker: RefCell::default(),
             pfadsprung: Cell::new(0),
+            seite,
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
@@ -3838,8 +3850,10 @@ impl DateifensterQuelle {
     /// Quelle und ihr Stand beim Fragen** ([`Pfadfrage`]), an den Hauptfaden
     /// gebunden (`MainThreadBound`), weil ein AppKit-Objekt nicht ueber die
     /// Fadengrenze geht. Die Quelle reist selbst und nicht ihre Fensterseite:
-    /// sie kennt ihre Seite nicht, und eine Suche ueber den Delegierten haette
-    /// sie am Zeiger wiedererkennen muessen. Jede Frage zaehlt die
+    /// eine Suche ueber den Delegierten haette sie am Zeiger wiedererkennen
+    /// muessen. Ihre Seite kennt sie allein fuer den Stand des Wartens, denn ein
+    /// Sprung gilt je Dateifenster, und damit auch der Satz dazu; ueberholt ist
+    /// er, sobald [`pfadfrage_gilt`] nein sagt. Jede Frage zaehlt die
     /// Sprungnummer hoch, und damit ist jede fruehere ueberholt, auch wenn sie
     /// zuletzt ankommt.
     ///
@@ -3860,9 +3874,16 @@ impl DateifensterQuelle {
             (Weak::from_retained(&self.retain()), self.pfadstand()),
             self.mtm(),
         );
+        let fuer_die_geltung = (Weak::from_retained(&self.retain()), self.pfadstand());
         nebenfaden::befehl_fragen_lassen(
             self.mtm(),
-            Plattenbefehl::Pfadsprung,
+            Plattenbefehl::pfadsprung(self.ivars().seite),
+            move |_mtm| {
+                let (quelle, gefragt) = &fuer_die_geltung;
+                quelle
+                    .load()
+                    .is_some_and(|quelle| pfadfrage_gilt(*gefragt, quelle.pfadstand()))
+            },
             PLATTENFRAGE,
             move || pruefung(&gefragt),
             move |fehler| {
@@ -6643,7 +6664,7 @@ impl Dateifenster {
     /// Einhaengen in die Aufteilung und jede weitere ueber ihre Autogroesse.
     /// Gelesen wird hier noch nicht: die Reihenfolge, in der die Tabs lesen,
     /// bestimmt das Fenstermodell und nicht der Aufbau.
-    pub fn bauen(mtm: MainThreadMarker, tabs: Tabliste) -> Self {
+    pub fn bauen(mtm: MainThreadMarker, seite: Fensterseite, tabs: Tabliste) -> Self {
         let rahmen = NSRect::new(NSPoint::ZERO, NSSize::ZERO);
         // Die Unterklasse und nicht die nackte `NSTableView`: sie rueckt die
         // Auswahl vor dem Kontextmenue nach. Der Rueckverweis kommt weiter
@@ -6674,7 +6695,7 @@ impl Dateifenster {
                 | NSAutoresizingMaskOptions::ViewHeightSizable,
         );
 
-        let quelle = DateifensterQuelle::neu(mtm, tabelle.clone(), sicht.clone(), tabs);
+        let quelle = DateifensterQuelle::neu(mtm, seite, tabelle.clone(), sicht.clone(), tabs);
         let delegierter = DateifensterDelegierter::neu(mtm, quelle);
         // SAFETY: Beide Objekte beantworten die Protokolle, die sie oben
         // implementieren. Ueber ihre Lebensdauer verlangt die Bindung nichts,
@@ -7686,7 +7707,7 @@ mod tests {
         let rahmen = NSRect::new(NSPoint::ZERO, NSSize::ZERO);
         let tabelle = Dateiliste::neu(mtm, rahmen);
         let sicht = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), rahmen);
-        let quelle = DateifensterQuelle::neu(mtm, tabelle, sicht, tabs);
+        let quelle = DateifensterQuelle::neu(mtm, Fensterseite::Links, tabelle, sicht, tabs);
         // Der Weg von `left`; welcher Eintrag gewaehlt ist, spielt fuer die
         // Panik keine Rolle, und hier ist keiner gewaehlt.
         assert!(quelle.kommando_ausfuehren(Kommando::OrdnerAufwaerts));
@@ -7726,7 +7747,7 @@ mod tests {
         let rahmen = NSRect::new(NSPoint::ZERO, NSSize::ZERO);
         let tabelle = Dateiliste::neu(mtm, rahmen);
         let sicht = NSScrollView::initWithFrame(NSScrollView::alloc(mtm), rahmen);
-        let quelle = DateifensterQuelle::neu(mtm, tabelle, sicht, tabs);
+        let quelle = DateifensterQuelle::neu(mtm, Fensterseite::Links, tabelle, sicht, tabs);
         quelle.ivars().tabs.borrow_mut().sichtbaren_lesen();
         fertig_lesen(&quelle);
         quelle

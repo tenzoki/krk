@@ -429,7 +429,7 @@ impl Quellen {
     }
 }
 
-/// Was der fuenfte Rang aus dem sichtbaren Tab braucht.
+/// Was [`Rang::Filterstand`] aus dem sichtbaren Tab braucht.
 ///
 /// Sechs Groessen, und keine davon wird hier gerechnet. Vier kommen aus dem
 /// `Ordnermodell` und stehen dort schon; die zwei der Runde 11 kommen vom
@@ -483,7 +483,7 @@ pub struct Filterstand {
     pub nur_in_der_cloud: u64,
 }
 
-/// Der fuenfte Rang der Statuszeile: der stehende Filtertext und was er von der
+/// [`Rang::Filterstand`] der Statuszeile: der stehende Filtertext und was er von der
 /// Liste uebrig laesst (C4 der Runde 10).
 ///
 /// `None` heisst: dieser Rang meldet nichts. Zwei Wege fuehren dorthin, und
@@ -495,7 +495,7 @@ pub struct Filterstand {
 /// den der Nutzer schon verlassen hat (C4.7 der Runde 10).
 ///
 /// **Dieser Rang ist seit dem 261007 nicht mehr die einzige Stelle, die den
-/// Filtertext nennt.** Er kann von den vier Raengen darueber verdraengt
+/// Filtertext nennt.** Er kann von den Raengen darueber verdraengt
 /// werden, auch aus dem anderen Dateifenster; das Etikett rechts von „Deep“
 /// und „Content“ in der Bereichsleiste nennt den Filtertext daneben ohne Rang
 /// ([`crate::filteranzeige::anzeigetext`]). Die Rangfolge bleibt dabei, wie
@@ -729,10 +729,15 @@ pub struct Meldung<'a> {
 ///
 /// **Das Warten auf die Platte haengt am Befehl und an keinem Bereich** (siehe
 /// [`Rang::Plattenwarte`]): seinen Text reicht der Aufrufer als `platte` herein,
-/// und `None` heisst, dass nichts wartet. **Haengt eine Frage auf Dauer, bleibt
-/// der Satz stehen und verdeckt alles unter ihm**, bis ihre Antwort kommt oder
-/// eine neuere Frage desselben Befehls beantwortet ist; verloren ist dabei nichts,
-/// nach der Regel weiter unten.
+/// und `None` heisst, dass nichts wartet. **Solange der Befehl gilt, verdeckt der
+/// Satz alles unter ihm, auch die Fehler in [`Rang::Fenstermeldung`] und
+/// [`Rang::Tabmeldung`]**; ueberholt faellt er ohne Antwort
+/// ([`crate::plattenwarte`]), und verloren ist dabei nichts, nach der Regel weiter
+/// unten. Die Fehler stehen bewusst nicht darueber: eine Tabmeldung bleibt stehen,
+/// solange der Ordner sie hat, auch im anderen Dateifenster, und wer vor ihr einen
+/// Befehl gibt, saehe dann wieder nichts und druecke noch einmal. Was der Befehl
+/// selbst an Fehlern meldet, ist eine [`Rang::Befehlsantwort`] und steht ohnehin
+/// ueber ihm.
 ///
 /// **Der Seitenzaehler steht unter dem Filterstand und ueber dem
 /// Markierungsstand** (A5 der Runde 20). Ein stehender Filtertext verdraengt
@@ -782,7 +787,8 @@ pub struct Meldung<'a> {
 /// Tastenbefehl in der Zeile. Ein Zeitgeber ist dafuer nicht noetig, weil jede
 /// Lebensdauer an einem Ereignis haengt und an keiner Uhr. **Auch die des Wartens
 /// auf die Platte**: die Uhr bestimmt allein, wann der Satz erscheint, und
-/// `appkit::nebenfaden` haelt sie; fallen laesst ihn die Antwort.
+/// `appkit::nebenfaden` haelt sie; fallen lassen ihn die Antwort und das
+/// Ueberholen des Befehls.
 ///
 /// # Die zweite Stelle der Ordnung: erst der Rang, dann die aktive Seite
 ///
@@ -1433,7 +1439,7 @@ mod tests {
     }
 
     // ------------------------------------------------------------------
-    // Der fuenfte Rang: der Filterstand (C4, Runde 10)
+    // Der Rang des Filterstands (C4, Runde 10)
     // ------------------------------------------------------------------
 
     /// Die Stelle eines Ranges in der Rangfolge, aus [`Rang::ALLE`] gelesen
@@ -2121,7 +2127,7 @@ mod tests {
     }
 
     // ------------------------------------------------------------------
-    // Der siebte Rang: der Seitenzaehler der Vorschau (C4, Runde 20)
+    // Der Rang des Seitenzaehlers der Vorschau (C4, Runde 20)
     // ------------------------------------------------------------------
 
     /// Eine Vorschau, die ein PDF zeigt, ohne dass ein Dateifenster etwas

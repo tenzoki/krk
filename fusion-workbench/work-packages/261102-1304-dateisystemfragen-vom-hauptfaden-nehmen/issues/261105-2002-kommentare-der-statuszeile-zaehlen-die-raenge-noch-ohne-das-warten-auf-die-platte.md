@@ -18,3 +18,5 @@ Schwere: Niedrig. Nur Kommentare und Abschnittsüberschriften in Proben; am Verh
 **Richtung.** Die Ordnungszahlen und Zählungen durch den Namen des Rangs ersetzen, wie es der Projektbrauch bei Zahlen vorschreibt, die mit der nächsten Änderung falsch werden. „Von den Rängen darüber“ reicht an `:498`.
 
 **Abnahme.** `grep -n -i 'fuenfte\|vier raengen\|fuenf Eingaben\|zwei Anlaessen' crates/krk-ui/src/appkit/statuszeile.rs crates/krk-ui/src/appkit/anwendung.rs` findet keine dieser Stellen mehr.
+---
+Resolved: Die Ordnungszahlen in `statuszeile.rs` tragen den Namen des Rangs, „von den Raengen darueber“ steht an der Stelle der vier, `statuszeile_nachziehen` in `anwendung.rs` zählt weder Eingaben noch Anlässe. Die weiteren Treffer des Abnahme-`grep` meinen anderes (Bereiche, Stufen, zwei andere Schreiber).

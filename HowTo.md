@@ -204,10 +204,32 @@ bei der Auswahl eines Lesezeichens fragt KRK erst die Platte und tut bis zur
 Antwort nichts Sichtbares. Das Fenster bleibt dabei bedienbar. Dauert die Antwort
 länger als einen Augenblick, etwa auf einer getrennten Freigabe oder einer
 Platte, die erst anlaufen muss, steht in der Statuszeile „wartet auf die
-Platte …“. Der Satz verschwindet, sobald die Antwort da ist. Hast du inzwischen
-etwas anderes getan, geschieht danach nichts mehr: der Befehl gilt dann als
-überholt, und du gibst ihn neu, wenn du ihn noch willst. Erneutes Drücken macht
-nichts schneller, und abbrechen lässt sich das Warten nicht.
+Platte …“. Der Satz verschwindet, sobald die Antwort da ist oder der Befehl durch
+etwas anderes abgelöst ist, auch wenn die Platte nie antwortet. Erneutes Drücken
+macht nichts schneller, und abbrechen lässt sich das Warten nicht.
+
+Was geschieht, wenn du inzwischen etwas anderes getan hast, hängt vom Befehl ab:
+
+- **Sprung auf einen Pfad:** Hast du im selben Dateifenster den Tab oder den Ordner
+  gewechselt oder einen neuen Pfad eingegeben, geschieht mit der alten Antwort
+  nichts mehr. Was du im anderen Dateifenster tust, stört ihn nicht.
+- **Lesezeichen:** Hast du eine andere Zeile der Leiste gewählt, das Dateifenster,
+  den Tab oder den Ordner gewechselt, geschieht mit der alten Antwort nichts mehr,
+  und ebenso, wenn sie kommt, während ein Dialog offen ist. Ein Klick auf dieselbe
+  Zeile fragt neu.
+- **F4 auf `secrets.txt`:** Hast du im Editor inzwischen etwas anderes geöffnet oder
+  neu geladen oder die Quicknote aufgemacht, geschieht mit der alten Antwort nichts
+  mehr. Ein Wechsel im Dateifenster stört nicht: die Frage nach der PIN geht dann
+  trotzdem noch auf.
+- **Löschen:** Die Frage, ob du löschen willst, kann auch dann noch aufgehen,
+  wenn die Platte erst viel später antwortet und du längst woanders bist. Sie nennt,
+  was gelöscht würde, und ohne deine Zustimmung geschieht nichts. Allein ein neuer
+  Löschbefehl löst den alten ab, und solange er das nicht getan hat, bleibt auch der
+  Satz stehen. Ist bei der Antwort schon ein anderer Dialog offen, sagt die
+  Statuszeile das, und du gibst den Befehl neu.
+- **F2:** Was F2 auf der Platte schon angelegt hat, bleibt angelegt, und die
+  Statuszeile sagt es dir auch später noch. Hast du inzwischen etwas anderes getan,
+  springt KRK aber nicht mehr in den Notizordner.
 
 ---
 

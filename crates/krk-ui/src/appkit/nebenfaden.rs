@@ -48,6 +48,17 @@
 //! sie danach verwirft. Die Regel steht in [`crate::plattenwarte`]. **Eine Frage im
 //! Hintergrund bleibt bei [`fragen_lassen`]**, denn auf sie wartet kein Nutzer.
 //!
+//! **Der Satz faellt auch, sobald der Befehl ueberholt ist.** Der Rufer gibt dafuer
+//! eine Frage `gilt` mit, die seinen eigenen Stand gegen den beim Fragen haelt.
+//! [`nachsehen_lassen`] stellt sie, und zwar erst auf der Hauptschlange und nicht
+//! an der Stelle, an der sich etwas aendert, aus zwei Gruenden: ein Befehl zieht
+//! seine neue Nummer, bevor er seine neue Frage stellt, und sofort gefragt fiele
+//! der Satz gerade dann, wenn derselbe Befehl wiederholt wird; und die Stellen, die
+//! etwas aendern, halten womoeglich die Ausleihe, die `gilt` lesen will. Angestossen
+//! wird es vom einen Schreiber der Zeile, von jedem Wechsel des Ersthelfers und des
+//! Schluesselfensters und von den Befehlen, die ihre Nummer ohne einen Nachzug der
+//! Zeile weiterzaehlen. Ohne offene Frage kostet das eine Abfrage eines leeren Feldes.
+//!
 //! **Der Zeitgeber laeuft auf der Hauptschlange und stellt keine Frage an die
 //! Platte.** Er ist ein `dispatch_after` je Frage, das einmal laeuft und nichts
 //! haelt ausser zwei Zahlen, und die Statuszeile hat keinen eigenen Zeitgeber,
@@ -76,7 +87,7 @@
 //! keine Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die
 //! Untergrenze nicht; die Nennung hier ist die Gegenmassnahme.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::rc::Rc;
 use std::sync::{Arc, Mutex};
@@ -93,6 +104,30 @@ thread_local! {
     static WARTE: RefCell<Plattenwarte> = RefCell::default();
     /// Was die Statuszeile nachzieht; siehe [`wartemelder_setzen`].
     static WARTEMELDER: RefCell<Option<Rc<dyn Fn()>>> = RefCell::default();
+    /// Die juengste Frage je Befehl, bis ihre Antwort da ist; siehe den Modulkopf.
+    static OFFENE: RefCell<Vec<OffeneFrage>> = RefCell::default();
+    /// Ob [`nachsehen_lassen`] schon auf der Hauptschlange steht.
+    static NACHSEHEN_STEHT: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Die Frage eines Befehls, solange ihre Antwort aussteht.
+#[derive(Clone)]
+struct OffeneFrage {
+    /// Der Befehl, zu dem sie gehoert.
+    befehl: Plattenbefehl,
+    /// Ihre Nummer in [`Plattenwarte`].
+    nummer: u64,
+    /// Fragt den Stand des Befehls: gilt er noch? Fragt nie die Platte.
+    gilt: Rc<dyn Fn(MainThreadMarker) -> bool>,
+}
+
+/// Eine angemeldete Frage auf dem Weg in den Faden.
+#[derive(Debug, Clone, Copy)]
+struct Wartefrage {
+    /// Der Befehl, zu dem sie gehoert.
+    befehl: Plattenbefehl,
+    /// Ihre Nummer in [`Plattenwarte`].
+    nummer: u64,
 }
 
 /// Der Name des Fadens, auf dem eine Frage an die Platte gestellt wird, die
@@ -151,31 +186,57 @@ pub(crate) fn fragen_lassen<T: Send + 'static>(
 /// `fertig` aus der Antwort macht: eine verfallene Antwort ist auch eine Antwort.
 /// Eine Meldung, die `fertig` dann setzt, steht ohnehin ueber diesem Rang
 /// ([`super::statuszeile::Rang::Plattenwarte`]).
+///
+/// `gilt` sagt, ob der Befehl beim jetzigen Stand noch gilt, und antwortet
+/// dasselbe wie die Pruefung, die `fertig` an der Antwort vornimmt. **Sie fragt nie
+/// die Platte**, denn sie laeuft auf dem Hauptfaden.
 pub(crate) fn befehl_fragen_lassen<T: Send + 'static>(
     mtm: MainThreadMarker,
     befehl: Plattenbefehl,
+    gilt: impl Fn(MainThreadMarker) -> bool + 'static,
     fadenname: &'static str,
     arbeit: impl FnOnce() -> T + Send + 'static,
     startfehler: impl FnOnce(std::io::Error) -> T + Send + 'static,
     fertig: impl FnOnce(MainThreadMarker, T) + Send + 'static,
 ) {
-    befehl_fragen_lassen_nach(FRIST, mtm, befehl, fadenname, arbeit, startfehler, fertig);
+    let frage = anmelden(mtm, befehl, gilt);
+    befehl_fragen_lassen_nach(FRIST, frage, fadenname, arbeit, startfehler, fertig);
+}
+
+/// Traegt eine neue Frage ein; sie loest die vorige desselben Befehls ab.
+fn anmelden(
+    _mtm: MainThreadMarker,
+    befehl: Plattenbefehl,
+    gilt: impl Fn(MainThreadMarker) -> bool + 'static,
+) -> Wartefrage {
+    let nummer = WARTE.with_borrow_mut(|warte| warte.gestellt(befehl));
+    OFFENE.with_borrow_mut(|offene| {
+        offene.retain(|frage| frage.befehl != befehl);
+        offene.push(OffeneFrage {
+            befehl,
+            nummer,
+            gilt: Rc::new(gilt),
+        });
+    });
+    Wartefrage { befehl, nummer }
 }
 
 /// [`befehl_fragen_lassen`] mit genannter Frist, damit eine Probe nicht die volle
 /// Frist abwarten muss.
 fn befehl_fragen_lassen_nach<T: Send + 'static>(
     frist: Duration,
-    _mtm: MainThreadMarker,
-    befehl: Plattenbefehl,
+    frage: Wartefrage,
     fadenname: &'static str,
     arbeit: impl FnOnce() -> T + Send + 'static,
     startfehler: impl FnOnce(std::io::Error) -> T + Send + 'static,
     fertig: impl FnOnce(MainThreadMarker, T) + Send + 'static,
 ) {
-    let nummer = WARTE.with_borrow_mut(|warte| warte.gestellt(befehl));
+    let Wartefrage { befehl, nummer } = frage;
     frist_stellen(frist, befehl, nummer);
     fragen_lassen(fadenname, arbeit, startfehler, move |mtm, ergebnis| {
+        OFFENE.with_borrow_mut(|offene| {
+            offene.retain(|frage| frage.befehl != befehl || frage.nummer != nummer);
+        });
         if WARTE.with_borrow_mut(|warte| warte.beantwortet(befehl, nummer)) {
             zeile_nachziehen();
         }
@@ -200,6 +261,33 @@ fn frist_stellen(frist: Duration, befehl: Plattenbefehl, nummer: u64) {
             zeile_nachziehen();
         }
     });
+}
+
+/// Fragt auf der Hauptschlange jeden wartenden Befehl, ob er noch gilt, und zieht
+/// die Zeile nach, wenn der Satz deshalb gefallen oder wieder da ist (Modulkopf).
+pub(crate) fn nachsehen_lassen(_mtm: MainThreadMarker) {
+    if OFFENE.with_borrow(Vec::is_empty) || NACHSEHEN_STEHT.replace(true) {
+        return;
+    }
+    DispatchQueue::main().exec_async(|| {
+        NACHSEHEN_STEHT.set(false);
+        if let Some(mtm) = MainThreadMarker::new() {
+            nachsehen(mtm);
+        }
+    });
+}
+
+/// Stellt die Fragen ausserhalb jeder Ausleihe dieses Moduls: sie lesen die Staende
+/// der Befehle, und der Nachzug der Zeile stoesst [`nachsehen_lassen`] wieder an.
+fn nachsehen(mtm: MainThreadMarker) {
+    let mut geaendert = false;
+    for frage in OFFENE.with_borrow(Clone::clone) {
+        let gilt = (frage.gilt)(mtm);
+        geaendert |= WARTE.with_borrow_mut(|warte| warte.geltung(frage.befehl, frage.nummer, gilt));
+    }
+    if geaendert {
+        zeile_nachziehen();
+    }
 }
 
 /// Ruft den Melder ausserhalb jeder Ausleihe: er liest [`platte_wartet`], und
@@ -277,6 +365,7 @@ mod tests {
         hauptfadenprobe!(ohne_panik_bekommt_fertig_das_ergebnis_und_startfehler_laeuft_nicht),
         hauptfadenprobe!(der_satz_kommt_nach_der_frist_und_geht_mit_der_antwort),
         hauptfadenprobe!(eine_schnelle_antwort_laesst_keinen_satz_stehen),
+        hauptfadenprobe!(ein_ueberholter_befehl_nimmt_den_satz_ohne_antwort),
     ];
 
     /// Laesst die Hauptschlange laufen, bis `fertig` gerufen ist, und danach noch
@@ -379,8 +468,7 @@ mod tests {
         let (freigabe, warten) = std::sync::mpsc::channel::<()>();
         befehl_fragen_lassen_nach(
             Duration::from_millis(10),
-            mtm,
-            Plattenbefehl::Pfadsprung,
+            anmelden(mtm, Plattenbefehl::PfadsprungLinks, |_mtm| true),
             "krk-probe-warte",
             move || warten.recv().is_ok(),
             |_fehler| false,
@@ -414,8 +502,7 @@ mod tests {
         let frist = Duration::from_millis(50);
         befehl_fragen_lassen_nach(
             frist,
-            mtm,
-            Plattenbefehl::Lesezeichen,
+            anmelden(mtm, Plattenbefehl::Lesezeichen, |_mtm| true),
             "krk-probe-warte",
             || (),
             |_fehler| (),
@@ -429,6 +516,65 @@ mod tests {
             umlauf();
         }
         assert!(!platte_wartet(mtm));
+    }
+
+    /// Der ganze Weg eines ueberholten Befehls: die Arbeit haengt weiter, und der
+    /// Satz faellt trotzdem, sobald `gilt` nein sagt und nachgesehen wird. Gilt der
+    /// Befehl wieder, steht er wieder, und die spaete Antwort raeumt ihn.
+    ///
+    /// **Was sie nicht sieht:** ob die Befehle im Programm das richtige `gilt`
+    /// mitgeben. Das zeigt der Lauf an einer getrennten Freigabe.
+    fn ein_ueberholter_befehl_nimmt_den_satz_ohne_antwort(mtm: MainThreadMarker) {
+        let melder = Arc::new(AtomicUsize::new(0));
+        let fuer_den_melder = Arc::clone(&melder);
+        wartemelder_setzen(mtm, move || {
+            fuer_den_melder.fetch_add(1, Ordering::SeqCst);
+        });
+        let gilt = Rc::new(Cell::new(true));
+        let fuer_die_frage = Rc::clone(&gilt);
+        let aufrufe = Arc::new(AtomicUsize::new(0));
+        let fuer_fertig = Arc::clone(&aufrufe);
+        let (freigabe, warten) = std::sync::mpsc::channel::<()>();
+        befehl_fragen_lassen_nach(
+            Duration::from_millis(10),
+            anmelden(mtm, Plattenbefehl::Lesezeichen, move |_mtm| {
+                fuer_die_frage.get()
+            }),
+            "krk-probe-warte",
+            move || warten.recv().is_ok(),
+            |_fehler| false,
+            move |_mtm, _ergebnis| {
+                fuer_fertig.fetch_add(1, Ordering::SeqCst);
+            },
+        );
+        hauptschlange_bis_gilt(|| platte_wartet(mtm));
+        assert!(platte_wartet(mtm), "der Satz kam nach der Frist nicht");
+
+        gilt.set(false);
+        nachsehen_lassen(mtm);
+        hauptschlange_bis_gilt(|| !platte_wartet(mtm));
+        assert!(
+            !platte_wartet(mtm),
+            "der Satz blieb nach dem Ueberholen stehen"
+        );
+        assert_eq!(melder.load(Ordering::SeqCst), 2, "die Zeile zog nicht nach");
+
+        gilt.set(true);
+        nachsehen_lassen(mtm);
+        hauptschlange_bis_gilt(|| platte_wartet(mtm));
+        assert!(platte_wartet(mtm), "der Satz kam nicht zurueck");
+
+        freigabe.send(()).expect("die Arbeit wartet nicht mehr");
+        hauptschlange_bis(&aufrufe);
+        assert!(
+            !platte_wartet(mtm),
+            "der Satz blieb nach der Antwort stehen"
+        );
+        assert!(
+            OFFENE.with_borrow(Vec::is_empty),
+            "die Frage blieb eingetragen"
+        );
+        WARTEMELDER.set(None);
     }
 
     /// Die fuenf Befehle gehen ueber den meldenden Weg, die Fragen im Hintergrund
@@ -460,7 +606,7 @@ mod tests {
                 "geheimnisgroesse_fragen_lassen",
                 "Plattenbefehl::Geheimnis",
             ),
-            (&tabelle, "pfad_pruefen_lassen", "Plattenbefehl::Pfadsprung"),
+            (&tabelle, "pfad_pruefen_lassen", "Plattenbefehl::pfadsprung"),
             (
                 &anwendung,
                 "leistenauswahl_fragen_lassen",
@@ -491,6 +637,25 @@ mod tests {
             nachzug.contains(concat!("nebenfaden::platte_", "wartet("))
                 && nachzug.contains("Text::WartetAufDiePlatte"),
             "der Schreiber der Zeile fragt das Warten nicht"
+        );
+        // Wer seine Nummer weiterzaehlt, ohne dass die Zeile nachzieht, stoesst
+        // das Nachsehen selbst an; sonst bliebe der Satz bis zum naechsten Ereignis.
+        let nachsehen = concat!("nebenfaden::nachsehen_", "lassen(");
+        for (quelle, stelle) in [
+            (&anwendung, "statuszeile_nachziehen"),
+            (&anwendung, "leistenauswahl_ausfuehren"),
+            (&anwendung, "loeschen_nach_rueckfrage"),
+            (&editor, "oeffnung_ueberholen"),
+        ] {
+            assert!(
+                rumpf(quelle, stelle).contains(nachsehen),
+                "{stelle} stoesst das Nachsehen nicht an"
+            );
+        }
+        assert!(
+            rumpf(&anwendung, "oberflaeche_aufbauen").contains(nachsehen),
+            "der Melder des Hauptfensters stoesst das Nachsehen nicht an: \
+             ein Blatt oder ein Fokuswechsel nimmt den Satz nicht"
         );
     }
 }

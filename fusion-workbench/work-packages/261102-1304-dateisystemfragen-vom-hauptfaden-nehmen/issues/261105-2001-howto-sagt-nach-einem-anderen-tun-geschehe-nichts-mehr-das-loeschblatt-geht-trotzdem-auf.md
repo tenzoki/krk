@@ -14,3 +14,5 @@ Aus dem Quelltext gelesen, im Programm nicht gefahren.
 **Richtung.** Den Satz auf das bringen, was gilt, ohne Fachwort: bei Sprung, Lesezeichen und F4 geschieht danach nichts mehr, das Löschen fragt trotzdem noch, und F2 hat seine Ordner dann schon angelegt und sagt es. Ob das Löschblatt auch nach einem Tabwechsel aufgehen soll, kann der Nutzer dabei mit entscheiden; ein Stand wie bei den anderen vier wäre die Änderung am Code statt am Text.
 
 **Abnahme.** Der Absatz liest sich gegen `loeschbefund_einziehen` und `notizordnerausgang` richtig. Am Wortlaut hängt keine Probe.
+---
+Resolved: `HowTo.md` im Abschnitt „Wenn eine Platte langsam ist oder nicht antwortet“ sagt je Befehl, was nach einem anderen Tun geschieht; das Löschblatt und die Sätze von F2 bleiben nach Nutzerentscheid, wie sie sind. Am Code nichts geändert.
