@@ -1732,10 +1732,10 @@ pub enum Text {
     /// Die Antwort auf einen Befehl im Dateifenster ohne Auswahl: der
     /// Loeschweg, das Stapel-Umbenennen, jeder Auftrag und F4.
     NichtsAusgewaehlt,
-    /// `loeschen_nach_rueckfrage`: die Fragen eines frueheren Loeschbefehls
-    /// an die Platte laufen noch auf dem Faden `krk-plattenfrage`, und ein
-    /// zweiter startet keine zweite Pruefung.
-    LoeschpruefungLaeuftNoch,
+    /// `nebenfaden::fragen_lassen`: die Arbeit auf dem Faden ist in Panik
+    /// geraten; der Satz steht als Fehler an der Stelle, an der sonst der
+    /// Fehler des Fadenstarts steht.
+    FrageAbgebrochen,
     /// `stapel_umbenennen_ausfuehren`: aus den Feldern liess sich keine Regel
     /// bauen.
     StapelKeineRegel,
@@ -2659,7 +2659,7 @@ impl Text {
         Text::LoeschblattSchaltflaeche,
         Text::LoeschblattSchaltflaecheEndgueltig,
         Text::NichtsAusgewaehlt,
-        Text::LoeschpruefungLaeuftNoch,
+        Text::FrageAbgebrochen,
         Text::StapelKeineRegel,
         Text::StapelJedeZeileMitHinweis,
         Text::QuelleUndZielDerselbeOrdner,

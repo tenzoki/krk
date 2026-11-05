@@ -112,6 +112,7 @@ fn alle() -> Vec<&'static Probe> {
         super::editor::HAUPTFADENPROBEN,
         super::tabelle::HAUPTFADENPROBEN,
         super::blaetter::HAUPTFADENPROBEN,
+        super::nebenfaden::HAUPTFADENPROBEN,
     ]
     .into_iter()
     .flatten()

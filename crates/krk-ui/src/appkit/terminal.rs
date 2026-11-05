@@ -253,8 +253,8 @@ pub type Vorbereitung = Result<Vorbereitet, Skriptfehler>;
 /// **Scheitert schon der Fadenstart, bekommt `fertig` das als
 /// [`Skriptfehler::Schreiben`]**, ebenfalls ueber die Hauptschlange: es ist
 /// kein Skript entstanden, und der Rufer meldet es wie jeden anderen Fehler
-/// beim Anlegen. `fertig` wird in jedem Fall genau einmal gerufen, ausser die
-/// Hauptschlange laeuft nie wieder.
+/// beim Anlegen. `fertig` wird genau einmal gerufen, ausser die Frage kehrt nie
+/// zurueck oder die Hauptschlange laeuft nie wieder.
 pub fn vorbereiten_lassen(
     datei: PathBuf,
     fertig: impl FnOnce(MainThreadMarker, Vorbereitung) + Send + 'static,
@@ -281,9 +281,9 @@ pub fn vorbereiten_lassen(
 /// **Scheitert schon der Fadenstart, bekommt `fertig` den Satz fuer einen
 /// unerreichbaren Ordner mit dem Fehler des Starts**, ebenfalls ueber die
 /// Hauptschlange: gefragt ist dann nichts, und der Ordner zu oeffnen, ohne
-/// gefragt zu haben, hiesse die Pruefung still auszulassen. `fertig` wird in
-/// jedem Fall genau einmal gerufen, ausser die Hauptschlange laeuft nie
-/// wieder.
+/// gefragt zu haben, hiesse die Pruefung still auszulassen. `fertig` wird genau
+/// einmal gerufen, ausser die Frage kehrt nie zurueck oder die Hauptschlange
+/// laeuft nie wieder.
 pub fn ordner_pruefen_lassen(
     ordner: PathBuf,
     fertig: impl FnOnce(MainThreadMarker, Option<String>) + Send + 'static,

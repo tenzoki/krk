@@ -1091,7 +1091,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::LoeschblattSchaltflaeche => "Move to Trash",
         Text::LoeschblattSchaltflaecheEndgueltig => "Delete Permanently",
         Text::NichtsAusgewaehlt => "nothing is selected",
-        Text::LoeschpruefungLaeuftNoch => "the delete check is still running",
+        Text::FrageAbgebrochen => "internal error: the question to the disk was aborted",
         Text::StapelKeineRegel => "nothing to rename: no rule could be built from the fields",
         Text::StapelJedeZeileMitHinweis => "nothing to rename: every line carries a note",
         Text::QuelleUndZielDerselbeOrdner => "source and destination are the same folder",

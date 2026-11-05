@@ -807,6 +807,44 @@ struct Loeschanfrage {
     /// Die Beschriftung, die der Befehl fuer den Weg in den Papierkorb
     /// mitbringt.
     schaltflaeche: &'static str,
+    /// Die Nummer des Befehls ([`Loeschbefehle`]).
+    nummer: u64,
+}
+
+/// Zaehlt die Loeschbefehle, damit allein die Antwort des juengsten ein Blatt
+/// oeffnen kann.
+///
+/// **Eine Nummer statt einer Sperre** (Defekt
+/// `261104-1957-die-sperre-des-loeschwegs-gilt-programmweit-und-faellt-ohne-antwort-nie.md`):
+/// ein Wahrheitswert hielt jeden weiteren Loeschbefehl im ganzen Programm an,
+/// solange eine Frage an die Platte lief, und ohne Antwort bis zum Neustart.
+/// Mit der Nummer haelt nichts mehr an: jeder Befehl zieht eine neue, gleich an
+/// welchem Ort, und eine Antwort mit einer aelteren verfaellt. Der Faden einer
+/// ueberholten Frage bleibt stehen, bis die Platte antwortet; abbrechen laesst
+/// er sich nicht.
+///
+/// Ohne AppKit und ohne Systemaufruf, damit eine Probe die Regel ohne Fenster
+/// fahren kann.
+#[derive(Debug, Default)]
+struct Loeschbefehle {
+    /// Die Nummer des juengsten Befehls.
+    juengster: Cell<u64>,
+}
+
+impl Loeschbefehle {
+    /// Vergibt die Nummer eines neuen Befehls und ueberholt damit alle frueheren.
+    #[must_use]
+    fn neuer(&self) -> u64 {
+        let nummer = self.juengster.get() + 1;
+        self.juengster.set(nummer);
+        nummer
+    }
+
+    /// Ist `nummer` die des juengsten Befehls?
+    #[must_use]
+    fn ist_juengster(&self, nummer: u64) -> bool {
+        self.juengster.get() == nummer
+    }
 }
 
 /// Was die Platte ueber ein lokales Loeschziel sagt, in einem Zug erhoben
@@ -1436,15 +1474,13 @@ pub struct AnwendungsIvars {
     /// ueberschriebe. Gesetzt beim Start eines Fadens, geloescht in seinem
     /// Ausgang auf dem Hauptfaden.
     tresorgang: Cell<bool>,
-    /// Ob die Fragen eines lokalen Loeschbefehls an die Platte auf dem Faden
-    /// `krk-plattenfrage` laufen (Plan `261102-1314-…`, Schritt 8).
+    /// Die Nummer des juengsten Loeschbefehls.
     ///
-    /// Gesetzt in [`Anwendungsdelegierter::loeschen_nach_rueckfrage`] beim
-    /// Start der Frage, geloescht als erste Handlung von
-    /// [`Anwendungsdelegierter::loeschbefund_einziehen`]. Solange es steht,
-    /// startet ein weiterer Loeschbefehl keine zweite Frage, sondern meldet
-    /// [`Text::LoeschpruefungLaeuftNoch`].
-    loeschpruefung: Cell<bool>,
+    /// Vergeben in [`Anwendungsdelegierter::loeschen_nach_rueckfrage`],
+    /// gefragt als erste Handlung von
+    /// [`Anwendungsdelegierter::loeschbefund_einziehen`], die jede Antwort
+    /// eines aelteren Befehls verwirft.
+    loeschbefehle: Loeschbefehle,
     /// Die Zugaenge zu sftp-Servern, je Server einer (Entscheidung 3 des
     /// Plans `261016-1956-plan-sftp-ordner-im-dateifenster-wie-lokal.md`).
     ///
@@ -1941,7 +1977,7 @@ impl Anwendungsdelegierter {
             merker: Rc::new(RefCell::new(Schluesselmerker::neu())),
             ablaufwecker: RefCell::new(None),
             tresorgang: Cell::new(false),
-            loeschpruefung: Cell::new(false),
+            loeschbefehle: Loeschbefehle::default(),
             fernzugaenge: Zugangsregister::neu(),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
@@ -8136,10 +8172,14 @@ impl Anwendungsdelegierter {
     /// auf dem Hauptfaden ein und wertet dort erst die Stufentafel aus, mit dem
     /// dann gueltigen `vorgang_laeuft`. Ein ferner Gegenstand, einer im Archiv
     /// und ein lokaler, den schon eine billige Stufe anhaelt, gehen ohne Faden
-    /// und sofort in dieselbe Einzugsmethode, ohne Befund. **Solange eine
-    /// lokale Frage laeuft, startet ein weiterer Loeschbefehl keine zweite**
-    /// und meldet [`Text::LoeschpruefungLaeuftNoch`]; die Sperre ist das Feld
-    /// `loeschpruefung`, und die Einzugsmethode loest sie. **Scheitert der
+    /// und sofort in dieselbe Einzugsmethode, ohne Befund. **Laeuft noch eine
+    /// lokale Frage, ueberholt jeder weitere Loeschbefehl sie**, gleich an
+    /// welchem Ort: er zieht eine neue Nummer ([`Loeschbefehle`]), geht seinen
+    /// Weg bis zur Stufentafel, und die Antwort der alten Frage verfaellt in
+    /// der Einzugsmethode. Ein zweiter Befehl an einem lokalen Ort startet also
+    /// einen zweiten Faden; **eine Obergrenze dafuer gibt es nicht**, und auf
+    /// einer haengenden Freigabe bleibt jeder dieser Faeden stehen, bis die
+    /// Platte antwortet. **Scheitert der
     /// Fadenstart**, gilt der Befund als unentschieden
     /// ([`Loeschbefund::unentschieden`]), und die Tafel fuehrt auf die
     /// endgueltige Rueckfrage mit [`Endgueltiggrund::PapierkorbUngewiss`].
@@ -8242,12 +8282,10 @@ impl Anwendungsdelegierter {
     /// kein Fenster gibt, an dem das Blatt haengen koennte.
     fn loeschen_nach_rueckfrage(&self, schaltflaeche: &'static str) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
-        // Eine lokale Pruefung eines frueheren Befehls laeuft noch auf dem
-        // Faden: dieser startet keine zweite, sondern sagt es.
-        if self.ivars().loeschpruefung.get() {
-            self.antwort_zeigen(aktiv, text(Text::LoeschpruefungLaeuftNoch));
-            return true;
-        }
+        // Dieser Befehl ueberholt jede Frage eines frueheren, auch wenn er an
+        // einem fernen Ort oder im Archiv steht und selbst keine stellt: sonst
+        // ginge das Blatt des alten Befehls spaeter ohne Zusammenhang auf.
+        let nummer = self.ivars().loeschbefehle.neuer();
         // Was geloescht wuerde, am Wert des Tabs und ohne Systemaufruf: lokal
         // die Auswahl mit ihren Pfaden, fern und im Archiv die Namen unter dem
         // angezeigten Ort. Ein Archiv, das KRK allein lesen darf, loescht
@@ -8276,8 +8314,7 @@ impl Anwendungsdelegierter {
                 if self.ivars().fenster.get().is_none() {
                     return false;
                 }
-                self.ivars().loeschpruefung.set(true);
-                Self::loeschbefund_erheben_lassen(ordner, auswahl, aktiv, schaltflaeche);
+                Self::loeschbefund_erheben_lassen(ordner, auswahl, aktiv, schaltflaeche, nummer);
                 true
             }
             // Fern, im Archiv und lokal mit einer billigen Stufe: ohne Faden
@@ -8287,6 +8324,7 @@ impl Anwendungsdelegierter {
                     gegenstand,
                     seite: aktiv,
                     schaltflaeche,
+                    nummer,
                 },
                 None,
             ),
@@ -8303,12 +8341,14 @@ impl Anwendungsdelegierter {
     /// der Befund als unentschieden ([`Loeschbefund::unentschieden`]), und
     /// die Einzugsmethode bekommt ihn ebenso ueber die Hauptschlange; die
     /// Tafel fuehrt dann auf die endgueltige Rueckfrage mit
-    /// [`Endgueltiggrund::PapierkorbUngewiss`], und die Sperre faellt dort.
+    /// [`Endgueltiggrund::PapierkorbUngewiss`]. Dasselbe gilt bei einer Panik
+    /// auf dem Faden ([`nebenfaden::fragen_lassen`]).
     fn loeschbefund_erheben_lassen(
         ordner: PathBuf,
         auswahl: Auswahl,
         seite: Fensterseite,
         schaltflaeche: &'static str,
+        nummer: u64,
     ) {
         let fuer_den_faden = (ordner.clone(), auswahl.clone());
         nebenfaden::fragen_lassen(
@@ -8331,6 +8371,7 @@ impl Anwendungsdelegierter {
                     gegenstand: Loeschgegenstand::Lokal { ordner, auswahl },
                     seite,
                     schaltflaeche,
+                    nummer,
                 };
                 // Ohne Fenster gibt es kein Blatt; der Tastendruck ist
                 // laengst verbraucht, also bleibt die Antwort ungenutzt.
@@ -8367,19 +8408,25 @@ impl Anwendungsdelegierter {
     /// Loeschblatt stuende ohne Zusammenhang mit dem, was der Nutzer dann tut.
     /// Er drueckt die Taste neu und bekommt einen frischen Befund.
     ///
-    /// **Die Sperre `loeschpruefung` faellt als erste Handlung**, vor jedem
-    /// Ausstieg. Kaeme ein lokaler Gegenstand ohne Befund bis zur
+    /// **Die Nummer wird als erste Handlung gefragt**, vor der Tafel und vor
+    /// jeder Meldung: die Antwort eines ueberholten Befehls verfaellt still,
+    /// denn der Nutzer hat inzwischen einen neueren gegeben ([`Loeschbefehle`]).
+    /// Der Weg ohne Faden kommt mit der gerade vergebenen Nummer an und besteht
+    /// die Frage immer. Kaeme ein lokaler Gegenstand ohne Befund bis zur
     /// Papierkorbfrage, gilt er als unentschieden und nie als entwarnt; eine
     /// Frage an die Platte entsteht hier nicht.
     ///
     /// Liefert `false` allein dann, wenn es kein Fenster gibt, an dem das
     /// Blatt haengen koennte.
     fn loeschbefund_einziehen(&self, anfrage: Loeschanfrage, befund: Option<Loeschbefund>) -> bool {
-        self.ivars().loeschpruefung.set(false);
+        if !self.ivars().loeschbefehle.ist_juengster(anfrage.nummer) {
+            return true;
+        }
         let Loeschanfrage {
             gegenstand,
             seite,
             schaltflaeche,
+            nummer: _,
         } = anfrage;
         // Die Frage geht seit der Runde 13 durch `vorgang_laeuft` und nicht
         // mehr an `ivars().vorgang` heran: sie hat eine Antwortstelle, und
@@ -18234,8 +18281,8 @@ mod fernvorgangsproben {
     /// Einzugsmethode gibt, und erst die Einzugsmethode fragt die Stufentafel.
     ///
     /// **Was sie nicht sieht:** einen Systemaufruf in einer tiefer gerufenen
-    /// Funktion, und ob die Sperre auf jedem Weg faellt; dass sie die erste
-    /// Handlung der Einzugsmethode ist, prueft die Probe am Rumpf.
+    /// Funktion. Dass die Nummer die erste Frage der Einzugsmethode ist, prueft
+    /// die Probe am Rumpf.
     #[test]
     fn der_loeschweg_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
         let datei = diese_datei();
@@ -18269,13 +18316,12 @@ mod fernvorgangsproben {
         for nadel in [
             concat!("Self::loeschbefund_", "erheben_lassen("),
             concat!("self.loeschbefund_", "einziehen("),
-            concat!("loeschpruefung", ".set(true)"),
-            concat!("Text::Loeschpruefung", "LaeuftNoch"),
+            concat!("loeschbefehle", ".neuer()"),
         ] {
             assert!(
                 ausloeserrumpf.contains(nadel),
                 "{ausloeser} enthaelt {nadel} nicht: die Frage geht nicht auf den Faden, \
-                 ihre Antwort kommt nicht an oder die Sperre fehlt"
+                 ihre Antwort kommt nicht an oder der Befehl zieht keine Nummer"
             );
         }
         let huellenrumpf = rumpf(&datei, huelle);
@@ -18297,17 +18343,105 @@ mod fernvorgangsproben {
             einzugsrumpf.contains(concat!("loeschwarnung::vor_der_", "rueckfrage(")),
             "{einzug} fragt die Stufentafel nicht"
         );
-        let sperre = einzugsrumpf
-            .find(concat!("loeschpruefung", ".set(false)"))
-            .unwrap_or_else(|| panic!("{einzug} loest die Sperre nicht"));
+        let nummernfrage = einzugsrumpf
+            .find(concat!("loeschbefehle", ".ist_juengster(anfrage.nummer)"))
+            .unwrap_or_else(|| panic!("{einzug} fragt die Nummer nicht"));
         let erster_ausstieg = ["return", concat!("vor_der_", "rueckfrage(")]
             .iter()
             .filter_map(|nadel| einzugsrumpf.find(nadel))
             .min()
             .expect("die Einzugsmethode hat keinen Ausgang");
         assert!(
-            sperre < erster_ausstieg,
-            "{einzug} loest die Sperre nicht vor jedem Ausstieg"
+            nummernfrage < erster_ausstieg,
+            "{einzug} fragt die Nummer nicht vor jedem Ausstieg"
+        );
+    }
+
+    /// Eine ueberholte Antwort gilt nicht, und ein Befehl an einem anderen Ort
+    /// ueberholt ebenso wie einer am selben (Defekt
+    /// `261104-1957-die-sperre-des-loeschwegs-gilt-programmweit-…`).
+    ///
+    /// Die Regel an [`Loeschbefehle`] selbst: eine lokale Frage laeuft, dann
+    /// kommt ein weiterer Befehl, und auf die Antwort der ersten Frage trifft
+    /// erst ein Nein und dann fuer den eigenen ein Ja. Eine Frage, die nie
+    /// zurueckkehrt, kommt in dieser Folge gar nicht vor und haelt nichts an.
+    #[test]
+    fn eine_ueberholte_antwort_gilt_nicht() {
+        let befehle = super::Loeschbefehle::default();
+        let lokale_frage = befehle.neuer();
+        assert!(
+            befehle.ist_juengster(lokale_frage),
+            "die Antwort des einzigen Befehls muss gelten"
+        );
+        let anderer_ort = befehle.neuer();
+        assert!(
+            befehle.ist_juengster(anderer_ort),
+            "der Befehl am anderen Ort muss die Stufentafel erreichen"
+        );
+        assert!(
+            !befehle.ist_juengster(lokale_frage),
+            "die ueberholte Antwort wuerde ein Blatt oeffnen"
+        );
+    }
+
+    /// Waehrend eine lokale Frage laeuft, erreicht ein Loeschbefehl an einem
+    /// anderen Ort die Stufentafel, und eine ueberholte Antwort oeffnet kein
+    /// Blatt (Defekt `261104-1957-die-sperre-des-loeschwegs-gilt-programmweit-…`).
+    ///
+    /// Am Rumpf gehalten: der Ausloeser zieht die Nummer als erstes und haelt
+    /// vor der Weiche auf den Gegenstand an keiner laufenden Frage an, und er
+    /// fragt die Nummer nirgends. Die Einzugsmethode fragt sie vor der Tafel,
+    /// vor jeder Meldung und vor dem Blatt, und die Antwort des Fadens wie der
+    /// Weg ohne Faden tragen sie mit.
+    ///
+    /// **Was sie nicht sieht:** ob ein Blatt am laufenden Programm ausbleibt und
+    /// wie sich KRK an einer wirklich haengenden Freigabe verhaelt; das zeigt
+    /// allein ein Lauf des Nutzers.
+    #[test]
+    fn ein_weiterer_loeschbefehl_haelt_an_keiner_laufenden_frage_an() {
+        let datei = diese_datei();
+        let ausloeser = rumpf(&datei, concat!("loeschen_nach_", "rueckfrage"));
+        let nummer = ausloeser
+            .find(concat!("loeschbefehle", ".neuer()"))
+            .expect("der Ausloeser zieht keine Nummer");
+        let weiche = ausloeser
+            .find("self.loeschgegenstand(aktiv)")
+            .expect("der Ausloeser fragt den Gegenstand nicht");
+        assert!(nummer < weiche, "die Nummer kommt erst nach dem Gegenstand");
+        assert!(
+            !ausloeser[..weiche].contains("return"),
+            "vor dem Gegenstand steigt der Ausloeser aus, also haelt ihn etwas an"
+        );
+        assert!(
+            !ausloeser.contains(".ist_juengster("),
+            "der Ausloeser fragt die Nummer und koennte daran scheitern"
+        );
+        let einzug = rumpf(&datei, concat!("loeschbefund_", "einziehen"));
+        let frage = einzug
+            .find(concat!(
+                "!self.ivars().loeschbefehle",
+                ".ist_juengster(anfrage.nummer)"
+            ))
+            .expect("die Einzugsmethode verwirft keine ueberholte Antwort");
+        for nadel in [
+            concat!("loeschwarnung::vor_der_", "rueckfrage("),
+            concat!("self.loeschblatt_", "zeigen("),
+            "self.antwort_zeigen(",
+            "self.vorgang_laeuft(",
+        ] {
+            let stelle = einzug
+                .find(nadel)
+                .unwrap_or_else(|| panic!("die Einzugsmethode enthaelt {nadel} nicht"));
+            assert!(
+                frage < stelle,
+                "{nadel} steht vor der Frage nach der Nummer: eine ueberholte Antwort \
+                 erreichte sie"
+            );
+        }
+        let huelle = rumpf(&datei, concat!("loeschbefund_", "erheben_lassen"));
+        assert!(
+            huelle.contains("nummer,"),
+            "die Antwort des Fadens traegt ihre Nummer nicht"
         );
     }
 

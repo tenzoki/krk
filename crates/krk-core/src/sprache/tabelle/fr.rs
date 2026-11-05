@@ -1222,7 +1222,9 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::LoeschblattSchaltflaeche => "Mettre à la Corbeille",
         Text::LoeschblattSchaltflaecheEndgueltig => "Supprimer définitivement",
         Text::NichtsAusgewaehlt => "rien n’est sélectionné",
-        Text::LoeschpruefungLaeuftNoch => "la vérification avant suppression est encore en cours",
+        Text::FrageAbgebrochen => {
+            "erreur interne : la question adressée au disque a été interrompue"
+        }
         Text::StapelKeineRegel => {
             "rien à renommer\u{a0}: aucune règle n’a pu être construite à partir des champs"
         }
