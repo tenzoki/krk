@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "003a38f2-6a39-4016-b88a-76f7f03437e5",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261102-1304-dateisystemfragen-vom-hauptfaden-nehmen/issues/261105-1825-eine-panik-auf-dem-loeschweg-fuehrt-ohne-hinweis-in-die-endgueltige-rueckfrage.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

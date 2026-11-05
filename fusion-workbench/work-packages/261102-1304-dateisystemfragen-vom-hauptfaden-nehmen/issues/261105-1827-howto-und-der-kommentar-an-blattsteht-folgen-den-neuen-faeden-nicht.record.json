@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "57baceb8-68bb-473a-9a2e-247e62f1561c",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261102-1304-dateisystemfragen-vom-hauptfaden-nehmen/issues/261105-1827-howto-und-der-kommentar-an-blattsteht-folgen-den-neuen-faeden-nicht.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

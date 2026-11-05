@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "9cedf468-b717-423c-967d-8548a8f8e2f8",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261102-1304-dateisystemfragen-vom-hauptfaden-nehmen/issues/261105-1826-keine-laufende-plattenfrage-meldet-sich-und-jeder-weitere-befehl-startet-einen-faden.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

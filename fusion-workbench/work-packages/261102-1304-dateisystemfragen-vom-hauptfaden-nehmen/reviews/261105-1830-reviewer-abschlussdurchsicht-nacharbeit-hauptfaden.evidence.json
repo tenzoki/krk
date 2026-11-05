@@ -1,0 +1,28 @@
+{
+  "schema": "fusion.evidence/v1",
+  "id": "ca933cc3-29bb-4732-8e8a-bb7ed907f863",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "subject": {
+    "git_tree": "b85d62f58ecd1e5a825078214d06c7d09a3fcb43",
+    "git_range": null
+  },
+  "brief_revision": "sha256:6953bcb58cbdc7eabbfda98f0a6b32cda16fe16d477c12931a12a91c5151eaa7",
+  "plan_revision": "sha256:cc21bfe172599f9720b3861bb447c753471836c9cbb203f442071cbe836d8b61",
+  "role": {
+    "profile": "reviewer",
+    "version": "13.3.7"
+  },
+  "host": "claude-code",
+  "execution_policy": "claude-guided",
+  "verdict": "revise",
+  "uncertainties": [],
+  "checks": [],
+  "report": {
+    "path": "work-packages/261102-1304-dateisystemfragen-vom-hauptfaden-nehmen/reviews/261105-1830-reviewer-abschlussdurchsicht-nacharbeit-hauptfaden.md",
+    "sha256": "sha256:dad7b7b1651db423e517024be50a0c8e9ed6bf6df9f0a21684ce990828d749d7",
+    "kind": "review"
+  },
+  "predecessor": null,
+  "accepted_at": "2026-11-05T17:41:04Z",
+  "extensions": {}
+}
