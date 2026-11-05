@@ -28,3 +28,6 @@ Das `host` ist dekodiert. Die Form, in der der Nutzer den Namen getippt hat, ist
 **Richtung.** Die Frage am Text der Eingabe stellen, bevor `NSURL` kodiert: ein rohes Leerzeichen oder Steuerzeichen im Rechnerteil der Zeichenkette weist ab, ein gültiges `%20` nicht. Das `host` kann die Unterscheidung nicht liefern.
 
 **Abnahme.** `gezeigt("smb://Mein%20NAS._smb._tcp.local/Daten")` ist `Some` und `gezeigt("smb://nas local/x")` ist `None`, auf macOS 27.2 und in der Probe in `verbinden.rs`. Der Satz in `verbindung.rs` nennt den Stand. Ob NetFS einen solchen Namen einhängt, prüft der Nutzer an einer Freigabe.
+
+---
+Resolved: `url_aus` (`crates/krk-ui/src/appkit/verbinden.rs`) prueft den Rechnerteil jetzt an der rohen Zeichenkette, bevor `NSURL` kodiert, sodass ein rohes Leerzeichen, Steuerzeichen oder eines der Zeichen `<>"\^`{|}` abweist und ein gueltiges `%20` eine URL ergibt; ungemessen bleibt das Einhaengen ueber NetFS mit einem solchen Namen, das an keiner Freigabe gefahren ist.

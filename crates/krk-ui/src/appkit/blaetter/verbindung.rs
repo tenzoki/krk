@@ -151,7 +151,7 @@ pub fn entwurf_aus(mut felder: Vec<String>) -> Verbindungsentwurf {
 /// Die Pruefregel dieses Blattes: [`tresorweg::entwurf_pruefen`] und danach
 /// die Frage des Klicks, ob aus Protokoll, Adresse und Konto eine URL entsteht
 /// ([`verbinden::url_aus`]). Ohne die zweite naehme das Blatt eine Adresse mit
-/// Leerzeichen im Rechnernamen an, und erst der Klick wiese sie ab.
+/// rohem Leerzeichen im Rechnernamen an, und erst der Klick wiese sie ab.
 fn pruefen(entwurf: &Verbindungsentwurf) -> Result<(), Entwurfsfehler> {
     tresorweg::entwurf_pruefen(entwurf)?;
     let ziel = verbindung::verbindungsziel(&entwurf.protokoll, &entwurf.adresse, &entwurf.konto)
@@ -278,7 +278,7 @@ pub fn zeigen(
             knopf.setEnabled(geprueft.is_ok());
             // Der Grund beim Tippen allein fuer das, was Weitertippen nicht
             // heilt: ein Zeilenumbruch und eine Adresse, aus der keine URL
-            // entsteht (ein Leerzeichen im Rechnernamen). Ein leerer Name,
+            // entsteht (ein rohes Leerzeichen im Rechnernamen). Ein leerer Name,
             // eine noch leere Adresse und ein halb getipptes Protokoll sind
             // beim Tippen kein Fehler; ihren Grund zeigt erst die
             // Eingabetaste ueber `bestaetigung_pruefen` (HowTo.md, „Verbinden“).
@@ -389,6 +389,7 @@ mod tests {
         let mit_adresse =
             |adresse: &str| pruefen(&entwurf_aus(felder(["NAS", "smb", adresse, "", "", ""])));
         assert_eq!(mit_adresse("nas.local/Daten Ordner"), Ok(()));
+        assert_eq!(mit_adresse("Mein%20NAS._smb._tcp.local/Daten"), Ok(()));
         assert_eq!(
             mit_adresse("nas local/daten"),
             Err(Entwurfsfehler::KeineUrl)

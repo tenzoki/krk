@@ -139,7 +139,7 @@
 //! stehen sie hier als Zeichenketten. `NSURL`, `NSString`, `NSArray`,
 //! `NSMutableDictionary`, `NSFileManager` und `NSWorkspace` stehen seit 10.0,
 //! ebenso `openURL:`, `sharedWorkspace`, `defaultManager`,
-//! `path`, `scheme`, `host` und `absoluteString`.
+//! `path`, `scheme` und `absoluteString`.
 //! `mountedVolumeURLsIncludingResourceValuesForKeys:options:` und
 //! `resourceValuesForKeys:error:` stehen seit 10.6 (`NSFileManager.h`,
 //! `NSURL.h`), `NSURLVolumeURLForRemountingKey` seit 10.7 (`NSURL.h`,
@@ -748,11 +748,19 @@ pub fn uebergeben(url: &str) -> bool {
 /// URL ergibt, etwa ein Port aus Buchstaben, weist schon das Blatt „Verbinden“
 /// ab, ueber dieselbe Funktion.
 ///
-/// **Den Rechnernamen prueft KRK selbst** ([`rechnername_taugt`]). Auf macOS
-/// 27.2 kodiert `NSURL` auch ihn und macht aus `smb://nas local/x` die URL
+/// **Den Rechnernamen prueft KRK selbst, an der Zeichenkette und bevor `NSURL`
+/// kodiert** ([`rechnerteil`], [`rechnername_taugt`]). Auf macOS 27.2 kodiert
+/// `NSURL` auch ihn und macht aus `smb://nas local/x` die URL
 /// `smb://nas%20local/x` (gemessen am 261104), wo die Probe unten `nil` festhielt.
-/// Gefragt wird das gelesene `host`, damit ein schon kodiert eingetragener Name
-/// (`nas%20local`) denselben Weg nimmt.
+/// Das gelesene `host` kann die Frage nicht beantworten: es ist dekodiert, und
+/// eine rohe und eine kodierte Eingabe fallen darin zusammen. Ein rohes
+/// Leerzeichen weist deshalb ab, ein gueltiges `%20` nicht, also bleibt ein
+/// kodierter Bonjour-Name (`Mein%20NAS._smb._tcp.local`) eine URL. Ob NetFS einen
+/// solchen Namen einhaengt, ist an keiner Freigabe gefahren.
+///
+/// **Was diese Frage nicht sieht:** ein kodiertes Zeichen, das roh abgewiesen
+/// wuerde (`nas%0Alocal`, `nas%3Clocal`); es geht wie jedes `%XX` durch, und was
+/// NetFS damit tut, ist ebenso wenig gefahren.
 ///
 /// **`#` und `?` kodiert diese Funktion nicht**, denn sie sind gueltige
 /// URL-Zeichen und beenden hier den Pfad. Auf dem Einhaengeweg kommen sie
@@ -762,17 +770,36 @@ pub fn uebergeben(url: &str) -> bool {
 /// und Fragment.
 #[must_use]
 pub fn url_aus(url: &str) -> Option<Retained<NSURL>> {
-    let adresse = NSURL::URLWithString_encodingInvalidCharacters(&NSString::from_str(url), true)?;
-    let rechner = adresse.host().map(|rechner| rechner.to_string());
-    rechner
-        .as_deref()
-        .is_none_or(rechnername_taugt)
-        .then_some(adresse)
+    if !rechnerteil(url).is_none_or(rechnername_taugt) {
+        return None;
+    }
+    NSURL::URLWithString_encodingInvalidCharacters(&NSString::from_str(url), true)
 }
 
-/// Ob ein gelesener Rechnername ohne Leerraum, Steuerzeichen und die ASCII-Zeichen
-/// ist, die RFC 3986 in einer URL nirgends kennt. Ein Name jenseits von ASCII
-/// (`büro.local`) bleibt zulaessig, wie ein Unterstrich und eine IPv6-Adresse.
+/// Der Rechnerteil einer URL, wie er in der Zeichenkette steht, also nicht
+/// dekodiert: hinter `://`, bis zum ersten `/`, `?` oder `#`, ohne Konto
+/// (`konto@`, bis zum letzten `@`, denn ein `@` im Konto steht kodiert), ohne
+/// Port und ohne die Klammern einer IPv6-Adresse. `None`, wenn kein `://` dasteht
+/// und die URL damit keinen Rechner nennt. Rein und ohne System pruefbar.
+#[must_use]
+fn rechnerteil(url: &str) -> Option<&str> {
+    let (_, rest) = url.split_once("://")?;
+    let vorn = rest.split(['/', '?', '#']).next().unwrap_or(rest);
+    let rechner = vorn.rsplit_once('@').map_or(vorn, |(_, rechner)| rechner);
+    if let Some(klammer) = rechner.strip_prefix('[') {
+        return Some(
+            klammer
+                .split_once(']')
+                .map_or(klammer, |(adresse, _)| adresse),
+        );
+    }
+    Some(rechner.rsplit_once(':').map_or(rechner, |(name, _)| name))
+}
+
+/// Ob ein Rechnerteil aus [`rechnerteil`] ohne rohen Leerraum, rohe Steuerzeichen
+/// und die ASCII-Zeichen ist, die RFC 3986 in einer URL nirgends kennt. Ein Name
+/// jenseits von ASCII (`büro.local`) bleibt zulaessig, wie ein Unterstrich, eine
+/// IPv6-Adresse und ein gueltig kodiertes Zeichen (`%20`).
 fn rechnername_taugt(rechner: &str) -> bool {
     !rechner.chars().any(|zeichen| {
         zeichen.is_whitespace() || zeichen.is_control() || "<>\"\\^`{|}".contains(zeichen)
@@ -784,8 +811,8 @@ mod tests {
     use super::*;
 
     /// Ein Leerzeichen und ein Umlaut im Pfad werden kodiert, eine schon
-    /// kodierte Adresse bleibt, wie sie ist, und ein Leerzeichen im
-    /// Rechnernamen oder ein Port aus Buchstaben ergeben keine URL.
+    /// kodierte Adresse bleibt, wie sie ist, auch im Rechnernamen, und ein rohes
+    /// Leerzeichen im Rechnernamen oder ein Port aus Buchstaben ergeben keine URL.
     #[test]
     fn die_url_kodiert_was_sich_kodieren_laesst() {
         let gezeigt = |url: &str| {
@@ -808,12 +835,16 @@ mod tests {
         assert_eq!(gezeigt("smb://nas local/x"), None);
         assert_eq!(gezeigt("smb://nas.local:abc/x"), None);
         for ohne_rechner in [
-            "smb://nas%20local/x",
             "smb://nas local:445/x",
             "smb://konto@nas local/x",
             "smb://nas\tlocal/x",
             "smb://nas<local/x",
             "smb://nas\\local/x",
+            "smb://Mein NAS._smb._tcp.local/Daten",
+            "smb://nas local?x",
+            "smb://nas local#x",
+            "smb://nas:445 local/x",
+            "smb://[fe80 ::1]/x",
             "afp://nas local",
             "http://nas local/",
         ] {
@@ -824,9 +855,51 @@ mod tests {
             "smb://nas_1.local/x",
             "smb://konto@nas.local/x",
             "smb://[fe80::1]/x",
+            "smb://[fe80::1]:445/x",
             "smb://büro.local/x",
+            "smb://nas%20local/x",
+            "smb://Mein%20NAS._smb._tcp.local/Daten",
+            "smb://konto@Mein%20NAS._smb._tcp.local:445/Daten",
+            "afp://Time%20Capsule._afpovertcp._tcp.local/Data",
+            "smb://Kai%E2%80%99s%20Mac._smb._tcp.local/",
+            "ssh://kai%20%40b%C3%BCro@server",
+            // Bewusst durchgelassen, Doc-Kommentar von `url_aus`.
+            "smb://nas%0Alocal/x",
+            "smb://nas%3Clocal/x",
         ] {
             assert!(gezeigt(mit_rechner).is_some(), "{mit_rechner:?}");
+        }
+    }
+
+    /// Der Rechnerteil steht zwischen Schema samt Konto und Port oder dem Ende
+    /// der Autoritaet, ohne die Klammern einer IPv6-Adresse und unkodiert so,
+    /// wie er in der Zeichenkette steht.
+    #[test]
+    fn der_rechnerteil_loest_sich_aus_schema_konto_port_und_klammern() {
+        for (url, rechner) in [
+            ("smb://nas.local", Some("nas.local")),
+            ("smb://nas.local/Daten Ordner", Some("nas.local")),
+            ("smb://nas.local:445/x", Some("nas.local")),
+            ("smb://konto@nas.local/x", Some("nas.local")),
+            ("smb://konto@nas.local:445/x", Some("nas.local")),
+            ("smb://kon:to@nas.local/x", Some("nas.local")),
+            ("ssh://kai%20%40b%C3%BCro@server", Some("server")),
+            ("smb://nas local:445/x", Some("nas local")),
+            ("smb://konto@nas local/x", Some("nas local")),
+            ("smb://Mein%20NAS.local/x", Some("Mein%20NAS.local")),
+            ("https://example.org?q=a@b", Some("example.org")),
+            ("https://example.org#a:b", Some("example.org")),
+            ("smb://nas.local/a@b:c", Some("nas.local")),
+            ("smb://nas\\local/x", Some("nas\\local")),
+            ("smb://[fe80::1]/x", Some("fe80::1")),
+            ("smb://[fe80::1]:445/x", Some("fe80::1")),
+            ("smb://konto@[fe80::1%25en0]:445/x", Some("fe80::1%25en0")),
+            ("smb://[fe80::1", Some("fe80::1")),
+            ("smb:///x", Some("")),
+            ("mailto:kai@example.org", None),
+            ("kein url", None),
+        ] {
+            assert_eq!(rechnerteil(url), rechner, "{url:?}");
         }
     }
 

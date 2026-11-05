@@ -53,8 +53,10 @@
 //! `ssh`, `sftp` und `vnc` die URL so bekommt, wie sie eingetragen ist. Alles
 //! Uebrige wird erst in `krk-ui` kodiert, wo aus der URL ein `NSURL` wird
 //! (`appkit::verbinden::url_aus`): ein Leerzeichen oder ein Zeichen jenseits
-//! von ASCII im Pfad wird dort prozentkodiert, und was auch kodiert keine URL
-//! ergibt, etwa ein Leerzeichen im Rechnernamen, weist schon das Blatt
+//! von ASCII im Pfad wird dort prozentkodiert. Ein rohes Leerzeichen im
+//! Rechnernamen weist `url_aus` ab, bevor es kodiert, ein gueltig kodiertes
+//! (`Mein%20NAS._smb._tcp.local`) nicht. Den rohen Namen und was auch kodiert
+//! keine URL ergibt, etwa einen Port aus Buchstaben, weist schon das Blatt
 //! „Verbinden“ ab.
 
 use crate::fern::adresse::{self, Adressfehler, Fernziel};
