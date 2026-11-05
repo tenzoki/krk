@@ -51,8 +51,40 @@
 //! abgelegt wird. Die Geraete kommen bei jedem Aufbau frisch vom System und
 //! werden nie abgelegt: was eingehaengt ist, weiss das System besser als eine
 //! Datei von gestern.
+//!
+//! # Die Marke „fehlt“ kommt vom Faden
+//!
+//! **Dieses Modell fragt die Platte nicht, ausser in den zwei Funktionen, die
+//! auf einem Faden laufen** ([`Gueltigkeitsfrage::beantworten`] und
+//! [`Auswahl::nachgefragt`]). Bis zum 261105 setzte es die Marke beim Aufbau
+//! und nach jeder Geraetemeldung mit einem `is_dir` oder `is_file` je
+//! Lesezeichen auf dem Hauptfaden, und ein Lesezeichen auf einer haengenden
+//! Freigabe hielt damit die Ereignisschleife an.
+//!
+//! ```text
+//!  lesezeichen_setzen, orte_setzen   setzen allein Liste und Zeilen
+//!  gueltigkeit_anstossen             je Plattengruppe hoechstens eine Frage
+//!    Faden krk-plattenfrage          Gueltigkeitsfrage::beantworten
+//!  gueltigkeit_uebernehmen           Marken nach Ziel, dazu die Nachfrage
+//! ```
+//!
+//! **Bis zur Antwort gilt der letzte Stand**, und ein Eintrag ohne Stand gilt
+//! als gueltig: beim Start und direkt nach dem Hinzufuegen. Ein Ziel, das
+//! fehlt, steht also bis zur Antwort ohne den Zusatz „(fehlt)“ da; andersherum
+//! stuende bei jedem Start jede Zeile kurz als kaputt da. Was eine Auswahl
+//! dann tut, entscheidet die Marke nicht: sie fragt ihr eines Ziel selbst
+//! ([`Auswahl::nachgefragt`]).
+//!
+//! **Eine Antwort gilt je Ziel und nicht je Stelle.** Die Liste kann sich
+//! geaendert haben, seit die Frage gestellt ist; ein entfernter Eintrag findet
+//! dann keinen Abnehmer, ein neuer bekommt nichts, und ein umbenannter oder
+//! verschobener behaelt, was sein Ziel sagt.
+//!
+//! **Was eine haengende Freigabe kostet**, steht bei [`plattengruppe`].
 
-use std::path::{Path, PathBuf};
+use std::cell::Cell;
+use std::collections::BTreeMap;
+use std::path::{Component, Path, PathBuf};
 
 use krk_core::ablage::{Gruppe, Lesezeichen, Lesezeichenliste, Ziel};
 use krk_core::sprache::{Text, satz, text};
@@ -75,6 +107,143 @@ pub const UEBERSCHRIFT_VERBINDUNGEN: Text = Text::LeisteUeberschriftVerbindungen
 /// Ueberlegung wie bei der Markierung aus C2, die seit S16c neben der Farbe
 /// eine fette Schrift traegt.
 pub const ZUSATZ_UNGUELTIG: Text = Text::LeisteLesezeichenFehlt;
+
+/// Der Takt einer Frage an die Platte: hoechstens eine laeuft, und hoechstens
+/// eine Nachfrage folgt ihrer Antwort.
+///
+/// **Die Meldungen kommen in Stoessen.** Das System meldet ein Ein- oder
+/// Aushaengen mehrfach, und jede Meldung einen Faden starten hiesse, die
+/// Fadenzahl mit ihnen wachsen zu lassen. Der Takt faltet deshalb alles, was
+/// waehrend einer laufenden Frage kommt, zu einer einzigen Nachfrage zusammen.
+/// **Eine Nummer braucht er nicht**: es laeuft immer nur eine, also kommen die
+/// Antworten in der Reihenfolge an, in der sie erhoben sind. Eine Antwort, die
+/// vor der letzten Meldung erhoben ist, gilt deshalb bis zur Antwort der
+/// Nachfrage; sie ist die neueste, die es gibt.
+///
+/// **Was das kostet: eine Frage, die nie zurueckkommt, friert ihren Stand ein.**
+/// Abbrechen laesst sie sich nicht (`crate::appkit::nebenfaden`), und eine zweite
+/// daneben fragte dieselbe haengende Freigabe; das ist die Fadenzahl, die diese
+/// Regel begrenzt.
+///
+/// Ohne AppKit und ohne Systemaufruf, damit eine Probe die Regel ohne Fenster
+/// fahren kann. Zwei Abnehmer: die Aufzaehlung der Datentraeger
+/// (`crate::appkit::anwendung`) und die Marken der Lesezeichen, dort je
+/// [`plattengruppe`] einer.
+#[derive(Debug, Default)]
+pub struct Fragetakt {
+    /// Steht eine Frage auf dem Faden?
+    laeuft: Cell<bool>,
+    /// Kam seit ihrem Beginn eine weitere Meldung?
+    nachfrage: Cell<bool>,
+}
+
+impl Fragetakt {
+    /// Eine Meldung ist gekommen. `true` heisst: der Rufer stellt jetzt die Frage.
+    #[must_use = "bei true steht die Frage schon als laufend im Merker; ungestellt kaeme nie eine Antwort"]
+    pub fn anstossen(&self) -> bool {
+        if self.laeuft.replace(true) {
+            self.nachfrage.set(true);
+            return false;
+        }
+        true
+    }
+
+    /// Die Antwort ist da. `true` heisst: der Rufer fragt gleich noch einmal.
+    #[must_use = "bei true steht die Frage schon als laufend im Merker; ungestellt kaeme nie eine Antwort"]
+    pub fn antwort_da(&self) -> bool {
+        self.laeuft.set(false);
+        self.nachfrage.replace(false) && self.anstossen()
+    }
+}
+
+/// Die Gruppe, in der die Marke eines Pfads erfragt wird: der Datentraeger unter
+/// `/Volumes` oder der Rechner unter `/net`, sonst die Wurzel.
+///
+/// **Je Gruppe ein Faden und nicht je Lesezeichen.** Eine haengende Freigabe
+/// haelt damit allein die Marken ihrer eigenen Gruppe beim letzten Stand; die
+/// Fadenzahl ist hoechstens die Zahl der Gruppen, die die Lesezeichen nennen.
+///
+/// **Rein am Pfadtext und ohne Systemaufruf**, sonst stellte die Einteilung
+/// selbst die Frage, vor der sie schuetzen soll. **Der Preis:** eine Freigabe,
+/// die der Text nicht als solche zu erkennen gibt, liegt in der Gruppe der
+/// Wurzel, und das ist ein Lesezeichen ueber einen symbolischen Verweis oder auf
+/// einen Einhaengepunkt anderswo. Haengt sie, bleiben die Marken aller
+/// gewoehnlichen Lesezeichen beim letzten Stand, bis sie antwortet. Die Auswahl
+/// eines jeden Lesezeichens wirkt trotzdem, denn sie fragt auf eigenem Faden.
+fn plattengruppe(pfad: &Path) -> PathBuf {
+    let mut glieder = pfad.components();
+    match (glieder.next(), glieder.next(), glieder.next()) {
+        (
+            Some(Component::RootDir),
+            Some(Component::Normal(wurzel)),
+            Some(name @ Component::Normal(_)),
+        ) if wurzel == "Volumes" || wurzel == "net" => Path::new("/").join(wurzel).join(name),
+        _ => PathBuf::from("/"),
+    }
+}
+
+/// Der Pfad, an dem ein Ziel liegt; `None` fuer eine Verbindung, die keinen hat.
+fn pfad_des_ziels(ziel: &Ziel) -> Option<&Path> {
+    match ziel {
+        Ziel::Ordner { ordner, .. } => Some(ordner),
+        Ziel::Textstelle { datei, .. } => Some(datei),
+        Ziel::Verbindung { .. } => None,
+    }
+}
+
+/// Eine Frage nach den Marken einer [`plattengruppe`]; allein Werte, damit sie
+/// den Faden wechseln kann.
+#[derive(Debug)]
+pub struct Gueltigkeitsfrage {
+    gruppe: PathBuf,
+    lesezeichen: Vec<Lesezeichen>,
+}
+
+impl Gueltigkeitsfrage {
+    /// Fragt die Platte. **Laeuft auf dem Faden**, nie auf dem Hauptfaden.
+    #[must_use]
+    pub fn beantworten(self) -> Gueltigkeitsantwort {
+        let befunde = self
+            .lesezeichen
+            .into_iter()
+            .map(|lesezeichen| {
+                let gueltig = lesezeichen.gueltig();
+                (lesezeichen.ziel, gueltig)
+            })
+            .collect();
+        Gueltigkeitsantwort {
+            gruppe: self.gruppe,
+            befunde,
+        }
+    }
+
+    /// Die Antwort ohne Befund, wenn kein Faden entsteht oder er in Panik geraet:
+    /// die Marken bleiben beim letzten Stand, und der Takt laeuft weiter.
+    #[must_use]
+    pub fn ohne_befund(&self) -> Gueltigkeitsantwort {
+        Gueltigkeitsantwort {
+            gruppe: self.gruppe.clone(),
+            befunde: Vec::new(),
+        }
+    }
+}
+
+/// Die Antwort auf eine [`Gueltigkeitsfrage`].
+#[derive(Debug)]
+pub struct Gueltigkeitsantwort {
+    gruppe: PathBuf,
+    befunde: Vec<(Ziel, bool)>,
+}
+
+/// Was [`Leistenmodell::gueltigkeit_uebernehmen`] dem Rufer hinterlaesst.
+#[derive(Debug)]
+#[must_use = "die Nachfrage steht schon als laufend im Takt; ungestellt kaeme nie eine Antwort"]
+pub struct Gueltigkeitsuebernahme {
+    /// Ob sich eine Marke geaendert hat; nur dann muss die Ansicht neu zeichnen.
+    pub geaendert: bool,
+    /// Die Nachfrage, falls seit dem Beginn der Frage eine Meldung gekommen ist.
+    pub nachfrage: Option<Gueltigkeitsfrage>,
+}
 
 /// Ein Ort im unteren Teil der Leiste: ein Geraet oder ein Standardort.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -180,7 +349,10 @@ pub struct Auswahl {
     pub name: String,
     /// Was sie oeffnet: einen Ordner (C5) oder eine Stelle in einer Datei (C6).
     pub ziel: Ziel,
-    /// Ob das Ziel noch da ist (C5, C6).
+    /// Ob das Ziel noch da ist (C5, C6), nach dem letzten bekannten Stand.
+    ///
+    /// **Frisch ist der Wert erst nach [`Self::nachgefragt`]**;
+    /// [`Self::fragt_die_platte`] sagt, ob das noetig ist.
     ///
     /// **Ungueltig heisst allein, dass Ordner oder Datei fehlen.** Ob der
     /// gemerkte Zeileninhalt einer Textmarke noch auf seiner Nummer steht,
@@ -190,6 +362,9 @@ pub struct Auswahl {
     /// Immer `true` fuer ein Geraet: die Aufzaehlung nennt nur, was gerade
     /// eingehaengt ist.
     pub gueltig: bool,
+    /// Ob vor der Ausfuehrung die Platte zu fragen ist: ja fuer ein Lesezeichen
+    /// mit Pfad, nein fuer eine Verbindung und ein Geraet.
+    pub fragt_die_platte: bool,
 }
 
 impl Auswahl {
@@ -205,26 +380,35 @@ impl Auswahl {
     /// bekommt dort eine vollstaendige Fallunterscheidung.
     #[must_use]
     pub fn pfad(&self) -> Option<&Path> {
-        match &self.ziel {
-            Ziel::Ordner { ordner, .. } => Some(ordner),
-            Ziel::Textstelle { datei, .. } => Some(datei),
-            Ziel::Verbindung { .. } => None,
+        pfad_des_ziels(&self.ziel)
+    }
+
+    /// Die Auswahl mit dem Stand von jetzt. **Laeuft auf dem Faden**, nie auf dem
+    /// Hauptfaden.
+    ///
+    /// **Hier haelt die Zusage aus C5**, dass eine Auswahl den Grund meldet, statt
+    /// in einen Ordner zu fuehren, den es nicht mehr gibt: die Marke in der Zeile
+    /// kann veraltet sein, nach beiden Seiten, und diese Antwort ist es nicht.
+    #[must_use]
+    pub fn nachgefragt(mut self) -> Self {
+        if self.fragt_die_platte {
+            let lesezeichen = Lesezeichen {
+                name: self.name.clone(),
+                ziel: self.ziel.clone(),
+            };
+            self.gueltig = lesezeichen.gueltig();
         }
+        self
     }
 }
 
-/// Ein Lesezeichen mit dem Zustand seines Ordners.
+/// Ein Lesezeichen mit dem letzten bekannten Zustand seines Ziels.
 ///
-/// **Die eine Stelle, die die Marke setzt.** Bis zum 260807 taten es zwei:
-/// `Leistenmodell::lesezeichen_setzen` beim Aufbau der Eintraege und
-/// `Leistenmodell::gueltigkeit_pruefen` beim Nachziehen. Beide riefen
-/// [`Lesezeichen::gueltig`], beide lieferten dasselbe, und die erste nannte den
-/// Namen der zweiten nicht — wer die Pruefung erweitert haette, haette sie
-/// uebersehen
+/// **Eine Stelle faellt die Antwort auf die Frage, was gueltig heisst**,
+/// [`Lesezeichen::gueltig`]; bis zum 260807 fragten zwei Wege je fuer sich danach
 /// (`issues/260807-0012_*_vier-anlaesse-pruefen-die-lesezeichengueltigkeit-auf-drei-verschiedenen-wegen.md`).
-/// Seither schreibt allein [`Gemerkt::nachpruefen`] das Feld, und
-/// [`Gemerkt::neu`] ruft es. Ein `Gemerkt` mit einer Marke, die seinen Ordner
-/// nicht kennt, verlaesst diesen Block nicht.
+/// Das Feld hier schreiben allein [`Gemerkt::neu`] und [`Gemerkt::befund_setzen`],
+/// und keine von beiden fragt die Platte.
 #[derive(Debug, Clone, PartialEq, Eq)]
 struct Gemerkt {
     lesezeichen: Lesezeichen,
@@ -232,26 +416,22 @@ struct Gemerkt {
 }
 
 impl Gemerkt {
-    /// Ein Eintrag mit frisch geprueftem Ordner.
-    fn neu(lesezeichen: Lesezeichen) -> Self {
-        // Die Vorbelegung ist gleichgueltig: die naechste Zeile setzt die
-        // Marke, und dazwischen sieht den Eintrag niemand. Sie steht hier,
-        // damit `nachpruefen` die einzige Zeile der Kiste bleibt, die
-        // `Lesezeichen::gueltig` ruft.
-        let mut gemerkt = Self {
+    /// Ein Eintrag mit dem Stand, den sein Ziel in der vorigen Liste hatte, und
+    /// ohne einen solchen als gueltig: beim Start und direkt nach dem Hinzufuegen.
+    fn neu(lesezeichen: Lesezeichen, vorige: &[Gemerkt]) -> Self {
+        let gueltig = vorige
+            .iter()
+            .find(|gemerkt| gemerkt.lesezeichen.ziel == lesezeichen.ziel)
+            .is_none_or(|gemerkt| gemerkt.gueltig);
+        Self {
             lesezeichen,
-            gueltig: false,
-        };
-        gemerkt.nachpruefen();
-        gemerkt
+            gueltig,
+        }
     }
 
-    /// Prueft den Ordner noch einmal.
-    ///
-    /// Liefert, ob die Marke sich dabei geaendert hat.
-    fn nachpruefen(&mut self) -> bool {
-        let jetzt = self.lesezeichen.gueltig();
-        std::mem::replace(&mut self.gueltig, jetzt) != jetzt
+    /// Uebernimmt einen Befund und liefert, ob die Marke sich dabei geaendert hat.
+    fn befund_setzen(&mut self, gueltig: bool) -> bool {
+        std::mem::replace(&mut self.gueltig, gueltig) != gueltig
     }
 }
 
@@ -275,6 +455,11 @@ pub struct Leistenmodell {
     /// Sie zeigt immer auf eine waehlbare Zeile: jede Aenderung an den beiden
     /// Listen zieht sie ueber [`Leistenmodell::auswahl_nachziehen`] nach.
     auswahl: Option<usize>,
+    /// Der Takt der Marken, je [`plattengruppe`] einer. Eine Gruppe, die die
+    /// Liste nicht mehr nennt, bleibt stehen, damit eine noch laufende Frage ihre
+    /// Antwort abgeben kann; die Zahl ist die der Datentraeger, die je in einem
+    /// Lesezeichen standen.
+    fragen: BTreeMap<PathBuf, Fragetakt>,
 }
 
 impl Leistenmodell {
@@ -286,29 +471,28 @@ impl Leistenmodell {
         modell
     }
 
-    /// Uebernimmt die Lesezeichen und prueft ihre Ordner (C5).
+    /// Uebernimmt die Lesezeichen (C5); **ohne Frage an die Platte**.
     ///
-    /// Der zweite der vier Anlaesse aus [`Leistenmodell::gueltigkeit_pruefen`];
-    /// er laeuft ueber [`Gemerkt::neu`] und damit ueber dieselbe Zeile wie die
-    /// drei anderen.
+    /// Jeder Eintrag behaelt den Stand seines Ziels ([`Gemerkt::neu`]). Dass die
+    /// Marken danach erfragt werden, ist Sache der Ansicht, die ihn hierher reicht
+    /// (`crate::appkit::leiste::Leistenquelle`), ueber
+    /// [`Self::gueltigkeit_anstossen`].
     pub fn lesezeichen_setzen(&mut self, liste: &Lesezeichenliste) {
-        self.lesezeichen = liste.eintraege.iter().cloned().map(Gemerkt::neu).collect();
+        let neu = liste
+            .eintraege
+            .iter()
+            .cloned()
+            .map(|lesezeichen| Gemerkt::neu(lesezeichen, &self.lesezeichen))
+            .collect();
+        self.lesezeichen = neu;
         self.zeilen_bauen();
     }
 
-    /// Uebernimmt die Geraete und Standardorte und prueft die Ordner (C5).
+    /// Uebernimmt die Geraete und Standardorte (C5); **ohne Frage an die Platte**.
     ///
-    /// Der erste der vier Anlaesse: die Ortsliste aendert sich genau dann, wenn
-    /// ein Datentraeger gekommen oder gegangen ist, und damit aendert sich, was
-    /// ein Lesezeichen darauf wert ist. Die Pruefung steht deshalb hier und
-    /// nicht beim Aufrufer. Sie dort zu lassen hiesse, jedem kuenftigen
-    /// Aufrufer eine Pflicht mitzugeben, die er vergessen kann, und genau das
-    /// war der dritte der drei Wege, die der Befund vom 260807 zusammengelegt
-    /// hat.
-    ///
-    /// Der Rueckgabewert der Pruefung wird hier nicht gebraucht: die Ortsliste
-    /// hat sich ohnehin geaendert, die Ansicht zeichnet danach in jedem Fall
-    /// neu. Er zaehlt allein am vierten Anlass, wo nichts weiter passiert ist.
+    /// Die Ortsliste aendert sich genau dann, wenn ein Datentraeger gekommen oder
+    /// gegangen ist, und damit aendert sich, was ein Lesezeichen darauf wert ist;
+    /// die Ansicht stoesst deshalb danach die Marken an.
     ///
     /// **`einhaengepunkte` sind die blossen Einhaengepunkte derselben
     /// Aufzaehlung** (261016); an ihnen entscheidet
@@ -316,47 +500,121 @@ impl Leistenmodell {
     pub fn orte_setzen(&mut self, orte: Vec<Ort>, einhaengepunkte: Vec<PathBuf>) {
         self.orte = orte;
         self.einhaengepunkte = einhaengepunkte;
-        // `let _ =`: der Grund steht im Absatz darueber — die Ortsliste hat sich
-        // ohnehin geaendert, die Ansicht zeichnet danach in jedem Fall neu.
-        let _ = self.gueltigkeit_pruefen();
         self.zeilen_bauen();
     }
 
-    /// Prueft die Ordner aller Lesezeichen noch einmal (C5).
+    /// Eine Meldung ist gekommen: die Fragen, die der Rufer jetzt stellt.
     ///
-    /// Liefert, ob sich dabei etwas geaendert hat; nur dann muss die Ansicht
-    /// neu zeichnen.
+    /// Je [`plattengruppe`] hoechstens eine, gebaut aus der Liste von jetzt. Laeuft
+    /// fuer eine Gruppe schon eine, wird aus der Meldung deren Nachfrage
+    /// ([`Fragetakt`]). Eine Verbindung fragt nie, also fragt eine Liste ohne
+    /// Pfade so wenig wie eine leere, und das ist der Messmodus.
     ///
-    /// Gerufen an vier Anlaessen: wenn ein Datentraeger gekommen oder gegangen
-    /// ist ([`Leistenmodell::orte_setzen`]), wenn die Lesezeichen sich aendern
-    /// ([`Leistenmodell::lesezeichen_setzen`] ueber [`Gemerkt::neu`]), wenn eine
-    /// Dateioperation aus C4 abgeschlossen ist, und **bevor eine Auswahl
-    /// gemeldet wird**. Die letzten beiden kommen von aussen und laufen ueber
-    /// `crate::appkit::leiste::Leistenquelle::gueltigkeit_nachziehen`; alle vier
-    /// enden in [`Gemerkt::nachpruefen`].
+    /// Vier Anlaesse in der Ansicht: die Lesezeichen aendern sich, die Ortsliste
+    /// aendert sich, eine Dateioperation aus C4 ist abgeschlossen
+    /// (`crate::appkit::anwendung::Anwendungsdelegierter::vorgang_beenden`, dort
+    /// begruendet), und eine Auswahl hat einen anderen Stand gefunden. Loescht ein
+    /// **fremdes** Programm den Ordner, steht die Marke deshalb weiterhin bis zum
+    /// naechsten Anlass falsch; die Zusage aus C5 haelt auch dann, weil die Auswahl
+    /// selbst fragt.
+    #[must_use = "jede gelieferte Frage steht schon als laufend im Takt; ungestellt kaeme nie eine Antwort"]
+    pub fn gueltigkeit_anstossen(&mut self) -> Vec<Gueltigkeitsfrage> {
+        let mut gruppen: Vec<PathBuf> = self
+            .lesezeichen
+            .iter()
+            .filter_map(|gemerkt| pfad_des_ziels(&gemerkt.lesezeichen.ziel))
+            .map(plattengruppe)
+            .collect();
+        gruppen.sort();
+        gruppen.dedup();
+        let mut fragen = Vec::new();
+        for gruppe in gruppen {
+            if self.fragen.entry(gruppe.clone()).or_default().anstossen() {
+                fragen.push(self.frage_der_gruppe(gruppe));
+            }
+        }
+        fragen
+    }
+
+    /// Uebernimmt die Antwort einer Frage und liefert die Nachfrage, falls eine
+    /// faellig ist.
     ///
-    /// Der letzte traegt die Zusage aus C5: ein Ordner kann verschwinden, ohne
-    /// dass ein Datentraeger es tut, und ohne ihn meldete die Leiste einen
-    /// Ordner als gueltig, den es nicht mehr gibt. Der dritte haelt die
-    /// angezeigte Marke im haeufigsten dieser Faelle aktuell, dem Loeschen in
-    /// KRK selbst; er sitzt in
-    /// `crate::appkit::anwendung::Anwendungsdelegierter::vorgang_beenden` und
-    /// ist dort begruendet.
+    /// **Die Marken gehen nach dem Ziel**: siehe den Modulkopf. Die Nachfrage liest
+    /// die Liste von jetzt, also erreicht sie auch einen Eintrag, der nach dem
+    /// Beginn der Frage hinzugekommen ist.
+    pub fn gueltigkeit_uebernehmen(
+        &mut self,
+        antwort: Gueltigkeitsantwort,
+    ) -> Gueltigkeitsuebernahme {
+        let Gueltigkeitsantwort { gruppe, befunde } = antwort;
+        let geaendert = self.befunde_anwenden(&befunde);
+        let takt = self.fragen.entry(gruppe.clone()).or_default();
+        let nachfrage = takt
+            .antwort_da()
+            .then(|| self.frage_der_gruppe(gruppe.clone()))
+            .and_then(|frage| {
+                if !frage.lesezeichen.is_empty() {
+                    return Some(frage);
+                }
+                // Die Gruppe ist inzwischen leer: nichts zu fragen, und der Takt
+                // gibt seine Frage zurueck, die nie gestellt wird. Eine Nachfrage
+                // kann er dabei nicht melden, sie laeuft ja nicht.
+                if let Some(takt) = self.fragen.get(&gruppe) {
+                    let _ = takt.antwort_da();
+                }
+                None
+            });
+        Gueltigkeitsuebernahme {
+            geaendert,
+            nachfrage,
+        }
+    }
+
+    /// Uebernimmt, was eine Auswahl ueber ihr eines Ziel erfahren hat, und liefert,
+    /// ob sich dabei eine Marke geaendert hat.
     ///
-    /// Bei jedem Zeichendurchgang zu fragen waere dagegen ein Systemaufruf je
-    /// Zeile und Bild, und die Leiste zeichnet oefter, als der Nutzer in ihr
-    /// etwas tut. Loescht ein **fremdes** Programm den Ordner, steht die Marke
-    /// deshalb weiterhin bis zur naechsten Auswahl falsch; die Zusage aus C5
-    /// haelt auch dann, weil die Auswahl den Grund immer meldet.
-    #[must_use = "die Antwort sagt, ob sich etwas geaendert hat; nur dann muss die Ansicht neu zeichnen"]
-    pub fn gueltigkeit_pruefen(&mut self) -> bool {
+    /// Sie laeuft neben dem Takt, also kann eine aeltere Antwort der Gruppe sie noch
+    /// ueberschreiben. **Der Rufer stoesst bei `true` deshalb die Marken an**: die
+    /// Nachfrage beginnt nach beiden und hat das letzte Wort.
+    #[must_use = "bei true stoesst der Rufer die Marken an und zeichnet neu"]
+    pub fn auswahlbefund_uebernehmen(&mut self, auswahl: &Auswahl) -> bool {
+        self.befunde_anwenden(std::slice::from_ref(&(
+            auswahl.ziel.clone(),
+            auswahl.gueltig,
+        )))
+    }
+
+    /// Setzt die Marken nach den Befunden; liefert, ob sich eine geaendert hat.
+    fn befunde_anwenden(&mut self, befunde: &[(Ziel, bool)]) -> bool {
         let mut geaendert = false;
         for gemerkt in &mut self.lesezeichen {
-            // `|=` und nicht `||`: jeder Eintrag wird geprueft, auch wenn ein
-            // frueherer sich schon geaendert hat.
-            geaendert |= gemerkt.nachpruefen();
+            if let Some((_, gueltig)) = befunde
+                .iter()
+                .find(|(ziel, _)| *ziel == gemerkt.lesezeichen.ziel)
+            {
+                // `|=` und nicht `||`: jeder Eintrag bekommt seinen Befund, auch
+                // wenn ein frueherer sich schon geaendert hat.
+                geaendert |= gemerkt.befund_setzen(*gueltig);
+            }
         }
         geaendert
+    }
+
+    /// Die Frage nach den Eintraegen einer Gruppe, aus der Liste von jetzt.
+    fn frage_der_gruppe(&self, gruppe: PathBuf) -> Gueltigkeitsfrage {
+        let lesezeichen = self
+            .lesezeichen
+            .iter()
+            .map(|gemerkt| &gemerkt.lesezeichen)
+            .filter(|lesezeichen| {
+                pfad_des_ziels(&lesezeichen.ziel).is_some_and(|pfad| plattengruppe(pfad) == gruppe)
+            })
+            .cloned()
+            .collect();
+        Gueltigkeitsfrage {
+            gruppe,
+            lesezeichen,
+        }
     }
 
     /// Die Lesezeichen, wie sie auf die Platte gehoeren.
@@ -421,8 +679,8 @@ impl Leistenmodell {
     ///
     /// **Sie stellt keine Frage an das Dateisystem.** Die Sorte steht im
     /// Eintrag; ob sein Ziel noch da ist, beantwortet
-    /// [`Leistenmodell::ungueltig`] aus der Marke, die
-    /// [`Gemerkt::nachpruefen`] gesetzt hat.
+    /// [`Leistenmodell::ungueltig`] aus der Marke, die die letzte Antwort
+    /// gesetzt hat.
     #[must_use]
     pub fn sinnbild(&self, stelle: usize) -> Option<Sinnbild> {
         match self.zeile(stelle)? {
@@ -511,6 +769,7 @@ impl Leistenmodell {
                     name: gemerkt.lesezeichen.name.clone(),
                     ziel: gemerkt.lesezeichen.ziel.clone(),
                     gueltig: gemerkt.gueltig,
+                    fragt_die_platte: pfad_des_ziels(&gemerkt.lesezeichen.ziel).is_some(),
                 })
             }
             Zeile::Ort(stelle) => {
@@ -522,6 +781,7 @@ impl Leistenmodell {
                         auswahl: None,
                     },
                     gueltig: true,
+                    fragt_die_platte: false,
                 })
             }
         }
@@ -706,6 +966,20 @@ mod tests {
     use super::*;
     use crate::pruefordner::Pruefordner;
 
+    /// Stellt alle Fragen, die das Modell gerade hat, und zieht ihre Antworten und
+    /// Nachfragen ein, wie die Ansicht es ueber den Faden tut. Liefert, ob sich eine
+    /// Marke geaendert hat.
+    fn nachpruefen(modell: &mut Leistenmodell) -> bool {
+        let mut offen = modell.gueltigkeit_anstossen();
+        let mut geaendert = false;
+        while let Some(frage) = offen.pop() {
+            let uebernahme = modell.gueltigkeit_uebernehmen(frage.beantworten());
+            geaendert |= uebernahme.geaendert;
+            offen.extend(uebernahme.nachfrage);
+        }
+        geaendert
+    }
+
     fn modell() -> Leistenmodell {
         let mut modell = Leistenmodell::neu();
         modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![
@@ -719,6 +993,7 @@ mod tests {
             ],
             Vec::new(),
         );
+        let _ = nachpruefen(&mut modell);
         modell
     }
 
@@ -749,6 +1024,7 @@ mod tests {
             Ausgang::Unveraendert | Ausgang::Verschwunden => None,
         };
         modell.uebernehmen(&liste, stelle);
+        let _ = nachpruefen(modell);
         ausgang
     }
 
@@ -933,6 +1209,7 @@ mod tests {
                     auswahl: None
                 },
                 gueltig: false,
+                fragt_die_platte: true,
             }),
             "/zwei gibt es nicht, also ist das Lesezeichen ungueltig"
         );
@@ -946,6 +1223,7 @@ mod tests {
                     auswahl: None
                 },
                 gueltig: true,
+                fragt_die_platte: false,
             })
         );
     }
@@ -978,6 +1256,7 @@ mod tests {
                     zeileninhalt: "eine Zeile".to_owned(),
                 },
                 gueltig: true,
+                fragt_die_platte: true,
             })
         );
         assert_eq!(
@@ -999,6 +1278,7 @@ mod tests {
             3,
             "eine Zeile",
         )]));
+        let _ = nachpruefen(&mut modell);
         assert!(modell.waehlen(1));
         let auswahl = modell
             .gewaehlt()
@@ -1014,6 +1294,7 @@ mod tests {
             Lesezeichen::neu("Temp", std::env::temp_dir()),
             Lesezeichen::neu("Fort", "/gibt-es-nicht-krk"),
         ]));
+        let _ = nachpruefen(&mut modell);
         assert_eq!(modell.beschriftung(1).as_deref(), Some("Temp"));
         assert!(!modell.ungueltig(1));
         assert_eq!(modell.beschriftung(2).as_deref(), Some("Fort (fehlt)"));
@@ -1108,7 +1389,9 @@ mod tests {
             Lesezeichen::textstelle("Die Lesestelle", "/p/leser.rs", 118, "let x = 1;"),
             Lesezeichen::neu("Sicherung", "/s"),
         ]));
+        let _ = nachpruefen(&mut modell);
         modell.orte_setzen(vec![Ort::neu("Macintosh HD", "/")], Vec::new());
+        let _ = nachpruefen(&mut modell);
 
         assert_eq!(
             beschriftungen(&modell),
@@ -1152,6 +1435,7 @@ mod tests {
             Lesezeichen::textstelle("Verschoben", &datei, 2, "fn ganz_anders() {}"),
             Lesezeichen::textstelle("Fort", ordner.pfad().join("fehlt.rs"), 1, "fn eins() {}"),
         ]));
+        let _ = nachpruefen(&mut modell);
 
         assert!(
             !modell.ungueltig(1),
@@ -1174,6 +1458,7 @@ mod tests {
             Lesezeichen::neu("Projekte", "/p"),
             Lesezeichen::textstelle("Stelle", "/p/leser.rs", 118, "let x = 1;"),
         ]));
+        let _ = nachpruefen(&mut modell);
 
         assert_eq!(
             aendern(
@@ -1257,11 +1542,12 @@ mod tests {
         }
         let mut modell = Leistenmodell::neu();
         modell.lesezeichen_setzen(&Lesezeichenliste::aus(marken));
+        let _ = nachpruefen(&mut modell);
         assert_eq!(gueltige_marken(&modell, 10), 5);
 
         std::fs::remove_file(&vorhandene[0]).expect("die Pruefdatei laesst sich nicht loeschen");
         assert!(
-            modell.gueltigkeit_pruefen(),
+            nachpruefen(&mut modell),
             "ohne die gemeldete Aenderung zeichnete die Leiste nicht neu"
         );
         assert!(modell.ungueltig(1));
@@ -1277,6 +1563,7 @@ mod tests {
             1,
             "eine Zeile",
         )]));
+        let _ = nachpruefen(&mut modell);
         assert!(
             !modell.ungueltig(1),
             "die Pruefung fragt nach der Datei und liest sie nicht"
@@ -1362,19 +1649,20 @@ mod tests {
             "Kommt",
             ordner.pfad(),
         )]));
+        let _ = nachpruefen(&mut modell);
         assert!(modell.ungueltig(1));
 
         ordner.anlegen();
-        let _ = modell.gueltigkeit_pruefen();
+        let _ = nachpruefen(&mut modell);
         assert!(!modell.ungueltig(1));
 
         ordner.loeschen();
-        let _ = modell.gueltigkeit_pruefen();
+        let _ = nachpruefen(&mut modell);
         assert!(modell.ungueltig(1));
     }
 
-    /// Der vierte Anlass aus C5: eine abgeschlossene Dateioperation hat den
-    /// Ordner eines Lesezeichens geloescht.
+    /// Der Anlass aus C5: eine abgeschlossene Dateioperation hat den Ordner eines
+    /// Lesezeichens geloescht.
     ///
     /// Die Stelle, die den Anlass ausloest, sitzt in
     /// `crate::appkit::anwendung::Anwendungsdelegierter::vorgang_beenden` und
@@ -1397,23 +1685,20 @@ mod tests {
         ordner.loeschen();
 
         assert!(
-            modell.gueltigkeit_pruefen(),
+            nachpruefen(&mut modell),
             "ohne die gemeldete Aenderung zeichnete die Leiste nicht neu"
         );
         assert_eq!(modell.beschriftung(1).as_deref(), Some("Sicherung (fehlt)"));
         assert!(
-            !modell.gueltigkeit_pruefen(),
+            !nachpruefen(&mut modell),
             "ein zweiter Anlass ohne Aenderung zeichnet die Leiste nicht noch einmal"
         );
     }
 
-    /// Der zweite Anlass setzt die Marke so, wie der vierte sie pruefen wuerde.
+    /// Eine zweite Frage ohne Aenderung auf der Platte findet nichts zu aendern.
     ///
-    /// Die Probe haengt allein am **Rueckgabewert**: findet `gueltigkeit_pruefen`
-    /// unmittelbar nach `lesezeichen_setzen` etwas zu aendern, dann haben die
-    /// beiden Anlaesse verschiedene Vorstellungen davon, was gueltig heisst.
-    /// Bis zum 260807 waren es zwei Codestellen, die dasselbe taten; seither
-    /// ist es eine, und diese Probe haelt sie darauf fest.
+    /// Die Probe haengt allein am **Rueckgabewert**: an ihm haengt das Neuzeichnen
+    /// der Leiste, und eine Antwort ohne Aenderung zeichnet nicht.
     #[test]
     fn der_aufbau_und_das_nachziehen_kommen_zum_selben_ergebnis() {
         let vorhanden = Pruefordner::nur_name("aufbau-vorhanden");
@@ -1425,19 +1710,18 @@ mod tests {
             Lesezeichen::neu("Da", vorhanden.pfad()),
             Lesezeichen::neu("Fort", fehlend.pfad()),
         ]));
+        let _ = nachpruefen(&mut modell);
         assert!(!modell.ungueltig(1));
         assert!(modell.ungueltig(2));
 
         assert!(
-            !modell.gueltigkeit_pruefen(),
-            "der Aufbau hat die Marken schon richtig gesetzt"
+            !nachpruefen(&mut modell),
+            "die erste Antwort hat die Marken schon richtig gesetzt"
         );
     }
 
-    /// Der erste Anlass: die Ortsliste aendert sich, die Marken ziehen mit.
-    ///
-    /// Die Pruefung stand bis zum 260807 im AppKit-Aufrufer und nicht hier;
-    /// diese Probe kommt ohne Fenster aus und haelt sie im Modell fest.
+    /// Eine neue Ortsliste und ein Anstoss danach ziehen die Marken mit. Dass die
+    /// Ansicht ihn stoesst, steht in `Leistenquelle::orte_setzen`.
     #[test]
     fn eine_neue_ortsliste_zieht_die_gueltigkeit_nach() {
         let ordner = Pruefordner::nur_name("orte-setzen");
@@ -1447,12 +1731,14 @@ mod tests {
             "Sicherung",
             ordner.pfad(),
         )]));
+        let _ = nachpruefen(&mut modell);
         assert!(!modell.ungueltig(1), "der Datentraeger ist eingehaengt");
 
         // Was ein Auswurf hinterlaesst: der Ordner ist fort, und das System
         // meldet die kuerzere Ortsliste.
         ordner.loeschen();
         modell.orte_setzen(vec![Ort::neu("Macintosh HD", "/")], Vec::new());
+        let _ = nachpruefen(&mut modell);
 
         assert!(modell.ungueltig(1));
         assert_eq!(modell.beschriftung(1).as_deref(), Some("Sicherung (fehlt)"));
@@ -1538,5 +1824,272 @@ mod tests {
             .filter_map(|stelle| modell.auswurfziel(stelle))
             .collect();
         assert_eq!(ziele, [PathBuf::from("/Volumes/Freigabe")]);
+    }
+
+    /// Beim Start und direkt nach dem Hinzufuegen steht kein Eintrag als kaputt
+    /// da, auch nicht einer, dessen Ziel fehlt; die Antwort setzt die Marke.
+    #[test]
+    fn bis_zur_antwort_gilt_ein_neues_lesezeichen_als_gueltig_und_die_antwort_setzt_die_marke() {
+        let mut modell = Leistenmodell::neu();
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![Lesezeichen::neu(
+            "Fort",
+            "/gibt-es-nicht-krk",
+        )]));
+        assert!(!modell.ungueltig(1), "vor der Antwort kein Zusatz");
+        assert_eq!(modell.beschriftung(1).as_deref(), Some("Fort"));
+
+        assert!(nachpruefen(&mut modell), "die Antwort aendert die Marke");
+        assert!(modell.ungueltig(1));
+        assert_eq!(modell.beschriftung(1).as_deref(), Some("Fort (fehlt)"));
+
+        assert!(!nachpruefen(&mut modell), "ohne Aenderung kein Neuzeichnen");
+    }
+
+    /// Eine Antwort geht nach dem Ziel: der entfernte Eintrag findet keinen
+    /// Abnehmer, der neue bekommt nichts, und der umbenannte behaelt seine Marke.
+    #[test]
+    fn eine_ueberholte_antwort_setzt_fuer_ein_entferntes_oder_neues_lesezeichen_nichts_falsches() {
+        let bleibt = Lesezeichen::neu("Bleibt", "/gibt-es-nicht-krk/bleibt");
+        let mut modell = Leistenmodell::neu();
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![
+            Lesezeichen::neu("Entfernt", "/gibt-es-nicht-krk/entfernt"),
+            bleibt.clone(),
+        ]));
+        let mut fragen = modell.gueltigkeit_anstossen();
+        assert_eq!(fragen.len(), 1);
+        let antwort = fragen.remove(0).beantworten();
+
+        let mut umbenannt = bleibt;
+        umbenannt.name = "Neuer Name".to_owned();
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![
+            Lesezeichen::neu("Neu", "/gibt-es-nicht-krk/neu"),
+            umbenannt,
+        ]));
+        assert!(modell.gueltigkeit_anstossen().is_empty(), "sie laeuft noch");
+
+        let uebernahme = modell.gueltigkeit_uebernehmen(antwort);
+        assert!(uebernahme.geaendert);
+        assert!(
+            !modell.ungueltig(1),
+            "fuer den neuen sagt die Antwort nichts"
+        );
+        assert_eq!(
+            modell.beschriftung(2).as_deref(),
+            Some("Neuer Name (fehlt)"),
+            "der umbenannte bekommt die Antwort seines Ziels"
+        );
+        assert_eq!(modell.lesezeichenliste().zahl(), 2);
+
+        let nachfrage = uebernahme.nachfrage.expect("die Liste hat sich geaendert");
+        let uebernahme = modell.gueltigkeit_uebernehmen(nachfrage.beantworten());
+        assert!(uebernahme.nachfrage.is_none());
+        assert!(modell.ungueltig(1), "die Nachfrage erreicht den neuen");
+    }
+
+    /// Eine neue Liste nimmt keinem Eintrag seinen Stand: was seine Marke schon
+    /// hat, behaelt sie auf dem Weg durch eine Aenderung an einem anderen Eintrag.
+    #[test]
+    fn eine_neue_liste_behaelt_den_stand_jedes_ziels_das_sie_weiter_fuehrt() {
+        let fort = Lesezeichen::neu("Fort", "/gibt-es-nicht-krk");
+        let mut modell = Leistenmodell::neu();
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![fort.clone()]));
+        let _ = nachpruefen(&mut modell);
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![
+            Lesezeichen::neu("Temp", std::env::temp_dir()),
+            fort,
+        ]));
+        assert!(!modell.ungueltig(1));
+        assert!(modell.ungueltig(2), "die Zeile blinkt nicht auf gueltig");
+    }
+
+    /// Hundert Meldungen stellen eine Frage und eine Nachfrage, und danach keine
+    /// weitere.
+    #[test]
+    fn ein_sturm_von_meldungen_stellt_eine_frage_und_eine_nachfrage() {
+        let mut modell = Leistenmodell::neu();
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![Lesezeichen::neu(
+            "Temp",
+            std::env::temp_dir(),
+        )]));
+        let mut fragen = modell.gueltigkeit_anstossen();
+        assert_eq!(fragen.len(), 1, "die erste Meldung stellt die Frage");
+        for _ in 0..100 {
+            assert!(modell.gueltigkeit_anstossen().is_empty());
+        }
+        let uebernahme = modell.gueltigkeit_uebernehmen(fragen.remove(0).beantworten());
+        let nachfrage = uebernahme.nachfrage.expect("die eine Nachfrage");
+        assert!(
+            modell.gueltigkeit_anstossen().is_empty(),
+            "sie laeuft schon"
+        );
+        let uebernahme = modell.gueltigkeit_uebernehmen(nachfrage.beantworten());
+        let nachfrage = uebernahme.nachfrage.expect("die Meldung in die Nachfrage");
+        let uebernahme = modell.gueltigkeit_uebernehmen(nachfrage.beantworten());
+        assert!(uebernahme.nachfrage.is_none(), "ohne Meldung keine weitere");
+        assert_eq!(modell.gueltigkeit_anstossen().len(), 1, "danach neu");
+    }
+
+    /// Eine Frage, die nie zurueckkommt, haelt allein die Marken ihrer Gruppe an;
+    /// die Fadenzahl waechst dabei nicht, auch nicht unter weiteren Meldungen.
+    #[test]
+    fn eine_haengende_freigabe_reisst_die_marken_der_uebrigen_nicht_mit() {
+        let mut modell = Leistenmodell::neu();
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![
+            Lesezeichen::neu("Haengt", "/Volumes/krk-gibt-es-nicht-a/ordner"),
+            Lesezeichen::neu("Auch dort", "/Volumes/krk-gibt-es-nicht-a/anderer"),
+            Lesezeichen::neu("Zweite", "/Volumes/krk-gibt-es-nicht-b/ordner"),
+            Lesezeichen::neu("Hier", "/gibt-es-nicht-krk"),
+            Lesezeichen::verbindung("NAS"),
+        ]));
+        let fragen = modell.gueltigkeit_anstossen();
+        assert_eq!(
+            fragen.len(),
+            3,
+            "je Gruppe eine, die Verbindung fragt nicht"
+        );
+
+        // Die erste Frage, die der Gruppe `/`, steht vorn: die Gruppen sind
+        // sortiert. Es haengt die von `/Volumes/krk-gibt-es-nicht-a`.
+        let mut fragen = fragen.into_iter();
+        let wurzel = fragen.next().expect("die Wurzel");
+        let haengt = fragen.next().expect("die haengende Freigabe");
+        let zweite = fragen.next().expect("die zweite Freigabe");
+        let _ = modell.gueltigkeit_uebernehmen(wurzel.beantworten());
+        let _ = modell.gueltigkeit_uebernehmen(zweite.beantworten());
+
+        assert!(
+            !modell.ungueltig(1),
+            "ihre Marken bleiben beim letzten Stand"
+        );
+        assert!(!modell.ungueltig(2));
+        assert!(modell.ungueltig(3), "die andere Freigabe hat geantwortet");
+        assert!(modell.ungueltig(4), "der lokale Eintrag hat geantwortet");
+
+        let neue = modell.gueltigkeit_anstossen();
+        assert_eq!(neue.len(), 2, "die haengende Gruppe stellt keine zweite");
+        drop(neue);
+        drop(haengt);
+    }
+
+    /// Die Antwort fuer eine Gruppe, die inzwischen leer ist, hinterlaesst keinen
+    /// Takt, der fuer immer als laufend steht.
+    #[test]
+    fn eine_leer_gewordene_gruppe_gibt_ihren_takt_frei() {
+        let mut modell = Leistenmodell::neu();
+        let marke = Lesezeichen::neu("Fort", "/Volumes/krk-gibt-es-nicht/ordner");
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![marke.clone()]));
+        let mut fragen = modell.gueltigkeit_anstossen();
+        let frage = fragen.remove(0);
+        assert!(modell.gueltigkeit_anstossen().is_empty(), "die Nachfrage");
+        modell.lesezeichen_setzen(&Lesezeichenliste::default());
+        let uebernahme = modell.gueltigkeit_uebernehmen(frage.beantworten());
+        assert!(
+            uebernahme.nachfrage.is_none(),
+            "es gibt nichts mehr zu fragen"
+        );
+
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![marke]));
+        assert_eq!(modell.gueltigkeit_anstossen().len(), 1, "der Takt ist frei");
+    }
+
+    /// Eine Antwort ohne Befund, nach gescheitertem Fadenstart oder einer Panik,
+    /// laesst die Marken stehen und den Takt weiterlaufen.
+    #[test]
+    fn eine_antwort_ohne_befund_laesst_die_marken_stehen_und_gibt_den_takt_frei() {
+        let mut modell = Leistenmodell::neu();
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![Lesezeichen::neu(
+            "Fort",
+            "/gibt-es-nicht-krk",
+        )]));
+        let mut fragen = modell.gueltigkeit_anstossen();
+        let uebernahme = modell.gueltigkeit_uebernehmen(fragen.remove(0).ohne_befund());
+        assert!(!uebernahme.geaendert);
+        assert!(uebernahme.nachfrage.is_none());
+        assert!(!modell.ungueltig(1));
+        assert_eq!(modell.gueltigkeit_anstossen().len(), 1);
+    }
+
+    /// Eine Liste ohne Pfade stellt keine Frage, also auch die leere des Messmodus.
+    #[test]
+    fn ohne_pfade_entsteht_keine_frage() {
+        let mut modell = Leistenmodell::neu();
+        modell.orte_setzen(vec![Ort::neu("Macintosh HD", "/")], Vec::new());
+        assert!(
+            modell.gueltigkeit_anstossen().is_empty(),
+            "null Lesezeichen"
+        );
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![Lesezeichen::verbindung("NAS")]));
+        assert!(modell.gueltigkeit_anstossen().is_empty(), "eine Verbindung");
+    }
+
+    /// Die Auswahl eines Lesezeichens fragt die Platte, die eines Geraets und einer
+    /// Verbindung nicht; `nachgefragt` setzt den Stand von jetzt, nach beiden
+    /// Seiten, und der Befund erreicht die Marke.
+    #[test]
+    fn eine_auswahl_erfaehrt_den_stand_von_jetzt() {
+        let ordner = Pruefordner::nur_name("auswahlfrage");
+        let mut modell = Leistenmodell::neu();
+        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![
+            Lesezeichen::neu("Marke", ordner.pfad()),
+            Lesezeichen::verbindung("NAS"),
+        ]));
+        modell.orte_setzen(vec![Ort::neu("Fort", "/gibt-es-nicht-krk")], Vec::new());
+
+        assert!(modell.waehlen(1));
+        let auswahl = modell.gewaehlt().expect("das Lesezeichen");
+        assert!(auswahl.fragt_die_platte);
+        assert!(auswahl.gueltig, "angezeigt als gueltig");
+        let antwort = auswahl.nachgefragt();
+        assert!(!antwort.gueltig, "tatsaechlich fehlt es");
+        assert!(modell.auswahlbefund_uebernehmen(&antwort));
+        assert!(modell.ungueltig(1));
+
+        ordner.anlegen();
+        let antwort = modell.gewaehlt().expect("das Lesezeichen").nachgefragt();
+        assert!(
+            antwort.gueltig,
+            "angezeigt als fehlend, und es ist wieder da"
+        );
+        assert!(modell.auswahlbefund_uebernehmen(&antwort));
+        assert!(!modell.ungueltig(1));
+        assert!(
+            !modell.auswahlbefund_uebernehmen(&antwort),
+            "keine Aenderung"
+        );
+
+        let letzte = modell.zeilen().len() - 1;
+        assert!(modell.waehlen(letzte));
+        let geraet = modell.gewaehlt().expect("das Geraet");
+        assert!(!geraet.fragt_die_platte);
+        assert!(
+            geraet.nachgefragt().gueltig,
+            "ein Geraet fragt auch dann nicht"
+        );
+
+        assert!(modell.waehlen(3));
+        let verbindung = modell.gewaehlt().expect("die Verbindung");
+        assert_eq!(
+            verbindung.ziel,
+            Ziel::Verbindung {
+                verbindung: "NAS".to_owned()
+            }
+        );
+        assert!(!verbindung.fragt_die_platte);
+    }
+
+    /// Die Einteilung liest allein den Pfadtext.
+    #[test]
+    fn die_plattengruppe_folgt_dem_pfadtext() {
+        for (pfad, gruppe) in [
+            ("/Volumes/NAS/Ordner/Datei", "/Volumes/NAS"),
+            ("/Volumes/NAS", "/Volumes/NAS"),
+            ("/net/rechner/freigabe", "/net/rechner"),
+            ("/Volumes", "/"),
+            ("/Users/k1/Volumes/NAS", "/"),
+            ("/", "/"),
+            ("relativ/Volumes/NAS", "/"),
+        ] {
+            assert_eq!(plattengruppe(Path::new(pfad)), Path::new(gruppe), "{pfad}");
+        }
     }
 }

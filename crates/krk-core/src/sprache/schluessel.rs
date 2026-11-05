@@ -1657,7 +1657,7 @@ pub enum Text {
     /// `Notizlage::default` in `krk-ui/src/heimgriff.rs`: die `{ursache}`,
     /// solange der Start `settings.toml` noch nicht gelesen hat.
     OrtUrsacheStartNochNichtGelesen,
-    /// `leistenauswahl_ausfuehren`: das Ziel eines Lesezeichens gibt es nicht
+    /// `leistenauswahl_vollziehen`: das Ziel eines Lesezeichens gibt es nicht
     /// mehr; `{name}`, `{pfad}`.
     LesezeichenZielFehlt,
     /// `lesezeichen_aendern`: die Schreibsperre der Ablage ist nicht zu

@@ -36,6 +36,15 @@
 //! ueber dieselbe Senke. Zeigt ein Lesezeichen ins Leere, geht statt des
 //! Ordners der Grund an den Aufrufer.
 //!
+//! # Die Marke „fehlt“ kommt vom Faden (261105)
+//!
+//! **Keine Methode hier fragt die Platte auf dem Hauptfaden.** Jede, die die Liste
+//! oder die Orte aendert, zeichnet zuerst mit dem Stand, den sie hat, und stellt
+//! danach die Fragen, die [`Leistenmodell::gueltigkeit_anstossen`] liefert; eine
+//! Antwort zeichnet neu, wenn sich eine Marke geaendert hat. Warum eine Antwort
+//! nach dem Ziel geht und was eine haengende Freigabe kostet, steht im Modulkopf
+//! von [`crate::leistenmodell`].
+//!
 //! # Ein Klick verbindet, eine Auswahl nicht (261016)
 //!
 //! **Fuer eine Verbindung gilt der Satz darueber nicht.** Ihre Auswahl tut
@@ -145,7 +154,7 @@
 //!
 //! **Was die `use`-Zeilen daneben hereinholen, und warum keines davon die
 //! Untergrenze dieser Datei anhebt:** `MainThreadMarker` ist ein Rust-Typ der
-//! Kiste und hat kein macOS-Alter; das Makro `ns_string!` baut die
+//! Kiste und hat kein macOS-Alter, ebenso `MainThreadBound` aus `dispatch2`; das Makro `ns_string!` baut die
 //! Zeichenkette beim Uebersetzen und hat keines; `NSObjectProtocol` ist der
 //! Kistenname des Protokolls `NSObject` (`objc/NSObject.h`, ohne eigene
 //! Angabe); `NSPoint`, `NSRect` und `NSSize` sind C-Strukturen
@@ -160,6 +169,7 @@
 use std::cell::RefCell;
 use std::path::PathBuf;
 
+use dispatch2::MainThreadBound;
 use objc2::rc::{Retained, Weak};
 use objc2::runtime::{AnyObject, ProtocolObject};
 use objc2::{DefinedClass, MainThreadOnly, Message, define_class, msg_send, sel};
@@ -177,9 +187,12 @@ use objc2_foundation::{
 use krk_core::sprache::{Text, text};
 use krk_core::tasten::Kommando;
 
-use crate::leistenmodell::{Auswahl, Leistenmodell, Ort, Sinnbild, Zeile};
+use crate::leistenmodell::{
+    Auswahl, Gueltigkeitsantwort, Gueltigkeitsfrage, Leistenmodell, Ort, Sinnbild, Zeile,
+};
 
 use super::menue;
+use super::nebenfaden::{self, PLATTENFRAGE};
 
 /// Die Hoehe einer Zeile in Punkten.
 ///
@@ -529,17 +542,14 @@ impl Leistenquelle {
     pub fn lesezeichen_setzen(&self, liste: &krk_core::ablage::Lesezeichenliste) {
         self.ivars().modell.borrow_mut().lesezeichen_setzen(liste);
         self.nachziehen();
+        self.gueltigkeit_nachziehen();
     }
 
     /// Uebernimmt die Geraete und Standardorte (C5).
     ///
-    /// Gerufen beim Aufbau und nach jedem Ein- und Aushaengen. Die
-    /// Gueltigkeitspruefung der Lesezeichen laeuft im selben Zug: ein
-    /// eingehaengter Datentraeger macht ein Lesezeichen darauf wieder gueltig,
-    /// und ein Auswurf macht es ungueltig. Sie steht seit dem 260807 in
-    /// [`Leistenmodell::orte_setzen`] und nicht mehr hier; hier stand sie als
-    /// zweiter Weg zu derselben Marke neben
-    /// [`Leistenquelle::gueltigkeit_nachziehen`].
+    /// Gerufen beim Aufbau und nach jedem Ein- und Aushaengen. Die Marken der
+    /// Lesezeichen werden danach erfragt: ein eingehaengter Datentraeger macht ein
+    /// Lesezeichen darauf wieder gueltig, und ein Auswurf macht es ungueltig.
     ///
     /// `einhaengepunkte` stammen aus derselben Aufzaehlung wie `orte` und
     /// entscheiden, welche Zeile Auswerfsinnbild und Kontextmenue traegt
@@ -550,17 +560,81 @@ impl Leistenquelle {
             .borrow_mut()
             .orte_setzen(orte, einhaengepunkte);
         self.nachziehen();
+        self.gueltigkeit_nachziehen();
     }
 
-    /// Prueft die Ordner der Lesezeichen und zeichnet neu, falls noetig (C5).
+    /// Stoesst die Marken der Lesezeichen an; die Fragen laufen auf dem Faden, und
+    /// die Antworten zeichnen neu (C5).
     ///
-    /// Zwei Aufrufer: [`Leistenquelle::auswahl_melden`], bevor eine Auswahl
-    /// gemeldet wird, und
+    /// Gerufen von den Methoden hier, die die Liste oder die Orte aendern, und von
     /// `crate::appkit::anwendung::Anwendungsdelegierter::vorgang_beenden`, sobald
-    /// eine Dateioperation aus C4 abgeschlossen ist. Die beiden anderen Anlaesse
-    /// aus [`Leistenmodell::gueltigkeit_pruefen`] laufen ueber
-    /// [`Leistenquelle::lesezeichen_setzen`] und [`Leistenquelle::orte_setzen`],
-    /// die ohnehin die ganze Liste neu zeichnen.
+    /// eine Dateioperation aus C4 abgeschlossen ist.
+    pub fn gueltigkeit_nachziehen(&self) {
+        let fragen = self.ivars().modell.borrow_mut().gueltigkeit_anstossen();
+        for frage in fragen {
+            self.gueltigkeit_erheben_lassen(frage);
+        }
+    }
+
+    /// Stellt eine Frage nach den Marken auf dem Faden [`PLATTENFRAGE`].
+    ///
+    /// Ohne Faden oder bei einer Panik bleiben die Marken beim letzten Stand, und
+    /// der Takt bekommt seine Antwort trotzdem.
+    fn gueltigkeit_erheben_lassen(&self, frage: Gueltigkeitsfrage) {
+        let ersatz = frage.ohne_befund();
+        let rueckweg = MainThreadBound::new(Weak::from_retained(&self.retain()), self.mtm());
+        nebenfaden::fragen_lassen(
+            PLATTENFRAGE,
+            move || frage.beantworten(),
+            move |_fehler| ersatz,
+            move |mtm, antwort| {
+                if let Some(quelle) = rueckweg.get(mtm).load() {
+                    quelle.gueltigkeit_einziehen(antwort);
+                }
+            },
+        );
+    }
+
+    /// Nimmt eine Antwort auf dem Hauptfaden entgegen, zeichnet neu, falls noetig,
+    /// und stellt die Nachfrage, falls eine faellig ist.
+    fn gueltigkeit_einziehen(&self, antwort: Gueltigkeitsantwort) {
+        let uebernahme = self
+            .ivars()
+            .modell
+            .borrow_mut()
+            .gueltigkeit_uebernehmen(antwort);
+        if uebernahme.geaendert {
+            self.marken_zeichnen();
+        }
+        if let Some(frage) = uebernahme.nachfrage {
+            self.gueltigkeit_erheben_lassen(frage);
+        }
+    }
+
+    /// Uebernimmt, was eine Auswahl ueber ihr Ziel erfahren hat (C5).
+    ///
+    /// Hat sich dabei eine Marke geaendert, stimmt der Stand der Leiste nicht mehr,
+    /// und die Nachfrage hat das letzte Wort
+    /// ([`Leistenmodell::auswahlbefund_uebernehmen`]).
+    pub fn auswahlbefund_einziehen(&self, auswahl: &Auswahl) {
+        if self
+            .ivars()
+            .modell
+            .borrow_mut()
+            .auswahlbefund_uebernehmen(auswahl)
+        {
+            self.marken_zeichnen();
+            self.gueltigkeit_nachziehen();
+        }
+    }
+
+    /// Was hinter der ausgewaehlten Zeile steht; ohne Frage an die Platte.
+    #[must_use]
+    pub fn gewaehlt(&self) -> Option<Auswahl> {
+        self.ivars().modell.borrow().gewaehlt()
+    }
+
+    /// Zeichnet neu, weil sich eine Marke geaendert hat.
     ///
     /// **Nach dem Neuzeichnen die Auswahl wieder setzen**, und das ist keine
     /// Vorsichtsmassnahme: `reloadData` nimmt der `NSTableView` ihre Auswahl,
@@ -568,11 +642,13 @@ impl Leistenquelle {
     /// blaue Zeile unter der Hand des Nutzers, sobald ein Lesezeichen seine
     /// Gueltigkeit wechselte, und der naechste Pfeil sprang scheinbar aus dem
     /// Nichts weiter. Beobachtet am 260805 im laufenden Buendel.
-    pub fn gueltigkeit_nachziehen(&self) {
-        if self.ivars().modell.borrow_mut().gueltigkeit_pruefen() {
-            self.ivars().tabelle.reloadData();
-            self.auswahl_anzeigen();
-        }
+    ///
+    /// **Ohne Bildlauf**, anders als [`Self::auswahl_anzeigen`]: die Antwort kommt
+    /// von einem Faden und nicht aus einer Handlung des Nutzers, und sie zoege ihm
+    /// sonst die Leiste unter der Hand auf die gewaehlte Zeile.
+    fn marken_zeichnen(&self) {
+        self.ivars().tabelle.reloadData();
+        let _ = self.auswahl_stellen();
     }
 
     /// Die Lesezeichen, wie sie auf die Platte gehoeren.
@@ -605,6 +681,7 @@ impl Leistenquelle {
     ) {
         self.ivars().modell.borrow_mut().uebernehmen(liste, stelle);
         self.nachziehen();
+        self.gueltigkeit_nachziehen();
     }
 
     /// Fuehrt ein Kommando aus, das der Ereignisabgriff nachgeschlagen hat.
@@ -642,20 +719,28 @@ impl Leistenquelle {
         self.auswahl_anzeigen();
     }
 
-    /// Setzt die Auswahl der Tabelle auf die des Modells.
+    /// Setzt die Auswahl der Tabelle auf die des Modells und holt sie in den
+    /// sichtbaren Teil.
+    fn auswahl_anzeigen(&self) {
+        if let Some(zeile) = self.auswahl_stellen() {
+            self.ivars().tabelle.scrollRowToVisible(zeile as NSInteger);
+        }
+    }
+
+    /// Setzt die Auswahl der Tabelle auf die des Modells und liefert ihre Zeile.
     ///
     /// Waehrend des Setzens steht das Kennzeichen `setzt_selbst`: AppKit meldet
     /// jede Aenderung, auch die selbst gesetzte, und ohne das Kennzeichen liefe
     /// die Meldung in dieselbe Quelle zurueck.
-    fn auswahl_anzeigen(&self) {
+    fn auswahl_stellen(&self) -> Option<usize> {
         *self.ivars().setzt_selbst.borrow_mut() = true;
-        match self.ivars().modell.borrow().auswahl() {
+        let auswahl = self.ivars().modell.borrow().auswahl();
+        match auswahl {
             Some(zeile) => {
                 let stelle = NSIndexSet::indexSetWithIndex(zeile);
                 self.ivars()
                     .tabelle
                     .selectRowIndexes_byExtendingSelection(&stelle, false);
-                self.ivars().tabelle.scrollRowToVisible(zeile as NSInteger);
             }
             // SAFETY: `deselectAll:` nimmt einen beliebigen Absender; `None`
             // heisst, dass kein Steuerelement den Aufruf ausgeloest hat. Die
@@ -663,19 +748,19 @@ impl Leistenquelle {
             None => unsafe { self.ivars().tabelle.deselectAll(None) },
         }
         *self.ivars().setzt_selbst.borrow_mut() = false;
+        auswahl
     }
 
     /// Meldet die ausgewaehlte Zeile an den Halter.
     ///
-    /// Die eine Stelle, die aus einer Zeile einen Ordner macht. Vorher wird die
-    /// Gueltigkeit nachgezogen, damit die gemeldete Auswahl den Zustand von
-    /// jetzt traegt und nicht den vom letzten Neuaufbau; die Begruendung steht
-    /// an [`Leistenmodell::gueltigkeit_pruefen`].
+    /// Die eine Stelle, die aus einer Zeile einen Ordner macht. Die Auswahl traegt
+    /// hier den letzten bekannten Stand; den von jetzt fragt der Halter auf einem
+    /// Faden, bevor er sie ausfuehrt
+    /// (`crate::appkit::anwendung::Anwendungsdelegierter::leistenauswahl_ausfuehren`).
     ///
     /// Die Ausleihe des Modells endet vor dem Rueckruf: der Aufrufer liest die
     /// Leiste womoeglich selbst.
     fn auswahl_melden(&self) {
-        self.gueltigkeit_nachziehen();
         let Some(auswahl) = self.ivars().modell.borrow().gewaehlt() else {
             return;
         };

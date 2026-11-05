@@ -190,7 +190,7 @@ mod tests {
     /// wird genau einmal gerufen, mit dem Ersatzwert aus `startfehler`.
     ///
     /// **Was sie nicht sieht:** den gescheiterten Fadenstart, den keine Probe
-    /// erzwingen kann, und was die fuenf Rufer aus dem Ersatzwert machen.
+    /// erzwingen kann, und was die Rufer aus dem Ersatzwert machen.
     fn eine_panik_in_der_arbeit_ruft_fertig_genau_einmal_mit_dem_ersatzwert(
         _mtm: MainThreadMarker,
     ) {

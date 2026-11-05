@@ -330,7 +330,7 @@ use crate::kommandos::rundweg::{Rundweg, rundweg};
 use crate::kommandos::werkseinstellungen;
 use crate::kommandos::zellentaste;
 use crate::kommandos::zulaessigkeit::{self, Editorform, Lage};
-use crate::leistenmodell::Ort;
+use crate::leistenmodell::{Fragetakt, Ort};
 use crate::messmodus::{Anweisung, Aufgabe, Handlung, Messlauf, Sitzungslage, Zustand};
 use crate::quicknote::{self, F10Wirkung, Kopierausgang, Rueckkehr};
 use crate::spalten::Spalte;
@@ -847,53 +847,29 @@ impl Loeschbefehle {
     }
 }
 
-/// Haelt die Aufzaehlung der Datentraeger bei hoechstens einem Faden, gleich wie
-/// viele Ein- und Aushaengemeldungen kommen (Defekt
-/// `261104-2000-geraeteaufzaehlung-f2-und-secrets-fragen-die-platte-weiter-auf-dem-hauptfaden.md`).
+/// Der Stand, gegen den die Antwort einer Auswahl in der Leiste gilt.
 ///
-/// **Eine laufende Frage und eine Nachfrage nach ihrer Antwort**, wie beim
-/// Schreibrecht des Abwurfs: eine Meldung, die in eine laufende Frage faellt,
-/// merkt sich allein, dass nach ihrer Antwort noch einmal gefragt wird. Daraus
-/// folgt, dass **eine ueberholte Antwort keine neuere Liste ueberschreiben kann,
-/// und das ohne Nummer**: es laeuft nie mehr als eine Frage, jede beginnt erst
-/// nach der Antwort der vorigen, also kommen die Listen in der Reihenfolge an,
-/// in der sie erhoben sind. Eine Liste, die vor der letzten Meldung erhoben ist,
-/// gilt deshalb bis zur Antwort der Nachfrage; sie ist die neueste, die es gibt.
+/// **Eine Nummer statt eines Takts**, aus dem Grund von [`Loeschbefehle`]: eine
+/// Auswahl muss ihre eigene Antwort bekommen, und hinge sie an einer laufenden
+/// Frage, stuende der naechste Klick mit, sobald eine Freigabe haengt. Jede
+/// Auswahl eines Lesezeichens startet deshalb ihren Faden; **eine Obergrenze
+/// dafuer gibt es nicht**, und auf einer haengenden Freigabe bleibt jeder dieser
+/// Faeden stehen, bis die Platte antwortet, wie der Lesefaden einer Navigation.
 ///
-/// **Was das kostet: eine Aufzaehlung, die nie zurueckkommt, friert die Liste
-/// ein.** Leiste und Auswurfregel bleiben dann beim letzten Stand, nach einem
-/// Haenger schon beim ersten Mal also beim Benutzerverzeichnis ohne Datentraeger,
-/// bis der Faden antwortet oder der Prozess endet. Abbrechen laesst er sich nicht
-/// ([`super::nebenfaden`]), und eine zweite Frage daneben fragte dieselbe
-/// haengende Freigabe; das ist die Fadenzahl, die diese Regel begrenzt.
-///
-/// Ohne AppKit und ohne Systemaufruf, damit eine Probe die Regel ohne Fenster
-/// fahren kann.
-#[derive(Debug, Default)]
-struct Geraetefrage {
-    /// Steht eine Frage auf dem Faden?
-    laeuft: Cell<bool>,
-    /// Kam seit ihrem Beginn eine weitere Meldung?
-    nachfrage: Cell<bool>,
-}
-
-impl Geraetefrage {
-    /// Eine Meldung ist gekommen. `true` heisst: der Rufer stellt jetzt die Frage.
-    #[must_use = "bei true steht die Frage schon als laufend im Merker; ungestellt kaeme nie eine Antwort"]
-    fn anstossen(&self) -> bool {
-        if self.laeuft.replace(true) {
-            self.nachfrage.set(true);
-            return false;
-        }
-        true
-    }
-
-    /// Die Antwort ist da. `true` heisst: der Rufer fragt gleich noch einmal.
-    #[must_use = "bei true steht die Frage schon als laufend im Merker; ungestellt kaeme nie eine Antwort"]
-    fn antwort_da(&self) -> bool {
-        self.laeuft.set(false);
-        self.nachfrage.replace(false) && self.anstossen()
-    }
+/// Weicht der Stand ab, hat der Nutzer inzwischen etwas anderes getan: eine
+/// andere Zeile gewaehlt, das Dateifenster oder den Tab gewechselt, dort
+/// navigiert oder ein Blatt geoeffnet. Die spaete Antwort setzt dann noch die
+/// Marke und fuehrt nichts mehr aus.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Leistenauswahlstand {
+    /// Die Nummer der juengsten Auswahl.
+    nummer: u64,
+    /// Das aktive Dateifenster, auf das die Auswahl wirkt.
+    seite: Fensterseite,
+    /// Der sichtbare Tab dort samt dem Ort, den er zeigt.
+    tab: Tabstand,
+    /// Ob ein Blatt steht.
+    blatt: bool,
 }
 
 /// Zaehlt die F2-Befehle, damit eine doppelt gedrueckte F2 nichts doppelt oeffnet.
@@ -1619,8 +1595,16 @@ pub struct AnwendungsIvars {
     /// [`Anwendungsdelegierter::loeschbefund_einziehen`], die jede Antwort
     /// eines aelteren Befehls verwirft.
     loeschbefehle: Loeschbefehle,
-    /// Die eine laufende Aufzaehlung der Datentraeger und ihre Nachfrage.
-    geraetefrage: Geraetefrage,
+    /// Die eine laufende Aufzaehlung der Datentraeger und ihre Nachfrage
+    /// (Defekt
+    /// `261104-2000-geraeteaufzaehlung-f2-und-secrets-fragen-die-platte-weiter-auf-dem-hauptfaden.md`).
+    ///
+    /// Kommt sie nie zurueck, bleiben Leiste und Auswurfregel beim letzten Stand,
+    /// nach einem Haenger schon beim ersten Mal also beim Benutzerverzeichnis ohne
+    /// Datentraeger, bis der Faden antwortet oder der Prozess endet.
+    geraetefrage: Fragetakt,
+    /// Die Nummer der juengsten Auswahl in der Leiste ([`Leistenauswahlstand`]).
+    leistenauswahl: Cell<u64>,
     /// Die Nummer des juengsten F2 und die liegenden Saetze ueberholter.
     notizordnerbefehle: Notizordnerbefehle,
     /// Die Zugaenge zu sftp-Servern, je Server einer (Entscheidung 3 des
@@ -2120,7 +2104,8 @@ impl Anwendungsdelegierter {
             ablaufwecker: RefCell::new(None),
             tresorgang: Cell::new(false),
             loeschbefehle: Loeschbefehle::default(),
-            geraetefrage: Geraetefrage::default(),
+            geraetefrage: Fragetakt::default(),
+            leistenauswahl: Cell::new(0),
             notizordnerbefehle: Notizordnerbefehle::default(),
             fernzugaenge: Zugangsregister::neu(),
         });
@@ -3156,6 +3141,71 @@ impl Anwendungsdelegierter {
 
     /// Der Nutzer hat in der Leiste einen Eintrag ausgewaehlt (C5, C6).
     ///
+    /// **Ein Lesezeichen mit Pfad fragt zuerst die Platte, auf dem Faden**, nach
+    /// seinem einen Ziel: die Marke in der Zeile kann veraltet sein, nach beiden
+    /// Seiten, und ein als gueltig angezeigtes, fehlendes Lesezeichen setzte den Tab
+    /// sonst auf einen Ordner, den es nicht gibt. Bis die Antwort da ist, steht die
+    /// Zeile gewaehlt, und das Dateifenster bleibt, wo es ist. Ein Geraet und eine
+    /// Verbindung fragen nichts und laufen sofort.
+    fn leistenauswahl_ausfuehren(&self, auswahl: &crate::leistenmodell::Auswahl) {
+        let nummer = &self.ivars().leistenauswahl;
+        nummer.set(nummer.get() + 1);
+        if auswahl.fragt_die_platte {
+            Self::leistenauswahl_fragen_lassen(auswahl.clone(), self.leistenauswahlstand());
+        } else {
+            self.leistenauswahl_vollziehen(auswahl);
+        }
+    }
+
+    /// Fragt die Platte nach dem Ziel einer Auswahl, auf dem Faden [`PLATTENFRAGE`].
+    ///
+    /// Ohne Faden oder bei einer Panik gilt die Marke, die die Auswahl mitbringt.
+    fn leistenauswahl_fragen_lassen(
+        auswahl: crate::leistenmodell::Auswahl,
+        stand: Leistenauswahlstand,
+    ) {
+        let ersatz = auswahl.clone();
+        nebenfaden::fragen_lassen(
+            PLATTENFRAGE,
+            move || auswahl.nachgefragt(),
+            move |_fehler| ersatz,
+            move |mtm, auswahl| Self::leistenauswahl_einziehen(mtm, stand, &auswahl),
+        );
+    }
+
+    /// Der Stand, gegen den die Antwort einer Auswahl gilt
+    /// ([`Leistenauswahlstand`]). Fragt allein die Modelle und AppKit.
+    fn leistenauswahlstand(&self) -> Leistenauswahlstand {
+        let seite = self.ivars().modell.borrow().aktiv();
+        Leistenauswahlstand {
+            nummer: self.ivars().leistenauswahl.get(),
+            seite,
+            tab: self.dateifenster(seite).quelle().tabstand(),
+            blatt: self.blatt_steht(),
+        }
+    }
+
+    /// Nimmt die Antwort einer Auswahl auf dem Hauptfaden entgegen: die Marke gilt
+    /// immer, ausgefuehrt wird nur, solange der Stand derselbe ist und die Zeile
+    /// noch dieses Ziel traegt.
+    fn leistenauswahl_einziehen(
+        mtm: MainThreadMarker,
+        gefragt: Leistenauswahlstand,
+        auswahl: &crate::leistenmodell::Auswahl,
+    ) {
+        let Some(selbst) = Self::delegierter(mtm) else {
+            return;
+        };
+        let leiste = selbst.leiste().quelle();
+        leiste.auswahlbefund_einziehen(auswahl);
+        let dieselbe = leiste
+            .gewaehlt()
+            .is_some_and(|gewaehlt| gewaehlt.ziel == auswahl.ziel);
+        if dieselbe && gefragt == selbst.leistenauswahlstand() {
+            selbst.leistenauswahl_vollziehen(auswahl);
+        }
+    }
+
     /// **Erst die Gueltigkeit, dann die Sorte.** Der erste Zweig gilt beiden
     /// Sorten und stellt dieselbe Frage: ist das Ziel noch da. Ungueltig heisst
     /// dabei allein, dass Ordner oder Datei fehlen; ob der gemerkte
@@ -3180,7 +3230,7 @@ impl Anwendungsdelegierter {
     /// gemerkte Stelle.** Die Fallunterscheidung ueber das [`Ziel`] ist
     /// vollstaendig und hat keinen Auffangzweig; eine dritte Sorte haelt den Bau
     /// an und erzwingt die Antwort, was ihre Auswahl tut.
-    fn leistenauswahl_ausfuehren(&self, auswahl: &crate::leistenmodell::Auswahl) {
+    fn leistenauswahl_vollziehen(&self, auswahl: &crate::leistenmodell::Auswahl) {
         let aktiv = self.ivars().modell.borrow().aktiv();
         if !auswahl.gueltig {
             // Kurz genug fuer die Statuszeile: sie ist einzeilig, und ein
@@ -4059,10 +4109,10 @@ impl Anwendungsdelegierter {
 
     /// Zaehlt die Geraete und Standardorte neu auf (C5).
     ///
-    /// Gerufen nach jedem Ein- und Aushaengen. Die Leiste prueft dabei zugleich
-    /// die Gueltigkeit der Lesezeichen nach; ein eingehaengter Datentraeger
-    /// macht ein Lesezeichen darauf wieder erreichbar. Aufgezaehlt wird auf dem
-    /// Faden; die Leiste zieht nach, sobald die Antwort da ist.
+    /// Gerufen nach jedem Ein- und Aushaengen. Aufgezaehlt wird auf dem Faden; die
+    /// Leiste zieht nach, sobald die Antwort da ist, und stoesst dabei die Marken
+    /// ihrer Lesezeichen an, denn ein eingehaengter Datentraeger macht ein
+    /// Lesezeichen darauf wieder erreichbar.
     fn leiste_geraete_nachziehen(&self) {
         if self.ivars().leiste.get().is_none() {
             return;
@@ -4071,7 +4121,7 @@ impl Anwendungsdelegierter {
     }
 
     /// Stellt die Frage nach den Datentraegern, sofern keine laeuft; laeuft eine,
-    /// wird nach ihrer Antwort noch einmal gefragt ([`Geraetefrage`]).
+    /// wird nach ihrer Antwort noch einmal gefragt ([`Fragetakt`]).
     fn geraete_nachfragen(&self) {
         if self.ivars().geraetefrage.anstossen() {
             Self::geraete_aufzaehlen_lassen();
@@ -4124,11 +4174,9 @@ impl Anwendungsdelegierter {
     /// [`Self::auswurf_beginnen`].
     ///
     /// **Die Aufzaehlung steht nicht mehr hier**, sondern in
-    /// [`Self::geraete_aufzaehlen_lassen`]. **Die Leiste fragt dabei weiter die
-    /// Platte**: `Leistenmodell::orte_setzen` prueft die Lesezeichen mit einem
-    /// `is_dir`/`is_file` je Eintrag, auf dem Hauptfaden. Ein Lesezeichen auf einer
-    /// haengenden Freigabe haelt die Ereignisschleife also weiterhin an; das ist
-    /// der benannte Rest in `.claude/rules/coding-was-man-nicht-sieht.md`.
+    /// [`Self::geraete_aufzaehlen_lassen`]. **Die Leiste fragt dabei die Platte
+    /// nicht**: die Marken ihrer Lesezeichen stoesst sie an, und erhoben werden sie
+    /// auf dem Faden (Modulkopf von [`crate::leistenmodell`]).
     fn geraete_uebernehmen(&self, datentraeger: Vec<Ort>) {
         let einhaengepunkte: Vec<PathBuf> =
             datentraeger.iter().map(|ort| ort.pfad.clone()).collect();
@@ -11835,10 +11883,10 @@ impl Anwendungsdelegierter {
             }
         }
 
-        // **Der vierte Anlass fuer die Gueltigkeitsmarke der Lesezeichen (C5).**
+        // **Ein Anlass fuer die Gueltigkeitsmarke der Lesezeichen (C5).**
         // Ein abgeschlossener Vorgang kann den Ordner eines Lesezeichens
         // beseitigt oder angelegt haben. Bis zum 260806 blieb die Marke danach
-        // auf dem Stand des letzten der drei uebrigen Anlaesse stehen: der
+        // auf dem Stand des letzten der uebrigen Anlaesse stehen: der
         // Nutzer loeschte den Ordner in KRK selbst, sah die Leiste an und fand
         // den Eintrag unveraendert schwarz
         // (`issues/260805-1730_*_die-gueltigkeit-eines-lesezeichens-veraltet-zwischen-zwei-anlaessen.md`).
@@ -14964,14 +15012,14 @@ mod quicknoteproben {
 /// nicht mit den Meldungen (Defekt `261104-2000-…`).
 #[cfg(test)]
 mod geraeteproben {
-    use super::Geraetefrage;
-    use super::quelltextproben::{diese_datei, rumpf};
+    use super::Fragetakt;
+    use super::quelltextproben::{datei, diese_datei, rumpf};
 
     /// Ein Sturm von Meldungen stellt eine Frage und danach eine Nachfrage, und
     /// eine Frage, die nie zurueckkommt, stellt gar keine weitere.
     #[test]
     fn ein_sturm_von_meldungen_stellt_eine_frage_und_eine_nachfrage() {
-        let frage = Geraetefrage::default();
+        let frage = Fragetakt::default();
         assert!(frage.anstossen(), "die erste Meldung stellt die Frage");
         for _ in 0..100 {
             assert!(!frage.anstossen(), "eine zweite Frage neben der laufenden");
@@ -14992,9 +15040,8 @@ mod geraeteproben {
     /// Weder die Ausloeser noch die Einzugsmethode stellen die Frage selbst; sie
     /// steht in der Huelle auf dem Faden, und die Antwort kommt an.
     ///
-    /// **Was sie nicht sieht:** den Weg der Liste danach, und dort fragt
-    /// `Leistenmodell::orte_setzen` die Lesezeichen ab. Das ist ein benannter
-    /// Rest der Regeldatei.
+    /// **Was sie nicht sieht:** den Weg der Liste danach; den haelt
+    /// `die_lesezeichengueltigkeit_stellt_auf_dem_hauptfaden_keinen_systemaufruf`.
     #[test]
     fn die_geraeteaufzaehlung_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
         let datei = diese_datei();
@@ -15022,6 +15069,99 @@ mod geraeteproben {
         }
         assert!(rumpf(&datei, "leiste_einrichten").contains("self.geraete_nachfragen()"));
         assert!(rumpf(&datei, "leiste_geraete_nachziehen").contains("self.geraete_nachfragen()"));
+    }
+
+    /// Weder das Setzen der Lesezeichen und der Orte noch die Antwort der
+    /// Geraeteaufzaehlung noch der Weg einer Auswahl fragen die Platte; die Fragen
+    /// stehen in zwei Huellen auf dem Faden.
+    ///
+    /// **Was sie nicht sieht:** eine tiefer gerufene Frage, deren Name nicht als
+    /// Nadel dasteht. Deshalb haelt sie zusaetzlich, dass `.gueltig()` im
+    /// Betriebscode des Modells allein in den zwei Funktionen steht, die auf dem
+    /// Faden laufen, und dass die allein aus den zwei Huellen gerufen werden.
+    #[test]
+    fn die_lesezeichengueltigkeit_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
+        let modell = datei("krk-ui/src/leistenmodell.rs");
+        let leiste = datei("krk-ui/src/appkit/leiste.rs");
+        let anwendung = diese_datei();
+        let auf_dem_hauptfaden: [(&str, &str); 17] = [
+            (&modell, "lesezeichen_setzen"),
+            (&modell, "orte_setzen"),
+            (&modell, "uebernehmen"),
+            (&modell, "gueltigkeit_anstossen"),
+            (&modell, "gueltigkeit_uebernehmen"),
+            (&modell, "auswahlbefund_uebernehmen"),
+            (&leiste, "lesezeichen_setzen"),
+            (&leiste, "orte_setzen"),
+            (&leiste, "lesezeichen_uebernehmen"),
+            (&leiste, "gueltigkeit_nachziehen"),
+            (&leiste, "gueltigkeit_einziehen"),
+            (&leiste, "auswahlbefund_einziehen"),
+            (&leiste, "auswahl_melden"),
+            (&anwendung, "geraete_uebernehmen"),
+            (&anwendung, "leistenauswahl_ausfuehren"),
+            (&anwendung, "leistenauswahl_einziehen"),
+            (&anwendung, "leistenauswahl_vollziehen"),
+        ];
+        for (inhalt, name) in auf_dem_hauptfaden {
+            let rumpf = rumpf(inhalt, name);
+            for nadel in [
+                "is_dir(",
+                "is_file(",
+                "metadata(",
+                "exists(",
+                "canonicalize(",
+                ".gueltig()",
+                concat!("beant", "worten("),
+                concat!("nach", "gefragt("),
+            ] {
+                assert!(!rumpf.contains(nadel), "{name} enthaelt {nadel}");
+            }
+        }
+
+        let betrieb = modell
+            .split("#[cfg(test)]\nmod tests {")
+            .next()
+            .expect("der Betriebscode des Modells");
+        let fragestellen = betrieb
+            .lines()
+            .filter(|zeile| !zeile.trim_start().starts_with("//"))
+            .filter(|zeile| zeile.contains(".gueltig()"))
+            .count();
+        assert_eq!(fragestellen, 2, "die Frage steht an genau zwei Stellen");
+        for name in ["beantworten", "nachgefragt"] {
+            assert!(rumpf(&modell, name).contains(".gueltig()"));
+        }
+        assert!(
+            rumpf(&leiste, "gueltigkeit_erheben_lassen")
+                .contains(concat!("nebenfaden::", "fragen_lassen("))
+        );
+        assert!(rumpf(&leiste, "gueltigkeit_erheben_lassen").contains(concat!("beant", "worten(")));
+        let huelle = rumpf(&anwendung, "leistenauswahl_fragen_lassen");
+        assert!(huelle.contains(concat!("nebenfaden::", "fragen_lassen(")));
+        assert!(huelle.contains(concat!("nach", "gefragt(")));
+    }
+
+    /// Eine Auswahl geht vor der Platte allein ueber die Huelle, und ihre Antwort
+    /// wirkt allein gegen den Stand, aus dem gefragt wurde.
+    ///
+    /// **Was sie nicht sieht:** ob die Einzugsmethode den Stand richtig vergleicht,
+    /// das sieht allein das laufende Buendel; `Leistenauswahlstand` ist ein Wert
+    /// mit abgeleiteter Gleichheit.
+    #[test]
+    fn eine_auswahl_wirkt_allein_gegen_den_stand_der_frage() {
+        let anwendung = diese_datei();
+        let ausfuehren = rumpf(&anwendung, "leistenauswahl_ausfuehren");
+        assert!(ausfuehren.contains("auswahl.fragt_die_platte"));
+        assert!(ausfuehren.contains("Self::leistenauswahl_fragen_lassen("));
+        assert!(ausfuehren.contains("self.leistenauswahl_vollziehen(auswahl)"));
+        let einziehen = rumpf(&anwendung, "leistenauswahl_einziehen");
+        assert!(einziehen.contains("gefragt == selbst.leistenauswahlstand()"));
+        assert!(einziehen.contains("gewaehlt.ziel == auswahl.ziel"));
+        let stand = rumpf(&anwendung, "leistenauswahlstand");
+        for feld in ["nummer:", "seite,", "tab:", "blatt:"] {
+            assert!(stand.contains(feld), "der Stand fuehrt {feld} nicht");
+        }
     }
 }
 
@@ -17599,7 +17739,7 @@ mod kontextproben {
         );
 
         // Eine Auswahl, die ueber eine Verbindung laeuft, tut nichts.
-        let auswahl = rumpf(&datei, "leistenauswahl_ausfuehren");
+        let auswahl = rumpf(&datei, "leistenauswahl_vollziehen");
         let zweig = auswahl
             .split_once(concat!("Ziel::", "Verbindung { .. } =>"))
             .map(|(_, rest)| rest)

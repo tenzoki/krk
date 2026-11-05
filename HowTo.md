@@ -1517,7 +1517,10 @@ ihren Eintrag in `secrets.txt` weiter unter dem alten Namen. `opt+up` und
 
 Ein Lesezeichen, dessen Ziel fort ist, bleibt stehen und trägt den Zusatz
 „(fehlt)". Die Zeile ist zusätzlich grau, aber das Wort ist das Kennzeichen,
-nicht die Farbe. Eine Verbindung trägt den Zusatz nie: ob ihr Eintrag in
+nicht die Farbe. Geprüft wird im Hintergrund: gleich nach dem Start und nach dem
+Anlegen kann der Zusatz einen Augenblick fehlen, und auf einer Freigabe, die
+nicht antwortet, so lange, bis sie antwortet. Wählst du das Lesezeichen aus,
+fragt KRK sein Ziel sofort neu und nennt den Grund, falls es fehlt. Eine Verbindung trägt den Zusatz nie: ob ihr Eintrag in
 `secrets.txt` noch steht, weiß KRK erst nach dem Entschlüsseln, und die Leiste
 entschlüsselt nichts.
 
