@@ -39,6 +39,29 @@
 //! Antwort wieder freigibt (`Loeschbefehle` in [`super::anwendung`] ist aus
 //! diesem Grund eine Nummer und keine Sperre).
 //!
+//! # Was ein Befehl des Nutzers dazubekommt
+//!
+//! Stellt ein Befehl des Nutzers die Frage, nimmt er
+//! [`befehl_fragen_lassen`] und nicht [`fragen_lassen`]: bleibt die Antwort ueber
+//! die [`FRIST`] hinaus aus, sagt die Statuszeile, dass
+//! er wartet, und sobald die Antwort da ist, ist der Satz weg, auch wenn der Rufer
+//! sie danach verwirft. Die Regel steht in [`crate::plattenwarte`]. **Eine Frage im
+//! Hintergrund bleibt bei [`fragen_lassen`]**, denn auf sie wartet kein Nutzer.
+//!
+//! **Der Zeitgeber laeuft auf der Hauptschlange und stellt keine Frage an die
+//! Platte.** Er ist ein `dispatch_after` je Frage, das einmal laeuft und nichts
+//! haelt ausser zwei Zahlen, und die Statuszeile hat keinen eigenen Zeitgeber,
+//! den er ersetzen koennte. Die Fragen selbst deckelt er nicht: jede weitere
+//! Ausloesung startet weiter ihren Faden, eine Obergrenze hat der Nutzer nicht
+//! verlangt.
+//!
+//! **Der Stand steht in einem `thread_local!`** und nicht im
+//! Anwendungsdelegierten, damit dieser Weg nichts ueber die Schichten darueber
+//! wissen muss und die Dateifenster und der Editor ihn ohne Griff auf den
+//! Delegierten nehmen koennen. Zugang gibt es allein mit dem
+//! [`MainThreadMarker`], also allein auf dem Hauptfaden. Was die Zeile nachzieht,
+//! reicht der Aufbau als Melder herein ([`wartemelder_setzen`]).
+//!
 //! # Ab welchem macOS die angesprochenen Klassen stehen
 //!
 //! Der Betriebscode dieser Datei spricht keine Objective-C-Klasse an; allein
@@ -46,19 +69,31 @@
 //! Foundation, beide seit macOS 10.0, und nennt dafuer den Modus
 //! `NSDefaultRunLoopMode`. `MainThreadMarker` aus
 //! `objc2_foundation` ist ein Rust-Typ der Kiste und hat kein macOS-Alter;
-//! `DispatchQueue` aus `dispatch2` ist eine Rust-Huelle um `libdispatch`, seit
-//! macOS 10.6 im System. Das Buendel zielt auf 15.0 (`.cargo/config.toml`);
+//! `DispatchQueue` und `DispatchTime` aus `dispatch2` sind eine Rust-Huelle um
+//! `libdispatch`, seit macOS 10.6 im System, auch `dispatch_after`. Das Buendel zielt auf 15.0 (`.cargo/config.toml`);
 //! keines von beiden hebt die Untergrenze an, und keine Beruehrung in dieser
 //! Datei braucht eine Verfuegbarkeitspruefung zur Laufzeit. `objc2` fuehrt
 //! keine Verfuegbarkeitsangaben mit sich, und der Uebersetzer haelt die
 //! Untergrenze nicht; die Nennung hier ist die Gegenmassnahme.
 
+use std::cell::RefCell;
 use std::panic::{AssertUnwindSafe, catch_unwind};
+use std::rc::Rc;
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 
-use dispatch2::DispatchQueue;
+use dispatch2::{DispatchQueue, DispatchTime};
 use krk_core::sprache::{Text, text};
 use objc2_foundation::MainThreadMarker;
+
+use crate::plattenwarte::{FRIST, Plattenbefehl, Plattenwarte};
+
+thread_local! {
+    /// Was die Befehle von der Platte erwarten; siehe den Modulkopf.
+    static WARTE: RefCell<Plattenwarte> = RefCell::default();
+    /// Was die Statuszeile nachzieht; siehe [`wartemelder_setzen`].
+    static WARTEMELDER: RefCell<Option<Rc<dyn Fn()>>> = RefCell::default();
+}
 
 /// Der Name des Fadens, auf dem eine Frage an die Platte gestellt wird, die
 /// mit dem Terminal nichts zu tun hat: eine Frage, die ein Hauptfadenweg ueber
@@ -107,6 +142,84 @@ pub(crate) fn fragen_lassen<T: Send + 'static>(
     {
         auf_dem_hauptfaden(fertig, startfehler(fehler));
     }
+}
+
+/// Wie [`fragen_lassen`], fuer einen Befehl des Nutzers: bleibt die Antwort ueber
+/// die [`FRIST`] hinaus aus, sagt die Statuszeile, dass er wartet (Modulkopf).
+///
+/// **Das Warten endet, bevor `fertig` laeuft**, und unabhaengig davon, was
+/// `fertig` aus der Antwort macht: eine verfallene Antwort ist auch eine Antwort.
+/// Eine Meldung, die `fertig` dann setzt, steht ohnehin ueber diesem Rang
+/// ([`super::statuszeile::Rang::Plattenwarte`]).
+pub(crate) fn befehl_fragen_lassen<T: Send + 'static>(
+    mtm: MainThreadMarker,
+    befehl: Plattenbefehl,
+    fadenname: &'static str,
+    arbeit: impl FnOnce() -> T + Send + 'static,
+    startfehler: impl FnOnce(std::io::Error) -> T + Send + 'static,
+    fertig: impl FnOnce(MainThreadMarker, T) + Send + 'static,
+) {
+    befehl_fragen_lassen_nach(FRIST, mtm, befehl, fadenname, arbeit, startfehler, fertig);
+}
+
+/// [`befehl_fragen_lassen`] mit genannter Frist, damit eine Probe nicht die volle
+/// Frist abwarten muss.
+fn befehl_fragen_lassen_nach<T: Send + 'static>(
+    frist: Duration,
+    _mtm: MainThreadMarker,
+    befehl: Plattenbefehl,
+    fadenname: &'static str,
+    arbeit: impl FnOnce() -> T + Send + 'static,
+    startfehler: impl FnOnce(std::io::Error) -> T + Send + 'static,
+    fertig: impl FnOnce(MainThreadMarker, T) + Send + 'static,
+) {
+    let nummer = WARTE.with_borrow_mut(|warte| warte.gestellt(befehl));
+    frist_stellen(frist, befehl, nummer);
+    fragen_lassen(fadenname, arbeit, startfehler, move |mtm, ergebnis| {
+        if WARTE.with_borrow_mut(|warte| warte.beantwortet(befehl, nummer)) {
+            zeile_nachziehen();
+        }
+        fertig(mtm, ergebnis);
+    });
+}
+
+/// Legt den Ablauf der Frist auf die Hauptschlange. Er fragt allein den Stand.
+fn frist_stellen(frist: Duration, befehl: Plattenbefehl, nummer: u64) {
+    // `try_from` scheitert allein am Ueberlauf der Nanosekunden, und `after` hat
+    // keinen anderen Ausgang als `Ok`. Bei einer Frist von Sekunden geschieht
+    // beides nicht; geschaehe es, fehlte allein der Satz, und die Frage liefe.
+    let Ok(zeitpunkt) = DispatchTime::try_from(frist) else {
+        return;
+    };
+    let _ = DispatchQueue::main().after(zeitpunkt, move || {
+        // Dieselbe Hauptschlange wie in `auf_dem_hauptfaden`. Der Marker belegt,
+        // dass der Stand derselbe ist, den die Frage angelegt hat.
+        if MainThreadMarker::new().is_some()
+            && WARTE.with_borrow_mut(|warte| warte.frist_um(befehl, nummer))
+        {
+            zeile_nachziehen();
+        }
+    });
+}
+
+/// Ruft den Melder ausserhalb jeder Ausleihe: er liest [`platte_wartet`], und
+/// ein Setzen eines neuen Melders aus ihm heraus stiesse sonst auf die eigene.
+fn zeile_nachziehen() {
+    let melder = WARTEMELDER.with_borrow(Clone::clone);
+    if let Some(melder) = melder {
+        melder();
+    }
+}
+
+/// Ob die Statuszeile gerade sagen soll, dass ein Befehl auf die Platte wartet.
+pub(crate) fn platte_wartet(_mtm: MainThreadMarker) -> bool {
+    WARTE.with_borrow(Plattenwarte::meldet)
+}
+
+/// Setzt, was gerufen wird, wenn der Satz neu steht oder gefallen ist. Der Aufbau
+/// der Oberflaeche ruft das einmal; ohne Melder bleibt die Zeile, wie sie ist.
+pub(crate) fn wartemelder_setzen(_mtm: MainThreadMarker, melder: impl Fn() + 'static) {
+    WARTEMELDER.set(Some(Rc::new(melder)));
 }
 
 /// Der Fehler, den `startfehler` bei einer Panik in `arbeit` bekommt. Sein Satz
@@ -162,6 +275,8 @@ mod tests {
     pub(crate) const HAUPTFADENPROBEN: &[Probe] = &[
         hauptfadenprobe!(eine_panik_in_der_arbeit_ruft_fertig_genau_einmal_mit_dem_ersatzwert),
         hauptfadenprobe!(ohne_panik_bekommt_fertig_das_ergebnis_und_startfehler_laeuft_nicht),
+        hauptfadenprobe!(der_satz_kommt_nach_der_frist_und_geht_mit_der_antwort),
+        hauptfadenprobe!(eine_schnelle_antwort_laesst_keinen_satz_stehen),
     ];
 
     /// Laesst die Hauptschlange laufen, bis `fertig` gerufen ist, und danach noch
@@ -172,6 +287,15 @@ mod tests {
             umlauf();
         }
         for _ in 0..5 {
+            umlauf();
+        }
+    }
+
+    /// Laesst die Hauptschlange laufen, bis `erfuellt` gilt. Die Frist haelt der
+    /// Laeufer, und nach 30 s ruft die Probe mit ihrer eigenen Aussage aus.
+    fn hauptschlange_bis_gilt(erfuellt: impl Fn() -> bool) {
+        let beginn = Instant::now();
+        while !erfuellt() && beginn.elapsed() < Duration::from_secs(30) {
             umlauf();
         }
     }
@@ -240,5 +364,133 @@ mod tests {
         hauptschlange_bis(&aufrufe);
         assert_eq!(aufrufe.load(Ordering::SeqCst), 1);
         assert_eq!(*antwort.lock().expect("die Antwort ist vergiftet"), Some(7));
+    }
+
+    /// Der ganze Weg mit dem echten Zeitgeber: die Arbeit haelt an, bis die Probe
+    /// sie freigibt, also entscheidet keine Uhr, ob der Satz vor der Antwort kommt.
+    fn der_satz_kommt_nach_der_frist_und_geht_mit_der_antwort(mtm: MainThreadMarker) {
+        let melder = Arc::new(AtomicUsize::new(0));
+        let fuer_den_melder = Arc::clone(&melder);
+        wartemelder_setzen(mtm, move || {
+            fuer_den_melder.fetch_add(1, Ordering::SeqCst);
+        });
+        let aufrufe = Arc::new(AtomicUsize::new(0));
+        let fuer_fertig = Arc::clone(&aufrufe);
+        let (freigabe, warten) = std::sync::mpsc::channel::<()>();
+        befehl_fragen_lassen_nach(
+            Duration::from_millis(10),
+            mtm,
+            Plattenbefehl::Pfadsprung,
+            "krk-probe-warte",
+            move || warten.recv().is_ok(),
+            |_fehler| false,
+            move |mtm, _ergebnis| {
+                assert!(
+                    !platte_wartet(mtm),
+                    "der Satz steht noch, wenn fertig laeuft"
+                );
+                fuer_fertig.fetch_add(1, Ordering::SeqCst);
+            },
+        );
+        hauptschlange_bis_gilt(|| platte_wartet(mtm));
+        assert!(platte_wartet(mtm), "der Satz kam nach der Frist nicht");
+        assert_eq!(melder.load(Ordering::SeqCst), 1, "der Melder lief nicht");
+
+        freigabe.send(()).expect("die Arbeit wartet nicht mehr");
+        hauptschlange_bis(&aufrufe);
+        assert_eq!(aufrufe.load(Ordering::SeqCst), 1);
+        assert!(
+            !platte_wartet(mtm),
+            "der Satz blieb nach der Antwort stehen"
+        );
+        assert_eq!(melder.load(Ordering::SeqCst), 2, "der Melder lief nicht");
+        WARTEMELDER.set(None);
+    }
+
+    /// Eine Antwort vor der Frist: auch nach deren Ablauf steht nichts.
+    fn eine_schnelle_antwort_laesst_keinen_satz_stehen(mtm: MainThreadMarker) {
+        let aufrufe = Arc::new(AtomicUsize::new(0));
+        let fuer_fertig = Arc::clone(&aufrufe);
+        let frist = Duration::from_millis(50);
+        befehl_fragen_lassen_nach(
+            frist,
+            mtm,
+            Plattenbefehl::Lesezeichen,
+            "krk-probe-warte",
+            || (),
+            |_fehler| (),
+            move |_mtm, ()| {
+                fuer_fertig.fetch_add(1, Ordering::SeqCst);
+            },
+        );
+        hauptschlange_bis(&aufrufe);
+        let beginn = Instant::now();
+        while beginn.elapsed() < frist * 3 {
+            umlauf();
+        }
+        assert!(!platte_wartet(mtm));
+    }
+
+    /// Die fuenf Befehle gehen ueber den meldenden Weg, die Fragen im Hintergrund
+    /// nicht, und der Aufbau und die Zeile sind daran angeschlossen.
+    ///
+    /// **Was sie nicht sieht:** ob der Satz im Fenster erscheint. Das zeigt allein
+    /// der Lauf an einer getrennten Freigabe.
+    #[test]
+    fn genau_die_fuenf_befehle_melden_ein_warten() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let anwendung = datei("krk-ui/src/appkit/anwendung.rs");
+        let tabelle = datei("krk-ui/src/appkit/tabelle.rs");
+        let editor = datei("krk-ui/src/appkit/editor.rs");
+        let leiste = datei("krk-ui/src/appkit/leiste.rs");
+        let meldend = concat!("nebenfaden::befehl_", "fragen_lassen(");
+        for (quelle, huelle, befehl) in [
+            (
+                &anwendung,
+                "loeschbefund_erheben_lassen",
+                "Plattenbefehl::Loeschen",
+            ),
+            (
+                &anwendung,
+                "notizordner_oeffnen",
+                "Plattenbefehl::Notizordner",
+            ),
+            (
+                &editor,
+                "geheimnisgroesse_fragen_lassen",
+                "Plattenbefehl::Geheimnis",
+            ),
+            (&tabelle, "pfad_pruefen_lassen", "Plattenbefehl::Pfadsprung"),
+            (
+                &anwendung,
+                "leistenauswahl_fragen_lassen",
+                "Plattenbefehl::Lesezeichen",
+            ),
+        ] {
+            let rumpf = rumpf(quelle, huelle);
+            assert!(rumpf.contains(meldend), "{huelle} meldet kein Warten");
+            assert!(rumpf.contains(befehl), "{huelle} fragt nicht als {befehl}");
+        }
+        for (quelle, huelle) in [
+            (&anwendung, "geraete_aufzaehlen_lassen"),
+            (&leiste, "gueltigkeit_erheben_lassen"),
+            (&tabelle, "schreibrecht_fragen_lassen"),
+        ] {
+            assert!(
+                !rumpf(quelle, huelle).contains(meldend),
+                "{huelle} fragt im Hintergrund und meldet ein Warten"
+            );
+        }
+        assert!(
+            rumpf(&anwendung, "oberflaeche_aufbauen")
+                .contains(concat!("nebenfaden::wartemelder_", "setzen(")),
+            "der Aufbau setzt den Melder nicht: der Satz kaeme nie in die Zeile"
+        );
+        let nachzug = rumpf(&anwendung, "statuszeile_nachziehen");
+        assert!(
+            nachzug.contains(concat!("nebenfaden::platte_", "wartet("))
+                && nachzug.contains("Text::WartetAufDiePlatte"),
+            "der Schreiber der Zeile fragt das Warten nicht"
+        );
     }
 }

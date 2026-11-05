@@ -53,6 +53,7 @@ mod leistenmodell;
 mod markdown;
 mod menuemodell;
 mod messmodus;
+mod plattenwarte;
 #[cfg(test)]
 mod pruefordner;
 #[cfg(test)]

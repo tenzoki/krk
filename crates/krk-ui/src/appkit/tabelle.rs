@@ -391,6 +391,7 @@ use super::standardprogramm;
 use super::statuszeile::{self, Filterstand, Quellen};
 use super::tableiste::Tableiste;
 use super::teilen;
+use crate::plattenwarte::Plattenbefehl;
 
 /// Die Hoehe einer Zeile in Punkten.
 ///
@@ -3865,7 +3866,9 @@ impl DateifensterQuelle {
             (Weak::from_retained(&self.retain()), self.pfadstand()),
             self.mtm(),
         );
-        nebenfaden::fragen_lassen(
+        nebenfaden::befehl_fragen_lassen(
+            self.mtm(),
+            Plattenbefehl::Pfadsprung,
             PLATTENFRAGE,
             move || pruefung(&gefragt),
             move |fehler| {
@@ -8387,7 +8390,7 @@ mod tests {
     /// Einzugsmethode steht keine Frage an die Platte, auch nicht die
     /// Pruefung selbst, die auf den Faden `krk-plattenfrage` gehoert. Daneben
     /// haelt sie die Kette: beide Ausloeser reichen an die Huelle, die Huelle
-    /// an `nebenfaden::fragen_lassen` und die Antwort an die Einzugsmethode,
+    /// an `nebenfaden::befehl_fragen_lassen` und die Antwort an die Einzugsmethode,
     /// und die wendet sie an.
     ///
     /// **Was sie nicht sieht:** einen Systemaufruf in einer tiefer gerufenen
@@ -8433,7 +8436,7 @@ mod tests {
         }
         let huellenrumpf = rumpf_von(code, huelle);
         for nadel in [
-            concat!("nebenfaden::", "fragen_lassen("),
+            concat!("nebenfaden::befehl_", "fragen_lassen("),
             "PLATTENFRAGE",
             concat!(".pfadpruefung_", "einziehen("),
         ] {

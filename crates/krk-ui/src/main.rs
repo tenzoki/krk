@@ -36,6 +36,8 @@
 //! fuer die Vorschau der Runde 6: heraus kommen der Text ohne die
 //! Auszeichnungszeichen und dieselbe `Formatierung`, die `hervorhebung`
 //! liefert, damit es eine Umsetzung in AppKit-Merkmale gibt und nicht zwei.
+//! `plattenwarte` entscheidet, wann die Statuszeile sagt, dass ein Befehl auf
+//! die Platte wartet.
 //! `leistenmodell` haelt, was in der Lesezeichen-
 //! und Geraeteleiste aus C5 steht und welche Zeile darin ausgewaehlt ist.
 //! `kommandos` haelt die Rechnung hinter den Tastenbefehlen aus C2 und
@@ -106,6 +108,7 @@ mod leistenmodell;
 mod markdown;
 mod menuemodell;
 mod messmodus;
+mod plattenwarte;
 /// Der Pruefordner der Proben dieser Kiste. Nur im Probenbau uebersetzt, weil
 /// ihn kein ausgeliefertes Programm braucht; vier Probenmodule teilen ihn.
 #[cfg(test)]

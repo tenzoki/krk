@@ -15,3 +15,6 @@ Der frühere Befund am Abwurf (261104-1958-der-abwurf-startet-je-ordnerwechsel-e
 **Richtung.** Der Nutzer entscheidet, ob eine Statuszeile nach kurzer Frist („wartet auf …“) gebaut wird oder ob Stille genügt. Ich schlage die Statuszeile vor. In beiden Fällen gehört ein Absatz in `HowTo.md`.
 
 **Abnahme.** Entweder eine reine Probe am Fristwert samt Lauf an einer getrennten Freigabe durch den Nutzer, oder ein Entscheid, dass Stille gilt, und dazu der Absatz in `HowTo.md`.
+
+---
+Resolved: Löschen, F2, F4 auf `secrets.txt`, Pfadsprung und Lesezeichen-Auswahl gehen über `nebenfaden::befehl_fragen_lassen`; nach `plattenwarte::FRIST` (1 s, gesetzt und nicht gemessen) steht „wartet auf die Platte …“ in der Statuszeile, als eigener `Rang::Plattenwarte` unter Befehlsantwort und Vorgangsanzeige, und die Antwort auf die jüngste Frage des Befehls nimmt den Satz, auch wenn der Rufer sie verwirft. Eine Obergrenze der Fäden gibt es weiter nicht (Nutzerentscheid), Geräteaufzählung, Lesezeichen-Marken und Abwurf melden sich nicht, `HowTo.md` hat den Absatz. Der Lauf an einer getrennten Freigabe bleibt Nutzerarbeit.

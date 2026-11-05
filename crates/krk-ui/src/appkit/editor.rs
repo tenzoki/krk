@@ -593,6 +593,7 @@ use super::statuszeile;
 use super::teilen;
 use super::textautomatik;
 use super::textmerkmale;
+use crate::plattenwarte::Plattenbefehl;
 
 /// Welche der zwei Umformungen der Quicknote: Singlestrip
 /// (`krk_core::text::glaetten::befehl`) oder Format
@@ -4991,9 +4992,11 @@ impl Editorbereich {
     /// `261104-2000-geraeteaufzaehlung-f2-und-secrets-fragen-die-platte-weiter-auf-dem-hauptfaden.md`).
     ///
     /// Die Datei kann auf einer Freigabe liegen, seit sich der Notizordner dorthin
-    /// legen laesst. Ohne Antwort geschieht nichts, und auch ein weiteres F4 auf
-    /// sie startet einen weiteren Faden; **eine Obergrenze dafuer gibt es nicht**.
-    /// Der Nutzer arbeitet solange mit dem weiter, was der Editor haelt.
+    /// legen laesst. Ohne Antwort oeffnet sich nichts, nach einer Frist sagt die
+    /// Statuszeile, dass gewartet wird ([`crate::plattenwarte`]), und auch ein
+    /// weiteres F4 auf sie startet einen weiteren Faden; **eine Obergrenze dafuer
+    /// gibt es nicht**. Der Nutzer arbeitet solange mit dem weiter, was der Editor
+    /// haelt.
     ///
     /// **Ohne Faden oder nach einer Panik gilt die Groesse als unbekannt**, wie
     /// nach einem gescheiterten `stat(2)`; das Blatt und das Modell entscheiden
@@ -5008,7 +5011,9 @@ impl Editorbereich {
             ),
             self.mtm(),
         );
-        nebenfaden::fragen_lassen(
+        nebenfaden::befehl_fragen_lassen(
+            self.mtm(),
+            Plattenbefehl::Geheimnis,
             PLATTENFRAGE,
             move || std::fs::metadata(&gefragt).ok().map(|daten| daten.len()),
             |_fehler| None,
@@ -9987,7 +9992,7 @@ mod tests {
         }
         let huelle = rumpf(&quelle, "geheimnisgroesse_fragen_lassen");
         for nadel in [
-            concat!("nebenfaden::", "fragen_lassen("),
+            concat!("nebenfaden::befehl_", "fragen_lassen("),
             "PLATTENFRAGE",
             "metadata(",
             "self.oeffnungsstand()",

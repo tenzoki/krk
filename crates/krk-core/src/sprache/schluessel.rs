@@ -1736,6 +1736,9 @@ pub enum Text {
     /// geraten; der Satz steht als Fehler an der Stelle, an der sonst der
     /// Fehler des Fadenstarts steht.
     FrageAbgebrochen,
+    /// `statuszeile_nachziehen`: ein Befehl wartet ueber seine Frist hinaus auf
+    /// die Antwort der Platte (`crate::plattenwarte` in `krk-ui`).
+    WartetAufDiePlatte,
     /// `stapel_umbenennen_ausfuehren`: aus den Feldern liess sich keine Regel
     /// bauen.
     StapelKeineRegel,
@@ -1945,7 +1948,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 794] = [
+    pub const ALLE: [Text; 795] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -2660,6 +2663,7 @@ impl Text {
         Text::LoeschblattSchaltflaecheEndgueltig,
         Text::NichtsAusgewaehlt,
         Text::FrageAbgebrochen,
+        Text::WartetAufDiePlatte,
         Text::StapelKeineRegel,
         Text::StapelJedeZeileMitHinweis,
         Text::QuelleUndZielDerselbeOrdner,

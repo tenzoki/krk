@@ -1225,6 +1225,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::FrageAbgebrochen => {
             "erreur interne : la question adressée au disque a été interrompue"
         }
+        Text::WartetAufDiePlatte => "en attente du disque…",
         Text::StapelKeineRegel => {
             "rien à renommer\u{a0}: aucune règle n’a pu être construite à partir des champs"
         }

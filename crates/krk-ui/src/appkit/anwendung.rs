@@ -374,6 +374,7 @@ use super::verbinden::{self, Verbindungsausgang, Verbindungsergebnis};
 use super::volumes::{self, Datentraeger, Datentraegerwache, Wechsel};
 use super::vorschau::Vorschaufenster;
 use super::weitereinstanz;
+use crate::plattenwarte::Plattenbefehl;
 
 /// Der Rueckgabewert, mit dem ein Messlauf ohne Bildschirm endet.
 const OHNE_BILDSCHIRM: i32 = 3;
@@ -855,6 +856,8 @@ impl Loeschbefehle {
 /// Auswahl eines Lesezeichens startet deshalb ihren Faden; **eine Obergrenze
 /// dafuer gibt es nicht**, und auf einer haengenden Freigabe bleibt jeder dieser
 /// Faeden stehen, bis die Platte antwortet, wie der Lesefaden einer Navigation.
+/// Dass sie wartet, sagt nach einer Frist die Statuszeile
+/// ([`crate::plattenwarte`]).
 ///
 /// Weicht der Stand ab, hat der Nutzer inzwischen etwas anderes getan: eine
 /// andere Zeile gewaehlt, das Dateifenster oder den Tab gewechselt, dort
@@ -879,7 +882,8 @@ struct Leistenauswahlstand {
 /// Sperre fiele auf einer haengenden Freigabe nie, und F2 stuende dann auch fuer
 /// einen inzwischen anders gewaehlten Ort. Jeder Befehl startet deshalb seinen
 /// Faden; **eine Obergrenze dafuer gibt es nicht**, und auf einer haengenden
-/// Freigabe bleibt jeder dieser Faeden stehen, bis die Platte antwortet.
+/// Freigabe bleibt jeder dieser Faeden stehen, bis die Platte antwortet. Dass er
+/// wartet, sagt nach einer Frist die Statuszeile ([`crate::plattenwarte`]).
 ///
 /// **Die Saetze einer ueberholten Antwort liegen hier, bis die juengste ankommt.**
 /// Zwei F2 kurz nacheinander legen zweimal an, und nur eine der beiden Antworten
@@ -2169,6 +2173,14 @@ impl Anwendungsdelegierter {
                 selbst.statuszeile_nachziehen();
             }
         }));
+        // Dasselbe fuer das Warten auf die Platte: der Fadenweg sagt, dass sich
+        // der Satz geaendert hat, und fragt die Zeile nicht selbst.
+        let schwach = objc2::rc::Weak::from_retained(&self.retain());
+        nebenfaden::wartemelder_setzen(mtm, move || {
+            if let Some(selbst) = schwach.load() {
+                selbst.statuszeile_nachziehen();
+            }
+        });
         let editor = Editorbereich::bauen(mtm, Rc::clone(&ivars.heim), Rc::clone(&ivars.merker));
         // **Der Rueckweg des Editors.** Seit S24 liest er auf einem
         // Arbeitsfaden, und wie ein Oeffnen ausgegangen ist, steht erst fest,
@@ -3148,11 +3160,21 @@ impl Anwendungsdelegierter {
     /// sonst auf einen Ordner, den es nicht gibt. Bis die Antwort da ist, steht die
     /// Zeile gewaehlt, und das Dateifenster bleibt, wo es ist. Ein Geraet und eine
     /// Verbindung fragen nichts und laufen sofort.
+    ///
+    /// **Vor der Frage faellt die Antwort auf das, was der Nutzer vorher getan
+    /// hat**, wie bei einem Tastenbefehl: sonst verdeckte etwa der Satz ueber das
+    /// vorige fehlende Lesezeichen den Satz, dass diese Auswahl auf die Platte
+    /// wartet ([`Self::befehlsantwort_beidseitig_loeschen`]).
     fn leistenauswahl_ausfuehren(&self, auswahl: &crate::leistenmodell::Auswahl) {
         let nummer = &self.ivars().leistenauswahl;
         nummer.set(nummer.get() + 1);
         if auswahl.fragt_die_platte {
-            Self::leistenauswahl_fragen_lassen(auswahl.clone(), self.leistenauswahlstand());
+            self.befehlsantwort_beidseitig_loeschen();
+            Self::leistenauswahl_fragen_lassen(
+                self.mtm(),
+                auswahl.clone(),
+                self.leistenauswahlstand(),
+            );
         } else {
             self.leistenauswahl_vollziehen(auswahl);
         }
@@ -3162,11 +3184,14 @@ impl Anwendungsdelegierter {
     ///
     /// Ohne Faden oder bei einer Panik gilt die Marke, die die Auswahl mitbringt.
     fn leistenauswahl_fragen_lassen(
+        mtm: MainThreadMarker,
         auswahl: crate::leistenmodell::Auswahl,
         stand: Leistenauswahlstand,
     ) {
         let ersatz = auswahl.clone();
-        nebenfaden::fragen_lassen(
+        nebenfaden::befehl_fragen_lassen(
+            mtm,
+            Plattenbefehl::Lesezeichen,
             PLATTENFRAGE,
             move || auswahl.nachgefragt(),
             move |_fehler| ersatz,
@@ -6678,7 +6703,9 @@ impl Anwendungsdelegierter {
         self.ivars().notizordnerbefehle.neuer();
         let gefragt = self.notizordnerstand();
         let fuer_den_startfehler = auftrag.heim.clone();
-        nebenfaden::fragen_lassen(
+        nebenfaden::befehl_fragen_lassen(
+            self.mtm(),
+            Plattenbefehl::Notizordner,
             PLATTENFRAGE,
             move || Self::notizordner_erheben(auftrag),
             // Ohne Faden geschah nichts auf der Platte, und das sagt das
@@ -8117,7 +8144,7 @@ impl Anwendungsdelegierter {
     /// trotzdem neuer. Damit haengt der oberste Rang an einem Ereignis und an
     /// keiner Uhr.
     ///
-    /// Die zwei Wege:
+    /// Die Wege:
     ///
     /// 1. [`Self::kommando_ausfuehren`] vor jedem Befehl. Der aeltere Weg, und
     ///    bis zur Runde 13 der einzige.
@@ -8125,6 +8152,9 @@ impl Anwendungsdelegierter {
     ///    schreibt. Er kommt ueber den achten Rueckruf der Dateiliste herein
     ///    (`DateifensterQuelle::befehlsantwort_beidseitig_loeschen`), weil eine
     ///    Quelle von sich aus nur ihre eigene Seite erreicht.
+    /// 3. Die Auswahl eines Lesezeichens, die die Platte fragt
+    ///    ([`Self::leistenauswahl_ausfuehren`]): ein Klick in die Leiste geht an
+    ///    `kommando_ausfuehren` vorbei und wartet womoeglich auf die Platte.
     ///
     /// **Warum der Abwurf diesen Weg braucht und nicht seine eigene Seite
     /// genuegt.** [`statuszeile::zeile`] nimmt innerhalb eines Rangs die
@@ -8216,7 +8246,17 @@ impl Anwendungsdelegierter {
             .vorschau
             .get()
             .and_then(|vorschau| vorschau.seitenzaehler());
-        let meldung = statuszeile::zeile(&links, &rechts, aktiv, &sichtbar, vorschau.as_deref());
+        // Der Satz, solange ein Befehl ueber seine Frist hinaus auf die Platte
+        // wartet; wann das gilt, steht in `crate::plattenwarte`.
+        let platte = nebenfaden::platte_wartet(self.mtm()).then(|| text(Text::WartetAufDiePlatte));
+        let meldung = statuszeile::zeile(
+            &links,
+            &rechts,
+            aktiv,
+            &sichtbar,
+            vorschau.as_deref(),
+            platte,
+        );
         // Der Satz bekommt eine eigene Bindung, weil `zeilentext` eine
         // Zeichenkette **baut** und `meldung_setzen` eine ausleiht: ohne die Bindung
         // gaebe es nichts, woraus die Ausleihe genommen werden koennte.
@@ -8582,7 +8622,8 @@ impl Anwendungsdelegierter {
     /// der Einzugsmethode. Ein zweiter Befehl an einem lokalen Ort startet also
     /// einen zweiten Faden; **eine Obergrenze dafuer gibt es nicht**, und auf
     /// einer haengenden Freigabe bleibt jeder dieser Faeden stehen, bis die
-    /// Platte antwortet. **Scheitert der
+    /// Platte antwortet; dass er wartet, sagt nach einer Frist die Statuszeile
+    /// ([`crate::plattenwarte`]). **Scheitert der
     /// Fadenstart**, gilt der Befund als unentschieden
     /// ([`Loeschbefund::unentschieden`]), und die Tafel fuehrt auf die
     /// endgueltige Rueckfrage mit [`Endgueltiggrund::PapierkorbUngewiss`].
@@ -8717,7 +8758,14 @@ impl Anwendungsdelegierter {
                 if self.ivars().fenster.get().is_none() {
                     return false;
                 }
-                Self::loeschbefund_erheben_lassen(ordner, auswahl, aktiv, schaltflaeche, nummer);
+                Self::loeschbefund_erheben_lassen(
+                    self.mtm(),
+                    ordner,
+                    auswahl,
+                    aktiv,
+                    schaltflaeche,
+                    nummer,
+                );
                 true
             }
             // Fern, im Archiv und lokal mit einer billigen Stufe: ohne Faden
@@ -8745,8 +8793,9 @@ impl Anwendungsdelegierter {
     /// die Einzugsmethode bekommt ihn ebenso ueber die Hauptschlange; die
     /// Tafel fuehrt dann auf die endgueltige Rueckfrage mit
     /// [`Endgueltiggrund::PapierkorbUngewiss`]. Dasselbe gilt bei einer Panik
-    /// auf dem Faden ([`nebenfaden::fragen_lassen`]).
+    /// auf dem Faden ([`nebenfaden::befehl_fragen_lassen`]).
     fn loeschbefund_erheben_lassen(
+        mtm: MainThreadMarker,
         ordner: PathBuf,
         auswahl: Auswahl,
         seite: Fensterseite,
@@ -8754,7 +8803,9 @@ impl Anwendungsdelegierter {
         nummer: u64,
     ) {
         let fuer_den_faden = (ordner.clone(), auswahl.clone());
-        nebenfaden::fragen_lassen(
+        nebenfaden::befehl_fragen_lassen(
+            mtm,
+            Plattenbefehl::Loeschen,
             PLATTENFRAGE,
             move || {
                 let (ordner, auswahl) = fuer_den_faden;
@@ -15144,7 +15195,7 @@ mod geraeteproben {
         );
         assert!(rumpf(&leiste, "gueltigkeit_erheben_lassen").contains(concat!("beant", "worten(")));
         let huelle = rumpf(&anwendung, "leistenauswahl_fragen_lassen");
-        assert!(huelle.contains(concat!("nebenfaden::", "fragen_lassen(")));
+        assert!(huelle.contains(concat!("nebenfaden::befehl_", "fragen_lassen(")));
         assert!(huelle.contains(concat!("nach", "gefragt(")));
     }
 
@@ -15439,7 +15490,7 @@ mod notizordnerproben {
         }
         let ausloeser = rumpf(&datei, "notizordner_oeffnen");
         for nadel in [
-            concat!("nebenfaden::", "fragen_lassen("),
+            concat!("nebenfaden::befehl_", "fragen_lassen("),
             "PLATTENFRAGE",
             concat!("Self::notizordner_", "erheben(auftrag)"),
             concat!("selbst.notizordner_", "einziehen(gefragt, antwort)"),
@@ -15738,7 +15789,7 @@ mod notizordnerproben {
             .expect("F2 holt den Auftrag");
         let zurueck_f2 = f2.find("return true;").expect("F2 kehrt ohne Ort zurueck");
         let faden = f2
-            .find(concat!("nebenfaden::", "fragen_lassen("))
+            .find(concat!("nebenfaden::befehl_", "fragen_lassen("))
             .expect("F2 stellt die Frage nicht auf den Faden");
         assert!(auftrag_ruf < zurueck_f2 && zurueck_f2 < faden);
         let auftrag = rumpf(&quelle, concat!("notizordner", "auftrag"));
@@ -18983,7 +19034,7 @@ mod fernvorgangsproben {
     /// `loeschblatt_zeigen` und der beiden Textfunktionen steht keine Frage an
     /// die Platte und auch nicht `lokaler_loeschbefund`, der sie alle stellt.
     /// Daneben haelt sie die Kette: der Ausloeser reicht die Frage an
-    /// `loeschbefund_erheben_lassen`, das sie ueber `nebenfaden::fragen_lassen`
+    /// `loeschbefund_erheben_lassen`, das sie ueber `nebenfaden::befehl_fragen_lassen`
     /// auf den Faden `krk-plattenfrage` stellt und die Antwort an die
     /// Einzugsmethode gibt, und erst die Einzugsmethode fragt die Stufentafel.
     ///
@@ -19033,7 +19084,7 @@ mod fernvorgangsproben {
         }
         let huellenrumpf = rumpf(&datei, huelle);
         for nadel in [
-            concat!("nebenfaden::", "fragen_lassen("),
+            concat!("nebenfaden::befehl_", "fragen_lassen("),
             "PLATTENFRAGE",
             concat!("lokaler_", "loeschbefund("),
             concat!("Loeschbefund::", "unentschieden()"),

@@ -1142,6 +1142,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::LoeschblattSchaltflaecheEndgueltig => "Endgültig löschen",
         Text::NichtsAusgewaehlt => "es ist nichts ausgewählt",
         Text::FrageAbgebrochen => "interner Fehler: die Frage an die Platte ist abgebrochen",
+        Text::WartetAufDiePlatte => "wartet auf die Platte …",
         Text::StapelKeineRegel => {
             "nichts umzubenennen: aus den Feldern ließ sich keine Regel bauen"
         }

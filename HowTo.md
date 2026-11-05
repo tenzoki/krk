@@ -197,6 +197,20 @@ Festplattenvollzugriff hilft dann nicht.
 
 ---
 
+## Wenn eine Platte langsam ist oder nicht antwortet
+
+Beim Löschen, bei F2, bei F4 auf `secrets.txt`, beim Sprung auf einen Pfad und
+bei der Auswahl eines Lesezeichens fragt KRK erst die Platte und tut bis zur
+Antwort nichts Sichtbares. Das Fenster bleibt dabei bedienbar. Dauert die Antwort
+länger als einen Augenblick, etwa auf einer getrennten Freigabe oder einer
+Platte, die erst anlaufen muss, steht in der Statuszeile „wartet auf die
+Platte …“. Der Satz verschwindet, sobald die Antwort da ist. Hast du inzwischen
+etwas anderes getan, geschieht danach nichts mehr: der Befehl gilt dann als
+überholt, und du gibst ihn neu, wenn du ihn noch willst. Erneutes Drücken macht
+nichts schneller, und abbrechen lässt sich das Warten nicht.
+
+---
+
 ## Der Dateilistenfilter
 
 Jedes Zeichen, das im Dateifenster getippt wird und keiner Funktion gehört,
