@@ -379,7 +379,7 @@ use crate::kommandos::pfadeingabe::{
     self, Ergebnis, FernErgebnis, pruefen, pruefen_fuer_archivtab,
 };
 use crate::spalten::Spalte;
-use crate::tabs::{Auswahlversuch, Tabliste, Tabort, Vormerkung};
+use crate::tabs::{Auswahlversuch, Tabliste, Tabort, Tabstand, Vormerkung};
 use crate::vorschaumodell::{Archivangaben, Beschreibung, Fernangaben, Groessenangabe};
 
 use super::abwurf;
@@ -753,28 +753,33 @@ fn archivangaben_des_ordners(ort: &Archivort) -> Fernangaben {
     }
 }
 
-/// Wendet eine Pfadpruefung gegen den Ort an, gegen den sie gestellt wurde,
-/// und nicht gegen den, der jetzt sichtbar ist.
+/// Woran eine Pfadpruefung ihre Frage wiedererkennt: beim Fragen festgehalten
+/// und bei der Antwort gegen den Stand von dann gehalten.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Pfadfrage {
+    /// Die laufende Nummer des Sprungs in diesem Dateifenster.
+    sprung: u64,
+    /// Der sichtbare Tab samt dem Ort, den er zeigt ([`Tabstand`]).
+    tab: Tabstand,
+}
+
+/// Sagt, ob eine Pfadpruefung noch gilt, und gibt sie nur dann heraus.
 ///
-/// **Allein [`Ergebnis::NurAuswahl`] haengt vom Stand ab**: es heisst, dass
-/// die Datei in genau dem Ordner der Frage liegt. Zeigt der Tab inzwischen
-/// einen anderen Ort, waehlte das Setzen der Auswahl dort einen Eintrag
-/// gleichen Namens im falschen Ordner; deshalb wird es zum Wechsel in den
-/// Ordner der Frage mit der Auswahl darauf. `Wechseln` traegt einen absoluten
-/// Ordner und `Meldung` einen Satz, beide gelten unabhaengig vom Stand. Rein
-/// und ohne Systemaufruf.
+/// **Sie gilt, solange alles beim Stand der Frage ist:** seit der Frage wurde
+/// in diesem Dateifenster kein neuer Sprung gefragt, und sichtbar ist derselbe
+/// Tab auf demselben Ort. Sonst faellt sie, in jeder ihrer drei Arten.
+/// `Wechseln` traegt zwar einen absoluten Ordner, wirkt aber im Tab, der bei
+/// der Ankunft sichtbar ist, und stellte einen Tab um, aus dem nicht gefragt
+/// wurde. `NurAuswahl` waehlte im falschen Ordner einen Eintrag gleichen
+/// Namens. `Meldung` faellt mit, weil die Antwort auf einen Befehl je
+/// Dateifenster ein Feld ist: eine spaete Meldung schriebe die Antwort auf den
+/// Befehl zu, der inzwischen gelaufen ist. Rein und ohne Systemaufruf.
 fn gegen_den_ort_der_frage(
     ergebnis: Ergebnis,
-    ordner_der_frage: Option<PathBuf>,
-    ort_unveraendert: bool,
-) -> Ergebnis {
-    match (ergebnis, ordner_der_frage) {
-        (Ergebnis::NurAuswahl { name }, Some(ordner)) if !ort_unveraendert => Ergebnis::Wechseln {
-            ordner,
-            auswahl: Some(name),
-        },
-        (ergebnis, _) => ergebnis,
-    }
+    gefragt: Pfadfrage,
+    jetzt: Pfadfrage,
+) -> Option<Ergebnis> {
+    (gefragt == jetzt).then_some(ergebnis)
 }
 
 /// Der Ordner der Archivdatei: dorthin fuehrt der Aufstieg aus der Wurzel,
@@ -1486,6 +1491,10 @@ pub struct QuelleIvars {
     /// Raeumen nimmt Ordner und Antwort und nicht die laufende Frage**, denn
     /// ihr Faden laeuft weiter, gleich was der Zug tut.
     schreibrechtmerker: RefCell<Schreibrechtmerker>,
+    /// Die Nummer der zuletzt gestellten Pfadpruefung dieses Dateifensters;
+    /// hochgezaehlt allein in [`DateifensterQuelle::pfad_pruefen_lassen`] und
+    /// gelesen als Teil von [`Pfadfrage`].
+    pfadsprung: Cell<u64>,
 }
 
 /// Eine Frage nach dem Schreibrecht: welcher Ordner in welchem Ziehvorgang.
@@ -1835,6 +1844,7 @@ impl DateifensterQuelle {
             beschlossener_vorgang: Cell::new(None),
             abwurfquellen: RefCell::new(None),
             schreibrechtmerker: RefCell::default(),
+            pfadsprung: Cell::new(0),
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
         unsafe { msg_send![super(this), init] }
@@ -3784,18 +3794,14 @@ impl DateifensterQuelle {
     /// In einem fernen Tab ist der Text der Pfadeingabe ein Pfad auf
     /// demselben Server, und [`Self::fern_pfad_anspringen`] wendet ihn an.
     fn pfad_anspringen(&self, pfad: &Path) {
-        let ort = self.angezeigter_ort();
-        let angezeigt = match &ort {
-            Ort::Lokal(ordner) => ordner.clone(),
-            Ort::Fern(fern) => return self.fern_pfad_anspringen(pfad, fern.clone()),
+        let angezeigt = match self.angezeigter_ort() {
+            Ort::Lokal(ordner) => ordner,
+            Ort::Fern(fern) => return self.fern_pfad_anspringen(pfad, fern),
             // Im Archiv ist der Text ein lokaler Pfad wie in einem lokalen Tab,
             // gelesen gegen den Ordner der Archivdatei (E16).
-            Ort::Archiv(archiv) => archivordner(archiv),
+            Ort::Archiv(archiv) => archivordner(&archiv),
         };
-        let gegen = angezeigt.clone();
-        self.pfad_pruefen_lassen(pfad, ort, Some(angezeigt), move |gefragt| {
-            pruefen(gefragt, &gegen)
-        });
+        self.pfad_pruefen_lassen(pfad, move |gefragt| pruefen(gefragt, &angezeigt));
     }
 
     /// Springt zu einem Pfad auf diesem Mac, auch aus einem Archivtab: der
@@ -3812,10 +3818,12 @@ impl DateifensterQuelle {
             Ort::Lokal(_) => self.pfad_anspringen(pfad),
             // Im Archiv verlaesst der Pfad den Ort, und eine Datei fuehrt in
             // ihren Ordner.
-            ort @ Ort::Archiv(_) => {
-                self.pfad_pruefen_lassen(pfad, ort, None, |gefragt| {
-                    pruefen_fuer_archivtab(gefragt)
-                });
+            Ort::Archiv(_) => {
+                // Als Aufruf ausgeschrieben, weil die Probe
+                // `die_zwischenablage_springt_nie_an_einen_serverpfad` ihn in
+                // diesem Zweig mit der Klammer liest.
+                #[allow(clippy::redundant_closure)]
+                self.pfad_pruefen_lassen(pfad, |gefragt| pruefen_fuer_archivtab(gefragt));
             }
             Ort::Fern(_) => {
                 self.befehlsantwort_zeigen(text(Text::AmFernenOrtNichtVerfuegbar));
@@ -3831,15 +3839,14 @@ impl DateifensterQuelle {
     /// als Abschluss, und **sie laeuft allein auf dem Faden**. Der Ausloeser
     /// nennt sie, weil er weiss, gegen welchen Ort geprueft wird; die Probe
     /// `die_pfadeingabe_stellt_auf_dem_hauptfaden_keinen_systemaufruf` haelt,
-    /// dass er ihr Ergebnis nicht selbst anwendet. `ordner_der_frage` ist der
-    /// Ordner, gegen den die Pruefung liest, sofern sie gegen einen liest; ihn
-    /// braucht [`gegen_den_ort_der_frage`]. **Mit der
-    /// Frage reisen diese Quelle und der Ort, den sie beim Fragen zeigte**,
-    /// beide an den Hauptfaden gebunden (`MainThreadBound`), weil ein
-    /// AppKit-Objekt nicht ueber die Fadengrenze geht. Die Quelle reist selbst
-    /// und nicht ihre Fensterseite: sie kennt ihre Seite nicht, und eine
-    /// Suche ueber den Delegierten haette sie am Zeiger wiedererkennen
-    /// muessen.
+    /// dass er ihr Ergebnis nicht selbst anwendet. **Mit der Frage reisen diese
+    /// Quelle und ihr Stand beim Fragen** ([`Pfadfrage`]), an den Hauptfaden
+    /// gebunden (`MainThreadBound`), weil ein AppKit-Objekt nicht ueber die
+    /// Fadengrenze geht. Die Quelle reist selbst und nicht ihre Fensterseite:
+    /// sie kennt ihre Seite nicht, und eine Suche ueber den Delegierten haette
+    /// sie am Zeiger wiedererkennen muessen. Jede Frage zaehlt die
+    /// Sprungnummer hoch, und damit ist jede fruehere ueberholt, auch wenn sie
+    /// zuletzt ankommt.
     ///
     /// **Scheitert der Fadenstart**, kommt das als [`Ergebnis::Meldung`] mit
     /// dem Satz fuer einen Pfad, den es nicht gibt, und dem Fehler des Starts
@@ -3848,13 +3855,16 @@ impl DateifensterQuelle {
     fn pfad_pruefen_lassen(
         &self,
         pfad: &Path,
-        ort: Ort,
-        ordner_der_frage: Option<PathBuf>,
         pruefung: impl FnOnce(&Path) -> Ergebnis + Send + 'static,
     ) {
         let gefragt = pfad.to_path_buf();
         let fuer_den_startfehler = gefragt.clone();
-        let rueckweg = MainThreadBound::new((Weak::from_retained(&self.retain()), ort), self.mtm());
+        let sprung = &self.ivars().pfadsprung;
+        sprung.set(sprung.get() + 1);
+        let rueckweg = MainThreadBound::new(
+            (Weak::from_retained(&self.retain()), self.pfadstand()),
+            self.mtm(),
+        );
         nebenfaden::fragen_lassen(
             PLATTENFRAGE,
             move || pruefung(&gefragt),
@@ -3868,34 +3878,34 @@ impl DateifensterQuelle {
                 ))
             },
             move |mtm, ergebnis| {
-                let (quelle, ort_der_frage) = rueckweg.get(mtm);
+                let (quelle, gefragt) = rueckweg.get(mtm);
                 if let Some(quelle) = quelle.load() {
-                    quelle.pfadpruefung_einziehen(ort_der_frage, ordner_der_frage, ergebnis);
+                    quelle.pfadpruefung_einziehen(*gefragt, ergebnis);
                 }
             },
         );
     }
 
+    /// Der Stand, gegen den eine Pfadpruefung gilt: die letzte Sprungnummer und
+    /// der sichtbare Tab. Fragt allein das Modell.
+    fn pfadstand(&self) -> Pfadfrage {
+        Pfadfrage {
+            sprung: self.ivars().pfadsprung.get(),
+            tab: self.ivars().tabs.borrow().aktiver().stand(),
+        }
+    }
+
     /// Nimmt die Antwort der Pfadpruefung auf dem Hauptfaden entgegen und
-    /// wendet sie an.
+    /// wendet sie an, sofern sie noch gilt.
     ///
-    /// Gerufen aus [`Self::pfad_pruefen_lassen`]. **Angewandt wird gegen den
-    /// Ort der Frage** ([`gegen_den_ort_der_frage`]): zeigt der Tab inzwischen
-    /// einen anderen Ort, wird ein blosses Setzen der Auswahl zum Wechsel in
-    /// den Ordner der Frage. **Sie stellt keinen Systemaufruf**; die Frage an
-    /// die Platte ist auf dem Faden gestellt.
-    fn pfadpruefung_einziehen(
-        &self,
-        ort_der_frage: &Ort,
-        ordner_der_frage: Option<PathBuf>,
-        ergebnis: Ergebnis,
-    ) {
-        let ort_unveraendert = self.angezeigter_ort() == *ort_der_frage;
-        self.ergebnis_anwenden(gegen_den_ort_der_frage(
-            ergebnis,
-            ordner_der_frage,
-            ort_unveraendert,
-        ));
+    /// Gerufen aus [`Self::pfad_pruefen_lassen`]. **Ob sie gilt, entscheidet
+    /// allein [`gegen_den_ort_der_frage`]**, und eine ueberholte Antwort faellt
+    /// ohne ein Wort. **Sie stellt keinen Systemaufruf**; die Frage an die
+    /// Platte ist auf dem Faden gestellt.
+    fn pfadpruefung_einziehen(&self, gefragt: Pfadfrage, ergebnis: Ergebnis) {
+        if let Some(ergebnis) = gegen_den_ort_der_frage(ergebnis, gefragt, self.pfadstand()) {
+            self.ergebnis_anwenden(ergebnis);
+        }
     }
 
     /// Wendet ein lokales Pruefergebnis an; die eine Stelle dafuer.
@@ -8432,42 +8442,113 @@ mod tests {
         );
     }
 
-    /// Eine Antwort auf einen veralteten Stand wird gegen den Ort der Frage
-    /// angewandt: allein `NurAuswahl` haengt am Stand und wird zum Wechsel in
-    /// den Ordner der Frage, sobald der Tab etwas anderes zeigt.
-    #[test]
-    fn nur_auswahl_wird_nach_einem_ortswechsel_zum_wechsel_in_den_ordner_der_frage() {
-        let ordner = PathBuf::from("/Nutzer/k/Projekte");
-        let nur = || Ergebnis::NurAuswahl {
-            name: "idee.txt".to_owned(),
-        };
-        assert_eq!(
-            gegen_den_ort_der_frage(nur(), Some(ordner.clone()), true),
-            nur(),
-            "bei unveraendertem Ort bleibt es beim Setzen der Auswahl"
-        );
-        assert_eq!(
-            gegen_den_ort_der_frage(nur(), Some(ordner.clone()), false),
-            Ergebnis::Wechseln {
-                ordner: ordner.clone(),
-                auswahl: Some("idee.txt".to_owned()),
+    /// Die drei Arten einer Antwort; die Regel gilt fuer jede.
+    fn alle_ergebnisse() -> [Ergebnis; 3] {
+        [
+            Ergebnis::NurAuswahl {
+                name: "idee.txt".to_owned(),
             },
-            "nach einem Ortswechsel waehlte die Auswahl im falschen Ordner"
-        );
-        let wechseln = Ergebnis::Wechseln {
-            ordner: PathBuf::from("/tmp"),
-            auswahl: None,
+            Ergebnis::Wechseln {
+                ordner: PathBuf::from("/tmp"),
+                auswahl: None,
+            },
+            Ergebnis::Meldung("x".to_owned()),
+        ]
+    }
+
+    /// Eine Tabliste auf zwei erfundenen Ordnern, der erste ist sichtbar. Die
+    /// Probe prueft allein die Verwaltung der Tabs; ein Faden gegen einen
+    /// Ordner, den es nicht gibt, laeuft ins Leere.
+    fn zwei_tabs() -> Tabliste {
+        let zustand = krk_core::ablage::Dateifenster {
+            aktiver_tab: 0,
+            tabs: ["/krk-probe/eins", "/krk-probe/zwei"]
+                .iter()
+                .map(krk_core::ablage::Tab::auf)
+                .collect(),
         };
+        Tabliste::aus_zustand(&zustand, crate::heimgriff::ungelesen())
+    }
+
+    fn frage(sprung: u64, tabs: &Tabliste) -> Pfadfrage {
+        Pfadfrage {
+            sprung,
+            tab: tabs.aktiver().stand(),
+        }
+    }
+
+    /// Bei unveraendertem Stand gilt die Antwort, in jeder ihrer Arten.
+    ///
+    /// **Bis zum Befund `261104-1959` hiess diese Probe
+    /// `nur_auswahl_wird_nach_einem_ortswechsel_zum_wechsel_in_den_ordner_der_frage`**
+    /// und hielt das Gegenteil fuer den Ortswechsel fest: `NurAuswahl` wurde zum
+    /// Wechsel in den Ordner der Frage, `Wechseln` und `Meldung` galten
+    /// unabhaengig vom Stand. Das stellte einen Tab um, in dem der Nutzer
+    /// laengst einen anderen Ort gewaehlt hatte; die Faelle stehen in den zwei
+    /// Proben darunter.
+    #[test]
+    fn eine_antwort_gilt_bei_unveraendertem_stand() {
+        let tabs = zwei_tabs();
+        for ergebnis in alle_ergebnisse() {
+            assert_eq!(
+                gegen_den_ort_der_frage(ergebnis.clone(), frage(1, &tabs), frage(1, &tabs)),
+                Some(ergebnis)
+            );
+        }
+    }
+
+    /// Eine Antwort auf eine ueberholte Frage aendert keinen Tab: weder ein
+    /// neuerer Sprung noch ein anderer Ort im selben Tab lassen sie durch, und
+    /// die Rueckkehr auf den Ort der Frage heilt sie nicht.
+    #[test]
+    fn eine_antwort_auf_eine_ueberholte_frage_faellt() {
+        let mut tabs = zwei_tabs();
+        let gefragt = frage(1, &tabs);
+        for ergebnis in alle_ergebnisse() {
+            assert_eq!(
+                gegen_den_ort_der_frage(ergebnis, gefragt, frage(2, &tabs)),
+                None,
+                "ein neuerer Sprung ueberholt die Frage, auch wenn sie zuletzt ankommt"
+            );
+        }
+
+        tabs.ordner_setzen("/krk-probe/anderswo", None);
+        let anderswo = frage(1, &tabs);
+        tabs.ordner_setzen("/krk-probe/eins", None);
+        let zurueck = frage(1, &tabs);
+        for ergebnis in alle_ergebnisse() {
+            assert_eq!(
+                gegen_den_ort_der_frage(ergebnis.clone(), gefragt, anderswo),
+                None,
+                "im Tab ist ein anderer Ort gewaehlt"
+            );
+            assert_eq!(
+                gegen_den_ort_der_frage(ergebnis, gefragt, zurueck),
+                None,
+                "auch der Weg zurueck ist eine Wahl des Nutzers"
+            );
+        }
+    }
+
+    /// Eine Antwort bei gewechseltem Tab stellt den sichtbaren Tab nicht um,
+    /// und gefragt wird dabei der Tab, den das Modell sichtbar nennt.
+    #[test]
+    fn eine_antwort_bei_gewechseltem_tab_stellt_den_sichtbaren_nicht_um() {
+        let mut tabs = zwei_tabs();
+        let gefragt = frage(1, &tabs);
+        assert!(tabs.waehlen(1), "die Probe wechselt den Tab");
+        for ergebnis in alle_ergebnisse() {
+            assert_eq!(
+                gegen_den_ort_der_frage(ergebnis, gefragt, frage(1, &tabs)),
+                None,
+                "der sichtbare Tab ist nicht der der Frage"
+            );
+        }
+        assert!(tabs.waehlen(0), "die Probe wechselt zurueck");
         assert_eq!(
-            gegen_den_ort_der_frage(wechseln.clone(), Some(ordner.clone()), false),
-            wechseln,
-            "ein Wechsel traegt einen absoluten Ordner und haengt nicht am Stand"
-        );
-        let meldung = Ergebnis::Meldung("x".to_owned());
-        assert_eq!(
-            gegen_den_ort_der_frage(meldung.clone(), Some(ordner), false),
-            meldung,
-            "eine Meldung haengt nicht am Stand"
+            gegen_den_ort_der_frage(Ergebnis::Meldung("x".to_owned()), gefragt, frage(1, &tabs)),
+            Some(Ergebnis::Meldung("x".to_owned())),
+            "wer in den Tab der Frage zurueckkehrt, bekommt ihre Antwort dort"
         );
     }
 

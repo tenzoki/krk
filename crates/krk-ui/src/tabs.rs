@@ -77,6 +77,7 @@
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{Receiver, TryRecvError, sync_channel};
 
 use krk_core::ablage::{Dateifenster as Fensterzustand, Tab as Tabzustand};
@@ -211,8 +212,30 @@ struct Verweispruefung {
     antwort: Receiver<Option<Verweisziel>>,
 }
 
+/// Die naechste Nummer fuer einen [`Tabstand`], ueber alle Dateifenster.
+static NAECHSTER_TABSTAND: AtomicU64 = AtomicU64::new(0);
+
+/// Kennzeichnet einen Tab auf dem Ort, den er zeigt: dieselbe Antwort heisst
+/// derselbe Tab und kein anderer Ort seitdem.
+///
+/// **Eine Nummer und keine Stelle**, weil sich die Stelle eines Tabs verschiebt,
+/// sobald ein Tab davor schliesst. Sie hat einen Vergeber, den einen Bau eines
+/// [`Tabinhalt`] in [`Tabinhalt::aus_zustand`], und ein Ortswechsel baut den
+/// Tab neu ([`Tabliste::ort_setzen_an`]), also auch ein Weg von A ueber B zurueck
+/// nach A. Eine Auffrischung baut nichts und laesst sie stehen
+/// ([`Tabliste::aktiven_neu_lesen`]), denn sie ist keine Wahl des Nutzers.
+///
+/// **Was sie nicht sieht:** einen Ort, der einmal an einem stehenden Tab
+/// ausgewechselt wuerde statt ueber einen Neubau, und heute steht kein solcher
+/// Weg in dieser Datei. Umgekehrt zaehlt ein erneutes Setzen desselben Ordners
+/// als anderer Ort, und eine wartende Antwort faellt dann, statt zu wirken.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Tabstand(u64);
+
 /// Ein Tab: sein Ort, sein Inhalt und sein Lesevorgang.
 pub struct Tabinhalt {
+    /// Welcher Tab auf welchem Ort das ist; siehe [`Tabstand`].
+    stand: Tabstand,
     ort: Tabort,
     modell: Ordnermodell,
     lesevorgang: Option<Lesevorgang>,
@@ -353,6 +376,7 @@ impl Tabinhalt {
         modell.sortierung_setzen(zustand.sortierung);
         modell.ohne_inhaltsauftrag_setzen(ohne_inhaltsauftrag);
         Self {
+            stand: Tabstand(NAECHSTER_TABSTAND.fetch_add(1, Ordering::Relaxed)),
             ort: Tabort::Lokal(zustand.ordner.clone()),
             modell,
             lesevorgang: None,
@@ -400,6 +424,12 @@ impl Tabinhalt {
             rueckkehr: zustand.ordner.clone(),
         };
         tab
+    }
+
+    /// Welcher Tab auf welchem Ort das ist; siehe [`Tabstand`].
+    #[must_use]
+    pub fn stand(&self) -> Tabstand {
+        self.stand
     }
 
     /// Was dieser Tab zeigt.
@@ -2627,6 +2657,45 @@ mod tests {
     /// abgebrochen.
     fn liste(ordner: &[&str]) -> Tabliste {
         Tabliste::aus_zustand(&zustand(ordner), ohne_heim())
+    }
+
+    /// Der [`Tabstand`] haelt beim Schliessen eines Tabs davor und bei einer
+    /// Auffrischung und faellt mit jedem Ortswechsel, auch auf dem Weg zurueck.
+    #[test]
+    fn der_tabstand_folgt_dem_tab_und_seinem_ort_und_nicht_der_stelle() {
+        let mut liste = liste(&["/krk-probe/a", "/krk-probe/b"]);
+        let erster = liste.aktiver().stand();
+        assert!(liste.waehlen(1));
+        let zweiter = liste.aktiver().stand();
+        assert_ne!(erster, zweiter, "zwei Tabs tragen zwei Staende");
+
+        liste.aktiven_neu_lesen();
+        assert_eq!(
+            liste.aktiver().stand(),
+            zweiter,
+            "die Auffrischung baut nichts"
+        );
+
+        assert!(liste.waehlen(0));
+        assert_eq!(
+            liste.aktiver().stand(),
+            erster,
+            "der Tabwechsel baut nichts"
+        );
+
+        assert!(liste.schliessen());
+        assert_eq!(liste.aktive_stelle(), 0);
+        assert_eq!(
+            liste.aktiver().stand(),
+            zweiter,
+            "die Stelle verschiebt sich beim Schliessen, der Stand nicht"
+        );
+
+        liste.ordner_setzen("/krk-probe/c", None);
+        let anderswo = liste.aktiver().stand();
+        assert_ne!(anderswo, zweiter, "ein anderer Ort ist ein anderer Stand");
+        liste.ordner_setzen("/krk-probe/b", None);
+        assert_ne!(liste.aktiver().stand(), zweiter, "auch der Weg zurueck");
     }
 
     fn ordnernamen(liste: &Tabliste) -> Vec<String> {
