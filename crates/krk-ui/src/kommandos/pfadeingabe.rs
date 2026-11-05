@@ -446,7 +446,7 @@ mod tests {
         let (_, archivzweig) = vor_fern
             .split_once("Ort::Archiv(_) =>")
             .expect("lokalen_pfad_anspringen hat einen Archivzweig vor dem fernen");
-        assert!(archivzweig.contains("pruefen_fuer_archivtab("));
+        assert!(archivzweig.contains("pruefen_fuer_archivtab"));
         assert!(
             ferner_zweig.contains("AmFernenOrtNichtVerfuegbar"),
             "der ferne Zweig meldet nicht, dass der Sprung dort nicht geht"

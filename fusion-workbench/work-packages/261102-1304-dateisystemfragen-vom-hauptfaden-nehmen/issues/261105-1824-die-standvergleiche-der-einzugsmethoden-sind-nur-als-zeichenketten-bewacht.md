@@ -17,3 +17,6 @@ Dass es anders geht, zeigt `gegen_den_ort_der_frage` (`crates/krk-ui/src/appkit/
 **Richtung.** Ich schlage reine Entscheidungsfunktionen vor, etwa einen `Notizordnerausgang` aus Stand der Frage, jetzigem Stand und Hindernis, und einen zweiten für die Leistenauswahl, je mit einer Tafelprobe. Die Rumpfproben dürfen danach nur noch die Abwesenheit von Systemaufrufen halten. Die Rufer zählt die Gültigkeitsprobe entweder wirklich, oder der Kommentar verliert den Satz.
 
 **Abnahme.** Eine Mutation im Vergleich (`gilt` immer wahr, Nummernvergleich entfernt) macht eine Verhaltensprobe rot. Der Kommentar in `:15081` sagt nichts, was die Probe nicht prüft. Die Klammer in `tabelle.rs:3825` ist ohne `allow` zulässig oder die Probe liest die Form nicht mehr.
+
+---
+Resolved: Die Entscheidungen der Einzugsmethoden sind reine Funktionen mit Tafelproben: `leistenauswahl_gilt`, `notizordnerausgang`, `papierkorb_des_gegenstands` und `loeschausgang` in `crates/krk-ui/src/appkit/anwendung.rs`, `geheimnisgroesse_gilt` in `crates/krk-ui/src/appkit/editor.rs`; die Rumpfproben halten die Abwesenheit von Systemaufrufen und den Ruf der reinen Funktion. `die_lesezeichengueltigkeit_stellt_auf_dem_hauptfaden_keinen_systemaufruf` zaehlt die Rufer ueber `notizordnerproben::rufer`, und das `allow` in `lokalen_pfad_anspringen` ist gefallen.

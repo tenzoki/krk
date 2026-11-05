@@ -2560,6 +2560,12 @@ struct Oeffnungsstand {
     quicknote: bool,
 }
 
+/// Sagt, ob die Antwort auf die Groesse noch gilt ([`Oeffnungsstand`]). Rein und
+/// ohne Systemaufruf.
+fn geheimnisgroesse_gilt(gefragt: &Oeffnungsstand, jetzt: &Oeffnungsstand) -> bool {
+    gefragt == jetzt
+}
+
 /// Die Flaeche, die eine Form zeigt.
 #[must_use]
 fn flaeche_der_form(form: Editorform) -> Flaeche {
@@ -5041,7 +5047,7 @@ impl Editorbereich {
         gefragt: &Oeffnungsstand,
         groesse: Option<u64>,
     ) {
-        if *gefragt != self.oeffnungsstand() {
+        if !geheimnisgroesse_gilt(gefragt, &self.oeffnungsstand()) {
             return;
         }
         // Ein gemerkter Schluessel oeffnet ohne Blatt, ausser an einer
@@ -9965,8 +9971,44 @@ mod tests {
         );
     }
 
-    /// Die Groesse von `secrets.txt` steht auf dem Faden, und ihre Antwort fragt
-    /// den Stand vor allem anderen (Defekt `261104-2000-…`).
+    /// Die Antwort auf die Groesse gilt allein beim Stand der Frage, und jedes Feld
+    /// zaehlt.
+    #[test]
+    fn die_geheimnisgroesse_gilt_allein_beim_stand_der_frage() {
+        let gefragt = Oeffnungsstand {
+            nummer: 2,
+            gehalten: Some(PathBuf::from("/heim/secrets.txt")),
+            quicknote: false,
+        };
+        assert!(geheimnisgroesse_gilt(&gefragt, &gefragt.clone()));
+        for jetzt in [
+            Oeffnungsstand {
+                nummer: 3,
+                ..gefragt.clone()
+            },
+            Oeffnungsstand {
+                gehalten: Some(PathBuf::from("/heim/notes.txt")),
+                ..gefragt.clone()
+            },
+            Oeffnungsstand {
+                gehalten: None,
+                ..gefragt.clone()
+            },
+            Oeffnungsstand {
+                quicknote: true,
+                ..gefragt.clone()
+            },
+        ] {
+            assert!(
+                !geheimnisgroesse_gilt(&gefragt, &jetzt),
+                "ein anderer Stand laesst die Antwort durch: {jetzt:?}"
+            );
+        }
+    }
+
+    /// Die Groesse von `secrets.txt` steht auf dem Faden, und die Einzugsmethode
+    /// ruft die reine Entscheidung (Defekt `261104-2000-…`; die Faelle haelt
+    /// `die_geheimnisgroesse_gilt_allein_beim_stand_der_frage`).
     ///
     /// Dieselbe Bauform wie
     /// `der_loeschweg_stellt_auf_dem_hauptfaden_keinen_systemaufruf`. **Was sie
@@ -10000,11 +10042,9 @@ mod tests {
         ] {
             assert!(huelle.contains(nadel), "die Huelle enthaelt {nadel} nicht");
         }
-        let einzug = rumpf(&quelle, "geheimnisgroesse_einziehen");
-        let stand = einzug.find("self.oeffnungsstand()").expect("kein Stand");
         assert!(
-            stand < einzug.find("geheimnisweg(").expect("kein Weg"),
-            "die Einzugsmethode fragt den Stand zu spaet"
+            rumpf(&quelle, "geheimnisgroesse_einziehen").contains("if !geheimnisgroesse_gilt("),
+            "die Einzugsmethode entscheidet nicht ueber die reine Funktion"
         );
         for name in ["datei_oeffnen", "geheimnisse_oeffnen", "neu_laden"] {
             assert!(

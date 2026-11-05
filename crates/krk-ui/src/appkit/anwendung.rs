@@ -876,6 +876,17 @@ struct Leistenauswahlstand {
     blatt: bool,
 }
 
+/// Sagt, ob die Antwort einer Auswahl noch ausgefuehrt wird: die Zeile traegt
+/// noch ihr Ziel, und alles ist beim Stand der Frage. Rein und ohne Systemaufruf.
+fn leistenauswahl_gilt(
+    gewaehlt: Option<&Ziel>,
+    antwort: &Ziel,
+    gefragt: Leistenauswahlstand,
+    jetzt: Leistenauswahlstand,
+) -> bool {
+    gewaehlt == Some(antwort) && gefragt == jetzt
+}
+
 /// Zaehlt die F2-Befehle, damit eine doppelt gedrueckte F2 nichts doppelt oeffnet.
 ///
 /// **Eine Nummer statt einer Sperre**, aus dem Grund von [`Loeschbefehle`]: eine
@@ -963,6 +974,134 @@ struct Notizordnerantwort {
     ausgang: Result<heimordner::Bereitstellung, heimordner::Hindernis>,
     /// Der Satz, wenn die Sperre sich nicht nehmen liess.
     sperrsatz: Option<String>,
+}
+
+/// Was nach dem Griff aus einer gelungenen Bereitstellung von F2 folgt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Notizordnerfolge {
+    /// Ein neuerer F2 hat sie ueberholt: ihre Saetze warten auf die juengste
+    /// Antwort ([`Notizordnerbefehle`]).
+    Zurueckstellen,
+    /// Es ist die juengste, aber der Stand ist ein anderer: die Saetze und kein
+    /// Tab und kein Fokus.
+    NurSaetze,
+    /// Alles ist beim Stand des Befehls: Tab, Saetze und Fokus.
+    TabUndFokus,
+}
+
+/// Was aus der Antwort von F2 folgt ([`notizordnerausgang`]).
+#[derive(Debug, PartialEq, Eq)]
+enum Notizordnerausgang {
+    /// Das Hindernis eines Befehls, der noch gilt, steht in der Statuszeile.
+    HindernisZeigen(heimordner::Hindernis),
+    /// Das Hindernis gehoert zu einem Befehl, der nicht mehr gilt, und faellt mit.
+    HindernisFaellt,
+    /// Die Bereitstellung ist gelungen.
+    Bereit {
+        /// Was auf der Platte entstanden ist; ihre Saetze fallen in keinem Fall.
+        bereitstellung: Box<heimordner::Bereitstellung>,
+        /// Ob der [`Heimordner`] der Antwort in den Griff geht. Nicht, wenn
+        /// inzwischen ein anderer Ort gilt: sie nennt den alten, und die neuere
+        /// Wahl ueberschriebe sie.
+        griff_ersetzen: bool,
+        /// Was danach geschieht.
+        folge: Notizordnerfolge,
+    },
+}
+
+/// Die Dreiwege-Entscheidung ueber die Antwort von F2, aus dem Stand des Befehls,
+/// dem jetzigen und dem, was das Anlegen ergeben hat. Rein und ohne Systemaufruf;
+/// die Faelle haelt die Tafel `f2_entscheidet_je_stand_und_hindernis`.
+fn notizordnerausgang(
+    gefragt: &Notizordnerstand,
+    jetzt: &Notizordnerstand,
+    ausgang: Result<heimordner::Bereitstellung, heimordner::Hindernis>,
+) -> Notizordnerausgang {
+    let gilt = gefragt == jetzt;
+    let bereitstellung = match ausgang {
+        Ok(bereitstellung) => bereitstellung,
+        Err(hindernis) if gilt => return Notizordnerausgang::HindernisZeigen(hindernis),
+        Err(_) => return Notizordnerausgang::HindernisFaellt,
+    };
+    let folge = if gefragt.nummer != jetzt.nummer {
+        Notizordnerfolge::Zurueckstellen
+    } else if gilt {
+        Notizordnerfolge::TabUndFokus
+    } else {
+        Notizordnerfolge::NurSaetze
+    };
+    Notizordnerausgang::Bereit {
+        bereitstellung: Box::new(bereitstellung),
+        griff_ersetzen: gefragt.ort == jetzt.ort,
+        folge,
+    }
+}
+
+/// Die Antwort auf die Papierkorbfrage: am Wert, solange der Gegenstand sie schon
+/// entscheidet, sonst aus dem Befund vom Faden. Rein und ohne Systemaufruf.
+fn papierkorb_des_gegenstands(
+    gegenstand: &Loeschgegenstand,
+    befund: Option<&Loeschbefund>,
+) -> Erlaubnisbefund {
+    match gegenstand {
+        // Ein Server hat keinen Papierkorb; entschieden am Wert und ohne
+        // Systemaufruf (Entscheidung 12).
+        Loeschgegenstand::Fern { .. } => Erlaubnisbefund::Nein,
+        // Ein Archiv ebenso nicht, am Wert und ohne Systemaufruf (E17 des Plans
+        // der Archive).
+        Loeschgegenstand::Archiv { .. } => Erlaubnisbefund::Nein,
+        // Der Befund kam vom Faden; fehlt er, ist nichts entschieden.
+        Loeschgegenstand::Lokal { .. } => {
+            befund.map_or(Erlaubnisbefund::Unentschieden, |befund| befund.papierkorb)
+        }
+    }
+}
+
+/// Was aus der Antwort eines Loeschbefehls folgt, der noch der juengste ist.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Loeschausgang {
+    /// Es laeuft schon ein Vorgang.
+    VorgangLaeuft,
+    /// Es ist nichts ausgewaehlt.
+    NichtsAusgewaehlt,
+    /// Die Tafel verlangt ein Blatt, und es steht schon eines.
+    BlattSteht,
+    /// Das Blatt geht auf, auf diesem Weg und mit diesem Grund.
+    Blatt(Loeschweg, Endgueltiggrund),
+}
+
+/// Die Entscheidung ueber die Antwort eines Loeschbefehls, nach der Frage nach der
+/// Nummer ([`Loeschbefehle`]): die Stufentafel und das stehende Blatt. Rein und
+/// ohne Systemaufruf.
+fn loeschausgang(
+    vorgang_laeuft: bool,
+    gegenstand: &Loeschgegenstand,
+    befund: Option<&Loeschbefund>,
+    blatt_steht: bool,
+) -> Loeschausgang {
+    match loeschwarnung::vor_der_rueckfrage(vorgang_laeuft, gegenstand.ist_leer(), || {
+        papierkorb_des_gegenstands(gegenstand, befund)
+    }) {
+        Vorstufe::VorgangLaeuft => Loeschausgang::VorgangLaeuft,
+        Vorstufe::NichtsAusgewaehlt => Loeschausgang::NichtsAusgewaehlt,
+        // Kein zweites Blatt dahinter und kein zweiter Griff im Schlitz.
+        Vorstufe::Rueckfrage | Vorstufe::EndgueltigeRueckfrage(_) if blatt_steht => {
+            Loeschausgang::BlattSteht
+        }
+        // Ein ferner Gegenstand erreicht diesen Zweig nicht, weil die Tafel fuer
+        // ihn nein bekam; kaeme er doch, ginge er den endgueltigen Weg, denn
+        // einen anderen hat er nicht (`Loeschgegenstand::weg`), und sein Grund
+        // ist dann der sichere: ein Server und ein Archiv haben keinen Papierkorb.
+        Vorstufe::Rueckfrage => {
+            Loeschausgang::Blatt(Loeschweg::Papierkorb, Endgueltiggrund::KeinPapierkorb)
+        }
+        // Sicher kein Papierkorb, oder es liess sich nicht feststellen; der Grund
+        // reist aus der Tafel mit und waehlt allein den ersten Satz der
+        // Erlaeuterung (261019).
+        Vorstufe::EndgueltigeRueckfrage(grund) => {
+            Loeschausgang::Blatt(Loeschweg::Endgueltig, grund)
+        }
+    }
 }
 
 /// Was die Platte ueber ein lokales Loeschziel sagt, in einem Zug erhoben
@@ -3224,10 +3363,13 @@ impl Anwendungsdelegierter {
         };
         let leiste = selbst.leiste().quelle();
         leiste.auswahlbefund_einziehen(auswahl);
-        let dieselbe = leiste
-            .gewaehlt()
-            .is_some_and(|gewaehlt| gewaehlt.ziel == auswahl.ziel);
-        if dieselbe && gefragt == selbst.leistenauswahlstand() {
+        let gewaehlt = leiste.gewaehlt();
+        if leistenauswahl_gilt(
+            gewaehlt.as_ref().map(|gewaehlt| &gewaehlt.ziel),
+            &auswahl.ziel,
+            gefragt,
+            selbst.leistenauswahlstand(),
+        ) {
             selbst.leistenauswahl_vollziehen(auswahl);
         }
     }
@@ -6745,7 +6887,8 @@ impl Anwendungsdelegierter {
     /// aus, **sofern sie noch gilt**; einen Systemaufruf an die Platte stellt sie
     /// nicht.
     ///
-    /// Was aus der Antwort folgt, faellt je nach dem, was sich geaendert hat:
+    /// Was aus der Antwort folgt, entscheidet [`notizordnerausgang`], und es faellt
+    /// je nach dem, was sich geaendert hat:
     ///
     /// - **Ein neuerer F2** ueberholt sie: kein Tab, kein Fokus, und ihre Saetze
     ///   warten auf die juengste Antwort ([`Notizordnerbefehle`]).
@@ -6761,34 +6904,41 @@ impl Anwendungsdelegierter {
     /// ihren Gegenstand selbst.
     fn notizordner_einziehen(&self, gefragt: Notizordnerstand, antwort: Notizordnerantwort) {
         let jetzt = self.notizordnerstand();
-        let gilt = gefragt == jetzt;
         let seite = gefragt.seite;
         let Notizordnerantwort {
             heim,
             ausgang,
             sperrsatz,
         } = antwort;
-        let bereitstellung = match ausgang {
-            Ok(bereitstellung) => bereitstellung,
-            Err(hindernis) => {
-                if gilt {
+        let (bereitstellung, griff_ersetzen, folge) =
+            match notizordnerausgang(&gefragt, &jetzt, ausgang) {
+                Notizordnerausgang::HindernisFaellt => return,
+                Notizordnerausgang::HindernisZeigen(hindernis) => {
                     self.antwort_zeigen(seite, &hindernis.meldung(heim.anzeigename()));
+                    return;
                 }
-                return;
-            }
-        };
-        if gefragt.ort == jetzt.ort {
+                Notizordnerausgang::Bereit {
+                    bereitstellung,
+                    griff_ersetzen,
+                    folge,
+                } => (bereitstellung, griff_ersetzen, folge),
+            };
+        if griff_ersetzen {
             heimgriff::ersetzen(&self.ivars().heim, Notizlage::gilt(heim.clone()));
         }
         let mut saetze = bereitstellung.meldungen();
         saetze.extend(sperrsatz);
         let befehle = &self.ivars().notizordnerbefehle;
-        if gefragt.nummer != jetzt.nummer {
-            befehle.zurueckstellen(saetze);
-            return;
-        }
+        let tab_und_fokus = match folge {
+            Notizordnerfolge::Zurueckstellen => {
+                befehle.zurueckstellen(saetze);
+                return;
+            }
+            Notizordnerfolge::NurSaetze => false,
+            Notizordnerfolge::TabUndFokus => true,
+        };
         let saetze = befehle.saetze_mit(saetze);
-        if gilt {
+        if tab_und_fokus {
             let tabelle = self.dateifenster(seite).quelle();
             let vorhanden = tabelle
                 .tabordner()
@@ -6807,7 +6957,7 @@ impl Anwendungsdelegierter {
             let antwort = saetze.join("; ");
             self.antwort_zeigen(seite, &antwort);
         }
-        if gilt {
+        if tab_und_fokus {
             let _ = self.fokus_holen(Fokus::Dateifenster);
         }
     }
@@ -8887,64 +9037,36 @@ impl Anwendungsdelegierter {
         // dieser Zweig braucht von ihrer Antwort allein, ob es sie gibt.
         let vorgang_laeuft = self.vorgang_laeuft().is_some();
 
-        match loeschwarnung::vor_der_rueckfrage(vorgang_laeuft, gegenstand.ist_leer(), || {
-            match &gegenstand {
-                // Ein Server hat keinen Papierkorb; entschieden am Wert und
-                // ohne Systemaufruf (Entscheidung 12).
-                Loeschgegenstand::Fern { .. } => Erlaubnisbefund::Nein,
-                // Ein Archiv ebenso nicht, am Wert und ohne Systemaufruf (E17
-                // des Plans der Archive).
-                Loeschgegenstand::Archiv { .. } => Erlaubnisbefund::Nein,
-                // Der Befund kam vom Faden; fehlt er, ist nichts entschieden.
-                Loeschgegenstand::Lokal { .. } => befund
-                    .as_ref()
-                    .map_or(Erlaubnisbefund::Unentschieden, |befund| befund.papierkorb),
-            }
-        }) {
+        match loeschausgang(
+            vorgang_laeuft,
+            &gegenstand,
+            befund.as_ref(),
+            self.blatt_steht(),
+        ) {
             // Die Meldung baut `vorgang_laeuft_schon`, die eine Stelle,
             // die sie fuer jeden ihrer Frager baut; sie nennt die Art des
             // laufenden Vorgangs und liest ihn dafuer ein zweites Mal. Es ist
             // derselbe Durchgang der Ereignisschleife wie oben, also dieselbe
             // Antwort, und `let _ =` heisst hier wie ueberall im Baum „ich
             // brauche den Wert nicht": entschieden ist die Stufe schon.
-            Vorstufe::VorgangLaeuft => {
+            Loeschausgang::VorgangLaeuft => {
                 let _ = self.vorgang_laeuft_schon(seite);
                 true
             }
-            Vorstufe::NichtsAusgewaehlt => {
+            Loeschausgang::NichtsAusgewaehlt => {
                 self.antwort_zeigen(seite, text(Text::NichtsAusgewaehlt));
                 true
             }
-            // Die Tafel verlangt ein Blatt, und es steht schon eines: kein
-            // zweites dahinter und kein zweiter Griff im Schlitz. Gemeldet wird
-            // auf der gereisten Seite, und die Antwort verfaellt.
-            Vorstufe::Rueckfrage | Vorstufe::EndgueltigeRueckfrage(_) if self.blatt_steht() => {
+            // Gemeldet wird auf der gereisten Seite, und die Antwort verfaellt.
+            Loeschausgang::BlattSteht => {
                 self.antwort_zeigen(seite, text(Text::BlattSteht));
                 true
             }
-            // Ein ferner Gegenstand erreicht diesen Zweig nicht, weil die
-            // Tafel fuer ihn nein bekam; kaeme er doch, ginge er den
-            // endgueltigen Weg, denn einen anderen hat er nicht
-            // (`Loeschgegenstand::weg`), und sein Grund ist dann der sichere:
-            // ein Server und ein Archiv haben keinen Papierkorb.
-            Vorstufe::Rueckfrage => self.loeschblatt_zeigen(
-                Loeschweg::Papierkorb,
-                Endgueltiggrund::KeinPapierkorb,
-                gegenstand,
-                befund,
-                schaltflaeche,
-            ),
-            // Sicher kein Papierkorb, oder es liess sich nicht feststellen;
-            // der Grund reist aus der Tafel mit und waehlt allein den ersten
-            // Satz der Erlaeuterung (261019). Eine weitere Frage an die Platte
-            // entsteht dabei nicht: der Befund kam vom Faden.
-            Vorstufe::EndgueltigeRueckfrage(grund) => self.loeschblatt_zeigen(
-                Loeschweg::Endgueltig,
-                grund,
-                gegenstand,
-                befund,
-                schaltflaeche,
-            ),
+            // Eine weitere Frage an die Platte entsteht dabei nicht: der Befund
+            // kam vom Faden.
+            Loeschausgang::Blatt(weg, grund) => {
+                self.loeschblatt_zeigen(weg, grund, gegenstand, befund, schaltflaeche)
+            }
         }
     }
 
@@ -15069,8 +15191,13 @@ mod quicknoteproben {
 /// nicht mit den Meldungen (Defekt `261104-2000-…`).
 #[cfg(test)]
 mod geraeteproben {
-    use super::Fragetakt;
+    use std::path::PathBuf;
+
+    use krk_core::ablage::{Fensterseite, Ziel};
+
+    use super::notizordnerproben::{rufer, tabstand};
     use super::quelltextproben::{datei, diese_datei, rumpf};
+    use super::{Fragetakt, Leistenauswahlstand, leistenauswahl_gilt};
 
     /// Ein Sturm von Meldungen stellt eine Frage und danach eine Nachfrage, und
     /// eine Frage, die nie zurueckkommt, stellt gar keine weitere.
@@ -15135,7 +15262,10 @@ mod geraeteproben {
     /// **Was sie nicht sieht:** eine tiefer gerufene Frage, deren Name nicht als
     /// Nadel dasteht. Deshalb haelt sie zusaetzlich, dass `.gueltig()` im
     /// Betriebscode des Modells allein in den zwei Funktionen steht, die auf dem
-    /// Faden laufen, und dass die allein aus den zwei Huellen gerufen werden.
+    /// Faden laufen, und dass die allein aus den zwei Huellen gerufen werden,
+    /// gezaehlt ueber den ausgelieferten Code aller Kisten
+    /// ([`super::notizordnerproben::rufer`]). Ein Verweis ohne Klammer, etwa
+    /// `Auswahl::nachgefragt` als Abschluss, entgeht dieser Zaehlung.
     #[test]
     fn die_lesezeichengueltigkeit_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
         let modell = datei("krk-ui/src/leistenmodell.rs");
@@ -15197,14 +15327,79 @@ mod geraeteproben {
         let huelle = rumpf(&anwendung, "leistenauswahl_fragen_lassen");
         assert!(huelle.contains(concat!("nebenfaden::befehl_", "fragen_lassen(")));
         assert!(huelle.contains(concat!("nach", "gefragt(")));
+        for (name, datei) in [
+            ("beantworten", "krk-ui/src/appkit/leiste.rs"),
+            ("nachgefragt", "krk-ui/src/appkit/anwendung.rs"),
+        ] {
+            assert_eq!(
+                rufer(name),
+                [(datei.to_owned(), 1)],
+                "{name} hat einen Rufer ausserhalb seiner Huelle"
+            );
+        }
     }
 
-    /// Eine Auswahl geht vor der Platte allein ueber die Huelle, und ihre Antwort
-    /// wirkt allein gegen den Stand, aus dem gefragt wurde.
+    /// Die Antwort einer Auswahl wirkt allein, solange die Zeile ihr Ziel traegt und
+    /// jedes Feld beim Stand der Frage ist. Eine Rueckkehr auf den Stand heilt nichts,
+    /// weil die Nummer der Auswahl nur steigt.
+    #[test]
+    fn eine_auswahl_gilt_je_ziel_und_stand() {
+        let ziel = |ordner: &str| Ziel::Ordner {
+            ordner: PathBuf::from(ordner),
+            auswahl: None,
+        };
+        let gefragt = Leistenauswahlstand {
+            nummer: 2,
+            seite: Fensterseite::Links,
+            tab: tabstand(),
+            blatt: false,
+        };
+        let antwort = ziel("/a");
+        let gewaehlt = ziel("/a");
+        assert!(leistenauswahl_gilt(
+            Some(&gewaehlt),
+            &antwort,
+            gefragt,
+            gefragt
+        ));
+        let anderes = ziel("/b");
+        for zeile in [None, Some(&anderes)] {
+            assert!(
+                !leistenauswahl_gilt(zeile, &antwort, gefragt, gefragt),
+                "die Zeile traegt ein anderes Ziel: {zeile:?}"
+            );
+        }
+        for jetzt in [
+            Leistenauswahlstand {
+                nummer: 3,
+                ..gefragt
+            },
+            Leistenauswahlstand {
+                seite: Fensterseite::Rechts,
+                ..gefragt
+            },
+            Leistenauswahlstand {
+                tab: tabstand(),
+                ..gefragt
+            },
+            Leistenauswahlstand {
+                blatt: true,
+                ..gefragt
+            },
+        ] {
+            assert!(
+                !leistenauswahl_gilt(Some(&gewaehlt), &antwort, gefragt, jetzt),
+                "ein anderer Stand fuehrt die Auswahl aus: {jetzt:?}"
+            );
+        }
+    }
+
+    /// Eine Auswahl geht vor der Platte allein ueber die Huelle, und die
+    /// Einzugsmethode ruft die reine Entscheidung
+    /// ([`eine_auswahl_gilt_je_ziel_und_stand`]).
     ///
-    /// **Was sie nicht sieht:** ob die Einzugsmethode den Stand richtig vergleicht,
-    /// das sieht allein das laufende Buendel; `Leistenauswahlstand` ist ein Wert
-    /// mit abgeleiteter Gleichheit.
+    /// **Was sie nicht sieht:** ob die Einzugsmethode der Entscheidung folgt; das
+    /// sieht allein das laufende Buendel.
     #[test]
     fn eine_auswahl_wirkt_allein_gegen_den_stand_der_frage() {
         let anwendung = diese_datei();
@@ -15212,13 +15407,10 @@ mod geraeteproben {
         assert!(ausfuehren.contains("auswahl.fragt_die_platte"));
         assert!(ausfuehren.contains("Self::leistenauswahl_fragen_lassen("));
         assert!(ausfuehren.contains("self.leistenauswahl_vollziehen(auswahl)"));
-        let einziehen = rumpf(&anwendung, "leistenauswahl_einziehen");
-        assert!(einziehen.contains("gefragt == selbst.leistenauswahlstand()"));
-        assert!(einziehen.contains("gewaehlt.ziel == auswahl.ziel"));
-        let stand = rumpf(&anwendung, "leistenauswahlstand");
-        for feld in ["nummer:", "seite,", "tab:", "blatt:"] {
-            assert!(stand.contains(feld), "der Stand fuehrt {feld} nicht");
-        }
+        assert!(
+            rumpf(&anwendung, "leistenauswahl_einziehen").contains("if leistenauswahl_gilt("),
+            "die Einzugsmethode entscheidet nicht ueber die reine Funktion"
+        );
     }
 
     /// Der Wert im Modell erreicht seine drei Stellen in der Ansicht und beim
@@ -15274,8 +15466,29 @@ mod geraeteproben {
 /// im Quelltext das kann.
 #[cfg(test)]
 mod notizordnerproben {
+    use std::path::PathBuf;
+
+    use krk_core::ablage::Fensterseite;
+    use krk_core::heimordner::{Bereitstellung, Hindernis, Zettelmerker};
+
     use super::quelltextproben::{diese_datei, rumpf};
+    use super::{
+        Fokus, Notizordnerausgang, Notizordnerfolge, Notizordnerstand, notizordnerausgang,
+    };
     use crate::quellbaum::{aufrufstellen, quelldateien};
+    use crate::tabs::{Tabliste, Tabstand};
+
+    /// Ein Tabstand, den noch kein anderer Tab traegt. Eine neue Tabliste baut
+    /// einen neuen Tab, und nur so entsteht der Wert.
+    pub(super) fn tabstand() -> Tabstand {
+        let zustand = krk_core::ablage::Dateifenster {
+            aktiver_tab: 0,
+            tabs: vec![krk_core::ablage::Tab::auf("/krk-probe/eins")],
+        };
+        Tabliste::aus_zustand(&zustand, crate::heimgriff::ungelesen())
+            .aktiver()
+            .stand()
+    }
 
     /// Der ausgelieferte Code jeder Datei: ohne Probenziele und ohne die
     /// Pruefmodule hinter `#[cfg(test)]`.
@@ -15318,7 +15531,7 @@ mod notizordnerproben {
     }
 
     /// Die Dateien, in denen `name` gerufen wird, je mit der Zahl der Rufe.
-    fn rufer(name: &str) -> Vec<(String, usize)> {
+    pub(super) fn rufer(name: &str) -> Vec<(String, usize)> {
         ausgelieferter_code()
             .into_iter()
             .map(|(datei, code)| {
@@ -15455,7 +15668,8 @@ mod notizordnerproben {
     }
 
     /// F2 stellt auf dem Hauptfaden keinen Systemaufruf, und die Einzugsmethode
-    /// fragt ihren Stand vor dem Tab (Defekt `261104-2000-…`).
+    /// ruft die reine Entscheidung (Defekt `261104-2000-…`; die Faelle haelt
+    /// `f2_entscheidet_je_stand_und_hindernis`).
     ///
     /// Dieselbe Bauform wie
     /// `der_loeschweg_stellt_auf_dem_hauptfaden_keinen_systemaufruf`. **Was sie
@@ -15505,22 +15719,117 @@ mod notizordnerproben {
             !ausloeser.contains("tab_oeffnen"),
             "der Ausloeser oeffnet den Tab vor der Antwort"
         );
-        let einzug = rumpf(&datei, "notizordner_einziehen");
-        let stand = einzug.find("self.notizordnerstand()").expect("kein Stand");
-        let griff = einzug.find("heimgriff::ersetzen").expect("kein Griff");
-        let tab = einzug.find("tab_oeffnen").expect("kein Tab");
         assert!(
-            stand < griff && griff < tab,
-            "der Stand wird zu spaet gefragt"
+            rumpf(&datei, "notizordner_einziehen").contains("match notizordnerausgang("),
+            "die Einzugsmethode entscheidet nicht ueber die reine Funktion"
         );
-        for nadel in [
-            "if gefragt.ort == jetzt.ort",
-            "gefragt.nummer != jetzt.nummer",
-            "if gilt {",
-        ] {
-            assert!(
-                einzug.contains(nadel),
-                "die Einzugsmethode enthaelt {nadel} nicht"
+    }
+
+    /// Die Tafel der Antwort von F2: je Feld des Stands ein Abweichen, jeweils mit
+    /// und ohne Hindernis.
+    #[test]
+    fn f2_entscheidet_je_stand_und_hindernis() {
+        let gefragt = Notizordnerstand {
+            nummer: 2,
+            seite: Fensterseite::Links,
+            tab: tabstand(),
+            ersthelfer: Fokus::Dateifenster,
+            blatt: false,
+            ort: Some(PathBuf::from("/heim")),
+        };
+        let bereitstellung = || Bereitstellung {
+            ordner_angelegt: false,
+            angelegt: Vec::new(),
+            nicht_angelegt: Vec::new(),
+            uebernahme: None,
+            zettelmerker: Zettelmerker::NichtsZuVermerken,
+            merkerersetzung: None,
+            alte_geheimnisse: None,
+            ort: "heim".to_owned(),
+        };
+        let mit = |aenderung: fn(&mut Notizordnerstand)| {
+            let mut jetzt = gefragt.clone();
+            aenderung(&mut jetzt);
+            jetzt
+        };
+        let tafel = [
+            (
+                "derselbe Stand",
+                gefragt.clone(),
+                true,
+                Notizordnerfolge::TabUndFokus,
+            ),
+            (
+                "neuerer Befehl",
+                mit(|jetzt| jetzt.nummer = 3),
+                true,
+                Notizordnerfolge::Zurueckstellen,
+            ),
+            (
+                "anderes Dateifenster",
+                mit(|jetzt| jetzt.seite = Fensterseite::Rechts),
+                true,
+                Notizordnerfolge::NurSaetze,
+            ),
+            (
+                "anderer Tab",
+                mit(|jetzt| jetzt.tab = tabstand()),
+                true,
+                Notizordnerfolge::NurSaetze,
+            ),
+            (
+                "anderer Ersthelfer",
+                mit(|jetzt| jetzt.ersthelfer = Fokus::Leiste),
+                true,
+                Notizordnerfolge::NurSaetze,
+            ),
+            (
+                "ein Blatt steht",
+                mit(|jetzt| jetzt.blatt = true),
+                true,
+                Notizordnerfolge::NurSaetze,
+            ),
+            (
+                "anderer Ort",
+                mit(|jetzt| jetzt.ort = Some(PathBuf::from("/anderswo"))),
+                false,
+                Notizordnerfolge::NurSaetze,
+            ),
+            (
+                "kein Ort mehr",
+                mit(|jetzt| jetzt.ort = None),
+                false,
+                Notizordnerfolge::NurSaetze,
+            ),
+            (
+                "neuerer Befehl und anderer Ort",
+                mit(|jetzt| {
+                    jetzt.nummer = 3;
+                    jetzt.ort = None;
+                }),
+                false,
+                Notizordnerfolge::Zurueckstellen,
+            ),
+        ];
+        for (fall, jetzt, griff_ersetzen, folge) in tafel {
+            assert_eq!(
+                notizordnerausgang(&gefragt, &jetzt, Ok(bereitstellung())),
+                Notizordnerausgang::Bereit {
+                    bereitstellung: Box::new(bereitstellung()),
+                    griff_ersetzen,
+                    folge,
+                },
+                "{fall}"
+            );
+            let hindernis = if jetzt == gefragt {
+                Notizordnerausgang::HindernisZeigen(Hindernis::KeinOrdner)
+            } else {
+                Notizordnerausgang::HindernisFaellt
+            };
+            assert_eq!(
+                notizordnerausgang(&gefragt, &jetzt, Err(Hindernis::KeinOrdner)),
+                hindernis,
+                "{fall}, mit Hindernis"
             );
         }
     }
@@ -19017,11 +19326,6 @@ mod fernvorgangsproben {
                 );
             }
         }
-        assert!(
-            rumpf(&datei, "loeschbefund_einziehen")
-                .contains("Loeschgegenstand::Fern { .. } => Erlaubnisbefund::Nein"),
-            "ein ferner Ort beantwortet die Papierkorbfrage nicht am Wert"
-        );
     }
 
     /// Der lokale Loeschweg stellt auf dem Hauptfaden keinen Systemaufruf (Plan
@@ -19098,13 +19402,13 @@ mod fernvorgangsproben {
         }
         let einzugsrumpf = rumpf(&datei, einzug);
         assert!(
-            einzugsrumpf.contains(concat!("loeschwarnung::vor_der_", "rueckfrage(")),
-            "{einzug} fragt die Stufentafel nicht"
+            einzugsrumpf.contains("match loeschausgang("),
+            "{einzug} entscheidet nicht ueber die reine Funktion"
         );
         let nummernfrage = einzugsrumpf
             .find(concat!("loeschbefehle", ".ist_juengster(anfrage.nummer)"))
             .unwrap_or_else(|| panic!("{einzug} fragt die Nummer nicht"));
-        let erster_ausstieg = ["return", concat!("vor_der_", "rueckfrage(")]
+        let erster_ausstieg = ["return", "match loeschausgang("]
             .iter()
             .filter_map(|nadel| einzugsrumpf.find(nadel))
             .min()
@@ -19182,7 +19486,7 @@ mod fernvorgangsproben {
             ))
             .expect("die Einzugsmethode verwirft keine ueberholte Antwort");
         for nadel in [
-            concat!("loeschwarnung::vor_der_", "rueckfrage("),
+            "match loeschausgang(",
             concat!("self.loeschblatt_", "zeigen("),
             "self.antwort_zeigen(",
             "self.vorgang_laeuft(",
@@ -19206,11 +19510,12 @@ mod fernvorgangsproben {
     /// Das Loeschblatt geht nie ueber einem stehenden Blatt auf (Defekt
     /// `261104-1956-das-loeschblatt-oeffnet-nach-der-antwort-…`).
     ///
-    /// Gehalten wird am Rumpf der Einzugsmethode, dass der Zweig mit
-    /// `blatt_steht` beide Blattstufen der Tafel faengt, vor dem ersten Ruf von
-    /// `loeschblatt_zeigen` steht und auf der gereisten Seite meldet. Daneben
-    /// haelt sie, dass `loeschblatt_zeigen` nur diese zwei Rufe hat und in seinem
-    /// Rumpf genau ein Blatt und genau einen Griff entstehen.
+    /// Dass `blatt_steht` beide Blattstufen faengt, haelt die Tafel
+    /// `die_antwort_eines_loeschbefehls_folgt_der_tafel`. Gehalten wird hier am
+    /// Rumpf der Einzugsmethode, dass sie die Antwort von `blatt_steht` an die
+    /// Entscheidung gibt und auf der gereisten Seite meldet. Daneben haelt sie,
+    /// dass `loeschblatt_zeigen` nur diesen einen Ruf hat und in seinem Rumpf genau
+    /// ein Blatt und genau einen Griff entstehen.
     ///
     /// **Was sie nicht sieht:** was `attachedSheet` antwortet und ob die Meldung
     /// in der Statuszeile zu lesen ist, solange das andere Blatt steht; das
@@ -19220,11 +19525,8 @@ mod fernvorgangsproben {
         let datei = diese_datei();
         let einzugsrumpf = rumpf(&datei, concat!("loeschbefund_", "einziehen"));
         let frage = einzugsrumpf
-            .find(concat!(
-                "Vorstufe::Rueckfrage | Vorstufe::EndgueltigeRueckfrage(_) ",
-                "if self.blatt_steht()"
-            ))
-            .expect("die Einzugsmethode faengt nicht beide Blattstufen mit blatt_steht");
+            .find("self.blatt_steht()")
+            .expect("die Einzugsmethode gibt blatt_steht nicht an die Entscheidung");
         let erster_ruf = einzugsrumpf
             .find(concat!("self.loeschblatt_", "zeigen("))
             .expect("die Einzugsmethode ruft das Blatt nicht");
@@ -19241,16 +19543,16 @@ mod fernvorgangsproben {
         );
         assert_eq!(
             datei.matches(concat!("loeschblatt_", "zeigen(")).count(),
-            3,
-            "loeschblatt_zeigen hat neben seinem Kopf nicht genau die zwei Rufe \
+            2,
+            "loeschblatt_zeigen hat neben seinem Kopf nicht genau den einen Ruf \
              der Einzugsmethode"
         );
         assert_eq!(
             einzugsrumpf
                 .matches(concat!("self.loeschblatt_", "zeigen("))
                 .count(),
-            2,
-            "die Einzugsmethode ruft das Blatt nicht aus genau zwei Stufen"
+            1,
+            "die Einzugsmethode ruft das Blatt nicht an genau einer Stelle"
         );
         let blattrumpf = rumpf(&datei, concat!("loeschblatt_", "zeigen"));
         for nadel in [
@@ -19290,6 +19592,139 @@ mod fernvorgangsproben {
 
 /// Die Proben des Loeschwegs im Archiv (Schritt 7 des Plans
 /// `261017-1036-plan-zip-und-gz-wie-ordner-im-dateifenster.md`, E17).
+/// Die Tafel der Antwort eines Loeschbefehls ([`loeschausgang`]).
+#[cfg(test)]
+mod loeschausgangproben {
+    use std::path::PathBuf;
+    use std::sync::Arc;
+
+    use krk_core::archiv::{Archivformat, Archivzugang};
+    use krk_core::ort::Archivort;
+
+    use super::{
+        Auswahl, Endgueltiggrund, Erlaubnisbefund, Loeschausgang, Loeschbefund, Loeschgegenstand,
+        Loeschweg, loeschausgang, papierkorb_des_gegenstands,
+    };
+
+    fn lokal(namen: &[&str]) -> Loeschgegenstand {
+        Loeschgegenstand::Lokal {
+            ordner: PathBuf::from("/krk-probe"),
+            auswahl: Auswahl {
+                pfade: namen.iter().map(PathBuf::from).collect(),
+                ist_ordner: vec![false; namen.len()],
+                ordner: 0,
+            },
+        }
+    }
+
+    fn fern() -> Loeschgegenstand {
+        Loeschgegenstand::Fern {
+            ordner: crate::fernprobe::ferner_ort("rechner", None, "/ordner"),
+            namen: vec!["a.txt".to_owned()],
+            ordnerzahl: 0,
+        }
+    }
+
+    fn archiv() -> Loeschgegenstand {
+        let zugang = Arc::new(Archivzugang::neu(
+            PathBuf::from("/gibt/es/nicht/probe.zip"),
+            Archivformat::Zip,
+        ));
+        Loeschgegenstand::Archiv {
+            ordner: Archivort::wurzel(zugang),
+            namen: vec!["a.txt".to_owned()],
+            ordnerzahl: 0,
+        }
+    }
+
+    fn befund(papierkorb: Erlaubnisbefund) -> Loeschbefund {
+        Loeschbefund {
+            papierkorb,
+            gruende: Vec::new(),
+        }
+    }
+
+    /// Ein Server und ein Archiv antworten am Wert, auch gegen einen Befund, der
+    /// etwas anderes sagte; lokal entscheidet allein der Befund, und ohne ihn ist
+    /// nichts entschieden.
+    #[test]
+    fn die_papierkorbfrage_folgt_dem_gegenstand_und_dem_befund() {
+        let ja = befund(Erlaubnisbefund::Ja);
+        for gegenstand in [fern(), archiv()] {
+            for mitgebracht in [None, Some(&ja)] {
+                assert_eq!(
+                    papierkorb_des_gegenstands(&gegenstand, mitgebracht),
+                    Erlaubnisbefund::Nein
+                );
+            }
+        }
+        let lokal = lokal(&["a.txt"]);
+        assert_eq!(
+            papierkorb_des_gegenstands(&lokal, None),
+            Erlaubnisbefund::Unentschieden
+        );
+        for antwort in [
+            Erlaubnisbefund::Ja,
+            Erlaubnisbefund::Nein,
+            Erlaubnisbefund::Unentschieden,
+        ] {
+            assert_eq!(
+                papierkorb_des_gegenstands(&lokal, Some(&befund(antwort))),
+                antwort
+            );
+        }
+    }
+
+    /// Die Stufen stehen vor dem stehenden Blatt, und ein stehendes Blatt haelt
+    /// jede Rueckfrage an, in jeder ihrer Gestalten.
+    #[test]
+    fn die_antwort_eines_loeschbefehls_folgt_der_tafel() {
+        let papierkorb =
+            Loeschausgang::Blatt(Loeschweg::Papierkorb, Endgueltiggrund::KeinPapierkorb);
+        let endgueltig =
+            Loeschausgang::Blatt(Loeschweg::Endgueltig, Endgueltiggrund::KeinPapierkorb);
+        let ungewiss =
+            Loeschausgang::Blatt(Loeschweg::Endgueltig, Endgueltiggrund::PapierkorbUngewiss);
+        let voll = lokal(&["a.txt"]);
+        let leer = lokal(&[]);
+        let ja = befund(Erlaubnisbefund::Ja);
+        let nein = befund(Erlaubnisbefund::Nein);
+        let unklar = befund(Erlaubnisbefund::Unentschieden);
+        let (ferner, im_archiv) = (fern(), archiv());
+        let tafel: [(
+            bool,
+            &Loeschgegenstand,
+            Option<&Loeschbefund>,
+            bool,
+            Loeschausgang,
+        ); 14] = [
+            (true, &voll, Some(&ja), false, Loeschausgang::VorgangLaeuft),
+            (true, &leer, None, true, Loeschausgang::VorgangLaeuft),
+            (false, &leer, None, false, Loeschausgang::NichtsAusgewaehlt),
+            (false, &leer, None, true, Loeschausgang::NichtsAusgewaehlt),
+            (false, &voll, Some(&ja), false, papierkorb),
+            (false, &voll, Some(&ja), true, Loeschausgang::BlattSteht),
+            (false, &voll, Some(&nein), false, endgueltig),
+            (false, &voll, Some(&nein), true, Loeschausgang::BlattSteht),
+            (false, &voll, Some(&unklar), false, ungewiss),
+            (false, &voll, None, false, ungewiss),
+            (false, &voll, None, true, Loeschausgang::BlattSteht),
+            (false, &ferner, Some(&ja), false, endgueltig),
+            (false, &im_archiv, None, false, endgueltig),
+            (false, &im_archiv, None, true, Loeschausgang::BlattSteht),
+        ];
+        for (stelle, (vorgang, gegenstand, mitgebracht, blatt, erwartet)) in
+            tafel.into_iter().enumerate()
+        {
+            assert_eq!(
+                loeschausgang(vorgang, gegenstand, mitgebracht, blatt),
+                erwartet,
+                "Zeile {stelle} der Tafel"
+            );
+        }
+    }
+}
+
 #[cfg(test)]
 mod archivloeschproben {
     use std::sync::Arc;
@@ -19313,11 +19748,9 @@ mod archivloeschproben {
         }
     }
 
-    /// Ein Gegenstand im Archiv nimmt immer den endgueltigen Weg, und die
-    /// Einzugsmethode des Loeschwegs (`loeschbefund_einziehen`, seit Schritt 8
-    /// des Plans `261102-1314-…`) beantwortet seine Papierkorbfrage am Wert
-    /// mit nein; was
-    /// die Stufenregel daraus macht, haelt
+    /// Ein Gegenstand im Archiv nimmt immer den endgueltigen Weg, und
+    /// [`super::papierkorb_des_gegenstands`] beantwortet seine Papierkorbfrage am
+    /// Wert mit nein; was die Stufenregel daraus macht, haelt
     /// `im_archiv_folgt_die_endgueltige_rueckfrage_ohne_papierkorbfrage` an
     /// ihrer Tafel (`kommandos/loeschwarnung.rs`).
     ///
@@ -19333,9 +19766,9 @@ mod archivloeschproben {
         for gewuenscht in [Loeschweg::Papierkorb, Loeschweg::Endgueltig] {
             assert_eq!(voll.weg(gewuenscht), Loeschweg::Endgueltig);
         }
-        assert!(
-            rumpf(&diese_datei(), "loeschbefund_einziehen")
-                .contains("Loeschgegenstand::Archiv { .. } => Erlaubnisbefund::Nein"),
+        assert_eq!(
+            super::papierkorb_des_gegenstands(&voll, None),
+            super::Erlaubnisbefund::Nein,
             "ein Archiv beantwortet die Papierkorbfrage nicht am Wert"
         );
     }

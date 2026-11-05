@@ -3819,13 +3819,7 @@ impl DateifensterQuelle {
             Ort::Lokal(_) => self.pfad_anspringen(pfad),
             // Im Archiv verlaesst der Pfad den Ort, und eine Datei fuehrt in
             // ihren Ordner.
-            Ort::Archiv(_) => {
-                // Als Aufruf ausgeschrieben, weil die Probe
-                // `die_zwischenablage_springt_nie_an_einen_serverpfad` ihn in
-                // diesem Zweig mit der Klammer liest.
-                #[allow(clippy::redundant_closure)]
-                self.pfad_pruefen_lassen(pfad, |gefragt| pruefen_fuer_archivtab(gefragt));
-            }
+            Ort::Archiv(_) => self.pfad_pruefen_lassen(pfad, pruefen_fuer_archivtab),
             Ort::Fern(_) => {
                 self.befehlsantwort_zeigen(text(Text::AmFernenOrtNichtVerfuegbar));
             }
