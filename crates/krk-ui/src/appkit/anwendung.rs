@@ -859,7 +859,8 @@ impl Loeschbefehle {
 /// Weicht der Stand ab, hat der Nutzer inzwischen etwas anderes getan: eine
 /// andere Zeile gewaehlt, das Dateifenster oder den Tab gewechselt, dort
 /// navigiert oder ein Blatt geoeffnet. Die spaete Antwort setzt dann noch die
-/// Marke und fuehrt nichts mehr aus.
+/// Marke und fuehrt nichts mehr aus; die Zeile bleibt gewaehlt, und ein Klick auf
+/// sie loest die Auswahl erneut aus (`Leistenmodell::klick_loest_aus`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct Leistenauswahlstand {
     /// Die Nummer der juengsten Auswahl.
@@ -3230,7 +3231,12 @@ impl Anwendungsdelegierter {
     /// gemerkte Stelle.** Die Fallunterscheidung ueber das [`Ziel`] ist
     /// vollstaendig und hat keinen Auffangzweig; eine dritte Sorte haelt den Bau
     /// an und erzwingt die Antwort, was ihre Auswahl tut.
+    ///
+    /// **Von hier an tut ein Klick auf dieselbe Zeile nichts mehr**, auch nach dem
+    /// Satz ueber ein fehlendes Ziel. Beide Rufer kommen allein mit der juengsten
+    /// Auswahl hierher.
     fn leistenauswahl_vollziehen(&self, auswahl: &crate::leistenmodell::Auswahl) {
+        self.leiste().quelle().auswahl_vollzogen();
         let aktiv = self.ivars().modell.borrow().aktiv();
         if !auswahl.gueltig {
             // Kurz genug fuer die Statuszeile: sie ist einzeilig, und ein
@@ -15162,6 +15168,33 @@ mod geraeteproben {
         for feld in ["nummer:", "seite,", "tab:", "blatt:"] {
             assert!(stand.contains(feld), "der Stand fuehrt {feld} nicht");
         }
+    }
+
+    /// Der Wert im Modell erreicht seine drei Stellen in der Ansicht und beim
+    /// Delegierten: die Meldung oeffnet, der Vollzug schliesst, der Klick fragt.
+    ///
+    /// **Was sie nicht sieht:** die Reihenfolge von Auswahlmeldung und `action`, von
+    /// der der Merker des laufenden Klicks ausgeht, und ob die Antwort wirklich
+    /// verfaellt; beides sieht allein das laufende Buendel.
+    #[test]
+    fn der_offene_stand_einer_auswahl_reisst_nirgends_ab() {
+        let leiste = datei("krk-ui/src/appkit/leiste.rs");
+        assert!(rumpf(&leiste, "auswahl_melden").contains(".auswahl_zum_melden()"));
+        let klick = rumpf(&leiste, "zeile_geklickt");
+        assert!(klick.contains(".klick_loest_aus(zeile)"));
+        assert!(klick.contains("self.auswahl_melden()"));
+        let anwendung = diese_datei();
+        let vollziehen = rumpf(&anwendung, "leistenauswahl_vollziehen");
+        let schliesst = vollziehen
+            .find(".auswahl_vollzogen()")
+            .expect("der Vollzug schliesst die Auswahl");
+        let frueher = vollziehen
+            .find("if !auswahl.gueltig")
+            .expect("der Zweig des fehlenden Ziels");
+        assert!(
+            schliesst < frueher,
+            "auch der Satz ueber ein fehlendes Ziel"
+        );
     }
 }
 
