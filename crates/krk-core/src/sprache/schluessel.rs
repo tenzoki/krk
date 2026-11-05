@@ -1731,9 +1731,8 @@ pub enum Text {
     /// Die Antwort auf einen Befehl im Dateifenster ohne Auswahl: der
     /// Loeschweg, das Stapel-Umbenennen, jeder Auftrag und F4.
     NichtsAusgewaehlt,
-    /// `nebenfaden::fragen_lassen`: die Arbeit auf dem Faden ist in Panik
-    /// geraten; der Satz steht als Fehler an der Stelle, an der sonst der
-    /// Fehler des Fadenstarts steht.
+    /// Eine Frage an die Platte ist ohne Antwort abgebrochen: die Arbeit auf dem
+    /// Faden geriet in Panik, oder der Faden liess sich nicht starten.
     FrageAbgebrochen,
     /// `statuszeile_nachziehen`: ein Befehl wartet ueber seine Frist hinaus auf
     /// die Antwort der Platte (`crate::plattenwarte` in `krk-ui`).

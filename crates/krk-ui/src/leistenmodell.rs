@@ -48,9 +48,11 @@
 //!
 //! Die Lesezeichen kommen aus `bookmarks.toml` und gehoeren dem Nutzer; die
 //! Liste selbst wohnt in [`krk_core::ablage::Lesezeichenliste`], weil sie
-//! abgelegt wird. Die Geraete kommen bei jedem Aufbau frisch vom System und
-//! werden nie abgelegt: was eingehaengt ist, weiss das System besser als eine
-//! Datei von gestern.
+//! abgelegt wird. Die Geraete erfragt die Anwendung auf einem Faden beim System
+//! und reicht sie herein ([`Leistenmodell::orte_setzen`]); abgelegt werden sie
+//! nie: was eingehaengt ist, weiss das System besser als eine Datei von gestern.
+//! Bleibt die Antwort aus oder scheitert die Frage, gilt der letzte Stand, nach
+//! dem Start also das Benutzerverzeichnis ohne Datentraeger.
 //!
 //! # Die Marke „fehlt“ kommt vom Faden
 //!
