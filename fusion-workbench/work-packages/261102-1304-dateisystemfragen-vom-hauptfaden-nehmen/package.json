@@ -3,7 +3,7 @@
   "id": "815a6cf4-e740-40b1-8f65-38e907354031",
   "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
   "domain": "code",
-  "status": "claimed",
+  "status": "done",
   "claim": {
     "checkout_id": "9be83618",
     "person": "Kai Stalmann <ks@qantr.com>",
@@ -37,7 +37,20 @@
   ],
   "references": [],
   "evidence": [],
-  "outcome": null,
+  "outcome": {
+    "class": "completed",
+    "reason": "Die Wege aus dem Sammeldefekt fragen die Platte auf Nebenfaeden; alle Befunde der drei Durchsichten behoben; alle neun Grenzen vom Nutzer am 261106 bestaetigt; im Programm nicht gefahren",
+    "evidence": [
+      {
+        "ref": {
+          "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+          "record_id": "5c28634d-d7a1-4ee7-b9d9-0aef78415a1c",
+          "revision": "sha256:be73ce10313321be8eb11d1d8af41cf926e9299ccf406ad42bb25e13c5b4b876"
+        },
+        "policy": "claude-guided"
+      }
+    ]
+  },
   "provenance": {
     "source": "created",
     "legacy_fields": {}
