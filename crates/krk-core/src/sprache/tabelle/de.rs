@@ -389,14 +389,14 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::HeimMerkerOhneAblage => {
             "KRK kann sich ohne seinen Ablageordner nicht merken, dass die alten Zettel übernommen sind; ein späteres F2 holt das nach, und wird {ort} vorher gelöscht, übernimmt es sie noch einmal"
         }
-        Text::HeimGeheimnisseUmbenannt => "{alt} heißt jetzt {neu}",
-        Text::HeimGeheimnisseBeideStehen => {
+        Text::HeimUmbenannt => "{alt} heißt jetzt {neu}",
+        Text::HeimUmbenennungBeideStehen => {
             "{neu} und {alt} stehen beide in {ort}; KRK benennt keine um, und es gilt {neu}"
         }
-        Text::HeimGeheimnisseAlterNameBleibt => {
+        Text::HeimUmbenennungAlterNameBleibt => {
             "{alt} heißt jetzt auch {neu}, der alte Name lässt sich nicht entfernen: {grund}"
         }
-        Text::HeimGeheimnisseNichtUmbenannt => {
+        Text::HeimNichtUmbenannt => {
             "{alt} lässt sich nicht in {neu} umbenennen ({grund}); sie bleibt unverändert, und {neu} ist nicht angelegt"
         }
         Text::HeimZettelNotizenStandenSchon => {
@@ -937,10 +937,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "Die Quicknote wird nicht gesichert: es gibt keinen Notizordner."
         }
         Text::QuicknoteFremdGeaendert => {
-            "scratch.txt wurde außerhalb der Quicknote geändert; die Quicknote sichert bis zum nächsten Start nicht mehr."
+            "quicknote.txt wurde außerhalb der Quicknote geändert; die Quicknote sichert bis zum nächsten Start nicht mehr."
         }
         Text::QuicknoteNichtGelesen => {
-            "scratch.txt ließ sich nicht lesen ({grund}); die Quicknote sichert bis zum nächsten Start nicht."
+            "quicknote.txt ließ sich nicht lesen ({grund}); die Quicknote sichert bis zum nächsten Start nicht."
         }
         Text::QuicknoteNichtGesichert => "Die Quicknote ließ sich nicht sichern: {fehler}.",
         Text::QuicknoteGrundZuGross => "sie ist zu groß für die Quicknote",

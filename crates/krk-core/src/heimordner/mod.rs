@@ -5,9 +5,11 @@
 //! dort mit Aufgabenkaestchen, der Editor zeigt sie in der Formatansicht als
 //! Tabelle, und `secrets.txt` bekommt dort vom Inhaltsfilter keinen Auftrag.
 //! Die vierte Eintragsdatei ist `appointments.md` mit den Terminen. Daneben
-//! liegt `scratch.txt` ([`QUICKNOTEDATEI`]), der gesicherte Inhalt der
+//! liegt `quicknote.txt` ([`QUICKNOTEDATEI`]), der gesicherte Inhalt der
 //! Quicknote; sie ist **keine** Eintragsdatei und steht deshalb nicht in
-//! [`Sonderdatei`].
+//! [`Sonderdatei`]. Bis zum 261111 hiess sie anders
+//! ([`ALTE_QUICKNOTEDATEI`]), und die Sicherung der Quicknote uebernimmt eine
+//! Datei unter dem frueheren Namen vor ihrem ersten Lesen.
 //! **Jede dieser Regeln fragt dieses Modul und keine eigene Erkennung** (C2 des Spec
 //! `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
 //! Die Form der Eintraege in `notes.txt`, `tasks.txt` und `appointments.md`
@@ -104,8 +106,9 @@ pub mod tresor;
 pub mod verbindung;
 
 pub use bereitstellen::{
-    ALTE_ZETTEL, ALTER_GEHEIMNISNAME, AlteGeheimnisse, AlterZettel, Bereitstellung, Hindernis,
-    Uebernahme, Uebernahmeausgang, Zettelbefund, Zettelmerker, bereitstellen,
+    ALTE_ZETTEL, ALTER_GEHEIMNISNAME, AlterZettel, Bereitstellung, Hindernis, Uebernahme,
+    Uebernahmeausgang, Umbenennung, Zettelbefund, Zettelmerker, bereitstellen,
+    ohne_ersetzen_umbenennen,
 };
 
 use std::path::{Component, Path, PathBuf};
@@ -123,7 +126,7 @@ pub const ORDNERNAME: &str = "krkhome";
 /// **Keine [`Sonderdatei`], und das ist Absicht:** jeder Wert jener Aufzaehlung
 /// ist eine Eintragsdatei und fuehrt ueber [`Heimordner::sonderdatei`] zur
 /// Tabellenansicht, zu den Eintragsbefehlen, zur Vorschau mit
-/// Aufgabenkaestchen und zum Anlegen bei F2. `scratch.txt` ist nichts davon:
+/// Aufgabenkaestchen und zum Anlegen bei F2. `quicknote.txt` ist nichts davon:
 /// im Editor und in der Vorschau eine gewoehnliche Textdatei, und F2 legt sie
 /// nicht an; sie entsteht beim ersten Sichern der Quicknote. Eine fuenfte
 /// Variante brauchte an jeder dieser Stellen eine Ausnahme, die sagt, dass sie
@@ -132,7 +135,27 @@ pub const ORDNERNAME: &str = "krkhome";
 /// **Geschrieben wird sie allein von der Sicherung der Quicknote**
 /// (`krk-ui/src/quicknotesicherung.rs`), die den Pfad aus
 /// [`Heimordner::quicknotedatei`] bekommt.
-pub const QUICKNOTEDATEI: &str = "scratch.txt";
+pub const QUICKNOTEDATEI: &str = "quicknote.txt";
+
+/// Der Name der Quicknote-Datei bis zum 261111, allein fuer die Uebernahme.
+///
+/// Unter diesem Namen legt KRK nichts mehr an und sichert nichts mehr. Die
+/// Sicherung der Quicknote gibt einer solchen Datei vor ihrem ersten Lesen den
+/// Namen [`QUICKNOTEDATEI`], ueber [`ohne_ersetzen_umbenennen`] und damit ohne
+/// je eine vorhandene `quicknote.txt` zu ersetzen; stehen beide, bleiben beide
+/// (C2.2 bis C2.4 des Spec
+/// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`).
+pub const ALTE_QUICKNOTEDATEI: &str = "scratch.txt";
+
+/// Der Satz fuer die Statuszeile nach der Uebernahme der frueheren
+/// Quicknote-Datei; `ort` ist der Notizordner, wie
+/// [`Heimordner::anzeigename`] ihn nennt.
+///
+/// Hier und nicht in `krk-ui`, weil die zwei Dateinamen allein in diesem Modul
+/// stehen und die Oberflaeche sie nicht nennen soll.
+pub fn quicknote_uebernahmemeldung(ausgang: &Umbenennung, ort: &str) -> String {
+    ausgang.meldung(ALTE_QUICKNOTEDATEI, QUICKNOTEDATEI, ort)
+}
 
 /// Eine der Dateien im Heimordner, die KRK als Eintragsdatei behandelt.
 ///
@@ -312,6 +335,15 @@ impl Heimordner {
     /// erst die Sicherung der Quicknote auf ihrem eigenen Faden.
     pub fn quicknotedatei(&self) -> PathBuf {
         self.geschrieben.join(QUICKNOTEDATEI)
+    }
+
+    /// Der Pfad von [`ALTE_QUICKNOTEDATEI`] im Notizordner, in der
+    /// geschriebenen Form; allein fuer die Uebernahme durch die Sicherung der
+    /// Quicknote.
+    ///
+    /// Ein `join` und kein Systemaufruf, wie [`Self::quicknotedatei`].
+    pub fn alte_quicknotedatei(&self) -> PathBuf {
+        self.geschrieben.join(ALTE_QUICKNOTEDATEI)
     }
 
     /// Die aufgeloeste Form, falls es eine gibt.

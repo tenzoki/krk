@@ -3,7 +3,7 @@
 //! `260927-0110_*_plan-f10-oeffnet-quicknote-mit-fluechtigem-puffer.md`),
 //! deren Text seit dem Plan
 //! `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`
-//! in `scratch.txt` gesichert wird. **Diese Datei schreibt nichts auf die
+//! in `quicknote.txt` gesichert wird. **Diese Datei schreibt nichts auf die
 //! Platte**: sie meldet jede Aenderung dem Editorbereich, und der gibt den
 //! Auftrag an `crate::quicknotesicherung`, den einen Schreiber.
 //!
@@ -38,7 +38,7 @@
 //! ihr vorbei**, beide ueber `setString:`: [`Quicknote::nach_kopie_leeren`],
 //! das deshalb den Melder selbst ruft, und
 //! [`Quicknote::einsetzen_ohne_rueckgaengig`], das den gelesenen Inhalt von
-//! `scratch.txt` einsetzt und gerade **nicht** melden soll, denn was von der
+//! `quicknote.txt` einsetzt und gerade **nicht** melden soll, denn was von der
 //! Platte kommt, muss nicht zurueck auf sie.
 //!
 //! **Bis der Inhalt gelesen ist, ist die Flaeche nicht bearbeitbar**
@@ -517,7 +517,7 @@ impl Quicknote {
         let _ = self.ersetzen(NSRange::new(0, laenge), "");
     }
 
-    /// Setzt den gelesenen Inhalt von `scratch.txt` ein, **ohne Eintrag im
+    /// Setzt den gelesenen Inhalt von `quicknote.txt` ein, **ohne Eintrag im
     /// Rueckgaengig und ohne Aenderungsmeldung** (Entscheidung 3 des Plans der
     /// Sicherung).
     ///
@@ -545,7 +545,7 @@ impl Quicknote {
     ///
     /// **Es meldet die Aenderung selbst**, weil `setString:` an
     /// `textDidChange:` vorbeischreibt und die Sicherung sonst den Text vor dem
-    /// Kopieren in `scratch.txt` liesse (Entscheidung 4 des Plans der
+    /// Kopieren in `quicknote.txt` liesse (Entscheidung 4 des Plans der
     /// Sicherung).
     pub fn nach_kopie_leeren(&self) {
         self.ivars().text.setString(ns_string!(""));

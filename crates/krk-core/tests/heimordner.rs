@@ -50,9 +50,9 @@ use krk_core::heimordner::verbindung::{
     Protokoll, Verbindungsziel, Weg, Zielfehler, protokoll_pruefen, verbindungsziel,
 };
 use krk_core::heimordner::{
-    ALTE_ZETTEL, ALTER_GEHEIMNISNAME, AlteGeheimnisse, Bereitstellung, Heimordner, Hindernis,
-    ORDNERNAME, QUICKNOTEDATEI, Sonderdatei, Uebernahmeausgang, Zettelbefund, Zettelmerker,
-    bereitstellen,
+    ALTE_QUICKNOTEDATEI, ALTE_ZETTEL, ALTER_GEHEIMNISNAME, Bereitstellung, Heimordner, Hindernis,
+    ORDNERNAME, QUICKNOTEDATEI, Sonderdatei, Uebernahmeausgang, Umbenennung, Zettelbefund,
+    Zettelmerker, bereitstellen, ohne_ersetzen_umbenennen,
 };
 use krk_core::verzeichnis::Richtung as SortRichtung;
 
@@ -343,28 +343,200 @@ fn die_genaue_frage_nennt_allein_secrets_txt_als_geheimnisse() {
     );
 }
 
-/// Schritt 2 des Plans der Quicknote (E1): `scratch.txt` liegt im Notizordner,
+/// Schritt 2 des Plans der Quicknote (E1): `quicknote.txt` liegt im Notizordner,
 /// ist aber keine Eintragsdatei. Weder die Erkennung am Pfadtext noch die
 /// genaue Frage antwortet fuer sie mit einer Sorte, und ihr Pfad ist der
-/// geschriebene Ort samt Name.
+/// geschriebene Ort samt Name. Dasselbe gilt fuer den frueheren Namen
+/// `scratch.txt`, den allein die Uebernahme noch nennt (C2.6 des Spec
+/// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`).
 #[test]
 fn die_quicknotedatei_ist_keine_eintragsdatei() {
-    assert_eq!(QUICKNOTEDATEI, "scratch.txt");
+    assert_eq!(QUICKNOTEDATEI, "quicknote.txt");
+    assert_eq!(ALTE_QUICKNOTEDATEI, "scratch.txt");
     for sorte in Sonderdatei::ALLE {
         assert_ne!(sorte.dateiname(), QUICKNOTEDATEI, "{sorte:?}");
+        assert_ne!(sorte.dateiname(), ALTE_QUICKNOTEDATEI, "{sorte:?}");
     }
 
     let ordner = Pruefordner::neu("heim-quicknote");
     let zuhause = kanonisch(&ordner);
     let heimpfad = zuhause.join(ORDNERNAME);
     fs::create_dir(&heimpfad).expect("Heimordner laesst sich nicht anlegen");
-    fs::write(heimpfad.join(QUICKNOTEDATEI), b"notiert").expect("scratch.txt");
+    fs::write(heimpfad.join(QUICKNOTEDATEI), b"notiert").expect("quicknote.txt");
     let heim = Heimordner::im_benutzerverzeichnis(&zuhause);
 
     let pfad = heim.quicknotedatei();
-    assert_eq!(pfad, heim.geschrieben().join("scratch.txt"));
+    assert_eq!(pfad, heim.geschrieben().join("quicknote.txt"));
     assert_eq!(heim.sonderdatei(&pfad), None);
     assert_eq!(heim.sonderdatei_genau(&pfad), None);
+
+    let frueher = heim.alte_quicknotedatei();
+    assert_eq!(frueher, heim.geschrieben().join("scratch.txt"));
+    assert_eq!(heim.sonderdatei(&frueher), None);
+    assert_eq!(heim.sonderdatei_genau(&frueher), None);
+}
+
+/// F2 legt weder `quicknote.txt` noch eine Datei unter dem frueheren Namen an
+/// und fasst eine vorhandene `scratch.txt` nicht an: die Uebernahme ist Sache
+/// der Sicherung der Quicknote und nicht von `bereitstellen` (C2.6).
+#[test]
+fn f2_legt_die_quicknotedatei_nicht_an_und_laesst_die_fruehere_liegen() {
+    let lage = Lage::neu("heim-quicknote-f2", [None, None]);
+    fs::create_dir(lage.heimpfad()).expect("Heimordner");
+    let frueher = lage.heimpfad().join(ALTE_QUICKNOTEDATEI);
+    fs::write(&frueher, b"von vorher").expect("scratch.txt");
+
+    let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
+
+    assert_eq!(bereitstellung.umbenennung, None);
+    assert!(!lage.heimpfad().join(QUICKNOTEDATEI).exists());
+    assert_eq!(fs::read(&frueher).expect("scratch.txt"), b"von vorher");
+}
+
+/// Die Umbenennung ohne Ersetzen an zwei beliebigen Namen, so wie die
+/// Sicherung der Quicknote sie ruft: jeder Ausgang, den ein Pruefordner
+/// herstellen kann, und in keinem wird eine vorhandene Datei ersetzt (C2.2
+/// bis C2.4).
+#[test]
+fn ohne_ersetzen_umbenennen_ersetzt_nie_eine_vorhandene_datei() {
+    use std::os::unix::fs::MetadataExt;
+
+    let ordner = Pruefordner::neu("heim-umbenennen");
+    let wurzel = kanonisch(&ordner);
+    let alt = wurzel.join(ALTE_QUICKNOTEDATEI);
+    let neu = wurzel.join(QUICKNOTEDATEI);
+
+    // Keine alte Datei: nichts geschieht, nichts entsteht.
+    assert_eq!(ohne_ersetzen_umbenennen(&alt, &neu), None);
+    assert!(!neu.exists());
+
+    // Allein die alte: sie traegt danach den neuen Namen, dieselbe Inode.
+    fs::write(&alt, b"alter Inhalt").expect("alt");
+    let inode = fs::metadata(&alt).expect("alt").ino();
+    assert_eq!(
+        ohne_ersetzen_umbenennen(&alt, &neu),
+        Some(Umbenennung::Umbenannt)
+    );
+    assert!(!alt.exists());
+    assert_eq!(fs::metadata(&neu).expect("neu").ino(), inode);
+    assert_eq!(fs::read(&neu).expect("neu"), b"alter Inhalt");
+
+    // Beide stehen: beide bleiben Byte fuer Byte, und die neue behaelt ihre
+    // Inode, ist also nicht ersetzt.
+    fs::write(&alt, b"noch eine alte").expect("alt");
+    assert_eq!(
+        ohne_ersetzen_umbenennen(&alt, &neu),
+        Some(Umbenennung::BeideStehen)
+    );
+    assert_eq!(fs::read(&alt).expect("alt"), b"noch eine alte");
+    assert_eq!(fs::read(&neu).expect("neu"), b"alter Inhalt");
+    assert_eq!(fs::metadata(&neu).expect("neu").ino(), inode);
+
+    // Der Ordner fehlt: wie ohne alte Datei, und kein Ordner entsteht.
+    let fort = wurzel.join("fehlt");
+    assert_eq!(
+        ohne_ersetzen_umbenennen(&fort.join(ALTE_QUICKNOTEDATEI), &fort.join(QUICKNOTEDATEI)),
+        None
+    );
+    assert!(!fort.exists());
+}
+
+/// Die Meldung der Uebernahme nennt beide Dateinamen und kommt aus den
+/// neutralen Saetzen der Umbenennung, je Ausgang einer; die Saetze der
+/// Sicherung nennen in jeder Sprache den heutigen Namen und nie den frueheren
+/// (C2.5).
+#[test]
+fn die_uebernahme_der_quicknote_meldet_sich_mit_beiden_namen() {
+    use krk_core::heimordner::quicknote_uebernahmemeldung;
+    use krk_core::sprache::{Sprache, Text};
+
+    assert_eq!(
+        quicknote_uebernahmemeldung(&Umbenennung::Umbenannt, "~/krkhome"),
+        "scratch.txt heißt jetzt quicknote.txt"
+    );
+    let beide = quicknote_uebernahmemeldung(&Umbenennung::BeideStehen, "~/krkhome");
+    assert_eq!(
+        beide,
+        "quicknote.txt und scratch.txt stehen beide in ~/krkhome; KRK benennt keine um, und es gilt quicknote.txt"
+    );
+    for ausgang in [
+        Umbenennung::AlterNameBleibt("der Grund".to_owned()),
+        Umbenennung::Gescheitert("der Grund".to_owned()),
+    ] {
+        let meldung = quicknote_uebernahmemeldung(&ausgang, "~/krkhome");
+        for teil in ["scratch.txt", "quicknote.txt", "der Grund"] {
+            assert!(meldung.contains(teil), "{ausgang:?}: {meldung}");
+        }
+    }
+    for sprache in [Sprache::De, Sprache::Fr, Sprache::En] {
+        for schluessel in [Text::QuicknoteFremdGeaendert, Text::QuicknoteNichtGelesen] {
+            let wortlaut = sprache.text(schluessel);
+            assert!(wortlaut.contains(QUICKNOTEDATEI), "{sprache:?}: {wortlaut}");
+            assert!(
+                !wortlaut.contains(ALTE_QUICKNOTEDATEI),
+                "{sprache:?}: {wortlaut}"
+            );
+        }
+    }
+}
+
+/// Der Rumpf von `ohne_ersetzen_umbenennen` nennt kein `rename` und stellt
+/// vor dem harten Verweis keine Frage an die Platte (C2.4).
+///
+/// `rename(2)` ersetzte ein vorhandenes Ziel still, und eine Existenzpruefung
+/// vor dem Verweis liesse das Fenster offen, in dem eine entstehende Datei
+/// ersetzt wuerde; die eine Frage, ob der neue Name frei ist, beantwortet
+/// `link(2)` selbst. Gelesen werden die Codezeilen des Rumpfs: `hard_link`
+/// ist der erste Aufruf, der die Platte erreicht, und `rename` steht nirgends.
+///
+/// **Was sie nicht sieht:** eine Pruefung beim Rufer vor dem Aufruf, und einen
+/// Helfer, den der Rumpf vor dem Verweis ruft und der selbst die Platte fragt;
+/// heute ruft er vor dem Verweis nichts.
+#[test]
+fn ohne_ersetzen_umbenennen_prueft_nicht_vor_dem_verweis_und_benennt_nicht_um() {
+    let inhalt = fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/src/heimordner/bereitstellen.rs"
+    ))
+    .expect("heimordner/bereitstellen.rs ist nicht lesbar");
+    let kopf = concat!("pub fn ohne_ersetzen_", "umbenennen(");
+    let beginn = inhalt
+        .find(kopf)
+        .expect("ohne_ersetzen_umbenennen steht nicht in bereitstellen.rs");
+    let rest = &inhalt[beginn..];
+    let ende = rest.find("\n}\n").expect("der Rumpf endet nicht");
+    let rumpf: String = rest[..ende]
+        .lines()
+        .filter(|zeile| !zeile.trim_start().starts_with("//"))
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    assert!(
+        !rumpf.contains("rename"),
+        "der Rumpf benennt ueber rename um und ersetzte ein vorhandenes Ziel"
+    );
+    let verweis = rumpf
+        .find(concat!("fs::hard_", "link("))
+        .expect("der Rumpf legt keinen harten Verweis an");
+    let (_, rumpf_ab_klammer) = rumpf[..verweis]
+        .split_once('{')
+        .expect("der Rumpf oeffnet nicht");
+    for nadel in [
+        "fs::",
+        "metadata",
+        "exists(",
+        "File::",
+        "OpenOptions",
+        "read_link",
+        "canonicalize",
+        "is_file(",
+        "is_dir(",
+    ] {
+        assert!(
+            !rumpf_ab_klammer.contains(nadel),
+            "vor dem harten Verweis steht {nadel}: eine Pruefung dort laesst das Fenster offen"
+        );
+    }
 }
 
 /// Der Rumpf einer Methode aus `heimordner/mod.rs`, ohne Kommentarzeilen.
@@ -1679,10 +1851,7 @@ fn eine_alte_secrets_txt_wird_umbenannt_und_bleibt_byte_fuer_byte() {
 
     let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
 
-    assert_eq!(
-        bereitstellung.alte_geheimnisse,
-        Some(AlteGeheimnisse::Umbenannt)
-    );
+    assert_eq!(bereitstellung.umbenennung, Some(Umbenennung::Umbenannt));
     assert!(!alt.exists(), "der alte Name steht noch");
     assert_eq!(fs::read(&neu).expect("secrets.txt fehlt"), chiffrat);
     assert_eq!(fs::metadata(&neu).expect("secrets.txt").ino(), inode);
@@ -1724,10 +1893,7 @@ fn stehen_beide_bleiben_beide_und_die_statuszeile_sagt_es() {
 
     let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
 
-    assert_eq!(
-        bereitstellung.alte_geheimnisse,
-        Some(AlteGeheimnisse::BeideStehen)
-    );
+    assert_eq!(bereitstellung.umbenennung, Some(Umbenennung::BeideStehen));
     assert_eq!(fs::read(&alt).expect(".secrets.txt"), altes_chiffrat);
     assert_eq!(fs::read(&neu).expect("secrets.txt"), neues_chiffrat);
     assert!(
@@ -1751,7 +1917,7 @@ fn ohne_alte_datei_entsteht_secrets_txt_leer_oder_bleibt_wie_sie_war() {
     let neu = lage.heimpfad().join(Sonderdatei::Geheimnisse.dateiname());
 
     let erste = lage.bereitstellen().expect("kein Hindernis erwartet");
-    assert_eq!(erste.alte_geheimnisse, None);
+    assert_eq!(erste.umbenennung, None);
     assert!(
         erste.angelegt.contains(&Sonderdatei::Geheimnisse),
         "{erste:?}"
@@ -1762,7 +1928,7 @@ fn ohne_alte_datei_entsteht_secrets_txt_leer_oder_bleibt_wie_sie_war() {
     let chiffrat = ein_chiffrat();
     fs::write(&neu, &chiffrat).expect("secrets.txt");
     let zweite = lage.bereitstellen().expect("kein Hindernis erwartet");
-    assert_eq!(zweite.alte_geheimnisse, None);
+    assert_eq!(zweite.umbenennung, None);
     assert!(zweite.angelegt.is_empty(), "{zweite:?}");
     assert_eq!(fs::read(&neu).expect("secrets.txt"), chiffrat);
     assert!(
@@ -1800,8 +1966,8 @@ fn eine_gescheiterte_umbenennung_legt_keine_leere_datei_daneben() {
     let bereitstellung = bereitstellung.expect("kein Hindernis erwartet");
     assert!(
         matches!(
-            bereitstellung.alte_geheimnisse,
-            Some(AlteGeheimnisse::Gescheitert(_))
+            bereitstellung.umbenennung,
+            Some(Umbenennung::Gescheitert(_))
         ),
         "{bereitstellung:?}"
     );

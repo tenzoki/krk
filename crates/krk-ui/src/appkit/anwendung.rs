@@ -15825,7 +15825,7 @@ mod notizordnerproben {
             uebernahme: None,
             zettelmerker: Zettelmerker::NichtsZuVermerken,
             merkerersetzung: None,
-            alte_geheimnisse: None,
+            umbenennung: None,
             ort: "heim".to_owned(),
         };
         let mit = |aenderung: fn(&mut Notizordnerstand)| {

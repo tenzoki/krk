@@ -5140,9 +5140,9 @@ mod tests {
     ///   und hinter der Frage nach `secrets.txt`;
     /// - in der ganzen Kiste rufen allein dieses Modul und die Sicherung der
     ///   Quicknote `datei::sichern`. Die zweite schreibt seit dem 261031
-    ///   `scratch.txt` und keine Datei des Editors; ihren Pfad baut allein
+    ///   `quicknote.txt` und keine Datei des Editors; ihren Pfad baut allein
     ///   `Heimordner::quicknotedatei`, und dass sie der einzige Schreiber
-    ///   dieser Datei ist, haelt `scratch_txt_hat_genau_einen_schreiber` in
+    ///   dieser Datei ist, haelt `quicknote_txt_hat_genau_einen_schreiber` in
     ///   `quicknotesicherung.rs`. Was das nicht ausschliesst: einen Pfad auf
     ///   `secrets.txt`, den ein kuenftiger Rufer der Sicherung hereinreicht.
     #[test]

@@ -371,14 +371,14 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::HeimMerkerOhneAblage => {
             "Without its data folder KRK cannot remember that the old notes have been taken over; a later F2 catches up on that, and if {ort} is deleted before then, it takes them over once more"
         }
-        Text::HeimGeheimnisseUmbenannt => "{alt} is now called {neu}",
-        Text::HeimGeheimnisseBeideStehen => {
+        Text::HeimUmbenannt => "{alt} is now called {neu}",
+        Text::HeimUmbenennungBeideStehen => {
             "{neu} and {alt} both exist in {ort}; KRK renames neither, and {neu} counts"
         }
-        Text::HeimGeheimnisseAlterNameBleibt => {
+        Text::HeimUmbenennungAlterNameBleibt => {
             "{alt} is now also called {neu}, the old name cannot be removed: {grund}"
         }
-        Text::HeimGeheimnisseNichtUmbenannt => {
+        Text::HeimNichtUmbenannt => {
             "{alt} cannot be renamed to {neu} ({grund}); it stays unchanged, and {neu} is not created"
         }
         Text::HeimZettelNotizenStandenSchon => {
@@ -891,10 +891,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "The Quicknote is not being saved: there is no notes folder."
         }
         Text::QuicknoteFremdGeaendert => {
-            "scratch.txt was changed outside the Quicknote; the Quicknote stops saving until the next start."
+            "quicknote.txt was changed outside the Quicknote; the Quicknote stops saving until the next start."
         }
         Text::QuicknoteNichtGelesen => {
-            "scratch.txt could not be read ({grund}); the Quicknote does not save until the next start."
+            "quicknote.txt could not be read ({grund}); the Quicknote does not save until the next start."
         }
         Text::QuicknoteNichtGesichert => "The Quicknote could not be saved: {fehler}.",
         Text::QuicknoteGrundZuGross => "it is too large for the Quicknote",

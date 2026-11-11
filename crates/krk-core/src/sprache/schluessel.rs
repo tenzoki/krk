@@ -515,14 +515,17 @@ pub enum Text {
     HeimMerkerNichtVermerkt,
     /// `Zettelmerker::OhneAblage` nach einer Uebernahme; `{ort}`.
     HeimMerkerOhneAblage,
-    /// `AlteGeheimnisse::Umbenannt`; `{alt}`, `{neu}`.
-    HeimGeheimnisseUmbenannt,
-    /// `AlteGeheimnisse::BeideStehen`; `{neu}`, `{alt}`, `{ort}`.
-    HeimGeheimnisseBeideStehen,
-    /// `AlteGeheimnisse::AlterNameBleibt`; `{alt}`, `{neu}`, `{grund}`.
-    HeimGeheimnisseAlterNameBleibt,
-    /// `AlteGeheimnisse::Gescheitert`; `{alt}`, `{neu}`, `{grund}`.
-    HeimGeheimnisseNichtUmbenannt,
+    /// `Umbenennung::Umbenannt`; `{alt}`, `{neu}`. Die vier Saetze der
+    /// Umbenennung nennen keine Datei selbst und gelten fuer `.secrets.txt`
+    /// wie fuer die fruehere Quicknote-Datei; bis zum 261111 hiessen ihre
+    /// Schluessel `HeimGeheimnisse…`.
+    HeimUmbenannt,
+    /// `Umbenennung::BeideStehen`; `{neu}`, `{alt}`, `{ort}`.
+    HeimUmbenennungBeideStehen,
+    /// `Umbenennung::AlterNameBleibt`; `{alt}`, `{neu}`, `{grund}`.
+    HeimUmbenennungAlterNameBleibt,
+    /// `Umbenennung::Gescheitert`; `{alt}`, `{neu}`, `{grund}`.
+    HeimNichtUmbenannt,
     /// `Uebernahmeausgang::NotizenStandenSchon`; `{notizen}`, `{dateien}`.
     HeimZettelNotizenStandenSchon,
     /// `Uebernahmeausgang::Gescheitert`; `{grund}`, `{dateien}`.
@@ -1428,9 +1431,9 @@ pub enum Text {
     /// Die Sicherung der Quicknote hat keinen Notizordner, weil das System
     /// kein Benutzerverzeichnis nennt.
     QuicknoteKeinNotizordner,
-    /// `scratch.txt` wurde von aussen geaendert; die Sicherung ist gesperrt.
+    /// `quicknote.txt` wurde von aussen geaendert; die Sicherung ist gesperrt.
     QuicknoteFremdGeaendert,
-    /// `scratch.txt` liess sich nicht lesen; `{grund}`, die Sicherung ist
+    /// `quicknote.txt` liess sich nicht lesen; `{grund}`, die Sicherung ist
     /// gesperrt.
     QuicknoteNichtGelesen,
     /// Das Sichern der Quicknote ist gescheitert; `{fehler}` vom System.
@@ -2153,10 +2156,10 @@ impl Text {
         Text::HeimObererOrdnerFehlt,
         Text::HeimMerkerNichtVermerkt,
         Text::HeimMerkerOhneAblage,
-        Text::HeimGeheimnisseUmbenannt,
-        Text::HeimGeheimnisseBeideStehen,
-        Text::HeimGeheimnisseAlterNameBleibt,
-        Text::HeimGeheimnisseNichtUmbenannt,
+        Text::HeimUmbenannt,
+        Text::HeimUmbenennungBeideStehen,
+        Text::HeimUmbenennungAlterNameBleibt,
+        Text::HeimNichtUmbenannt,
         Text::HeimZettelNotizenStandenSchon,
         Text::HeimZettelGescheitert,
         Text::HeimZettelThemenzeile,

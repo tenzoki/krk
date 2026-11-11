@@ -251,22 +251,57 @@ pub enum Zettelmerker {
 /// dieser hier wird nie angelegt und nie gelesen, nur umbenannt.
 pub const ALTER_GEHEIMNISNAME: &str = ".secrets.txt";
 
-/// Was aus einer `.secrets.txt` von vorher geworden ist.
+/// Was aus einer Datei unter ihrem frueheren Namen geworden ist, der Ausgang
+/// von [`ohne_ersetzen_umbenennen`].
+///
+/// Der Typ hat zwei Nutzer: `.secrets.txt` wird bei F2 zu `secrets.txt`, und
+/// die Sicherung der Quicknote macht aus der frueheren Quicknote-Datei
+/// ([`super::ALTE_QUICKNOTEDATEI`]) `quicknote.txt`. Bis zum 261111 hiess er
+/// `AlteGeheimnisse` und meinte allein den ersten.
 ///
 /// **Vollstaendig und ohne Auffangzweig**, damit ein weiterer Ausgang die
 /// Meldungen anhaelt, bis er einen Satz hat.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum AlteGeheimnisse {
-    /// Sie heisst jetzt `secrets.txt`, dieselbe Inode, der alte Name ist weg.
+pub enum Umbenennung {
+    /// Die Datei traegt jetzt den neuen Namen, dieselbe Inode, der alte Name
+    /// ist weg.
     Umbenannt,
-    /// `secrets.txt` stand schon; beide bleiben, wie sie sind.
+    /// Der neue Name stand schon; beide Dateien bleiben, wie sie sind.
     BeideStehen,
     /// Der harte Verweis ist gelungen, der alte Name laesst sich aber nicht
     /// entfernen: beide Namen nennen dieselbe Datei. Der Grund des Systems.
     AlterNameBleibt(String),
-    /// Der harte Verweis ist gescheitert; `.secrets.txt` ist unberuehrt, und
-    /// `secrets.txt` ist nicht angelegt. Der Grund des Systems.
+    /// Der harte Verweis ist gescheitert; die Datei unter dem alten Namen ist
+    /// unberuehrt, und der neue Name ist nicht angelegt. Der Grund des
+    /// Systems.
     Gescheitert(String),
+}
+
+impl Umbenennung {
+    /// Der Satz fuer die Statuszeile; `alt` und `neu` sind die zwei
+    /// Dateinamen, `ort` der Ordner, wie [`Heimordner::anzeigename`] ihn nennt.
+    ///
+    /// Der Wortlaut steht in der Sprachtabelle (`crate::sprache`) und nennt
+    /// keine Datei selbst, damit beide Nutzer des Typs dieselben vier Saetze
+    /// tragen.
+    pub fn meldung(&self, alt: &str, neu: &str, ort: &str) -> String {
+        let namen: [(&str, &dyn fmt::Display); 2] = [("alt", &alt), ("neu", &neu)];
+        match self {
+            Umbenennung::Umbenannt => satz(Text::HeimUmbenannt, &namen),
+            Umbenennung::BeideStehen => satz(
+                Text::HeimUmbenennungBeideStehen,
+                &[("alt", &alt), ("neu", &neu), ("ort", &ort)],
+            ),
+            Umbenennung::AlterNameBleibt(grund) => satz(
+                Text::HeimUmbenennungAlterNameBleibt,
+                &[("alt", &alt), ("neu", &neu), ("grund", grund)],
+            ),
+            Umbenennung::Gescheitert(grund) => satz(
+                Text::HeimNichtUmbenannt,
+                &[("alt", &alt), ("neu", &neu), ("grund", grund)],
+            ),
+        }
+    }
 }
 
 /// Was ein Aufruf von [`bereitstellen`] getan hat.
@@ -289,8 +324,9 @@ pub struct Bereitstellung {
     /// dem Auslieferungszustand kam.
     pub merkerersetzung: Option<String>,
     /// Was aus einer `.secrets.txt` von vorher geworden ist; `None`, wenn im
-    /// Heimordner keine stand.
-    pub alte_geheimnisse: Option<AlteGeheimnisse>,
+    /// Heimordner keine stand. Bis zum 261111 hiess das Feld
+    /// `alte_geheimnisse`.
+    pub umbenennung: Option<Umbenennung>,
     /// Der Ort, wie die Statuszeile ihn nennt ([`Heimordner::anzeigename`]),
     /// fuer die Saetze, die den Ordner nennen.
     pub ort: String,
@@ -378,26 +414,12 @@ impl Bereitstellung {
                 &[("name", &sorte.dateiname()), ("grund", grund)],
             ));
         }
-        let neu = Sonderdatei::Geheimnisse.dateiname();
-        let alt = ALTER_GEHEIMNISNAME;
-        let namen: [(&str, &dyn fmt::Display); 2] = [("alt", &alt), ("neu", &neu)];
-        match &self.alte_geheimnisse {
-            None => {}
-            Some(AlteGeheimnisse::Umbenannt) => {
-                saetze.push(satz(Text::HeimGeheimnisseUmbenannt, &namen));
-            }
-            Some(AlteGeheimnisse::BeideStehen) => saetze.push(satz(
-                Text::HeimGeheimnisseBeideStehen,
-                &[("alt", &alt), ("neu", &neu), ("ort", &self.ort)],
-            )),
-            Some(AlteGeheimnisse::AlterNameBleibt(grund)) => saetze.push(satz(
-                Text::HeimGeheimnisseAlterNameBleibt,
-                &[("alt", &alt), ("neu", &neu), ("grund", grund)],
-            )),
-            Some(AlteGeheimnisse::Gescheitert(grund)) => saetze.push(satz(
-                Text::HeimGeheimnisseNichtUmbenannt,
-                &[("alt", &alt), ("neu", &neu), ("grund", grund)],
-            )),
+        if let Some(umbenennung) = &self.umbenennung {
+            saetze.push(umbenennung.meldung(
+                ALTER_GEHEIMNISNAME,
+                Sonderdatei::Geheimnisse.dateiname(),
+                &self.ort,
+            ));
         }
         saetze
     }
@@ -541,25 +563,25 @@ fn anlegen_mit_vorlauf(
         uebernahme: None,
         zettelmerker: Zettelmerker::NichtsZuVermerken,
         merkerersetzung,
-        alte_geheimnisse: None,
+        umbenennung: None,
         ort: heim.anzeigename().to_owned(),
     };
     let mut notizen_stehen = false;
     for sorte in Sonderdatei::ALLE {
         let pfad = ordner.join(sorte.dateiname());
         if sorte == Sonderdatei::Geheimnisse {
-            bereitstellung.alte_geheimnisse =
+            bereitstellung.umbenennung =
                 ohne_ersetzen_umbenennen(&ordner.join(ALTER_GEHEIMNISNAME), &pfad);
-            match &bereitstellung.alte_geheimnisse {
+            match &bereitstellung.umbenennung {
                 // Es gab keine alte Datei, oder `secrets.txt` stand schon: dann
                 // legt der gewoehnliche Weg an oder findet sie vor.
-                None | Some(AlteGeheimnisse::BeideStehen) => {}
+                None | Some(Umbenennung::BeideStehen) => {}
                 // Sie heisst jetzt `secrets.txt`, oder eine Datei unter altem
                 // Namen soll nicht eine leere neue neben sich bekommen.
                 Some(
-                    AlteGeheimnisse::Umbenannt
-                    | AlteGeheimnisse::AlterNameBleibt(_)
-                    | AlteGeheimnisse::Gescheitert(_),
+                    Umbenennung::Umbenannt
+                    | Umbenennung::AlterNameBleibt(_)
+                    | Umbenennung::Gescheitert(_),
                 ) => continue,
             }
         }
@@ -615,21 +637,33 @@ fn anlegen_mit_vorlauf(
 /// Meldet `link(2)` ein vorhandenes Ziel, wird `alt` noch einmal am Eintrag
 /// gefragt: fehlen beide Seiten nicht, stehen beide; fehlt `alt`, gab es nichts
 /// umzubenennen, gleich welchen Fehler das System zuerst nennt.
-fn ohne_ersetzen_umbenennen(alt: &Path, neu: &Path) -> Option<AlteGeheimnisse> {
+///
+/// **Vor dem Verweis steht keine Pruefung, ob `neu` frei ist, und `rename(2)`
+/// steht hier nicht**: die eine Frage, ob der neue Name frei ist, beantwortet
+/// `link(2)` selbst, also gibt es kein Fenster zwischen Pruefung und
+/// Umbenennung, in dem eine entstehende Datei ersetzt wuerde. Die Probe
+/// `ohne_ersetzen_umbenennen_prueft_nicht_vor_dem_verweis_und_benennt_nicht_um`
+/// (`crates/krk-core/tests/heimordner.rs`) haelt beides am Rumpf.
+///
+/// Oeffentlich seit dem 261111, weil neben F2 (`.secrets.txt`) die Sicherung
+/// der Quicknote dieselbe Regel braucht (E3 des Plans
+/// `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`). Die
+/// Funktion stellt Systemaufrufe und gehoert auf keinen Hauptfadenweg.
+pub fn ohne_ersetzen_umbenennen(alt: &Path, neu: &Path) -> Option<Umbenennung> {
     match fs::hard_link(alt, neu) {
         Ok(()) => Some(match fs::remove_file(alt) {
-            Ok(()) => AlteGeheimnisse::Umbenannt,
-            Err(fehler) => AlteGeheimnisse::AlterNameBleibt(fehler.to_string()),
+            Ok(()) => Umbenennung::Umbenannt,
+            Err(fehler) => Umbenennung::AlterNameBleibt(fehler.to_string()),
         }),
         Err(fehler) if fehler.kind() == io::ErrorKind::NotFound => None,
         Err(fehler) if fehler.kind() == io::ErrorKind::AlreadyExists => {
             match fs::symlink_metadata(alt) {
-                Ok(_) => Some(AlteGeheimnisse::BeideStehen),
+                Ok(_) => Some(Umbenennung::BeideStehen),
                 Err(pruefung) if pruefung.kind() == io::ErrorKind::NotFound => None,
-                Err(pruefung) => Some(AlteGeheimnisse::Gescheitert(pruefung.to_string())),
+                Err(pruefung) => Some(Umbenennung::Gescheitert(pruefung.to_string())),
             }
         }
-        Err(fehler) => Some(AlteGeheimnisse::Gescheitert(fehler.to_string())),
+        Err(fehler) => Some(Umbenennung::Gescheitert(fehler.to_string())),
     }
 }
 

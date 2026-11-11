@@ -413,14 +413,14 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::HeimMerkerOhneAblage => {
             "Sans son dossier de données, KRK ne peut pas retenir que les anciennes notes ont été reprises\u{202f}; un F2 ultérieur le rattrapera, et si {ort} est supprimé avant, il les reprendra une nouvelle fois"
         }
-        Text::HeimGeheimnisseUmbenannt => "{alt} s’appelle maintenant {neu}",
-        Text::HeimGeheimnisseBeideStehen => {
+        Text::HeimUmbenannt => "{alt} s’appelle maintenant {neu}",
+        Text::HeimUmbenennungBeideStehen => {
             "{neu} et {alt} existent tous deux dans {ort}\u{202f}; KRK n’en renomme aucun, et c’est {neu} qui compte"
         }
-        Text::HeimGeheimnisseAlterNameBleibt => {
+        Text::HeimUmbenennungAlterNameBleibt => {
             "{alt} s’appelle maintenant aussi {neu}, l’ancien nom ne peut pas être supprimé\u{a0}: {grund}"
         }
-        Text::HeimGeheimnisseNichtUmbenannt => {
+        Text::HeimNichtUmbenannt => {
             "{alt} ne peut pas être renommé en {neu} ({grund})\u{202f}; il reste inchangé, et {neu} n’est pas créé"
         }
         Text::HeimZettelNotizenStandenSchon => {
@@ -1004,10 +1004,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "La Quicknote n’est pas enregistrée\u{a0}: il n’y a pas de dossier de notes."
         }
         Text::QuicknoteFremdGeaendert => {
-            "scratch.txt a été modifié en dehors de la Quicknote\u{202f}; la Quicknote ne l’enregistre plus jusqu’au prochain démarrage."
+            "quicknote.txt a été modifié en dehors de la Quicknote\u{202f}; la Quicknote ne l’enregistre plus jusqu’au prochain démarrage."
         }
         Text::QuicknoteNichtGelesen => {
-            "scratch.txt n’a pas pu être lu ({grund})\u{202f}; la Quicknote ne l’enregistre pas jusqu’au prochain démarrage."
+            "quicknote.txt n’a pas pu être lu ({grund})\u{202f}; la Quicknote ne l’enregistre pas jusqu’au prochain démarrage."
         }
         Text::QuicknoteNichtGesichert => {
             "La Quicknote n’a pas pu être enregistrée\u{a0}: {fehler}."

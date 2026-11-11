@@ -1,11 +1,16 @@
-//! Die Sicherung der Quicknote in `scratch.txt`, ohne AppKit (Schritt 3 des
-//! Plans `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`).
+//! Die Sicherung der Quicknote in `quicknote.txt`, ohne AppKit (Schritt 3 des
+//! Plans `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`;
+//! der Dateiname und die Uebernahme der frueheren Datei aus Schritt 2 des Plans
+//! `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`).
 //!
 //! ```text
 //!  Editorbereich (Hauptfaden)                 Faden krk-quicknote
 //!  ───────────────────────────                ───────────────────
-//!  Sicherung::starten ── Lesen ─────────────> stat, Stempel, lesen
+//!  Sicherung::starten ── Lesen ─────────────> alte Datei uebernehmen,
+//!                                             stat, Stempel, lesen
 //!                                               │
+//!  einziehen() <── Uebernahme (hoechstens ────┤
+//!                  einmal, davor)             │
 //!  einziehen() <── Gelesen / Fehlt / ─────────┘
 //!                  NichtGelesen
 //!  schreiben(text) ── Schreiben ────────────> juengsten nehmen, Stempel
@@ -15,9 +20,9 @@
 //!  abschliessen(2 s) ── Abschliessen ───────> Quittung nach allem davor
 //! ```
 //!
-//! **Diese Datei ist der eine Schreiber von `scratch.txt`.** Den Pfad bekommt
+//! **Diese Datei ist der eine Schreiber von `quicknote.txt`.** Den Pfad bekommt
 //! sie hereingereicht, gebaut ueber `Heimordner::quicknotedatei`; die Probe
-//! `scratch_txt_hat_genau_einen_schreiber` im Pruefmodul haelt das, soweit eine
+//! `quicknote_txt_hat_genau_einen_schreiber` im Pruefmodul haelt das, soweit eine
 //! Nadel es kann.
 //!
 //! # Erst gelesen, dann geschrieben
@@ -29,6 +34,43 @@
 //! die Antwort auf das Lesen abgeholt hat**: sonst koennte ein Text, der vor dem
 //! Einsetzen des gelesenen Inhalts entstand (der leere Puffer), die Datei
 //! ueberschreiben, obwohl der Faden sie zuerst gelesen hat.
+//!
+//! # Die fruehere Datei wird vor dem ersten Lesen uebernommen
+//!
+//! Bis zum 261111 hiess die Datei anders (`heimordner::ALTE_QUICKNOTEDATEI`).
+//! **Unmittelbar vor dem ersten Lesen, auf diesem Faden, gibt
+//! `heimordner::ohne_ersetzen_umbenennen` einer Datei unter dem frueheren
+//! Namen den neuen**: ueber einen harten Verweis, der an einer vorhandenen
+//! `quicknote.txt` scheitert, und ohne Pruefung davor. Eine vorhandene
+//! `quicknote.txt` wird damit nie ersetzt, auch nicht, wenn sie in diesem
+//! Augenblick entsteht (C2.4 des Spec
+//! `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`). Was
+//! danach gelesen wird, sagt die Tafel aus E3 des Plans:
+//!
+//! ```text
+//!  Ausgang                    gezeigt wird               auf der Platte
+//!  ─────────────────────────  ─────────────────────────  ─────────────────────────
+//!  keine fruehere Datei       quicknote.txt oder leer    unveraendert
+//!  Umbenannt                  der Inhalt, jetzt unter    dieselbe Inode, der alte
+//!                             quicknote.txt              Name ist weg
+//!  BeideStehen                quicknote.txt              beide unveraendert
+//!  AlterNameBleibt            quicknote.txt              zwei Namen, eine Inode
+//!  Gescheitert                der Inhalt der frueheren   die fruehere Datei
+//!                             Datei                      unveraendert; quicknote.txt
+//!                                                        entsteht mit dem ersten
+//!                                                        Sichern exklusiv
+//! ```
+//!
+//! Der letzte Fall ist ein Notizordner auf einem Dateisystem ohne harte
+//! Verweise: `quicknote.txt` gilt dem Faden dann als fehlend, das erste Sichern
+//! legt sie exklusiv an, und die fruehere Datei schreibt dieser Faden nie.
+//! **Steht `quicknote.txt` bei einem gescheiterten Verweis doch**, etwa weil
+//! unter dem frueheren Namen ein Ordner liegt, wird sie gelesen wie in der
+//! Zeile `BeideStehen`; die Tafel nennt den Fall nicht, und so bleibt eine
+//! lesbare `quicknote.txt` nicht hinter einem unlesbaren frueheren Namen
+//! verborgen. Jeder Ausgang ausser dem ersten meldet sich einmal
+//! ([`Sicherungsmeldung::Uebernahme`]), vor der Antwort auf das Lesen, und
+//! sperrt nichts. Ein zweiter Leseauftrag benennt nichts um.
 //!
 //! # Wann nicht mehr gesichert wird
 //!
@@ -88,27 +130,28 @@ use std::sync::mpsc::{self, Receiver, Sender, SyncSender, TryRecvError};
 use std::thread;
 use std::time::{Duration, Instant};
 
+use krk_core::heimordner::{self, Umbenennung};
 use krk_core::text::datei::{self, Dateiform, Lesehindernis, Platzhalterregel, Zeilenenden};
 
 use crate::editormodell::Stempel;
 
-/// Die Form, in der `scratch.txt` geschrieben wird: der Puffer Byte fuer Byte.
+/// Die Form, in der `quicknote.txt` geschrieben wird: der Puffer Byte fuer Byte.
 const FORM: Dateiform = Dateiform {
     marke: false,
     zeilenenden: Zeilenenden::WieGelesen,
 };
 
-/// Die Rechte einer neu angelegten `scratch.txt`: allein das eigene Konto.
+/// Die Rechte einer neu angelegten `quicknote.txt`: allein das eigene Konto.
 const RECHTE: u32 = 0o600;
 
 /// Was der Faden meldet. **Vollstaendig und ohne Auffangzweig** zu behandeln.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Sicherungsmeldung {
-    /// `scratch.txt` war lesbar; der Text in gehaltener Form.
+    /// `quicknote.txt` war lesbar; der Text in gehaltener Form.
     Gelesen(String),
-    /// `scratch.txt` fehlt (oder es gibt keinen Heimordner): ein leerer Puffer.
+    /// `quicknote.txt` fehlt (oder es gibt keinen Heimordner): ein leerer Puffer.
     Fehlt,
-    /// `scratch.txt` liess sich nicht lesen; die Sicherung ist gesperrt.
+    /// `quicknote.txt` liess sich nicht lesen; die Sicherung ist gesperrt.
     NichtGelesen(Unlesbar),
     /// Der juengste Text steht auf der Platte.
     Gesichert,
@@ -120,9 +163,14 @@ pub enum Sicherungsmeldung {
     FremdGeaendert,
     /// Das Schreiben ist an etwas anderem gescheitert; der Grund vom System.
     Gescheitert(String),
+    /// Was aus einer Datei unter dem frueheren Namen geworden ist (Modulkopf,
+    /// „Die fruehere Datei wird vor dem ersten Lesen uebernommen“). Kommt
+    /// hoechstens einmal je Prozess, vor der Antwort auf das Lesen, und
+    /// aendert den Stand nicht: sie sperrt nichts.
+    Uebernahme(Umbenennung),
 }
 
-/// Warum `scratch.txt` sich nicht lesen liess.
+/// Warum `quicknote.txt` sich nicht lesen liess.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Unlesbar {
     /// Ein Grund der Leseschleuse, vollstaendig aus `Lesehindernis`.
@@ -195,14 +243,28 @@ impl Sicherung {
     ///
     /// `pfad` ist `None`, wenn es keinen Heimordner gibt; dann meldet das
     /// Lesen [`Sicherungsmeldung::Fehlt`] und jedes Schreiben
-    /// [`Sicherungsmeldung::OrdnerFehlt`]. `grenze` ist die Grenze des
-    /// Puffers, `QUICKNOTEGRENZE`.
-    pub fn starten(pfad: Option<PathBuf>, grenze: u64) -> io::Result<Self> {
+    /// [`Sicherungsmeldung::OrdnerFehlt`]. `frueher` ist der Pfad der Datei
+    /// unter ihrem frueheren Namen, die der Faden vor dem ersten Lesen
+    /// uebernimmt; ohne `pfad` oder ohne `frueher` wird nichts uebernommen.
+    /// `grenze` ist die Grenze des Puffers, `QUICKNOTEGRENZE`.
+    pub fn starten(
+        pfad: Option<PathBuf>,
+        frueher: Option<PathBuf>,
+        grenze: u64,
+    ) -> io::Result<Self> {
         let (auftraege, eingang) = mpsc::channel();
         let (ausgang, antworten) = mpsc::channel();
         thread::Builder::new()
             .name("krk-quicknote".to_owned())
-            .spawn(move || faden(pfad.as_deref(), grenze, &eingang, &ausgang))?;
+            .spawn(move || {
+                faden(
+                    pfad.as_deref(),
+                    frueher.as_deref(),
+                    grenze,
+                    &eingang,
+                    &ausgang,
+                );
+            })?;
         let sicherung = Self::aus_kanaelen(auftraege, antworten);
         // Der Faden lebt, also nimmt der Kanal den Auftrag an; scheitert es
         // trotzdem, bleibt die Sicherung ungelesen und nimmt nichts an.
@@ -401,8 +463,9 @@ fn stand_nach(vorher: Sicherungsstand, meldung: &Sicherungsmeldung) -> Sicherung
             Sicherungsstand::Gesperrt
         }
         // Ein gescheitertes Schreiben laesst die Datei, wie sie war; der
-        // naechste Auftrag versucht es wieder.
-        Sicherungsmeldung::Gescheitert(_) => vorher,
+        // naechste Auftrag versucht es wieder. Der Ausgang der Uebernahme
+        // kommt vor der Antwort auf das Lesen und sagt ueber den Stand nichts.
+        Sicherungsmeldung::Gescheitert(_) | Sicherungsmeldung::Uebernahme(_) => vorher,
     }
 }
 
@@ -421,7 +484,13 @@ enum Zustand {
 
 /// Der Rumpf des Fadens: bedient die Auftraege in ihrer Reihenfolge und fasst
 /// wartende Schreibauftraege zum juengsten zusammen.
-fn faden(pfad: Option<&Path>, grenze: u64, eingang: &Receiver<Auftrag>, ausgang: &Sender<Antwort>) {
+fn faden(
+    pfad: Option<&Path>,
+    frueher: Option<&Path>,
+    grenze: u64,
+    eingang: &Receiver<Auftrag>,
+    ausgang: &Sender<Antwort>,
+) {
     let mut zustand = Zustand::Ungelesen;
     let mut naechster: Option<Auftrag> = None;
     loop {
@@ -433,10 +502,28 @@ fn faden(pfad: Option<&Path>, grenze: u64, eingang: &Receiver<Auftrag>, ausgang:
             },
         };
         let antwort = match auftrag {
-            Auftrag::Lesen => Antwort {
-                meldung: lesen(pfad, grenze, &mut zustand),
-                erledigt: 0,
-            },
+            Auftrag::Lesen => {
+                // Allein vor dem ersten Lesen: ein zweiter Leseauftrag
+                // benennt nichts um und liest nichts.
+                let uebernahme = matches!(zustand, Zustand::Ungelesen)
+                    .then(|| uebernehmen(pfad, frueher))
+                    .flatten();
+                if let Some(ausgang_der_uebernahme) = &uebernahme {
+                    let antwort = Antwort {
+                        meldung: Some(Sicherungsmeldung::Uebernahme(
+                            ausgang_der_uebernahme.clone(),
+                        )),
+                        erledigt: 0,
+                    };
+                    if ausgang.send(antwort).is_err() {
+                        return;
+                    }
+                }
+                Antwort {
+                    meldung: lesen(pfad, frueher, uebernahme.as_ref(), grenze, &mut zustand),
+                    erledigt: 0,
+                }
+            }
             Auftrag::Schreiben(mut text) => {
                 let mut erledigt = 1;
                 loop {
@@ -468,12 +555,36 @@ fn faden(pfad: Option<&Path>, grenze: u64, eingang: &Receiver<Auftrag>, ausgang:
     }
 }
 
-/// Liest `scratch.txt` (E3). Ein zweiter Leseauftrag liest nichts.
-fn lesen(pfad: Option<&Path>, grenze: u64, zustand: &mut Zustand) -> Option<Sicherungsmeldung> {
+/// Gibt einer Datei unter dem frueheren Namen den Namen `quicknote.txt`, ohne
+/// je eine vorhandene zu ersetzen. `None`, wenn es keine fruehere Datei gibt,
+/// der Notizordner fehlt oder einer der zwei Pfade nicht bekannt ist.
+fn uebernehmen(pfad: Option<&Path>, frueher: Option<&Path>) -> Option<Umbenennung> {
+    heimordner::ohne_ersetzen_umbenennen(frueher?, pfad?)
+}
+
+/// Ob an `pfad` nichts steht.
+fn fehlt(pfad: &Path) -> bool {
+    std::fs::metadata(pfad).is_err_and(|fehler| fehler.kind() == ErrorKind::NotFound)
+}
+
+/// Liest `quicknote.txt` (E3 des Plans der Sicherung) nach dem Ausgang der
+/// Uebernahme (Modulkopf, die Tafel). Ein zweiter Leseauftrag liest nichts.
+///
+/// Allein nach einem gescheiterten Verweis und ohne `quicknote.txt` wird die
+/// Datei unter dem frueheren Namen gelesen; `quicknote.txt` gilt dann als
+/// fehlend (kein Stempel), sodass das erste Sichern sie exklusiv anlegt und
+/// an einer inzwischen entstandenen scheitert, statt sie zu ersetzen.
+fn lesen(
+    pfad: Option<&Path>,
+    frueher: Option<&Path>,
+    uebernahme: Option<&Umbenennung>,
+    grenze: u64,
+    zustand: &mut Zustand,
+) -> Option<Sicherungsmeldung> {
     if !matches!(zustand, Zustand::Ungelesen) {
         return None;
     }
-    let fehlt = |zustand: &mut Zustand| {
+    let als_fehlend = |zustand: &mut Zustand| {
         *zustand = Zustand::Bereit {
             stempel: None,
             ordner_fehlte: false,
@@ -482,15 +593,33 @@ fn lesen(pfad: Option<&Path>, grenze: u64, zustand: &mut Zustand) -> Option<Sich
         Some(Sicherungsmeldung::Fehlt)
     };
     let Some(pfad) = pfad else {
-        return fehlt(zustand);
+        return als_fehlend(zustand);
     };
-    if std::fs::metadata(pfad).is_err_and(|fehler| fehler.kind() == ErrorKind::NotFound) {
-        return fehlt(zustand);
+    let aus_der_frueheren = match (uebernahme, frueher) {
+        (Some(Umbenennung::Gescheitert(_)), Some(frueher)) if fehlt(pfad) => Some(frueher),
+        (
+            None
+            | Some(
+                Umbenennung::Umbenannt
+                | Umbenennung::BeideStehen
+                | Umbenennung::AlterNameBleibt(_)
+                | Umbenennung::Gescheitert(_),
+            ),
+            _,
+        ) => None,
+    };
+    let pfad = aus_der_frueheren.unwrap_or(pfad);
+    if fehlt(pfad) {
+        return als_fehlend(zustand);
     }
     // Der Stempel vor dem Lesen, aus dem Grund an `Ladevorgang::starten`: eine
     // Aenderung waehrend des Lesens laesst ihn aelter sein als den Inhalt und
-    // faellt beim ersten Schreiben auf.
-    let stempel = Stempel::von_pfad(pfad);
+    // faellt beim ersten Schreiben auf. Aus der frueheren Datei gelesen, gibt
+    // es keinen: der Stempel gilt `quicknote.txt`, und die fehlt.
+    let stempel = match aus_der_frueheren {
+        Some(_) => None,
+        None => Stempel::von_pfad(pfad),
+    };
     let gelesen = datei::bis_zur_grenze_lesen(pfad, grenze, Platzhalterregel::Laden, &|| true)
         .map_err(Unlesbar::Hindernis)
         .and_then(|bytes| datei::einlesen(bytes).ok_or(Unlesbar::KeinText));
@@ -645,7 +774,7 @@ mod proben {
     }
 
     fn gestartet(pfad: &Path) -> Sicherung {
-        Sicherung::starten(Some(pfad.to_path_buf()), GRENZE).expect("Faden startet")
+        Sicherung::starten(Some(pfad.to_path_buf()), None, GRENZE).expect("Faden startet")
     }
 
     fn rechte(pfad: &Path) -> u32 {
@@ -659,7 +788,7 @@ mod proben {
     #[test]
     fn eine_fehlende_datei_ergibt_einen_leeren_puffer_und_entsteht_beim_ersten_sichern_mit_0600() {
         let ordner = Pruefordner::neu("qn-fehlt");
-        let pfad = ordner.unter("scratch.txt");
+        let pfad = ordner.unter("quicknote.txt");
         let sicherung = gestartet(&pfad);
         assert_eq!(abholen(&sicherung), vec![Sicherungsmeldung::Fehlt]);
         assert!(!pfad.exists(), "das Lesen legt nichts an");
@@ -676,7 +805,7 @@ mod proben {
     #[test]
     fn ein_gelesener_text_kommt_byte_fuer_byte_zurueck_ohne_angehaengten_umbruch() {
         let ordner = Pruefordner::neu("qn-rundlauf");
-        let pfad = ordner.unter("scratch.txt");
+        let pfad = ordner.unter("quicknote.txt");
         let text = "Gr\u{fc}\u{df}e\nzweite Zeile ohne Schluss";
 
         let erste = gestartet(&pfad);
@@ -704,7 +833,7 @@ mod proben {
     #[test]
     fn vor_der_antwort_auf_das_lesen_wird_nichts_geschrieben() {
         let ordner = Pruefordner::neu("qn-reihenfolge");
-        let pfad = ordner.datei("scratch.txt", "vorhanden");
+        let pfad = ordner.datei("quicknote.txt", "vorhanden");
         let sicherung = gestartet(&pfad);
         // Die Antwort auf das Lesen ist nicht abgeholt: kein Auftrag.
         assert_eq!(sicherung.stand(), Sicherungsstand::Ungelesen);
@@ -721,15 +850,16 @@ mod proben {
     #[test]
     fn wartende_auftraege_schreiben_nur_den_juengsten() {
         let ordner = Pruefordner::neu("qn-juengster");
-        let pfad = ordner.unter("scratch.txt");
+        let pfad = ordner.unter("quicknote.txt");
         let (auftraege, eingang) = mpsc::channel();
         let (ausgang, antworten) = mpsc::channel();
         let sicherung = Sicherung::aus_kanaelen(auftraege, antworten);
         // Die Auftraege stehen schon an, bevor der Faden laeuft.
         let _ = sicherung.auftraege.send(Auftrag::Lesen);
         let fuer_faden = pfad.clone();
-        let faden_griff =
-            thread::spawn(move || faden(Some(fuer_faden.as_path()), GRENZE, &eingang, &ausgang));
+        let faden_griff = thread::spawn(move || {
+            faden(Some(fuer_faden.as_path()), None, GRENZE, &eingang, &ausgang)
+        });
         assert_eq!(abholen(&sicherung), vec![Sicherungsmeldung::Fehlt]);
 
         // Ob der Faden zwischen den drei Auftraegen aufwacht, entscheidet der
@@ -758,7 +888,7 @@ mod proben {
         // Dieselbe Eigenschaft ohne Planer: die Auftraege stehen im Kanal,
         // bevor der Faden ueberhaupt startet.
         let ordner = Pruefordner::neu("qn-zusammen");
-        let pfad = ordner.unter("scratch.txt");
+        let pfad = ordner.unter("quicknote.txt");
         let (auftraege, eingang) = mpsc::channel();
         let (ausgang, antworten) = mpsc::channel();
         for auftrag in [
@@ -770,7 +900,7 @@ mod proben {
             let _ = auftraege.send(auftrag);
         }
         drop(auftraege);
-        faden(Some(pfad.as_path()), GRENZE, &eingang, &ausgang);
+        faden(Some(pfad.as_path()), None, GRENZE, &eingang, &ausgang);
         let gesammelt: Vec<(Option<Sicherungsmeldung>, usize)> = antworten
             .try_iter()
             .map(|antwort| (antwort.meldung, antwort.erledigt))
@@ -789,7 +919,7 @@ mod proben {
     fn ein_fehlender_ordner_schreibt_nichts_legt_nichts_an_und_sichert_sobald_er_steht() {
         let ordner = Pruefordner::neu("qn-ordner");
         let heim = ordner.unter("krkhome");
-        let pfad = heim.join("scratch.txt");
+        let pfad = heim.join("quicknote.txt");
         let sicherung = gestartet(&pfad);
         assert_eq!(abholen(&sicherung), vec![Sicherungsmeldung::Fehlt]);
 
@@ -830,7 +960,7 @@ mod proben {
     fn nach_fehlendem_ordner_sichert_der_abschluss_ohne_weitere_aenderung() {
         let ordner = Pruefordner::neu("qn-vormerkung-ordner");
         let heim = ordner.unter("krkhome");
-        let pfad = heim.join("scratch.txt");
+        let pfad = heim.join("quicknote.txt");
         let sicherung = gestartet(&pfad);
         assert_eq!(abholen(&sicherung), vec![Sicherungsmeldung::Fehlt]);
         let mut vormerkung = Vormerkung::default();
@@ -864,7 +994,7 @@ mod proben {
     fn nach_gescheitertem_schreiben_sichert_der_abschluss_ohne_weitere_aenderung() {
         let ordner = Pruefordner::neu("qn-vormerkung-gescheitert");
         let heim = ordner.ordner("krkhome");
-        let pfad = heim.join("scratch.txt");
+        let pfad = heim.join("quicknote.txt");
         let sicherung = gestartet(&pfad);
         assert_eq!(abholen(&sicherung), vec![Sicherungsmeldung::Fehlt]);
         let mut vormerkung = Vormerkung::default();
@@ -897,7 +1027,7 @@ mod proben {
     #[test]
     fn vor_der_ruhe_wird_nichts_abgegeben_und_danach_genau_einmal() {
         let ordner = Pruefordner::neu("qn-vormerkung-ruhe");
-        let pfad = ordner.unter("scratch.txt");
+        let pfad = ordner.unter("quicknote.txt");
         let sicherung = gestartet(&pfad);
         assert_eq!(abholen(&sicherung), vec![Sicherungsmeldung::Fehlt]);
         let mut vormerkung = Vormerkung::default();
@@ -922,7 +1052,7 @@ mod proben {
     #[test]
     fn eine_aenderung_nach_der_abgabe_bleibt_ungesichert_bis_ihr_auftrag_gesichert_ist() {
         let ordner = Pruefordner::neu("qn-vormerkung-spaet");
-        let pfad = ordner.unter("scratch.txt");
+        let pfad = ordner.unter("quicknote.txt");
         let sicherung = gestartet(&pfad);
         assert_eq!(abholen(&sicherung), vec![Sicherungsmeldung::Fehlt]);
         let mut vormerkung = Vormerkung::default();
@@ -949,7 +1079,7 @@ mod proben {
     #[test]
     fn eine_gesperrte_sicherung_merkt_nichts_vor() {
         let ordner = Pruefordner::neu("qn-vormerkung-ungelesen");
-        let pfad = ordner.datei("scratch.txt", "vorhanden");
+        let pfad = ordner.datei("quicknote.txt", "vorhanden");
         let sicherung = gestartet(&pfad);
         let mut vormerkung = Vormerkung::default();
         // Vor dem Abholen der Antwort auf das Lesen nimmt die Sicherung nichts.
@@ -961,7 +1091,7 @@ mod proben {
 
     #[test]
     fn ohne_heimordner_fehlt_die_datei_und_der_ordner() {
-        let sicherung = Sicherung::starten(None, GRENZE).expect("Faden startet");
+        let sicherung = Sicherung::starten(None, None, GRENZE).expect("Faden startet");
         assert_eq!(abholen(&sicherung), vec![Sicherungsmeldung::Fehlt]);
         assert_eq!(
             sichern_und_warten(&sicherung, "eins"),
@@ -972,7 +1102,7 @@ mod proben {
     #[test]
     fn eine_aenderung_von_aussen_sperrt_und_laesst_die_datei_unberuehrt() {
         let ordner = Pruefordner::neu("qn-fremd");
-        let pfad = ordner.datei("scratch.txt", "vorher");
+        let pfad = ordner.datei("quicknote.txt", "vorher");
         let sicherung = gestartet(&pfad);
         assert_eq!(
             abholen(&sicherung),
@@ -995,7 +1125,7 @@ mod proben {
     #[test]
     fn eine_datei_die_waehrend_der_fehlanzeige_entsteht_wird_nicht_ueberschrieben() {
         let ordner = Pruefordner::neu("qn-entsteht");
-        let pfad = ordner.unter("scratch.txt");
+        let pfad = ordner.unter("quicknote.txt");
         let sicherung = gestartet(&pfad);
         assert_eq!(abholen(&sicherung), vec![Sicherungsmeldung::Fehlt]);
         std::fs::write(&pfad, "fremd").expect("geschrieben");
@@ -1010,7 +1140,7 @@ mod proben {
     #[test]
     fn das_exklusive_anlegen_weist_eine_vorhandene_datei_ab() {
         let ordner = Pruefordner::neu("qn-exklusiv");
-        let pfad = ordner.datei("scratch.txt", "fremd");
+        let pfad = ordner.datei("quicknote.txt", "fremd");
         let mut stempel = None;
         // Der Wettlauf zwischen Stempel und Anlegen, von Hand hergestellt: der
         // Faden glaubt die Datei fehlend, sie steht aber.
@@ -1051,7 +1181,7 @@ mod proben {
             assert_eq!(std::fs::read(&pfad).expect("gelesen"), inhalt, "{name}");
         }
 
-        let roehre = ordner.roehre("scratch.txt");
+        let roehre = ordner.roehre("quicknote.txt");
         let sicherung = gestartet(&roehre);
         assert_eq!(
             abholen(&sicherung),
@@ -1064,7 +1194,7 @@ mod proben {
     #[test]
     fn die_rechte_einer_vorhandenen_datei_bleiben() {
         let ordner = Pruefordner::neu("qn-rechte");
-        let pfad = ordner.datei("scratch.txt", "vorher");
+        let pfad = ordner.datei("quicknote.txt", "vorher");
         std::fs::set_permissions(&pfad, std::fs::Permissions::from_mode(0o640))
             .expect("Rechte gesetzt");
         let sicherung = gestartet(&pfad);
@@ -1092,13 +1222,346 @@ mod proben {
 
         // Ein lebender Faden quittiert sofort.
         let ordner = Pruefordner::neu("qn-abschluss");
-        let lebend = gestartet(&ordner.unter("scratch.txt"));
+        let lebend = gestartet(&ordner.unter("quicknote.txt"));
         let beginn = Instant::now();
         assert!(lebend.abschliessen(Duration::from_secs(2)));
         assert!(beginn.elapsed() < Duration::from_secs(1));
     }
 
-    /// `scratch.txt` hat genau einen Schreiber, und den Pfad baut allein der
+    // Die Uebernahme der Datei unter ihrem frueheren Namen (Modulkopf, die
+    // Tafel; E3 des Plans
+    // `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`). Der
+    // fruehere Name steht hier als Literal: die Konstante des Kerns soll in
+    // dieser Kiste keine Codezeile nennen.
+
+    const FRUEHER: &str = "scratch.txt";
+    const HEUTE: &str = "quicknote.txt";
+
+    /// Startet die Sicherung mit beiden Pfaden, wie der Editorbereich es tut.
+    fn mit_frueherer(ordner: &Pruefordner) -> (PathBuf, PathBuf, Sicherung) {
+        let pfad = ordner.unter(HEUTE);
+        let frueher = ordner.unter(FRUEHER);
+        let sicherung = Sicherung::starten(Some(pfad.clone()), Some(frueher.clone()), GRENZE)
+            .expect("Faden startet");
+        (pfad, frueher, sicherung)
+    }
+
+    /// Holt die Meldungen ab, bis die Antwort auf das Lesen da ist; die
+    /// Meldung der Uebernahme kommt davor und kann einen Zug frueher eintreffen.
+    fn bis_gelesen(sicherung: &Sicherung) -> Vec<Sicherungsmeldung> {
+        let beginn = Instant::now();
+        let mut meldungen = Vec::new();
+        loop {
+            meldungen.extend(sicherung.einziehen());
+            if sicherung.stand() != Sicherungsstand::Ungelesen {
+                return meldungen;
+            }
+            assert!(
+                beginn.elapsed() < Duration::from_secs(5),
+                "der Faden antwortet nicht"
+            );
+            thread::sleep(Duration::from_millis(2));
+        }
+    }
+
+    fn inode(pfad: &Path) -> u64 {
+        use std::os::unix::fs::MetadataExt;
+        std::fs::metadata(pfad).expect("Datei steht").ino()
+    }
+
+    /// Zeile 1 der Tafel: ohne fruehere Datei meldet die Uebernahme nichts,
+    /// gelesen wird `quicknote.txt` oder nichts, und die Platte bleibt, wie sie
+    /// war. Dazu C2.1: das erste Sichern legt `quicknote.txt` an und keine
+    /// Datei unter dem frueheren Namen.
+    #[test]
+    fn ohne_fruehere_datei_meldet_die_uebernahme_nichts_und_gesichert_wird_als_quicknote_txt() {
+        let leer = Pruefordner::neu("qn-ueb-keine");
+        let (pfad, frueher, sicherung) = mit_frueherer(&leer);
+        assert_eq!(bis_gelesen(&sicherung), vec![Sicherungsmeldung::Fehlt]);
+        assert!(
+            !pfad.exists() && !frueher.exists(),
+            "das Lesen legt nichts an"
+        );
+        assert_eq!(
+            sichern_und_warten(&sicherung, "getippt"),
+            vec![Sicherungsmeldung::Gesichert]
+        );
+        assert_eq!(std::fs::read(&pfad).expect("gelesen"), b"getippt");
+        assert!(
+            !frueher.exists(),
+            "unter dem frueheren Namen entsteht nichts"
+        );
+
+        let vorhanden = Pruefordner::neu("qn-ueb-keine-vorhanden");
+        vorhanden.datei(HEUTE, "steht schon");
+        let (pfad, frueher, sicherung) = mit_frueherer(&vorhanden);
+        assert_eq!(
+            bis_gelesen(&sicherung),
+            vec![Sicherungsmeldung::Gelesen("steht schon".to_owned())]
+        );
+        assert_eq!(std::fs::read(&pfad).expect("gelesen"), b"steht schon");
+        assert!(!frueher.exists());
+    }
+
+    /// Zeile 2 der Tafel und C2.2: die fruehere Datei heisst danach
+    /// `quicknote.txt`, dieselbe Inode, der alte Name ist weg, und die
+    /// Quicknote zeigt ihren Inhalt. Gemeldet wird einmal, vor dem Gelesenen.
+    #[test]
+    fn eine_fruehere_datei_wird_umbenannt_und_ihr_inhalt_gelesen() {
+        let ordner = Pruefordner::neu("qn-ueb-umbenannt");
+        let alt = ordner.datei(FRUEHER, "von vorher\nzweite Zeile");
+        let vorher = inode(&alt);
+        let (pfad, frueher, sicherung) = mit_frueherer(&ordner);
+        assert_eq!(
+            bis_gelesen(&sicherung),
+            vec![
+                Sicherungsmeldung::Uebernahme(Umbenennung::Umbenannt),
+                Sicherungsmeldung::Gelesen("von vorher\nzweite Zeile".to_owned()),
+            ]
+        );
+        assert!(!frueher.exists(), "der alte Name ist weg");
+        assert_eq!(inode(&pfad), vorher, "dieselbe Inode");
+        assert_eq!(
+            std::fs::read(&pfad).expect("gelesen"),
+            b"von vorher\nzweite Zeile"
+        );
+
+        // Danach sichert die Quicknote wie immer, und der alte Name kommt
+        // nicht wieder.
+        assert_eq!(
+            sichern_und_warten(&sicherung, "weiter"),
+            vec![Sicherungsmeldung::Gesichert]
+        );
+        assert_eq!(std::fs::read(&pfad).expect("gelesen"), b"weiter");
+        assert!(!frueher.exists());
+    }
+
+    /// Zeile 3 der Tafel und C2.3: stehen beide, zeigt die Quicknote
+    /// `quicknote.txt`, und die fruehere Datei bleibt Byte fuer Byte, auch
+    /// ueber das naechste Sichern hinweg.
+    #[test]
+    fn stehen_beide_gilt_quicknote_txt_und_die_fruehere_bleibt_byte_fuer_byte() {
+        let ordner = Pruefordner::neu("qn-ueb-beide");
+        let alter_inhalt: &[u8] = b"alt \xff\xfe kein Text\r\n";
+        let alt = ordner.datei(FRUEHER, alter_inhalt);
+        let alte_inode = inode(&alt);
+        ordner.datei(HEUTE, "neu");
+        let (pfad, frueher, sicherung) = mit_frueherer(&ordner);
+        let neue_inode = inode(&pfad);
+        assert_eq!(
+            bis_gelesen(&sicherung),
+            vec![
+                Sicherungsmeldung::Uebernahme(Umbenennung::BeideStehen),
+                Sicherungsmeldung::Gelesen("neu".to_owned()),
+            ]
+        );
+        assert_eq!(std::fs::read(&frueher).expect("gelesen"), alter_inhalt);
+        assert_eq!(inode(&frueher), alte_inode);
+        assert_eq!(std::fs::read(&pfad).expect("gelesen"), b"neu");
+        assert_eq!(inode(&pfad), neue_inode, "quicknote.txt ist nicht ersetzt");
+
+        assert_eq!(
+            sichern_und_warten(&sicherung, "neuer"),
+            vec![Sicherungsmeldung::Gesichert]
+        );
+        assert_eq!(std::fs::read(&pfad).expect("gelesen"), b"neuer");
+        assert_eq!(std::fs::read(&frueher).expect("gelesen"), alter_inhalt);
+    }
+
+    /// Zeile 4 der Tafel: laesst sich der alte Name nicht entfernen, nennen
+    /// beide Namen eine Inode, gelesen wird `quicknote.txt`, und gesichert
+    /// wird dorthin.
+    ///
+    /// Die Lage ist von Hand hergestellt (ein harter Verweis, der alte Name
+    /// bleibt), weil ein `unlink(2)`, das nach gelungenem `link(2)` im selben
+    /// Ordner scheitert, sich in einem Pruefordner nicht herstellen laesst;
+    /// gefahren wird deshalb `lesen` mit dem Ausgang als Wert. Dass
+    /// `ohne_ersetzen_umbenennen` diesen Ausgang liefert, sieht die Probe nicht.
+    #[test]
+    fn bleibt_der_alte_name_wird_quicknote_txt_gelesen_und_beide_namen_nennen_eine_inode() {
+        let ordner = Pruefordner::neu("qn-ueb-altername");
+        let frueher = ordner.datei(FRUEHER, "ein Inhalt");
+        let pfad = ordner.unter(HEUTE);
+        std::fs::hard_link(&frueher, &pfad).expect("zweiter Name");
+        let ausgang = Umbenennung::AlterNameBleibt("Operation not permitted".to_owned());
+        let mut zustand = Zustand::Ungelesen;
+        assert_eq!(
+            lesen(
+                Some(&pfad),
+                Some(&frueher),
+                Some(&ausgang),
+                GRENZE,
+                &mut zustand
+            ),
+            Some(Sicherungsmeldung::Gelesen("ein Inhalt".to_owned()))
+        );
+        assert_eq!(inode(&pfad), inode(&frueher), "zwei Namen, eine Inode");
+        assert!(
+            matches!(
+                zustand,
+                Zustand::Bereit {
+                    stempel: Some(_),
+                    ..
+                }
+            ),
+            "quicknote.txt ist die gelesene Datei und traegt den Stempel"
+        );
+        assert_eq!(
+            schreiben(Some(&pfad), "weiter", &mut zustand),
+            Some(Sicherungsmeldung::Gesichert)
+        );
+        assert_eq!(std::fs::read(&pfad).expect("gelesen"), b"weiter");
+    }
+
+    /// Zeile 5 der Tafel: ist der Verweis gescheitert (ein Dateisystem ohne
+    /// harte Verweise), zeigt die Quicknote den Inhalt der frueheren Datei,
+    /// die unberuehrt bleibt, und `quicknote.txt` entsteht mit dem ersten
+    /// Sichern exklusiv, mit den Rechten `0600`.
+    ///
+    /// Gefahren wird `lesen` mit dem Ausgang als Wert, aus dem Grund der Probe
+    /// darueber: ein Dateisystem ohne harte Verweise hat der Pruefordner nicht.
+    #[test]
+    fn nach_gescheitertem_verweis_wird_die_fruehere_gelesen_und_quicknote_txt_exklusiv_angelegt() {
+        let ordner = Pruefordner::neu("qn-ueb-gescheitert");
+        let frueher = ordner.datei(FRUEHER, "auf der Freigabe");
+        let pfad = ordner.unter(HEUTE);
+        let ausgang = Umbenennung::Gescheitert("Operation not supported".to_owned());
+        let mut zustand = Zustand::Ungelesen;
+        assert_eq!(
+            lesen(
+                Some(&pfad),
+                Some(&frueher),
+                Some(&ausgang),
+                GRENZE,
+                &mut zustand
+            ),
+            Some(Sicherungsmeldung::Gelesen("auf der Freigabe".to_owned()))
+        );
+        assert!(!pfad.exists(), "das Lesen legt quicknote.txt nicht an");
+        assert!(
+            matches!(zustand, Zustand::Bereit { stempel: None, .. }),
+            "quicknote.txt gilt als fehlend"
+        );
+
+        assert_eq!(
+            schreiben(Some(&pfad), "auf der Freigabe, weiter", &mut zustand),
+            Some(Sicherungsmeldung::Gesichert)
+        );
+        assert_eq!(
+            std::fs::read(&pfad).expect("gelesen"),
+            b"auf der Freigabe, weiter"
+        );
+        assert_eq!(rechte(&pfad), 0o600);
+        assert_eq!(
+            std::fs::read(&frueher).expect("gelesen"),
+            b"auf der Freigabe",
+            "die fruehere Datei schreibt dieser Faden nie"
+        );
+    }
+
+    /// Neben der Tafel: scheitert der Verweis und `quicknote.txt` steht doch
+    /// (unter dem frueheren Namen liegt etwa ein Ordner), wird sie gelesen und
+    /// nicht der fruehere Name. Hier am wirklichen Faden, weil `link(2)` einen
+    /// Ordner abweist.
+    #[test]
+    fn ein_ordner_unter_dem_frueheren_namen_verbirgt_quicknote_txt_nicht() {
+        let ordner = Pruefordner::neu("qn-ueb-ordner");
+        ordner.ordner(FRUEHER);
+        ordner.datei(HEUTE, "lesbar");
+        let (pfad, frueher, sicherung) = mit_frueherer(&ordner);
+        let meldungen = bis_gelesen(&sicherung);
+        assert!(
+            matches!(
+                meldungen.as_slice(),
+                [
+                    Sicherungsmeldung::Uebernahme(
+                        Umbenennung::Gescheitert(_) | Umbenennung::BeideStehen
+                    ),
+                    Sicherungsmeldung::Gelesen(text),
+                ] if text == "lesbar"
+            ),
+            "{meldungen:?}"
+        );
+        assert_eq!(sicherung.stand(), Sicherungsstand::Bereit);
+        assert!(frueher.is_dir(), "der Ordner bleibt");
+        assert_eq!(std::fs::read(&pfad).expect("gelesen"), b"lesbar");
+    }
+
+    /// C2.4: eine vorhandene `quicknote.txt` wird nie ersetzt, auch nicht,
+    /// wenn sie erst entsteht, nachdem der Faden sie als fehlend erkannt hat.
+    ///
+    /// Zwei Lagen: die Uebernahme trifft auf eine vorhandene Datei (dieselbe
+    /// Inode und derselbe Inhalt danach), und nach einem gescheiterten Verweis
+    /// entsteht `quicknote.txt` von anderer Hand vor dem ersten Sichern; dann
+    /// sperrt die Sicherung, und beide Dateien bleiben Byte fuer Byte.
+    #[test]
+    fn eine_vorhandene_quicknote_txt_wird_nie_ersetzt() {
+        let ordner = Pruefordner::neu("qn-ueb-nie-ersetzt");
+        let frueher = ordner.datei(FRUEHER, "frueher");
+        let pfad = ordner.datei(HEUTE, "heute");
+        let vorher = inode(&pfad);
+        assert_eq!(
+            uebernehmen(Some(&pfad), Some(&frueher)),
+            Some(Umbenennung::BeideStehen)
+        );
+        assert_eq!(inode(&pfad), vorher);
+        assert_eq!(std::fs::read(&pfad).expect("gelesen"), b"heute");
+        assert_eq!(std::fs::read(&frueher).expect("gelesen"), b"frueher");
+
+        let ordner = Pruefordner::neu("qn-ueb-nie-ersetzt-spaet");
+        let frueher = ordner.datei(FRUEHER, "frueher");
+        let pfad = ordner.unter(HEUTE);
+        let ausgang = Umbenennung::Gescheitert("Operation not supported".to_owned());
+        let mut zustand = Zustand::Ungelesen;
+        assert_eq!(
+            lesen(
+                Some(&pfad),
+                Some(&frueher),
+                Some(&ausgang),
+                GRENZE,
+                &mut zustand
+            ),
+            Some(Sicherungsmeldung::Gelesen("frueher".to_owned()))
+        );
+        std::fs::write(&pfad, "von anderer Hand").expect("geschrieben");
+        assert_eq!(
+            schreiben(Some(&pfad), "aus der Quicknote", &mut zustand),
+            Some(Sicherungsmeldung::FremdGeaendert)
+        );
+        assert!(matches!(zustand, Zustand::Gesperrt));
+        assert_eq!(std::fs::read(&pfad).expect("gelesen"), b"von anderer Hand");
+        assert_eq!(std::fs::read(&frueher).expect("gelesen"), b"frueher");
+    }
+
+    /// Die Uebernahme laeuft einmal: ein zweiter Leseauftrag benennt nichts um
+    /// und meldet nichts, auch wenn inzwischen wieder eine Datei unter dem
+    /// frueheren Namen steht. Und ohne Notizordner gibt es nichts zu
+    /// uebernehmen und keinen Ordner danach.
+    #[test]
+    fn die_uebernahme_laeuft_einmal_und_legt_keinen_ordner_an() {
+        let ordner = Pruefordner::neu("qn-ueb-einmal");
+        let (pfad, frueher, sicherung) = mit_frueherer(&ordner);
+        assert_eq!(bis_gelesen(&sicherung), vec![Sicherungsmeldung::Fehlt]);
+        std::fs::write(&frueher, "spaeter hingelegt").expect("geschrieben");
+        let _ = sicherung.auftraege.send(Auftrag::Lesen);
+        assert!(sicherung.abschliessen(Duration::from_secs(5)));
+        assert_eq!(sicherung.einziehen(), vec![]);
+        assert!(!pfad.exists(), "nichts umbenannt");
+        assert_eq!(
+            std::fs::read(&frueher).expect("gelesen"),
+            b"spaeter hingelegt"
+        );
+
+        let ohne = Pruefordner::neu("qn-ueb-ohne-ordner");
+        let heim = ohne.unter("krkhome");
+        let sicherung =
+            Sicherung::starten(Some(heim.join(HEUTE)), Some(heim.join(FRUEHER)), GRENZE)
+                .expect("Faden startet");
+        assert_eq!(bis_gelesen(&sicherung), vec![Sicherungsmeldung::Fehlt]);
+        assert!(!heim.exists(), "die Uebernahme legt keinen Ordner an");
+    }
+
+    /// `quicknote.txt` hat genau einen Schreiber, und den Pfad baut allein der
     /// Kern.
     ///
     /// Gehalten am Quelltext von `crates/krk-ui/src`:
@@ -1110,23 +1573,30 @@ mod proben {
     /// - `quicknotedatei(` wird in dieser Kiste genau in `appkit/editor.rs`
     ///   gerufen, der Stelle, die die Sicherung startet und ihr den Pfad
     ///   reicht, und in keiner Datei sonst;
+    /// - `alte_quicknotedatei(`, der Pfad der Datei unter ihrem frueheren
+    ///   Namen, ebenso allein dort: allein die Sicherung bekommt ihn, und
+    ///   allein sie uebernimmt die fruehere Datei;
     /// - diese Datei ruft `datei::sichern`.
     ///
-    /// **Was sie nicht sieht:** einen Pfad auf `scratch.txt`, der anders gebaut
-    /// wird (ein Literal `"scratch.txt"`, ein `join` an den Notizordner), und
+    /// Bis zum 261111 hiess die Probe nach dem frueheren Dateinamen.
+    ///
+    /// **Was sie nicht sieht:** einen Pfad auf `quicknote.txt`, der anders gebaut
+    /// wird (ein Literal `"quicknote.txt"`, ein `join` an den Notizordner), und
     /// einen Schreiber, der den Pfad aus `quicknotedatei` bekommt und ihn an
     /// `datei::sichern` oder `ablage::atomar` in einer anderen Datei reicht.
     /// Eine Nadel entscheidet nicht, wohin ein Pfad fliesst.
     #[test]
-    fn scratch_txt_hat_genau_einen_schreiber() {
+    fn quicknote_txt_hat_genau_einen_schreiber() {
         let diese = "krk-ui/src/quicknotesicherung.rs";
         let erlaubte_rufer = ["krk-ui/src/appkit/editor.rs"];
         let anlegen = concat!("create", "_new(");
         let name = concat!("QUICKNOTE", "DATEI");
         let ruf = concat!("quicknote", "datei(");
+        let alter_ruf = concat!("alte_quicknote", "datei(");
         let schreibweg = concat!("datei::", "sichern(");
         let mut diese_gelesen = false;
         let mut rufer: Vec<String> = Vec::new();
+        let mut alte_rufer: Vec<String> = Vec::new();
         for (datei, inhalt) in quelldateien() {
             if !datei.starts_with("krk-ui/src/") {
                 continue;
@@ -1144,6 +1614,9 @@ mod proben {
             }
             assert!(!nennt(anlegen), "{datei} legt exklusiv an");
             assert!(!nennt(name), "{datei} nennt den Namen der Quicknote-Datei");
+            if nennt(alter_ruf) {
+                alte_rufer.push(datei.clone());
+            }
             if nennt(ruf) {
                 rufer.push(datei);
             }
@@ -1152,6 +1625,10 @@ mod proben {
         assert_eq!(
             rufer, erlaubte_rufer,
             "quicknotedatei wird nicht genau in den erlaubten Dateien gerufen"
+        );
+        assert_eq!(
+            alte_rufer, erlaubte_rufer,
+            "alte_quicknotedatei wird nicht genau in den erlaubten Dateien gerufen"
         );
     }
 }

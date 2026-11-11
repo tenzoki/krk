@@ -549,13 +549,13 @@ use objc2::rc::autoreleasepool;
 #[cfg(test)]
 use objc2_foundation::{NSDate, NSDefaultRunLoopMode};
 
-use krk_core::heimordner::Sonderdatei;
 use krk_core::heimordner::eintraege::geheimnisse::{self, Geheimnisentwurf};
 use krk_core::heimordner::eintraege::{
     self, Aufgaben, Block, Neustand, Notizen, Richtung, Tag, aufgaben, notizen, termine,
 };
 use krk_core::heimordner::schluesselmerker::Schluesselmerker;
 use krk_core::heimordner::tresor::{Oeffnungsmittel, Pin, Schluessel};
+use krk_core::heimordner::{self, Sonderdatei, Umbenennung};
 use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
 use krk_core::tasten::Kommando;
 use krk_core::text::datei::Lesehindernis;
@@ -809,14 +809,20 @@ pub enum Editormeldung {
     /// ist der Notizordner, wie die Statuszeile ihn nennt, `None` ohne
     /// Heimordner.
     QuicknoteOrdnerFehlt { ort: Option<String> },
-    /// `scratch.txt` wurde ausserhalb der Quicknote geaendert; die Sicherung
+    /// `quicknote.txt` wurde ausserhalb der Quicknote geaendert; die Sicherung
     /// ist bis zum naechsten Start gesperrt (Entscheidung 6 desselben Plans).
     QuicknoteFremdGeaendert,
-    /// `scratch.txt` liess sich nicht lesen; die Sicherung ist bis zum
+    /// `quicknote.txt` liess sich nicht lesen; die Sicherung ist bis zum
     /// naechsten Start gesperrt (Entscheidung 7 desselben Plans).
     QuicknoteNichtGelesen(Unlesbar),
-    /// Das Schreiben von `scratch.txt` ist gescheitert; `fehler` vom System.
+    /// Das Schreiben von `quicknote.txt` ist gescheitert; `fehler` vom System.
     QuicknoteNichtGesichert { fehler: String },
+    /// Was aus einer Quicknote-Datei unter ihrem frueheren Namen geworden ist
+    /// (E3 des Plans
+    /// `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`);
+    /// kommt hoechstens einmal je Programmlauf, vor dem gelesenen Inhalt.
+    /// `ort` ist der Notizordner, wie die Statuszeile ihn nennt.
+    QuicknoteUebernahme { ausgang: Umbenennung, ort: String },
     /// Eine CSV- oder TSV-Datei ist geoeffnet, und so liest der Editor sie:
     /// das Trennzeichen und woher die Wahl kommt (E2 des Plans der
     /// CSV-Tabelle).
@@ -1030,6 +1036,10 @@ impl Editormeldung {
             ),
             Self::QuicknoteNichtGesichert { fehler } => {
                 satz(Text::QuicknoteNichtGesichert, &[("fehler", fehler)])
+            }
+            // Die zwei Dateinamen stehen im Kern und nicht in dieser Kiste.
+            Self::QuicknoteUebernahme { ausgang, ort } => {
+                heimordner::quicknote_uebernahmemeldung(ausgang, ort)
             }
             Self::Trennzeichen(dialekt) => satz(
                 Text::TrenntextTrennzeichen,
@@ -2271,7 +2281,7 @@ const QUICKNOTE_RUHE: Duration = Duration::from_secs(1);
 /// das Beenden nicht laenger auf.
 const QUICKNOTE_ABSCHLUSS: Duration = Duration::from_secs(2);
 
-/// Warum `scratch.txt` sich nicht lesen liess, als Schluessel der
+/// Warum `quicknote.txt` sich nicht lesen liess, als Schluessel der
 /// Sprachtabelle; vollstaendig und ohne Auffangzweig (Entscheidung 7 des Plans
 /// der Sicherung).
 ///
@@ -3116,7 +3126,7 @@ pub struct EditorIvars {
     /// [`Editorbereich::quicknote_zeigen`], genommen allein von
     /// [`Editorbereich::quicknote_verlassen`].
     quicknote_rueckkehr: Cell<Option<Rueckkehr>>,
-    /// Die Sicherung der Quicknote in `scratch.txt`, gestartet beim Bau der
+    /// Die Sicherung der Quicknote in `quicknote.txt`, gestartet beim Bau der
     /// Flaeche in [`Editorbereich::quicknote`]; leer, solange die Quicknote nie
     /// offen war oder der Faden nicht starten konnte.
     quicknote_ablage: OnceCell<Quicknoteablage>,
@@ -3550,7 +3560,7 @@ impl Editorbereich {
     }
 
     /// Baut die Flaeche der Quicknote mit ihren drei Meldern, **nicht
-    /// bearbeitbar**, bis die Sicherung den Inhalt von `scratch.txt` geliefert
+    /// bearbeitbar**, bis die Sicherung den Inhalt von `quicknote.txt` geliefert
     /// hat.
     fn quicknote_bauen(&self) -> Retained<Quicknote> {
         {
@@ -3585,19 +3595,22 @@ impl Editorbereich {
         }
     }
 
-    /// Startet die Sicherung fuer `scratch.txt` im geltenden Notizordner und
+    /// Startet die Sicherung fuer `quicknote.txt` im geltenden Notizordner und
     /// gibt ihr den Auftrag „Lesen"; die Antwort holt der Takt ab
     /// ([`Self::quicknote_sicherung_einziehen`]).
     ///
-    /// **Kein Systemaufruf**: der Pfad ist ein `join` an den geschriebenen Ort,
-    /// und ob Ordner und Datei stehen, fragt der Faden. Startet der Faden
+    /// **Kein Systemaufruf**: beide Pfade sind ein `join` an den geschriebenen
+    /// Ort, und ob Ordner und Datei stehen, fragt der Faden; er uebernimmt auch
+    /// eine Datei unter dem frueheren Namen, vor seinem ersten Lesen. Startet
+    /// der Faden
     /// nicht, bleibt die Quicknote fluechtig wie vor der Sicherung, wird
     /// bearbeitbar und sagt es.
     fn quicknote_sicherung_starten(&self, quicknote: &Quicknote) {
         let heim = heimgriff::lesen(&self.ivars().heim);
         let pfad = heim.as_ref().map(|heim| heim.quicknotedatei());
+        let frueher = heim.as_ref().map(|heim| heim.alte_quicknotedatei());
         let ort = heim.as_ref().map(|heim| heim.anzeigename().to_owned());
-        match Sicherung::starten(pfad, QUICKNOTEGRENZE) {
+        match Sicherung::starten(pfad, frueher, QUICKNOTEGRENZE) {
             Ok(sicherung) => {
                 // `let _ =`: die Zelle ist leer, denn dieser Weg laeuft allein
                 // nach dem ersten Bau der Flaeche.
@@ -3687,6 +3700,14 @@ impl Editorbereich {
                 Sicherungsmeldung::FremdGeaendert => Some(Editormeldung::QuicknoteFremdGeaendert),
                 Sicherungsmeldung::Gescheitert(fehler) => {
                     Some(Editormeldung::QuicknoteNichtGesichert { fehler })
+                }
+                // Ohne Notizordner gibt es keine Uebernahme, also steht der
+                // Ort immer; der leere Name ist allein die Form des Typs.
+                Sicherungsmeldung::Uebernahme(ausgang) => {
+                    Some(Editormeldung::QuicknoteUebernahme {
+                        ausgang,
+                        ort: ablage.ort.clone().unwrap_or_default(),
+                    })
                 }
             };
             if let Some(anzeige) = anzeige {
@@ -9635,7 +9656,7 @@ mod tests {
     /// Die Quicknote stellt auf dem Hauptfaden keinen Systemaufruf an die
     /// Platte (Entscheidung 15 des Plans
     /// `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`):
-    /// Lesen und Schreiben von `scratch.txt` laufen auf dem Faden
+    /// Lesen und Schreiben von `quicknote.txt` laufen auf dem Faden
     /// `krk-quicknote`.
     ///
     /// Gelesen werden die Ruempfe der Wege des Editorbereichs, die die
