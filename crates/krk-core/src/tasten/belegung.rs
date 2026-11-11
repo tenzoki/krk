@@ -315,9 +315,11 @@ static AUSLIEFERUNG: LazyLock<Belegung> = LazyLock::new(|| {
 /// zum 261111 trug das Verschieben einen eigenen Wert und das Umkehren der
 /// Richtung der Termintabelle einen weiteren; beide sind mit der
 /// Termintabelle gefallen, und das Verschieben traegt wieder
-/// [`Wirkungsbereich::Eintraege`]. Seit dem 260927 tragen das Kopieren und das Leeren der
-/// Quicknote [`Wirkungsbereich::Quicknote`], weil sie allein an deren Puffer
-/// wirken und der Editor ihn nur in dieser Form zeigt.
+/// [`Wirkungsbereich::Eintraege`]. Seit dem 260927 traegt das Leeren der
+/// Quicknote [`Wirkungsbereich::Quicknote`], weil es allein an deren Puffer
+/// wirkt und der Editor ihn nur in dieser Form zeigt; das Kopieren, Singlestrip
+/// und Format tragen seit dem 261111 [`Wirkungsbereich::Notiztext`] und wirken
+/// auch am Text einer Protokolldatei.
 ///
 /// Der Preis dafuer, dass der Fokusvorbehalt **eine** Regel bleibt und keine
 /// Abfrage je Aufrufstelle wird. Neue Werte in einer Aufzaehlung sind
@@ -431,7 +433,25 @@ pub enum Wirkungsbereich {
     /// [`Wirkungsbereich::Editortext`], `krk_ui`. Das Oeffnen und Schliessen
     /// traegt [`Wirkungsbereich::Ueberall`], weil es die Quicknote aus jedem
     /// Bereich heraus holt.
+    ///
+    /// Seit dem 261111 traegt ihn allein noch das Leeren; das Kopieren,
+    /// Singlestrip und Format tragen [`Wirkungsbereich::Notiztext`].
     Quicknote,
+    /// Wirkt nur, wenn der Fokus im Editor steht und der Editor die Quicknote
+    /// zeigt oder den Text einer Protokolldatei, also einer Datei unmittelbar
+    /// in `minutes/` des Notizordners (E3 des Plans
+    /// `261111-2248-plan-protokolldatei-traegt-kopieren-singlestrip-format.md`).
+    ///
+    /// Der Wert von [`Kommando::QuicknoteKopieren`],
+    /// [`Kommando::QuicknoteSinglestrip`] und [`Kommando::QuicknoteFormat`]:
+    /// die drei wirken an einem Notiztext, gleich ob er im Puffer der
+    /// Quicknote oder in einer Protokolldatei steht. Das Leeren bleibt bei
+    /// [`Wirkungsbereich::Quicknote`], denn ein Protokoll leert es nicht.
+    /// **Ob der Editor die Quicknote zeigt oder eine Protokolldatei haelt,
+    /// weiss der Kern nicht**; die Form und die Datei fragt `krk_ui`, wie bei
+    /// [`Wirkungsbereich::Geheimnisse`]. Er verengt nichts: eine Verengung
+    /// entsteht mit dem Paar, das sie braucht.
+    Notiztext,
     /// Wirkt, wenn der Fokus in einem Bereich mit Tabs steht: in einem
     /// Dateifenster oder im Vorschaufenster (C1, C6).
     ///
@@ -592,6 +612,7 @@ impl Wirkungsbereich {
 
             Wirkungsbereich::Geheimnisse => text(Text::WirkungsbereichGeheimnisse),
             Wirkungsbereich::Quicknote => text(Text::WirkungsbereichQuicknote),
+            Wirkungsbereich::Notiztext => text(Text::WirkungsbereichNotiztext),
             Wirkungsbereich::Tabbereich => text(Text::WirkungsbereichTabbereich),
             Wirkungsbereich::Navigator => text(Text::WirkungsbereichNavigator),
             Wirkungsbereich::Vorschau => text(Text::WirkungsbereichVorschau),
@@ -621,6 +642,7 @@ impl Wirkungsbereich {
             | Wirkungsbereich::Aufgaben
             | Wirkungsbereich::Geheimnisse
             | Wirkungsbereich::Quicknote
+            | Wirkungsbereich::Notiztext
             | Wirkungsbereich::Trenntext
             | Wirkungsbereich::Csv => Seite::Editor,
             Wirkungsbereich::Dateifenster
@@ -686,6 +708,7 @@ impl Wirkungsbereich {
             | Wirkungsbereich::Aufgaben
             | Wirkungsbereich::Geheimnisse
             | Wirkungsbereich::Quicknote
+            | Wirkungsbereich::Notiztext
             | Wirkungsbereich::Tabbereich
             | Wirkungsbereich::Navigator
             | Wirkungsbereich::Vorschau
@@ -1166,12 +1189,14 @@ pub enum Kommando {
     /// Den ganzen Text der Quicknote in die Zwischenablage legen, den Puffer
     /// leeren und die Quicknote schliessen (Q2).
     ///
-    /// Traegt [`Wirkungsbereich::Quicknote`]: ohne offene Quicknote gibt es
-    /// keinen Puffer, den er kopierte.
+    /// Traegt seit dem 261111 [`Wirkungsbereich::Notiztext`]: vor dem Text
+    /// einer Protokolldatei kopiert er deren ganzen Text und laesst Datei und
+    /// Editor stehen; ohne Quicknote und ohne Protokolldatei gibt es nichts,
+    /// das er kopierte.
     QuicknoteKopieren,
     /// Den Puffer der Quicknote leeren, mit `cmd+z` zuruecknehmbar (Q2).
     ///
-    /// Traegt [`Wirkungsbereich::Quicknote`] wie das Kopieren und ist ab Werk
+    /// Traegt [`Wirkungsbereich::Quicknote`] und ist ab Werk
     /// unbelegt; erreichbar ist er ueber die Schaltflaeche und das Menue.
     QuicknoteLeeren,
     /// Singlestrip: aus einem aus dem Chat kopierten, umbrochenen Shell-Befehl
@@ -1183,15 +1208,16 @@ pub enum Kommando {
     /// (`261031-1226-in-welche-richtung-irrt-strip-wenn-ein-umbruch-nicht-entscheidbar-ist.md`);
     /// bis dahin hiess die Funktion Strip und die Kennung `quicknote_strip`.
     ///
-    /// Traegt [`Wirkungsbereich::Quicknote`] wie das Leeren und ist ab Werk
-    /// unbelegt; erreichbar ueber die Schaltflaeche und das Menue.
+    /// Traegt [`Wirkungsbereich::Notiztext`] wie das Kopieren, wirkt also
+    /// auch am Text einer Protokolldatei, und ist ab Werk unbelegt;
+    /// erreichbar ueber die Schaltflaeche und das Menue.
     QuicknoteSinglestrip,
     /// Format: terminal-umbrochenen Fliesstext der Quicknote zu Absaetzen und
     /// Aufzaehlungspunkten auf je einer Zeile machen, an der Auswahl oder sonst
     /// am ganzen Text, mit `cmd+z` zuruecknehmbar
     /// (`crate::text::glaetten::fliesstext`).
     ///
-    /// Traegt [`Wirkungsbereich::Quicknote`] und ist ab Werk unbelegt wie
+    /// Traegt [`Wirkungsbereich::Notiztext`] und ist ab Werk unbelegt wie
     /// [`Kommando::QuicknoteSinglestrip`].
     QuicknoteFormat,
     /// Am Ende der Eintragstabelle einen leeren Eintrag anlegen und seine
@@ -1905,10 +1931,13 @@ impl Kommando {
             Kommando::PinAendern => Wirkungsbereich::Geheimnisse,
             // Allein am Puffer der offenen Quicknote (Q2 des Spec der
             // Quicknote); ob sie offen ist, fragt `krk_ui` ueber die Form.
+            Kommando::QuicknoteLeeren => Wirkungsbereich::Quicknote,
+            // An der Quicknote und seit dem 261111 am Text einer
+            // Protokolldatei (E3 des Plans der Protokollknoepfe); welches von
+            // beiden der Editor zeigt, fragt `krk_ui`.
             Kommando::QuicknoteKopieren
-            | Kommando::QuicknoteLeeren
             | Kommando::QuicknoteSinglestrip
-            | Kommando::QuicknoteFormat => Wirkungsbereich::Quicknote,
+            | Kommando::QuicknoteFormat => Wirkungsbereich::Notiztext,
             // Die Leiste (C5).
             Kommando::LesezeichenUmbenennen
             | Kommando::LesezeichenLoeschen

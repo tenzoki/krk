@@ -43,6 +43,8 @@ pub enum Text {
     WirkungsbereichGeheimnisse,
     /// `Wirkungsbereich::Quicknote`.
     WirkungsbereichQuicknote,
+    /// `Wirkungsbereich::Notiztext`.
+    WirkungsbereichNotiztext,
     /// `Wirkungsbereich::Tabbereich`.
     WirkungsbereichTabbereich,
     /// `Wirkungsbereich::Navigator`.
@@ -1906,7 +1908,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 768] = [
+    pub const ALLE: [Text; 769] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1917,6 +1919,7 @@ impl Text {
         Text::WirkungsbereichAufgaben,
         Text::WirkungsbereichGeheimnisse,
         Text::WirkungsbereichQuicknote,
+        Text::WirkungsbereichNotiztext,
         Text::WirkungsbereichTabbereich,
         Text::WirkungsbereichNavigator,
         Text::WirkungsbereichVorschau,

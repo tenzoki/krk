@@ -572,7 +572,7 @@ use crate::heimgriff::{self, Heimgriff};
 use crate::hervorhebung::{
     Abholung, Darstellungsart, Einfaerbungsstand, Einfaerbungsvorgang, Formatierung, Tafel,
 };
-use crate::kommandos::zulaessigkeit::Editorform;
+use crate::kommandos::zulaessigkeit::{self, Editorform};
 use crate::quicknote::{QUICKNOTEGRENZE, Rueckkehr};
 use crate::quicknotesicherung::{
     Sicherung, Sicherungsmeldung, Sicherungsstand, Unlesbar, Vormerkung,
@@ -3761,12 +3761,13 @@ impl Editorbereich {
     /// keine laufende Zelle.
     ///
     /// Zeigt der Editor nicht den Text einer Protokolldatei, geschieht nichts;
-    /// die Zulaessigkeit laesst den Befehl dann gar nicht erst durch. Die
-    /// Bedingung steht hier ausgeschrieben, bis Schritt 4 des Plans sie als
-    /// eine Funktion in `kommandos/zulaessigkeit.rs` fuehrt.
+    /// die Zulaessigkeit laesst den Befehl dann gar nicht erst durch. Gefragt
+    /// wird die eine Regel [`zulaessigkeit::protokolltext`], dieselbe, die
+    /// die Zulaessigkeit fuer `Wirkungsbereich::Notiztext` fragt (E4 des
+    /// Plans).
     #[must_use = "die Meldung „nichts zu aendern“ gehoert in die Statuszeile"]
     pub fn protokoll_umformen(&self, art: Umformung) -> Option<Editormeldung> {
-        if !matches!(self.form(), Editorform::Text) || !self.haelt_protokolldatei() {
+        if !zulaessigkeit::protokolltext(self.form(), self.haelt_protokolldatei()) {
             return None;
         }
         let auswahl = self.ivars().text.selectedRange();
@@ -3793,12 +3794,12 @@ impl Editorbereich {
     /// „Kopieren“ nimmt im Protokoll wie in der Quicknote den ganzen Text (E7
     /// des Plans
     /// `261111-2248-plan-protokolldatei-traegt-kopieren-singlestrip-format.md`).
-    /// Die Bedingung ist dieselbe wie an [`Self::protokoll_umformen`] und steht
-    /// hier ausgeschrieben, bis Schritt 4 des Plans sie als eine Funktion in
-    /// `kommandos/zulaessigkeit.rs` fuehrt.
+    /// Die Bedingung ist die eine Regel [`zulaessigkeit::protokolltext`], an
+    /// der auch [`Self::protokoll_umformen`] und die Zulaessigkeit der drei
+    /// Befehle haengen (E4 des Plans).
     #[must_use]
     pub fn protokolltext(&self) -> Option<String> {
-        if !matches!(self.form(), Editorform::Text) || !self.haelt_protokolldatei() {
+        if !zulaessigkeit::protokolltext(self.form(), self.haelt_protokolldatei()) {
             return None;
         }
         Some(self.ivars().modell.borrow().stand().to_owned())

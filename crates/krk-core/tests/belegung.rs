@@ -1186,7 +1186,9 @@ fn geduldet_sind_allein_die_benannten_zurueckgezogenen_kennungen() {
 
 /// Die Befehle der Quicknote tragen ihre Bereiche und ihre Kennungen, und die
 /// Auslieferung legt F10 und `shift+f10` auf die ersten zwei; Singlestrip und Format
-/// kamen am 261031 dazu.
+/// kamen am 261031 dazu. Seit dem 261111 tragen Kopieren, Singlestrip und
+/// Format `Wirkungsbereich::Notiztext` und das Leeren allein weiter
+/// `Wirkungsbereich::Quicknote`.
 #[test]
 fn die_drei_befehle_der_quicknote_tragen_ihre_bereiche_und_kennungen() {
     let faelle = [
@@ -1198,7 +1200,7 @@ fn die_drei_befehle_der_quicknote_tragen_ihre_bereiche_und_kennungen() {
         (
             Kommando::QuicknoteKopieren,
             "quicknote_kopieren",
-            Wirkungsbereich::Quicknote,
+            Wirkungsbereich::Notiztext,
         ),
         (
             Kommando::QuicknoteLeeren,
@@ -1208,12 +1210,12 @@ fn die_drei_befehle_der_quicknote_tragen_ihre_bereiche_und_kennungen() {
         (
             Kommando::QuicknoteSinglestrip,
             "quicknote_singlestrip",
-            Wirkungsbereich::Quicknote,
+            Wirkungsbereich::Notiztext,
         ),
         (
             Kommando::QuicknoteFormat,
             "quicknote_format",
-            Wirkungsbereich::Quicknote,
+            Wirkungsbereich::Notiztext,
         ),
     ];
     for (kommando, kennung, bereich) in faelle {
@@ -1222,6 +1224,8 @@ fn die_drei_befehle_der_quicknote_tragen_ihre_bereiche_und_kennungen() {
         assert_eq!(kommando.kennung(), kennung);
     }
     assert_eq!(Wirkungsbereich::Quicknote.seite(), Seite::Editor);
+    assert_eq!(Wirkungsbereich::Notiztext.seite(), Seite::Editor);
+    assert_eq!(Wirkungsbereich::Notiztext.weiter(), None);
 
     let belegung = Belegung::auslieferung();
     assert!(matches!(
@@ -2626,7 +2630,8 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
         // `Editortext`, `Eintraege` und `Aufgaben` mit den Eintragstabellen der
         // krkhome-Arbeit, `Geheimnisse` mit „PIN ändern" aus deren Schritt 5.5,
         // `Quicknote` mit der
-        // Quicknote auf F10, `Bildfolge` mit den drei Befehlen der Bildfolge,
+        // Quicknote auf F10, `Notiztext` mit den Protokollknoepfen,
+        // `Bildfolge` mit den drei Befehlen der Bildfolge,
         // `Trenntext` und `Csv` mit den Befehlen der Tabelle einer CSV.
         let bereich = kommando.wirkungsbereich();
         assert!(
@@ -2642,6 +2647,7 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
                     | Wirkungsbereich::Aufgaben
                     | Wirkungsbereich::Geheimnisse
                     | Wirkungsbereich::Quicknote
+                    | Wirkungsbereich::Notiztext
                     | Wirkungsbereich::Tabbereich
                     | Wirkungsbereich::Navigator
                     | Wirkungsbereich::Vorschau
@@ -3068,7 +3074,7 @@ fn pin_aendern_traegt_den_bereich_der_geheimnisse() {
 /// [`varianten_der_aufzaehlung`] aus dem Quelltext der Aufzaehlung; ein Wert
 /// ohne Zeile in diesem Feld wird dort rot, statt still ungeprueft zu bleiben
 /// (`shared/issues/260826-1302_*_ein-achter-wirkungsbereich-uebersetzt-ohne-eintrag-im-beschriftungsfeld-der-doc-kommentar-sagt-das-gegenteil.md`).
-const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 17] = [
+const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 18] = [
     (Wirkungsbereich::Dateifenster, "Dateifenster"),
     (Wirkungsbereich::Leiste, "Lesezeichen- und Geräteleiste"),
     (
@@ -3098,6 +3104,10 @@ const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 17] = [
         "Tabellen einer CSV- oder TSV-Datei im Editor",
     ),
     (Wirkungsbereich::Csv, "Tabellen einer CSV-Datei im Editor"),
+    (
+        Wirkungsbereich::Notiztext,
+        "Quicknote und Protokolle im Editor",
+    ),
 ];
 
 /// Die Stelle eines Bereichs in [`BESCHRIFTUNGEN`].
@@ -3130,6 +3140,7 @@ fn stelle_im_feld(bereich: Wirkungsbereich) -> usize {
         Wirkungsbereich::Eintragsdatei => 14,
         Wirkungsbereich::Trenntext => 15,
         Wirkungsbereich::Csv => 16,
+        Wirkungsbereich::Notiztext => 17,
     }
 }
 

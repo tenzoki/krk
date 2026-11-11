@@ -22,6 +22,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::WirkungsbereichAufgaben => "tâches dans l’Éditeur",
         Text::WirkungsbereichGeheimnisse => "secrets dans l’Éditeur",
         Text::WirkungsbereichQuicknote => "Quicknote dans l’Éditeur",
+        Text::WirkungsbereichNotiztext => "Quicknote et comptes rendus dans l’Éditeur",
         Text::WirkungsbereichTabbereich => "volet de fichiers et Aperçu",
         Text::WirkungsbereichNavigator => "volet de fichiers, barre, Aperçu et zone Git",
         Text::WirkungsbereichVorschau => "Aperçu",

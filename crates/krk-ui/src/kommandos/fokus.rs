@@ -427,7 +427,8 @@ pub fn wirkt(bereich: Wirkungsbereich, fokus: Fokus) -> bool {
         }
         // Die drei Bereiche der Eintragstabellen und der Textflaeche (Schritt
         // 3.3 der krkhome-Arbeit) verlangen den Fokus wie `Editor`, ebenso der
-        // der Geheimnisse (Schritt 5.5) und seit dem 260927 der der Quicknote.
+        // der Geheimnisse (Schritt 5.5), seit dem 260927 der der Quicknote
+        // und seit dem 261111 der des Notiztexts.
         // Welche Form der Editor zeigt und ob er `secrets.txt`
         // mit einem Kopf haelt, fragt nicht diese Regel, sondern ihre zweite
         // Haelfte in `zulaessigkeit::gestattet`; hier steht allein der Fokus.
@@ -438,6 +439,7 @@ pub fn wirkt(bereich: Wirkungsbereich, fokus: Fokus) -> bool {
         | Wirkungsbereich::Aufgaben
         | Wirkungsbereich::Geheimnisse
         | Wirkungsbereich::Quicknote
+        | Wirkungsbereich::Notiztext
         | Wirkungsbereich::Trenntext
         | Wirkungsbereich::Csv => fokus == Fokus::Editor,
         Wirkungsbereich::Tabbereich => {
@@ -512,7 +514,7 @@ mod tests {
         // Eine Zeile je Wirkungsbereich; die Spalten stehen in der Reihenfolge
         // von JEDER_FOKUS: Dateifenster, Leiste, Vorschau, Editor, Git,
         // Anderswo.
-        const TAFEL: [(Wirkungsbereich, [bool; 6]); 17] = [
+        const TAFEL: [(Wirkungsbereich, [bool; 6]); 18] = [
             (
                 Wirkungsbereich::Dateifenster,
                 [true, false, false, false, false, false],
@@ -551,6 +553,10 @@ mod tests {
             ),
             (
                 Wirkungsbereich::Quicknote,
+                [false, false, false, true, false, false],
+            ),
+            (
+                Wirkungsbereich::Notiztext,
                 [false, false, false, true, false, false],
             ),
             (
@@ -1004,6 +1010,7 @@ mod tests {
                 | Wirkungsbereich::Aufgaben
                 | Wirkungsbereich::Geheimnisse
                 | Wirkungsbereich::Quicknote
+                | Wirkungsbereich::Notiztext
                 | Wirkungsbereich::Trenntext
                 | Wirkungsbereich::Csv => {
                     assert!(

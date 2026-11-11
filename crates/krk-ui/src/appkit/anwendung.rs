@@ -5315,6 +5315,12 @@ impl Anwendungsdelegierter {
                 .editor
                 .get()
                 .is_some_and(|editor| editor.haelt_csv()),
+            // Ohne Editorbereich haelt niemand eine Protokolldatei.
+            protokolldatei: self
+                .ivars()
+                .editor
+                .get()
+                .is_some_and(|editor| editor.haelt_protokolldatei()),
             bildfolge: self.bildfolge_steht(),
             aktiv_ort: self.aktiv_ort(),
         }

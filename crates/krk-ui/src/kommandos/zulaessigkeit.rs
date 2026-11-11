@@ -272,6 +272,19 @@ pub struct Lage {
     /// hat, und ohne Systemaufruf; gelesen allein von [`datei_passt`] fuer
     /// `Wirkungsbereich::Csv`, den Bereich von „Trennzeichen wechseln“.
     pub csv: bool,
+    /// Ob der Editor eine Protokolldatei haelt, also eine Datei unmittelbar
+    /// in `minutes/` des geltenden Notizordners, gleich in welcher Ansicht
+    /// (E2 des Plans
+    /// `261111-2248-plan-protokolldatei-traegt-kopieren-singlestrip-format.md`).
+    ///
+    /// Erhoben von `Anwendungsdelegierter::lage` ueber
+    /// `Editorbereich::haelt_protokolldatei`, das das Kennzeichen des Modells
+    /// liest; das steht seit dem Laden fest und kostet keinen Systemaufruf.
+    /// Gelesen allein von [`datei_passt`] fuer `Wirkungsbereich::Notiztext`,
+    /// und dort ueber [`protokolltext`], das daneben die Form fragt: eine CSV
+    /// in `minutes/` meldet hier `true` und traegt die drei Befehle trotzdem
+    /// allein in der Rohansicht.
+    pub protokolldatei: bool,
     /// Ob die Vorschau sichtbar ist und im aktiven Tab eine Bildfolge fuer
     /// genau den Pfad zeigt, den das aktive Dateifenster beschreibt, ohne
     /// wartenden neueren Auftrag
@@ -577,7 +590,12 @@ fn ort_passt(bedarf: Ortsbedarf, ort: Ortsart, fokus: Fokus) -> bool {
 /// Sichern, das Schliessen und der Ansichtswechsel wirken damit auch aus der
 /// Tabelle heraus. **Die Quicknote ist die Ausnahme davon**: in ihr sagen
 /// `Editor` und `Geheimnisse` nein, weil die Datei darunter nicht zu sehen
-/// ist, und allein `Quicknote` sagt ja.
+/// ist, und allein `Quicknote` und `Notiztext` sagen ja.
+///
+/// **Neun Bereiche fragen hier etwas**, je einer oder zwei in einem Zweig:
+/// `Editortext`, `Eintraege`, `Eintragsdatei`, `Aufgaben`, `Quicknote`,
+/// `Notiztext`, `Editor`, `Geheimnisse` und das Paar `Trenntext` und `Csv` in
+/// einem. Jeder andere steht im letzten Zweig und bekommt ja.
 ///
 /// Die Form fragt allein nach dem Editor und nicht nach dem Fokus. Das ist
 /// ohne Folgen, weil jeder Bereich, der hier nein sagen kann, von
@@ -623,14 +641,24 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
             | Editorform::Quicknote => false,
             Editorform::Aufgaben => true,
         },
-        // Das Kopieren und das Leeren der Quicknote wirken allein an ihrem
-        // Puffer, und den zeigt der Editor allein in dieser Form.
+        // Das Leeren der Quicknote wirkt allein an ihrem Puffer, und den
+        // zeigt der Editor allein in dieser Form.
         Wirkungsbereich::Quicknote => match form {
             Editorform::Text
             | Editorform::Aufgaben
             | Editorform::Geheimnisse
             | Editorform::Trenntext => false,
             Editorform::Quicknote => true,
+        },
+        // Kopieren, Singlestrip und Format wirken an einem Notiztext: in der
+        // Quicknote an ihrem Puffer, in der Textflaeche am Text einer
+        // Protokolldatei (E3 des Plans der Protokollknoepfe). Ob die Datei in
+        // der Textflaeche eine Protokolldatei ist, fragt `datei_passt`; in
+        // jeder Tabellenform ist die Textflaeche ausgeblendet, und die drei
+        // haetten keinen Text vor dem Nutzer.
+        Wirkungsbereich::Notiztext => match form {
+            Editorform::Text | Editorform::Quicknote => true,
+            Editorform::Aufgaben | Editorform::Geheimnisse | Editorform::Trenntext => false,
         },
         // Sichern, Schliessen und der Ansichtswechsel arbeiten an der Datei,
         // die der Editor haelt; in der Quicknote liegt sie unsichtbar darunter,
@@ -680,7 +708,7 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
 /// Ob der Editor die Datei haelt, die dieser Wirkungsbereich verlangt (die
 /// dritte Haelfte von Bestandteil (3), Schritt 5.5 der krkhome-Arbeit).
 ///
-/// **Drei Bereiche fragen hier etwas.** [`Wirkungsbereich::Geheimnisse`]
+/// **Vier Bereiche fragen hier etwas.** [`Wirkungsbereich::Geheimnisse`]
 /// fragt [`Lage::pin_aenderbar`]: „PIN ändern" wirkt nur, solange der Editor
 /// `secrets.txt` entsperrt haelt und ihre PIN schon in einem Kopf auf der
 /// Platte steht. [`Wirkungsbereich::Eintragsdatei`] fragt seit dem 261005
@@ -688,7 +716,14 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
 /// Eintragsdatei, als Tabelle wie in der Rohansicht, und vor keiner anderen
 /// Datei. [`Wirkungsbereich::Csv`] fragt [`Lage::csv`]: „Trennzeichen
 /// wechseln“ wirkt allein an einer `.csv`, denn eine `.tsv` trennt fest mit
-/// dem Tabulator (E1, E2 des Plans der CSV-Tabelle). Vollstaendig und ohne Auffangzweig wie [`form_passt`]: ein
+/// dem Tabulator (E1, E2 des Plans der CSV-Tabelle).
+/// [`Wirkungsbereich::Notiztext`] fragt seit dem 261111
+/// [`Lage::protokolldatei`], und zwar ueber [`protokolltext`] zusammen mit
+/// der Form: Kopieren, Singlestrip und Format wirken in der Quicknote immer
+/// und sonst allein vor dem Text einer Protokolldatei. Er ist der eine
+/// Bereich, der hier neben dem Feld die Form liest, weil die Antwort in der
+/// Quicknote nicht an der Datei darunter haengt.
+/// Vollstaendig und ohne Auffangzweig wie [`form_passt`]: ein
 /// weiterer Wirkungsbereich haelt den Bau hier an und bekommt seine Antwort
 /// bewusst.
 ///
@@ -700,6 +735,12 @@ fn datei_passt(bereich: Wirkungsbereich, lage: Lage) -> bool {
         Wirkungsbereich::Geheimnisse => lage.pin_aenderbar,
         Wirkungsbereich::Eintragsdatei => lage.eintragsdatei,
         Wirkungsbereich::Csv => lage.csv,
+        // Der Puffer der Quicknote ist ein Notiztext, gleich welche Datei
+        // darunter liegt; sonst entscheidet die eine Regel `protokolltext`.
+        Wirkungsbereich::Notiztext => {
+            lage.editorform == Editorform::Quicknote
+                || protokolltext(lage.editorform, lage.protokolldatei)
+        }
         Wirkungsbereich::Dateifenster
         | Wirkungsbereich::Leiste
         | Wirkungsbereich::Dateibereiche
@@ -739,12 +780,40 @@ fn folge_passt(bereich: Wirkungsbereich, bildfolge: bool) -> bool {
         | Wirkungsbereich::Aufgaben
         | Wirkungsbereich::Geheimnisse
         | Wirkungsbereich::Quicknote
+        | Wirkungsbereich::Notiztext
         | Wirkungsbereich::Tabbereich
         | Wirkungsbereich::Navigator
         | Wirkungsbereich::Vorschau
         | Wirkungsbereich::Trenntext
         | Wirkungsbereich::Csv
         | Wirkungsbereich::Ueberall => true,
+    }
+}
+
+/// Ob der Editor den Text einer Protokolldatei zeigt: die Textflaeche und
+/// darin eine Datei unmittelbar in `minutes/` des Notizordners (E4 des Plans
+/// `261111-2248-plan-protokolldatei-traegt-kopieren-singlestrip-format.md`).
+///
+/// **Die Regel steht einmal, und an ihr haengen Geltung und Anzeige
+/// gemeinsam.** [`datei_passt`] fragt sie fuer `Wirkungsbereich::Notiztext`,
+/// und der Editorbereich fragt sie fuer seinen Protokolltext
+/// (`Editorbereich::protokolltext`), fuer das Umformen
+/// (`Editorbereich::protokoll_umformen`) und fuer die Sichtbarkeit der
+/// Schaltflaechenreihe. Eine zweite Fassung der Bedingung daneben liesse die
+/// Reihe erscheinen, wo die Befehle nicht wirken, oder umgekehrt.
+///
+/// Vollstaendig ueber [`Editorform`] und ohne Auffangzweig: eine weitere Form
+/// bekommt ihre Antwort bewusst. Eine CSV in `minutes/` traegt den
+/// Protokolltext in der Rohansicht und nicht in der Tabelle; die Quicknote
+/// sagt hier nein, denn ihr Text ist nicht der der Datei darunter.
+#[must_use = "fallengelassen wirkt ein Befehl des Protokolls an einer anderen Datei"]
+pub const fn protokolltext(form: Editorform, protokolldatei: bool) -> bool {
+    match form {
+        Editorform::Text => protokolldatei,
+        Editorform::Aufgaben
+        | Editorform::Geheimnisse
+        | Editorform::Trenntext
+        | Editorform::Quicknote => false,
     }
 }
 
@@ -947,7 +1016,7 @@ mod tests {
     /// wird, und die Probe `jeder_wirkungsbereich_hat_einen_stellvertreter`
     /// darunter, die die Zahl der Zeilen gegen die Aufzaehlung im Quelltext
     /// haelt.
-    const STELLVERTRETER: [(Wirkungsbereich, Kommando); 17] = [
+    const STELLVERTRETER: [(Wirkungsbereich, Kommando); 18] = [
         (Wirkungsbereich::Dateifenster, Kommando::Oeffnen),
         (Wirkungsbereich::Leiste, Kommando::LesezeichenLoeschen),
         (Wirkungsbereich::Dateibereiche, Kommando::EditorRundweg),
@@ -978,6 +1047,9 @@ mod tests {
             Wirkungsbereich::Csv,
             Kommando::TrenntextTrennzeichenWechseln,
         ),
+        // Der Bereich der drei Befehle an Quicknote und Protokoll, aus
+        // demselben Grund am Ende (E3 des Plans der Protokollknoepfe).
+        (Wirkungsbereich::Notiztext, Kommando::QuicknoteFormat),
     ];
 
     /// Jede Variante von [`Wirkungsbereich`] hat genau einen Stellvertreter.
@@ -1057,6 +1129,10 @@ mod tests {
     /// nicht kennt: so ist „Eintrag hinzufügen“ in der Tafel ueberall
     /// abgewiesen, und die Lage mit `true` baut
     /// [`eintrag_hinzufuegen_wirkt_vor_jeder_eintragsdatei_in_tabelle_und_rohansicht`].
+    /// `protokolldatei` steht auf `false`: Kopieren, Singlestrip und Format
+    /// sind in der Tafel allein in der Quicknote zugelassen, und die Lage mit
+    /// `true` bauen [`jede_lage`] und
+    /// [`die_drei_notiztextbefehle_wirken_in_der_quicknote_und_vor_dem_text_einer_protokolldatei`].
     fn lage_in(
         blatt_steht: bool,
         ersthelfer_gehoert_appkit: bool,
@@ -1073,6 +1149,7 @@ mod tests {
             pin_aenderbar: false,
             eintragsdatei: false,
             csv: false,
+            protokolldatei: false,
             bildfolge: false,
             aktiv_ort: Ortsart::Lokal,
         }
@@ -1242,7 +1319,7 @@ mod tests {
         // gegen `Fokus::ALLE`.
         //
         // Die Zeilen stehen in der Reihenfolge von STELLVERTRETER.
-        const IN_DER_TEXTFLAECHE: [[bool; 6]; 17] = [
+        const IN_DER_TEXTFLAECHE: [[bool; 6]; 18] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1268,9 +1345,11 @@ mod tests {
             // Trenntext: allein in der Tabelle einer CSV
             [false, false, false, false, false, false],
             // Csv: ohne `csv` nirgends
+            [false, false, false, false, false, false],
+            // Notiztext: ohne `protokolldatei` nirgends
             [false, false, false, false, false, false],
         ];
-        const IN_DER_AUFGABENTABELLE: [[bool; 6]; 17] = [
+        const IN_DER_AUFGABENTABELLE: [[bool; 6]; 18] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1296,11 +1375,13 @@ mod tests {
             // Trenntext: allein in der Tabelle einer CSV
             [false, false, false, false, false, false],
             // Csv: ohne `csv` nirgends
+            [false, false, false, false, false, false],
+            // Notiztext: in keiner Tabellenform
             [false, false, false, false, false, false],
         ];
         // Wie die Aufgabentabelle, nur ohne die Zeile `Aufgaben`: die
         // Geheimnistabelle traegt keine Kaestchen.
-        const IN_DER_GEHEIMNISTABELLE: [[bool; 6]; 17] = [
+        const IN_DER_GEHEIMNISTABELLE: [[bool; 6]; 18] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1326,13 +1407,15 @@ mod tests {
             // Trenntext: allein in der Tabelle einer CSV
             [false, false, false, false, false, false],
             // Csv: ohne `csv` nirgends
+            [false, false, false, false, false, false],
+            // Notiztext: in keiner Tabellenform
             [false, false, false, false, false, false],
         ];
         // Wie die Textflaeche, nur dass jede Zeile, die an der Datei darunter
         // arbeitet, ueberall nein sagt und allein die Zeile `Quicknote` mit
         // dem Fokus im Editor ja (Schritt 2 des Plans der Quicknote,
         // Entscheidung 7).
-        const IN_DER_QUICKNOTE: [[bool; 6]; 17] = [
+        const IN_DER_QUICKNOTE: [[bool; 6]; 18] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1360,11 +1443,13 @@ mod tests {
             [false, false, false, false, false, false],
             // Csv: ohne `csv` nirgends
             [false, false, false, false, false, false],
+            // Notiztext: hier immer, mit dem Fokus im Editor
+            [false, false, false, true, false, false],
         ];
         // Wie die Geheimnistabelle, dazu die Zeile `Trenntext`: die Befehle allein
         // der Tabelle einer CSV wirken hier und sonst nirgends (E14 des Plans
         // der CSV-Tabelle). Die Zeile `Csv` bleibt ohne `csv` leer.
-        const IN_DER_TRENNTEXTTABELLE: [[bool; 6]; 17] = [
+        const IN_DER_TRENNTEXTTABELLE: [[bool; 6]; 18] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1391,8 +1476,10 @@ mod tests {
             [false, false, false, true, false, false],
             // Csv: ohne `csv` nirgends
             [false, false, false, false, false, false],
+            // Notiztext: in keiner Tabellenform
+            [false, false, false, false, false, false],
         ];
-        const ALLES_ABGEWIESEN: [[bool; 6]; 17] = [[false; 6]; 17];
+        const ALLES_ABGEWIESEN: [[bool; 6]; 18] = [[false; 6]; 18];
 
         // Je Form die Tafel ohne Sperre. Ein `match` und keine Liste, damit
         // eine weitere Form den Bau hier anhaelt.
@@ -1413,7 +1500,7 @@ mod tests {
         for form in JEDE_FORM {
             // blatt_steht, ersthelfer_gehoert_appkit,
             // schluesselfenster_gehoert_krk, und welches Achtel gilt.
-            let achtel: [(bool, bool, bool, [[bool; 6]; 17]); 8] = [
+            let achtel: [(bool, bool, bool, [[bool; 6]; 18]); 8] = [
                 (false, false, true, ohne_sperre(form)),
                 (false, false, false, ALLES_ABGEWIESEN),
                 (false, true, true, ALLES_ABGEWIESEN),
@@ -1456,8 +1543,9 @@ mod tests {
 
     /// Jede Lage, die die Regel unterscheidet: jeder Fokus, jede Form, alle
     /// acht Achtel aus Blattstand, Ersthelferbefund und Schluesselfenster und
-    /// beide Werte von `pin_aenderbar`, von `eintragsdatei` und von
-    /// `bildfolge` und jede Art Ort aus [`JEDE_ORTSART`].
+    /// beide Werte von `pin_aenderbar`, von `eintragsdatei`, von `csv`, von
+    /// `protokolldatei` und von `bildfolge` und jede Art Ort aus
+    /// [`JEDE_ORTSART`].
     ///
     /// **Die zweite Dimension von `bildfolge` und die Arten Ort stehen von
     /// Hand da**: das Literal in [`lage_in`] zwingt nur zu einem Wert, und eine
@@ -1470,16 +1558,19 @@ mod tests {
                     for pin_aenderbar in [false, true] {
                         for eintragsdatei in [false, true] {
                             for csv in [false, true] {
-                                for bildfolge in [false, true] {
-                                    for aktiv_ort in JEDE_ORTSART {
-                                        lagen.push(Lage {
-                                            pin_aenderbar,
-                                            eintragsdatei,
-                                            csv,
-                                            bildfolge,
-                                            aktiv_ort,
-                                            ..lage_in(blatt, appkit, krk, fokus, form)
-                                        });
+                                for protokolldatei in [false, true] {
+                                    for bildfolge in [false, true] {
+                                        for aktiv_ort in JEDE_ORTSART {
+                                            lagen.push(Lage {
+                                                pin_aenderbar,
+                                                eintragsdatei,
+                                                csv,
+                                                protokolldatei,
+                                                bildfolge,
+                                                aktiv_ort,
+                                                ..lage_in(blatt, appkit, krk, fokus, form)
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -2523,6 +2614,101 @@ mod tests {
                         zulaessig(kommando, ohne),
                         zulaessig(kommando, mit),
                         "{kommando:?} fragt eintragsdatei in {fokus:?} bei {form:?}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// Die eine Regel aus E4 des Plans der Protokollknoepfe als Tafel: allein
+    /// die Textflaeche mit dem Kennzeichen zeigt den Text einer
+    /// Protokolldatei, keine Tabellenform und nicht die Quicknote.
+    #[test]
+    fn protokolltext_gilt_allein_in_der_textflaeche_vor_einer_protokolldatei() {
+        for form in JEDE_FORM {
+            assert!(!protokolltext(form, false), "{form:?} ohne Protokolldatei");
+            assert_eq!(
+                protokolltext(form, true),
+                form == Editorform::Text,
+                "{form:?} vor einer Protokolldatei"
+            );
+        }
+    }
+
+    /// E3 und E4 des Plans
+    /// `261111-2248-plan-protokolldatei-traegt-kopieren-singlestrip-format.md`:
+    /// Kopieren, Singlestrip und Format sind genau dann zulaessig, wenn kein
+    /// Hindernis steht, der Fokus im Editor ist und der Editor die Quicknote
+    /// zeigt oder den Text einer Protokolldatei; das Leeren ist vor einer
+    /// Protokolldatei nie zulaessig, sondern allein in der Quicknote.
+    ///
+    /// Ueber jede Lage aus [`jede_lage`], also auch ueber jede Art Ort und
+    /// jeden Wert der uebrigen Felder: keines davon aendert die Antwort. Die
+    /// Erwartung ist ausgeschrieben und ruft `protokolltext` nicht, sonst
+    /// waere sie die Umsetzung ein zweites Mal.
+    #[test]
+    fn die_drei_notiztextbefehle_wirken_in_der_quicknote_und_vor_dem_text_einer_protokolldatei() {
+        let mut vor_dem_protokoll = 0usize;
+        for lage in jede_lage() {
+            let frei = !lage.blatt_steht
+                && !lage.ersthelfer_gehoert_appkit
+                && lage.schluesselfenster_gehoert_krk
+                && lage.fokus == Fokus::Editor;
+            let in_der_quicknote = lage.editorform == Editorform::Quicknote;
+            let vor_protokolltext = lage.editorform == Editorform::Text && lage.protokolldatei;
+            for kommando in [
+                Kommando::QuicknoteKopieren,
+                Kommando::QuicknoteSinglestrip,
+                Kommando::QuicknoteFormat,
+            ] {
+                assert_eq!(
+                    zulaessig(kommando, lage),
+                    frei && (in_der_quicknote || vor_protokolltext),
+                    "{kommando:?} in {lage:?}"
+                );
+            }
+            assert_eq!(
+                zulaessig(Kommando::QuicknoteLeeren, lage),
+                frei && in_der_quicknote,
+                "das Leeren in {lage:?}"
+            );
+            if frei && vor_protokolltext {
+                vor_dem_protokoll += 1;
+            }
+        }
+        assert!(
+            vor_dem_protokoll > 0,
+            "jede_lage fuehrt keine Lage vor dem Text einer Protokolldatei; die Probe prueft \
+             den neuen Zweig nicht"
+        );
+    }
+
+    /// Kein anderer Befehl fragt `protokolldatei`: mit ihm und ohne ihn gibt
+    /// die Regel fuer jedes Kommando ausser den dreien dieselbe Antwort, auch
+    /// fuer das Leeren der Quicknote. Dasselbe Muster wie
+    /// [`allein_eintrag_hinzufuegen_fragt_eintragsdatei`].
+    #[test]
+    fn allein_die_drei_notiztextbefehle_fragen_protokolldatei() {
+        for kommando in Kommando::KENNUNGEN.map(|(kommando, _)| kommando) {
+            if matches!(
+                kommando,
+                Kommando::QuicknoteKopieren
+                    | Kommando::QuicknoteSinglestrip
+                    | Kommando::QuicknoteFormat
+            ) {
+                continue;
+            }
+            for form in JEDE_FORM {
+                for fokus in JEDER_FOKUS {
+                    let ohne = lage_in(false, false, true, fokus, form);
+                    let mit = Lage {
+                        protokolldatei: true,
+                        ..ohne
+                    };
+                    assert_eq!(
+                        zulaessig(kommando, ohne),
+                        zulaessig(kommando, mit),
+                        "{kommando:?} fragt protokolldatei in {fokus:?} bei {form:?}"
                     );
                 }
             }
