@@ -17,9 +17,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::WirkungsbereichEditortext => "text in the Editor",
         Text::WirkungsbereichEintraege => "entries in the Editor",
         Text::WirkungsbereichEintragsdatei => "entry files in the Editor",
-        Text::WirkungsbereichReihenfolge => "entries in file order in the Editor",
         Text::WirkungsbereichAufgaben => "tasks in the Editor",
-        Text::WirkungsbereichTermine => "appointments in the Editor",
         Text::WirkungsbereichGeheimnisse => "secrets in the Editor",
         Text::WirkungsbereichQuicknote => "Quicknote in the Editor",
         Text::WirkungsbereichTabbereich => "file pane and Preview",
@@ -51,12 +49,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::AbweisungUmbruchImThema => "A topic is one line and contains no line break.",
         Text::AbweisungThemenzeileImNotiztext => {
             "A line in the note text must not begin with “## ”, because that is how the next note begins."
-        }
-        Text::AbweisungUngueltigesDatum => {
-            "A date is written as YYMMDD or YYMMDD HH:MM, for example 261002 or 261002 09:30."
-        }
-        Text::AbweisungKopfzeileImTermintext => {
-            "A line in the appointment text must not begin with “## ”, because that is how the next appointment begins."
         }
         Text::AbweisungUmbruchImGeheimnisfeld => {
             "Name, protocol, address, account and password are one line each and contain no line break."
@@ -521,8 +513,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::EintragsspalteAufgabe => "Task",
         Text::EintragsspalteThema => "Topic",
         Text::EintragsspalteNotiz => "Note",
-        Text::EintragsspalteDatum => "Date",
-        Text::EintragsspalteTermin => "Appointment",
         Text::EintragsspalteName => "Name",
         Text::EintragsspalteProtokoll => "Protocol",
         Text::EintragsspalteAdresse => "Address",
@@ -870,8 +860,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::EditorKeineSuche => "no search is running",
         Text::EditorKeinTrefferErsetzt => "no match replaced",
         Text::EditorPinGeaendert => "the PIN of {pfad} is changed",
-        Text::EditorTermineAufsteigend => "Appointments sorted ascending",
-        Text::EditorTermineAbsteigend => "Appointments sorted descending",
         Text::QuicknoteLeer => "The Quicknote is empty; the clipboard stays as it was.",
         Text::QuicknoteNichtKopiert => {
             "The Quicknote could not be copied to the clipboard; its text stays in place."
@@ -902,30 +890,20 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::QuicknoteGrundLesefehler => "the system reports a read error",
         Text::EintragKeineAufgabentabelle => "the Editor shows no task table",
         Text::EintragKeineNotiztabelle => "the Editor shows no note table",
-        Text::EintragKeineTermintabelle => "the Editor shows no appointment table",
         Text::EintragKeineAufgabeGewaehlt => "no task is selected",
         Text::EintragKeineNotizGewaehlt => "no note is selected",
-        Text::EintragKeinTerminGewaehlt => "no appointment is selected",
         Text::EintragAufgabeHinzugefuegt => "new task at the end; return accepts the text",
         Text::EintragNotizHinzugefuegt => {
             "new note at the end; tab moves to the text, cmd+return accepts"
-        }
-        Text::EintragTerminHinzugefuegt => {
-            "appointment added, with today’s date; tab moves to the text, cmd+return accepts"
         }
         Text::EintragAufgabeBearbeitung => "return accepts, esc discards",
         Text::EintragNotizBearbeitung => {
             "cmd+return accepts, tab changes the cell, return writes a line break in the text"
         }
-        Text::EintragTerminBearbeitung => {
-            "cmd+return accepts, tab changes the cell, return writes a line break in the appointment"
-        }
         Text::EintragAufgabeUebernommen => "task accepted",
         Text::EintragNotizUebernommen => "note accepted",
-        Text::EintragTerminUebernommen => "appointment accepted",
         Text::EintragAufgabeAbgehakt => "task checked off",
         Text::EintragNotizOhneKaestchen => "a note has no checkbox",
-        Text::EintragTerminOhneKaestchen => "an appointment has no checkbox",
         Text::EintragAufgabeWiederOffen => "task open again",
         Text::EintragAufgabeVerschoben => "task moved",
         Text::EintragNotizVerschoben => "note moved",
@@ -933,16 +911,11 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::EintragNotizSchonOben => "the note is already at the top",
         Text::EintragAufgabeSchonUnten => "the task is already at the bottom",
         Text::EintragNotizSchonUnten => "the note is already at the bottom",
-        Text::EintragTermineNachDatum => {
-            "Appointments are ordered by their date; none can be moved."
-        }
         Text::EintragAufgabeGeloescht => "task deleted; cmd+z brings it back",
         Text::EintragNotizGeloescht => "note deleted; cmd+z brings it back",
-        Text::EintragTerminGeloescht => "appointment deleted; cmd+z brings it back",
         Text::EintragZelleBleibt => "the cell stays in editing",
         Text::EintragAufgabeMitEscUebernommen => "task accepted; cmd+z takes it back",
         Text::EintragNotizMitEscUebernommen => "note accepted; cmd+z takes it back",
-        Text::EintragTerminMitEscUebernommen => "appointment accepted; cmd+z takes it back",
         Text::EintragHeuteUnbestimmt => "Today’s date could not be determined.",
         Text::EintragKeineTrenntexttabelle => "the Editor shows no table of a CSV file",
         Text::EintragKeineZeileGewaehlt => "no row is selected",
@@ -1438,7 +1411,6 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::TrenntextTrennzeichenWechseln => "Change Delimiter",
         Kommando::AufgabeAbhaken => "Check Off or Reopen Task",
         Kommando::PinAendern => "Change PIN",
-        Kommando::TermineRichtungUmkehren => "Appointments: Reverse Sort Order",
         Kommando::BelegungAnsehen => "Show Key Bindings",
         Kommando::BelegungsdateiAnsehen => "Open Key Bindings File",
         Kommando::Beenden => "Quit KRK",

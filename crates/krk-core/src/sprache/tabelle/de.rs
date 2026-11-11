@@ -19,9 +19,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::WirkungsbereichEditortext => "Text im Editor",
         Text::WirkungsbereichEintraege => "Einträge im Editor",
         Text::WirkungsbereichEintragsdatei => "Eintragsdateien im Editor",
-        Text::WirkungsbereichReihenfolge => "Einträge in Dateireihenfolge im Editor",
         Text::WirkungsbereichAufgaben => "Aufgaben im Editor",
-        Text::WirkungsbereichTermine => "Termine im Editor",
         Text::WirkungsbereichGeheimnisse => "Geheimnisse im Editor",
         Text::WirkungsbereichQuicknote => "Quicknote im Editor",
         Text::WirkungsbereichTabbereich => "Dateifenster und Vorschau",
@@ -55,12 +53,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::AbweisungUmbruchImThema => "Ein Thema ist eine Zeile und trägt keinen Zeilenumbruch.",
         Text::AbweisungThemenzeileImNotiztext => {
             "Eine Zeile im Notiztext darf nicht mit „## “ beginnen, denn so beginnt die nächste Notiz."
-        }
-        Text::AbweisungUngueltigesDatum => {
-            "Ein Datum steht als YYMMDD oder YYMMDD HH:MM, etwa 261002 oder 261002 09:30."
-        }
-        Text::AbweisungKopfzeileImTermintext => {
-            "Eine Zeile im Termintext darf nicht mit „## “ beginnen, denn so beginnt der nächste Termin."
         }
         Text::AbweisungUmbruchImGeheimnisfeld => {
             "Name, Protokoll, Adresse, Konto und Passwort sind je eine Zeile und tragen keinen Zeilenumbruch."
@@ -549,8 +541,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::EintragsspalteAufgabe => "Aufgabe",
         Text::EintragsspalteThema => "Thema",
         Text::EintragsspalteNotiz => "Notiz",
-        Text::EintragsspalteDatum => "Datum",
-        Text::EintragsspalteTermin => "Termin",
         Text::EintragsspalteName => "Name",
         Text::EintragsspalteProtokoll => "Protokoll",
         Text::EintragsspalteAdresse => "Adresse",
@@ -916,8 +906,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::EditorKeineSuche => "es läuft keine Suche",
         Text::EditorKeinTrefferErsetzt => "kein Treffer ersetzt",
         Text::EditorPinGeaendert => "die PIN von {pfad} ist geändert",
-        Text::EditorTermineAufsteigend => "Termine aufsteigend sortiert",
-        Text::EditorTermineAbsteigend => "Termine absteigend sortiert",
         Text::QuicknoteLeer => "Die Quicknote ist leer; die Zwischenablage bleibt, wie sie war.",
         Text::QuicknoteNichtKopiert => {
             "Die Quicknote ließ sich nicht in die Zwischenablage kopieren; ihr Text bleibt stehen."
@@ -948,30 +936,20 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::QuicknoteGrundLesefehler => "das System meldet einen Lesefehler",
         Text::EintragKeineAufgabentabelle => "der Editor zeigt keine Aufgabentabelle",
         Text::EintragKeineNotiztabelle => "der Editor zeigt keine Notiztabelle",
-        Text::EintragKeineTermintabelle => "der Editor zeigt keine Termintabelle",
         Text::EintragKeineAufgabeGewaehlt => "es ist keine Aufgabe gewählt",
         Text::EintragKeineNotizGewaehlt => "es ist keine Notiz gewählt",
-        Text::EintragKeinTerminGewaehlt => "es ist kein Termin gewählt",
         Text::EintragAufgabeHinzugefuegt => "neue Aufgabe am Ende; return übernimmt den Text",
         Text::EintragNotizHinzugefuegt => {
             "neue Notiz am Ende; tab wechselt zum Text, cmd+return übernimmt"
-        }
-        Text::EintragTerminHinzugefuegt => {
-            "Termin hinzugefügt, mit dem heutigen Datum; tab wechselt zum Text, cmd+return übernimmt"
         }
         Text::EintragAufgabeBearbeitung => "return übernimmt, esc verwirft",
         Text::EintragNotizBearbeitung => {
             "cmd+return übernimmt, tab wechselt die Zelle, return schreibt im Text einen Zeilenumbruch"
         }
-        Text::EintragTerminBearbeitung => {
-            "cmd+return übernimmt, tab wechselt die Zelle, return schreibt im Termin einen Zeilenumbruch"
-        }
         Text::EintragAufgabeUebernommen => "Aufgabe übernommen",
         Text::EintragNotizUebernommen => "Notiz übernommen",
-        Text::EintragTerminUebernommen => "Termin übernommen",
         Text::EintragAufgabeAbgehakt => "Aufgabe abgehakt",
         Text::EintragNotizOhneKaestchen => "eine Notiz hat kein Kästchen",
-        Text::EintragTerminOhneKaestchen => "ein Termin hat kein Kästchen",
         Text::EintragAufgabeWiederOffen => "Aufgabe wieder offen",
         Text::EintragAufgabeVerschoben => "Aufgabe verschoben",
         Text::EintragNotizVerschoben => "Notiz verschoben",
@@ -979,16 +957,11 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::EintragNotizSchonOben => "die Notiz steht schon oben",
         Text::EintragAufgabeSchonUnten => "die Aufgabe steht schon unten",
         Text::EintragNotizSchonUnten => "die Notiz steht schon unten",
-        Text::EintragTermineNachDatum => {
-            "Termine stehen nach ihrem Datum; verschieben lässt sich keiner."
-        }
         Text::EintragAufgabeGeloescht => "Aufgabe gelöscht; cmd+z holt sie zurück",
         Text::EintragNotizGeloescht => "Notiz gelöscht; cmd+z holt sie zurück",
-        Text::EintragTerminGeloescht => "Termin gelöscht; cmd+z holt ihn zurück",
         Text::EintragZelleBleibt => "die Zelle bleibt in Bearbeitung",
         Text::EintragAufgabeMitEscUebernommen => "Aufgabe übernommen; cmd+z nimmt es zurück",
         Text::EintragNotizMitEscUebernommen => "Notiz übernommen; cmd+z nimmt es zurück",
-        Text::EintragTerminMitEscUebernommen => "Termin übernommen; cmd+z nimmt es zurück",
         Text::EintragHeuteUnbestimmt => "Das heutige Datum ließ sich nicht bestimmen.",
         Text::EintragKeineTrenntexttabelle => "der Editor zeigt keine Tabelle einer CSV-Datei",
         Text::EintragKeineZeileGewaehlt => "es ist keine Zeile gewählt",
@@ -1506,7 +1479,6 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::TrenntextTrennzeichenWechseln => "Trennzeichen wechseln",
         Kommando::AufgabeAbhaken => "Aufgabe abhaken oder öffnen",
         Kommando::PinAendern => "PIN ändern",
-        Kommando::TermineRichtungUmkehren => "Termine: Sortierrichtung umkehren",
         Kommando::BelegungAnsehen => "Tastaturbelegung anzeigen",
         Kommando::BelegungsdateiAnsehen => "Tastaturdefinition öffnen",
         Kommando::Beenden => "KRK beenden",

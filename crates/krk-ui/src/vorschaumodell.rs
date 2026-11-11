@@ -313,7 +313,6 @@ use krk_core::archiv::{
 };
 use krk_core::bild::Aufnahmezeit;
 use krk_core::fern::Fernfaden;
-use krk_core::heimordner::eintraege::termine;
 use krk_core::heimordner::{Heimordner, Sonderdatei};
 use krk_core::leseprofil::bildfolge::{Bildverzeichnis, Foto, Kuerzung};
 use krk_core::leseprofil::{Auskunft, Profile, Zusammenfassungszeile, zusammenfassen};
@@ -2398,7 +2397,7 @@ impl Leseart {
 fn text_als_inhalt(pfad: &Path, text: String, typ: Dateityp, tafel: Tafel) -> Inhalt {
     match hervorhebung::art(Some(pfad), typ) {
         Darstellungsart::Markdown => Inhalt::Markdown(Box::new(markdown::rendern(
-            &vorschautext(typ, text),
+            &text,
             tafel,
             Lesart::von_dateityp(typ),
         ))),
@@ -2760,38 +2759,6 @@ fn leseart_in_der_datenbank(
     }
 }
 
-/// Der Text, den die Vorschau rendert: fuer `appointments.md` im erkannten
-/// Notizordner die Termine nach ihrem Datum, fuer jede andere Datei der Text,
-/// wie er dasteht.
-///
-/// **Die Vorschau ordnet fest aufsteigend und hebt nichts hervor** (A13 des
-/// Spec `260926-2253_*_spec-termine-als-weitere-datei-im-heimordner.md`,
-/// Schritt 9 des Plans
-/// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`). Die
-/// Richtung der Termintabelle im Editor erreicht sie nicht: die Tabelle ist
-/// eine Ansicht auf den Stand, die Vorschau eine auf die Datei. Der Vorspann
-/// steht oben, ungueltige Termine stehen am Ende, und die Umordnung rechnet
-/// allein [`termine::in_anzeigeordnung`], dieselbe Rechnung wie die Tabelle,
-/// ueber einen Text im Speicher; geschrieben wird nichts.
-///
-/// **Kopiert der Nutzer aus der Vorschau, kommt der Text aus dieser
-/// umgeordneten Quelle** und nicht aus der Datei. Jeder Termin reist dabei mit
-/// seinen eigenen Zeilen, weil die Umordnung ganze Bloecke versetzt und keinen
-/// zerschneidet.
-///
-/// Eine `appointments.md` ausserhalb des Notizordners ist `Dateityp::Markdown`
-/// und kommt in Dateireihenfolge, wie jede andere Markdown-Datei.
-fn vorschautext(typ: Dateityp, text: String) -> String {
-    match typ {
-        Dateityp::Eintraege(Sonderdatei::Termine) => termine::in_anzeigeordnung(&text),
-        Dateityp::Eintraege(
-            Sonderdatei::Notizen | Sonderdatei::Aufgaben | Sonderdatei::Geheimnisse,
-        )
-        | Dateityp::Markdown
-        | Dateityp::Sonstiges => text,
-    }
-}
-
 /// Die Endung des Pfades in Kleinschreibung, oder keine.
 ///
 /// Die Stelle, an der die Gross- und Kleinschreibung der PDF-Endung faellt
@@ -3150,56 +3117,40 @@ mod tests {
         assert_eq!([stand("notes.txt"), stand("tasks.txt")], vorher);
     }
 
-    /// Eine Termindatei mit Vorspann, drei Terminen ausser der Reihe und
-    /// einer ungueltigen Kopfzeile, ohne Schlussumbruch.
+    /// Eine fruehere Termindatei mit Vorspann, drei Terminen ausser der Reihe
+    /// und einer ungueltigen Kopfzeile, ohne Schlussumbruch.
     const TERMINDATEI: &str = "Vorspann\n\n## 261003\nDrei\n\n## xyz\nKaputt\n\n\
                                ## 261001 09:30\nEins\n\n## 261002\nZwei";
 
-    /// T7.3: im erkannten Notizordner kommt `appointments.md` als Markdown,
-    /// der Vorspann oben, die Termine aufsteigend nach dem Datum und der
-    /// ungueltige am Ende; kein Hinweis und kein Fehler. Ueber die
-    /// geschriebene und die aufgeloeste Form des Ordners gleich.
+    /// C3.3 des Spec
+    /// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`:
+    /// `appointments.md` ist im erkannten Notizordner gewoehnliches Markdown
+    /// und kommt in der Reihenfolge der Datei, ueber die geschriebene und die
+    /// aufgeloeste Form des Ordners gleich und genau wie dieselbe Datei
+    /// anderswo. Bis zum 261111 ordnete die Vorschau sie im Notizordner nach
+    /// dem Datum um.
     #[test]
-    fn die_termine_im_notizordner_kommen_aufsteigend() {
-        let ordner = Pruefordner::neu("termine-aufsteigend");
+    fn appointments_md_kommt_ueberall_in_dateireihenfolge() {
+        let ordner = Pruefordner::neu("termine-dateireihenfolge");
         let (heim, geschrieben, ziel) = pruef_krkhome(&ordner);
         std::fs::write(ziel.join("appointments.md"), TERMINDATEI).expect("appointments.md");
-        for basis in [&geschrieben, &ziel] {
-            let text = gerenderter_text(laden(
-                &basis.join("appointments.md"),
-                Tafel::Hell,
-                &Profile::default(),
-                Some(&heim),
-            ));
+        let daneben = ordner.datei("appointments.md", TERMINDATEI);
+        for pfad in [
+            geschrieben.join("appointments.md"),
+            ziel.join("appointments.md"),
+            daneben,
+        ] {
             assert_eq!(
-                text,
-                "Vorspann\n\n261001 09:30\n\nEins\n\n261002\n\nZwei\n\n261003\n\nDrei\n\nxyz\n\nKaputt",
+                gerenderter_text(laden(&pfad, Tafel::Hell, &Profile::default(), Some(&heim))),
+                "Vorspann\n\n261003\n\nDrei\n\nxyz\n\nKaputt\n\n261001 09:30\n\nEins\n\n261002\n\nZwei",
                 "{}",
-                basis.display()
+                pfad.display()
             );
         }
     }
 
-    /// T7.1: dieselbe Datei in einem anderen Ordner ist gewoehnliches
-    /// Markdown und kommt in Dateireihenfolge.
-    #[test]
-    fn die_termine_anderswo_kommen_in_dateireihenfolge() {
-        let ordner = Pruefordner::neu("termine-anderswo");
-        let (heim, _, _) = pruef_krkhome(&ordner);
-        let daneben = ordner.datei("appointments.md", TERMINDATEI);
-        assert_eq!(
-            gerenderter_text(laden(
-                &daneben,
-                Tafel::Hell,
-                &Profile::default(),
-                Some(&heim)
-            )),
-            "Vorspann\n\n261003\n\nDrei\n\nxyz\n\nKaputt\n\n261001 09:30\n\nEins\n\n261002\n\nZwei"
-        );
-    }
-
-    /// T7.2: die Vorschau ordnet im Speicher um und schreibt nichts; Bytes,
-    /// Groesse und Aenderungszeit der Datei stehen nach dem Laden wie vorher.
+    /// C3.6: die Vorschau schreibt nichts; Bytes, Groesse und Aenderungszeit
+    /// einer `appointments.md` im Notizordner stehen nach dem Laden wie vorher.
     #[test]
     fn das_laden_laesst_die_termindatei_unberuehrt() {
         let ordner = Pruefordner::neu("termine-unberuehrt");

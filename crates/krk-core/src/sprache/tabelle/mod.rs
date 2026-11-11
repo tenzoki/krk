@@ -42,7 +42,6 @@
 //! | Werkseinstellungen | réglages d’usine | factory settings |
 //! | Notizordner | dossier de notes | notes folder |
 //! | Geheimnisse | secrets | secrets |
-//! | Termine | rendez-vous | appointments |
 //! | Aufgaben | tâches | tasks |
 //! | Bildfolge | série de photos | photo sequence |
 //! | Quicknote | Quicknote | Quicknote |
@@ -123,7 +122,7 @@
 //! | Geraete und Orte (Leiste) | Volumes et emplacements | Volumes and Locations |
 //! | fehlt (ein Lesezeichen ohne Ziel) | absent | missing |
 //! | Textstelle (eines Lesezeichens) | passage de texte | text location |
-//! | Aufgabe / Thema / Notiz / Termin (Spalten des Editors) | Tâche / Sujet / Note / Rendez-vous | Task / Topic / Note / Appointment |
+//! | Aufgabe / Thema / Notiz (Spalten des Editors) | Tâche / Sujet / Note | Task / Topic / Note |
 //! | Zuweisen (F1-Ansicht) | Attribuer | Assign |
 //! | Fertig (Schaltflaeche) | Terminé | Done |
 //! | Aufnahme (einer Kombination) | saisie | recording |
@@ -189,7 +188,7 @@
 //! | verdeckter Tab | onglet masqué | hidden tab |
 //! | eine Fassung, hinter der eine Datei zurueckliegt | version sur laquelle un fichier est en retard | version a file lags behind |
 //! | Auswahl (die gewaehlte Zeile des Dateifensters) | sélection | selection |
-//! | Tabelle (Aufgaben-, Notiz-, Termintabelle des Editors) | tableau | table |
+//! | Tabelle (Aufgaben- und Notiztabelle des Editors) | tableau | table |
 //! | Kombination (einer Belegung) | combinaison | combination |
 //! | Funktion (der Belegung) | fonction | function |
 //! | Unterbaum | sous-arborescence | subtree |

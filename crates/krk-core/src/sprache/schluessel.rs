@@ -37,12 +37,8 @@ pub enum Text {
     WirkungsbereichEintraege,
     /// `Wirkungsbereich::Eintragsdatei`.
     WirkungsbereichEintragsdatei,
-    /// `Wirkungsbereich::Reihenfolge`.
-    WirkungsbereichReihenfolge,
     /// `Wirkungsbereich::Aufgaben`.
     WirkungsbereichAufgaben,
-    /// `Wirkungsbereich::Termine`.
-    WirkungsbereichTermine,
     /// `Wirkungsbereich::Geheimnisse`.
     WirkungsbereichGeheimnisse,
     /// `Wirkungsbereich::Quicknote`.
@@ -104,10 +100,6 @@ pub enum Text {
     AbweisungUmbruchImThema,
     /// `Abweisung::ThemenzeileImNotiztext`.
     AbweisungThemenzeileImNotiztext,
-    /// `Abweisung::UngueltigesDatum`.
-    AbweisungUngueltigesDatum,
-    /// `Abweisung::KopfzeileImTermintext`.
-    AbweisungKopfzeileImTermintext,
     /// `Abweisung::UmbruchImGeheimnisfeld`.
     AbweisungUmbruchImGeheimnisfeld,
     /// `Abweisung::KopfzeileInGeheimnisnotizen`.
@@ -792,10 +784,6 @@ pub enum Text {
     EintragsspalteThema,
     /// Die zweite Spalte der Notiztabelle.
     EintragsspalteNotiz,
-    /// Die erste Spalte der Termintabelle.
-    EintragsspalteDatum,
-    /// Die zweite Spalte der Termintabelle.
-    EintragsspalteTermin,
     /// Die erste Spalte der Geheimnistabelle, der Name des Eintrags.
     EintragsspalteName,
     /// Die zweite Spalte der Geheimnistabelle, `protocol:`.
@@ -1399,10 +1387,6 @@ pub enum Text {
     EditorKeinTrefferErsetzt,
     /// `Editormeldung::PinGeaendert`; `{pfad}`.
     EditorPinGeaendert,
-    /// `Editormeldung::Terminrichtung(Aufsteigend)`.
-    EditorTermineAufsteigend,
-    /// `Editormeldung::Terminrichtung(Absteigend)`.
-    EditorTermineAbsteigend,
     /// `Editormeldung::QuicknoteLeer`.
     QuicknoteLeer,
     /// `Editormeldung::QuicknoteNichtKopiert`.
@@ -1449,38 +1433,26 @@ pub enum Text {
     EintragKeineAufgabentabelle,
     /// `Eintragsantwort::KeineTabelle` in der Notiztabelle.
     EintragKeineNotiztabelle,
-    /// `Eintragsantwort::KeineTabelle` in der Termintabelle.
-    EintragKeineTermintabelle,
     /// `Eintragsantwort::KeinEintragGewaehlt`, Aufgaben.
     EintragKeineAufgabeGewaehlt,
     /// `Eintragsantwort::KeinEintragGewaehlt`, Notizen.
     EintragKeineNotizGewaehlt,
-    /// `Eintragsantwort::KeinEintragGewaehlt`, Termine.
-    EintragKeinTerminGewaehlt,
     /// `Eintragsantwort::Hinzugefuegt`, Aufgaben.
     EintragAufgabeHinzugefuegt,
     /// `Eintragsantwort::Hinzugefuegt`, Notizen.
     EintragNotizHinzugefuegt,
-    /// `Eintragsantwort::Hinzugefuegt`, Termine.
-    EintragTerminHinzugefuegt,
     /// `Eintragsantwort::BearbeitungBegonnen`, Aufgaben.
     EintragAufgabeBearbeitung,
     /// `Eintragsantwort::BearbeitungBegonnen`, Notizen.
     EintragNotizBearbeitung,
-    /// `Eintragsantwort::BearbeitungBegonnen`, Termine.
-    EintragTerminBearbeitung,
     /// `Eintragsantwort::Uebernommen`, Aufgaben.
     EintragAufgabeUebernommen,
     /// `Eintragsantwort::Uebernommen`, Notizen.
     EintragNotizUebernommen,
-    /// `Eintragsantwort::Uebernommen`, Termine.
-    EintragTerminUebernommen,
     /// `Eintragsantwort::Abgehakt`, Aufgaben.
     EintragAufgabeAbgehakt,
     /// `Eintragsantwort::Abgehakt` und `WiederOffen` in der Notiztabelle.
     EintragNotizOhneKaestchen,
-    /// `Eintragsantwort::Abgehakt` und `WiederOffen` in der Termintabelle.
-    EintragTerminOhneKaestchen,
     /// `Eintragsantwort::WiederOffen`, Aufgaben.
     EintragAufgabeWiederOffen,
     /// `Eintragsantwort::Verschoben`, Aufgaben.
@@ -1495,24 +1467,22 @@ pub enum Text {
     EintragAufgabeSchonUnten,
     /// `Eintragsantwort::SchonUnten`, Notizen.
     EintragNotizSchonUnten,
-    /// `Eintragsantwort::NachDatumGeordnet` und jedes Verschieben in der
-    /// Termintabelle.
-    EintragTermineNachDatum,
     /// `Eintragsantwort::Geloescht`, Aufgaben.
     EintragAufgabeGeloescht,
     /// `Eintragsantwort::Geloescht`, Notizen.
     EintragNotizGeloescht,
-    /// `Eintragsantwort::Geloescht`, Termine.
-    EintragTerminGeloescht,
     /// `Eintragsantwort::ZelleBleibt`, jede Tabelle.
     EintragZelleBleibt,
     /// `Eintragsantwort::MitEscUebernommen`, Aufgaben.
     EintragAufgabeMitEscUebernommen,
     /// `Eintragsantwort::MitEscUebernommen`, Notizen.
     EintragNotizMitEscUebernommen,
-    /// `Eintragsantwort::MitEscUebernommen`, Termine.
-    EintragTerminMitEscUebernommen,
-    /// `Eintragsantwort::HeuteUnbestimmt`, jede Tabelle.
+    /// „Das heutige Datum ließ sich nicht bestimmen.“ Bis zum 261111 die
+    /// Antwort der Termintabelle auf einen neuen Termin ohne Uhr; seitdem
+    /// ohne Leser und stehen gelassen, weil Schritt 6 des Plans
+    /// `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md` den
+    /// Satz fuer das Anlegen in `minutes/` braucht und den Schluessel dort
+    /// umbenennt.
     EintragHeuteUnbestimmt,
     /// `Eintragsantwort::KeineTabelle`, Tabelle einer CSV.
     EintragKeineTrenntexttabelle,
@@ -1954,7 +1924,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 796] = [
+    pub const ALLE: [Text; 779] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1962,9 +1932,7 @@ impl Text {
         Text::WirkungsbereichEditortext,
         Text::WirkungsbereichEintraege,
         Text::WirkungsbereichEintragsdatei,
-        Text::WirkungsbereichReihenfolge,
         Text::WirkungsbereichAufgaben,
-        Text::WirkungsbereichTermine,
         Text::WirkungsbereichGeheimnisse,
         Text::WirkungsbereichQuicknote,
         Text::WirkungsbereichTabbereich,
@@ -1993,8 +1961,6 @@ impl Text {
         Text::AbweisungUmbruchImAufgabentext,
         Text::AbweisungUmbruchImThema,
         Text::AbweisungThemenzeileImNotiztext,
-        Text::AbweisungUngueltigesDatum,
-        Text::AbweisungKopfzeileImTermintext,
         Text::AbweisungUmbruchImGeheimnisfeld,
         Text::AbweisungKopfzeileInGeheimnisnotizen,
         Text::VerbindungProtokollUnbekannt,
@@ -2272,8 +2238,6 @@ impl Text {
         Text::EintragsspalteAufgabe,
         Text::EintragsspalteThema,
         Text::EintragsspalteNotiz,
-        Text::EintragsspalteDatum,
-        Text::EintragsspalteTermin,
         Text::EintragsspalteName,
         Text::EintragsspalteProtokoll,
         Text::EintragsspalteAdresse,
@@ -2529,8 +2493,6 @@ impl Text {
         Text::EditorKeineSuche,
         Text::EditorKeinTrefferErsetzt,
         Text::EditorPinGeaendert,
-        Text::EditorTermineAufsteigend,
-        Text::EditorTermineAbsteigend,
         Text::QuicknoteLeer,
         Text::QuicknoteNichtKopiert,
         Text::QuicknoteZuGross,
@@ -2551,22 +2513,16 @@ impl Text {
         Text::QuicknoteGrundLesefehler,
         Text::EintragKeineAufgabentabelle,
         Text::EintragKeineNotiztabelle,
-        Text::EintragKeineTermintabelle,
         Text::EintragKeineAufgabeGewaehlt,
         Text::EintragKeineNotizGewaehlt,
-        Text::EintragKeinTerminGewaehlt,
         Text::EintragAufgabeHinzugefuegt,
         Text::EintragNotizHinzugefuegt,
-        Text::EintragTerminHinzugefuegt,
         Text::EintragAufgabeBearbeitung,
         Text::EintragNotizBearbeitung,
-        Text::EintragTerminBearbeitung,
         Text::EintragAufgabeUebernommen,
         Text::EintragNotizUebernommen,
-        Text::EintragTerminUebernommen,
         Text::EintragAufgabeAbgehakt,
         Text::EintragNotizOhneKaestchen,
-        Text::EintragTerminOhneKaestchen,
         Text::EintragAufgabeWiederOffen,
         Text::EintragAufgabeVerschoben,
         Text::EintragNotizVerschoben,
@@ -2574,14 +2530,11 @@ impl Text {
         Text::EintragNotizSchonOben,
         Text::EintragAufgabeSchonUnten,
         Text::EintragNotizSchonUnten,
-        Text::EintragTermineNachDatum,
         Text::EintragAufgabeGeloescht,
         Text::EintragNotizGeloescht,
-        Text::EintragTerminGeloescht,
         Text::EintragZelleBleibt,
         Text::EintragAufgabeMitEscUebernommen,
         Text::EintragNotizMitEscUebernommen,
-        Text::EintragTerminMitEscUebernommen,
         Text::EintragHeuteUnbestimmt,
         Text::EintragKeineTrenntexttabelle,
         Text::EintragKeineZeileGewaehlt,

@@ -551,7 +551,7 @@ use objc2_foundation::{NSDate, NSDefaultRunLoopMode};
 
 use krk_core::heimordner::eintraege::geheimnisse::{self, Geheimnisentwurf};
 use krk_core::heimordner::eintraege::{
-    self, Aufgaben, Block, Neustand, Notizen, Richtung, Tag, aufgaben, notizen, termine,
+    self, Aufgaben, Block, Neustand, Notizen, Richtung, aufgaben, notizen,
 };
 use krk_core::heimordner::schluesselmerker::Schluesselmerker;
 use krk_core::heimordner::tresor::{Oeffnungsmittel, Pin, Schluessel};
@@ -563,7 +563,6 @@ use krk_core::text::{
     Abweisung, Fund, Markensprung, Treffer, Zeilenindex, Zeilenlage, datei, glaetten, marke,
 };
 use krk_core::trenntext::{self, Dialekt, Herkunft, Satzindex, Trenntextstand, Zellbereich};
-use krk_core::verzeichnis::Richtung as Sortierrichtung;
 
 use crate::editormodell::{
     Ansicht, Dateityp, Editormodell, Geheimnisweg, Ladeausgang, Pinwechselausgang,
@@ -782,9 +781,6 @@ pub enum Editormeldung {
         /// Der Grund, wie das Modell ihn formuliert hat.
         grund: String,
     },
-    /// Die Termintabelle ordnet jetzt in dieser Richtung nach dem Datum
-    /// (T5.5 der Termine); die Datei ist unveraendert.
-    Terminrichtung(Sortierrichtung),
     /// Der ganze Text der Quicknote liegt in der Zwischenablage, ihr Puffer
     /// ist geleert und sie geschlossen (Q2 des Spec der Quicknote).
     QuicknoteKopiert {
@@ -1003,12 +999,6 @@ impl Editormeldung {
                 satz(Text::EditorPinGeaendert, &[("pfad", &pfad.display())])
             }
             Self::PinNichtGeaendert { grund } => grund.clone(),
-            Self::Terminrichtung(Sortierrichtung::Aufsteigend) => {
-                text(Text::EditorTermineAufsteigend).to_owned()
-            }
-            Self::Terminrichtung(Sortierrichtung::Absteigend) => {
-                text(Text::EditorTermineAbsteigend).to_owned()
-            }
             Self::QuicknoteKopiert { zeichen } => anzahl(
                 Zahlwort::QuicknoteKopiert,
                 u64::try_from(*zeichen).unwrap_or(u64::MAX),
@@ -1482,14 +1472,6 @@ pub enum Eintragsantwort {
     /// `cmd+z` nimmt die Uebernahme zurueck (C5, Moeglichkeit 2 von
     /// `260926-0115_*_was-tut-esc-in-einer-geaenderten-zelle-der-eintragstabellen.md`).
     MitEscUebernommen,
-    /// Ein neuer Termin braucht das heutige Datum, und die Uhr hat keines
-    /// geliefert; es ist nichts hinzugefuegt (Schritt 6 des Plans der
-    /// Termine).
-    HeuteUnbestimmt,
-    /// Die Termintabelle ordnet nach dem Datum, und verschieben laesst sich
-    /// darin nichts. Die Zulaessigkeit haelt die zwei Befehle vorher an; der
-    /// Satz ist die ehrliche Antwort, falls ein Rufer doch durchkommt.
-    NachDatumGeordnet,
 }
 
 impl Eintragsantwort {
@@ -1506,10 +1488,9 @@ impl Eintragsantwort {
         enum Satzfamilie {
             A,
             N,
-            T,
             Z,
         }
-        use Satzfamilie::{A, N, T, Z};
+        use Satzfamilie::{A, N, Z};
         // Die Geheimnistabelle antwortet mit den Saetzen der Notiztabelle,
         // wie bis zum 261016, als sie sich als Notizen zeigte: ein Geheimnis
         // traegt die Form einer Notiz, und eigene Saetze sagten nichts
@@ -1517,7 +1498,6 @@ impl Eintragsantwort {
         let art = match art {
             Eintragsart::Aufgaben => A,
             Eintragsart::Notizen | Eintragsart::Geheimnisse => N,
-            Eintragsart::Termine => T,
             // Die Tabelle einer CSV spricht von Zeilen und Zellen (Schritt 3
             // des Plans der CSV-Tabelle).
             Eintragsart::Trenntext => Z,
@@ -1536,22 +1516,16 @@ impl Eintragsantwort {
             (Self::Geloescht, Z) => Text::EintragZeileGeloescht,
             (Self::MitEscUebernommen, Z) => Text::EintragZelleMitEscUebernommen,
             (Self::KeineTabelle, N) => Text::EintragKeineNotiztabelle,
-            (Self::KeineTabelle, T) => Text::EintragKeineTermintabelle,
             (Self::KeinEintragGewaehlt, A) => Text::EintragKeineAufgabeGewaehlt,
             (Self::KeinEintragGewaehlt, N) => Text::EintragKeineNotizGewaehlt,
-            (Self::KeinEintragGewaehlt, T) => Text::EintragKeinTerminGewaehlt,
             (Self::Hinzugefuegt, A) => Text::EintragAufgabeHinzugefuegt,
             (Self::Hinzugefuegt, N) => Text::EintragNotizHinzugefuegt,
-            (Self::Hinzugefuegt, T) => Text::EintragTerminHinzugefuegt,
             (Self::BearbeitungBegonnen, A) => Text::EintragAufgabeBearbeitung,
             (Self::BearbeitungBegonnen, N) => Text::EintragNotizBearbeitung,
-            (Self::BearbeitungBegonnen, T) => Text::EintragTerminBearbeitung,
             (Self::Uebernommen, A) => Text::EintragAufgabeUebernommen,
             (Self::Uebernommen, N) => Text::EintragNotizUebernommen,
-            (Self::Uebernommen, T) => Text::EintragTerminUebernommen,
             (Self::Abgehakt, A) => Text::EintragAufgabeAbgehakt,
             (Self::Abgehakt | Self::WiederOffen, N) => Text::EintragNotizOhneKaestchen,
-            (Self::Abgehakt | Self::WiederOffen, T) => Text::EintragTerminOhneKaestchen,
             (Self::WiederOffen, A) => Text::EintragAufgabeWiederOffen,
             (Self::Verschoben, A) => Text::EintragAufgabeVerschoben,
             (Self::Verschoben, N) => Text::EintragNotizVerschoben,
@@ -1559,18 +1533,11 @@ impl Eintragsantwort {
             (Self::SchonOben, N) => Text::EintragNotizSchonOben,
             (Self::SchonUnten, A) => Text::EintragAufgabeSchonUnten,
             (Self::SchonUnten, N) => Text::EintragNotizSchonUnten,
-            // Termine verschieben sich nicht; ein Rufer, der trotzdem hier
-            // ankommt, bekommt die Ordnung genannt.
-            (Self::Verschoben | Self::SchonOben | Self::SchonUnten, T)
-            | (Self::NachDatumGeordnet, A | N | T | Z) => Text::EintragTermineNachDatum,
             (Self::Geloescht, A) => Text::EintragAufgabeGeloescht,
             (Self::Geloescht, N) => Text::EintragNotizGeloescht,
-            (Self::Geloescht, T) => Text::EintragTerminGeloescht,
-            (Self::ZelleBleibt, A | N | T | Z) => Text::EintragZelleBleibt,
+            (Self::ZelleBleibt, A | N | Z) => Text::EintragZelleBleibt,
             (Self::MitEscUebernommen, A) => Text::EintragAufgabeMitEscUebernommen,
             (Self::MitEscUebernommen, N) => Text::EintragNotizMitEscUebernommen,
-            (Self::MitEscUebernommen, T) => Text::EintragTerminMitEscUebernommen,
-            (Self::HeuteUnbestimmt, A | N | T | Z) => Text::EintragHeuteUnbestimmt,
         };
         text(schluessel)
     }
@@ -1621,26 +1588,19 @@ enum Handlung {
 ///
 /// **Die Notiztabelle kennt kein Abhaken**: die Zulaessigkeit haelt den
 /// Befehl dort an, und kommt er trotzdem an, antwortet er wie in der
-/// Textflaeche, ohne Umbau. Die Termintabelle ebenso.
-///
-/// **Die Termintabelle rechnet ueber `termine`**: ein neuer Termin traegt
-/// `heute`, und ohne `heute` entsteht keiner; verschieben laesst sich nichts,
-/// weil sie nach dem Datum ordnet. `stelle` ist auch hier die Stelle im Stand
-/// und nie die Zeile auf dem Schirm; die Umrechnung steht in der Tabelle.
+/// Textflaeche, ohne Umbau. `zeile` ist die Stelle im Stand und nie die Zeile
+/// auf dem Schirm; die Umrechnung steht in der Tabelle.
 fn handlung_rechnen(
     stand: &str,
     art: Eintragsart,
     handlung: Handlung,
     zeile: Option<usize>,
-    heute: Option<Tag>,
 ) -> (Editormeldung, Option<Neustand>) {
     use Eintragsantwort as A;
     let antwort = |antwort| Editormeldung::Eintrag(art, antwort);
     let anzahl = match art {
         Eintragsart::Aufgaben => Aufgaben::lesen(stand).bloecke().len(),
-        Eintragsart::Notizen | Eintragsart::Termine | Eintragsart::Geheimnisse => {
-            Notizen::lesen(stand).bloecke().len()
-        }
+        Eintragsart::Notizen | Eintragsart::Geheimnisse => Notizen::lesen(stand).bloecke().len(),
         // Die Tabelle einer CSV rechnet ueber `trenntext_handlung_rechnen`,
         // das den Index der Datei braucht und das der Rufer statt dieser
         // Funktion waehlt. Ein Rufer, der trotzdem hier ankommt, bekommt die
@@ -1659,10 +1619,6 @@ fn handlung_rechnen(
                 Eintragsart::Geheimnisse => {
                     geheimnisse::hinzufuegen(stand, &Geheimnisentwurf::default())
                 }
-                Eintragsart::Termine => match heute {
-                    Some(heute) => Ok(termine::hinzufuegen(stand, heute)),
-                    None => return (antwort(A::HeuteUnbestimmt), None),
-                },
                 // Oben beantwortet, wie in jedem Zweig darunter.
                 Eintragsart::Trenntext => return (antwort(A::KeineTabelle), None),
             };
@@ -1675,9 +1631,6 @@ fn handlung_rechnen(
             Some(_) => (antwort(A::BearbeitungBegonnen), None),
             None => ohne_auswahl,
         },
-        Handlung::Verschieben(_) if art == Eintragsart::Termine => {
-            (antwort(A::NachDatumGeordnet), None)
-        }
         Handlung::Verschieben(richtung) => {
             let Some(stelle) = gewaehlt else {
                 return ohne_auswahl;
@@ -1688,7 +1641,7 @@ fn handlung_rechnen(
                 Eintragsart::Geheimnisse => geheimnisse::verschieben(stand, stelle, richtung),
                 // Oben beantwortet; die Zeile steht, damit die Unterscheidung
                 // vollstaendig bleibt.
-                Eintragsart::Termine | Eintragsart::Trenntext => None,
+                Eintragsart::Trenntext => None,
             };
             match verschoben {
                 Some(neustand) => (antwort(A::Verschoben), Some(neustand)),
@@ -1703,7 +1656,6 @@ fn handlung_rechnen(
                 Eintragsart::Aufgaben => aufgaben::loeschen(stand, stelle),
                 Eintragsart::Notizen => notizen::loeschen(stand, stelle),
                 Eintragsart::Geheimnisse => geheimnisse::loeschen(stand, stelle),
-                Eintragsart::Termine => termine::loeschen(stand, stelle),
                 Eintragsart::Trenntext => None,
             });
             match geloescht {
@@ -2344,7 +2296,7 @@ fn quicknotekopf() -> &'static str {
 ///
 /// **Rein und ohne Fenster pruefbar.** In der Aufgabentabelle ist es der Text
 /// der Aufgabe, in der Notiztabelle Thema oder Text der Notiz je nach Spalte,
-/// in der Termintabelle Datum oder Text des Termins, und die andere Haelfte
+/// und die andere Haelfte
 /// bleibt, wie die Ableitung sie zeigt. In der Geheimnistabelle ist es das
 /// Feld der Spalte, und der Eintrag geht in die Grundform. Die Zelle nennt eine Stelle im Stand
 /// und keine Zeile des Schirms. `Ok(None)`: kein
@@ -2381,44 +2333,26 @@ fn zellenrechnung(
                 notizen::aendern(stand, zelle.stelle, text, &alt.text)
             }
         }
-        // Die Termine rechnen ueber `termine::aendern`, das ein geaendertes
-        // Datum prueft und eine Kopfzeile im Text abweist (Schritt 6 des
-        // Plans der Termine).
-        Editorform::Termine => {
-            let Some(alt) = Notizen::lesen(stand).notiz(zelle.stelle) else {
-                return Ok(None);
-            };
-            if zelle.spalte == eintragsansicht::TERMINSPALTE {
-                termine::aendern(stand, zelle.stelle, alt.thema, text)
-            } else {
-                termine::aendern(stand, zelle.stelle, text, &alt.text)
-            }
-        }
     }
 }
 
 /// Nach welcher Form sich `esc` in einer Zelle dieser Form und dieser Spalte
-/// richtet (T3.9 der Termine).
+/// richtet.
 ///
 /// **Rein und ohne Fenster pruefbar.** Jede Form richtet sich nach sich
-/// selbst, bis auf die Termintabelle: ihre Datumszelle ist einzeilig und
-/// richtet sich nach der Aufgabenzelle, die verwirft; ihre Terminzelle traegt
-/// Absaetze und richtet sich nach der Notizzelle, die uebernimmt, weil ein
-/// Verwerfen ohne Meldung mehrere Absaetze verloere. Ohne laufende Zelle gilt
-/// die Terminzelle; `zelle_uebernehmen` findet dann keine und tut nichts.
+/// selbst, bis auf zwei: eine einzeilige Zelle richtet sich nach der
+/// Aufgabenzelle, die verwirft, und eine Zelle mit Absaetzen nach der
+/// Notizzelle, die uebernimmt, weil ein Verwerfen ohne Meldung mehrere
+/// Absaetze verloere.
 ///
-/// **Die Geheimnistabelle unterscheidet ebenso nach Spalte** (Entscheidung 18
+/// **Die Geheimnistabelle unterscheidet nach Spalte** (Entscheidung 18
 /// des Plans der sechs Felder): Name, Protokoll, Adresse, Konto und Passwort
-/// sind einzeilig und verwerfen wie die Datumszelle, die Notizen tragen
+/// sind einzeilig und verwerfen, die Notizen tragen
 /// Absaetze und uebernehmen wie die Notizzelle. Ohne laufende Zelle gilt die
-/// Notizenzelle, aus demselben Grund wie bei den Terminen.
+/// Notizenzelle; `zelle_uebernehmen` findet dann keine und tut nichts.
 #[must_use]
 fn esc_regel(form: Editorform, spalte: Option<usize>) -> Editorform {
     match form {
-        Editorform::Termine if spalte == Some(eintragsansicht::DATUMSSPALTE) => {
-            Editorform::Aufgaben
-        }
-        Editorform::Termine => Editorform::Notizen,
         Editorform::Geheimnisse
             if spalte.is_some()
                 && spalte != eintragsansicht::mehrzeilige_spalte(Eintragsart::Geheimnisse) =>
@@ -2491,14 +2425,10 @@ fn editorform(ansicht: Ansicht, typ: Dateityp) -> Editorform {
             Dateityp::Markdown
             | Dateityp::Sonstiges
             | Dateityp::Eintraege(
-                Sonderdatei::Notizen
-                | Sonderdatei::Aufgaben
-                | Sonderdatei::Geheimnisse
-                | Sonderdatei::Termine,
+                Sonderdatei::Notizen | Sonderdatei::Aufgaben | Sonderdatei::Geheimnisse,
             ),
         )
         | (Ansicht::Format, Dateityp::Markdown | Dateityp::Sonstiges) => Editorform::Text,
-        (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Termine)) => Editorform::Termine,
         (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Aufgaben)) => Editorform::Aufgaben,
         (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Notizen)) => Editorform::Notizen,
         (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Geheimnisse)) => Editorform::Geheimnisse,
@@ -2537,10 +2467,7 @@ fn oeffnungsweg(
     haelt_bereits: bool,
 ) -> Oeffnungsweg {
     match sonderdatei {
-        // `appointments.md` laedt wie `notes.txt`: an ihr haengt keine PIN.
-        None | Some(Sonderdatei::Notizen | Sonderdatei::Aufgaben | Sonderdatei::Termine) => {
-            Oeffnungsweg::Laden
-        }
+        None | Some(Sonderdatei::Notizen | Sonderdatei::Aufgaben) => Oeffnungsweg::Laden,
         Some(Sonderdatei::Geheimnisse) if haelt_bereits => Oeffnungsweg::Laden,
         Some(Sonderdatei::Geheimnisse) => {
             if herkunft.ist_aus_sitzung() {
@@ -2584,7 +2511,6 @@ fn flaeche_der_form(form: Editorform) -> Flaeche {
         Editorform::Aufgaben
         | Editorform::Notizen
         | Editorform::Geheimnisse
-        | Editorform::Termine
         | Editorform::Trenntext => Flaeche::Tabelle,
         Editorform::Quicknote => Flaeche::Quicknote,
     }
@@ -2601,7 +2527,6 @@ fn eintragsart_der_form(form: Editorform) -> Option<Eintragsart> {
         Editorform::Aufgaben => Some(Eintragsart::Aufgaben),
         Editorform::Notizen => Some(Eintragsart::Notizen),
         Editorform::Geheimnisse => Some(Eintragsart::Geheimnisse),
-        Editorform::Termine => Some(Eintragsart::Termine),
         Editorform::Trenntext => Some(Eintragsart::Trenntext),
     }
 }
@@ -2620,7 +2545,6 @@ fn eintragsart_des_typs(typ: Dateityp) -> Option<Eintragsart> {
         Dateityp::Eintraege(Sonderdatei::Aufgaben) => Some(Eintragsart::Aufgaben),
         Dateityp::Eintraege(Sonderdatei::Notizen) => Some(Eintragsart::Notizen),
         Dateityp::Eintraege(Sonderdatei::Geheimnisse) => Some(Eintragsart::Geheimnisse),
-        Dateityp::Eintraege(Sonderdatei::Termine) => Some(Eintragsart::Termine),
     }
 }
 
@@ -2680,8 +2604,8 @@ fn dargestellte_ansicht(ansicht: Ansicht, verweigert: bool) -> Ansicht {
 /// Umbruch, als Stelle in Bytes.
 ///
 /// Die Kopfzeile ist, was die Tabelle nach dem Anlegen als erste Zelle
-/// oeffnet: der Aufgabentext hinter dem Kaestchen, das Thema einer Notiz, das
-/// Datum eines Termins. Wo sie liegt, sagt der Leser des Kerns und keine
+/// oeffnet: der Aufgabentext hinter dem Kaestchen, das Thema einer Notiz.
+/// Wo sie liegt, sagt der Leser des Kerns und keine
 /// zweite Fassung der Grammatik hier; der letzte Block reicht bis ans
 /// Dateiende, also beginnt er dort, wo seine Zeilen vom Ende her anfangen.
 /// Ohne einen Eintrag steht die Marke am Dateiende.
@@ -2694,9 +2618,7 @@ fn schreibstelle_im_letzten_eintrag(art: Eintragsart, stand: &str) -> usize {
     };
     match art {
         Eintragsart::Aufgaben => stelle(Aufgaben::lesen(stand).bloecke()),
-        Eintragsart::Notizen | Eintragsart::Termine | Eintragsart::Geheimnisse => {
-            stelle(Notizen::lesen(stand).bloecke())
-        }
+        Eintragsart::Notizen | Eintragsart::Geheimnisse => stelle(Notizen::lesen(stand).bloecke()),
         // Eine Zeile einer CSV hat keine Kopfzeile: die Marke steht am Anfang
         // der angehaengten Zeile, die mit dem Zeilenende des Standes endet
         // (E7, E13 des Plans der CSV-Tabelle).
@@ -3097,15 +3019,9 @@ pub struct EditorIvars {
     /// sagt, dass `esc` uebernommen hat (C5). AppKit meldet das Ende einer
     /// Zelle ohne Auskunft darueber, ob sich etwas geaendert hat.
     zelle_umgebaut: Cell<bool>,
-    /// In welcher Richtung die Termintabelle nach dem Datum ordnet.
-    ///
-    /// Eine Angabe der Anzeige und nicht des Standes: sie ordnet die Zeilen
-    /// in [`Editorbereich::tabelle_nachziehen`] und aendert an der Datei
-    /// nichts.
-    terminrichtung: Cell<Sortierrichtung>,
-    /// Die Senke fuer ein Kommando, das aus der Tabelle kommt: der Klick auf
-    /// den Kopf „Datum" der Termintabelle (Entscheidung 8 des Plans der
-    /// Termine).
+    /// Die Senke fuer ein Kommando, das aus einer Flaeche dieses Bereichs
+    /// kommt: heute der Klick auf eine Schaltflaeche der Quicknote, bis zum
+    /// 261111 daneben der Klick auf den Kopf „Datum" der Termintabelle.
     ///
     /// Sie haelt den Anwendungsdelegierten **schwach**, wie [`Self::melden`];
     /// `None`, solange der Aufbau nicht so weit ist. Derselbe Zuschnitt wie
@@ -3313,7 +3229,6 @@ impl Editorbereich {
             meldungsmelder: RefCell::new(None),
             zellenabweisung: Cell::new(None),
             zelle_umgebaut: Cell::new(false),
-            terminrichtung: Cell::new(Sortierrichtung::Aufsteigend),
             kommandomelder: RefCell::new(None),
             quicknote: OnceCell::new(),
             quicknote_rueckkehr: Cell::new(None),
@@ -3337,8 +3252,7 @@ impl Editorbereich {
         // Die Wege aus der Tabelle, aus demselben Grund erst hier. Jeder
         // haelt den Editorbereich schwach; die Begruendung steht an
         // `Zellenwege`.
-        let (pruefer, schreiber, haker, anleger, kopf, einfueger) = (
-            Weak::from_retained(&this),
+        let (pruefer, schreiber, haker, anleger, einfueger) = (
             Weak::from_retained(&this),
             Weak::from_retained(&this),
             Weak::from_retained(&this),
@@ -3368,15 +3282,6 @@ impl Editorbereich {
                 if let Some(editor) = anleger.load() {
                     let meldung = editor.eintrag_hinzufuegen();
                     editor.meldung_melden(meldung);
-                }
-            }),
-            // Der Klick auf den Kopf „Datum" ist dasselbe Kommando wie
-            // `cmd+1` und geht als Kommando nach oben, nicht als Aufruf von
-            // `terminrichtung_umkehren`: so fragt die Zulaessigkeit ihn wie
-            // die Taste, und die Sitzung merkt sich die Richtung.
-            kopf_geklickt: Box::new(move || {
-                if let Some(editor) = kopf.load() {
-                    editor.kommando_melden(Kommando::TermineRichtungUmkehren);
                 }
             }),
             // `cmd+v` in der Tabelle einer CSV: eine Handlung wie jede andere,
@@ -3567,8 +3472,8 @@ impl Editorbereich {
             let quicknote = Quicknote::bauen(self.mtm(), self.ivars().textrolle.frame());
             self.ivars().bereich.addSubview(quicknote.rolle());
             // Ein Klick auf eine Schaltflaeche geht als Kommando durch den
-            // einen Kommandomelder dieses Bereichs, wie der Klick auf den Kopf
-            // „Datum"; schwach, aus dem Grund an `Zellenwege`.
+            // einen Kommandomelder dieses Bereichs; schwach, aus dem Grund an
+            // `Zellenwege`.
             let schwach = Weak::from_retained(&self.retain());
             quicknote.knopfmelder_setzen(Box::new(move |kommando| {
                 if let Some(editor) = schwach.load() {
@@ -3954,52 +3859,6 @@ impl Editorbereich {
         }
     }
 
-    /// In welcher Richtung die Termintabelle nach dem Datum ordnet; fuer die
-    /// Sitzung.
-    #[must_use]
-    pub fn terminrichtung(&self) -> Sortierrichtung {
-        self.ivars().terminrichtung.get()
-    }
-
-    /// Setzt die Richtung der Termintabelle, beim Aufbau aus der Sitzung.
-    ///
-    /// Der Pfeil im Kopf folgt, und eine gezeigte Termintabelle ordnet sich
-    /// neu; der Stand bleibt, wie er ist.
-    pub fn terminrichtung_setzen(&self, richtung: Sortierrichtung) {
-        self.ivars().terminrichtung.set(richtung);
-        self.ivars().eintraege.terminrichtung_zeigen(richtung);
-        self.tabelle_nachziehen();
-    }
-
-    /// Kehrt die Richtung der Termintabelle um (T4.2, T4.3, T5.5 der
-    /// Termine), der Rumpf von „Termine: Sortierrichtung umkehren".
-    ///
-    /// **Zuerst die laufende Zelle**, wie bei jeder Tabellenhandlung: eine
-    /// abgewiesene haelt den Befehl an, denn das Neuordnen luede die Tabelle
-    /// neu und verwuerfe ihren Text. Dann merkt es sich die gewaehlte Stelle,
-    /// kehrt die Richtung um, zieht die Tabelle nach und waehlt dieselbe
-    /// Stelle wieder; derselbe Termin bleibt gewaehlt, auch wenn er jetzt in
-    /// einer anderen Zeile steht. **Den Stand fasst es nicht an**: die Datei
-    /// bleibt in ihrer Reihenfolge, und die Rohansicht zeigt sie so.
-    pub fn terminrichtung_umkehren(&self) -> Editormeldung {
-        if let Zellenausgang::Abgewiesen(meldung) = self.zelle_uebernehmen() {
-            return meldung;
-        }
-        if self.form() != Editorform::Termine {
-            return Editormeldung::Eintrag(Eintragsart::Termine, Eintragsantwort::KeineTabelle);
-        }
-        let gewaehlt = self.ivars().eintraege.gewaehlte_stelle();
-        let richtung = match self.ivars().terminrichtung.get() {
-            Sortierrichtung::Aufsteigend => Sortierrichtung::Absteigend,
-            Sortierrichtung::Absteigend => Sortierrichtung::Aufsteigend,
-        };
-        self.ivars().terminrichtung.set(richtung);
-        self.ivars().eintraege.terminrichtung_zeigen(richtung);
-        self.tabelle_nachziehen();
-        self.ivars().eintraege.auswahl_setzen(gewaehlt);
-        Editormeldung::Terminrichtung(richtung)
-    }
-
     /// Ob dieser Ersthelfer der Feldeditor einer Zelle der Eintragstabelle ist.
     ///
     /// Der Anwendungsdelegierte fragt danach in `ist_eigene_textflaeche` und im
@@ -4040,9 +3899,8 @@ impl Editorbereich {
     /// Anwendungsdelegierten `editor_stand_befragen`, die Frage vor dem
     /// Schliessen und dem Beenden. Dazu seit Schritt 4.3
     /// [`Self::zelle_abbrechen`], das eine Notizzelle mit `esc` uebernimmt,
-    /// und seit Schritt 5.5 [`Self::pin_aendern`] vor dem PIN-Blatt, seit
-    /// Schritt 8 des Plans der Termine [`Self::terminrichtung_umkehren`] vor
-    /// dem Neuordnen, seit dem 261017 [`Self::verbindungsname`] vor `cmd+d`
+    /// und seit Schritt 5.5 [`Self::pin_aendern`] vor dem PIN-Blatt,
+    /// seit dem 261017 [`Self::verbindungsname`] vor `cmd+d`
     /// in der Tabelle von `secrets.txt`. Die Liste haelt die Probe
     /// `die_zellenuebernahme_hat_genau_diese_rufer`.
     pub fn zelle_uebernehmen(&self) -> Zellenausgang {
@@ -4081,14 +3939,9 @@ impl Editorbereich {
     /// offen, und ihren Grund hat die Pruefung schon gemeldet. Verworfen wird
     /// dort nicht, weil eine Notizzelle mehrere Absaetze tragen kann, die ein
     /// Verwerfen ohne Meldung verloere. Die Tabelle der Geheimnisse folgt
-    /// seit dem 261016 je Spalte einer der beiden Regeln, wie die Termine
+    /// seit dem 261016 je Spalte einer der beiden Regeln, nach [`esc_regel`]
     /// (Entscheidung 18 des Plans der sechs Felder): die fuenf einzeiligen
     /// Spalten verwerfen, die Notizen uebernehmen.
-    ///
-    /// **Die Termintabelle folgt je Spalte einer der beiden Regeln** (T3.9 der
-    /// Termine), nach [`esc_regel`]: die Datumszelle ist einzeilig und
-    /// verwirft wie die Aufgabenzelle, die Terminzelle traegt Absaetze und
-    /// uebernimmt wie die Notizzelle, mit dem Satz ueber einen Termin.
     pub fn zelle_abbrechen(&self) {
         let form = self.form();
         let art = eintragsart_der_form(form).unwrap_or(Eintragsart::Notizen);
@@ -4110,10 +3963,9 @@ impl Editorbereich {
             // Die Quicknote zeigt keine Tabelle, also laeuft darin keine
             // Zelle; aus demselben Grund wie bei der Textflaeche.
             Editorform::Quicknote => {}
-            // `esc_regel` nennt fuer die Termintabelle je Spalte die Regel
-            // der Aufgaben oder der Notizen und diese Form nie, fuer die
-            // Tabelle einer CSV die der Aufgaben.
-            Editorform::Termine | Editorform::Trenntext => {}
+            // `esc_regel` nennt fuer die Tabelle einer CSV die Regel der
+            // Aufgaben und diese Form nie.
+            Editorform::Trenntext => {}
         }
     }
 
@@ -4216,7 +4068,6 @@ impl Editorbereich {
             Editorform::Aufgaben
             | Editorform::Notizen
             | Editorform::Geheimnisse
-            | Editorform::Termine
             | Editorform::Trenntext
             | Editorform::Quicknote => self.handlung_ausfuehren(Handlung::Hinzufuegen, None),
         }
@@ -4259,11 +4110,6 @@ impl Editorbereich {
         let Some(art) = art else {
             return Editormeldung::Eintrag(Eintragsart::Aufgaben, Eintragsantwort::KeineTabelle);
         };
-        let heute = if art == Eintragsart::Termine {
-            termine::heute()
-        } else {
-            None
-        };
         // Die Rohansicht einer CSV haengt eine leere Zeile an, ueber denselben
         // Kern wie die Tabelle; der Index entsteht dafuer neu, weil beim
         // Tippen in der Rohansicht keiner nachgezogen wird (E9).
@@ -4276,7 +4122,6 @@ impl Editorbereich {
                 art,
                 Handlung::Hinzufuegen,
                 None,
-                heute,
             )
         };
         if let Some(neustand) = neustand {
@@ -4367,20 +4212,8 @@ impl Editorbereich {
             return meldung;
         }
         let stelle = stelle.or_else(|| self.ivars().eintraege.gewaehlte_stelle());
-        // Die Uhr wird allein fuer einen neuen Termin gelesen, ueber die eine
-        // Stelle im Kern.
-        let heute = if handlung == Handlung::Hinzufuegen && art == Eintragsart::Termine {
-            termine::heute()
-        } else {
-            None
-        };
-        let (meldung, neustand) = handlung_rechnen(
-            self.ivars().modell.borrow().stand(),
-            art,
-            handlung,
-            stelle,
-            heute,
-        );
+        let (meldung, neustand) =
+            handlung_rechnen(self.ivars().modell.borrow().stand(), art, handlung, stelle);
         let auswahl = neustand.as_ref().and_then(|neustand| neustand.auswahl);
         if let Some(neustand) = neustand {
             self.umbau_anwenden(neustand);
@@ -4526,15 +4359,6 @@ impl Editorbereich {
                 }
                 Dateityp::Eintraege(Sonderdatei::Geheimnisse) => {
                     Zeilen::Geheimnisse(eintragsansicht::geheimniszeilen(modell.stand()))
-                }
-                // Der heutige Tag ueber die eine Stelle im Kern, an der die Uhr
-                // fuer die Termine gelesen wird; allein fuer diese Datei.
-                Dateityp::Eintraege(Sonderdatei::Termine) => {
-                    Zeilen::Termine(eintragsansicht::terminzeilen(
-                        modell.stand(),
-                        self.ivars().terminrichtung.get(),
-                        termine::heute(),
-                    ))
                 }
                 Dateityp::Markdown | Dateityp::Sonstiges => Zeilen::Aufgaben(Vec::new()),
             }
@@ -4793,29 +4617,6 @@ impl Editorbereich {
     #[must_use]
     pub fn haelt_csv(&self) -> bool {
         self.ivars().modell.borrow().trenntext() == Some(trenntext::Art::Csv)
-    }
-
-    /// Bestimmt den heutigen Tag der Termintabelle neu (T6, Schritt 7 des
-    /// Plans der Termine).
-    ///
-    /// **Der dritte Empfaenger am einen Melder des Hauptfensters**, hinter
-    /// `fokusanzeige_nachziehen` (Rumpf von `oberflaeche_aufbauen` beim
-    /// Anwendungsdelegierten): er laeuft bei jedem Wechsel des Ersthelfers und
-    /// jedem Wechsel in den Vorder- oder Hintergrund, und wer KRK ueber
-    /// Mitternacht offen laesst, sieht die Hervorhebung beim naechsten Wechsel
-    /// auf dem neuen Tag. Ein zweiter Beobachter entsteht nicht.
-    ///
-    /// **Er tut nichts, solange der Editor keine Termintabelle zeigt oder eine
-    /// Zelle laeuft**: das Neuladen verwuerfe eine offene Zelle
-    /// ([`Eintragsansicht::zeilen_zeigen`]), und nachgeholt wird beim naechsten
-    /// Nachzug. Sonst geht er ueber [`Self::tabelle_nachziehen`], und die
-    /// Tabelle laedt allein dann neu, wenn sich die Zeilen geaendert haben. Er
-    /// ruft weder `anwenden` noch `setHidden:` noch `makeFirstResponder:`.
-    pub fn heute_nachziehen(&self) {
-        if self.form() != Editorform::Termine || self.zelle_laeuft() {
-            return;
-        }
-        self.tabelle_nachziehen();
     }
 
     /// Ob der Editor eine Datei haelt (C1, C2).
@@ -7292,7 +7093,6 @@ mod tests {
         hauptfadenprobe!(cmd_z_in_der_zelle_endet_am_anfang_der_zelle_und_laesst_den_umbau),
         hauptfadenprobe!(umkehren_und_eine_eingetroffene_datei_lassen_keine_offene_zelle_stehen),
         hauptfadenprobe!(die_notiztabelle_leitet_zwei_zeilen_mit_thema_und_mehrzeiligem_text_ab),
-        hauptfadenprobe!(die_termintabelle_loescht_aendert_und_legt_an_der_stelle_der_zeile_an),
         hauptfadenprobe!(eine_csv_oeffnet_als_tabelle_mit_spalten_aus_der_datei),
         hauptfadenprobe!(
             der_kopf_zeigt_buchstabe_und_text_der_ersten_zeile_und_die_erste_zeile_bleibt_zeile
@@ -10621,8 +10421,7 @@ mod tests {
         pruefung: bool,
     ) -> (eintragsansicht::Zellenwege, Rc<RefCell<Vec<String>>>) {
         let buch = Rc::new(RefCell::new(Vec::new()));
-        let (p, f, a, n, k, e) = (
-            buch.clone(),
+        let (p, f, a, n, e) = (
             buch.clone(),
             buch.clone(),
             buch.clone(),
@@ -10650,9 +10449,6 @@ mod tests {
             }),
             anlegen: Box::new(move || {
                 n.borrow_mut().push("anlegen".to_owned());
-            }),
-            kopf_geklickt: Box::new(move || {
-                k.borrow_mut().push("kopf".to_owned());
             }),
             einfuegen: Box::new(move |text| {
                 e.borrow_mut().push(format!("einfuegen {text}"));
@@ -10964,7 +10760,7 @@ mod tests {
         use Eintragsantwort as A;
         let umbau = |handlung, zeile| {
             let (meldung, neustand) =
-                handlung_rechnen(AUFGABEN, Eintragsart::Aufgaben, handlung, zeile, None);
+                handlung_rechnen(AUFGABEN, Eintragsart::Aufgaben, handlung, zeile);
             (meldung, neustand.map(|neustand| neustand.text))
         };
         let antwort = |antwort| Editormeldung::Eintrag(Eintragsart::Aufgaben, antwort);
@@ -10979,15 +10775,9 @@ mod tests {
             ))
         );
         assert_eq!(
-            handlung_rechnen(
-                AUFGABEN,
-                Eintragsart::Aufgaben,
-                Handlung::Hinzufuegen,
-                None,
-                None
-            )
-            .1
-            .and_then(|neustand| neustand.auswahl),
+            handlung_rechnen(AUFGABEN, Eintragsart::Aufgaben, Handlung::Hinzufuegen, None)
+                .1
+                .and_then(|neustand| neustand.auswahl),
             Some(2),
             "die neue Aufgabe ist gewaehlt, ihre Zelle geht danach in Bearbeitung"
         );
@@ -11091,8 +10881,7 @@ mod tests {
     /// **Die eine Uebernahmestelle und ihre Rufer.** `zelle_uebernehmen` wird
     /// von genau den Rufern der Liste darunter gerufen — seit Schritt 4.3 auch
     /// von `zelle_abbrechen`, das eine Notizzelle mit `esc` uebernimmt, seit
-    /// Schritt 5.5 von `pin_aendern` vor dem PIN-Blatt, seit Schritt 8 des
-    /// Plans der Termine von `terminrichtung_umkehren` —, von jedem vor allem anderen, was den
+    /// Schritt 5.5 von `pin_aendern` vor dem PIN-Blatt —, von jedem vor allem anderen, was den
     /// Stand liest oder die Flaeche wechselt; und die Uebernahme selbst geht
     /// ueber `bearbeitung_beenden`, also ueber die zwei Delegiertenwege, und
     /// nicht an ihnen vorbei.
@@ -11110,7 +10899,6 @@ mod tests {
             (&editor, "handlung_ausfuehren"),
             (&editor, "zelle_abbrechen"),
             (&editor, "pin_aendern"),
-            (&editor, "terminrichtung_umkehren"),
             (&editor, "quicknote_zeigen"),
             (&editor, "verbindungsname"),
             (&editor, "tabellenhandlung_ausfuehren"),
@@ -11539,7 +11327,6 @@ mod tests {
             }),
             abhaken: Box::new(|_| {}),
             anlegen: Box::new(|| {}),
-            kopf_geklickt: Box::new(|| {}),
             einfuegen: Box::new(|_| {}),
         });
         feld.setStringValue(ns_string!("Brot und Butter"));
@@ -11810,7 +11597,7 @@ mod tests {
         use Eintragsantwort as A;
         let umbau = |handlung, zeile| {
             let (meldung, neustand) =
-                handlung_rechnen(NOTIZEN, Eintragsart::Notizen, handlung, zeile, None);
+                handlung_rechnen(NOTIZEN, Eintragsart::Notizen, handlung, zeile);
             (
                 meldung,
                 neustand.map(|neustand| (neustand.text, neustand.auswahl)),
@@ -11934,21 +11721,14 @@ mod tests {
         );
     }
     // ------------------------------------------------------------------
-    // Die Termintabelle (Schritt 6 des Plans
-    // `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`)
+    // Die Geheimnistabelle, und was fuer jede Eintragstabelle gilt
     // ------------------------------------------------------------------
     //
-    // Dieselbe Zerlegung wie bei der Notiztabelle. **Das Risiko dieser Tabelle
-    // ist die Naht zwischen Zeile und Stelle**: sie ordnet nach dem Datum, und
-    // jede Stelle, die eine Zeilennummer als Stelle weiterreichte, aenderte
-    // oder loeschte den falschen Termin. Die erste Probe faehrt deshalb
-    // Loeschen, Aendern und Hinzufuegen an einer gebauten Tabelle, deren Folge
-    // die umgekehrte der Datei ist, und nimmt die Stelle jedes Mal von der
-    // Tabelle, wie `handlung_ausfuehren` es tut.
-
-    /// `appointments.md` der Proben: Vorspann und drei Termine in
-    /// **umgekehrter** Reihenfolge der Datei.
-    const TERMINE: &str = "Vorspann\n## 261003\ndrei\n## 261002 09:30\nzwei\n## 261001\neins\n";
+    // Bis zum 261111 stand hier die Termintabelle mit ihren Proben an einer
+    // umgeordneten Tabelle; sie ist gefallen (Schritt 3 des Plans
+    // `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`), und
+    // mit ihr die Proben, die die Naht aus Stelle und Zeile an einer Folge
+    // hielten, die nicht die der Datei ist.
 
     /// Ein Klartext von `secrets.txt` mit einem Eintrag in der Grundform und
     /// einem des frueheren Formats (Entscheidungen 1 und 2 des Plans der
@@ -12114,188 +11894,7 @@ mod tests {
         );
     }
 
-    /// Der feste Tag der Proben, statt der Uhr.
-    fn tag(jahr: u16, monat: u8, tag: u8) -> Tag {
-        Tag::neu(jahr, monat, tag).expect("ein Tag im Kalender")
-    }
-
-    /// Zeigt einen Stand in der Tabelle, aufsteigend, und setzt danach die
-    /// Auswahl des Neustands, wie `umbau_anwenden` es tut.
-    fn termine_zeigen(eintraege: &Eintragsansicht, stand: &str, auswahl: Option<usize>) {
-        eintraege.zeilen_zeigen(eintragsansicht::terminzeilen(
-            stand,
-            Sortierrichtung::Aufsteigend,
-            None,
-        ));
-        eintraege.auswahl_setzen(auswahl);
-    }
-
-    /// Waehlt die Zeile auf dem Schirm, wie ein Klick es taete.
-    fn zeile_waehlen(eintraege: &Eintragsansicht, zeile: usize) {
-        eintraege.tabelle().selectRowIndexes_byExtendingSelection(
-            &objc2_foundation::NSIndexSet::indexSetWithIndex(zeile),
-            false,
-        );
-    }
-
-    /// T3.1 bis T3.5 und T4.2 an einer gebauten Tabelle mit umgekehrter
-    /// Folge: gewaehlt, geloescht, geaendert und angelegt wird an der Stelle,
-    /// die die Zeile zeigt, und nie an der Stelle, die ihre Nummer waere.
-    fn die_termintabelle_loescht_aendert_und_legt_an_der_stelle_der_zeile_an(
-        mtm: MainThreadMarker,
-    ) {
-        use Eintragsantwort as A;
-        use eintragsansicht::{DATUMSSPALTE, TERMINSPALTE, Zelle};
-        let antwort = |antwort| Editormeldung::Eintrag(Eintragsart::Termine, antwort);
-        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-        let tabelle = eintraege.tabelle();
-        termine_zeigen(&eintraege, TERMINE, None);
-        assert_eq!(eintraege.art(), Eintragsart::Termine);
-        assert_eq!(tabelle.numberOfRows(), 3);
-        assert_eq!(tabelle.numberOfColumns(), 2, "Datum und Termin");
-        assert!(
-            tabelle.headerView().is_some(),
-            "die Spalten tragen ihre Namen"
-        );
-
-        // Auswahl: die erste Zeile ist gewaehlt und zeigt den fruehesten
-        // Termin, der in der Datei an letzter Stelle steht.
-        assert_eq!(tabelle.selectedRow(), 0);
-        assert_eq!(eintraege.gewaehlte_stelle(), Some(2));
-        eintraege.auswahl_setzen(Some(0));
-        assert_eq!(
-            tabelle.selectedRow(),
-            2,
-            "die Stelle 0 steht in der letzten Zeile"
-        );
-        eintraege.auswahl_setzen(Some(1));
-        assert_eq!(tabelle.selectedRow(), 1);
-
-        // Bearbeitungsbeginn: die Datumszelle der Zeile, die die Stelle zeigt.
-        assert_eq!(
-            eintraege.ziel_der_zelle(Zelle {
-                stelle: 2,
-                spalte: DATUMSSPALTE
-            }),
-            Some((0, 0))
-        );
-        assert_eq!(
-            eintraege.ziel_der_zelle(Zelle {
-                stelle: 0,
-                spalte: TERMINSPALTE
-            }),
-            Some((2, 1))
-        );
-        assert_eq!(
-            eintraege.ziel_der_zelle(Zelle {
-                stelle: 3,
-                spalte: 0
-            }),
-            None
-        );
-
-        // Loeschen der gewaehlten Zeile 0: der frueheste Termin und kein
-        // anderer.
-        zeile_waehlen(&eintraege, 0);
-        let (meldung, neu) = handlung_rechnen(
-            TERMINE,
-            Eintragsart::Termine,
-            Handlung::Loeschen,
-            eintraege.gewaehlte_stelle(),
-            None,
-        );
-        assert_eq!(meldung, antwort(A::Geloescht));
-        let neu = neu.expect("geloescht ist ein Umbau");
-        assert_eq!(
-            neu.text,
-            "Vorspann\n## 261003\ndrei\n## 261002 09:30\nzwei\n"
-        );
-        termine_zeigen(&eintraege, &neu.text, neu.auswahl);
-        assert_eq!(tabelle.numberOfRows(), 2);
-
-        // Aendern des Datums des obersten Termins auf einen spaeteren Tag:
-        // allein seine Kopfzeile aendert sich, und nach dem Umbau steht er
-        // an seiner neuen Zeile und ist gewaehlt.
-        termine_zeigen(&eintraege, TERMINE, None);
-        zeile_waehlen(&eintraege, 0);
-        let stelle = eintraege
-            .gewaehlte_stelle()
-            .expect("eine Zeile ist gewaehlt");
-        let neu = zellenrechnung(
-            Editorform::Termine,
-            TERMINE,
-            Zelle {
-                stelle,
-                spalte: DATUMSSPALTE,
-            },
-            " 261005 ",
-        )
-        .expect("ein gueltiges Datum")
-        .expect("das Datum ist neu");
-        assert_eq!(
-            neu.text,
-            "Vorspann\n## 261003\ndrei\n## 261002 09:30\nzwei\n## 261005\neins\n"
-        );
-        termine_zeigen(&eintraege, &neu.text, neu.auswahl);
-        assert_eq!(tabelle.selectedRow(), 2, "er steht jetzt zuunterst");
-        assert_eq!(
-            eintraege.gewaehlte_stelle(),
-            Some(2),
-            "und ist derselbe Termin"
-        );
-
-        // Aendern des Textes der mittleren Zeile: allein ihre Textzeilen.
-        termine_zeigen(&eintraege, TERMINE, None);
-        zeile_waehlen(&eintraege, 1);
-        let stelle = eintraege
-            .gewaehlte_stelle()
-            .expect("eine Zeile ist gewaehlt");
-        let neu = zellenrechnung(
-            Editorform::Termine,
-            TERMINE,
-            Zelle {
-                stelle,
-                spalte: TERMINSPALTE,
-            },
-            "zwei\nmit Absatz",
-        )
-        .expect("ein Text ohne Kopfzeile")
-        .expect("der Text ist neu");
-        assert_eq!(
-            neu.text,
-            "Vorspann\n## 261003\ndrei\n## 261002 09:30\nzwei\nmit Absatz\n## 261001\neins\n"
-        );
-
-        // Hinzufuegen mit festem Tag: am Ende der Datei, gewaehlt, und auf
-        // dem Schirm dort, wo sein Datum ihn einordnet; seine Datumszelle
-        // ist die Zelle, die danach in Bearbeitung geht.
-        let (meldung, neu) = handlung_rechnen(
-            TERMINE,
-            Eintragsart::Termine,
-            Handlung::Hinzufuegen,
-            None,
-            Some(tag(2026, 10, 2)),
-        );
-        assert_eq!(meldung, antwort(A::Hinzugefuegt));
-        let neu = neu.expect("hinzugefuegt ist ein Umbau");
-        assert_eq!(neu.text, format!("{TERMINE}## 261002\n"));
-        assert_eq!(neu.auswahl, Some(3));
-        termine_zeigen(&eintraege, &neu.text, neu.auswahl);
-        assert_eq!(
-            tabelle.selectedRow(),
-            1,
-            "ohne Uhrzeit vor 09:30 desselben Tages, nach dem Vortag"
-        );
-        assert_eq!(
-            eintraege.ziel_der_zelle(Zelle {
-                stelle: 3,
-                spalte: DATUMSSPALTE
-            }),
-            Some((1, 0))
-        );
-    }
-
-    /// Das Loeschen ist in jeder der vier Tabellen ueber einen
+    /// Das Loeschen ist in jeder Tabelle des Notizordners ueber einen
     /// [`Umkehrpunkt`] Byte fuer Byte zuruecknehmbar und wiederherstellbar
     /// (Nutzerauftrag vom 261005: `delete` loescht den gewaehlten Eintrag,
     /// `cmd+z` nimmt es zurueck).
@@ -12315,12 +11914,11 @@ mod tests {
             (Editorform::Notizen, NOTIZEN),
             (Editorform::Geheimnisse, NOTIZEN),
             (Editorform::Geheimnisse, GEHEIMNISSE),
-            (Editorform::Termine, TERMINE),
         ] {
             let art = eintragsart_der_form(form).expect("eine Tabellenform");
             for stelle in 0..2 {
                 let (meldung, neustand) =
-                    handlung_rechnen(stand, art, Handlung::Loeschen, Some(stelle), None);
+                    handlung_rechnen(stand, art, Handlung::Loeschen, Some(stelle));
                 assert_eq!(
                     meldung,
                     Editormeldung::Eintrag(art, Eintragsantwort::Geloescht),
@@ -12347,7 +11945,6 @@ mod tests {
             Dateityp::Eintraege(Sonderdatei::Aufgaben),
             Dateityp::Eintraege(Sonderdatei::Notizen),
             Dateityp::Eintraege(Sonderdatei::Geheimnisse),
-            Dateityp::Eintraege(Sonderdatei::Termine),
         ] {
             assert_eq!(
                 eintragsart_des_typs(typ),
@@ -12375,7 +11972,6 @@ mod tests {
     fn die_rohansicht_haengt_den_eintrag_der_tabelle_an() {
         use super::super::anwendung::quelltextproben::{datei, rumpf};
         use Eintragsantwort as A;
-        let heute = tag(2026, 10, 5);
         for (art, stand, erwartet, kopf) in [
             (
                 Eintragsart::Aufgaben,
@@ -12389,12 +11985,6 @@ mod tests {
                 notizen::hinzufuegen(NOTIZEN, "", "").expect("eine leere Notiz ist zulaessig"),
                 "## ",
             ),
-            (
-                Eintragsart::Termine,
-                TERMINE,
-                termine::hinzufuegen(TERMINE, heute),
-                "## 261005",
-            ),
             // Ein leeres Geheimnis in der Grundform, alle vier Feldzeilen.
             (
                 Eintragsart::Geheimnisse,
@@ -12404,8 +11994,7 @@ mod tests {
                 "## ",
             ),
         ] {
-            let (meldung, neustand) =
-                handlung_rechnen(stand, art, Handlung::Hinzufuegen, None, Some(heute));
+            let (meldung, neustand) = handlung_rechnen(stand, art, Handlung::Hinzufuegen, None);
             assert_eq!(meldung, Editormeldung::Eintrag(art, A::Hinzugefuegt));
             let neustand = neustand.expect("hinzugefuegt ist ein Umbau");
             assert_eq!(neustand, erwartet, "{art:?}: der Eintrag des Kerns");
@@ -12462,131 +12051,43 @@ mod tests {
         assert!(anlegen.contains("Editorform::Text => self.eintrag_im_text_hinzufuegen()"));
     }
 
-    /// T3.1 bis T3.5 in ihrer reinen Haelfte: ohne Tag entsteht kein Termin,
-    /// ein ungueltiges Datum und eine Kopfzeile im Text werden abgewiesen und
-    /// lassen den Stand, verschieben und abhaken tut nichts, und ein
-    /// unveraendert gelassenes ungueltiges Datum sperrt den Text nicht.
+    /// C3.2 des Spec
+    /// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`:
+    /// `appointments.md` im erkannten Notizordner ist gewoehnliches Markdown.
+    /// Der Dateityp folgt der Endung, die Formatansicht zeigt die Textflaeche
+    /// und keine Tabelle, und die Datei fuehrt keine Eintragsart, also ist
+    /// „Eintrag hinzufügen“ vor ihr ausgegraut wie vor jeder anderen Datei.
     #[test]
-    fn jede_terminhandlung_rechnet_ueber_den_kern_und_antwortet() {
-        use Eintragsantwort as A;
-        use eintragsansicht::{DATUMSSPALTE, TERMINSPALTE, Zelle};
-        use krk_core::heimordner::eintraege::Abweisung as Eintragsabweisung;
-        let antwort = |antwort| Editormeldung::Eintrag(Eintragsart::Termine, antwort);
-        let rechnen = |handlung, stelle| {
-            handlung_rechnen(TERMINE, Eintragsart::Termine, handlung, stelle, None)
-        };
+    fn appointments_md_im_notizordner_ist_gewoehnliches_markdown() {
+        let zuhause = Path::new("/pruefung-ohne-platte/zuhause");
+        let heim = krk_core::heimordner::Heimordner::im_benutzerverzeichnis(zuhause);
+        let pfad = heim.geschrieben().join("appointments.md");
+        let typ = Dateityp::von_pfad(&pfad, Some(&heim));
+        assert_eq!(typ, Dateityp::Markdown);
         assert_eq!(
-            rechnen(Handlung::Hinzufuegen, None),
-            (antwort(A::HeuteUnbestimmt), None),
-            "ohne heutiges Datum entsteht nichts"
+            typ,
+            Dateityp::von_pfad(Path::new("/anderswo/appointments.md"), Some(&heim)),
+            "im Notizordner wie anderswo"
         );
-        assert_eq!(
-            antwort(A::HeuteUnbestimmt).text(),
-            "Das heutige Datum ließ sich nicht bestimmen."
-        );
-        for richtung in [Richtung::Hoch, Richtung::Runter] {
-            assert_eq!(
-                rechnen(Handlung::Verschieben(richtung), Some(1)),
-                (antwort(A::NachDatumGeordnet), None)
-            );
+        for ansicht in [Ansicht::Roh, Ansicht::Format] {
+            assert_eq!(editorform(ansicht, typ), Editorform::Text, "{ansicht:?}");
         }
         assert_eq!(
-            antwort(A::NachDatumGeordnet).text(),
-            "Termine stehen nach ihrem Datum; verschieben lässt sich keiner."
+            flaeche_der_form(editorform(Ansicht::Format, typ)),
+            Flaeche::Textflaeche
         );
-        assert_eq!(
-            rechnen(Handlung::Abhaken, Some(0)),
-            (
-                Editormeldung::Eintrag(Eintragsart::Aufgaben, A::KeineTabelle),
-                None
-            ),
-            "ein Termin hat kein Kaestchen"
-        );
-        assert_eq!(
-            rechnen(Handlung::Bearbeiten, Some(2)),
-            (antwort(A::BearbeitungBegonnen), None)
-        );
-        assert_eq!(
-            rechnen(Handlung::Loeschen, Some(3)),
-            (antwort(A::KeinEintragGewaehlt), None)
-        );
-        assert!(antwort(A::Geloescht).text().contains("Termin"));
-
-        let datum = Zelle {
-            stelle: 0,
-            spalte: DATUMSSPALTE,
-        };
-        let text = Zelle {
-            stelle: 0,
-            spalte: TERMINSPALTE,
-        };
-        let zelle = |zelle, eingabe| zellenrechnung(Editorform::Termine, TERMINE, zelle, eingabe);
-        assert_eq!(
-            zelle(datum, "261332"),
-            Err(Eintragsabweisung::UngueltigesDatum)
-        );
-        assert_eq!(
-            zelle(datum, " 2610 "),
-            Err(Eintragsabweisung::UngueltigesDatum)
-        );
-        assert_eq!(
-            zelle(text, "drei\n## vier"),
-            Err(Eintragsabweisung::KopfzeileImTermintext)
-        );
-        assert_eq!(zelle(datum, "261003"), Ok(None), "unveraendert");
-        assert_eq!(zelle(text, "drei"), Ok(None), "unveraendert");
-
-        let ungueltig = "## xyz\nalt\n";
-        let neu = zellenrechnung(
-            Editorform::Termine,
-            ungueltig,
-            Zelle {
-                stelle: 0,
-                spalte: TERMINSPALTE,
-            },
-            "neu",
-        )
-        .expect("das ungueltige Datum bleibt ungeprueft stehen")
-        .expect("der Text ist neu");
-        assert_eq!(neu.text, "## xyz\nneu\n");
+        assert_eq!(eintragsart_des_typs(typ), None);
+        assert_eq!(eintragsart_der_datei(typ, None), None);
     }
 
-    /// Die Termintabelle ist eine Form des Editors mit ihrer eigenen Art;
-    /// `appointments.md` ausserhalb des Notizordners ist Markdown und bleibt
-    /// Text (T3.10).
+    /// `esc` in einer einzeiligen Zelle der Geheimnistabelle richtet sich
+    /// nach der Aufgabenzelle und verwirft, in ihren Notizen nach der
+    /// Notizzelle und uebernimmt; jede andere Form nach sich selbst. Der Rang
+    /// der Zelle in `abbrechen` bleibt, also leert keines von beiden den
+    /// Filtertext.
     #[test]
-    fn die_termine_haben_ihre_form_und_ausserhalb_des_notizordners_bleiben_sie_text() {
-        let termine = Dateityp::Eintraege(Sonderdatei::Termine);
-        assert_eq!(editorform(Ansicht::Format, termine), Editorform::Termine);
-        assert_eq!(editorform(Ansicht::Roh, termine), Editorform::Text);
-        assert_eq!(flaeche_der_form(Editorform::Termine), Flaeche::Tabelle);
-        assert_eq!(
-            eintragsart_der_form(Editorform::Termine),
-            Some(Eintragsart::Termine)
-        );
-        assert_eq!(
-            editorform(Ansicht::Format, Dateityp::Markdown),
-            Editorform::Text,
-            "eine appointments.md anderswo ist gewoehnliches Markdown"
-        );
-    }
-
-    /// T3.9: `esc` in der Datumszelle richtet sich nach der Aufgabenzelle und
-    /// verwirft, in der Terminzelle nach der Notizzelle und uebernimmt; jede
-    /// andere Form nach sich selbst. Der Rang der Zelle in `abbrechen` bleibt,
-    /// also leert keines von beiden den Filtertext.
-    #[test]
-    fn esc_verwirft_die_datumszelle_und_uebernimmt_die_terminzelle() {
-        use eintragsansicht::{DATUMSSPALTE, TERMINSPALTE};
-        assert_eq!(
-            esc_regel(Editorform::Termine, Some(DATUMSSPALTE)),
-            Editorform::Aufgaben
-        );
-        assert_eq!(
-            esc_regel(Editorform::Termine, Some(TERMINSPALTE)),
-            Editorform::Notizen
-        );
-        assert_eq!(esc_regel(Editorform::Termine, None), Editorform::Notizen);
+    fn esc_verwirft_die_einzeiligen_zellen_und_uebernimmt_die_notizen() {
+        use eintragsansicht::{NOTIZSPALTE, THEMENSPALTE};
         // Die Geheimnistabelle (Entscheidung 18 des Plans der sechs Felder):
         // die fuenf einzeiligen Spalten verwerfen, die Notizen uebernehmen.
         for feld in Feld::ALLE {
@@ -12607,7 +12108,7 @@ mod tests {
             Editorform::Geheimnisse
         );
         for form in [Editorform::Text, Editorform::Aufgaben, Editorform::Notizen] {
-            for spalte in [None, Some(DATUMSSPALTE), Some(TERMINSPALTE)] {
+            for spalte in [None, Some(THEMENSPALTE), Some(NOTIZSPALTE)] {
                 assert_eq!(esc_regel(form, spalte), form, "{form:?} {spalte:?}");
             }
         }
@@ -12617,21 +12118,16 @@ mod tests {
             rumpf(&quelle, "zelle_abbrechen").contains(concat!("esc_", "regel(")),
             "zelle_abbrechen fragt die Regel"
         );
-        assert_eq!(
-            Editormeldung::Eintrag(Eintragsart::Termine, Eintragsantwort::MitEscUebernommen).text(),
-            "Termin übernommen; cmd+z nimmt es zurück"
-        );
     }
 
     /// `tabelle_nachziehen` liest den Stand und schreibt ihn nicht: die Datei
-    /// gilt danach nicht als geaendert, und die Termintabelle ordnet allein
-    /// ihre Zeilen.
+    /// gilt danach nicht als geaendert.
     #[test]
-    fn das_nachziehen_der_termintabelle_aendert_den_stand_nicht() {
+    fn das_nachziehen_der_tabelle_aendert_den_stand_nicht() {
         use super::super::anwendung::quelltextproben::{datei, rumpf};
         let quelle = datei("krk-ui/src/appkit/editor.rs");
         let nachziehen = rumpf(&quelle, "tabelle_nachziehen");
-        assert!(nachziehen.contains(concat!("eintragsansicht::termin", "zeilen(")));
+        assert!(nachziehen.contains(concat!("eintragsansicht::notiz", "zeilen(")));
         for nadel in [
             concat!("borrow_", "mut("),
             concat!(".bear", "beiten("),
@@ -12643,172 +12139,6 @@ mod tests {
                 "tabelle_nachziehen ruft {nadel}"
             );
         }
-    }
-    /// Schritt 7: `heute_nachziehen` haengt am einen Melder des Hauptfensters
-    /// und an keinem zweiten Beobachter, hinter den zwei aelteren Empfaengern;
-    /// es ueberspringt eine laufende Zelle vor jedem Nachzug und ruft weder
-    /// `anwenden` noch `setHidden:` noch `makeFirstResponder:`. Die Uhr liest es
-    /// nicht selbst, sondern ueber `tabelle_nachziehen` und `termine::heute`.
-    #[test]
-    fn der_heutige_tag_wird_allein_am_melder_des_hauptfensters_nachgezogen() {
-        use super::super::anwendung::quelltextproben::{datei, rumpf};
-        use crate::quellbaum::{aufrufstellen, quelldateien};
-        let name = concat!("heute_", "nachziehen");
-        let mut rufer = Vec::new();
-        for (pfad, inhalt) in quelldateien() {
-            let code = inhalt
-                .split_once(concat!("#[cfg(test)]\nmod ", "tests {"))
-                .map_or(inhalt.as_str(), |(code, _)| code);
-            let zahl = aufrufstellen(code, name);
-            if zahl > 0 {
-                rufer.push((pfad, zahl));
-            }
-        }
-        assert_eq!(
-            rufer,
-            vec![("krk-ui/src/appkit/anwendung.rs".to_owned(), 1)],
-            "ein Rufer ausser dem Melder"
-        );
-        let anwendung = datei("krk-ui/src/appkit/anwendung.rs");
-        let aufbau = rumpf(&anwendung, "oberflaeche_aufbauen");
-        let melder = aufbau
-            .find(concat!("fenster.melder_", "setzen("))
-            .expect("der Melder des Hauptfensters steht im Aufbau");
-        let aktiv = aufbau
-            .find(concat!("selbst.aktives_dem_ersthelfer_", "nachziehen()"))
-            .expect("der erste Empfaenger");
-        let anzeige = aufbau
-            .find(concat!("selbst.fokusanzeige_", "nachziehen()"))
-            .expect("der zweite Empfaenger");
-        let heute = aufbau
-            .find(concat!("editor.heute_", "nachziehen()"))
-            .expect("der dritte Empfaenger");
-        assert!(melder < aktiv && aktiv < anzeige && anzeige < heute);
-
-        let editor = datei("krk-ui/src/appkit/editor.rs");
-        let nachziehen = rumpf(&editor, name);
-        let zelle = nachziehen
-            .find(concat!("self.zelle_", "laeuft()"))
-            .expect("eine laufende Zelle wird uebersprungen");
-        let tabelle = nachziehen
-            .find(concat!("self.tabelle_", "nachziehen()"))
-            .expect("der Nachzug geht ueber tabelle_nachziehen");
-        assert!(zelle < tabelle);
-        for nadel in [
-            concat!("an", "wenden("),
-            concat!("set", "Hidden("),
-            concat!("makeFirst", "Responder("),
-            concat!("termine::", "heute("),
-        ] {
-            assert!(!nachziehen.contains(nadel), "heute_nachziehen ruft {nadel}");
-        }
-        assert!(
-            rumpf(&editor, "tabelle_nachziehen").contains(concat!("termine::", "heute()")),
-            "die Tabelle liest den Tag ueber die eine Stelle im Kern"
-        );
-    }
-    /// T4.2 und T4.3 der Termine: das Umkehren der Richtung ordnet allein die
-    /// Zeilen und fasst den Stand nicht an, uebernimmt zuerst eine laufende
-    /// Zelle und waehlt danach dieselbe Stelle wieder; die Tabelle zeigt in
-    /// beiden Richtungen dieselben Termine, und die Rohansicht bleibt Text in
-    /// der Reihenfolge der Datei. Gelesen am Rumpf, weil sich ein Editorbereich
-    /// unter `libtest` nicht bauen laesst; die Ordnung selbst an `terminzeilen`.
-    #[test]
-    fn das_umkehren_der_richtung_ordnet_die_zeilen_und_laesst_den_stand() {
-        use super::super::anwendung::quelltextproben::{datei, rumpf};
-        let quelle = datei("krk-ui/src/appkit/editor.rs");
-        let umkehren = rumpf(&quelle, "terminrichtung_umkehren");
-        let zelle = umkehren
-            .find(concat!("self.zelle_", "uebernehmen()"))
-            .expect("die laufende Zelle wird zuerst uebernommen");
-        let gemerkt = umkehren
-            .find(concat!("eintraege.gewaehlte_", "stelle()"))
-            .expect("die gewaehlte Stelle wird gemerkt");
-        let nachgezogen = umkehren
-            .find(concat!("self.tabelle_", "nachziehen()"))
-            .expect("die Tabelle zieht nach");
-        let gewaehlt = umkehren
-            .find(concat!("eintraege.auswahl_", "setzen(gewaehlt)"))
-            .expect("dieselbe Stelle wird wieder gewaehlt");
-        assert!(zelle < gemerkt && gemerkt < nachgezogen && nachgezogen < gewaehlt);
-        for nadel in [
-            concat!(".bear", "beiten("),
-            concat!("umbau_", "anwenden("),
-            concat!("stand_", "einsetzen("),
-            concat!("modell.borrow_", "mut("),
-        ] {
-            assert!(
-                !umkehren.contains(nadel),
-                "terminrichtung_umkehren ruft {nadel}"
-            );
-        }
-
-        let auf = eintragsansicht::terminzeilen(TERMINE, Sortierrichtung::Aufsteigend, None);
-        let ab = eintragsansicht::terminzeilen(TERMINE, Sortierrichtung::Absteigend, None);
-        let stellen = |zeilen: &[eintragsansicht::Terminzeile]| -> Vec<usize> {
-            zeilen.iter().map(|termin| termin.stelle).collect()
-        };
-        assert_eq!(stellen(&auf), [2, 1, 0]);
-        assert_eq!(stellen(&ab), [0, 1, 2]);
-        assert_eq!(
-            editorform(Ansicht::Roh, Dateityp::Eintraege(Sonderdatei::Termine)),
-            Editorform::Text,
-            "die Rohansicht zeigt die Datei in ihrer Reihenfolge"
-        );
-        assert_eq!(
-            Editormeldung::Terminrichtung(Sortierrichtung::Absteigend).text(),
-            "Termine absteigend sortiert"
-        );
-        assert_eq!(
-            Editormeldung::Terminrichtung(Sortierrichtung::Aufsteigend).text(),
-            "Termine aufsteigend sortiert"
-        );
-    }
-
-    /// Entscheidung 8 des Plans der Termine: der Klick auf den Kopf „Datum"
-    /// holt erst den Fokus in die Tabelle und meldet dann das Kommando; der
-    /// Editorbereich reicht es als `TermineRichtungUmkehren` nach oben, und
-    /// oben ist es derselbe Melder wie der der Bereichsleiste.
-    #[test]
-    fn der_klick_auf_den_kopf_datum_geht_den_weg_der_taste() {
-        use super::super::anwendung::quelltextproben::{datei, rumpf};
-        let ansicht = datei("krk-ui/src/appkit/eintragsansicht.rs");
-        let klick = rumpf(&ansicht, "kopf_geklickt");
-        let spalte = klick
-            .find("DATUMSSPALTE")
-            .expect("allein die Datumsspalte zaehlt");
-        let fokus = klick
-            .find(concat!("self.fokus_in_die_", "tabelle()"))
-            .expect("der Klick holt den Fokus");
-        let melden = klick
-            .find(concat!("(wege.kopf_", "geklickt)()"))
-            .expect("der Klick meldet sich");
-        assert!(spalte < fokus && fokus < melden);
-
-        let editor = datei("krk-ui/src/appkit/editor.rs");
-        let anfang = editor
-            .find("kopf_geklickt: Box::new(move || {")
-            .expect("der Weg steht in bauen");
-        assert!(
-            editor[anfang..anfang + 200].contains(concat!(
-                "editor.kommando_melden(Kommando::TermineRichtung",
-                "Umkehren)"
-            )),
-            "der Editorbereich reicht ein Kommando nach oben"
-        );
-
-        let anwendung = datei("krk-ui/src/appkit/anwendung.rs");
-        let aufbau = rumpf(&anwendung, "oberflaeche_aufbauen");
-        for nadel in [
-            concat!("editor.kommandomelder_setzen(self.klick", "melder())"),
-            concat!("bereichsleiste.melder_setzen(self.klick", "melder())"),
-        ] {
-            assert!(aufbau.contains(nadel), "der Aufbau setzt {nadel} nicht");
-        }
-        assert!(
-            rumpf(&anwendung, "klickmelder")
-                .contains(concat!("selbst.kommando_", "ausfuehren(kommando, None)"))
-        );
     }
 
     // ------------------------------------------------------------------
@@ -13239,18 +12569,11 @@ mod tests {
         pruefen(Eintragsart::Notizen);
         eintraege.zeilen_zeigen(eintragsansicht::geheimniszeilen(GEHEIMNISSE));
         pruefen(Eintragsart::Geheimnisse);
-        eintraege.zeilen_zeigen(eintragsansicht::terminzeilen(
-            TERMINE,
-            Sortierrichtung::Aufsteigend,
-            None,
-        ));
-        pruefen(Eintragsart::Termine);
         eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
         pruefen(Eintragsart::Aufgaben);
         for art in [
             Eintragsart::Aufgaben,
             Eintragsart::Notizen,
-            Eintragsart::Termine,
             Eintragsart::Geheimnisse,
             Eintragsart::Trenntext,
         ] {
@@ -13311,7 +12634,6 @@ mod tests {
             Editorform::Aufgaben,
             Editorform::Notizen,
             Editorform::Geheimnisse,
-            Editorform::Termine,
             Editorform::Quicknote,
         ] {
             assert_eq!(sicht_zum_nachzug(form, CSV, &mut lage, &generation), None);
@@ -14081,16 +13403,9 @@ mod tests {
         zeilenweise(&eintraege, Eintragsart::Aufgaben);
         eintraege.zeilen_zeigen(eintragsansicht::geheimniszeilen(GEHEIMNISSE));
         zeilenweise(&eintraege, Eintragsart::Geheimnisse);
-        eintraege.zeilen_zeigen(eintragsansicht::terminzeilen(
-            TERMINE,
-            Sortierrichtung::Aufsteigend,
-            None,
-        ));
-        zeilenweise(&eintraege, Eintragsart::Termine);
         for art in [
             Eintragsart::Aufgaben,
             Eintragsart::Notizen,
-            Eintragsart::Termine,
             Eintragsart::Geheimnisse,
         ] {
             assert_eq!(eintragsansicht::hervorhebung(art), Hervorhebung::Regular);

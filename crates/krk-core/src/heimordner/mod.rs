@@ -4,7 +4,9 @@
 //! haengen mehrere Regeln: die Vorschau rendert `notes.txt` und `tasks.txt`
 //! dort mit Aufgabenkaestchen, der Editor zeigt sie in der Formatansicht als
 //! Tabelle, und `secrets.txt` bekommt dort vom Inhaltsfilter keinen Auftrag.
-//! Die vierte Eintragsdatei ist `appointments.md` mit den Terminen. Daneben
+//! Eine `appointments.md` im Notizordner war bis zum 261111 die vierte
+//! Eintragsdatei; seitdem ist sie gewoehnliches Markdown, KRK legt sie nicht
+//! mehr an und fasst eine vorhandene nicht an. Daneben
 //! liegt `quicknote.txt` ([`QUICKNOTEDATEI`]), der gesicherte Inhalt der
 //! Quicknote; sie ist **keine** Eintragsdatei und steht deshalb nicht in
 //! [`Sonderdatei`]. Bis zum 261111 hiess sie anders
@@ -12,7 +14,7 @@
 //! Datei unter dem frueheren Namen vor ihrem ersten Lesen.
 //! **Jede dieser Regeln fragt dieses Modul und keine eigene Erkennung** (C2 des Spec
 //! `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
-//! Die Form der Eintraege in `notes.txt`, `tasks.txt` und `appointments.md`
+//! Die Form der Eintraege in `notes.txt` und `tasks.txt`
 //! steht in [`eintraege`], das
 //! Anlegen von Ordner und Dateien samt der einmaligen Uebernahme der alten
 //! Zettel in [`bereitstellen`], das Dateiformat von `secrets.txt` mit Kopf,
@@ -181,23 +183,14 @@ pub enum Sonderdatei {
     /// erkannten Ordner bekommt sie vom Inhaltsfilter keinen Auftrag; die Regel
     /// steht bei [`Heimordner::ohne_inhaltsauftrag`].
     Geheimnisse,
-    /// `appointments.md`: Termine, geschrieben wie Notizen, deren Thema ein
-    /// Datum ist (Form in [`eintraege`], Handlungen in [`eintraege::termine`]).
-    ///
-    /// Sie entsteht bei F2 leer ueber [`bereitstellen`], nie beim Start, und
-    /// ist allein im erkannten Notizordner eine Termindatei; eine gleichnamige
-    /// Datei anderswo ist gewoehnliches Markdown
-    /// (`260926-2253_*_spec-termine-als-weitere-datei-im-heimordner.md`, T1).
-    Termine,
 }
 
 impl Sonderdatei {
     /// Jede Eintragsdatei, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Sonderdatei; 4] = [
+    pub const ALLE: [Sonderdatei; 3] = [
         Sonderdatei::Notizen,
         Sonderdatei::Aufgaben,
         Sonderdatei::Geheimnisse,
-        Sonderdatei::Termine,
     ];
 
     /// Der Dateiname im Heimordner.
@@ -206,7 +199,6 @@ impl Sonderdatei {
             Sonderdatei::Notizen => "notes.txt",
             Sonderdatei::Aufgaben => "tasks.txt",
             Sonderdatei::Geheimnisse => "secrets.txt",
-            Sonderdatei::Termine => "appointments.md",
         }
     }
 }

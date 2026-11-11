@@ -460,6 +460,13 @@ pub struct Sitzung {
     /// `session.toml` aus der Zeit davor bleibt lesbar, weil diese Struktur
     /// `#[serde(default)]` traegt. **Vor den drei Tabellen**, aus dem Grund,
     /// den [`Sitzung::editor`] ausschreibt.
+    ///
+    /// **Seit dem 261111 setzt KRK das Feld nicht mehr**: die Termintabelle
+    /// ist gefallen (Schritt 3 des Plans
+    /// `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`),
+    /// und die Oberflaeche schreibt `None`. Das Feld bleibt, damit das Format
+    /// von `session.toml` sich nicht aendert und eine Datei, die es noch
+    /// nennt, weiter laedt.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub terminrichtung: Option<Richtung>,
     /// Die Breiten der sechs Bereiche.

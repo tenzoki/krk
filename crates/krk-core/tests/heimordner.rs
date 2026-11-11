@@ -33,8 +33,8 @@ use krk_core::heimordner::eintraege::geheimnisse::{
     self, Feld, Geheimnisentwurf, Geheimnisse, Passwort, Suchfehler,
 };
 use krk_core::heimordner::eintraege::{
-    Abweisung, Aufgaben, Notiz, Notizen, Richtung, Tag, Termindatum, aufgabe_in_grundform,
-    aufgaben, aufgabenzeile, ist_themenzeile, notizen, termindatum, termine,
+    Abweisung, Aufgaben, Notiz, Notizen, Richtung, aufgabe_in_grundform, aufgaben, aufgabenzeile,
+    ist_themenzeile, notizen,
 };
 use krk_core::heimordner::ort::{
     Notizort, Ortsfehler, abweisungssatz, gehaltene_notizdatei, im_ablageordner, notizort,
@@ -54,7 +54,6 @@ use krk_core::heimordner::{
     ORDNERNAME, QUICKNOTEDATEI, Sonderdatei, Uebernahmeausgang, Umbenennung, Zettelbefund,
     Zettelmerker, bereitstellen, ohne_ersetzen_umbenennen,
 };
-use krk_core::verzeichnis::Richtung as SortRichtung;
 
 /// Der Pruefordner in der Schreibweise, die `canonicalize` fuer ihn liefert.
 fn kanonisch(ordner: &Pruefordner) -> PathBuf {
@@ -287,37 +286,58 @@ fn ein_schlussstrich_aendert_die_antwort_nicht() {
     );
 }
 
-/// T1.1: die Eintragsdateien fuehren `appointments.md` als vierten Wert.
+/// Schritt 3 des Plans
+/// `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md` (C3.2,
+/// C3.5): `appointments.md` ist keine Eintragsdatei mehr. Keine Sorte traegt
+/// den Namen, und die Erkennung am Pfadtext antwortet fuer sie im
+/// Notizordner wie anderswo mit `None`, ueber die geschriebene wie ueber die
+/// aufgeloeste Form des Ordners.
 #[test]
-fn appointments_md_ist_die_vierte_eintragsdatei() {
-    assert_eq!(Sonderdatei::ALLE.len(), 4);
-    assert_eq!(Sonderdatei::Termine.dateiname(), "appointments.md");
-    assert!(Sonderdatei::ALLE.contains(&Sonderdatei::Termine));
-}
-
-/// T1.5: `appointments.md` ist allein im erkannten Notizordner die
-/// Termindatei, ueber dieselbe eine Erkennung wie die uebrigen und ohne
-/// Systemaufruf; anderswo und unter anderer Schreibung ist sie es nicht.
-#[test]
-fn appointments_md_ist_allein_im_notizordner_die_termindatei() {
-    let heim = Heimordner::im_benutzerverzeichnis(Path::new("/Users/probe"));
-    assert_eq!(
-        heim.sonderdatei(Path::new("/Users/probe/krkhome/appointments.md")),
-        Some(Sonderdatei::Termine)
+fn appointments_md_ist_keine_eintragsdatei_mehr() {
+    assert!(
+        Sonderdatei::ALLE
+            .iter()
+            .all(|sorte| sorte.dateiname() != "appointments.md"),
+        "eine Sorte traegt noch den Namen appointments.md"
     );
-    for anderswo in [
+    let heim = Heimordner::im_benutzerverzeichnis(Path::new("/Users/probe"));
+    for pfad in [
+        "/Users/probe/krkhome/appointments.md",
         "/Users/probe/appointments.md",
         "/Users/probe/krkhome/unter/appointments.md",
         "/Users/probe/krkhome-alt/appointments.md",
         "/Users/probe/krkhome/Appointments.MD",
         "/Users/probe/krkhome/appointments.txt",
     ] {
-        assert_eq!(heim.sonderdatei(Path::new(anderswo)), None, "{anderswo}");
+        assert_eq!(heim.sonderdatei(Path::new(pfad)), None, "{pfad}");
+    }
+
+    // Dasselbe ueber einen Verweis, also ueber beide Formen des Ordners.
+    let ordner = Pruefordner::neu("heim-termine-verweis");
+    let zuhause = kanonisch(&ordner);
+    let ziel = zuhause.join("ziel");
+    fs::create_dir(&ziel).expect("das Ziel laesst sich nicht anlegen");
+    std::os::unix::fs::symlink(&ziel, zuhause.join(ORDNERNAME))
+        .expect("der Verweis laesst sich nicht anlegen");
+    let heim = Heimordner::im_benutzerverzeichnis(&zuhause);
+    for basis in [zuhause.join(ORDNERNAME), ziel] {
+        assert_eq!(
+            heim.sonderdatei(&basis.join("tasks.txt")),
+            Some(Sonderdatei::Aufgaben),
+            "die Probe haengt daran, dass der Ordner unter {} erkannt ist",
+            basis.display()
+        );
+        assert_eq!(
+            heim.sonderdatei(&basis.join("appointments.md")),
+            None,
+            "{}",
+            basis.display()
+        );
     }
 }
 
-/// T1.6: die genaue Frage antwortet fuer `secrets.txt` wie vorher und fuer
-/// `appointments.md` in keiner Schreibung mit den Geheimnissen.
+/// Die genaue Frage antwortet fuer `secrets.txt` wie vorher und fuer
+/// `appointments.md` in keiner Schreibung mit einer Sorte.
 #[test]
 fn die_genaue_frage_nennt_allein_secrets_txt_als_geheimnisse() {
     let ordner = Pruefordner::neu("heim-genau-termine");
@@ -333,14 +353,9 @@ fn die_genaue_frage_nennt_allein_secrets_txt_als_geheimnisse() {
         heim.sonderdatei_genau(&heimpfad.join("secrets.txt")),
         Some(Sonderdatei::Geheimnisse)
     );
-    assert_eq!(
-        heim.sonderdatei_genau(&heimpfad.join("appointments.md")),
-        Some(Sonderdatei::Termine)
-    );
-    assert_eq!(
-        heim.sonderdatei_genau(&heimpfad.join("Appointments.MD")),
-        None
-    );
+    for name in ["appointments.md", "Appointments.MD"] {
+        assert_eq!(heim.sonderdatei_genau(&heimpfad.join(name)), None, "{name}");
+    }
 }
 
 /// Schritt 2 des Plans der Quicknote (E1): `quicknote.txt` liegt im Notizordner,
@@ -1280,378 +1295,6 @@ fn notiz_verschieben_nimmt_den_text_mit() {
 }
 
 // ---------------------------------------------------------------------------
-// Die Terminform (Schritt 1 des Plans
-// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`)
-// ---------------------------------------------------------------------------
-
-/// Eine Termindatei mit Vorspann, zwei Terminen mit Uhrzeit, einem ohne und
-/// einer ungueltigen Kopfzeile, ohne Schlussumbruch.
-const TERMINSTAND: &str = "# Termine
-
-## 261002 09:30
-Zahnarzt
-Dr. Beispiel
-
-## 260927 14:00
-Anruf Werkstatt
-
-## xyz
-vertippt
-## 261002
-Steuererklärung";
-
-/// Ein fester Tag fuer die Proben, der 26. September 2026.
-fn tag(jahr: u16, monat: u8, tag: u8) -> Tag {
-    Tag::neu(jahr, monat, tag).expect("den Tag gibt es")
-}
-
-/// T2.1: eine Termindatei liest sich mit dem Leser der Notizen und schreibt
-/// sich Byte fuer Byte zurueck, mit Vorspann, ohne Schlussumbruch und mit einer
-/// Kopfzeile, deren Datum ungueltig ist.
-#[test]
-fn eine_termindatei_liest_und_schreibt_sich_byte_fuer_byte() {
-    for stand in [
-        TERMINSTAND,
-        "## 261002\n",
-        "Vorspann ohne Termin",
-        "## 991231 23:59\nText\n\n\n## 000101\n",
-    ] {
-        assert_eq!(Notizen::lesen(stand).schreiben(), stand, "{stand:?}");
-    }
-    let gelesen = Notizen::lesen(TERMINSTAND);
-    assert_eq!(gelesen.vorspann(), ["# Termine\n", "\n"]);
-    assert_eq!(gelesen.bloecke().len(), 4);
-}
-
-/// T2.2: die Tafel der Datumspruefung, je Fall eine Zeile.
-#[test]
-fn die_datumspruefung_folgt_der_tafel() {
-    let angenommen = [
-        ("261002", tag(2026, 10, 2), None),
-        ("261002 09:30", tag(2026, 10, 2), Some((9, 30))),
-        ("280229", tag(2028, 2, 29), None),
-        ("991231 23:59", tag(2099, 12, 31), Some((23, 59))),
-        ("000101 00:00", tag(2000, 1, 1), Some((0, 0))),
-    ];
-    for (text, erwarteter_tag, zeit) in angenommen {
-        assert_eq!(
-            termindatum(text),
-            Some(Termindatum {
-                tag: erwarteter_tag,
-                zeit
-            }),
-            "{text:?}"
-        );
-    }
-    let abgewiesen = [
-        "260229",
-        "261301",
-        "261000",
-        "261032",
-        "26102",
-        "2610022",
-        "261002 24:00",
-        "261002 9:30",
-        "261002 09:60",
-        "261002  09:30",
-        "261002 09:30 Zahnarzt",
-    ];
-    for text in abgewiesen {
-        assert_eq!(termindatum(text), None, "{text:?}");
-    }
-    // Das Jahr 2000 ist ein Schaltjahr, der Monat mit 30 Tagen hat keinen 31.
-    assert!(termindatum("000229").is_some());
-    assert_eq!(termindatum("260431"), None);
-    // Kein Leerraum und kein Umbruch um das Datum; getrimmt wird vorher.
-    assert_eq!(termindatum(" 261002"), None);
-    assert_eq!(termindatum("261002\n"), None);
-    assert_eq!(tag(2026, 9, 26).kopftext(), "260926");
-    assert_eq!(tag(2000, 1, 1).kopftext(), "000101");
-    assert_eq!(Tag::neu(1999, 12, 31), None);
-    assert_eq!(Tag::neu(2100, 1, 1), None);
-}
-
-/// T2.3: eine Zeile `## <Text>` mit ungueltigem Datum ist ein Termin, dessen
-/// Datumstext der Text nach `## ` ist.
-#[test]
-fn eine_kopfzeile_mit_ungueltigem_datum_ist_ein_termin() {
-    let gelesen = Notizen::lesen("## xyz\nText\n");
-    assert_eq!(gelesen.notiz(0), Some(notiz("xyz", "Text")));
-    assert_eq!(
-        termine::anzeigeordnung("## xyz\nText\n", SortRichtung::Aufsteigend),
-        [0]
-    );
-    assert_eq!(
-        Notizen::lesen(TERMINSTAND).notiz(2),
-        Some(notiz("xyz", "vertippt"))
-    );
-}
-
-/// T3.1, T3.2: Hinzufuegen haengt `## YYMMDD` des Tages mit leerem Text ans
-/// Ende und waehlt den neuen Termin; ein Vorspann bleibt oben, das Dateiende
-/// bleibt.
-#[test]
-fn ein_neuer_termin_traegt_das_heutige_datum_und_steht_am_ende() {
-    let heute = tag(2026, 9, 26);
-    let neu = termine::hinzufuegen("# Termine\n\n## 261002\nA\n", heute);
-    assert_eq!(neu.text, "# Termine\n\n## 261002\nA\n## 260926\n");
-    assert_eq!(neu.auswahl, Some(1));
-    let gelesen = Notizen::lesen(&neu.text);
-    assert_eq!(gelesen.vorspann(), ["# Termine\n", "\n"]);
-    assert_eq!(gelesen.notiz(1), Some(notiz("260926", "")));
-
-    let leer = termine::hinzufuegen("", heute);
-    assert_eq!(leer.text, "## 260926\n");
-    assert_eq!(leer.auswahl, Some(0));
-
-    let ohne_schluss = termine::hinzufuegen(TERMINSTAND, heute);
-    assert_eq!(ohne_schluss.text, format!("{TERMINSTAND}\n## 260926"));
-    assert_eq!(ohne_schluss.auswahl, Some(4));
-}
-
-/// T3.5: ein geaendertes Datum schreibt allein die Kopfzeile, ein geaenderter
-/// Text allein die Textzeilen; die Auswahl bleibt auf der Stelle in der Datei.
-#[test]
-fn datum_und_text_aendern_schreiben_allein_ihre_zeilen() {
-    let datum = termine::aendern(TERMINSTAND, 0, "261003 10:00", "Zahnarzt\nDr. Beispiel")
-        .expect("zulaessig")
-        .expect("den Termin gibt es");
-    assert_eq!(abweichende_zeilen(TERMINSTAND, &datum.text), [2]);
-    assert_eq!(
-        datum.text.split_inclusive('\n').nth(2),
-        Some("## 261003 10:00\n")
-    );
-    assert_eq!(datum.auswahl, Some(0));
-
-    let text = termine::aendern(TERMINSTAND, 1, "260927 14:00", "Werkstatt anrufen")
-        .expect("zulaessig")
-        .expect("den Termin gibt es");
-    assert_eq!(abweichende_zeilen(TERMINSTAND, &text.text), [7]);
-    assert_eq!(
-        Notizen::lesen(&text.text).notiz(1),
-        Some(notiz("260927 14:00", "Werkstatt anrufen"))
-    );
-
-    // Leerraum um ein gueltiges Datum wird vor der Pruefung entfernt.
-    let getrimmt = termine::aendern(TERMINSTAND, 3, "  261005 \t", "Steuererklärung")
-        .expect("zulaessig")
-        .expect("den Termin gibt es");
-    assert!(getrimmt.text.ends_with("## 261005\nSteuererklärung"));
-
-    // Unveraendert ergibt nichts, auch mit Leerraum um das alte Datum.
-    assert_eq!(
-        termine::aendern(TERMINSTAND, 3, " 261002 ", "Steuererklärung"),
-        Ok(None)
-    );
-    assert_eq!(termine::aendern(TERMINSTAND, 9, "261002", ""), Ok(None));
-}
-
-/// T3.3, T3.4: ein ungueltiges Datum wird abgewiesen, auch mit Leerraum
-/// drumherum, und eine Zeile mit `## ` im Text ebenso; eine Abweisung ist kein
-/// Neustand, der Stand bleibt. Ein unveraendert gelassenes ungueltiges Datum
-/// wird nicht geprueft.
-#[test]
-fn ein_ungueltiges_datum_und_eine_kopfzeile_im_text_werden_abgewiesen() {
-    for datum in [
-        "261340",
-        "  261340  ",
-        "",
-        "morgen",
-        "261002 9:30",
-        "261002\n09:30",
-    ] {
-        assert_eq!(
-            termine::aendern(TERMINSTAND, 0, datum, "Zahnarzt\nDr. Beispiel"),
-            Err(Abweisung::UngueltigesDatum),
-            "{datum:?}"
-        );
-    }
-    for text in ["## x", "davor\n## 261002"] {
-        assert_eq!(
-            termine::aendern(TERMINSTAND, 0, "261002 09:30", text),
-            Err(Abweisung::KopfzeileImTermintext),
-            "{text:?}"
-        );
-    }
-
-    // Der Termin mit ungueltigem Datum laesst sich im Text aendern, ohne dass
-    // sein Datum erst berichtigt werden muss, und berichtigen laesst es sich.
-    let text = termine::aendern(TERMINSTAND, 2, "xyz", "neu")
-        .expect("das alte Datum wird nicht geprueft")
-        .expect("den Termin gibt es");
-    assert_eq!(
-        Notizen::lesen(&text.text).notiz(2),
-        Some(notiz("xyz", "neu"))
-    );
-    let berichtigt = termine::aendern(TERMINSTAND, 2, "261010", "vertippt")
-        .expect("zulaessig")
-        .expect("den Termin gibt es");
-    assert_eq!(
-        Notizen::lesen(&berichtigt.text).notiz(2),
-        Some(notiz("261010", "vertippt"))
-    );
-
-    assert!(
-        Abweisung::UngueltigesDatum
-            .meldung()
-            .contains("YYMMDD HH:MM")
-    );
-    assert!(
-        Abweisung::KopfzeileImTermintext
-            .meldung()
-            .contains("nächste Termin")
-    );
-}
-
-/// Eine unveraendert verlassene Datumszelle ergibt keine Handlung, auch wenn
-/// die Kopfzeile Leerraum am Ende oder ein `\r` traegt: die Zelle zeigt das
-/// rohe Thema, und der getrimmte Vergleich darf es nicht als geaendert lesen,
-/// weder als gueltiges Datum (stilles Neuschreiben) noch als ungueltiges
-/// (Abweisung, die Zelle liesse sich nicht verlassen). Geaendert wird dabei der
-/// Text allein, und die Kopfzeile bleibt Byte fuer Byte.
-#[test]
-fn eine_unveraenderte_datumszelle_mit_leerraum_am_ende_ergibt_keine_handlung() {
-    assert_eq!(
-        termine::aendern("## xyz \nalt\n", 0, "xyz ", "alt"),
-        Ok(None)
-    );
-    assert_eq!(
-        termine::aendern("## 261002 \nText\n", 0, "261002 ", "Text"),
-        Ok(None)
-    );
-    assert_eq!(
-        termine::aendern("## 261002\r\nText\r\n", 0, "261002\r", "Text\r"),
-        Ok(None)
-    );
-
-    for (stand, datum) in [("## xyz \nalt\n", "xyz "), ("## 261002 \nalt\n", "261002 ")] {
-        let neu = termine::aendern(stand, 0, datum, "neu")
-            .expect("das unveraenderte Datum wird nicht geprueft")
-            .expect("den Termin gibt es");
-        assert_eq!(neu.text, format!("## {datum}\nneu\n"), "{stand:?}");
-    }
-}
-
-/// T3.1: Loeschen nimmt den Termin an seiner Stelle in der Datei ganz weg.
-#[test]
-fn ein_termin_wird_ganz_geloescht() {
-    let neu = termine::loeschen(TERMINSTAND, 1).expect("den Termin gibt es");
-    assert_eq!(
-        neu.text,
-        "# Termine\n\n## 261002 09:30\nZahnarzt\nDr. Beispiel\n\n## xyz\nvertippt\n## 261002\nSteuererklärung"
-    );
-    assert_eq!(neu.auswahl, Some(1));
-    assert_eq!(termine::loeschen(TERMINSTAND, 4), None);
-}
-
-/// T4.1 woertlich: aufsteigend und absteigend, gleiche Schluessel in der
-/// Reihenfolge der Datei, ungueltige in beiden Richtungen am Ende.
-#[test]
-fn die_termine_ordnen_sich_nach_datum_und_uhrzeit() {
-    let stand = "## 261002 09:30\n## 260927 14:00\n## 261002\n## xyz\n## 261002 09:30\n";
-    let kopf = |reihenfolge: Vec<usize>| -> Vec<String> {
-        let notizen = Notizen::lesen(stand);
-        reihenfolge
-            .into_iter()
-            .map(|stelle| format!("{stelle}:{}", notizen.notiz(stelle).expect("da").thema))
-            .collect()
-    };
-    assert_eq!(
-        kopf(termine::anzeigeordnung(stand, SortRichtung::Aufsteigend)),
-        [
-            "1:260927 14:00",
-            "2:261002",
-            "0:261002 09:30",
-            "4:261002 09:30",
-            "3:xyz"
-        ]
-    );
-    assert_eq!(
-        kopf(termine::anzeigeordnung(stand, SortRichtung::Absteigend)),
-        [
-            "0:261002 09:30",
-            "4:261002 09:30",
-            "2:261002",
-            "1:260927 14:00",
-            "3:xyz"
-        ]
-    );
-    assert!(termine::anzeigeordnung("", SortRichtung::Aufsteigend).is_empty());
-
-    // Die Anzeigeordnung als Text: Vorspann oben, aufsteigend, der ungueltige
-    // am Ende, das Dateiende bleibt, und die Datei selbst bleibt unberuehrt.
-    assert_eq!(
-        termine::in_anzeigeordnung(TERMINSTAND),
-        "# Termine\n\n## 260927 14:00\nAnruf Werkstatt\n\n## 261002\nSteuererklärung\n## 261002 09:30\nZahnarzt\nDr. Beispiel\n\n## xyz\nvertippt"
-    );
-}
-
-/// T6.1: `ist_heute` nimmt den Tag entgegen, statt die Uhr zu lesen.
-#[test]
-fn heute_ist_der_tag_mit_und_ohne_uhrzeit() {
-    let heute = tag(2026, 9, 26);
-    assert!(termine::ist_heute("260926", heute));
-    assert!(termine::ist_heute("260926 08:15", heute));
-    assert!(!termine::ist_heute("260925", heute));
-    assert!(!termine::ist_heute("260927 00:00", heute));
-    assert!(!termine::ist_heute("260926 25:00", heute));
-    assert!(!termine::ist_heute("xyz", heute));
-}
-
-/// T6.2: im ganzen Baum unter `crates/` liest allein `termine::heute` die Uhr
-/// und rechnet sie in die Ortszeit um.
-///
-/// Gesucht sind die Dateien, in denen ausserhalb von Kommentaren beides
-/// steht, `SystemTime::now()` und ein Aufruf von `ortszeit`. Die Nadeln sind
-/// zusammengesetzt, damit diese Probe sich nicht selbst findet. **Was sie
-/// nicht sieht:** eine Uhr, die in einer Datei gelesen und in einer anderen
-/// umgerechnet wird; der Kopf von `tests/baum.rs` sagt, warum keine Suche im
-/// Quelltext restlos dicht ist.
-///
-/// **Sie gilt der Uhr der Termine.** Eine zweite Uhr fuer einen anderen Zweck
-/// ist kein Verstoss gegen ihre Zusage: das Zuruecksetzen auf
-/// Werkseinstellungen liest die Uhr in der Oberflaeche und rechnet sie in
-/// `ablage::werkszustand` in den Stempel seiner Sicherungen um, also traegt
-/// keine Datei beides.
-#[test]
-fn die_uhr_der_termine_wird_an_einer_stelle_gelesen() {
-    let uhr = concat!("SystemTime", "::now()");
-    let umrechnung = concat!("ortszeit", "(");
-    let mut fundstellen = Vec::new();
-    for (name, inhalt) in gemeinsam::quelldateien() {
-        let zeilen: Vec<&str> = inhalt
-            .lines()
-            .filter(|zeile| !zeile.trim_start().starts_with("//"))
-            .collect();
-        let liest_die_uhr = zeilen.iter().any(|zeile| zeile.contains(uhr));
-        let rechnet_um = zeilen.iter().any(|zeile| zeile.contains(umrechnung));
-        if liest_die_uhr && rechnet_um {
-            fundstellen.push(name);
-        }
-    }
-    assert_eq!(fundstellen, ["krk-core/src/heimordner/eintraege.rs"]);
-
-    let (_, eintraege) = gemeinsam::quelldateien()
-        .into_iter()
-        .find(|(name, _)| name == "krk-core/src/heimordner/eintraege.rs")
-        .expect("die Datei steht im Baum");
-    let rumpf = eintraege
-        .split("pub fn heute() -> Option<Tag> {")
-        .nth(1)
-        .and_then(|rest| rest.split("\n    }\n").next())
-        .expect("termine::heute steht in der Datei");
-    assert!(rumpf.contains(uhr) && rumpf.contains(umrechnung));
-    assert_eq!(
-        eintraege
-            .lines()
-            .filter(|zeile| !zeile.trim_start().starts_with("//") && zeile.contains(uhr))
-            .count(),
-        1,
-        "die Uhr wird in eintraege.rs genau einmal gelesen"
-    );
-}
-
-// ---------------------------------------------------------------------------
 // Anlegen und Uebernahme (Schritt 1.2)
 // ---------------------------------------------------------------------------
 
@@ -1785,20 +1428,17 @@ fn eine_vorhandene_datei_bleibt_und_eine_fehlende_entsteht_leer() {
     assert!(!bereitstellung.ordner_angelegt);
     assert_eq!(
         bereitstellung.angelegt,
-        vec![
-            Sonderdatei::Aufgaben,
-            Sonderdatei::Geheimnisse,
-            Sonderdatei::Termine
-        ]
+        vec![Sonderdatei::Aufgaben, Sonderdatei::Geheimnisse]
     );
     assert_eq!(bereitstellung.uebernahme, None);
     assert!(bereitstellung.meldungen().is_empty(), "{bereitstellung:?}");
     lage.zettel_unveraendert();
 }
 
-/// C2, C7.1, T1.1: der erste Aufruf legt Ordner, `notes.txt`, `tasks.txt`,
-/// `secrets.txt` und `appointments.md` an und sonst nichts; `secrets.txt` hat
-/// null Bytes.
+/// C2, C7.1: der erste Aufruf legt Ordner, `notes.txt`, `tasks.txt` und
+/// `secrets.txt` an und sonst nichts, auch keine `appointments.md` (C3.5 des
+/// Spec `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`);
+/// `secrets.txt` hat null Bytes.
 #[test]
 fn der_erste_aufruf_legt_genau_die_eintragsdateien_an() {
     let lage = Lage::neu("heim-erster", [None, None]);
@@ -1809,7 +1449,7 @@ fn der_erste_aufruf_legt_genau_die_eintragsdateien_an() {
     assert_eq!(bereitstellung.angelegt, Sonderdatei::ALLE.to_vec());
     assert_eq!(
         namen_in(&lage.heimpfad()),
-        vec!["appointments.md", "notes.txt", "secrets.txt", "tasks.txt"]
+        vec!["notes.txt", "secrets.txt", "tasks.txt"]
     );
     assert_eq!(lage.lesen(Sonderdatei::Notizen), "");
     assert_eq!(lage.lesen(Sonderdatei::Aufgaben), "");
@@ -1864,7 +1504,7 @@ fn eine_alte_secrets_txt_wird_umbenannt_und_bleibt_byte_fuer_byte() {
     );
     assert_eq!(
         namen_in(&lage.heimpfad()),
-        vec!["appointments.md", "notes.txt", "secrets.txt", "tasks.txt"]
+        vec!["notes.txt", "secrets.txt", "tasks.txt"]
     );
     let meldungen = bereitstellung.meldungen().join("\n");
     assert!(
@@ -1947,11 +1587,7 @@ fn eine_gescheiterte_umbenennung_legt_keine_leere_datei_daneben() {
     use std::os::unix::fs::PermissionsExt;
     let lage = Lage::neu("heim-alt-gescheitert", [None, None]);
     fs::create_dir(lage.heimpfad()).expect("Heimordner");
-    for sorte in [
-        Sonderdatei::Notizen,
-        Sonderdatei::Aufgaben,
-        Sonderdatei::Termine,
-    ] {
+    for sorte in [Sonderdatei::Notizen, Sonderdatei::Aufgaben] {
         fs::write(lage.heimpfad().join(sorte.dateiname()), b"").expect("Eintragsdatei");
     }
     let alt = lage.heimpfad().join(ALTER_GEHEIMNISNAME);
@@ -2021,46 +1657,70 @@ fn beide_zettel_werden_zu_notizen_wenn_der_ordner_neu_ist() {
     lage.zettel_unveraendert();
 }
 
-/// T1.7: die Uebernahme der alten Zettel schreibt nichts nach
-/// `appointments.md`; sie entsteht daneben mit null Bytes.
+/// C3.5 und C3.6 des Spec
+/// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`: die
+/// Bereitstellung legt `appointments.md` nicht an und fasst eine vorhandene
+/// nicht an. In einem neuen Ordner entsteht sie nicht, auch nicht neben
+/// uebernommenen Zetteln; in einem bestehenden bleibt sie nach zwei Aufrufen
+/// Byte fuer Byte, mit ihrer Groesse und ihrer Aenderungszeit, und kein Satz
+/// der Statuszeile nennt sie.
 #[test]
-fn die_uebernahme_der_zettel_laesst_die_termine_leer() {
-    let lage = Lage::neu(
-        "heim-uebernahme-termine",
+fn die_bereitstellung_legt_appointments_md_nicht_an_und_fasst_sie_nicht_an() {
+    let neu = Lage::neu(
+        "heim-termine-neu",
         [
             Some("## 261002\nkein Termin\n".as_bytes()),
             Some("Zettel\n".as_bytes()),
         ],
     );
+    let bereitstellung = neu.bereitstellen().expect("kein Hindernis erwartet");
+    assert!(bereitstellung.ordner_angelegt);
+    assert_eq!(
+        namen_in(&neu.heimpfad()),
+        vec!["notes.txt", "secrets.txt", "tasks.txt"]
+    );
+    neu.zettel_unveraendert();
 
-    let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
-
-    assert!(bereitstellung.uebernahme.is_some(), "{bereitstellung:?}");
-    assert!(bereitstellung.angelegt.contains(&Sonderdatei::Termine));
-    assert_eq!(lage.lesen(Sonderdatei::Termine), "");
-    assert!(!lage.lesen(Sonderdatei::Notizen).is_empty());
-    lage.zettel_unveraendert();
-}
-
-/// T1.3: eine vorhandene `appointments.md` bleibt beim Anlegen Byte fuer Byte,
-/// und eine fehlende entsteht mit null Bytes.
-#[test]
-fn eine_vorhandene_termindatei_bleibt_und_eine_fehlende_entsteht_leer() {
     let lage = Lage::neu("heim-termine-vorhanden", [None, None]);
     fs::create_dir(lage.heimpfad()).expect("Heimordner");
     let vorher = b"# Termine\n## 261002 09:30\nZahnarzt ohne Schluss";
     let termine = lage.heimpfad().join("appointments.md");
     fs::write(&termine, vorher).expect("appointments.md");
+    let stand = || {
+        let angaben = fs::metadata(&termine).expect("appointments.md fehlt");
+        (
+            fs::read(&termine).expect("appointments.md ist nicht lesbar"),
+            angaben.len(),
+            angaben.modified().expect("Aenderungszeit"),
+        )
+    };
+    let davor = stand();
 
-    let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
-
-    assert_eq!(fs::read(&termine).expect("appointments.md"), vorher);
-    assert!(!bereitstellung.angelegt.contains(&Sonderdatei::Termine));
-
-    fs::remove_file(&termine).expect("appointments.md laesst sich nicht loeschen");
-    let zweite = lage.bereitstellen().expect("kein Hindernis erwartet");
-    assert_eq!(zweite.angelegt, vec![Sonderdatei::Termine]);
-    assert_eq!(fs::read(&termine).expect("appointments.md"), b"");
+    for durchgang in ["erster", "zweiter"] {
+        let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
+        assert_eq!(stand(), davor, "{durchgang} Aufruf");
+        assert_eq!(stand().0, vorher);
+        assert!(
+            bereitstellung
+                .angelegt
+                .iter()
+                .chain(bereitstellung.nicht_angelegt.iter().map(|(sorte, _)| sorte))
+                .all(|sorte| sorte.dateiname() != "appointments.md"),
+            "{bereitstellung:?}"
+        );
+        assert!(
+            bereitstellung
+                .meldungen()
+                .iter()
+                .all(|satz| !satz.contains("appointments")),
+            "{:?}",
+            bereitstellung.meldungen()
+        );
+    }
+    assert_eq!(
+        namen_in(&lage.heimpfad()),
+        vec!["appointments.md", "notes.txt", "secrets.txt", "tasks.txt"]
+    );
 }
 
 /// C3.3: Ein Zettel mit einer Themenzeile wird nicht uebernommen, der andere
@@ -2398,7 +2058,7 @@ fn eine_vorhandene_geheimnisdatei_bleibt_byte_fuer_byte() {
         );
         assert_eq!(
             namen_in(&lage.heimpfad()),
-            vec!["appointments.md", "notes.txt", "secrets.txt", "tasks.txt"]
+            vec!["notes.txt", "secrets.txt", "tasks.txt"]
         );
     }
 }
@@ -2432,7 +2092,7 @@ fn ein_verweis_auf_einen_ordner_laesst_die_dateien_im_ziel_entstehen() {
 
     assert_eq!(
         namen_in(&ziel),
-        vec!["appointments.md", "notes.txt", "secrets.txt", "tasks.txt"]
+        vec!["notes.txt", "secrets.txt", "tasks.txt"]
     );
     assert!(!bereitstellung.ordner_angelegt);
     assert_eq!(bereitstellung.uebernahme, None);
@@ -2773,7 +2433,7 @@ fn die_alten_zettel_kommen_allein_am_vorgabeort() {
     );
     assert_eq!(
         namen_in(&ort),
-        vec!["appointments.md", "notes.txt", "secrets.txt", "tasks.txt"]
+        vec!["notes.txt", "secrets.txt", "tasks.txt"]
     );
     assert!(anderswo.meldungen().is_empty(), "{anderswo:?}");
     lage.zettel_unveraendert();

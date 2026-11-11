@@ -36,7 +36,7 @@
 //! [`Lage`] und ist der Eingang fuer die Dateiablage, also fuer die drei
 //! Selektoren, die der Delegierte am Dateifenster beantwortet: `copy:` und
 //! `cut:` aus dem Menue „Bearbeiten" seit der Runde 22 und, seit dem 260907,
-//! `filterEinfuegen:` aus dem Menue „Dateilisting". Keiner der drei ist ein
+//! `filterEinfuegen:` aus dem Menue „Dateiliste". Keiner der drei ist ein
 //! Kommando, und keiner bekommt eines
 //! (Constraint 3 der Runde 22, Constraint 3 und 5 der Runde 21). Was der
 //! Rumpf vom Befehl wissen will, sind
@@ -250,7 +250,7 @@ pub struct Lage {
     /// Oeffnen fragt ohnehin nach einer neuen.
     pub pin_aenderbar: bool,
     /// Ob der Editor eine Eintragsdatei des Notizordners haelt (`tasks.txt`,
-    /// `notes.txt`, `secrets.txt` entsperrt, `appointments.md`), gleich in
+    /// `notes.txt`, `secrets.txt` entsperrt), gleich in
     /// welcher Ansicht.
     ///
     /// Erhoben von `Anwendungsdelegierter::lage` ueber
@@ -311,10 +311,10 @@ pub struct Lage {
 ///
 /// **Gewachsen mit den Eintragsdateien**: die Notiztabelle ist mit Schritt 4.3
 /// als `Notizen` dazugekommen, die Geheimnisse mit Schritt 5.4b als
-/// `Geheimnisse`, die Termine mit Schritt 6 des Plans
-/// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md` als
-/// `Termine`. Jede vollstaendige Fallunterscheidung ueber diesen Typ haelt den
-/// Bau an, sobald einer dazukommt.
+/// `Geheimnisse`. Vom 260926 bis zum 261111 stand daneben die Termintabelle
+/// als eigener Wert; sie ist gefallen, und `appointments.md` zeigt der Editor
+/// seitdem in der Form `Text`. Jede vollstaendige Fallunterscheidung ueber
+/// diesen Typ haelt den Bau an, sobald einer dazukommt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Editorform {
     /// Die Textflaeche: jede Datei in der Rohansicht und jede Datei ausser
@@ -333,16 +333,6 @@ pub enum Editorform {
     /// Form tragen, und nimmt dieselben Befehle an; ein eigener Wert, weil
     /// „PIN ändern" aus Schritt 5.5 allein hier wirkt.
     Geheimnisse,
-    /// Die Termintabelle: `appointments.md` im erkannten Heimordner in der
-    /// Formatansicht (Schritt 6 des Plans der Termine).
-    ///
-    /// **Der Unterschied zur Notiztabelle ist die Ordnung.** Sie zeigt ihre
-    /// Eintraege nach dem Datum und nicht in der Reihenfolge der Datei; die
-    /// Befehle, die die Reihenfolge der Datei aendern, tragen deshalb einen
-    /// eigenen Wirkungsbereich und wirken hier nicht (Entscheidung 2 des
-    /// Plans). Alle uebrigen Befehle der Eintragstabelle nimmt sie an wie die
-    /// Notiztabelle.
-    Termine,
     /// Die Tabelle einer CSV- oder TSV-Datei in der Formatansicht (Plan
     /// `261018-0822_*_plan-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md`,
     /// Schritt 3), eine weitere Art der Eintragstabelle mit Spalten aus der
@@ -604,18 +594,19 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
             Editorform::Aufgaben
             | Editorform::Notizen
             | Editorform::Geheimnisse
-            | Editorform::Termine
             | Editorform::Trenntext
             | Editorform::Quicknote => false,
         },
         // Die Tabelle einer CSV ist eine Eintragstabelle, ihre Zeilen sind
-        // ihre Eintraege (E13 des Plans der CSV-Tabelle).
+        // ihre Eintraege (E13 des Plans der CSV-Tabelle). Das Verschieben
+        // traegt diesen Bereich seit dem 261111 wieder mit: der eigene Wert
+        // dafuer unterschied allein die Termintabelle und ist mit ihr
+        // gefallen.
         Wirkungsbereich::Eintraege => match form {
             Editorform::Text | Editorform::Quicknote => false,
             Editorform::Aufgaben
             | Editorform::Notizen
             | Editorform::Geheimnisse
-            | Editorform::Termine
             | Editorform::Trenntext => true,
         },
         // Das Anlegen wirkt in jeder Tabellenform und in der Textflaeche,
@@ -629,44 +620,18 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
             | Editorform::Aufgaben
             | Editorform::Notizen
             | Editorform::Geheimnisse
-            | Editorform::Termine
             | Editorform::Trenntext => true,
             Editorform::Quicknote => false,
         },
-        // Das Verschieben verlangt eine Tabelle in Dateireihenfolge. Die
-        // Termintabelle ordnet nach dem Datum und lehnt es ab (Entscheidung 2
-        // des Plans `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`);
-        // die Tabelle einer CSV steht in der Folge der Datei.
-        Wirkungsbereich::Reihenfolge => match form {
-            Editorform::Text | Editorform::Termine | Editorform::Quicknote => false,
-            Editorform::Aufgaben
-            | Editorform::Notizen
-            | Editorform::Geheimnisse
-            | Editorform::Trenntext => true,
-        },
         // Die Notiztabelle traegt keine Kaestchen, die der Geheimnisse als
-        // dieselbe Tabelle ebenso wenig, die der Termine und die einer CSV
-        // auch nicht.
+        // dieselbe Tabelle ebenso wenig, und die einer CSV auch nicht.
         Wirkungsbereich::Aufgaben => match form {
             Editorform::Text
             | Editorform::Notizen
             | Editorform::Geheimnisse
-            | Editorform::Termine
             | Editorform::Trenntext
             | Editorform::Quicknote => false,
             Editorform::Aufgaben => true,
-        },
-        // Allein die Termintabelle ordnet nach dem Datum und hat eine
-        // Richtung, die sich umkehren laesst (Schritt 8 des Plans der
-        // Termine).
-        Wirkungsbereich::Termine => match form {
-            Editorform::Text
-            | Editorform::Aufgaben
-            | Editorform::Notizen
-            | Editorform::Geheimnisse
-            | Editorform::Trenntext
-            | Editorform::Quicknote => false,
-            Editorform::Termine => true,
         },
         // Das Kopieren und das Leeren der Quicknote wirken allein an ihrem
         // Puffer, und den zeigt der Editor allein in dieser Form.
@@ -675,7 +640,6 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
             | Editorform::Aufgaben
             | Editorform::Notizen
             | Editorform::Geheimnisse
-            | Editorform::Termine
             | Editorform::Trenntext => false,
             Editorform::Quicknote => true,
         },
@@ -689,7 +653,6 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
             | Editorform::Aufgaben
             | Editorform::Notizen
             | Editorform::Geheimnisse
-            | Editorform::Termine
             | Editorform::Trenntext => true,
             Editorform::Quicknote => false,
         },
@@ -703,7 +666,6 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
             | Editorform::Aufgaben
             | Editorform::Notizen
             | Editorform::Geheimnisse
-            | Editorform::Termine
             | Editorform::Trenntext => true,
             Editorform::Quicknote => false,
         },
@@ -715,7 +677,6 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
             | Editorform::Aufgaben
             | Editorform::Notizen
             | Editorform::Geheimnisse
-            | Editorform::Termine
             | Editorform::Quicknote => false,
             Editorform::Trenntext => true,
         },
@@ -759,9 +720,7 @@ fn datei_passt(bereich: Wirkungsbereich, lage: Lage) -> bool {
         | Wirkungsbereich::Editor
         | Wirkungsbereich::Editortext
         | Wirkungsbereich::Eintraege
-        | Wirkungsbereich::Reihenfolge
         | Wirkungsbereich::Aufgaben
-        | Wirkungsbereich::Termine
         | Wirkungsbereich::Quicknote
         | Wirkungsbereich::Tabbereich
         | Wirkungsbereich::Navigator
@@ -791,9 +750,7 @@ fn folge_passt(bereich: Wirkungsbereich, bildfolge: bool) -> bool {
         | Wirkungsbereich::Editortext
         | Wirkungsbereich::Eintraege
         | Wirkungsbereich::Eintragsdatei
-        | Wirkungsbereich::Reihenfolge
         | Wirkungsbereich::Aufgaben
-        | Wirkungsbereich::Termine
         | Wirkungsbereich::Geheimnisse
         | Wirkungsbereich::Quicknote
         | Wirkungsbereich::Tabbereich
@@ -1004,19 +961,17 @@ mod tests {
     /// wird, und die Probe `jeder_wirkungsbereich_hat_einen_stellvertreter`
     /// darunter, die die Zahl der Zeilen gegen die Aufzaehlung im Quelltext
     /// haelt.
-    const STELLVERTRETER: [(Wirkungsbereich, Kommando); 19] = [
+    const STELLVERTRETER: [(Wirkungsbereich, Kommando); 17] = [
         (Wirkungsbereich::Dateifenster, Kommando::Oeffnen),
         (Wirkungsbereich::Leiste, Kommando::LesezeichenLoeschen),
         (Wirkungsbereich::Dateibereiche, Kommando::EditorRundweg),
         (Wirkungsbereich::Editor, Kommando::EditorSichern),
         (Wirkungsbereich::Editortext, Kommando::EditorWeitersuchen),
-        // `EintragLoeschen`, seit das Verschieben und das Anlegen je einen
-        // eigenen Bereich tragen; er steht auf keiner Ausnahmeliste und kommt
-        // waehrend eines Blattes nicht durch.
+        // `EintragLoeschen`, seit das Anlegen einen eigenen Bereich traegt;
+        // er steht auf keiner Ausnahmeliste und kommt waehrend eines Blattes
+        // nicht durch.
         (Wirkungsbereich::Eintraege, Kommando::EintragLoeschen),
-        (Wirkungsbereich::Reihenfolge, Kommando::EintragHoch),
         (Wirkungsbereich::Aufgaben, Kommando::AufgabeAbhaken),
-        (Wirkungsbereich::Termine, Kommando::TermineRichtungUmkehren),
         (Wirkungsbereich::Geheimnisse, Kommando::PinAendern),
         (Wirkungsbereich::Quicknote, Kommando::QuicknoteLeeren),
         (Wirkungsbereich::Tabbereich, Kommando::TabNeu),
@@ -1175,12 +1130,11 @@ mod tests {
     /// aus dem Quelltext und nicht die Feldbreite; ein Programmfeld
     /// `Editorform::ALLE` gibt es nicht, weil nur Proben ueber die Formen
     /// laufen.
-    const JEDE_FORM: [Editorform; 7] = [
+    const JEDE_FORM: [Editorform; 6] = [
         Editorform::Text,
         Editorform::Aufgaben,
         Editorform::Notizen,
         Editorform::Geheimnisse,
-        Editorform::Termine,
         Editorform::Trenntext,
         Editorform::Quicknote,
     ];
@@ -1303,7 +1257,7 @@ mod tests {
         // gegen `Fokus::ALLE`.
         //
         // Die Zeilen stehen in der Reihenfolge von STELLVERTRETER.
-        const IN_DER_TEXTFLAECHE: [[bool; 6]; 19] = [
+        const IN_DER_TEXTFLAECHE: [[bool; 6]; 17] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1312,11 +1266,7 @@ mod tests {
             [false, false, false, true, false, false],
             // Eintraege
             [false, false, false, false, false, false],
-            // Reihenfolge, gleich der Zeile darueber
-            [false, false, false, false, false, false],
             // Aufgaben
-            [false, false, false, false, false, false],
-            // Termine
             [false, false, false, false, false, false],
             // Geheimnisse: ohne `pin_aenderbar` nirgends
             [false, false, false, false, false, false],
@@ -1335,7 +1285,7 @@ mod tests {
             // Csv: ohne `csv` nirgends
             [false, false, false, false, false, false],
         ];
-        const IN_DER_AUFGABENTABELLE: [[bool; 6]; 19] = [
+        const IN_DER_AUFGABENTABELLE: [[bool; 6]; 17] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1344,12 +1294,8 @@ mod tests {
             [false, false, false, false, false, false],
             // Eintraege
             [false, false, false, true, false, false],
-            // Reihenfolge, gleich der Zeile darueber
-            [false, false, false, true, false, false],
             // Aufgaben
             [false, false, false, true, false, false],
-            // Termine
-            [false, false, false, false, false, false],
             // Geheimnisse: ohne `pin_aenderbar` nirgends
             [false, false, false, false, false, false],
             // Quicknote: in keiner Form dieser Tafel
@@ -1369,7 +1315,7 @@ mod tests {
         ];
         // Wie die Aufgabentabelle, nur ohne die Zeile `Aufgaben`: die
         // Notiztabelle traegt keine Kaestchen (Schritt 4.3).
-        const IN_DER_NOTIZTABELLE: [[bool; 6]; 19] = [
+        const IN_DER_NOTIZTABELLE: [[bool; 6]; 17] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1378,47 +1324,8 @@ mod tests {
             [false, false, false, false, false, false],
             // Eintraege
             [false, false, false, true, false, false],
-            // Reihenfolge, gleich der Zeile darueber
-            [false, false, false, true, false, false],
             // Aufgaben
             [false, false, false, false, false, false],
-            // Termine
-            [false, false, false, false, false, false],
-            // Geheimnisse: ohne `pin_aenderbar` nirgends
-            [false, false, false, false, false, false],
-            // Quicknote: in keiner Form dieser Tafel
-            [false, false, false, false, false, false],
-            [true, false, true, false, false, false],
-            [true, true, true, false, true, false],
-            [false, false, true, false, false, false],
-            // Bildfolge: ohne stehende Bildfolge nirgends
-            [false, false, false, false, false, false],
-            [true, true, true, true, true, true],
-            // Eintragsdatei: ohne `eintragsdatei` nirgends
-            [false, false, false, false, false, false],
-            // Trenntext: allein in der Tabelle einer CSV
-            [false, false, false, false, false, false],
-            // Csv: ohne `csv` nirgends
-            [false, false, false, false, false, false],
-        ];
-        // Wie die Notiztabelle, nur ohne die Zeile `Reihenfolge`: die
-        // Termintabelle ordnet nach dem Datum, und verschieben laesst sich
-        // darin nichts (Schritt 6 des Plans der Termine, T3.7).
-        const IN_DER_TERMINTABELLE: [[bool; 6]; 19] = [
-            [true, false, false, false, false, false],
-            [false, true, false, false, false, false],
-            [true, false, true, true, false, false],
-            [false, false, false, true, false, false],
-            // Editortext
-            [false, false, false, false, false, false],
-            // Eintraege
-            [false, false, false, true, false, false],
-            // Reihenfolge: ueberall nein
-            [false, false, false, false, false, false],
-            // Aufgaben
-            [false, false, false, false, false, false],
-            // Termine: allein hier
-            [false, false, false, true, false, false],
             // Geheimnisse: ohne `pin_aenderbar` nirgends
             [false, false, false, false, false, false],
             // Quicknote: in keiner Form dieser Tafel
@@ -1440,7 +1347,7 @@ mod tests {
         // arbeitet, ueberall nein sagt und allein die Zeile `Quicknote` mit
         // dem Fokus im Editor ja (Schritt 2 des Plans der Quicknote,
         // Entscheidung 7).
-        const IN_DER_QUICKNOTE: [[bool; 6]; 19] = [
+        const IN_DER_QUICKNOTE: [[bool; 6]; 17] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1450,11 +1357,7 @@ mod tests {
             [false, false, false, false, false, false],
             // Eintraege
             [false, false, false, false, false, false],
-            // Reihenfolge
-            [false, false, false, false, false, false],
             // Aufgaben
-            [false, false, false, false, false, false],
-            // Termine
             [false, false, false, false, false, false],
             // Geheimnisse: ohne `pin_aenderbar` ohnehin nirgends
             [false, false, false, false, false, false],
@@ -1476,7 +1379,7 @@ mod tests {
         // Wie die Notiztabelle, dazu die Zeile `Trenntext`: die Befehle allein
         // der Tabelle einer CSV wirken hier und sonst nirgends (E14 des Plans
         // der CSV-Tabelle). Die Zeile `Csv` bleibt ohne `csv` leer.
-        const IN_DER_TRENNTEXTTABELLE: [[bool; 6]; 19] = [
+        const IN_DER_TRENNTEXTTABELLE: [[bool; 6]; 17] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1485,11 +1388,7 @@ mod tests {
             [false, false, false, false, false, false],
             // Eintraege
             [false, false, false, true, false, false],
-            // Reihenfolge, gleich der Zeile darueber
-            [false, false, false, true, false, false],
             // Aufgaben
-            [false, false, false, false, false, false],
-            // Termine
             [false, false, false, false, false, false],
             // Geheimnisse: ohne `pin_aenderbar` nirgends
             [false, false, false, false, false, false],
@@ -1508,7 +1407,7 @@ mod tests {
             // Csv: ohne `csv` nirgends
             [false, false, false, false, false, false],
         ];
-        const ALLES_ABGEWIESEN: [[bool; 6]; 19] = [[false; 6]; 19];
+        const ALLES_ABGEWIESEN: [[bool; 6]; 17] = [[false; 6]; 17];
 
         // Je Form die Tafel ohne Sperre. Ein `match` und keine Liste, damit
         // eine weitere Form den Bau hier anhaelt.
@@ -1519,11 +1418,10 @@ mod tests {
             // nehmen dieselben Befehle an (Schritt 5.4b).
             Editorform::Notizen | Editorform::Geheimnisse => IN_DER_NOTIZTABELLE,
             // Die Tabelle einer CSV antwortet wie die Notiztabelle:
-            // Zeilenbefehle und Verschieben ja, Kaestchen, Termine und
+            // Zeilenbefehle und Verschieben ja, Kaestchen und
             // Textflaeche nein (E13 des Plans der CSV-Tabelle), und dazu ihre
             // eigenen Befehle (E14).
             Editorform::Trenntext => IN_DER_TRENNTEXTTABELLE,
-            Editorform::Termine => IN_DER_TERMINTABELLE,
             Editorform::Quicknote => IN_DER_QUICKNOTE,
         };
 
@@ -1532,7 +1430,7 @@ mod tests {
         for form in JEDE_FORM {
             // blatt_steht, ersthelfer_gehoert_appkit,
             // schluesselfenster_gehoert_krk, und welches Achtel gilt.
-            let achtel: [(bool, bool, bool, [[bool; 6]; 19]); 8] = [
+            let achtel: [(bool, bool, bool, [[bool; 6]; 17]); 8] = [
                 (false, false, true, ohne_sperre(form)),
                 (false, false, false, ALLES_ABGEWIESEN),
                 (false, true, true, ALLES_ABGEWIESEN),
@@ -2388,12 +2286,6 @@ mod tests {
                     Editorform::Notizen | Editorform::Geheimnisse => {
                         kommando != Kommando::AufgabeAbhaken
                     }
-                    // Die Termintabelle ordnet nach dem Datum: kein
-                    // Verschieben und kein Kaestchen (T3.7).
-                    Editorform::Termine => !matches!(
-                        kommando,
-                        Kommando::AufgabeAbhaken | Kommando::EintragHoch | Kommando::EintragRunter
-                    ),
                     // Die Tabelle einer CSV: jeder Zeilenbefehl, kein
                     // Kaestchen (E13 des Plans der CSV-Tabelle).
                     Editorform::Trenntext => kommando != Kommando::AufgabeAbhaken,
@@ -2448,7 +2340,6 @@ mod tests {
                 Editorform::Aufgaben,
                 Editorform::Notizen,
                 Editorform::Geheimnisse,
-                Editorform::Termine,
             ] {
                 assert!(
                     !zulaessig(
@@ -2847,74 +2738,30 @@ mod tests {
         }
         assert!(zulaessig(Kommando::QuicknoteUmschalten, quicknote));
     }
-    /// T3.7 der Termine: in der Termintabelle, mit dem Fokus im Editor, ist
-    /// „Eintrag hinzufügen" zulaessig, „Eintrag nach oben" und „nach unten"
-    /// nicht, weil sie nach dem Datum ordnet, und „Aufgabe abhaken" und „PIN
-    /// ändern" ebenso wenig. Die Tafel haelt dasselbe Feld fuer Feld; hier
-    /// steht es mit seinem Grund.
+    /// E5 des Plans
+    /// `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`:
+    /// seit die Termintabelle gefallen ist, wirkt das Verschieben in jeder
+    /// Tabellenform, die „Eintrag bearbeiten“ annimmt, und in keiner anderen;
+    /// einen eigenen Wirkungsbereich dafuer gibt es nicht mehr.
     #[test]
-    fn in_der_termintabelle_wirkt_das_anlegen_und_kein_verschieben() {
-        let (blatt, appkit, krk) = OHNE_HINDERNIS;
-        // Vor der Termintabelle haelt der Editor eine Eintragsdatei.
-        let termine = Lage {
-            eintragsdatei: true,
-            ..lage_in(blatt, appkit, krk, Fokus::Editor, Editorform::Termine)
-        };
-        assert!(zulaessig(Kommando::EintragHinzufuegen, termine));
-        assert!(zulaessig(Kommando::EintragBearbeiten, termine));
-        assert!(zulaessig(Kommando::EintragLoeschen, termine));
-        for kommando in [
-            Kommando::EintragHoch,
-            Kommando::EintragRunter,
-            Kommando::AufgabeAbhaken,
-            Kommando::PinAendern,
-        ] {
-            assert!(
-                !zulaessig(kommando, termine),
-                "{kommando:?} wirkt in der Termintabelle"
-            );
-        }
-        assert!(
-            zulaessig(
-                Kommando::EintragHoch,
-                lage_in(blatt, appkit, krk, Fokus::Editor, Editorform::Notizen)
-            ),
-            "in der Notiztabelle verschiebt es weiter"
+    fn das_verschieben_wirkt_wo_das_bearbeiten_wirkt() {
+        assert_eq!(
+            Kommando::EintragHoch.wirkungsbereich(),
+            Kommando::EintragBearbeiten.wirkungsbereich()
         );
-    }
-    /// T5.5 und T5.6 der Termine: „Termine: Sortierrichtung umkehren" ist
-    /// allein mit dem Fokus im Editor und der Termintabelle zulaessig, und in
-    /// jeder Lage, in der „Nach Name sortieren" zulaessig ist, waehlt `cmd+1`
-    /// die Sortierung; in der Termintabelle mit dem Fokus im Editor waehlt es
-    /// die Richtung.
-    #[test]
-    fn cmd_1_sortiert_im_dateifenster_und_kehrt_in_der_termintabelle_um() {
-        let (erste, zweite) = (Kommando::SortierungName, Kommando::TermineRichtungUmkehren);
-        let mut umgekehrt = 0usize;
+        assert_eq!(
+            Kommando::EintragRunter.wirkungsbereich(),
+            Kommando::EintragBearbeiten.wirkungsbereich()
+        );
         for lage in jede_lage() {
-            let ohne_hindernis = !lage.blatt_steht
-                && !lage.ersthelfer_gehoert_appkit
-                && lage.schluesselfenster_gehoert_krk;
-            assert_eq!(
-                zulaessig(zweite, lage),
-                ohne_hindernis
-                    && lage.fokus == Fokus::Editor
-                    && lage.editorform == Editorform::Termine,
-                "{lage:?}"
-            );
-            let gewaehlt = waehlen(erste, zweite, lage);
-            if zulaessig(erste, lage) {
-                assert_eq!(gewaehlt, erste, "{lage:?}");
-            }
-            if zulaessig(zweite, lage) {
-                assert_eq!(gewaehlt, zweite, "{lage:?}");
-                umgekehrt += 1;
+            for kommando in [Kommando::EintragHoch, Kommando::EintragRunter] {
+                assert_eq!(
+                    zulaessig(kommando, lage),
+                    zulaessig(Kommando::EintragBearbeiten, lage),
+                    "{kommando:?} in {lage:?}"
+                );
             }
         }
-        assert!(
-            umgekehrt > 0,
-            "die Richtung ist in keiner Lage gewaehlt worden"
-        );
     }
 
     /// An einem fernen Ort sind genau diese Befehle ausgegraut, und keiner

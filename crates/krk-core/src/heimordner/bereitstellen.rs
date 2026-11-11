@@ -103,10 +103,10 @@
 //! aus C7 sich im Editor oeffnen und mit Klartext sichern liesse; diese Regeln
 //! bringt Stufe 5 mit.
 //!
-//! **`appointments.md` ist die vierte Datei derselben Regel**
-//! (`260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`, Schritt 2):
-//! sie entsteht ueber dasselbe exklusive Oeffnen mit null Bytes und nie ueber
-//! eine vorhandene, und die Uebernahme der alten Zettel schreibt nichts in sie.
+//! **`appointments.md` legt dieser Weg seit dem 261111 nicht mehr an**: sie
+//! steht nicht mehr in [`Sonderdatei::ALLE`], und weil allein die Namen jener
+//! Liste hier einen Pfad bekommen, fasst die Bereitstellung eine vorhandene
+//! `appointments.md` auch nicht an.
 //!
 //! # Eine `.secrets.txt` von vorher wird zu `secrets.txt`
 //!
@@ -589,15 +589,7 @@ fn anlegen_mit_vorlauf(
             (Sonderdatei::Notizen, Some((_, notizen))) => notizen.as_str(),
             // `secrets.txt` entsteht leer wie `tasks.txt`: null Bytes und
             // kein Kopf, die PIN legt erst das erste Oeffnen im Editor fest.
-            // `appointments.md` ebenso: eine leere Termindatei ist eine ohne
-            // Termine, und kein Zettel fliesst in sie.
-            (
-                Sonderdatei::Notizen
-                | Sonderdatei::Aufgaben
-                | Sonderdatei::Geheimnisse
-                | Sonderdatei::Termine,
-                _,
-            ) => "",
+            (Sonderdatei::Notizen | Sonderdatei::Aufgaben | Sonderdatei::Geheimnisse, _) => "",
         };
         vorlauf(&pfad);
         let ausgang = exklusiv_anlegen(&pfad, inhalt);

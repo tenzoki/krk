@@ -918,10 +918,10 @@ fn der_rueckweg_ueber_die_belegungsdatei_traegt_den_zusteller_mit() {
 // ausserhalb wirkt (Entscheid
 // `260926-2308_*_duerfen-zwei-funktionen-desselben-zustellers-eine-kombination-tragen-wenn-ihre-wirkungsbereiche-einander-ausschliessen.md`).
 // Die Proben arbeiten mit `editor_sichern` auf `cmd+2`, der Kombination von
-// `sortierung_groesse`: die Regel haengt an keiner Kennung, und `cmd+1` traegt
-// seit Schritt 8 in der Auslieferung selbst schon zwei Funktionen, die
-// Sortierung nach Name und die Richtung der Termine. Die Proben dieses Falls
-// stehen im Abschnitt darunter.
+// `sortierung_groesse`: die Regel haengt an keiner Kennung. `cmd+1` trug vom
+// 260926 bis zum 261111 in der Auslieferung selbst zwei Funktionen, die
+// Sortierung nach Name und die Richtung der Termine; was aus der zweiten
+// geworden ist, steht im Abschnitt darunter.
 
 /// `editor_sichern` zusaetzlich auf `cmd+2` laedt ohne Ersetzung, und der
 /// Nachschlag nennt beide Funktionen in der Reihenfolge der Belegung.
@@ -1026,95 +1026,153 @@ fn die_umbelegung_folgt_derselben_regel_wie_das_einlesen() {
 }
 
 // ---------------------------------------------------------------------------
-// `cmd+1` auf zwei Funktionen (Schritt 8 des Plans
-// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`, T5)
+// Die zurueckgezogene Kennung `termine_richtung_umkehren` (Schritt 3 des Plans
+// `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`, C3.4 und
+// C3.10 des Spec)
 // ---------------------------------------------------------------------------
+//
+// Vom 260926 bis zum 261111 trug `cmd+1` in der Auslieferung zwei Funktionen,
+// die Sortierung nach Name und die Richtung der Termintabelle. Mit der
+// Termintabelle ist die zweite gefallen; ihre Kennung steht seitdem in
+// `belegung::ZURUECKGEZOGENE_KENNUNGEN`.
 
-/// T5.1 und T5.2: die Auslieferung fuehrt „Termine: Sortierrichtung umkehren"
-/// auf `cmd+1`, und `sortierung_name` behaelt `cmd+1`; die Auslieferung bleibt
-/// ohne Konflikt.
+/// C3.4, Kernhaelfte: die Auslieferung kennt die Funktion nicht mehr, und
+/// `cmd+1` gehoert allein dem Sortieren nach Name.
 #[test]
-fn die_auslieferung_legt_die_richtung_der_termine_auf_cmd_1_und_die_sortierung_behaelt_sie() {
+fn cmd_1_gehoert_in_der_auslieferung_allein_dem_sortieren_nach_name() {
     let belegung = Belegung::auslieferung();
-    let cmd_1 = kombi("cmd+1");
-    let termine = belegung
-        .funktion("termine_richtung_umkehren")
-        .expect("die Auslieferung fuehrt die Funktion");
-    assert_eq!(termine.tasten(), [cmd_1]);
-    assert_eq!(termine.name(), "Termine: Sortierrichtung umkehren");
-    assert_eq!(termine.kommando(), Some(Kommando::TermineRichtungUmkehren));
+    assert!(belegung.funktion("termine_richtung_umkehren").is_none());
+    assert_eq!(Kommando::aus_kennung("termine_richtung_umkehren"), None);
     assert_eq!(
-        Kommando::TermineRichtungUmkehren.wirkungsbereich(),
-        Wirkungsbereich::Termine
+        Funktionsschluessel::aus_kennung("termine_richtung_umkehren"),
+        None
     );
-    assert_eq!(Wirkungsbereich::Termine.seite(), Seite::Editor);
-    assert_eq!(ausgeliefert("sortierung_name"), cmd_1);
+    assert_eq!(ausgeliefert("sortierung_name"), kombi("cmd+1"));
+    assert!(matches!(
+        belegung.nachschlag(kombi("cmd+1").tastendruck()),
+        Nachschlag::Funktion(funktion) if funktion.kennung() == "sortierung_name"
+    ));
     assert!(belegung.konflikte().is_empty());
 }
 
-/// T5.3: der Nachschlag von `cmd+1` in der Auslieferung nennt beide
-/// Funktionen, in der Reihenfolge der Belegung.
-#[test]
-fn cmd_1_ergibt_in_der_auslieferung_einen_geteilten_nachschlag() {
-    let belegung = Belegung::auslieferung();
-    let Nachschlag::Geteilt(erste, zweite) = belegung.nachschlag(kombi("cmd+1").tastendruck())
-    else {
-        panic!("cmd+1 ergibt keinen geteilten Nachschlag");
-    };
-    assert_eq!(erste.kennung(), "sortierung_name");
-    assert_eq!(zweite.kennung(), "termine_richtung_umkehren");
+/// Die Auslieferungsbelegung als Nutzerdatei aus der Zeit vor dem 261111:
+/// mit dem Block der entfallenen Funktion, in der Form, in der
+/// `Belegung::sichern` ihn geschrieben hat (mit `name`), und mit den
+/// genannten eigenen Zuweisungen.
+fn keymap_von_vor_dem_rueckzug(zusaetze: &[(&str, &str)]) -> String {
+    let block = "\n[[funktion]]\nid = \"termine_richtung_umkehren\"\nname = \"Termine: Sortierrichtung umkehren\"\ntasten = [\"cmd+1\"]\n";
+    let text = auslieferung_mit(zusaetze);
+    // Mitten in die Datei und nicht ans Ende: hinter den Block von
+    // `pin_aendern`, wo er bis zum 261111 stand.
+    let anker = "id = \"pin_aendern\"\ntasten = [\"shift+cmd+p\"]\n";
+    let stelle = text
+        .find(anker)
+        .expect("der Block von pin_aendern steht in der Auslieferung")
+        + anker.len();
+    format!("{}{block}{}", &text[..stelle], &text[stelle..])
 }
 
-/// T5.4: eine Nutzerbelegung mit `cmd+1` auf beiden Funktionen laedt ohne
-/// Ersetzung; eine ohne die neue Funktion laedt ebenso und fuehrt sie
-/// unbelegt; `cmd+1` auf `sortierung_name` und `sortierung_groesse` bleibt ein
-/// Konflikt, auch neben der Richtung der Termine.
+/// C3.10: eine eigene `keymap.toml`, die `termine_richtung_umkehren` noch
+/// nennt, laedt ohne Ersetzung; die uebrigen eigenen Zuweisungen gelten, die
+/// Funktion fehlt in der geladenen Belegung, `cmd+1` sortiert nach Name, und
+/// das Sichern schreibt die Kennung nicht zurueck.
 #[test]
-fn eine_eigene_belegung_mit_und_ohne_die_neue_funktion_laedt() {
-    let ordner = Pruefordner::neu("termine-mit");
-    let ablage = ablage_mit(&ordner, belegung::AUSLIEFERUNGSTEXT);
-    let geladen = geladene_belegung(&ablage);
-    assert!(
-        !geladen.ist_ersetzt(),
-        "cmd+1 auf beiden Funktionen wurde abgewiesen"
-    );
+fn eine_keymap_mit_der_entfallenen_richtung_der_termine_laedt_und_sichert_ohne_sie() {
+    let gesichert = keymap_von_vor_dem_rueckzug(&[("editor_sichern", "cmd+2")]);
+    assert!(gesichert.contains("id = \"termine_richtung_umkehren\""));
+    let ordner = Pruefordner::neu("zurueckgezogen");
+    let ablage = ablage_mit(&ordner, &gesichert);
 
-    // Die Belegung eines Nutzers von vor dieser Arbeit: ohne den Block.
-    let kopf = "[[funktion]]\nid = \"termine_richtung_umkehren\"\n";
-    let beginn = belegung::AUSLIEFERUNGSTEXT
-        .find(kopf)
-        .expect("der Block steht in der Auslieferung");
-    let ende = beginn
-        + belegung::AUSLIEFERUNGSTEXT[beginn..]
-            .find("tasten = [\"cmd+1\"]\n")
-            .expect("der Block traegt cmd+1")
-        + "tasten = [\"cmd+1\"]\n".len();
-    let ohne = format!(
-        "{}{}",
-        &belegung::AUSLIEFERUNGSTEXT[..beginn],
-        &belegung::AUSLIEFERUNGSTEXT[ende..]
-    );
-    assert!(!ohne.contains("termine_richtung_umkehren\""));
-    let ordner = Pruefordner::neu("termine-ohne");
-    let ablage = ablage_mit(&ordner, &ohne);
     let geladen = geladene_belegung(&ablage);
     assert!(
         !geladen.ist_ersetzt(),
-        "eine aeltere Belegung wurde abgewiesen"
+        "die Belegung mit der entfallenen Kennung wurde verworfen"
     );
-    let termine = geladen
-        .wert
-        .funktion("termine_richtung_umkehren")
-        .expect("die neue Funktion kommt hinzu");
-    assert!(termine.tasten().is_empty(), "und zwar unbelegt");
+    let belegung = geladen.wert;
+    assert!(belegung.funktion("termine_richtung_umkehren").is_none());
+    assert!(belegung.konflikte().is_empty());
+
+    // Die eigene Zuweisung des Nutzers gilt: `cmd+2` traegt neben der
+    // Sortierung nach Groesse das Sichern, und `cmd+s` behaelt es auch.
+    let Nachschlag::Geteilt(erste, zweite) = belegung.nachschlag(kombi("cmd+2").tastendruck())
+    else {
+        panic!("die eigene Zuweisung cmd+2 ist verloren");
+    };
+    assert_eq!(
+        (erste.kennung(), zweite.kennung()),
+        ("sortierung_groesse", "editor_sichern")
+    );
+    assert_ne!(
+        belegung,
+        Belegung::auslieferung(),
+        "geladen ist die Auslieferung und nicht die Belegung des Nutzers"
+    );
+    // Bis auf die eine Zuweisung ist es die Auslieferung, Funktion fuer
+    // Funktion: nichts sonst ist beim Uebergehen verloren gegangen.
+    assert_eq!(kennungen(&belegung), kennungen(&Belegung::auslieferung()));
     assert!(matches!(
-        geladen.wert.nachschlag(kombi("cmd+1").tastendruck()),
+        belegung.nachschlag(kombi("cmd+1").tastendruck()),
         Nachschlag::Funktion(funktion) if funktion.kennung() == "sortierung_name"
     ));
 
-    let Err(Belegungsfehler::Konflikt(konflikt)) =
-        nutzerbelegung_mit(&[("sortierung_groesse", "cmd+1")])
-    else {
+    // Die Datei auf der Platte bleibt beim Laden, wie sie ist.
+    let pfad = ablage.pfad(Datei::Belegung);
+    assert_eq!(
+        fs::read_to_string(&pfad).expect("keymap.toml ist lesbar"),
+        gesichert,
+        "das Laden hat die Datei angefasst"
+    );
+
+    // Das Sichern schreibt die Kennung nicht zurueck, und was es schreibt,
+    // laedt wieder als dieselbe Belegung.
+    belegung_sichern(&ablage, &belegung);
+    let geschrieben = fs::read_to_string(&pfad).expect("keymap.toml ist lesbar");
+    assert!(
+        !geschrieben.contains("termine_richtung_umkehren"),
+        "das Sichern schreibt die entfallene Kennung zurueck"
+    );
+    let wieder = geladene_belegung(&ablage);
+    assert!(!wieder.ist_ersetzt());
+    assert_eq!(wieder.wert, belegung);
+}
+
+/// Die Duldung reicht genau so weit wie die Liste: jede Kennung darin ist
+/// keine Funktion mehr, `endgueltig_loeschen` steht nicht darin (Nutzerantwort
+/// vom 260817, gehalten von
+/// `eine_keymap_mit_der_zurueckgezogenen_kennung_wird_als_ganzes_verworfen`),
+/// und eine unbekannte Kennung, die nicht in der Liste steht, verwirft die
+/// Belegung weiter als Ganzes, auch neben einer geduldeten.
+#[test]
+fn geduldet_sind_allein_die_benannten_zurueckgezogenen_kennungen() {
+    assert_eq!(
+        belegung::ZURUECKGEZOGENE_KENNUNGEN,
+        ["termine_richtung_umkehren"]
+    );
+    for kennung in belegung::ZURUECKGEZOGENE_KENNUNGEN {
+        assert_eq!(
+            Funktionsschluessel::aus_kennung(kennung),
+            None,
+            "{kennung} ist noch eine Funktion und steht in der Liste der zurueckgezogenen"
+        );
+    }
+
+    let mit_tippfehler = format!(
+        "{}\n[[funktion]]\nid = \"termine_richtung_umkeren\"\ntasten = []\n",
+        keymap_von_vor_dem_rueckzug(&[])
+    );
+    let datei: belegung::Belegungsdatei = toml::from_str(&mit_tippfehler).expect("gueltiges TOML");
+    assert_eq!(
+        Belegung::vom_nutzer(&datei),
+        Err(Belegungsfehler::UnbekannteFunktion(
+            "termine_richtung_umkeren".to_owned()
+        ))
+    );
+
+    // Die Regeln an den uebrigen Eintraegen gelten neben dem uebergangenen
+    // weiter: ein Konflikt bleibt ein Konflikt.
+    let mit_konflikt = keymap_von_vor_dem_rueckzug(&[("sortierung_groesse", "cmd+1")]);
+    let datei: belegung::Belegungsdatei = toml::from_str(&mit_konflikt).expect("gueltiges TOML");
+    let Err(Belegungsfehler::Konflikt(konflikt)) = Belegung::vom_nutzer(&datei) else {
         panic!("cmd+1 auf zwei Sortierungen ist kein Konflikt mehr");
     };
     assert_eq!(konflikt.andere.kennung, "sortierung_name");
@@ -2452,7 +2510,7 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
         // eingebauten Editor, `Vorschau` mit den drei Zoombefehlen der Runde 20,
         // `Editortext`, `Eintraege` und `Aufgaben` mit den Eintragstabellen der
         // krkhome-Arbeit, `Geheimnisse` mit „PIN ändern" aus deren Schritt 5.5,
-        // `Reihenfolge` und `Termine` mit den Terminen, `Quicknote` mit der
+        // `Quicknote` mit der
         // Quicknote auf F10, `Bildfolge` mit den drei Befehlen der Bildfolge,
         // `Trenntext` und `Csv` mit den Befehlen der Tabelle einer CSV.
         let bereich = kommando.wirkungsbereich();
@@ -2466,9 +2524,7 @@ fn jedes_kommando_traegt_genau_einen_wirkungsbereich() {
                     | Wirkungsbereich::Editortext
                     | Wirkungsbereich::Eintraege
                     | Wirkungsbereich::Eintragsdatei
-                    | Wirkungsbereich::Reihenfolge
                     | Wirkungsbereich::Aufgaben
-                    | Wirkungsbereich::Termine
                     | Wirkungsbereich::Geheimnisse
                     | Wirkungsbereich::Quicknote
                     | Wirkungsbereich::Tabbereich
@@ -2807,9 +2863,10 @@ fn die_zwoelf_kommandos_des_editors_tragen_ihre_bereiche() {
 /// Die sechs Befehle der Eintragstabelle tragen die Bereiche, die Schritt 3.3
 /// der krkhome-Arbeit ihnen gibt (C6.5, C6.6, Kernhaelfte).
 ///
-/// Drei wirken in jeder Tabellenform, die zwei des Verschiebens seit dem
-/// 260926 allein in einer Tabelle in Dateireihenfolge (Schritt 4 des Plans
-/// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`), das
+/// Das Anlegen wirkt vor jeder Eintragsdatei, vier wirken in jeder
+/// Tabellenform, darunter seit dem 261111 wieder die zwei des Verschiebens
+/// (ihr eigener Bereich unterschied allein die Termintabelle und ist mit ihr
+/// gefallen), das
 /// Abhaken allein in der Aufgabentabelle. Ob die Form passt, fragt `krk_ui`;
 /// hier steht die Aussage ueber die Befehle, die ohne Fenster pruefbar ist,
 /// und dass jede der sechs Kennungen zu ihrem Kommando fuehrt.
@@ -2829,12 +2886,12 @@ fn die_sechs_befehle_der_eintragstabelle_tragen_ihre_bereiche() {
         (
             Kommando::EintragHoch,
             "eintrag_hoch",
-            Wirkungsbereich::Reihenfolge,
+            Wirkungsbereich::Eintraege,
         ),
         (
             Kommando::EintragRunter,
             "eintrag_runter",
-            Wirkungsbereich::Reihenfolge,
+            Wirkungsbereich::Eintraege,
         ),
         (
             Kommando::EintragLoeschen,
@@ -2896,7 +2953,7 @@ fn pin_aendern_traegt_den_bereich_der_geheimnisse() {
 /// [`varianten_der_aufzaehlung`] aus dem Quelltext der Aufzaehlung; ein Wert
 /// ohne Zeile in diesem Feld wird dort rot, statt still ungeprueft zu bleiben
 /// (`shared/issues/260826-1302_*_ein-achter-wirkungsbereich-uebersetzt-ohne-eintrag-im-beschriftungsfeld-der-doc-kommentar-sagt-das-gegenteil.md`).
-const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 19] = [
+const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 17] = [
     (Wirkungsbereich::Dateifenster, "Dateifenster"),
     (Wirkungsbereich::Leiste, "Lesezeichen- und Geräteleiste"),
     (
@@ -2906,12 +2963,7 @@ const BESCHRIFTUNGEN: [(Wirkungsbereich, &str); 19] = [
     (Wirkungsbereich::Editor, "Editor"),
     (Wirkungsbereich::Editortext, "Text im Editor"),
     (Wirkungsbereich::Eintraege, "Einträge im Editor"),
-    (
-        Wirkungsbereich::Reihenfolge,
-        "Einträge in Dateireihenfolge im Editor",
-    ),
     (Wirkungsbereich::Aufgaben, "Aufgaben im Editor"),
-    (Wirkungsbereich::Termine, "Termine im Editor"),
     (Wirkungsbereich::Geheimnisse, "Geheimnisse im Editor"),
     (Wirkungsbereich::Quicknote, "Quicknote im Editor"),
     (Wirkungsbereich::Tabbereich, "Dateifenster und Vorschau"),
@@ -2952,19 +3004,17 @@ fn stelle_im_feld(bereich: Wirkungsbereich) -> usize {
         Wirkungsbereich::Editor => 3,
         Wirkungsbereich::Editortext => 4,
         Wirkungsbereich::Eintraege => 5,
-        Wirkungsbereich::Reihenfolge => 6,
-        Wirkungsbereich::Aufgaben => 7,
-        Wirkungsbereich::Termine => 8,
-        Wirkungsbereich::Geheimnisse => 9,
-        Wirkungsbereich::Quicknote => 10,
-        Wirkungsbereich::Tabbereich => 11,
-        Wirkungsbereich::Navigator => 12,
-        Wirkungsbereich::Vorschau => 13,
-        Wirkungsbereich::Bildfolge => 14,
-        Wirkungsbereich::Ueberall => 15,
-        Wirkungsbereich::Eintragsdatei => 16,
-        Wirkungsbereich::Trenntext => 17,
-        Wirkungsbereich::Csv => 18,
+        Wirkungsbereich::Aufgaben => 6,
+        Wirkungsbereich::Geheimnisse => 7,
+        Wirkungsbereich::Quicknote => 8,
+        Wirkungsbereich::Tabbereich => 9,
+        Wirkungsbereich::Navigator => 10,
+        Wirkungsbereich::Vorschau => 11,
+        Wirkungsbereich::Bildfolge => 12,
+        Wirkungsbereich::Ueberall => 13,
+        Wirkungsbereich::Eintragsdatei => 14,
+        Wirkungsbereich::Trenntext => 15,
+        Wirkungsbereich::Csv => 16,
     }
 }
 
@@ -3416,13 +3466,12 @@ fn die_verengung_laesst_hoechstens_zwei_zu() {
     };
     assert_eq!(konflikt.bewerber.kennung, "bild_zurueck");
 
-    let Err(Belegungsfehler::Konflikt(konflikt)) =
-        nutzerbelegung_mit(&[("termine_richtung_umkehren", "cmd+up")])
+    let Err(Belegungsfehler::Konflikt(konflikt)) = nutzerbelegung_mit(&[("pin_aendern", "cmd+up")])
     else {
         panic!("cmd+up auf drei Funktionen ist kein Konflikt");
     };
     assert_eq!(konflikt.andere.kennung, "ordner_aufwaerts");
-    assert_eq!(konflikt.bewerber.kennung, "termine_richtung_umkehren");
+    assert_eq!(konflikt.bewerber.kennung, "pin_aendern");
 
     // Die Bildfolge verengt allein das Dateifenster und nicht den Navigator.
     assert!(nutzerbelegung_mit(&[("bild_vor", "up")]).is_err());
@@ -3453,7 +3502,7 @@ fn die_umbelegung_folgt_der_verengung() {
     };
     assert_eq!(konflikt.andere.kennung, "bild_zurueck");
     let Err(Zuweisungsfehler::Konflikt(konflikt)) =
-        Belegung::auslieferung().zuweisen("termine_richtung_umkehren", kombi("cmd+up"))
+        Belegung::auslieferung().zuweisen("pin_aendern", kombi("cmd+up"))
     else {
         panic!("cmd+up an eine dritte Funktion lieferte keinen Konflikt");
     };

@@ -1,8 +1,9 @@
-//! Die Eintragsansicht: `tasks.txt`, `notes.txt` und `appointments.md` aus dem
+//! Die Eintragsansicht: `tasks.txt` und `notes.txt` aus dem
 //! erkannten `~/krkhome/` als Tabelle in der Formatansicht des Editors (C6 und
-//! C5 des Arbeitspakets `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`,
-//! die Termine aus Schritt 6 des Plans
-//! `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
+//! C5 des Arbeitspakets `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`).
+//! Vom 260926 bis zum 261111 zeigte sie daneben `appointments.md` als
+//! Termintabelle, nach dem Datum geordnet; die ist gefallen (Schritt 3 des
+//! Plans `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`).
 //!
 //! ```text
 //! ┌──────────────────────────────┐
@@ -18,14 +19,11 @@
 //!
 //! # Eine Ansicht fuer jede Art
 //!
-//! **Aufgaben, Notizen und Termine teilen sich diese eine Ansicht**, und welche
+//! **Aufgaben und Notizen teilen sich diese eine Ansicht**, und welche
 //! Art sie zeigt, sagen die Zeilen selbst: [`Zeilen::Aufgaben`] traegt eine
 //! Spalte mit Kaestchen und Text in fester Zeilenhoehe, [`Zeilen::Notizen`]
 //! zwei Spalten, Thema und Notiz, mit Kopfzeile und einer Zeilenhoehe nach dem
-//! Inhalt (Schritt 4.3). [`Zeilen::Termine`] traegt dieselben zwei Spalten
-//! unter den Namen Datum und Termin, die erste schmaler, und steht als einzige
-//! Art **nicht in der Reihenfolge der Datei**, sondern nach dem Datum
-//! ([`terminzeilen`]); was daraus folgt, steht unter „Stelle und Zeile". [`Eintragsansicht::zeilen_zeigen`] richtet die Spalten neu
+//! Inhalt (Schritt 4.3). [`Eintragsansicht::zeilen_zeigen`] richtet die Spalten neu
 //! ein, wenn die Art wechselt, und an keiner anderen Stelle. **Eine Ansicht und
 //! nicht zwei**, weil alles, was an der Naemlichkeit der Tabelle haengt, damit
 //! eine Stelle behaelt: [`Eintragsansicht::laufende_zelle`], der eigene
@@ -129,9 +127,15 @@
 //! *Stelle* ist die Zahl, mit der der Kern einen Eintrag zaehlt: in der
 //! Reihenfolge der Datei, ohne den Vorspann, wie `Neustand::auswahl` und jede
 //! Handlung in `krk_core::heimordner::eintraege`. Die *Zeile* ist AppKits
-//! Zeilennummer, also die Reihenfolge auf dem Schirm. Fuer Aufgaben und
-//! Notizen sind beide dieselbe Zahl; die Termintabelle ordnet nach dem Datum
-//! und trennt sie, und jede [`Terminzeile`] traegt deshalb ihre Stelle.
+//! Zeilennummer, also die Reihenfolge auf dem Schirm. **Heute sind beide in
+//! jeder Art dieselbe Zahl**, denn jede Tabelle steht in der Reihenfolge der
+//! Datei. Die Termintabelle, die nach dem Datum ordnete und die zwei trennte,
+//! ist am 261111 gefallen; die Naht bleibt trotzdem stehen, als Gleichheit in
+//! [`Zeilen::stelle_der_zeile`] und [`Zeilen::zeile_der_stelle`], damit eine
+//! spaetere Ordnung einer Tabelle allein dort eingehaengt wird. **Mit der
+//! Termintabelle sind auch die Proben gefallen, die die Naht an einer
+//! umgeordneten Tabelle hielten**; einen Uebergang, der die Umrechnung
+//! auslaesst, sieht seitdem keine Probe.
 //!
 //! **Nach aussen spricht diese Ansicht allein in Stellen**: die gewaehlte
 //! Stelle ([`Eintragsansicht::gewaehlte_stelle`]), die gemeldete [`Zelle`],
@@ -143,8 +147,8 @@
 //! `clickedRow`, `rowForView:`, `selectRowIndexes:`, `editColumn:row:` und der
 //! Zellenwechsel mit `tab` —, rechnet ueber [`Zeilen::stelle_der_zeile`] und
 //! [`Zeilen::zeile_der_stelle`] und ueber keinen dritten Weg. Wer hier eine
-//! Zeilennummer ohne die Umrechnung weiterreicht, aendert oder loescht in einer
-//! umgeordneten Tabelle den falschen Eintrag.
+//! Zeilennummer ohne die Umrechnung weiterreicht, aenderte oder loeschte in
+//! einer umgeordneten Tabelle den falschen Eintrag.
 //!
 //! Innen bleibt es bei Zeilen: die abgeleiteten Zeilen stehen in der
 //! Reihenfolge des Schirms, und wer sie mit einer Zeilennummer von AppKit
@@ -305,22 +309,13 @@
 //! - `NSTextField::textFieldWithString:` und
 //!   `NSButton::checkboxWithTitle:target:action:` seit 10.12
 //!   (`NSTextField.h:115`, `NSButton.h:59`)
-//! - `NSTableRowView` seit 10.7 (`NSTableRowView.h:21`), samt seiner
-//!   Eigenschaft `backgroundColor` und damit `setBackgroundColor:`
-//!   (`NSTableRowView.h:61`, ohne eigene Angabe), und die **gebaute** Methode
-//!   `tableView:didAddRowView:forRow:` seit 10.7 (`NSTableView.h:601`), fuer
-//!   die Hervorhebung des heutigen Tages in der Termintabelle
-//! - `NSColor` samt `colorWithAlphaComponent:` (`NSColor.h:311`) und
-//!   `backgroundColor` von `NSTableView` (`NSTableView.h:189`) ohne Angabe und
-//!   damit seit 10.0; `systemYellowColor` seit 10.10 (`NSColor.h:254`); allein
-//!   in einer Probe `selectedContentBackgroundColor` und
-//!   `unemphasizedSelectedContentBackgroundColor` seit 10.14 (`NSColor.h:221`
-//!   und `:222`) und `isEqual:` aus `NSObjectProtocol`
-//! - fuer den Kopf der Termintabelle `NSImage` samt `imageNamed:`
-//!   (`NSImage.h:77`), `setIndicatorImage:inTableColumn:` (`NSTableView.h:287`),
-//!   `tableColumnWithIdentifier:` (`:242`), `setAllowsColumnSelection:`
-//!   (`:334`) und die **gebaute** Methode `tableView:didClickTableColumn:`
-//!   (`:659`), alle ohne Angabe und damit seit 10.0
+//! - `NSTableRowView` seit 10.7 (`NSTableRowView.h:21`), als Typ im Block
+//!   von `enumerateAvailableRowViewsUsingBlock:` weiter unten
+//! - `NSColor` ohne Angabe und damit seit 10.0
+//! - fuer den Kopf der Tabelle `setAllowsColumnSelection:`
+//!   (`NSTableView.h:334`) und die **gebaute** Methode
+//!   `tableView:didClickTableColumn:` (`:659`), beide ohne Angabe und damit
+//!   seit 10.0
 //! - `NSTableViewStyle` samt `setStyle:` seit 11.0 (`NSTableView.h:77` und
 //!   `:377`) — die hoechste Untergrenze dieser Datei
 //! - fuer die Tabelle einer CSV `makeViewWithIdentifier:owner:` seit 10.7
@@ -372,7 +367,7 @@ use objc2::{DefinedClass, MainThreadOnly, define_class, msg_send, sel};
 use objc2_app_kit::{
     NSApplication, NSAutoresizingMaskOptions, NSButton, NSColor, NSControl, NSControlStateValueOff,
     NSControlStateValueOn, NSControlTextEditingDelegate, NSEvent, NSEventModifierFlags, NSFont,
-    NSImage, NSLayoutConstraintOrientation, NSLayoutPriorityRequired, NSLineBreakMode, NSResponder,
+    NSLayoutConstraintOrientation, NSLayoutPriorityRequired, NSLineBreakMode, NSResponder,
     NSScrollView, NSTableCellView, NSTableColumn, NSTableColumnResizingOptions, NSTableHeaderView,
     NSTableRowView, NSTableView, NSTableViewColumnAutoresizingStyle, NSTableViewDataSource,
     NSTableViewDelegate, NSTableViewSelectionHighlightStyle, NSTableViewStyle, NSText, NSTextField,
@@ -384,11 +379,10 @@ use objc2_foundation::{
 };
 
 use krk_core::heimordner::eintraege::geheimnisse::{Feld, Geheimnisse};
-use krk_core::heimordner::eintraege::{Aufgaben, Notizen, Tag, aufgabenzeile, termine};
+use krk_core::heimordner::eintraege::{Aufgaben, Notizen, aufgabenzeile};
 use krk_core::sprache::{Text, text};
 use krk_core::tasten::{ModMaske, Tastendruck};
 use krk_core::trenntext::{self, Satzindex, Zellbereich};
-use krk_core::verzeichnis::Richtung;
 
 use crate::trenntextvorschau::spaltenbuchstabe;
 
@@ -422,14 +416,6 @@ pub const THEMENSPALTE: usize = 0;
 /// sie nicht.
 pub const NOTIZSPALTE: usize = 1;
 
-/// Die erste Spalte der Termintabelle, das Datum: dieselbe Spalte wie
-/// [`THEMENSPALTE`], denn das Datum ist das Thema eines Termins.
-pub const DATUMSSPALTE: usize = THEMENSPALTE;
-
-/// Die zweite Spalte der Termintabelle, der Termintext: dieselbe Spalte wie
-/// [`NOTIZSPALTE`].
-pub const TERMINSPALTE: usize = NOTIZSPALTE;
-
 /// Die Spalte der Geheimnistabelle, die ein Feld zeigt: seine Stelle in
 /// `Feld::ALLE`, denn die Spalten stehen in der Folge der Felder
 /// (Entscheidung 18 des Plans
@@ -462,7 +448,7 @@ pub fn mehrzeilige_spalte(art: Eintragsart) -> Option<usize> {
         // Eine Zelle einer CSV zeigt eine Zeile; ihr Umbruch erscheint als
         // `⏎` ([`zellanzeige`]), und `opt+return` schreibt ihn beim Bearbeiten.
         Eintragsart::Aufgaben | Eintragsart::Trenntext => None,
-        Eintragsart::Notizen | Eintragsart::Termine => Some(NOTIZSPALTE),
+        Eintragsart::Notizen => Some(NOTIZSPALTE),
         Eintragsart::Geheimnisse => Some(spalte_des_feldes(Feld::Notizen)),
     }
 }
@@ -475,7 +461,7 @@ pub fn mehrzeilige_spalte(art: Eintragsart) -> Option<usize> {
 pub fn spaltenzahl(art: Eintragsart) -> usize {
     match art {
         Eintragsart::Aufgaben | Eintragsart::Trenntext => 1,
-        Eintragsart::Notizen | Eintragsart::Termine => 2,
+        Eintragsart::Notizen => 2,
         Eintragsart::Geheimnisse => Feld::ALLE.len(),
     }
 }
@@ -670,10 +656,6 @@ struct Satzspeicher {
     werte: Vec<String>,
 }
 
-/// Die Breite, mit der die Datumsspalte entsteht: schmaler als die
-/// Themenspalte, weil `YYMMDD HH:MM` zwoelf Zeichen hat.
-const DATUMSBREITE: f64 = 110.0;
-
 /// Die Breite, mit der die Themenspalte entsteht; der Nutzer kann sie ziehen,
 /// die Notizspalte nimmt den Rest.
 const THEMENBREITE: f64 = 160.0;
@@ -691,9 +673,6 @@ pub enum Eintragsart {
     Aufgaben,
     /// Zwei Spalten, Thema und Notiz, `notes.txt`.
     Notizen,
-    /// Zwei Spalten, Datum und Termin, `appointments.md`, nach dem Datum
-    /// geordnet.
-    Termine,
     /// Sechs Spalten, Name, Protokoll, Adresse, Konto, Passwort und Notizen,
     /// `secrets.txt` (Entscheidungen 17 und 18 des Plans
     /// `261016-0306_*_plan-secrets-mit-sechs-feldern-schluesselmerker-und-verbindungen.md`).
@@ -717,8 +696,6 @@ pub enum Zeilen {
     Aufgaben(Vec<Eintragszeile>),
     /// Die Zeilen der Notiztabelle.
     Notizen(Vec<Notizzeile>),
-    /// Die Zeilen der Termintabelle, in der Folge des Schirms.
-    Termine(Vec<Terminzeile>),
     /// Die Zeilen der Geheimnistabelle, in der Folge der Datei.
     Geheimnisse(Vec<Geheimniszeile>),
     /// Die Sicht auf eine CSV- oder TSV-Datei, in der Folge der Datei; ihre
@@ -733,7 +710,6 @@ impl Zeilen {
         match self {
             Self::Aufgaben(_) => Eintragsart::Aufgaben,
             Self::Notizen(_) => Eintragsart::Notizen,
-            Self::Termine(_) => Eintragsart::Termine,
             Self::Geheimnisse(_) => Eintragsart::Geheimnisse,
             Self::Trenntext(_) => Eintragsart::Trenntext,
         }
@@ -745,7 +721,6 @@ impl Zeilen {
         match self {
             Self::Aufgaben(zeilen) => zeilen.len(),
             Self::Notizen(zeilen) => zeilen.len(),
-            Self::Termine(zeilen) => zeilen.len(),
             Self::Geheimnisse(zeilen) => zeilen.len(),
             Self::Trenntext(sicht) => sicht.index().zeilenzahl(),
         }
@@ -758,9 +733,7 @@ impl Zeilen {
     pub fn spaltenzahl(&self) -> usize {
         match self {
             Self::Trenntext(sicht) => sicht.index().spaltenzahl(),
-            Self::Aufgaben(_) | Self::Notizen(_) | Self::Termine(_) | Self::Geheimnisse(_) => {
-                spaltenzahl(self.art())
-            }
+            Self::Aufgaben(_) | Self::Notizen(_) | Self::Geheimnisse(_) => spaltenzahl(self.art()),
         }
     }
 
@@ -774,9 +747,7 @@ impl Zeilen {
     pub fn feld_der_tabellenspalte(&self, spalte: usize) -> Option<usize> {
         let feld = match self {
             Self::Trenntext(_) => spalte.checked_sub(NUMMERNSPALTE + 1)?,
-            Self::Aufgaben(_) | Self::Notizen(_) | Self::Termine(_) | Self::Geheimnisse(_) => {
-                spalte
-            }
+            Self::Aufgaben(_) | Self::Notizen(_) | Self::Geheimnisse(_) => spalte,
         };
         (feld < self.spaltenzahl()).then_some(feld)
     }
@@ -787,7 +758,7 @@ impl Zeilen {
     pub fn tabellenspalte_des_feldes(&self, feld: usize) -> usize {
         match self {
             Self::Trenntext(_) => feld + NUMMERNSPALTE + 1,
-            Self::Aufgaben(_) | Self::Notizen(_) | Self::Termine(_) | Self::Geheimnisse(_) => feld,
+            Self::Aufgaben(_) | Self::Notizen(_) | Self::Geheimnisse(_) => feld,
         }
     }
 
@@ -795,35 +766,26 @@ impl Zeilen {
     /// der letzten Zeile.
     ///
     /// **Eine der zwei Stellen der Umrechnung** (Modulkopf, „Stelle und
-    /// Zeile"). Aufgaben, Notizen und Geheimnisse stehen in der Reihenfolge
-    /// der Datei, und dort ist es die Gleichheit; eine Terminzeile nennt ihre
-    /// Stelle selbst. Die Geheimnisse gehen trotzdem durch diese Naht und
-    /// nicht an ihr vorbei, damit eine spaetere Ordnung der Tabelle allein
-    /// diese zwei Funktionen beruehrt.
+    /// Zeile"). Jede Art steht in der Reihenfolge der Datei, und die
+    /// Umrechnung ist deshalb fuer jede die Gleichheit. **Der Zweck der
+    /// Funktion ist die Naht und nicht die Rechnung**: jede Zeilennummer von
+    /// AppKit geht durch sie, damit eine spaetere Ordnung einer Tabelle allein
+    /// hier und in [`Self::zeile_der_stelle`] eingehaengt wird und kein
+    /// Uebergang dafuer gesucht werden muss. Bis zum 261111 trennte die
+    /// Termintabelle die zwei Zahlen an dieser Stelle.
     #[must_use]
     pub fn stelle_der_zeile(&self, zeile: usize) -> Option<usize> {
-        match self {
-            Self::Aufgaben(_) | Self::Notizen(_) | Self::Geheimnisse(_) | Self::Trenntext(_) => {
-                (zeile < self.len()).then_some(zeile)
-            }
-            Self::Termine(zeilen) => zeilen.get(zeile).map(|termin| termin.stelle),
-        }
+        (zeile < self.len()).then_some(zeile)
     }
 
     /// Die Zeile, in der AppKit die Stelle `stelle` zeigt; `None`, wenn es sie
     /// nicht gibt.
     ///
-    /// Die Umkehrung von [`Self::stelle_der_zeile`], und fuer Aufgaben,
-    /// Notizen und Geheimnisse ebenso die Gleichheit; fuer Termine die Zeile,
-    /// deren Stelle es ist.
+    /// Die Umkehrung von [`Self::stelle_der_zeile`] und wie sie fuer jede Art
+    /// die Gleichheit; ihr Zweck ist derselbe, die zweite Haelfte der Naht.
     #[must_use]
     pub fn zeile_der_stelle(&self, stelle: usize) -> Option<usize> {
-        match self {
-            Self::Aufgaben(_) | Self::Notizen(_) | Self::Geheimnisse(_) | Self::Trenntext(_) => {
-                (stelle < self.len()).then_some(stelle)
-            }
-            Self::Termine(zeilen) => zeilen.iter().position(|termin| termin.stelle == stelle),
-        }
+        (stelle < self.len()).then_some(stelle)
     }
 }
 
@@ -904,59 +866,6 @@ impl From<Vec<Notizzeile>> for Zeilen {
     }
 }
 
-impl From<Vec<Terminzeile>> for Zeilen {
-    fn from(zeilen: Vec<Terminzeile>) -> Self {
-        Self::Termine(zeilen)
-    }
-}
-
-/// Eine Zeile der Termintabelle, abgeleitet aus einem Block des Standes.
-///
-/// **Sie traegt ihre Stelle**, weil die Termintabelle nach dem Datum ordnet
-/// und die Zeile auf dem Schirm deshalb nicht die Stelle im Stand ist
-/// (Modulkopf, „Stelle und Zeile").
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Terminzeile {
-    /// Die Stelle des Termins im Stand, gezaehlt wie `Neustand::auswahl`.
-    pub stelle: usize,
-    /// Der Datumstext der Kopfzeile, ohne `## ` davor, auch ein ungueltiger.
-    pub datum: String,
-    /// Der Termintext, Zeilen durch `\n` getrennt, wie der Text einer
-    /// [`Notizzeile`].
-    pub text: String,
-    /// Ob der Termin am heutigen Tag liegt, mit oder ohne Uhrzeit; die Zeile
-    /// ist dann hervorgehoben ([`heute_farbe`], Schritt 7 des Plans der
-    /// Termine). Ein Feld der Zeile und nicht eine Frage beim Zeichnen: eine
-    /// geaenderte Hervorhebung ist damit eine geaenderte Zeilenfolge, und
-    /// [`Eintragsansicht::zeilen_zeigen`] laedt neu.
-    pub heute: bool,
-}
-
-/// Die Zeilen der Termintabelle zu einem Stand von `appointments.md`, in der
-/// Folge des Schirms.
-///
-/// **Die eine Stelle der Ableitung fuer Termine**: die Folge ist
-/// `termine::anzeigeordnung` in der genannten Richtung, Datum und Text kommen
-/// ueber `Notizen::notiz` wie in [`notizzeilen`], und jede Zeile nennt ihre
-/// Stelle. `heute` ist der Tag, dessen Termine hervorgehoben sind; die Uhr
-/// liest der Rufer ueber `termine::heute`, damit diese Ableitung ohne Uhr
-/// pruefbar bleibt, und ohne Tag ist keine Zeile hervorgehoben.
-#[must_use = "die Zeilen sind die ganze Auskunft"]
-pub fn terminzeilen(stand: &str, richtung: Richtung, heute: Option<Tag>) -> Vec<Terminzeile> {
-    let notizen = Notizen::lesen(stand);
-    termine::anzeigeordnung(stand, richtung)
-        .into_iter()
-        .filter_map(|stelle| {
-            notizen.notiz(stelle).map(|notiz| Terminzeile {
-                stelle,
-                heute: heute.is_some_and(|tag| termine::ist_heute(notiz.thema, tag)),
-                datum: notiz.thema.to_owned(),
-                text: notiz.text,
-            })
-        })
-        .collect()
-}
-
 /// Eine Zeile der Notiztabelle, abgeleitet aus einem Block des Standes.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Notizzeile {
@@ -986,39 +895,6 @@ pub fn notizzeilen(stand: &str) -> Vec<Notizzeile> {
         .collect()
 }
 
-/// Der Hintergrund einer Zeile der Termintabelle, deren Termin heute liegt
-/// (T6, Entscheidung 4 des Plans
-/// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
-///
-/// **Die eine Stelle der Farbe.** `systemYellowColor` mit dem Deckungsgrad
-/// 0,25: die Systemfarbe liefert AppKit je Erscheinungsbild, und der geringe
-/// Deckungsgrad laesst den Text im hellen wie im dunklen Erscheinungsbild
-/// lesbar. Gelb steht fuer den Textmarker. Die Auswahl zeichnet
-/// `NSTableRowView` ueber den Hintergrund; eine gewaehlte Zeile zeigt also die
-/// Auswahl, und sobald sie weiterwandert, erscheint die Faerbung wieder.
-///
-/// **Verworfen:** `findHighlightColor`, weil sie fuer dunklen Text auf hellem
-/// Grund gemacht ist und im dunklen Erscheinungsbild den weissen Text
-/// schluckt; `unemphasizedSelectedContentBackgroundColor`, weil sie die Farbe
-/// der Auswahl einer Tabelle ohne Fokus ist und genau damit verwechselt
-/// wuerde; `controlAccentColor`, weil sie die Auswahlfarbe ist. Ob Gelb auf
-/// dem Referenzgeraet in beiden Erscheinungsbildern traegt, ist Nutzerabnahme
-/// (T6).
-#[must_use]
-pub fn heute_farbe() -> Retained<NSColor> {
-    NSColor::systemYellowColor().colorWithAlphaComponent(0.25)
-}
-
-/// Der Name des Systembildes, das AppKit als Pfeil einer Sortierrichtung im
-/// Spaltenkopf zeigt.
-#[must_use]
-pub fn richtungsbild(richtung: Richtung) -> &'static NSString {
-    match richtung {
-        Richtung::Aufsteigend => ns_string!("NSAscendingSortIndicator"),
-        Richtung::Absteigend => ns_string!("NSDescendingSortIndicator"),
-    }
-}
-
 /// Was ein Befehl des Feldeditors in einer Zelle bewirkt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Zellenbefehl {
@@ -1040,8 +916,7 @@ pub enum Zellenbefehl {
 /// beide tragen keinen Umbruch, und `return` beendet dort die Zelle. `tab` und
 /// `shift+tab` wechseln in der Notiztabelle von Zelle zu Zelle; in der
 /// Aufgabentabelle gibt es keine zweite Zelle der Zeile, und `tab` beendet wie
-/// bisher. Die Termintabelle folgt der Notiztabelle: die Datumsspalte ist die
-/// Themenspalte, die Terminspalte die Notizspalte. Die Geheimnistabelle ebenso,
+/// bisher. Die Geheimnistabelle folgt der Notiztabelle,
 /// mit fuenf einzeiligen Spalten und den Notizen als der einen mehrzeiligen
 /// ([`mehrzeilige_spalte`]). Die Tabelle einer CSV hat keine mehrzeilige
 /// Spalte: `return` uebernimmt, `opt+return` schreibt den Umbruch ueber die
@@ -1050,10 +925,7 @@ pub enum Zellenbefehl {
 pub fn zellenbefehl(art: Eintragsart, spalte: usize, befehl: Sel) -> Zellenbefehl {
     match art {
         Eintragsart::Aufgaben => Zellenbefehl::Appkit,
-        Eintragsart::Notizen
-        | Eintragsart::Termine
-        | Eintragsart::Geheimnisse
-        | Eintragsart::Trenntext => {
+        Eintragsart::Notizen | Eintragsart::Geheimnisse | Eintragsart::Trenntext => {
             if befehl == sel!(insertNewline:) && mehrzeilige_spalte(art) == Some(spalte) {
                 Zellenbefehl::Umbruch
             } else if befehl == sel!(insertTab:) {
@@ -1503,12 +1375,6 @@ pub struct Zellenwege {
     /// Ein Doppelklick unter die Zeilen: ein Eintrag soll entstehen
     /// ([`doppelklick`]).
     pub anlegen: Box<dyn Fn()>,
-    /// Ein Klick auf den Kopf der Datumsspalte der Termintabelle: die Richtung
-    /// soll sich umkehren (Entscheidung 8 des Plans
-    /// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
-    /// Der Editorbereich reicht ihn als Kommando weiter, damit er denselben
-    /// Weg geht wie die Taste.
-    pub kopf_geklickt: Box<dyn Fn()>,
     /// `cmd+v` in der Tabelle einer CSV ohne laufende Zelle: der Text der
     /// Zwischenablage soll als Zellbereich ab der Auswahl eingesetzt werden
     /// (E12 des Plans der CSV-Tabelle). Der Text kommt allein aus
@@ -1917,13 +1783,6 @@ pub struct EintragsansichtIvars {
     endet: Cell<bool>,
     /// Der Feldeditor der Zellen, siehe [`Zelleneditor`].
     zelleneditor: Retained<Zelleneditor>,
-    /// Die Richtung, die der Pfeil im Kopf der Datumsspalte zeigt.
-    ///
-    /// Keine zweite Wahrheit neben dem Editorbereich, der die Richtung haelt:
-    /// geschrieben allein von [`Eintragsansicht::terminrichtung_zeigen`], und
-    /// gebraucht, weil die Spalten beim Wechsel der Art neu entstehen und ihr
-    /// Pfeil dann neu zu setzen ist.
-    terminrichtung: Cell<Richtung>,
     /// Der zuletzt zerlegte Satz der Tabelle einer CSV, fuer die uebrigen
     /// Zellen seiner Zeile (E9); siehe [`Satzspeicher`].
     satzspeicher: RefCell<Option<Satzspeicher>>,
@@ -2051,64 +1910,19 @@ define_class!(
             spalte.ok().and_then(|spalte| self.zellenansicht(zeile, spalte))
         }
 
-        /// Eine Zeilenansicht ist in die Tabelle gekommen, neu gebaut oder
-        /// wiederverwendet: sie bekommt den Hintergrund des heutigen Tages,
-        /// wenn ihre Zeile einen Termin von heute zeigt, und sonst den der
-        /// Tabelle zurueck (Schritt 7 des Plans der Termine).
+        /// Ein Klick auf einen Spaltenkopf: allein in der Tabelle einer CSV
+        /// tut er etwas.
         ///
-        /// **Zurueckgesetzt wird immer**, weil AppKit Zeilenansichten
-        /// wiederverwendet: eine Ansicht, die eben eine heutige Zeile trug,
-        /// behielte sonst ihre Farbe in einer anderen. Der Hintergrund der
-        /// Tabelle ist der Vorgabewert der Eigenschaft (`NSTableRowView.h`).
-        /// Gelesen an AppKits Zeile, denn die abgeleiteten Zeilen stehen in der
-        /// Folge des Schirms.
-        // SAFETY: Die Signatur entspricht der des Protokolls
-        // (`NSTableView.h:601`).
-        #[unsafe(method(tableView:didAddRowView:forRow:))]
-        fn zeilenansicht_hinzugefuegt(
-            &self,
-            tabelle: &NSTableView,
-            zeilenansicht: &NSTableRowView,
-            zeile: NSInteger,
-        ) {
-            let heute = usize::try_from(zeile)
-                .ok()
-                .is_some_and(|zeile| self.zeigt_heute(zeile));
-            let farbe = if heute {
-                heute_farbe()
-            } else {
-                tabelle.backgroundColor()
-            };
-            zeilenansicht.setBackgroundColor(&farbe);
-        }
-
-        /// Ein Klick auf einen Spaltenkopf (Entscheidung 8 des Plans der
-        /// Termine): allein der Kopf der Datumsspalte der Termintabelle tut
-        /// etwas, und zwar dasselbe wie `cmd+1`.
-        ///
-        /// **Erst der Fokus, dann das Kommando**: der Klick auf den Kopf holt
-        /// den Ersthelfer nicht von selbst, und das Kommando wirkt allein mit
-        /// dem Fokus im Editor. Der Fokus kommt ueber
+        /// **Erst der Fokus**: der Klick auf den Kopf holt den Ersthelfer
+        /// nicht von selbst. Der Fokus kommt ueber
         /// [`Eintragsansicht::fokus_in_die_tabelle`], also ueber
-        /// `makeFirstResponder:` des Fensters; das Kommando geht ueber
-        /// [`Zellenwege::kopf_geklickt`] an den Editorbereich und von dort als
-        /// Kommando an den Anwendungsdelegierten, also durch dieselbe
-        /// Zulaessigkeit wie die Taste.
+        /// `makeFirstResponder:` des Fensters.
         // SAFETY: Die Signatur entspricht der des Protokolls
         // (`NSTableView.h:659`).
         #[unsafe(method(tableView:didClickTableColumn:))]
         fn kopf_geklickt(&self, tabelle: &NSTableView, spalte: &NSTableColumn) {
             let stelle = tabelle.columnWithIdentifier(&spalte.identifier());
             match self.art() {
-                Eintragsart::Termine => {
-                    if usize::try_from(stelle) != Ok(DATUMSSPALTE) {
-                        return;
-                    }
-                    self.fokus_in_die_tabelle();
-                    if let Some(wege) = self.ivars().wege.borrow().as_ref() {
-                        (wege.kopf_geklickt)();
-                    }
-                }
                 // Die Tabelle einer CSV waehlt mit dem Kopf die Spalte, mit
                 // der Umschalttaste bis zu ihr, und mit dem Kopf der
                 // Nummernspalte jede Zelle (E10); auch hier zuerst der Fokus.
@@ -2215,9 +2029,8 @@ impl Eintragsansicht {
         tabelle.setStyle(NSTableViewStyle::FullWidth);
         tabelle.setAllowsEmptySelection(true);
         tabelle.setAllowsMultipleSelection(false);
-        // Ein Klick auf einen Spaltenkopf waehlt keine Spalte; in der
-        // Termintabelle kehrt er die Richtung um (Schritt 8 des Plans der
-        // Termine).
+        // Ein Klick auf einen Spaltenkopf waehlt keine Spalte von AppKit;
+        // die Tabelle einer CSV waehlt ihre Spalte selbst.
         tabelle.setAllowsColumnSelection(false);
         // Die letzte Spalte nimmt jede Aenderung der Breite: in der
         // Aufgabentabelle die einzige, in der Notiztabelle die Notiz, und das
@@ -2261,7 +2074,6 @@ impl Eintragsansicht {
             verwerfen: Cell::new(false),
             endet: Cell::new(false),
             zelleneditor: Zelleneditor::neu(mtm),
-            terminrichtung: Cell::new(Richtung::Aufsteigend),
             mtm,
         });
         // SAFETY: `init` von NSObject hat die hier angenommene Signatur.
@@ -2399,7 +2211,6 @@ impl Eintragsansicht {
                 &ivars.kopfzeile,
                 &ivars.zeilen.borrow(),
             );
-            self.richtungspfeil_setzen();
         } else if let Zeilen::Trenntext(sicht) = &*ivars.zeilen.borrow() {
             // Dieselbe Art, ein neuer Stand: die Spalten der Datei koennen
             // dazugekommen oder fortgefallen sein, und der Kopf zeigt den Text
@@ -2427,27 +2238,14 @@ impl Eintragsansicht {
             return;
         }
         // Die Regel rechnet eine Auswahl davor als Stelle weiter; ohne eine
-        // meint sie die erste Zeile des Schirms, und die zeigt in der
-        // Termintabelle nicht die Stelle 0.
+        // meint sie die erste Zeile des Schirms, und die geht durch die Naht
+        // aus Stelle und Zeile wie jede Zeilennummer.
         let auswahl = match vorher {
             Some(_) => auswahl_nach_neuladen(vorher, laenge),
             None => auswahl_nach_neuladen(None, laenge)
                 .and_then(|zeile| self.ivars().zeilen.borrow().stelle_der_zeile(zeile)),
         };
         self.auswahl_setzen(auswahl);
-    }
-
-    /// Ob AppKits Zeile `zeile` einen Termin von heute zeigt; ausserhalb der
-    /// Termintabelle nie.
-    #[must_use]
-    fn zeigt_heute(&self, zeile: usize) -> bool {
-        match &*self.ivars().zeilen.borrow() {
-            Zeilen::Termine(zeilen) => zeilen.get(zeile).is_some_and(|termin| termin.heute),
-            Zeilen::Aufgaben(_)
-            | Zeilen::Notizen(_)
-            | Zeilen::Geheimnisse(_)
-            | Zeilen::Trenntext(_) => false,
-        }
     }
 
     /// Das Mass der Tabelle einer CSV; `None` in jeder anderen Art.
@@ -2458,10 +2256,7 @@ impl Eintragsansicht {
                 zeilen: sicht.index().zeilenzahl(),
                 spalten: sicht.index().spaltenzahl(),
             }),
-            Zeilen::Aufgaben(_)
-            | Zeilen::Notizen(_)
-            | Zeilen::Termine(_)
-            | Zeilen::Geheimnisse(_) => None,
+            Zeilen::Aufgaben(_) | Zeilen::Notizen(_) | Zeilen::Geheimnisse(_) => None,
         }
     }
 
@@ -2720,30 +2515,6 @@ impl Eintragsansicht {
         self.ivars().zeilen.borrow().art()
     }
 
-    /// Zeigt die Richtung der Termintabelle als Pfeil im Kopf der
-    /// Datumsspalte (Schritt 8 des Plans der Termine).
-    ///
-    /// Gerufen vom Editorbereich vor jedem Nachzug der Termintabelle; der Pfeil
-    /// steht damit auch dann richtig, wenn die Zeilen gleich bleiben und
-    /// [`Self::zeilen_zeigen`] nicht neu laedt. Ohne Datumsspalte, also in jeder
-    /// anderen Art, wird er gemerkt und beim naechsten Einrichten der Spalten
-    /// gesetzt.
-    pub fn terminrichtung_zeigen(&self, richtung: Richtung) {
-        self.ivars().terminrichtung.set(richtung);
-        self.richtungspfeil_setzen();
-    }
-
-    /// Setzt den Pfeil der gemerkten Richtung in den Kopf der Datumsspalte,
-    /// falls die Tabelle eine traegt.
-    fn richtungspfeil_setzen(&self) {
-        let tabelle = &self.ivars().tabelle;
-        let Some(spalte) = tabelle.tableColumnWithIdentifier(ns_string!("datum")) else {
-            return;
-        };
-        let bild = NSImage::imageNamed(richtungsbild(self.ivars().terminrichtung.get()));
-        tabelle.setIndicatorImage_inTableColumn(bild.as_deref(), &spalte);
-    }
-
     /// Verwirft eine offene Zelle, unter der sich der Stand von aussen
     /// geaendert hat; siehe [`Self::zeilen_zeigen`].
     fn fremde_zelle_verwerfen(&self) {
@@ -2859,7 +2630,7 @@ impl Eintragsansicht {
     /// traegt: kopiert wird, was der Nutzer woanders einsetzen will, und bei
     /// einer Notiz ist das der Inhalt und nicht die Ueberschrift.
     ///
-    /// Von einem Termin ebenso sein Text, und das Datum nur ohne Text. Von
+    /// Von
     /// einem Geheimnis seine Notizen, und der Name nur ohne Notizen: dieselbe
     /// Regel wie bei der Notiz, deren Form es traegt.
     #[must_use]
@@ -2886,9 +2657,6 @@ impl Eintragsansicht {
             Zeilen::Notizen(zeilen) => zeilen
                 .get(zeile)
                 .map(|notiz| text_oder(&notiz.text, &notiz.thema)),
-            Zeilen::Termine(zeilen) => zeilen
-                .get(zeile)
-                .map(|termin| text_oder(&termin.text, &termin.datum)),
             Zeilen::Geheimnisse(zeilen) => zeilen.get(zeile).map(|geheimnis| {
                 text_oder(geheimnis.feld(Feld::Notizen), geheimnis.feld(Feld::Name))
             }),
@@ -2989,10 +2757,7 @@ impl Eintragsansicht {
     fn trenntextfeld_oeffnen(&self, zelle: Zelle, zeile: NSInteger, spalte: NSInteger) {
         let wert = match &*self.ivars().zeilen.borrow() {
             Zeilen::Trenntext(sicht) => sicht.wert(zelle.stelle, zelle.spalte),
-            Zeilen::Aufgaben(_)
-            | Zeilen::Notizen(_)
-            | Zeilen::Termine(_)
-            | Zeilen::Geheimnisse(_) => {
+            Zeilen::Aufgaben(_) | Zeilen::Notizen(_) | Zeilen::Geheimnisse(_) => {
                 return;
             }
         };
@@ -3163,13 +2928,6 @@ impl Eintragsansicht {
                     notiz.thema.clone()
                 }
             }),
-            Zeilen::Termine(zeilen) => zeilen.get(zeile).map(|termin| {
-                if zelle.spalte == TERMINSPALTE {
-                    termin.text.clone()
-                } else {
-                    termin.datum.clone()
-                }
-            }),
             Zeilen::Geheimnisse(zeilen) => zeilen
                 .get(zeile)
                 .map(|geheimnis| geheimnis.wert(zelle.spalte).to_owned()),
@@ -3279,16 +3037,6 @@ impl Eintragsansicht {
                     &notiz.thema
                 };
                 Some(self.notizzelle(inhalt, spalte, Eintragsart::Notizen))
-            }
-            // Datum und Termin in denselben zwei Zellen wie Thema und Notiz.
-            Zeilen::Termine(zeilen) => {
-                let termin = zeilen.get(zeile)?;
-                let inhalt = if spalte == TERMINSPALTE {
-                    &termin.text
-                } else {
-                    &termin.datum
-                };
-                Some(self.notizzelle(inhalt, spalte, Eintragsart::Termine))
             }
             // Sechs Zellen derselben Bauart: fuenf einzeilige wie das Thema,
             // die Notizen mehrzeilig wie die Notiz.
@@ -3417,8 +3165,7 @@ impl Eintragsansicht {
     /// „hoechstens" an der Zelle, damit eine hohe Notiz daneben die Zeile
     /// strecken darf, ohne dass die zwei Bindungen einander widersprechen.
     ///
-    /// Die Termintabelle baut ihre Zellen hier ebenso, mit dem Datum als
-    /// Thema und dem Termintext als Notiz, und die Geheimnistabelle alle sechs.
+    /// Die Geheimnistabelle baut ihre sechs Zellen hier ebenso.
     /// Mehrzeilig ist allein die Spalte, die [`mehrzeilige_spalte`] der Art
     /// nennt; `inhalt` ist der Text der Zelle.
     fn notizzelle(&self, inhalt: &str, spalte: usize, art: Eintragsart) -> Retained<NSView> {
@@ -3584,8 +3331,7 @@ fn geheimnisspalte(feld: Feld) -> (&'static NSString, Text, f64) {
 /// [`Eintragsansicht::zeilen_zeigen`], und sonst nie**: die Spalten sind eine
 /// Eigenschaft der Art und nicht des Standes. Die Aufgabentabelle traegt eine
 /// Spalte in fester Zeilenhoehe und keine Kopfzeile, die Notiztabelle Thema und
-/// Notiz mit Kopfzeile und automatischer Zeilenhoehe, die Termintabelle Datum
-/// und Termin ebenso.
+/// Notiz mit Kopfzeile und automatischer Zeilenhoehe.
 ///
 /// **Die Tabelle einer CSV** traegt die Nummernspalte und so viele Spalten,
 /// wie die Datei Felder hat, eine Kopfzeile, eine feste Zeilenhoehe und als
@@ -3650,24 +3396,6 @@ fn spalten_einrichten(
             tabelle.setUsesAutomaticRowHeights(true);
             tabelle.setHeaderView(Some(kopfzeile));
         }
-        // Dieselben zwei Spalten wie die Notiztabelle, unter ihren eigenen
-        // Namen und mit einer schmaleren ersten.
-        Eintragsart::Termine => {
-            let datum = spalte_bauen(ns_string!("datum"), Text::EintragsspalteDatum);
-            datum.setResizingMask(NSTableColumnResizingOptions::UserResizingMask);
-            datum.setWidth(DATUMSBREITE);
-            datum.setMinWidth(DATUMSBREITE / 2.0);
-            tabelle.addTableColumn(&datum);
-            let termin = spalte_bauen(ns_string!("termin"), Text::EintragsspalteTermin);
-            termin.setResizingMask(
-                NSTableColumnResizingOptions::AutoresizingMask
-                    | NSTableColumnResizingOptions::UserResizingMask,
-            );
-            termin.setMinWidth(THEMENBREITE / 2.0);
-            tabelle.addTableColumn(&termin);
-            tabelle.setUsesAutomaticRowHeights(true);
-            tabelle.setHeaderView(Some(kopfzeile));
-        }
         // Sechs Spalten in der Folge von `Feld::ALLE` (Entscheidung 18 des
         // Plans); die Notizen nehmen den Rest der Breite wie die Notizspalte.
         Eintragsart::Geheimnisse => {
@@ -3721,10 +3449,9 @@ fn trenntextfeld_schalten(feld: &NSTextField, bearbeitbar: bool) {
 pub fn hervorhebung(art: Eintragsart) -> NSTableViewSelectionHighlightStyle {
     match art {
         Eintragsart::Trenntext => NSTableViewSelectionHighlightStyle::None,
-        Eintragsart::Aufgaben
-        | Eintragsart::Notizen
-        | Eintragsart::Termine
-        | Eintragsart::Geheimnisse => NSTableViewSelectionHighlightStyle::Regular,
+        Eintragsart::Aufgaben | Eintragsart::Notizen | Eintragsart::Geheimnisse => {
+            NSTableViewSelectionHighlightStyle::Regular
+        }
     }
 }
 
@@ -3800,10 +3527,7 @@ pub fn tabellentaste(druck: Tastendruck) -> Option<Tabellentaste> {
 pub fn rollt_waagerecht(art: Eintragsart) -> bool {
     match art {
         Eintragsart::Trenntext => true,
-        Eintragsart::Aufgaben
-        | Eintragsart::Notizen
-        | Eintragsart::Termine
-        | Eintragsart::Geheimnisse => false,
+        Eintragsart::Aufgaben | Eintragsart::Notizen | Eintragsart::Geheimnisse => false,
     }
 }
 
@@ -3937,14 +3661,16 @@ mod tests {
     }
 
     /// Die zwei Umrechnungen zwischen Stelle und Zeile (Modulkopf, „Stelle
-    /// und Zeile"): fuer Aufgaben und Notizen die Gleichheit, jenseits der
-    /// Laenge `None` in beiden Richtungen, und in der leeren Tabelle immer
-    /// `None`.
+    /// und Zeile"): fuer Aufgaben, Notizen und Geheimnisse die Gleichheit,
+    /// jenseits der Laenge `None` in beiden Richtungen, und in der leeren
+    /// Tabelle immer `None`. Die Probe an einer umgeordneten Tabelle ist am
+    /// 261111 mit der Termintabelle gefallen.
     #[test]
-    fn stelle_und_zeile_sind_fuer_aufgaben_und_notizen_dieselbe_zahl() {
+    fn stelle_und_zeile_sind_in_den_tabellen_des_notizordners_dieselbe_zahl() {
         let aufgaben = Zeilen::from(aufgabenzeilen("- [ ] a\n- [x] b\n- [ ] c\n"));
         let notizen = Zeilen::from(notizzeilen("Vorspann\n## a\n## b\n"));
-        for zeilen in [&aufgaben, &notizen] {
+        let geheimnisse = Zeilen::from(geheimniszeilen("## a\n## b\n"));
+        for zeilen in [&aufgaben, &notizen, &geheimnisse] {
             for zahl in 0..zeilen.len() {
                 assert_eq!(zeilen.stelle_der_zeile(zahl), Some(zahl), "{zeilen:?}");
                 assert_eq!(zeilen.zeile_der_stelle(zahl), Some(zahl), "{zeilen:?}");
@@ -3981,70 +3707,6 @@ mod tests {
         assert!(aufgabenzeilen("").is_empty());
         assert!(aufgabenzeilen("nur Vorspann\n").is_empty());
     }
-    /// Termine in umgekehrter Dateireihenfolge: die Zeilen stehen nach dem
-    /// Datum, jede traegt ihre Stelle, und die zwei Umrechnungen trennen
-    /// Zeile und Stelle; `tab` wechselt in der Folge des Schirms.
-    #[test]
-    fn die_termintabelle_trennt_zeile_und_stelle() {
-        let stand = "Vorspann\n## 261003\ndrei\n## 261002 09:30\nzwei\n## 261001\neins\n";
-        let zeilen = Zeilen::from(terminzeilen(stand, Richtung::Aufsteigend, None));
-        assert_eq!(zeilen.art(), Eintragsart::Termine);
-        let Zeilen::Termine(termine) = &zeilen else {
-            unreachable!("die Art ist eben geprueft")
-        };
-        assert_eq!(
-            termine
-                .iter()
-                .map(|t| (t.stelle, t.datum.as_str(), t.text.as_str()))
-                .collect::<Vec<_>>(),
-            vec![
-                (2, "261001", "eins"),
-                (1, "261002 09:30", "zwei"),
-                (0, "261003", "drei"),
-            ]
-        );
-        for (zeile, stelle) in [(0, 2), (1, 1), (2, 0)] {
-            assert_eq!(zeilen.stelle_der_zeile(zeile), Some(stelle));
-            assert_eq!(zeilen.zeile_der_stelle(stelle), Some(zeile));
-        }
-        assert_eq!(zeilen.stelle_der_zeile(3), None);
-        assert_eq!(zeilen.zeile_der_stelle(3), None);
-
-        let absteigend = Zeilen::from(terminzeilen(stand, Richtung::Absteigend, None));
-        assert_eq!(
-            absteigend.stelle_der_zeile(0),
-            Some(0),
-            "der spaeteste oben"
-        );
-
-        let zelle = |stelle, spalte| Zelle { stelle, spalte };
-        assert_eq!(
-            naechste_zelle(zelle(2, TERMINSPALTE), true, &zeilen),
-            Some(zelle(1, DATUMSSPALTE)),
-            "tab fuehrt in die naechste Zeile des Schirms und nicht an die naechste Stelle"
-        );
-        assert_eq!(naechste_zelle(zelle(0, TERMINSPALTE), true, &zeilen), None);
-        assert_eq!(
-            naechste_zelle(zelle(1, DATUMSSPALTE), false, &zeilen),
-            Some(zelle(2, TERMINSPALTE))
-        );
-        assert_eq!(naechste_zelle(zelle(2, DATUMSSPALTE), false, &zeilen), None);
-        assert_eq!(
-            zellenbefehl(Eintragsart::Termine, TERMINSPALTE, sel!(insertNewline:)),
-            Zellenbefehl::Umbruch,
-            "return schreibt im Termin einen Umbruch"
-        );
-        assert_eq!(
-            zellenbefehl(Eintragsart::Termine, DATUMSSPALTE, sel!(insertNewline:)),
-            Zellenbefehl::Appkit,
-            "return beendet die Datumszelle"
-        );
-        assert_eq!(
-            zellenbefehl(Eintragsart::Termine, DATUMSSPALTE, sel!(insertTab:)),
-            Zellenbefehl::Weiter(true)
-        );
-    }
-
     /// Jede Zeilennummer, die AppKit meldet — `rowForView:`, `selectedRow`,
     /// `clickedRow` —, geht im Code dieser Datei ueber `stelle_an`, und jede,
     /// die zu AppKit hinausgeht — `selectRowIndexes:`, `editColumn:row:` —,
@@ -4098,87 +3760,6 @@ mod tests {
         assert!(rumpf(&quelle, "zelle_beginnen").contains(concat!("self.ziel_der_", "zelle(")));
         assert!(rumpf(&quelle, "ziel_der_zelle").contains(concat!("self.zeile_", "von(")));
     }
-    /// T6.1 in der Oberflaechenhaelfte: mit festem Tag tragen genau die zwei
-    /// Termine dieses Tages, mit und ohne Uhrzeit, die Hervorhebung; der
-    /// Vortag, der Folgetag und ein ungueltiges Datum nicht, und ohne Tag
-    /// keiner.
-    #[test]
-    fn genau_die_termine_des_tages_sind_hervorgehoben() {
-        let stand = concat!(
-            "## 261003\nFolgetag\n",
-            "## 261002 09:30\nmit Uhrzeit\n",
-            "## 261001\nVortag\n",
-            "## xyz\nungueltig\n",
-            "## 261002\nohne Uhrzeit\n",
-        );
-        let heute = Tag::neu(2026, 10, 2).expect("ein Tag im Kalender");
-        let hervorgehoben: Vec<(usize, bool)> =
-            terminzeilen(stand, Richtung::Aufsteigend, Some(heute))
-                .into_iter()
-                .map(|termin| (termin.stelle, termin.heute))
-                .collect();
-        assert_eq!(
-            hervorgehoben,
-            vec![(2, false), (4, true), (1, true), (0, false), (3, false)]
-        );
-        assert!(
-            terminzeilen(stand, Richtung::Aufsteigend, None)
-                .iter()
-                .all(|termin| !termin.heute),
-            "ohne Tag ist keine Zeile hervorgehoben"
-        );
-    }
-
-    /// T6.3: die Farbe des heutigen Tages steht an einer Stelle, ist die
-    /// Systemfarbe Gelb und kein fest gebauter Farbwert, und sie ist weder die
-    /// Farbe der Auswahl noch die der Auswahl ohne Fokus. Dazu setzt der
-    /// Delegierte sie je Zeile und setzt sonst zurueck.
-    #[test]
-    fn die_farbe_des_heutigen_tages_ist_die_systemfarbe_gelb_und_keine_auswahlfarbe() {
-        use super::super::anwendung::quelltextproben::{datei, rumpf};
-        let quelle = datei("krk-ui/src/appkit/eintragsansicht.rs");
-        let farbe = rumpf(&quelle, "heute_farbe");
-        assert!(farbe.contains(concat!("systemYellow", "Color()")));
-        for nadel in [
-            concat!("colorWith", "Red"),
-            concat!("colorWith", "SRGB"),
-            concat!("colorWith", "Calibrated"),
-            concat!("colorWith", "DeviceRed"),
-        ] {
-            assert!(
-                !farbe.contains(nadel),
-                "heute_farbe baut eine feste Farbe: {nadel}"
-            );
-        }
-        let (code, _) = quelle
-            .split_once(concat!("#[cfg(test)]\nmod ", "tests {"))
-            .expect("das Pruefmodul steht am Fuss der Datei");
-        assert_eq!(
-            code.lines()
-                .filter(|zeile| !zeile.trim_start().starts_with("//"))
-                .filter(|zeile| zeile.contains(concat!("systemYellow", "Color(")))
-                .count(),
-            1,
-            "die Farbe steht an einer Stelle"
-        );
-        let hinzugefuegt = rumpf(&quelle, "zeilenansicht_hinzugefuegt");
-        for nadel in [
-            concat!("heute_", "farbe()"),
-            concat!("tabelle.background", "Color()"),
-            concat!("setBackground", "Color("),
-        ] {
-            assert!(
-                hinzugefuegt.contains(nadel),
-                "die Zeilenansicht setzt {nadel} nicht"
-            );
-        }
-
-        let heute = heute_farbe();
-        let heute: &AnyObject = &heute;
-        assert!(!NSColor::selectedContentBackgroundColor().isEqual(Some(heute)));
-        assert!(!NSColor::unemphasizedSelectedContentBackgroundColor().isEqual(Some(heute)));
-    }
-
     /// Die Rechteckauswahl der Tabelle einer CSV ist nach jeder Folge aus
     /// Klick, Umschaltklick, Pfeil, Umschaltpfeil, Zeile, Spalte, Ziehen und
     /// Beschneiden ein Rechteck in der Tabelle mit mindestens einer Zelle

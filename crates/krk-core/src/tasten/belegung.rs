@@ -311,11 +311,11 @@ static AUSLIEFERUNG: LazyLock<Belegung> = LazyLock::new(|| {
 /// in derselben Regel, die den Fokus fragt, und die Ausgrauung des Menues folgt
 /// daraus ohne eigenen Weg. Ein vierter, [`Wirkungsbereich::Geheimnisse`],
 /// kommt mit Schritt 5.5 fuer „PIN ändern" und fragt statt der Form, ob der
-/// Editor `secrets.txt` mit einem Kopf auf der Platte haelt. Seit dem 260926
-/// traegt das Verschieben [`Wirkungsbereich::Reihenfolge`], weil die
-/// Termintabelle nach dem Datum ordnet und es dort nicht annimmt, und das
-/// Umkehren ihrer Richtung [`Wirkungsbereich::Termine`], weil es allein in ihr
-/// etwas bedeutet. Seit dem 260927 tragen das Kopieren und das Leeren der
+/// Editor `secrets.txt` mit einem Kopf auf der Platte haelt. Vom 260926 bis
+/// zum 261111 trug das Verschieben einen eigenen Wert und das Umkehren der
+/// Richtung der Termintabelle einen weiteren; beide sind mit der
+/// Termintabelle gefallen, und das Verschieben traegt wieder
+/// [`Wirkungsbereich::Eintraege`]. Seit dem 260927 tragen das Kopieren und das Leeren der
 /// Quicknote [`Wirkungsbereich::Quicknote`], weil sie allein an deren Puffer
 /// wirken und der Editor ihn nur in dieser Form zeigt.
 ///
@@ -380,10 +380,10 @@ pub enum Wirkungsbereich {
     /// Eintragstabelle zeigt (C6 des Spec
     /// `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
     ///
-    /// Der Wert der zwei Befehle, die Eintraege bearbeiten und loeschen. Die
-    /// Form fragt, wie bei [`Wirkungsbereich::Editortext`], `krk_ui`. Das
-    /// Verschieben traegt seit dem 260926 [`Wirkungsbereich::Reihenfolge`],
-    /// das Anlegen seit dem 261005 [`Wirkungsbereich::Eintragsdatei`].
+    /// Der Wert der Befehle, die Eintraege bearbeiten, loeschen und nach oben
+    /// oder unten verschieben. Die Form fragt, wie bei
+    /// [`Wirkungsbereich::Editortext`], `krk_ui`. Das Anlegen traegt seit dem
+    /// 261005 [`Wirkungsbereich::Eintragsdatei`].
     Eintraege,
     /// Wirkt nur, wenn der Fokus im Editor steht und der Editor eine
     /// Eintragsdatei des Notizordners haelt, gleich ob er sie als Tabelle
@@ -405,35 +405,11 @@ pub enum Wirkungsbereich {
     /// einblenden“ zugleich gehoeren; vor einer Eintragsdatei geht der engere
     /// vor.
     Eintragsdatei,
-    /// Wirkt nur, wenn der Fokus im Editor steht und der Editor eine
-    /// Eintragstabelle **in Dateireihenfolge** zeigt.
-    ///
-    /// Der Wert der zwei Befehle, die einen Eintrag nach oben oder unten
-    /// verschieben. Eine Tabelle, die ihre Zeilen nach etwas anderem ordnet als
-    /// der Datei, nimmt sie nicht an: die Termintabelle ordnet nach dem Datum,
-    /// und dort hiesse „nach oben" nichts, was der Nutzer sieht (Entscheidung 2
-    /// des Plans `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
-    /// Ein eigener Wert und keine Frage nach dem Kommando, weil die
-    /// Zulaessigkeit in `krk_ui` allein den Wirkungsbereich und die Form fragt;
-    /// der Menueeintrag ist dort damit ausgegraut. Die Form fragt, wie bei
-    /// [`Wirkungsbereich::Eintraege`], `krk_ui`.
-    Reihenfolge,
     /// Wirkt nur, wenn der Fokus im Editor steht und der Editor die
     /// Aufgabentabelle zeigt (C6).
     ///
     /// Der Wert allein des Abhakens: eine Notiz hat kein Kaestchen.
     Aufgaben,
-    /// Wirkt nur, wenn der Fokus im Editor steht und der Editor die
-    /// Termintabelle zeigt (Schritt 8 des Plans
-    /// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
-    ///
-    /// Der Wert allein von „Termine: Sortierrichtung umkehren": eine andere
-    /// Tabelle ordnet nicht nach dem Datum und hat keine Richtung, die sich
-    /// umkehren liesse. Die Form fragt, wie bei [`Wirkungsbereich::Eintraege`],
-    /// `krk_ui`. Er steht auf der Seite des Editors und teilt sich deshalb
-    /// `cmd+1` mit dem Sortieren nach Name im Dateifenster (Entscheid
-    /// `260926-2308_*_duerfen-zwei-funktionen-desselben-zustellers-eine-kombination-tragen-wenn-ihre-wirkungsbereiche-einander-ausschliessen.md`).
-    Termine,
     /// Wirkt nur, wenn der Fokus im Editor steht und der Editor
     /// `secrets.txt` entsperrt haelt, deren PIN schon in einem Kopf auf der
     /// Platte steht (C7 des Spec, Schritt 5.5 der krkhome-Arbeit).
@@ -610,9 +586,9 @@ impl Wirkungsbereich {
             Wirkungsbereich::Editortext => text(Text::WirkungsbereichEditortext),
             Wirkungsbereich::Eintraege => text(Text::WirkungsbereichEintraege),
             Wirkungsbereich::Eintragsdatei => text(Text::WirkungsbereichEintragsdatei),
-            Wirkungsbereich::Reihenfolge => text(Text::WirkungsbereichReihenfolge),
+
             Wirkungsbereich::Aufgaben => text(Text::WirkungsbereichAufgaben),
-            Wirkungsbereich::Termine => text(Text::WirkungsbereichTermine),
+
             Wirkungsbereich::Geheimnisse => text(Text::WirkungsbereichGeheimnisse),
             Wirkungsbereich::Quicknote => text(Text::WirkungsbereichQuicknote),
             Wirkungsbereich::Tabbereich => text(Text::WirkungsbereichTabbereich),
@@ -641,9 +617,7 @@ impl Wirkungsbereich {
             | Wirkungsbereich::Editortext
             | Wirkungsbereich::Eintraege
             | Wirkungsbereich::Eintragsdatei
-            | Wirkungsbereich::Reihenfolge
             | Wirkungsbereich::Aufgaben
-            | Wirkungsbereich::Termine
             | Wirkungsbereich::Geheimnisse
             | Wirkungsbereich::Quicknote
             | Wirkungsbereich::Trenntext
@@ -708,9 +682,7 @@ impl Wirkungsbereich {
             | Wirkungsbereich::Editor
             | Wirkungsbereich::Editortext
             | Wirkungsbereich::Eintraege
-            | Wirkungsbereich::Reihenfolge
             | Wirkungsbereich::Aufgaben
-            | Wirkungsbereich::Termine
             | Wirkungsbereich::Geheimnisse
             | Wirkungsbereich::Quicknote
             | Wirkungsbereich::Tabbereich
@@ -1279,17 +1251,6 @@ pub enum Kommando {
     /// im Editor und nur, solange der Editor `secrets.txt` haelt und ihre
     /// PIN schon in einem Kopf auf der Platte steht.
     PinAendern,
-    /// Die Richtung der Termintabelle umkehren: aufsteigend nach dem Datum
-    /// oder absteigend (T5 des Spec
-    /// `260926-2253_*_spec-termine-als-weitere-datei-im-heimordner.md`).
-    ///
-    /// Traegt [`Wirkungsbereich::Termine`] und ist ausgeliefert auf `cmd+1`,
-    /// derselben Kombination wie das Sortieren nach Name: die beiden Bereiche
-    /// schliessen einander aus, und welche der zwei Funktionen ein Anschlag
-    /// meint, entscheidet die Lage. Die Richtung ist eine Angabe der Anzeige;
-    /// die Datei aendert der Befehl nicht, und die Sitzung merkt sich die
-    /// Richtung.
-    TermineRichtungUmkehren,
     /// Die Belegungsansicht zeigen: jede Funktion mit ihren Kombinationen,
     /// aenderbar und zuruecksetzbar (C3).
     BelegungAnsehen,
@@ -1477,7 +1438,7 @@ const _: () = assert!(Kommando::KENNUNGEN.len() <= u16::MAX as usize);
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 112] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 111] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -1608,10 +1569,6 @@ impl Kommando {
         ),
         (Kommando::AufgabeAbhaken, "aufgabe_abhaken"),
         (Kommando::PinAendern, "pin_aendern"),
-        (
-            Kommando::TermineRichtungUmkehren,
-            "termine_richtung_umkehren",
-        ),
         (Kommando::BelegungAnsehen, "belegung_ansehen"),
         (Kommando::BelegungsdateiAnsehen, "belegungsdatei_ansehen"),
         (Kommando::Beenden, "beenden"),
@@ -1901,14 +1858,14 @@ impl Kommando {
             // der Rohansicht (Nutzerauftrag vom 261005).
             Kommando::EintragHinzufuegen => Wirkungsbereich::Eintragsdatei,
             // Die Befehle der Eintragstabelle (C6 der krkhome-Arbeit). Diese
-            // zwei wirken in jeder Tabellenform; das Abhaken allein in der
-            // Aufgabentabelle, denn eine Notiz hat kein Kaestchen.
-            Kommando::EintragBearbeiten | Kommando::EintragLoeschen => Wirkungsbereich::Eintraege,
-            // Das Verschieben wirkt allein in einer Tabelle, die in der
-            // Reihenfolge der Datei steht; die Termintabelle ordnet nach dem
-            // Datum (Entscheidung 2 des Plans
-            // `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
-            Kommando::EintragHoch | Kommando::EintragRunter => Wirkungsbereich::Reihenfolge,
+            // vier wirken in jeder Tabellenform; das Abhaken allein in der
+            // Aufgabentabelle, denn eine Notiz hat kein Kaestchen. Das
+            // Verschieben trug vom 260926 bis zum 261111 einen eigenen Wert,
+            // der allein die Termintabelle ausnahm, und ist mit ihr gefallen.
+            Kommando::EintragBearbeiten
+            | Kommando::EintragLoeschen
+            | Kommando::EintragHoch
+            | Kommando::EintragRunter => Wirkungsbereich::Eintraege,
             Kommando::AufgabeAbhaken => Wirkungsbereich::Aufgaben,
             // Die Befehle allein der Tabelle einer CSV (E14 des Plans der
             // CSV-Tabelle); das Trennzeichen wechselt allein eine `.csv`.
@@ -1921,9 +1878,6 @@ impl Kommando {
             // entsperrten `secrets.txt`, deren PIN schon in einem Kopf steht;
             // ob das so ist, fragt `krk_ui`.
             Kommando::PinAendern => Wirkungsbereich::Geheimnisse,
-            // Allein in der Termintabelle, die nach dem Datum ordnet (Schritt 8
-            // des Plans der Termine).
-            Kommando::TermineRichtungUmkehren => Wirkungsbereich::Termine,
             // Allein am Puffer der offenen Quicknote (Q2 des Spec der
             // Quicknote); ob sie offen ist, fragt `krk_ui` ueber die Form.
             Kommando::QuicknoteKopieren
@@ -2208,7 +2162,6 @@ impl Kommando {
             | Kommando::TrenntextTrennzeichenWechseln
             | Kommando::AufgabeAbhaken
             | Kommando::PinAendern
-            | Kommando::TermineRichtungUmkehren
             | Kommando::BelegungAnsehen
             | Kommando::BelegungsdateiAnsehen
             | Kommando::Beenden
@@ -2740,7 +2693,10 @@ impl Belegung {
     /// [`Belegungsfehler::UnbekannteFunktion`] und dem Rueckfall auf die
     /// Auslieferung, die Auslieferung selbst mit dem Abbruch beim ersten
     /// Zugriff auf [`AUSLIEFERUNG`], denn eine Funktion ohne Schluessel haette
-    /// in keiner Sprache einen Namen.
+    /// in keiner Sprache einen Namen. **Die eine Ausnahme der Nutzerdatei ist
+    /// eine Kennung aus [`ZURUECKGEZOGENE_KENNUNGEN`]**: ihr Eintrag wird
+    /// uebergangen, ohne Meldung, und die uebrigen Eintraege gelten. Die
+    /// Auslieferung duldet nichts.
     #[allow(clippy::result_large_err)]
     fn bauen(
         datei: &Belegungsdatei,
@@ -2759,6 +2715,14 @@ impl Belegung {
             let bekannt = match wortschatz {
                 Some(wortschatz) => match wortschatz.funktion(&eintrag.id) {
                     Some(bekannt) => Some(bekannt),
+                    // Eine geduldete zurueckgezogene Kennung: der Eintrag
+                    // faellt aus der gebauten Belegung, und weil
+                    // `Belegung::sichern` allein die gebauten Funktionen
+                    // schreibt, steht er nach dem naechsten Sichern auch
+                    // nicht mehr in der Datei.
+                    None if ZURUECKGEZOGENE_KENNUNGEN.contains(&eintrag.id.as_str()) => {
+                        continue;
+                    }
                     None => {
                         return Err(Belegungsfehler::UnbekannteFunktion(eintrag.id.clone()));
                     }
@@ -2826,6 +2790,36 @@ impl Belegung {
         }
     }
 }
+
+/// Die Kennungen zurueckgezogener Funktionen, die eine eigene `keymap.toml`
+/// weiter nennen darf.
+///
+/// **Die Regel:** [`Belegung::bauen`] uebergeht beim Bau einer Belegung des
+/// Nutzers einen Eintrag, dessen Kennung hier steht, ohne Meldung; die Datei
+/// laedt, jede andere Zuweisung des Nutzers gilt, und das naechste Sichern
+/// schreibt die Kennung nicht zurueck (Kriterium C3.10 des Spec
+/// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`). Die
+/// Liste ist keine zweite Belegung: sie fuehrt Namen, die KRK nicht mehr
+/// kennt, und keine Tasten. Die Auslieferungsbelegung selbst duldet nichts,
+/// und jede unbekannte Kennung, die hier nicht steht, wird weiter mit
+/// [`Belegungsfehler::UnbekannteFunktion`] abgewiesen, damit ein Tippfehler
+/// in einer von Hand gepflegten Datei auffaellt.
+///
+/// **Der Unterschied zu `endgueltig_loeschen`:** jene Kennung ist am 260817
+/// zurueckgezogen worden, und der Nutzer hat damals gewaehlt, dass eine
+/// `keymap.toml`, die sie fuehrt, als Ganzes verworfen wird
+/// (`260817-0536_*_was-geschieht-mit-einer-gespeicherten-keymap-die-die-entfallene-funktion-fuehrt.md`).
+/// Sie steht deshalb **nicht** hier, und die Probe
+/// `eine_keymap_mit_der_zurueckgezogenen_kennung_wird_als_ganzes_verworfen`
+/// (`crates/krk-core/tests/belegung.rs`) haelt das. Ob die Liste die Regel
+/// fuer jede kuenftig zurueckgezogene Kennung ist und ob jene rueckwirkend
+/// hineinkommt, ist eine offene Nutzerfrage:
+/// `261111-0852-gilt-die-duldung-einer-zurueckgezogenen-kennung-in-der-eigenen-keymap-fuer-jede-kuenftige-und-rueckwirkend.md`.
+/// Der eine Eintrag ist jeder ihrer Antworten gemeinsam.
+///
+/// `termine_richtung_umkehren` war bis zum 261111 „Termine: Sortierrichtung
+/// umkehren“ auf `cmd+1` und ist mit der Termintabelle gefallen.
+pub const ZURUECKGEZOGENE_KENNUNGEN: [&str; 1] = ["termine_richtung_umkehren"];
 
 /// Die eine Fassung der Konfliktregel: der Traeger, an dem `bewerber` auf
 /// dieser Kombination scheitert, oder `None`, wenn er sie mittragen darf.

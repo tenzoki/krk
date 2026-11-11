@@ -2899,7 +2899,7 @@ impl DateifensterQuelle {
     }
 
     /// Fuegt den Inhalt der Zwischenablage in den Filtertext des sichtbaren
-    /// Tabs ein (`cmd+f` und „Dateilisting › In den Filter einfuegen",
+    /// Tabs ein (`cmd+f` und „Dateiliste › In den Filter einfuegen",
     /// Runde 21; bis zum 260907 `cmd+v` und „Bearbeiten › Einfuegen").
     ///
     /// **Der zweite Eingang in den Filtertext**, neben

@@ -19,9 +19,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::WirkungsbereichEditortext => "texte dans l’Éditeur",
         Text::WirkungsbereichEintraege => "entrées dans l’Éditeur",
         Text::WirkungsbereichEintragsdatei => "fichiers d’entrées dans l’Éditeur",
-        Text::WirkungsbereichReihenfolge => "entrées dans l’ordre du fichier dans l’Éditeur",
         Text::WirkungsbereichAufgaben => "tâches dans l’Éditeur",
-        Text::WirkungsbereichTermine => "rendez-vous dans l’Éditeur",
         Text::WirkungsbereichGeheimnisse => "secrets dans l’Éditeur",
         Text::WirkungsbereichQuicknote => "Quicknote dans l’Éditeur",
         Text::WirkungsbereichTabbereich => "volet de fichiers et Aperçu",
@@ -59,12 +57,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::AbweisungThemenzeileImNotiztext => {
             "Une ligne du texte de la note ne peut pas commencer par «\u{a0}##\u{a0}», car c’est ainsi que commence la note suivante."
-        }
-        Text::AbweisungUngueltigesDatum => {
-            "Une date s’écrit AAMMJJ ou AAMMJJ HH:MM, par exemple 261002 ou 261002 09:30."
-        }
-        Text::AbweisungKopfzeileImTermintext => {
-            "Une ligne du texte du rendez-vous ne peut pas commencer par «\u{a0}##\u{a0}», car c’est ainsi que commence le rendez-vous suivant."
         }
         Text::AbweisungUmbruchImGeheimnisfeld => {
             "Le nom, le protocole, l’adresse, le compte et le mot de passe tiennent chacun sur une ligne et ne contiennent pas de saut de ligne."
@@ -575,8 +567,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::EintragsspalteAufgabe => "Tâche",
         Text::EintragsspalteThema => "Sujet",
         Text::EintragsspalteNotiz => "Note",
-        Text::EintragsspalteDatum => "Date",
-        Text::EintragsspalteTermin => "Rendez-vous",
         Text::EintragsspalteName => "Nom",
         Text::EintragsspalteProtokoll => "Protocole",
         Text::EintragsspalteAdresse => "Adresse",
@@ -979,8 +969,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::EditorKeineSuche => "aucune recherche n’est en cours",
         Text::EditorKeinTrefferErsetzt => "aucun résultat remplacé",
         Text::EditorPinGeaendert => "le code PIN de {pfad} est modifié",
-        Text::EditorTermineAufsteigend => "Rendez-vous triés par ordre croissant",
-        Text::EditorTermineAbsteigend => "Rendez-vous triés par ordre décroissant",
         Text::QuicknoteLeer => {
             "La Quicknote est vide\u{202f}; le presse-papiers reste tel qu’il était."
         }
@@ -1017,32 +1005,22 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::QuicknoteGrundLesefehler => "le système signale une erreur de lecture",
         Text::EintragKeineAufgabentabelle => "l’Éditeur n’affiche pas de tableau des tâches",
         Text::EintragKeineNotiztabelle => "l’Éditeur n’affiche pas de tableau des notes",
-        Text::EintragKeineTermintabelle => "l’Éditeur n’affiche pas de tableau des rendez-vous",
         Text::EintragKeineAufgabeGewaehlt => "aucune tâche n’est sélectionnée",
         Text::EintragKeineNotizGewaehlt => "aucune note n’est sélectionnée",
-        Text::EintragKeinTerminGewaehlt => "aucun rendez-vous n’est sélectionné",
         Text::EintragAufgabeHinzugefuegt => {
             "nouvelle tâche à la fin\u{202f}; return valide le texte"
         }
         Text::EintragNotizHinzugefuegt => {
             "nouvelle note à la fin\u{202f}; tab passe au texte, cmd+return valide"
         }
-        Text::EintragTerminHinzugefuegt => {
-            "rendez-vous ajouté, à la date du jour\u{202f}; tab passe au texte, cmd+return valide"
-        }
         Text::EintragAufgabeBearbeitung => "return valide, esc abandonne",
         Text::EintragNotizBearbeitung => {
             "cmd+return valide, tab change de cellule, return insère un saut de ligne dans le texte"
         }
-        Text::EintragTerminBearbeitung => {
-            "cmd+return valide, tab change de cellule, return insère un saut de ligne dans le rendez-vous"
-        }
         Text::EintragAufgabeUebernommen => "tâche validée",
         Text::EintragNotizUebernommen => "note validée",
-        Text::EintragTerminUebernommen => "rendez-vous validé",
         Text::EintragAufgabeAbgehakt => "tâche cochée",
         Text::EintragNotizOhneKaestchen => "une note n’a pas de case à cocher",
-        Text::EintragTerminOhneKaestchen => "un rendez-vous n’a pas de case à cocher",
         Text::EintragAufgabeWiederOffen => "tâche de nouveau ouverte",
         Text::EintragAufgabeVerschoben => "tâche déplacée",
         Text::EintragNotizVerschoben => "note déplacée",
@@ -1050,16 +1028,11 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::EintragNotizSchonOben => "la note est déjà en haut",
         Text::EintragAufgabeSchonUnten => "la tâche est déjà en bas",
         Text::EintragNotizSchonUnten => "la note est déjà en bas",
-        Text::EintragTermineNachDatum => {
-            "Les rendez-vous sont classés par date\u{202f}; aucun ne peut être déplacé."
-        }
         Text::EintragAufgabeGeloescht => "tâche supprimée\u{202f}; cmd+z la rétablit",
         Text::EintragNotizGeloescht => "note supprimée\u{202f}; cmd+z la rétablit",
-        Text::EintragTerminGeloescht => "rendez-vous supprimé\u{202f}; cmd+z le rétablit",
         Text::EintragZelleBleibt => "la cellule reste en cours de modification",
         Text::EintragAufgabeMitEscUebernommen => "tâche validée\u{202f}; cmd+z annule",
         Text::EintragNotizMitEscUebernommen => "note validée\u{202f}; cmd+z annule",
-        Text::EintragTerminMitEscUebernommen => "rendez-vous validé\u{202f}; cmd+z annule",
         Text::EintragHeuteUnbestimmt => "La date du jour n’a pas pu être déterminée.",
         Text::EintragKeineTrenntexttabelle => "l’Éditeur n’affiche pas de tableau de fichier CSV",
         Text::EintragKeineZeileGewaehlt => "aucune ligne n’est sélectionnée",
@@ -1604,7 +1577,6 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::TrenntextTrennzeichenWechseln => "Changer de séparateur",
         Kommando::AufgabeAbhaken => "Cocher ou rouvrir la tâche",
         Kommando::PinAendern => "Modifier le code PIN",
-        Kommando::TermineRichtungUmkehren => "Rendez-vous\u{a0}: inverser l’ordre de tri",
         Kommando::BelegungAnsehen => "Afficher les raccourcis clavier",
         Kommando::BelegungsdateiAnsehen => "Ouvrir le fichier des raccourcis clavier",
         Kommando::Beenden => "Quitter KRK",

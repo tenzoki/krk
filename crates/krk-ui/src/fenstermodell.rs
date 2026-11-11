@@ -599,9 +599,9 @@ impl Fenstermodell {
     /// durchgeschrieben: welcher Ort zuletzt gegolten hat, weiss der
     /// Anwendungsdelegierte, und dieses Modell kennt keinen Ort.
     ///
-    /// **Die Richtung der Termintabelle ebenso**: sie wohnt im Editorbereich,
-    /// der die Tabelle ordnet, und wird durchgeschrieben (Schritt 8 des Plans
-    /// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
+    /// **Die Richtung der Termintabelle ebenso**: sie wird durchgeschrieben,
+    /// und seit dem 261111 reicht der Rufer `None` herein, weil die
+    /// Termintabelle gefallen ist; das Feld der Sitzung bleibt.
     pub fn sitzung(
         &self,
         fenster: [Fensterzustand; 2],

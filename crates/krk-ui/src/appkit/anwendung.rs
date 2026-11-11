@@ -301,7 +301,7 @@ use krk_core::tasten::belegung;
 use krk_core::tasten::normalisierung::ModMaske;
 use krk_core::tasten::{Belegung, Kommando, Tastendruck, code_von_pflicht};
 use krk_core::terminalskript;
-use krk_core::verzeichnis::{Erlaubnisbefund, Richtung, Warnbefund, arbeitsbaum, umfang};
+use krk_core::verzeichnis::{Erlaubnisbefund, Warnbefund, arbeitsbaum, umfang};
 
 use crate::angezeigtedatei;
 use crate::auffrischung::{self, Dateifenstersicht};
@@ -1902,7 +1902,7 @@ define_class!(
             self.dateiablage_ausfuehren(Dateiablage::Ausschneiden);
         }
 
-        /// "Dateilisting › In den Filter einfuegen" und `cmd+f` mit dem Fokus
+        /// "Dateiliste › In den Filter einfuegen" und `cmd+f` mit dem Fokus
         /// in der Dateiliste (A1, C1.3 der Runde 21; Nutzerentscheid vom
         /// 260907-2009).
         ///
@@ -2384,18 +2384,15 @@ impl Anwendungsdelegierter {
             }
         }));
         // Der dritte Rueckweg des Editors traegt ein Kommando: der Klick auf
-        // den Kopf „Datum" der Termintabelle geht denselben Weg wie `cmd+1`
+        // eine Schaltflaeche der Quicknote geht denselben Weg wie die Taste
         // und wie der Klick auf einen Schalter der Bereichsleiste, samt
-        // Zulaessigkeit (Entscheidung 8 des Plans
-        // `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`).
+        // Zulaessigkeit. Bis zum 261111 ging auch der Klick auf den Kopf
+        // „Datum" der Termintabelle hier durch.
         // **Es ist derselbe Melder** wie der der Bereichsleiste, aus
         // `klickmelder`: ein Klick auf ein Bedienelement ist einer der drei
         // Wege aus C2.14 der Runde 7, gleich welches Element geklickt ist,
         // und ein zweiter Rumpf daneben waere ein vierter.
         editor.kommandomelder_setzen(self.klickmelder());
-        // Die Richtung der Termintabelle aus der Sitzung; nie umgekehrt heisst
-        // aufsteigend (Entscheidung 5 des Plans der Termine).
-        editor.terminrichtung_setzen(sitzung.terminrichtung.unwrap_or(Richtung::Aufsteigend));
         let git = Gitfenster::bauen(mtm);
         // Die Teilung zwischen Verlaufsliste und Einzelheiten aus der Sitzung
         // (Nutzerbefund vom 260831). Sie wird hier vorgemerkt und nicht
@@ -2468,7 +2465,10 @@ impl Anwendungsdelegierter {
         // Delegierter → Fenster → Rueckruf → Delegierter, und das Fenster lebt
         // ueber sein Schliessen hinaus.
         //
-        // **Drei Empfaenger haengen daran, in dieser Reihenfolge.**
+        // **Drei Empfaenger haengen daran, in dieser Reihenfolge.** Bis zum
+        // 261111 stand zwischen dem zweiten und dem heutigen dritten ein
+        // weiterer, der den heutigen Tag der Termintabelle nachzog; er ist
+        // mit ihr gefallen.
         // `aktives_dem_ersthelfer_nachziehen` setzt den Nutzerentscheid vom
         // 260819 um: liegt der Rang nach dem Wechsel in einem Dateifenster, ist
         // dieses das aktive. Es steht **vor** dem Nachzug der Anzeige, damit
@@ -2484,16 +2484,7 @@ impl Anwendungsdelegierter {
         // ausfallen, sobald jemand das aendert. Der eine Schreiber der Anzeige
         // laeuft auf diesem Ausloesepunkt immer.
         //
-        // **Der dritte ist `Editorbereich::heute_nachziehen`** (Schritt 7 des
-        // Plans `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`):
-        // er bestimmt den heutigen Tag der Termintabelle beim Wechsel in den
-        // Vordergrund neu und haengt deshalb hier und an keinem zweiten
-        // Beobachter. Er steht zuletzt, weil er allein die Zeilen der Tabelle
-        // angeht und keinen der beiden davor braucht; er ruft weder `anwenden`
-        // noch `setHidden:` noch `makeFirstResponder:` und ueberspringt eine
-        // laufende Zelle.
-        //
-        // **Der vierte stoesst das Nachsehen an, ob die wartenden Befehle noch
+        // **Der dritte stoesst das Nachsehen an, ob die wartenden Befehle noch
         // gelten** ([`crate::plattenwarte`]): ein Blatt, die Quicknote und ein
         // anderer Ersthelfer ueberholen welche, ohne dass die Zeile sich ruehrt.
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
@@ -2501,9 +2492,6 @@ impl Anwendungsdelegierter {
             if let Some(selbst) = schwach.load() {
                 selbst.aktives_dem_ersthelfer_nachziehen();
                 selbst.fokusanzeige_nachziehen();
-                if let Some(editor) = selbst.ivars().editor.get() {
-                    editor.heute_nachziehen();
-                }
                 nebenfaden::nachsehen_lassen(selbst.mtm());
             }
         }));
@@ -5326,7 +5314,7 @@ impl Anwendungsdelegierter {
     /// **Der Spiegel von [`Self::kommando_ausfuehren`] fuer einen Befehl ohne
     /// [`Kommando`].** Die drei kommen aus dem Hauptmenue ueber die
     /// Antwortkette an und tragen weder Kennung noch `tag` — die zwei ersten
-    /// aus "Bearbeiten", der dritte seit dem 260907 aus "Dateilisting"; alle
+    /// aus "Bearbeiten", der dritte seit dem 260907 aus "Dateiliste"; alle
     /// gehen durch
     /// diesen einen Vorspann — Lage, Regel, Loeschregel, Seite —, und was
     /// danach an der Datenquelle geschieht, bringt der Rufer als `tun` mit:
@@ -5791,11 +5779,6 @@ impl Anwendungsdelegierter {
             // taete nichts; gehalten von
             // `zweigproben::jeder_dieser_befehle_hat_einen_eigenen_ausfuehrungszweig`.
             Kommando::PinAendern => self.pin_aendern_erfragen(),
-            // Die Richtung der Termintabelle (Schritt 8 des Plans der
-            // Termine): ein eigener Zweig, weil die Sitzung sich die Richtung
-            // merkt. Gehalten von
-            // `zweigproben::jeder_dieser_befehle_hat_einen_eigenen_ausfuehrungszweig`.
-            Kommando::TermineRichtungUmkehren => self.termine_richtung_umkehren(),
             // Die Quicknote auf F10: oeffnen, den Fokus in sie holen oder sie
             // schliessen, je nach Lage. Gehalten von
             // `zweigproben::jeder_dieser_befehle_hat_einen_eigenen_ausfuehrungszweig`.
@@ -13041,7 +13024,7 @@ impl Anwendungsdelegierter {
     // ------------------------------------------------------------------
 
     /// Der Melder fuer ein Kommando aus einem Klick: auf einen Schalter der
-    /// Bereichsleiste oder auf den Kopf „Datum" der Termintabelle.
+    /// Bereichsleiste oder auf eine Schaltflaeche der Quicknote.
     ///
     /// **Ein Rumpf fuer beide Elemente**, weil beide derselbe der drei Wege
     /// aus C2.14 der Runde 7 sind, der Klick; die Probe
@@ -13061,18 +13044,6 @@ impl Anwendungsdelegierter {
                 let _ = selbst.kommando_ausfuehren(kommando, None);
             }
         })
-    }
-
-    /// Kehrt die Richtung der Termintabelle um und merkt die Sitzung vor
-    /// (T5.5, T5.7 der Termine).
-    ///
-    /// Die Umkehrung selbst und ihre Meldung stehen im Editorbereich; hier
-    /// steht allein, dass die Sitzung sie sich merkt, wie jede andere Angabe
-    /// der Anzeige.
-    fn termine_richtung_umkehren(&self) -> bool {
-        let ausgefuehrt = self.editorbefehl(Editorbereich::terminrichtung_umkehren);
-        self.sitzung_vormerken();
-        ausgefuehrt
     }
 
     // ------------------------------------------------------------------
@@ -13875,11 +13846,10 @@ impl Anwendungsdelegierter {
         let gitanteil = self.gitanteil();
         let heim = heimgriff::lesen(&self.ivars().heim);
         let notizordner = self.ivars().gemerkter_ort.borrow().clone();
-        let terminrichtung = self
-            .ivars()
-            .editor
-            .get()
-            .map(|editor| editor.terminrichtung());
+        // Das Feld `terminrichtung` der Sitzung bleibt im Format von
+        // `session.toml` stehen und wird seit dem 261111 nicht mehr gesetzt:
+        // die Termintabelle, deren Richtung es merkte, ist gefallen.
+        let terminrichtung = None;
         // **Eine offene Quicknote schreibt die Sichtbarkeit, die ihr Schliessen
         // herstellen wuerde** (Schritt 6 des Plans der Quicknote): gebaut wird
         // aus einer Kopie des Modells, an der die Rueckkehr des Randes gelaufen
@@ -14946,7 +14916,7 @@ mod zweigproben {
     ///
     /// `NeuerungenZeigen` ist der erste, und bis zur krkhome-Arbeit hielt ihn
     /// eine eigene Probe im Pruefmodul der Neuerungen.
-    const BEFEHLE: [&str; 26] = [
+    const BEFEHLE: [&str; 25] = [
         "NeuerungenZeigen",
         "Notizordner",
         "OrtWaehlen",
@@ -14962,7 +14932,6 @@ mod zweigproben {
         "TrenntextTrennzeichenWechseln",
         "AufgabeAbhaken",
         "PinAendern",
-        "TermineRichtungUmkehren",
         "QuicknoteUmschalten",
         "QuicknoteKopieren",
         "QuicknoteLeeren",

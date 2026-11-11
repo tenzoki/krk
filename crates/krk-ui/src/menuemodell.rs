@@ -1054,8 +1054,9 @@ mod tests {
     /// Die Auslieferungsbelegung, in der `editor_sichern` statt `cmd+s` die
     /// Kombination `cmd+2` von `sortierung_groesse` teilt: Dateifenster und
     /// Editor schliessen einander aus, also laedt sie ohne Konflikt. `cmd+2`
-    /// und nicht `cmd+1`, weil `cmd+1` seit Schritt 8 des Plans der Termine in
-    /// der Auslieferung selbst schon zwei Funktionen traegt.
+    /// und nicht `cmd+1`, weil `cmd+1` vom 260926 bis zum 261111 in der
+    /// Auslieferung selbst schon zwei Funktionen trug und die Probe aus jener
+    /// Zeit stammt.
     fn mit_geteilter_kombination() -> Belegung {
         use krk_core::tasten::Belegungsdatei;
         use krk_core::tasten::belegung::AUSLIEFERUNGSTEXT;
@@ -1098,13 +1099,14 @@ mod tests {
         assert_eq!(befehle[1].1, None, "der spaetere zeigt ein Kuerzel");
     }
 
-    /// Der Fall der Termine in der Auslieferung (T5, Entscheidung 7 des Plans
-    /// `260926-2308_*_plan-termine-als-weitere-datei-im-heimordner.md`):
-    /// „Home" steht vor dem Obermenue der Dateiliste, also zeigt „Termine:
-    /// Sortierrichtung umkehren" dort als letzter Eintrag `cmd+1`, und „Nach
-    /// Name sortieren" steht ohne Kuerzel da.
+    /// C3.4 des Spec
+    /// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`:
+    /// „Termine: Sortierrichtung umkehren“ steht in keinem Obermenue mehr,
+    /// und „Nach Name sortieren“ zeigt `cmd+1` wieder selbst. Vom 260926 bis
+    /// zum 261111 teilten die zwei die Kombination, und der fruehere Eintrag
+    /// der Leiste, der unter „Home“, nahm dem Sortieren die Anzeige.
     #[test]
-    fn in_der_auslieferung_zeigt_die_richtung_der_termine_cmd_1_und_die_sortierung_keines() {
+    fn nach_name_sortieren_zeigt_cmd_1_und_die_richtung_der_termine_steht_nirgends() {
         let belegung = Belegung::auslieferung();
         let leiste = aufbau(&belegung);
         let cmd_1 = Kombination::lesen("cmd+1").expect("cmd+1 ist eine Kombination");
@@ -1120,23 +1122,34 @@ mod tests {
                     } if *kennung == gesucht => Some(*kombination),
                     _ => None,
                 })
-                .unwrap_or_else(|| panic!("{gesucht} steht nicht im Menue"))
         };
-        assert_eq!(kuerzel("termine_richtung_umkehren"), Some(cmd_1));
-        assert_eq!(kuerzel("sortierung_name"), None);
-        let home = leiste
+        assert_eq!(
+            kuerzel("sortierung_name"),
+            Some(Some(cmd_1)),
+            "„Nach Name sortieren“ zeigt cmd+1 nicht"
+        );
+        assert_eq!(
+            kuerzel("termine_richtung_umkehren"),
+            None,
+            "der entfallene Befehl steht noch im Menue"
+        );
+        let traeger: Vec<&str> = leiste
             .iter()
-            .find(|obermenue| obermenue.titel == Funktionsbereich::Home.name())
-            .expect("es gibt ein Obermenue Home");
-        let letzter = home
-            .eintraege
-            .iter()
-            .rev()
-            .find_map(|eintrag| match eintrag {
-                Eintrag::Befehl { kennung, .. } => Some(*kennung),
+            .flat_map(|obermenue| obermenue.eintraege.iter())
+            .filter_map(|eintrag| match eintrag {
+                Eintrag::Befehl {
+                    kennung,
+                    kombination,
+                    ..
+                } if *kombination == Some(cmd_1) => Some(*kennung),
                 _ => None,
-            });
-        assert_eq!(letzter, Some("termine_richtung_umkehren"));
+            })
+            .collect();
+        assert_eq!(
+            traeger,
+            ["sortierung_name"],
+            "cmd+1 zeigt ein zweiter Eintrag"
+        );
     }
 
     /// C3.7 des Spec der Bildfolge: nach der bestehenden Regel fuer geteilte
