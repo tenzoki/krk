@@ -764,7 +764,11 @@ ist.
 Eine fehlerhafte `keymap.toml` wird als Ganzes verworfen und nicht teilweise
 übernommen. Unbekannte Kennung, doppelte Kennung, unlesbare Tastenschreibweise
 oder ein Kombinationskonflikt: KRK meldet es beim Start und fährt mit der
-Auslieferungsbelegung. Die Datei selbst bleibt dabei stehen.
+Auslieferungsbelegung. Die Datei selbst bleibt dabei stehen. Die eine Ausnahme
+ist die Kennung `termine_richtung_umkehren` des entfallenen Befehls
+„Termine: Sortierrichtung umkehren“: einen Eintrag mit ihr übergeht KRK ohne
+Meldung, die übrige Datei gilt, und sobald die Belegung das nächste Mal
+geschrieben wird, steht er nicht mehr darin.
 
 **Ein Kombinationskonflikt ist nicht jede Kombination, die zweimal vorkommt.**
 Eine Kombination darf auf zwei Funktionen liegen, wenn beide nie zugleich

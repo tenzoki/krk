@@ -408,7 +408,8 @@ pub enum Wirkungsbereich {
     /// Wirkt nur, wenn der Fokus im Editor steht und der Editor die
     /// Aufgabentabelle zeigt (C6).
     ///
-    /// Der Wert allein des Abhakens: eine Notiz hat kein Kaestchen.
+    /// Der Wert allein des Abhakens: ein Geheimnis und eine Zeile einer CSV
+    /// haben kein Kaestchen.
     Aufgaben,
     /// Wirkt nur, wenn der Fokus im Editor steht und der Editor
     /// `secrets.txt` entsperrt haelt, deren PIN schon in einem Kopf auf der
@@ -1882,9 +1883,10 @@ impl Kommando {
             Kommando::EintragHinzufuegen => Wirkungsbereich::Eintragsdatei,
             // Die Befehle der Eintragstabelle (C6 der krkhome-Arbeit). Diese
             // vier wirken in jeder Tabellenform; das Abhaken allein in der
-            // Aufgabentabelle, denn eine Notiz hat kein Kaestchen. Das
-            // Verschieben trug vom 260926 bis zum 261111 einen eigenen Wert,
-            // der allein die Termintabelle ausnahm, und ist mit ihr gefallen.
+            // Aufgabentabelle, denn ein Geheimnis und eine Zeile einer CSV
+            // haben kein Kaestchen. Das Verschieben trug vom 260926 bis zum
+            // 261111 einen eigenen Wert, der allein die Termintabelle
+            // ausnahm, und ist mit ihr gefallen.
             Kommando::EintragBearbeiten
             | Kommando::EintragLoeschen
             | Kommando::EintragHoch

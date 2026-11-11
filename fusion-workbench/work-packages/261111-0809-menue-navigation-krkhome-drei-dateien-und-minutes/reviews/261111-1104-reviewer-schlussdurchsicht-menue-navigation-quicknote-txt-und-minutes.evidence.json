@@ -1,0 +1,28 @@
+{
+  "schema": "fusion.evidence/v1",
+  "id": "2bc9c33c-88e0-4105-9bed-b8777ce21c9f",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "subject": {
+    "git_tree": "45fb45141bc08352c8015475f1bd2654c6882cf6",
+    "git_range": null
+  },
+  "brief_revision": "sha256:9e5592b8a63cd4c5db26d1f8916a1617b4b34c1a056f2381004ec18f07af19fe",
+  "plan_revision": "sha256:c39391a477bb13cf9101b22ceb29b803d257ef8c80c02368b8a31068b51be5ba",
+  "role": {
+    "profile": "reviewer",
+    "version": "13.4.4"
+  },
+  "host": "claude-code",
+  "execution_policy": "claude-guided",
+  "verdict": "accept",
+  "uncertainties": [],
+  "checks": [],
+  "report": {
+    "path": "work-packages/261111-0809-menue-navigation-krkhome-drei-dateien-und-minutes/reviews/261111-1104-reviewer-schlussdurchsicht-menue-navigation-quicknote-txt-und-minutes.md",
+    "sha256": "sha256:0d11240a77d149c297ad1ab486d6dc5a42a06f14d4acbb17c8c2c094a524e61b",
+    "kind": "review"
+  },
+  "predecessor": null,
+  "accepted_at": "2026-11-11T10:06:14Z",
+  "extensions": {}
+}
