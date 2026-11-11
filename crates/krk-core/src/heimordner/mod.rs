@@ -415,6 +415,30 @@ impl Heimordner {
             && ordner.parent().is_some_and(|eltern| self.ist(eltern))
     }
 
+    /// Ob der gefragte Pfad eine Datei unmittelbar in [`PROTOKOLLORDNER`] des
+    /// Notizordners nennt, `<geschrieben>/minutes/<name>` oder
+    /// `<aufgeloest>/minutes/<name>`.
+    ///
+    /// Gefragt wird allein der Elternordner ueber
+    /// [`Heimordner::ist_protokollordner`]; der Name und die Endung zaehlen
+    /// nicht, jede Datei unmittelbar in `minutes/` ist eine Protokolldatei.
+    /// Eine Datei in einem Unterordner von `minutes/`, eine im Notizordner
+    /// selbst und eine in einem Ordner dieses Namens anderswo sind es nicht,
+    /// wie beim Anlegen (C4.6). **Kein Systemaufruf**, aus dem Grund des
+    /// Modulkopfs; ob der Pfad eine Datei oder einen Ordner nennt und ob es
+    /// ihn gibt, fragt sie deshalb nicht, das weiss der Rufer.
+    ///
+    /// **Unter einer dritten Schreibweise des Notizordners antwortet sie
+    /// nein**, wie [`Heimordner::ist_protokollordner`]: was an der Antwort
+    /// haengt, fehlt dann, und nichts wirkt an der falschen Datei (E1 und
+    /// Kopf des Plans
+    /// `261111-2248-plan-protokolldatei-traegt-kopieren-singlestrip-format.md`,
+    /// `**Decidability:**`).
+    pub fn ist_protokolldatei(&self, pfad: &Path) -> bool {
+        pfad.parent()
+            .is_some_and(|eltern| self.ist_protokollordner(eltern))
+    }
+
     /// Welche Eintragsdatei der gefragte Pfad ist, oder `None`.
     ///
     /// Gefragt wird erst der Dateiname und nur bei einem der Namen der

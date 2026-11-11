@@ -608,6 +608,9 @@ fn rumpf(inhalt: &str, name: &str) -> String {
 /// `Tabliste::lesen_starten` es je Lesevorgang auf dem Hauptfaden fragt.
 /// `ist_protokollordner` steht seit dem 261111 dabei: „Leere Datei anlegen“
 /// fragt es auf dem Hauptfaden, und es ruft wie die zwei anderen allein `ist`.
+/// `ist_protokolldatei` steht seit dem Protokollknopf-Paket dabei: das
+/// Editormodell fragt es beim Uebernehmen einer Datei, und es ruft allein
+/// `ist_protokollordner`, dessen Rumpf diese Probe ebenfalls liest.
 #[test]
 fn ist_und_sonderdatei_stellen_keinen_systemaufruf() {
     let inhalt = fs::read_to_string(concat!(
@@ -632,6 +635,7 @@ fn ist_und_sonderdatei_stellen_keinen_systemaufruf() {
         "sonderdatei",
         "ohne_inhaltsauftrag",
         "ist_protokollordner",
+        "ist_protokolldatei",
     ] {
         let rumpf = rumpf(&inhalt, name);
         // Ein leer geschnittener Rumpf bestuende jede Nadel; er muss mindestens
@@ -1961,6 +1965,68 @@ fn ist_protokollordner_erkennt_minutes_allein_unmittelbar_im_notizordner() {
     let ohne = Heimordner::ohne_aufloesung(geschrieben.clone(), Some(&zuhause));
     assert!(ohne.ist_protokollordner(&geschrieben.join("minutes")));
     assert!(!ohne.ist_protokollordner(&ziel.join("minutes")));
+}
+
+/// E1 des Plans `261111-2248-plan-protokolldatei-traegt-kopieren-singlestrip-format.md`:
+/// `ist_protokolldatei` erkennt eine Datei unmittelbar in `minutes/` des
+/// Notizordners, in der geschriebenen und in der aufgeloesten Form, gleich
+/// welche Endung, und sonst nichts.
+#[test]
+fn ist_protokolldatei_erkennt_allein_dateien_unmittelbar_in_minutes() {
+    let ordner = Pruefordner::neu("minutes-datei");
+    let zuhause = kanonisch(&ordner);
+    let ziel = zuhause.join("anderswo");
+    fs::create_dir(&ziel).expect("Zielordner");
+    std::os::unix::fs::symlink(&ziel, zuhause.join(ORDNERNAME)).expect("Verweis");
+    let heim = Heimordner::im_benutzerverzeichnis(&zuhause);
+    let geschrieben = zuhause.join(ORDNERNAME);
+    assert_eq!(heim.aufgeloest(), Some(ziel.as_path()));
+
+    // Jeder Fall laeuft ueber beide Pfadformen des Notizordners.
+    let tafel = [
+        ("Datei in minutes", "minutes/261111-2248-runde.md", true),
+        ("andere Endung in minutes", "minutes/zahlen.csv", true),
+        ("ohne Endung in minutes", "minutes/notiz", true),
+        ("Datei im Notizordner selbst", "todo.md", false),
+        ("Datei in minutes/2026", "minutes/2026/alt.md", false),
+        (
+            "Datei in anderswo/minutes",
+            "anderswo/minutes/fremd.md",
+            false,
+        ),
+        ("Datei in Minutes", "Minutes/gross.md", false),
+        ("Datei in minutes-alt", "minutes-alt/alt.md", false),
+        ("der Protokollordner selbst", "minutes", false),
+    ];
+    for (form, wurzel) in [("geschrieben", &geschrieben), ("aufgeloest", &ziel)] {
+        for (fall, rest, erwartet) in tafel {
+            let pfad = wurzel.join(rest);
+            assert_eq!(
+                heim.ist_protokolldatei(&pfad),
+                erwartet,
+                "{fall}, {form}: {}",
+                pfad.display()
+            );
+        }
+        // Der Notizordner selbst ist keine Datei in minutes.
+        assert!(!heim.ist_protokolldatei(wurzel), "{form}");
+    }
+
+    // Ausserhalb des Notizordners und ohne Elternordner.
+    for pfad in [
+        zuhause.join("minutes/fremd.md"),
+        zuhause.join("projekt/minutes/fremd.md"),
+        PathBuf::from("/"),
+        PathBuf::from("minutes/nackt.md"),
+        PathBuf::from("nackt.md"),
+    ] {
+        assert!(!heim.ist_protokolldatei(&pfad), "{}", pfad.display());
+    }
+
+    // Ohne aufgeloeste Form gilt allein die geschriebene.
+    let ohne = Heimordner::ohne_aufloesung(geschrieben.clone(), Some(&zuhause));
+    assert!(ohne.ist_protokolldatei(&geschrieben.join("minutes/runde.md")));
+    assert!(!ohne.ist_protokolldatei(&ziel.join("minutes/runde.md")));
 }
 
 // ---------------------------------------------------------------------------
