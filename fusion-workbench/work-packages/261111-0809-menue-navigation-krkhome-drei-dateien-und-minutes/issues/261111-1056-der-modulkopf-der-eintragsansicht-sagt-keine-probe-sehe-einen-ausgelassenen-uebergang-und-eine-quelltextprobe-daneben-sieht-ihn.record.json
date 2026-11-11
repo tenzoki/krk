@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "6f3820a3-b374-4b56-9e9f-6078c68ce445",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261111-0809-menue-navigation-krkhome-drei-dateien-und-minutes/issues/261111-1056-der-modulkopf-der-eintragsansicht-sagt-keine-probe-sehe-einen-ausgelassenen-uebergang-und-eine-quelltextprobe-daneben-sieht-ihn.md"
+  },
+  "filed_by": {
+    "actor": "code-implementer",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}
