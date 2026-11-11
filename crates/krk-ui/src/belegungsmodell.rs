@@ -123,11 +123,33 @@ pub enum Funktionsbereich {
     /// ist eine Vorgabe des Spec und keine Mac-Regel; anders als die zwei
     /// Enden der Leiste laesst sie sich in der Durchsicht frei verschieben.
     Home,
-    /// Bewegung, Navigation, Markierung, Sortierung und Sichtbarkeit in der
-    /// Dateiliste (C2, C10).
+    /// Markierung, Sortierung und Sichtbarkeit in der Dateiliste und das
+    /// Einfuegen in ihren Filter (C2, C10).
+    ///
+    /// **Bezeichner und Titel gehen seit dem 261111 auseinander**: das Menue
+    /// heisst „Dateiliste", der Bezeichner bleibt, wie `Textbefehle` blieb,
+    /// als sein Menue „Bearbeiten" wurde. Bewegung und Ordnerwechsel standen
+    /// bis dahin mit hier und stehen seitdem unter
+    /// [`Funktionsbereich::Navigation`].
     Dateilisting,
+    /// Die Bewegung in der Dateiliste und jeder Befehl, der den Ordner setzt,
+    /// den eine Dateiliste zeigt: Auswahl, Seite, Anfang und Ende, Einstieg,
+    /// Aufstieg, Ordnersprung, Angleichen, Pfadeingabe und der Sprung zum
+    /// Inhalt der Zwischenablage (C1 des Spec
+    /// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`).
+    ///
+    /// **Steht unmittelbar hinter [`Funktionsbereich::Dateilisting`]**, weil
+    /// der Spec das Menue „Navigation" unmittelbar rechts neben „Dateiliste"
+    /// verlangt (C1.3). Innerhalb des Bereichs gilt wie ueberall die Folge
+    /// von `resources/default-keymap.toml`; die Probe
+    /// `der_bereich_navigation_fuehrt_genau_diese_befehle_in_dieser_folge`
+    /// haelt sie.
+    Navigation,
     /// Kopieren, Verschieben, Loeschen, Anlegen, Umbenennen, Abbrechen und
     /// das Terminal im angezeigten Ordner (C4, C11).
+    ///
+    /// **Bezeichner und Titel gehen seit dem 261111 auseinander**: das Menue
+    /// heisst „Dateioperation", der Bezeichner bleibt.
     Dateioperationen,
     /// Die vier Tabbefehle (C1, nach C6 auch fuer die Vorschau-Tabs).
     Tabs,
@@ -136,6 +158,10 @@ pub enum Funktionsbereich {
     Vorschau,
     /// Die Lesezeichen- und Geraeteleiste und der Fokuswechsel zwischen ihr
     /// und dem Dateifenster (C5).
+    ///
+    /// **Bezeichner und Titel gehen seit dem 261111 auseinander**: das Menue
+    /// heisst „Leiste", der Bezeichner bleibt, weil der Bereich die zwei
+    /// Fokusbefehle weiter fuehrt.
     LeisteUndFokus,
     /// Der eingebaute Editor: die beiden Einstiegswege, der Fokus, die beiden
     /// Ansichten, das Sichern, der Zeilensprung, Suchen und Ersetzen (C1 bis
@@ -177,10 +203,11 @@ impl Funktionsbereich {
     ///
     /// Dieselbe Folge wie die Aufzaehlung darueber, und dort steht auch, warum
     /// sie seit der Runde 7 eine Mac-Menueleiste beschreibt.
-    pub const ALLE: [Funktionsbereich; 11] = [
+    pub const ALLE: [Funktionsbereich; 12] = [
         Funktionsbereich::Anwendung,
         Funktionsbereich::Home,
         Funktionsbereich::Dateilisting,
+        Funktionsbereich::Navigation,
         Funktionsbereich::Dateioperationen,
         Funktionsbereich::Tabs,
         Funktionsbereich::Vorschau,
@@ -202,7 +229,7 @@ impl Funktionsbereich {
     ///
     /// **Umgekehrt gilt der Satz seit dem 260907 nicht mehr**: nicht jede
     /// Funktion mit `gehalten_von = "menue"` steht in diesem Bereich.
-    /// `filter_einfuegen` traegt den Wert und steht unter „Dateilisting";
+    /// `filter_einfuegen` traegt den Wert und steht unter „Dateiliste";
     /// [`bereich`] schreibt aus, warum.
     ///
     /// **Ob macOS seine eigenen Textzusaetze an den Menue*titel* haengt, ist
@@ -225,6 +252,7 @@ impl Funktionsbereich {
             Funktionsbereich::Anwendung => text(Text::FunktionsbereichAnwendung),
             Funktionsbereich::Home => text(Text::FunktionsbereichHome),
             Funktionsbereich::Dateilisting => text(Text::FunktionsbereichDateilisting),
+            Funktionsbereich::Navigation => text(Text::FunktionsbereichNavigation),
             Funktionsbereich::Dateioperationen => text(Text::FunktionsbereichDateioperationen),
             Funktionsbereich::Tabs => text(Text::FunktionsbereichTabs),
             Funktionsbereich::Vorschau => text(Text::FunktionsbereichVorschau),
@@ -291,10 +319,11 @@ const fn bereich_der_zustellung(zugestellt: Zugestellt) -> Funktionsbereich {
 /// Muster wie [`Kommando::wirkungsbereich`] im Kern.
 const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
     match kommando {
-        // Die Dateiliste: Bewegung, Navigation, Markierung, Sortierung,
-        // Sichtbarkeit und der Sprung zum Inhalt der Zwischenablage, der
-        // dieselbe Handlung ist wie die Pfadeingabe mit vorausgefuelltem
-        // Wert (C2, C10).
+        // Die Navigation: die Bewegung in der Liste, jeder Befehl, der den
+        // Ordner setzt, den eine Dateiliste zeigt, und der Sprung zum Inhalt
+        // der Zwischenablage, der dieselbe Handlung ist wie die Pfadeingabe
+        // mit vorausgefuelltem Wert (C1.4 des Spec vom 261111). Bis dahin
+        // standen die zwoelf unter `Dateilisting`.
         Kommando::AuswahlHoch
         | Kommando::AuswahlRunter
         | Kommando::SeiteHoch
@@ -317,7 +346,9 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         // ist eine, gleich wie viele es davon gibt.
         | Kommando::OrdnerAngleichen
         | Kommando::Pfadeingabe
-        | Kommando::MarkierungUmschalten
+        | Kommando::ZwischenablageSpringen => Funktionsbereich::Navigation,
+        // Die Dateiliste: Markierung, Sortierung und Sichtbarkeit (C2, C10).
+        Kommando::MarkierungUmschalten
         | Kommando::AlleMarkieren
         | Kommando::MarkierungAufheben
         | Kommando::MarkierungUmkehren
@@ -352,8 +383,7 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         // "Deep": er bestimmt, was die Liste zeigt, und er bildet mit ihm in
         // der Bereichsleiste eine Reihe. Im Hauptmenue steht er damit dort, wo
         // der Nutzer ihn sucht, naemlich unmittelbar bei der tiefen Suche.
-        | Kommando::InhaltssucheUmschalten
-        | Kommando::ZwischenablageSpringen => Funktionsbereich::Dateilisting,
+        | Kommando::InhaltssucheUmschalten => Funktionsbereich::Dateilisting,
         // Die Dateioperationen aus C4 und der Terminal-Befehl aus C11, der
         // wie sie auf dem angezeigten Ordner arbeitet.
         //
@@ -361,8 +391,9 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         // Gliederung fragt nach der Gegend der Anwendung und nicht nach dem
         // Mechanismus, und ein Befehl, der den Ordner oder einen Eintrag an
         // etwas ausserhalb der Liste uebergibt, steht dort, wo der
-        // Terminal-Befehl steht. `Dateilisting` traegt Bewegung, Markierung
-        // und Sortierung; keiner der drei tut davon etwas.
+        // Terminal-Befehl steht. `Dateilisting` traegt Markierung und
+        // Sortierung, `Navigation` die Bewegung; keiner der drei tut davon
+        // etwas.
         Kommando::Kopieren
         | Kommando::Verschieben
         | Kommando::InPapierkorb
@@ -393,7 +424,7 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         // und "Zwischenablage ansehen" zeigt in dasselbe Fenster (C3, C10).
         //
         // Derselbe Satz ordnet den Fokusbefehl aus C2/C6 hierher und nicht zu
-        // "Leiste und Fokus": diese Gliederung fragt nach der Gegend der
+        // "Leiste": diese Gliederung fragt nach der Gegend der
         // Anwendung und nicht nach dem Mechanismus, sonst stuende auch
         // `leiste_umschalten` unter "Fenster". Wer wissen will, wie er in die
         // Vorschau kommt, findet unter "Vorschau" alle Befehle, die sie
@@ -1708,7 +1739,8 @@ mod tests {
         }
     }
 
-    /// Der Ordnersprung aus C2 der Runde 6 steht unter "Dateilisting".
+    /// Der Ordnersprung aus C2 der Runde 6 steht unter "Navigation", bis
+    /// zum 261111 unter "Dateilisting".
     ///
     /// Die Zuordnung ist eine Wahl und keine Ableitung: der Befehl traegt
     /// [`Wirkungsbereich::Ueberall`](krk_core::tasten::Wirkungsbereich) und
@@ -1716,11 +1748,11 @@ mod tests {
     /// Fokus also ebensogut dort stehen. Die Gliederung fragt nach der Gegend
     /// der Anwendung, und bewegt wird eine Dateiliste.
     #[test]
-    fn der_ordnersprung_steht_unter_dateilisting() {
+    fn der_ordnersprung_steht_unter_navigation() {
         assert_eq!(
             bereich_der_kennung("ordner_der_datei"),
-            Funktionsbereich::Dateilisting,
-            "der Ordnersprung steht nicht beim Dateilisting"
+            Funktionsbereich::Navigation,
+            "der Ordnersprung steht nicht bei der Navigation"
         );
         let belegung = Belegung::auslieferung();
         let funktion = belegung
@@ -1732,7 +1764,8 @@ mod tests {
         );
     }
 
-    /// Das Angleichen aus C1 der Runde 13 steht unter "Dateilisting".
+    /// Das Angleichen aus C1 der Runde 13 steht unter "Navigation", bis zum
+    /// 261111 unter "Dateilisting".
     ///
     /// Anders als beim Ordnersprung darueber ist die Zuordnung hier keine
     /// Wahl gegen den Fokus: der Befehl traegt
@@ -1745,11 +1778,11 @@ mod tests {
     /// erschiene die Funktion in keiner Zeile der Belegungsansicht, und der
     /// Befehl waere gebaut und unerreichbar.
     #[test]
-    fn das_ordnerangleichen_steht_unter_dateilisting() {
+    fn das_ordnerangleichen_steht_unter_navigation() {
         assert_eq!(
             bereich_der_kennung("ordner_angleichen"),
-            Funktionsbereich::Dateilisting,
-            "das Ordnerangleichen steht nicht beim Dateilisting"
+            Funktionsbereich::Navigation,
+            "das Ordnerangleichen steht nicht bei der Navigation"
         );
         let belegung = Belegung::auslieferung();
         let funktion = belegung
@@ -1758,6 +1791,166 @@ mod tests {
         assert!(
             !funktion.tasten().is_empty(),
             "das Ordnerangleichen traegt ab Werk keine Kombination und erschiene damit in keiner Zeile"
+        );
+    }
+
+    /// Die zwoelf Befehle des Bereichs „Navigation", in der Folge aus C1.4
+    /// des Spec `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`,
+    /// je mit der ersten Kombination der Auslieferung, also der, die der
+    /// Menueeintrag als Kuerzel zeigt (C1.6).
+    ///
+    /// Die Kennungen stehen ausgeschrieben und nicht aus
+    /// [`bereich_des_kommandos`] abgeleitet: eine abgeleitete Liste hielte
+    /// die Zuordnung gegen sich selbst.
+    const NAVIGATIONSBEFEHLE: [(&str, &str); 12] = [
+        ("auswahl_hoch", "up"),
+        ("auswahl_runter", "down"),
+        ("seite_hoch", "pageup"),
+        ("seite_runter", "pagedown"),
+        ("listenanfang", "home"),
+        ("listenende", "end"),
+        ("oeffnen", "right"),
+        ("ordner_aufwaerts", "left"),
+        ("ordner_der_datei", "opt+cmd+o"),
+        ("ordner_angleichen", "opt+cmd+s"),
+        ("pfadeingabe", "shift+cmd+g"),
+        ("zwischenablage_springen", "opt+cmd+g"),
+    ];
+
+    /// Die Ansicht fuehrt unter „Navigation" genau die zwoelf Befehle aus
+    /// C1.4, in dessen Folge, und jeder traegt ab Werk die Kombination, die
+    /// er vor dem Umzug trug (C1.6).
+    ///
+    /// **Die Folge kommt aus der Folge der Bloecke in
+    /// `resources/default-keymap.toml`** (E2 des Plans): elf der zwoelf
+    /// stehen dort hintereinander, `zwischenablage_springen` weiter unten, und
+    /// zwischen beiden steht kein Befehl dieses Bereichs. Bis zu dieser Probe
+    /// hielt nichts die Reihenfolge innerhalb eines Bereichs; wer dort einen
+    /// Block verschiebt, bekommt hier die Rechnung.
+    ///
+    /// **Was sie nicht sieht:** ob der Menueeintrag das Kuerzel am laufenden
+    /// Buendel wirklich zeigt. Sie haelt die erste Kombination der
+    /// Auslieferung, aus der das Menuemodell das Kuerzel nimmt; eine mit einem
+    /// frueheren Eintrag geteilte Kombination nimmt AppKit dem spaeteren.
+    #[test]
+    fn der_bereich_navigation_fuehrt_genau_diese_befehle_in_dieser_folge() {
+        let belegung = Belegung::auslieferung();
+        let modell = Belegungsmodell::neu(Belegung::auslieferung());
+        let gefuehrt = funktionen_unter(&modell, Funktionsbereich::Navigation.name());
+        let erwartet: Vec<String> = NAVIGATIONSBEFEHLE
+            .iter()
+            .map(|(kennung, _)| {
+                belegung
+                    .funktion(kennung)
+                    .unwrap_or_else(|| panic!("die Auslieferungsbelegung kennt {kennung} nicht"))
+                    .name()
+                    .to_owned()
+            })
+            .collect();
+        assert_eq!(
+            gefuehrt, erwartet,
+            "unter Navigation stehen andere Funktionen oder dieselben in anderer Folge"
+        );
+
+        for (kennung, kuerzel) in NAVIGATIONSBEFEHLE {
+            assert_eq!(
+                bereich_der_kennung(kennung),
+                Funktionsbereich::Navigation,
+                "{kennung} steht nicht unter Navigation"
+            );
+            let funktion = belegung
+                .funktion(kennung)
+                .unwrap_or_else(|| panic!("die Auslieferungsbelegung kennt {kennung} nicht"));
+            let erste = funktion
+                .tasten()
+                .first()
+                .unwrap_or_else(|| panic!("{kennung} traegt ab Werk keine Kombination"));
+            assert_eq!(
+                erste.to_string(),
+                kuerzel,
+                "{kennung} zeigt im Menue ein anderes Kuerzel als vor dem Umzug"
+            );
+        }
+    }
+
+    /// Der Bereich „Dateiliste" beginnt mit den Markierungsbefehlen und
+    /// fuehrt keinen der zwoelf Befehle der Navigation mehr (C1.5).
+    #[test]
+    fn der_bereich_dateilisting_beginnt_mit_der_markierung_und_fuehrt_keinen_navigationsbefehl() {
+        let belegung = Belegung::auslieferung();
+        let modell = Belegungsmodell::neu(Belegung::auslieferung());
+        let gefuehrt = funktionen_unter(&modell, Funktionsbereich::Dateilisting.name());
+        let name_von = |kennung: &str| {
+            belegung
+                .funktion(kennung)
+                .unwrap_or_else(|| panic!("die Auslieferungsbelegung kennt {kennung} nicht"))
+                .name()
+                .to_owned()
+        };
+        assert_eq!(
+            gefuehrt.first(),
+            Some(&name_von("markierung_umschalten")),
+            "die Dateiliste beginnt nicht mit dem Markieren"
+        );
+        for (kennung, _) in NAVIGATIONSBEFEHLE {
+            assert_ne!(
+                bereich_der_kennung(kennung),
+                Funktionsbereich::Dateilisting,
+                "{kennung} steht noch unter der Dateiliste"
+            );
+            assert!(
+                !gefuehrt.contains(&name_von(kennung)),
+                "{kennung} steht noch im Abschnitt der Dateiliste"
+            );
+        }
+        assert_eq!(
+            bereich_der_kennung("filter_einfuegen"),
+            Funktionsbereich::Dateilisting,
+            "das Einfuegen in den Filter steht nicht mehr unter der Dateiliste"
+        );
+    }
+
+    /// Die vier Titel aus C1.1 bis C1.3 in jeder der drei Sprachen, ueber
+    /// die Form mit ausdruecklicher Sprache, weil kein Prozess die geltende
+    /// umschalten kann.
+    fn titel_in(sprache: krk_core::sprache::Sprache) -> [&'static str; 4] {
+        [
+            sprache.text(Text::FunktionsbereichLeisteUndFokus),
+            sprache.text(Text::FunktionsbereichDateioperationen),
+            sprache.text(Text::FunktionsbereichDateilisting),
+            sprache.text(Text::FunktionsbereichNavigation),
+        ]
+    }
+
+    /// C1.1 und C1.3 bei deutscher Oberflaeche.
+    #[test]
+    fn die_vier_menuetitel_lauten_deutsch_wie_zugesagt() {
+        assert_eq!(
+            titel_in(krk_core::sprache::Sprache::De),
+            ["Leiste", "Dateioperation", "Dateiliste", "Navigation"]
+        );
+    }
+
+    /// C1.2 und C1.3 bei englischer Oberflaeche.
+    #[test]
+    fn die_vier_menuetitel_lauten_englisch_wie_zugesagt() {
+        assert_eq!(
+            titel_in(krk_core::sprache::Sprache::En),
+            ["Bar", "File Operation", "File List", "Navigation"]
+        );
+    }
+
+    /// C1.2 und C1.3 bei franzoesischer Oberflaeche.
+    #[test]
+    fn die_vier_menuetitel_lauten_franzoesisch_wie_zugesagt() {
+        assert_eq!(
+            titel_in(krk_core::sprache::Sprache::Fr),
+            [
+                "Barre",
+                "Opération sur les fichiers",
+                "Liste de fichiers",
+                "Navigation"
+            ]
         );
     }
 

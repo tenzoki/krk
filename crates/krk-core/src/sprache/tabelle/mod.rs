@@ -112,9 +112,10 @@
 //! | Pfad | chemin | path |
 //! | Bildschirmseite | page d’écran | screen page |
 //! | Bereich (der Fensterzeile) | zone | area |
-//! | Dateilisting (Menue) | Liste de fichiers | File Listing |
-//! | Dateioperationen (Menue) | Opérations sur les fichiers | File Operations |
-//! | Leiste und Fokus (Menue) | Barre et focus | Bar and Focus |
+//! | Dateiliste (Menue) | Liste de fichiers | File List |
+//! | Navigation (Menue) | Navigation | Navigation |
+//! | Dateioperation (Menue) | Opération sur les fichiers | File Operation |
+//! | Leiste (Menue) | Barre | Bar |
 //! | Anwendung (Menue) | Application | Application |
 //! | Spalte | colonne | column |
 //! | Groesse / Datum / Typ / Marke (Spalten) | Taille / Date / Type / Marque | Size / Date / Type / Mark |

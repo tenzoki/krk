@@ -717,6 +717,58 @@ mod tests {
         assert_eq!(gefunden, erwartet);
     }
 
+    /// Die Markdown-Ausgabe fuehrt den Abschnitt „Navigation" unmittelbar
+    /// hinter dem der Dateiliste, mit den Funktionen, die die Gliederung
+    /// dorthin stellt (C1.8 des Spec
+    /// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`).
+    ///
+    /// Die Erwartung kommt wie beim Abschnitt „Home" aus [`nach_bereichen`];
+    /// welche zwoelf es sind, haelt
+    /// `der_bereich_navigation_fuehrt_genau_diese_befehle_in_dieser_folge` im
+    /// Belegungsmodell.
+    #[test]
+    fn der_abschnitt_navigation_folgt_der_dateiliste_und_fuehrt_die_funktionen_des_bereichs() {
+        let belegung = Belegung::auslieferung();
+        let text = markdown(&belegung);
+
+        let ueberschriften: Vec<&str> = text
+            .lines()
+            .filter_map(|zeile| zeile.strip_prefix("## "))
+            .collect();
+        let stelle = ueberschriften
+            .iter()
+            .position(|titel| *titel == Funktionsbereich::Dateilisting.name())
+            .expect("die Datei fuehrt keinen Abschnitt der Dateiliste");
+        assert_eq!(
+            ueberschriften.get(stelle + 1),
+            Some(&Funktionsbereich::Navigation.name()),
+            "hinter der Dateiliste steht nicht die Navigation"
+        );
+
+        let erwartet: Vec<&str> = nach_bereichen(&belegung)
+            .into_iter()
+            .find(|(bereich, _)| *bereich == Funktionsbereich::Navigation)
+            .map(|(_, stellen)| stellen)
+            .expect("die Gliederung fuehrt keinen Bereich Navigation")
+            .into_iter()
+            .map(|stelle| &belegung.funktionen()[stelle])
+            .filter(|funktion| !funktion.tasten().is_empty())
+            .map(Funktion::name)
+            .collect();
+        assert_eq!(erwartet.len(), 12, "ab Werk sind nicht alle zwoelf belegt");
+
+        let kopf = format!("## {}", Funktionsbereich::Navigation.name());
+        let abschnitt = text
+            .split_once(kopf.as_str())
+            .map(|(_, rest)| rest.split("\n## ").next().unwrap_or(rest))
+            .expect("die Datei fuehrt keinen Abschnitt Navigation");
+        let gefunden: Vec<String> = funktionszeilen(abschnitt)
+            .iter()
+            .map(|zeile| zellen(zeile)[0].to_owned())
+            .collect();
+        assert_eq!(gefunden, erwartet);
+    }
+
     /// Innerhalb eines Abschnitts bleibt die Reihenfolge der Belegungsdatei
     /// erhalten; eine eigene Sortierung entsteht nicht.
     #[test]

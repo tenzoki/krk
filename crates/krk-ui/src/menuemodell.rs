@@ -687,6 +687,92 @@ mod tests {
         );
     }
 
+    /// „Navigation" steht unmittelbar rechts neben „Dateiliste" und fuehrt
+    /// die zwoelf Befehle aus C1.4 in dessen Folge, jeden mit dem Kuerzel,
+    /// das er vor dem Umzug zeigte (C1.3, C1.4 und C1.6 des Spec
+    /// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`).
+    ///
+    /// Dieselbe Liste wie
+    /// `der_bereich_navigation_fuehrt_genau_diese_befehle_in_dieser_folge` im
+    /// Belegungsmodell, hier am fertigen Wert der Leiste: der Aufbau koennte
+    /// einem Eintrag das Kuerzel nehmen, das die Belegung ihm gibt. Ob AppKit
+    /// es am laufenden Buendel zeigt, sieht auch diese Probe nicht.
+    #[test]
+    fn navigation_steht_rechts_neben_der_dateiliste_mit_zwoelf_eintraegen() {
+        const ERWARTET: [(&str, &str); 12] = [
+            ("auswahl_hoch", "up"),
+            ("auswahl_runter", "down"),
+            ("seite_hoch", "pageup"),
+            ("seite_runter", "pagedown"),
+            ("listenanfang", "home"),
+            ("listenende", "end"),
+            ("oeffnen", "right"),
+            ("ordner_aufwaerts", "left"),
+            ("ordner_der_datei", "opt+cmd+o"),
+            ("ordner_angleichen", "opt+cmd+s"),
+            ("pfadeingabe", "shift+cmd+g"),
+            ("zwischenablage_springen", "opt+cmd+g"),
+        ];
+
+        let belegung = Belegung::auslieferung();
+        let leiste = aufbau(&belegung);
+        let stelle = leiste
+            .iter()
+            .position(|obermenue| obermenue.titel == Funktionsbereich::Dateilisting.name())
+            .expect("es gibt ein Obermenue der Dateiliste");
+        let navigation = leiste
+            .get(stelle + 1)
+            .expect("hinter der Dateiliste steht kein Obermenue");
+        assert_eq!(
+            navigation.titel,
+            Funktionsbereich::Navigation.name(),
+            "rechts neben der Dateiliste steht nicht die Navigation"
+        );
+
+        let gefuehrt: Vec<(&str, Option<String>)> = navigation
+            .eintraege
+            .iter()
+            .filter_map(|eintrag| match eintrag {
+                Eintrag::Befehl {
+                    kennung,
+                    kombination,
+                    ..
+                } => Some((*kennung, kombination.map(|kuerzel| kuerzel.to_string()))),
+                _ => None,
+            })
+            .collect();
+        let erwartet: Vec<(&str, Option<String>)> = ERWARTET
+            .iter()
+            .map(|(kennung, kuerzel)| (*kennung, Some((*kuerzel).to_owned())))
+            .collect();
+        assert_eq!(
+            gefuehrt, erwartet,
+            "die Navigation fuehrt andere Befehle, eine andere Folge oder andere Kuerzel"
+        );
+
+        let dateiliste: Vec<&str> = leiste[stelle]
+            .eintraege
+            .iter()
+            .filter_map(|eintrag| match eintrag {
+                Eintrag::Befehl { kennung, .. } | Eintrag::Textbefehl { kennung, .. } => {
+                    Some(*kennung)
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            dateiliste.first(),
+            Some(&"markierung_umschalten"),
+            "die Dateiliste beginnt nicht mit dem Markieren"
+        );
+        for (kennung, _) in ERWARTET {
+            assert!(
+                !dateiliste.contains(&kennung),
+                "{kennung} steht noch unter der Dateiliste"
+            );
+        }
+    }
+
     /// Das erste Obermenue traegt den Anwendungsbereich, das letzte das
     /// Fenster.
     ///
@@ -1123,7 +1209,7 @@ mod tests {
     /// `261029-0920-plan-datei-im-terminal-mit-vim-und-sudo-e-oeffnen.md`,
     /// Moeglichkeit 1 von
     /// `261029-0921-welcher-menueeintrag-zeigt-opt-cmd-e-editor-schliessen-oder-mit-vim-bearbeiten.md`):
-    /// „Dateioperationen“ steht in der Leiste vor „Editor“, und AppKit nimmt
+    /// „Dateioperation“ steht in der Leiste vor „Editor“, und AppKit nimmt
     /// dem spaeteren von zwei gleichen Kuerzeln das Zeichen.
     #[test]
     fn opt_cmd_e_zeigt_im_menue_das_terminal_und_nicht_das_schliessen() {

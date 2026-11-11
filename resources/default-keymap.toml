@@ -45,8 +45,15 @@
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
 # in der sie hier stehen, und drei Abnehmer zeigen sie so an: die
 # Belegungsansicht, die Markdown-Ausgabe und seit der Runde 7 die Menueleiste
-# von macOS. Wer einen Block verschiebt, verschiebt einen Menueeintrag mit, und
-# keine Probe haelt das fest. Welche Gruppe eine Funktion bekommt, kommt
+# von macOS. Wer einen Block verschiebt, verschiebt einen Menueeintrag mit.
+# Fuer zwei Menues haelt eine Probe die Folge fest: "Home"
+# (`der_bereich_home_fuehrt_genau_diese_befehle_in_dieser_folge`) und seit dem
+# 261111 "Navigation"
+# (`der_bereich_navigation_fuehrt_genau_diese_befehle_in_dieser_folge`), dessen
+# zwoelf Befehle im Block "C2: Navigation in der Liste" und, als letzter,
+# "zwischenablage_springen" im Block C10 stehen; zwischen beiden steht kein
+# Befehl dieses Menues, also ist kein Block gewandert. Fuer die uebrigen Menues
+# haelt keine Probe die Folge. Welche Gruppe eine Funktion bekommt, kommt
 # dagegen nicht von hier, sondern aus `belegungsmodell::bereich_des_kommandos`.
 #
 # Kombinationsschreibweise: [ctrl+][opt+][shift+][cmd+]<taste>, in genau
@@ -887,7 +894,7 @@ tasten = ["opt+cmd+e"]
 # (Entscheid
 # `260926-2308_*_duerfen-zwei-funktionen-desselben-zustellers-eine-kombination-tragen-wenn-ihre-wirkungsbereiche-einander-ausschliessen.md`).
 # Der Preis ist eine Anzeige und keine Wirkung: im Hauptmenue zeigt dieser
-# Eintrag unter "Dateioperationen" das Kuerzel, weil er in der Leiste frueher
+# Eintrag unter "Dateioperation" das Kuerzel, weil er in der Leiste frueher
 # steht, und "Editor schliessen" steht ohne Kuerzel da
 # (`261029-0921-welcher-menueeintrag-zeigt-opt-cmd-e-editor-schliessen-oder-mit-vim-bearbeiten.md`,
 # Moeglichkeit 1). opt+shift+cmd+e bleibt frei.
@@ -1277,8 +1284,8 @@ tasten = []
 # grau. So war es schon bis zur Runde 22, und genau dieser Punkt ist der
 # vorgemerkte Einhaengepunkt einer Dateizwischenablage: der Nutzer hat ihn am
 # 260907-2009 wieder freigezogen und das Einfuegen in den Filtertext auf cmd+f
-# verlegt, wo es eine eigene Zeile traegt ("filter_einfuegen", im Block des
-# Dateilistings). Dateien fuegt KRK weiterhin nicht ein; was Cmd+V mit einem
+# verlegt, wo es eine eigene Zeile traegt ("filter_einfuegen", im Menue
+# "Dateiliste"). Dateien fuegt KRK weiterhin nicht ein; was Cmd+V mit einem
 # Dateiverweis tut, entscheidet die Runde, die die Dateizwischenablage baut
 # (`circles/260828-1041-dateilistenfilter-nimmt-eingaben-per-paste/decisions/260828-1041_*_was-tut-cmd-v-mit-einem-dateiverweis-sobald-die-dateizwischenablage-gebaut-ist.md`).
 #

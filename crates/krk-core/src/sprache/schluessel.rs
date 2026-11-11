@@ -671,15 +671,20 @@ pub enum Text {
     FunktionsbereichAnwendung,
     /// `Funktionsbereich::Home`.
     FunktionsbereichHome,
-    /// `Funktionsbereich::Dateilisting`.
+    /// `Funktionsbereich::Dateilisting`: der Titel lautet seit dem 261111
+    /// „Dateiliste", der Schluessel bleibt.
     FunktionsbereichDateilisting,
-    /// `Funktionsbereich::Dateioperationen`.
+    /// `Funktionsbereich::Navigation`.
+    FunktionsbereichNavigation,
+    /// `Funktionsbereich::Dateioperationen`: der Titel lautet seit dem
+    /// 261111 „Dateioperation", der Schluessel bleibt.
     FunktionsbereichDateioperationen,
     /// `Funktionsbereich::Tabs`.
     FunktionsbereichTabs,
     /// `Funktionsbereich::Vorschau`.
     FunktionsbereichVorschau,
-    /// `Funktionsbereich::LeisteUndFokus`.
+    /// `Funktionsbereich::LeisteUndFokus`: der Titel lautet seit dem 261111
+    /// „Leiste", der Schluessel bleibt.
     FunktionsbereichLeisteUndFokus,
     /// `Funktionsbereich::Editor`.
     FunktionsbereichEditor,
@@ -1946,7 +1951,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 795] = [
+    pub const ALLE: [Text; 796] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -2214,6 +2219,7 @@ impl Text {
         Text::FunktionsbereichAnwendung,
         Text::FunktionsbereichHome,
         Text::FunktionsbereichDateilisting,
+        Text::FunktionsbereichNavigation,
         Text::FunktionsbereichDateioperationen,
         Text::FunktionsbereichTabs,
         Text::FunktionsbereichVorschau,
