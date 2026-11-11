@@ -3,7 +3,7 @@
   "id": "0d9a0798-a0da-4fa9-ad0b-62342bdc7579",
   "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
   "domain": "code",
-  "status": "claimed",
+  "status": "done",
   "claim": {
     "checkout_id": "9be83618",
     "person": "Kai Stalmann <ks@qantr.com>",
@@ -52,7 +52,20 @@
   ],
   "references": [],
   "evidence": [],
-  "outcome": null,
+  "outcome": {
+    "class": "completed",
+    "reason": "Menue Navigation und drei kuerzere Titel, quicknote.txt mit Uebernahme von scratch.txt, Notiz- und Terminfunktionen entfernt, minutes/ mit Namensregel, Protokoll anlegen auf cmd+m; gebaut und durchgesehen, am laufenden Buendel nicht abgenommen",
+    "evidence": [
+      {
+        "ref": {
+          "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+          "record_id": "2bc9c33c-88e0-4105-9bed-b8777ce21c9f",
+          "revision": "sha256:dd52dc4e9620e24ca5307bb9bf8766ceb285adfefaf6b2cf400827e698f7bd56"
+        },
+        "policy": "claude-guided"
+      }
+    ]
+  },
   "provenance": {
     "source": "created",
     "legacy_fields": {}
