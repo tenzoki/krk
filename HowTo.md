@@ -1193,11 +1193,18 @@ Oben in der Fläche stehen fünf Schaltflächen:
 
 Beide stehen unten unter „Singlestrip und Format“ im Einzelnen.
 
+**Kopieren, Singlestrip und Format stehen auch vor einem Protokoll.** Zeigt der
+Editor den Text einer Datei unmittelbar in `minutes/`, trägt er dieselben drei
+Schaltflächen, und `shift+f10` kopiert dort; Leeren und Schließen gibt es allein
+in der Quicknote. Was die drei dort anders tun, steht unter „Protokolle in
+`minutes/`“.
+
 Im Hauptmenü stehen die fünf als „Quicknote öffnen und schließen“, „Quicknote
 kopieren und schließen“, „Quicknote leeren“, „Quicknote: Befehl auf eine Zeile
 bringen (Singlestrip)“ und „Quicknote: Fließtext formatieren (Format)“ unter
 „Editor“; die letzten drei haben ab Werk keine Taste und lassen sich in **F1**
-belegen.
+belegen. Die Namen sagen „Quicknote“, auch wo der Befehl vor einem Protokoll
+wirkt: „Quicknote kopieren und schließen“ kopiert dort und schließt nichts.
 
 **Eine im Editor offene Datei liegt unberührt darunter.** Ihr Stand, ihre
 Schreibmarke und ihr Rückgängig bleiben, wie sie waren, und nach dem Schließen
@@ -1281,6 +1288,11 @@ Ergebnis ist danach ausgewählt, und `cmd+z` nimmt die Umformung als eine
 Handlung zurück. Ändert sich nichts, bleibt der Text unberührt, und die
 Statuszeile sagt „Singlestrip: nichts zu ändern.“ oder „Format: nichts zu
 ändern.“
+
+Beide wirken in der Quicknote und ebenso vor dem Text eines Protokolls, mit
+denselben Regeln und denselben Beispielen. Der Unterschied liegt im Sichern:
+die Quicknote sichert das Ergebnis von selbst, ein Protokoll erst mit `cmd+s`
+(siehe „Protokolle in `minutes/`“).
 
 **Singlestrip macht aus einem einzelnen umbrochenen Befehl eine Zeile.** Es geht
 davon aus, dass die Eingabe **ein** Befehl ist und keine Liste von Befehlen
@@ -1918,6 +1930,30 @@ Notizordner oder `minutes/`, legt der Befehl sie an wie `f2`. Lässt sich
 steht, nennt die Statuszeile den Grund, und es geht weder ein Tab noch das Blatt
 auf. Geschrieben wird das Protokoll danach im Editor, mit `f4` auf der neuen
 Datei.
+
+**Vor dem Text eines Protokolls trägt der Editor drei Schaltflächen: Kopieren,
+Singlestrip und Format.** Sie stehen oben in der Fläche, unter dem Kopf des
+Editors und über dem Text, und es sind die drei gleichnamigen der Quicknote.
+Sie erscheinen für jede Datei unmittelbar in `minutes/`, gleich mit welcher
+Endung, solange der Editor ihren Text zeigt; eine CSV-Datei dort trägt sie in
+der Rohansicht und nicht in der Tabelle. Vor jeder anderen Datei fehlen sie,
+auch vor einer in einem Unterordner von `minutes/` und in einem Ordner, der
+anderswo `minutes` heißt, und die drei Befehle sind dort ausgegraut.
+
+- **Kopieren** legt den **ganzen** Text in die Zwischenablage, nicht die
+  Auswahl, und zwar so, wie er im Editor steht, auch ungesichert. Das Protokoll
+  bleibt stehen und offen: anders als in der Quicknote wird nichts geleert und
+  nichts geschlossen. Die Statuszeile sagt „Das Protokoll ist in der
+  Zwischenablage“ und nennt die Zahl der Zeichen. Ein leeres Protokoll kopiert
+  nichts, und die Zwischenablage bleibt, wie sie war. `shift+f10` tut dasselbe
+  wie die Schaltfläche.
+- **Singlestrip** und **Format** wirken auf die Auswahl, und ohne Auswahl auf
+  den ganzen Text, wie unter „Singlestrip und Format“ beschrieben. `cmd+z`
+  nimmt die Umformung zurück. Sie ändert zunächst allein den Text im Editor:
+  in die Datei kommt sie erst mit `cmd+s`, und bis dahin zeigt der Kopf des
+  Editors den ungesicherten Stand an wie nach jedem Tippen.
+
+Ist die Quicknote offen, gelten die drei ihr und nicht dem Protokoll darunter.
 
 **Mit einer eigenen `keymap.toml` trägt „Protokoll anlegen“ keine Taste.** KRK
 hängt den Befehl beim Start unbelegt an, und über das Menü „Home“ wirkt er
