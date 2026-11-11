@@ -106,6 +106,13 @@
 //!                                     └> tabelle_nachziehen (nur die Zeilen)
 //! ```
 //!
+//! **Vor dem Text einer Protokolldatei steht ueber der Textflaeche eine
+//! Schaltflaechenreihe** (Kopieren, Singlestrip, Format; `super::knopfzeile`).
+//! Sie ist keine vierte Flaeche, sondern ein Streifen, den die Rolle der
+//! Textflaeche ihr abgibt, und nachgefuehrt wird sie an derselben einen
+//! Stelle, in [`Editorbereich::flaeche_waehlen`], vor der Frage nach dem
+//! Tausch ([`Editorbereich::protokollknoepfe_nachfuehren`]).
+//!
 //! **Die Tabelle ist eine Sicht und kein zweiter Stand.** Eine Tabellenhandlung
 //! rechnet der Kern aus dem alten Stand in einen neuen, und
 //! [`Editorbereich::umbau_anwenden`] schreibt ihn auf dem Weg des Ersetzens ein:
@@ -509,6 +516,13 @@
 //! `NSView`. `NSWindow` und `NSResponder` stehen seit macOS 10.0, und keine
 //! der fuenf Methoden traegt im SDK eine eigene Angabe.
 //!
+//! **Die Schaltflaechenreihe des Protokolls holt keinen Namen herein**: die
+//! Klasse `Knopfzeile` ist KRKs eigene (`super::knopfzeile`, deren Kopf ihre
+//! Beruehrungen nennt), und der Editor legt sie ueber `bounds`, `setFrame:`,
+//! `addSubview:` und `setHidden:` an der `NSView`, alle ohne eigene Angabe im
+//! SDK und damit seit macOS 10.0. Die Probe dazu nennt `NSButton` (seit
+//! 10.0) ausgeschrieben und ruft daran `performClick:`, ebenfalls ohne Angabe.
+//!
 //! **Vier Namen kommen erst im Pruefmodul dieser Datei herein**, ueber eine
 //! eingerueckte `use`-Zeile, und stehen deshalb hier und nicht oben:
 //! `NSResponder` (`NSResponder.h:21`, ohne eigene Angabe; die Proben des
@@ -584,6 +598,7 @@ use super::blaetter::suche::Suchwahl;
 use super::eintragsansicht::{
     self, Eintragsansicht, Eintragsart, Trenntextsicht, Zeilen, Zelle, Zellenwege,
 };
+use super::knopfzeile::{KNOPFZEILE, Knopfzeile, PROTOKOLLKNOEPFE};
 use super::koordinaten;
 use super::nebenfaden::{self, PLATTENFRAGE};
 use super::nummernspalte::{self, Nummernspalte};
@@ -2548,6 +2563,36 @@ fn geheimnisgroesse_gilt(gefragt: &Oeffnungsstand, jetzt: &Oeffnungsstand) -> bo
     gefragt == jetzt
 }
 
+/// Die zwei Rahmen unter dem Kopf, wenn der Editor Text zeigt: zuerst der der
+/// Rolle um die Textflaeche, dann der der Schaltflaechenreihe des Protokolls
+/// (Schritt 6 des Plans
+/// `261111-2248-plan-protokolldatei-traegt-kopieren-singlestrip-format.md`).
+///
+/// `flaeche` ist der Rahmen unter dem Kopf, in dem die drei Flaechen
+/// deckungsgleich liegen. **Mit Reihe** gibt die Textrolle oben
+/// [`KNOPFZEILE`] an Hoehe ab, und die Reihe liegt genau darueber, unter dem
+/// Kopf; **ohne Reihe** fuellt die Textrolle die Flaeche. Der Rahmen der Reihe
+/// ist in beiden Faellen derselbe Streifen am oberen Rand: ausgeblendet liegt
+/// sie dort, wo sie beim naechsten Einblenden stehen soll.
+///
+/// Rein und ohne AppKit-Aufruf; die Ansicht ist nicht gespiegelt, `y` waechst
+/// also nach oben. Eine Flaeche, die niedriger ist als die Reihe, laesst der
+/// Textrolle die Hoehe null und keine negative.
+#[must_use]
+fn protokollrahmen(flaeche: NSRect, mit_reihe: bool) -> (NSRect, NSRect) {
+    let texthoehe = (flaeche.size.height - KNOPFZEILE).max(0.0);
+    let reihe = NSRect::new(
+        NSPoint::new(flaeche.origin.x, flaeche.origin.y + texthoehe),
+        NSSize::new(flaeche.size.width, KNOPFZEILE),
+    );
+    let textrolle = if mit_reihe {
+        NSRect::new(flaeche.origin, NSSize::new(flaeche.size.width, texthoehe))
+    } else {
+        flaeche
+    };
+    (textrolle, reihe)
+}
+
 /// Die Flaeche, die eine Form zeigt.
 #[must_use]
 fn flaeche_der_form(form: Editorform) -> Flaeche {
@@ -3074,6 +3119,17 @@ pub struct EditorIvars {
     /// Gebaut wird allein in [`Editorbereich::quicknote`]; wer nur fragt, etwa
     /// [`Editorbereich::ist_quicknote_flaeche`], nimmt `get` und baut nie.
     quicknote: OnceCell<Retained<Quicknote>>,
+    /// Die Schaltflaechenreihe vor dem Text einer Protokolldatei (Kopieren,
+    /// Singlestrip, Format), gebaut beim ersten Bedarf und nicht beim Start
+    /// (E8 des Plans
+    /// `261111-2248-plan-protokolldatei-traegt-kopieren-singlestrip-format.md`).
+    ///
+    /// Gebaut wird allein in [`Editorbereich::protokollknoepfe`]; ein- und
+    /// ausgeblendet allein in [`Editorbereich::protokollknoepfe_nachfuehren`].
+    /// **Die Zelle haelt die Reihe so lange wie der Bereich ihre Ansicht**:
+    /// `NSControl` haelt sein Ziel schwach, und ohne diesen Halter zeigte das
+    /// Ziel der Schaltflaechen ins Leere.
+    protokollknoepfe: OnceCell<Retained<Knopfzeile>>,
     /// Die Rueckkehr der offenen Quicknote; `Some` heisst offen, `None` zu.
     ///
     /// **Das eine Kennzeichen „offen"**, und es gibt kein zweites daneben
@@ -3270,6 +3326,7 @@ impl Editorbereich {
             zelle_umgebaut: Cell::new(false),
             kommandomelder: RefCell::new(None),
             quicknote: OnceCell::new(),
+            protokollknoepfe: OnceCell::new(),
             quicknote_rueckkehr: Cell::new(None),
             quicknote_ablage: OnceCell::new(),
             quicknote_vormerkung: Cell::new(Vormerkung::default()),
@@ -3506,9 +3563,15 @@ impl Editorbereich {
     /// Baut die Flaeche der Quicknote mit ihren drei Meldern, **nicht
     /// bearbeitbar**, bis die Sicherung den Inhalt von `quicknote.txt` geliefert
     /// hat.
+    ///
+    /// **Ihr Rahmen ist der Flaechenrahmen und nicht der der Textrolle**
+    /// ([`Self::flaechenrahmen`]): vor dem Text einer Protokolldatei hat die
+    /// Textrolle [`KNOPFZEILE`] an Hoehe abgegeben, und eine Quicknote, die
+    /// beim ersten F10 ueber einem Protokoll entsteht, waere sonst um eine
+    /// Reihe zu niedrig.
     fn quicknote_bauen(&self) -> Retained<Quicknote> {
         {
-            let quicknote = Quicknote::bauen(self.mtm(), self.ivars().textrolle.frame());
+            let quicknote = Quicknote::bauen(self.mtm(), self.flaechenrahmen());
             self.ivars().bereich.addSubview(quicknote.rolle());
             // Ein Klick auf eine Schaltflaeche geht als Kommando durch den
             // einen Kommandomelder dieses Bereichs; schwach, aus dem Grund an
@@ -3729,6 +3792,93 @@ impl Editorbereich {
         // Flaeche vor dem Einlesen, an der noch nichts zu aendern ist.
         let _ = quicknote.ersetzen(bereich, &nachher);
         None
+    }
+
+    /// Der Rahmen unter dem Kopf, in dem Textrolle, Tabelle und Quicknote
+    /// deckungsgleich liegen, gerechnet aus den Grenzen des Bereichs.
+    ///
+    /// Aus den Grenzen und nicht aus dem Rahmen einer der Flaechen gelesen,
+    /// weil die Textrolle vor einer Protokolldatei niedriger ist als die
+    /// Flaeche ([`protokollrahmen`]). Dieselbe Rechnung wie beim Bau in
+    /// [`Self::bauen`], dort an der Aufbaugroesse.
+    fn flaechenrahmen(&self) -> NSRect {
+        let grenzen = self.ivars().bereich.bounds();
+        NSRect::new(
+            grenzen.origin,
+            NSSize::new(
+                grenzen.size.width,
+                (grenzen.size.height - statuszeile::HOEHE).max(0.0),
+            ),
+        )
+    }
+
+    /// Die Schaltflaechenreihe des Protokolls; beim ersten Ruf gebaut und in
+    /// den Bereich gehaengt (E8 des Plans der Protokollknoepfe).
+    ///
+    /// **Die eine Stelle im Editor, die eine [`Knopfzeile`] baut**; die
+    /// Quicknote baut ihre eigene in `super::quicknote`. Das Fokusziel ist die
+    /// Textflaeche der Datei, auf die die drei Kommandos wirken, und der
+    /// Klick geht als Kommando durch den einen Kommandomelder dieses
+    /// Bereichs, schwach gehalten wie bei der Quicknote. Gerufen allein aus
+    /// [`Self::protokollknoepfe_nachfuehren`], das sie danach legt und zeigt;
+    /// wer nur fragt, nimmt `get` und baut nie.
+    fn protokollknoepfe(&self) -> &Knopfzeile {
+        if let Some(reihe) = self.ivars().protokollknoepfe.get() {
+            return reihe;
+        }
+        let (_, rahmen) = protokollrahmen(self.flaechenrahmen(), true);
+        let gebaut = Knopfzeile::bauen(
+            self.mtm(),
+            PROTOKOLLKNOEPFE,
+            &self.ivars().text,
+            rahmen.origin,
+            rahmen.size.width,
+        );
+        let schwach = Weak::from_retained(&self.retain());
+        gebaut.melder_setzen(Box::new(move |kommando| {
+            if let Some(editor) = schwach.load() {
+                editor.kommando_melden(kommando);
+            }
+        }));
+        self.ivars().bereich.addSubview(gebaut.ansicht());
+        self.ivars().protokollknoepfe.get_or_init(|| gebaut)
+    }
+
+    /// Fuehrt die Schaltflaechenreihe des Protokolls dem nach, was der Editor
+    /// zeigt (Schritt 6 des Plans der Protokollknoepfe).
+    ///
+    /// Zeigt der Editor den Text einer Protokolldatei
+    /// ([`zulaessigkeit::protokolltext`], dieselbe Regel, an der die Geltung
+    /// der drei Befehle haengt, E4), steht die Reihe oben unter dem Kopf, und
+    /// die Textrolle gibt ihr [`KNOPFZEILE`] an Hoehe ab; sonst ist sie
+    /// ausgeblendet, und die Textrolle fuellt die Flaeche. Die zwei Rahmen
+    /// rechnet [`protokollrahmen`].
+    ///
+    /// **Gerufen allein aus [`Self::flaeche_waehlen`], und dort vor der Frage,
+    /// ob die Flaeche wechselt**: ein Protokoll und eine andere Textdatei
+    /// zeigen dieselbe Flaeche, und der Wechsel zwischen ihnen ist kein
+    /// Tausch. `flaeche_waehlen` laeuft nach jedem gelungenen Laden, nach dem
+    /// Schliessen, nach dem Ansichtswechsel und beim Zeigen und Verlassen der
+    /// Quicknote, also an jeder Stelle, an der sich Form oder Datei aendern.
+    ///
+    /// Solange nie ein Protokoll gezeigt wurde, gibt es keine Reihe, und
+    /// dieser Weg fasst nichts an (E8). Danach setzt jeder Ruf beide Rahmen
+    /// und die Sichtbarkeit, auch wenn sich nichts geaendert hat; den
+    /// Ersthelfer beruehrt er nie, denn die Schaltflaechen nehmen den Rang
+    /// nicht an.
+    fn protokollknoepfe_nachfuehren(&self) {
+        let zeigen = zulaessigkeit::protokolltext(self.form(), self.haelt_protokolldatei());
+        let reihe = if zeigen {
+            self.protokollknoepfe()
+        } else if let Some(reihe) = self.ivars().protokollknoepfe.get() {
+            reihe
+        } else {
+            return;
+        };
+        let (textrahmen, reihenrahmen) = protokollrahmen(self.flaechenrahmen(), zeigen);
+        self.ivars().textrolle.setFrame(textrahmen);
+        reihe.ansicht().setFrame(reihenrahmen);
+        reihe.ansicht().setHidden(!zeigen);
     }
 
     /// Ob der Editor eine Protokolldatei haelt, also eine Datei unmittelbar in
@@ -4389,7 +4539,15 @@ impl Editorbereich {
     /// [`Self::datei_oeffnen`] uebernehmend ueber [`Self::zelle_uebernehmen`],
     /// [`Self::schliessen`] verwerfend. Eine abgewiesene Zelle haelt die ersten
     /// beiden an, bevor es hierher kommt.
+    ///
+    /// **Die Schaltflaechenreihe des Protokolls wird hier nachgefuehrt, vor
+    /// der Frage nach dem Tausch** ([`Self::protokollknoepfe_nachfuehren`]):
+    /// ob sie steht, haengt an Form und Datei, und beide wechseln allein an
+    /// den Stellen, die hierher fuehren. Ein Wechsel zwischen einem Protokoll
+    /// und einer anderen Textdatei tauscht keine Flaeche und kaeme hinter der
+    /// leeren Schrittliste nicht mehr an.
     fn flaeche_waehlen(&self) {
+        self.protokollknoepfe_nachfuehren();
         let schritte = self.tausch_planen();
         if schritte.is_empty() {
             return;
@@ -7234,6 +7392,7 @@ mod tests {
         hauptfadenprobe!(die_uebrigen_arten_behalten_ihre_zeilenauswahl),
         hauptfadenprobe!(eine_neue_csv_beginnt_mit_anfangsbreiten_und_bei_a1),
         hauptfadenprobe!(die_pfeile_bewegen_die_auswahl_und_return_oeffnet_ihre_zelle),
+        hauptfadenprobe!(die_reihe_des_protokolls_folgt_datei_und_form),
     ];
 
     fn pfad() -> PathBuf {
@@ -10620,7 +10779,8 @@ mod tests {
     /// seit dem 260927 beim Zeigen und Verlassen der Quicknote:
     /// `flaeche_waehlen` hat genau diese Rufer, `makeFirstResponder:`
     /// steht im Editor an genau einer Stelle, in `flaeche_waehlen`, und
-    /// `setHidden:` allein in `tausch_ausfuehren`.
+    /// `setHidden:` allein in `tausch_ausfuehren` und, fuer die
+    /// Schaltflaechenreihe des Protokolls, in `protokollknoepfe_nachfuehren`.
     #[test]
     fn getauscht_wird_allein_bei_einem_wechsel_von_datei_oder_ansicht() {
         use super::super::anwendung::quelltextproben::{datei, rumpf};
@@ -10660,8 +10820,12 @@ mod tests {
         );
         assert_eq!(zeilen(concat!("makeFirst", "Responder(")), 1);
         assert!(rumpf(&quelle, "flaeche_waehlen").contains(concat!("makeFirst", "Responder(")));
-        assert_eq!(zeilen(concat!("set", "Hidden(")), 2);
+        // Zwei in `tausch_ausfuehren`, die dritte blendet die
+        // Schaltflaechenreihe des Protokolls ein und aus; sie ist keine
+        // Flaeche und haelt nie den Ersthelfer.
+        assert_eq!(zeilen(concat!("set", "Hidden(")), 3);
         assert!(rumpf(&quelle, "tausch_ausfuehren<'a>").contains(concat!("set", "Hidden(")));
+        assert!(rumpf(&quelle, "protokollknoepfe_nachfuehren").contains(concat!("set", "Hidden(")));
     }
 
     // ------------------------------------------------------------------
@@ -13875,5 +14039,284 @@ mod tests {
             Editormeldung::Trenntext(Trenntextantwort::ZeilenEingefuegt(2)).text(),
             "2 Zeilen eingefügt; cmd+z nimmt sie zurück"
         );
+    }
+
+    // ------------------------------------------------------------------
+    // Die Schaltflaechenreihe vor dem Text einer Protokolldatei (Schritt 6
+    // des Plans `261111-2248-plan-protokolldatei-traegt-kopieren-singlestrip-format.md`)
+    // ------------------------------------------------------------------
+
+    /// Mit Reihe ist die Textrolle um [`KNOPFZEILE`] niedriger, und die Reihe
+    /// liegt genau darueber bis an den oberen Rand der Flaeche; ohne Reihe
+    /// fuellt die Textrolle die Flaeche. Die Reihe hat in beiden Faellen
+    /// denselben Rahmen.
+    #[test]
+    fn mit_reihe_gibt_die_textrolle_eine_knopfzeile_ab_und_ohne_fuellt_sie_die_flaeche() {
+        for flaeche in [
+            NSRect::new(NSPoint::ZERO, NSSize::new(460.0, 372.0)),
+            NSRect::new(NSPoint::new(3.0, 7.0), NSSize::new(900.0, 55.5)),
+        ] {
+            let oben = flaeche.origin.y + flaeche.size.height;
+
+            let (text, reihe) = protokollrahmen(flaeche, true);
+            assert_eq!(text.origin, flaeche.origin);
+            assert_eq!(text.size.width, flaeche.size.width);
+            assert_eq!(text.size.height, flaeche.size.height - KNOPFZEILE);
+            assert_eq!(reihe.origin.x, flaeche.origin.x);
+            assert_eq!(
+                reihe.origin.y,
+                text.origin.y + text.size.height,
+                "die Reihe liegt unmittelbar ueber der Textrolle"
+            );
+            assert_eq!(reihe.size, NSSize::new(flaeche.size.width, KNOPFZEILE));
+            assert_eq!(reihe.origin.y + reihe.size.height, oben);
+
+            let (text_ohne, reihe_ohne) = protokollrahmen(flaeche, false);
+            assert_eq!(text_ohne, flaeche, "ohne Reihe fuellt die Textrolle");
+            assert_eq!(
+                reihe_ohne, reihe,
+                "die ausgeblendete Reihe behaelt ihren Ort"
+            );
+        }
+
+        // Eine Flaeche, die niedriger ist als die Reihe: keine negative Hoehe.
+        let flach = NSRect::new(NSPoint::ZERO, NSSize::new(200.0, 10.0));
+        let (text, reihe) = protokollrahmen(flach, true);
+        assert_eq!(text.size.height, 0.0);
+        assert_eq!(reihe.origin.y, 0.0);
+    }
+
+    /// Die Nachfuehrung der Reihe steht in `flaeche_waehlen`, vor der Frage
+    /// nach dem Tausch, und hat keinen zweiten Rufer; eine `Knopfzeile` baut
+    /// der Editor an genau einer Stelle, und die Quicknote nimmt ihren Rahmen
+    /// aus dem Flaechenrahmen.
+    ///
+    /// **Was diese Probe nicht sieht:** einen Weg, der Form oder Datei
+    /// wechselt, ohne `flaeche_waehlen` zu rufen; dessen Rufer haelt
+    /// `getauscht_wird_allein_bei_einem_wechsel_von_datei_oder_ansicht`, und
+    /// einen neuen, der dort fehlen muesste, haelt keine.
+    #[test]
+    fn die_reihe_des_protokolls_wird_in_flaeche_waehlen_nachgefuehrt_und_an_einer_stelle_gebaut() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        let (code, _) = quelle
+            .split_once(concat!("#[cfg(test)]\nmod ", "tests {"))
+            .expect("das Pruefmodul steht am Fuss der Datei");
+        let zeilen = |nadel: &str| {
+            code.lines()
+                .filter(|zeile| !zeile.trim_start().starts_with("//"))
+                .filter(|zeile| zeile.contains(nadel))
+                .count()
+        };
+
+        let nachfuehren = concat!("self.protokollknoepfe_", "nachfuehren()");
+        let waehlen = rumpf(&quelle, "flaeche_waehlen");
+        let ruf = waehlen
+            .find(nachfuehren)
+            .expect("flaeche_waehlen fuehrt die Reihe nicht nach");
+        let planen = waehlen
+            .find(concat!("self.tausch_", "planen()"))
+            .expect("flaeche_waehlen plant keinen Tausch");
+        assert!(
+            ruf < planen,
+            "die Reihe wird erst hinter der Frage nach dem Tausch nachgefuehrt"
+        );
+        assert_eq!(zeilen(nachfuehren), 1, "ein zweiter Rufer der Nachfuehrung");
+
+        let bau = concat!("Knopfzeile::", "bauen(");
+        assert_eq!(zeilen(bau), 1, "der Editor baut eine zweite Knopfzeile");
+        assert!(rumpf(&quelle, "protokollknoepfe").contains(bau));
+        assert_eq!(
+            zeilen(concat!("self.protokoll", "knoepfe()")),
+            1,
+            "die Reihe wird ausserhalb der Nachfuehrung gebaut"
+        );
+        let nachfuehrung = rumpf(&quelle, "protokollknoepfe_nachfuehren");
+        assert!(nachfuehrung.contains(concat!("self.protokoll", "knoepfe()")));
+        assert!(
+            nachfuehrung.contains(concat!(
+                "zulaessigkeit::protokolltext(self.form(), ",
+                "self.haelt_protokolldatei())"
+            )),
+            "die Sichtbarkeit fragt nicht die eine Regel"
+        );
+        assert!(nachfuehrung.contains(concat!("protokoll", "rahmen(")));
+
+        let quicknote = rumpf(&quelle, "quicknote_bauen");
+        assert!(
+            quicknote.contains(concat!(
+                "Quicknote::bauen(self.mtm(), ",
+                "self.flaechenrahmen())"
+            )),
+            "die Quicknote nimmt ihren Rahmen nicht aus dem Flaechenrahmen"
+        );
+        assert!(!quicknote.contains(concat!("textrolle", ".frame()")));
+    }
+
+    /// Der Editorbereich zeigt die Reihe genau vor dem Text einer
+    /// Protokolldatei: nach dem Laden eines Protokolls steht sie sichtbar mit
+    /// drei Schaltflaechen ueber der verkuerzten Textrolle, vor einer anderen
+    /// Textdatei, in der Quicknote, in der Tabelle einer CSV aus `minutes/`
+    /// und ohne Datei nicht, und in der Rohansicht jener CSV wieder.
+    ///
+    /// **Der Wechsel Protokoll, andere Textdatei, Protokoll tauscht keine
+    /// Flaeche**; dass die Reihe ihm trotzdem folgt, ist der Grund, aus dem
+    /// die Nachfuehrung vor der leeren Schrittliste steht. Eine Quicknote, die
+    /// ueber einem Protokoll entsteht, nimmt die ganze Flaeche.
+    ///
+    /// Geladen wird ueber den Arbeitsfaden des Modells; die Probe holt seine
+    /// Meldung selbst ab, weil hier keine Laufschleife den Takt faehrt. Das
+    /// Fenster fehlt, den Fokus holt ein Klick hier also nicht.
+    fn die_reihe_des_protokolls_folgt_datei_und_form(mtm: MainThreadMarker) {
+        use crate::fenstermodell::Randrueckkehr;
+        use crate::kommandos::fokus::Fokus;
+
+        let ordner = crate::pruefordner::Pruefordner::neu("editor-protokollknoepfe");
+        let zuhause = ordner.ordner("zuhause");
+        let heim = heimordner::Heimordner::im_benutzerverzeichnis(&zuhause);
+        let notizordner = heim.geschrieben().to_path_buf();
+        let minutes = notizordner.join(heimordner::PROTOKOLLORDNER);
+        std::fs::create_dir_all(&minutes).expect("minutes/");
+        let protokoll = minutes.join("treffen.md");
+        let liste = minutes.join("liste.csv");
+        let brief = notizordner.join("brief.md");
+        std::fs::write(&protokoll, "# Treffen\n\nText\n").expect("treffen.md");
+        std::fs::write(&liste, "a,b\n1,2\n").expect("liste.csv");
+        std::fs::write(&brief, "# Brief\n").expect("brief.md");
+
+        let griff = heimgriff::ungelesen();
+        heimgriff::ersetzen(&griff, heimgriff::Notizlage::gilt(heim));
+        let editor =
+            Editorbereich::bauen(mtm, griff, Rc::new(RefCell::new(Schluesselmerker::neu())));
+        let gemeldet: Rc<RefCell<Vec<Kommando>>> = Rc::new(RefCell::new(Vec::new()));
+        let senke = Rc::clone(&gemeldet);
+        editor.kommandomelder_setzen(Box::new(move |kommando| senke.borrow_mut().push(kommando)));
+
+        let oeffnen = |pfad: &Path| {
+            editor.datei_oeffnen(pfad, Oeffnungsherkunft::Befehl);
+            for _ in 0..5000 {
+                editor.einziehen();
+                let modell = editor.ivars().modell.borrow();
+                if !modell.laedt_noch() && modell.haelt_bereits(pfad) {
+                    return;
+                }
+                drop(modell);
+                std::thread::sleep(Duration::from_millis(1));
+            }
+            panic!("{} ist nach fuenf Sekunden nicht geladen", pfad.display());
+        };
+        // Die Lage der Reihe gegen die reine Rahmenrechnung: mit Reihe steht
+        // sie sichtbar mit drei Schaltflaechen ueber der verkuerzten
+        // Textrolle, ohne ist sie ausgeblendet oder nie gebaut, und die
+        // Textrolle fuellt die Flaeche.
+        let pruefen = |erwartet: bool, wann: &str| {
+            let flaeche = editor.flaechenrahmen();
+            let (textrahmen, reihenrahmen) = protokollrahmen(flaeche, erwartet);
+            assert_eq!(editor.ivars().textrolle.frame(), textrahmen, "{wann}");
+            let reihe = editor.ivars().protokollknoepfe.get();
+            if erwartet {
+                let reihe = reihe.unwrap_or_else(|| panic!("{wann}: die Reihe ist nicht gebaut"));
+                assert!(!reihe.ansicht().isHidden(), "{wann}: ausgeblendet");
+                assert_eq!(reihe.ansicht().frame(), reihenrahmen, "{wann}");
+                assert_eq!(reihe.ansicht().subviews().len(), 3, "{wann}");
+                assert!(
+                    reihe.ansicht().isDescendantOf(&editor.ivars().bereich),
+                    "{wann}: die Reihe haengt nicht im Bereich"
+                );
+            } else {
+                assert!(
+                    reihe.is_none_or(|reihe| reihe.ansicht().isHidden()),
+                    "{wann}: die Reihe steht"
+                );
+            }
+        };
+
+        // E8: ohne Protokoll entsteht keine Reihe.
+        assert!(editor.ivars().protokollknoepfe.get().is_none());
+        oeffnen(&brief);
+        assert_eq!(editor.form(), Editorform::Text);
+        assert!(
+            editor.ivars().protokollknoepfe.get().is_none(),
+            "vor einer anderen Textdatei wird die Reihe nicht gebaut"
+        );
+        pruefen(false, "andere Datei vor dem ersten Protokoll");
+
+        // Protokoll, andere Textdatei, Protokoll: dieselbe Flaeche, kein Tausch.
+        oeffnen(&protokoll);
+        assert_eq!(editor.form(), Editorform::Text);
+        assert!(editor.tausch_planen().is_empty());
+        pruefen(true, "Protokoll");
+        oeffnen(&brief);
+        assert_eq!(editor.form(), Editorform::Text);
+        pruefen(false, "andere Datei nach dem Protokoll");
+        oeffnen(&protokoll);
+        pruefen(true, "Protokoll zum zweiten Mal");
+
+        // Der Bereich waechst: die Reihe klebt oben, die Textrolle behaelt
+        // ihren Abstand.
+        editor
+            .ivars()
+            .bereich
+            .setFrame(NSRect::new(NSPoint::ZERO, NSSize::new(640.0, 520.0)));
+        pruefen(true, "nach dem Wachsen des Bereichs");
+
+        // Ein Klick ist ein Kommando an den Melder des Bereichs.
+        let knopf = editor
+            .ivars()
+            .protokollknoepfe
+            .get()
+            .expect("die Reihe steht")
+            .ansicht()
+            .subviews()
+            .iter()
+            .next()
+            .expect("drei Schaltflaechen")
+            .downcast::<objc2_app_kit::NSButton>()
+            .expect("in der Reihe steht etwas anderes als eine Schaltflaeche");
+        // SAFETY: Der Absender darf fehlen; das Ziel der Schaltflaeche ist die
+        // Reihe, die der Editorbereich haelt.
+        unsafe { knopf.performClick(None) };
+        assert_eq!(*gemeldet.borrow(), [Kommando::QuicknoteKopieren]);
+
+        // Die Quicknote entsteht ueber dem Protokoll und nimmt die ganze
+        // Flaeche; die Reihe weicht ihr und kommt mit dem Verlassen zurueck.
+        let rueckkehr = Rueckkehr {
+            fokus: Fokus::Dateifenster,
+            rand: Randrueckkehr::Nichts,
+        };
+        assert_eq!(editor.quicknote_zeigen(rueckkehr), Ok(()));
+        assert_eq!(editor.form(), Editorform::Quicknote);
+        pruefen(false, "Quicknote ueber dem Protokoll");
+        let quicknote = editor.ivars().quicknote.get().expect("die Quicknote steht");
+        assert_eq!(
+            quicknote.rolle().frame(),
+            editor.flaechenrahmen(),
+            "die Quicknote ist um eine Reihe zu niedrig"
+        );
+        assert_eq!(editor.quicknote_verlassen(), Some(rueckkehr));
+        pruefen(true, "nach dem Verlassen der Quicknote");
+
+        // Eine CSV in `minutes/`: in der Tabelle keine Reihe, in der
+        // Rohansicht ja (E4).
+        oeffnen(&liste);
+        assert!(editor.haelt_protokolldatei());
+        assert_eq!(editor.form(), Editorform::Trenntext);
+        pruefen(false, "Tabelle einer CSV in minutes/");
+        assert_eq!(editor.ansicht_umschalten(), None);
+        assert_eq!(editor.form(), Editorform::Text);
+        pruefen(true, "Rohansicht der CSV in minutes/");
+        assert_eq!(editor.ansicht_umschalten(), None);
+        pruefen(false, "zurueck in der Tabelle");
+
+        // Ohne Datei steht keine Reihe.
+        oeffnen(&protokoll);
+        pruefen(true, "Protokoll nach der CSV");
+        editor.schliessen();
+        pruefen(false, "nach dem Schliessen");
+
+        // Der Faden der Quicknote und der Takt enden, bevor der Pruefordner
+        // faellt.
+        editor.quicknote_abschliessen();
+        editor.takt_beenden();
     }
 }

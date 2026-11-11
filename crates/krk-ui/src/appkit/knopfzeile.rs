@@ -102,13 +102,6 @@ const NUR_QUICKNOTE: usize = 2;
 ///
 /// **Ein Ausschnitt der fuenf und keine zweite Liste**, damit Beschriftung
 /// und Kommando an beiden Flaechen dieselben Eintraege sind.
-#[cfg_attr(
-    not(test),
-    expect(
-        dead_code,
-        reason = "der Editor baut die Reihe des Protokolls erst in Schritt 6 des Plans"
-    )
-)]
 pub(super) const PROTOKOLLKNOEPFE: &[Knopfeintrag] = QUICKNOTEKNOEPFE.split_at(NUR_QUICKNOTE).1;
 
 /// Das Kommando des Eintrags, dessen Stelle `marke` nennt, oder `None` fuer
