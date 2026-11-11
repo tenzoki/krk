@@ -1,0 +1,61 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "0d9a0798-a0da-4fa9-ad0b-62342bdc7579",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "claimed",
+  "claim": {
+    "checkout_id": "9be83618",
+    "person": "Kai Stalmann <ks@qantr.com>",
+    "claimed_at": "2026-11-11T07:09:27Z"
+  },
+  "mode": {
+    "value": "autonomous",
+    "source": {
+      "kind": "user-word",
+      "ref": {
+        "path": "work-packages/261111-0809-menue-navigation-krkhome-drei-dateien-und-minutes/261111-0809-menue-navigation-krkhome-drei-dateien-und-minutes.md",
+        "sha256": "sha256:9e5592b8a63cd4c5db26d1f8916a1617b4b34c1a056f2381004ec18f07af19fe",
+        "kind": "other"
+      }
+    }
+  },
+  "origin": {
+    "kind": "user-request",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "user",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "narrative": {
+    "path": "work-packages/261111-0809-menue-navigation-krkhome-drei-dateien-und-minutes/261111-0809-menue-navigation-krkhome-drei-dateien-und-minutes.md"
+  },
+  "depends_on": [],
+  "active_documents": [
+    {
+      "ref": {
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "record_id": "3ad8a472-c3c1-423c-b962-b70d0611dac0"
+      },
+      "role": "spec",
+      "revision": "sha256:b0df47c580a9d3e7576bb32b52ad90ce1a563748bc1f781b755ecb5f0c24af7c"
+    },
+    {
+      "ref": {
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "record_id": "43fcfef2-6e93-4aeb-9bff-61e0b58ba5bf"
+      },
+      "role": "plan",
+      "revision": "sha256:c39391a477bb13cf9101b22ceb29b803d257ef8c80c02368b8a31068b51be5ba"
+    }
+  ],
+  "references": [],
+  "evidence": [],
+  "outcome": null,
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {}
+}

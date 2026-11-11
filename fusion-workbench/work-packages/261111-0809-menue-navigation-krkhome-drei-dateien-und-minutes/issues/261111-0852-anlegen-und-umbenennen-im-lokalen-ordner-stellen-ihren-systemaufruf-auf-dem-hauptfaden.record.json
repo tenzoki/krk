@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "2d8c40e6-e3b9-49ac-a4fc-ab8398c9b360",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261111-0809-menue-navigation-krkhome-drei-dateien-und-minutes/issues/261111-0852-anlegen-und-umbenennen-im-lokalen-ordner-stellen-ihren-systemaufruf-auf-dem-hauptfaden.md"
+  },
+  "filed_by": {
+    "actor": "implementation-planner",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

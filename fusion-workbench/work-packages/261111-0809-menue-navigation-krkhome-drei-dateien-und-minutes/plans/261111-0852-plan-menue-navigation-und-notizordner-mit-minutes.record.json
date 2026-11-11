@@ -1,0 +1,72 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "43fcfef2-6e93-4aeb-9bff-61e0b58ba5bf",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "plan",
+  "narrative": {
+    "path": "work-packages/261111-0809-menue-navigation-krkhome-drei-dateien-und-minutes/plans/261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md"
+  },
+  "filed_by": {
+    "actor": "implementation-planner",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "in_progress",
+    "steps": [
+      {
+        "id": "1",
+        "state": "in_progress"
+      },
+      {
+        "id": "2",
+        "state": "open"
+      },
+      {
+        "id": "3",
+        "state": "open"
+      },
+      {
+        "id": "4",
+        "state": "open"
+      },
+      {
+        "id": "5",
+        "state": "open"
+      },
+      {
+        "id": "6",
+        "state": "open"
+      },
+      {
+        "id": "7",
+        "state": "open"
+      },
+      {
+        "id": "8",
+        "state": "open"
+      },
+      {
+        "id": "9",
+        "state": "open"
+      },
+      {
+        "id": "10",
+        "state": "open"
+      }
+    ],
+    "criteria": [],
+    "acceptance": {
+      "ref": {
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "record_id": "0d9a0798-a0da-4fa9-ad0b-62342bdc7579"
+      },
+      "revision": "sha256:c39391a477bb13cf9101b22ceb29b803d257ef8c80c02368b8a31068b51be5ba"
+    }
+  }
+}

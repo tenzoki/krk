@@ -1,0 +1,31 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "3ad8a472-c3c1-423c-b962-b70d0611dac0",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "plan",
+  "narrative": {
+    "path": "shared/plans/261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md"
+  },
+  "filed_by": {
+    "actor": "requirements-designer",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "steps": [],
+    "criteria": [],
+    "acceptance": {
+      "ref": {
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "record_id": "0d9a0798-a0da-4fa9-ad0b-62342bdc7579"
+      },
+      "revision": "sha256:b0df47c580a9d3e7576bb32b52ad90ce1a563748bc1f781b755ecb5f0c24af7c"
+    }
+  }
+}
