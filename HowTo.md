@@ -1953,6 +1953,14 @@ anderswo `minutes` heißt, und die drei Befehle sind dort ausgegraut.
   in die Datei kommt sie erst mit `cmd+s`, und bis dahin zeigt der Kopf des
   Editors den ungesicherten Stand an wie nach jedem Tippen.
 
+**Singlestrip ist auch hier für eine markierte Befehlszeile gedacht und nicht
+für das ganze Protokoll.** Es liest ein `#` am Wortanfang als Kommentar eines
+Befehls, und ohne Auswahl entfernt es deshalb den Text des Protokolls ab der
+ersten Zeile, die mit `#` beginnt, samt allem danach. Ein Protokoll, das mit
+einer Überschrift wie `# Treffen` beginnt, steht danach leer im Editor, und die
+Statuszeile meldet dazu nichts; `cmd+z` holt den Text zurück, und in die Datei
+kommt die Änderung erst mit `cmd+s`.
+
 Ist die Quicknote offen, gelten die drei ihr und nicht dem Protokoll darunter.
 
 **Mit einer eigenen `keymap.toml` trägt „Protokoll anlegen“ keine Taste.** KRK

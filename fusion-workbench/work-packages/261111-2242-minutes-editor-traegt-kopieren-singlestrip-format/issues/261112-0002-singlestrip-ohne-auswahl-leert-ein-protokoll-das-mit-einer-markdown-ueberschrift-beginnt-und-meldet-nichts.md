@@ -24,3 +24,6 @@ Richtungen, eine genügt:
 3. Singlestrip verlangt vor einem Protokoll eine Auswahl und meldet ohne sie, dass nichts markiert ist.
 
 Abnahme: ein Klick auf „Singlestrip“ ohne Auswahl vor `# Treffen\n\nText\n` lässt den Nutzer nicht ohne Auskunft vor einem leeren Editor stehen. Entweder nennt `HowTo.md` die Folge an der Stelle des Protokolls, oder eine Probe hält die Meldung beziehungsweise die verlangte Auswahl.
+
+---
+Resolved: Richtung 1. `HowTo.md` `### Protokolle in minutes/` nennt die Folge jetzt an der Stelle des Protokolls: ein Absatz nach der Aufzählung der drei Schaltflächen sagt, dass Singlestrip für eine markierte Befehlszeile gedacht ist, ohne Auswahl den Text ab der ersten Zeile mit `#` entfernt, ein Protokoll mit Überschrift am Anfang leer im Editor steht, `cmd+z` den Text zurückholt und die Datei erst mit `cmd+s` folgt. Am Verhalten ist nichts geändert.
