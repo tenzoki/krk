@@ -3,7 +3,7 @@
   "id": "6f7dcb6e-8753-4cbb-b317-0fcc467258f5",
   "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
   "domain": "code",
-  "status": "claimed",
+  "status": "done",
   "claim": {
     "checkout_id": "9be83618",
     "person": "Kai Stalmann <ks@qantr.com>",
@@ -44,7 +44,20 @@
   ],
   "references": [],
   "evidence": [],
-  "outcome": null,
+  "outcome": {
+    "class": "completed",
+    "reason": "Kopieren, Singlestrip und Format stehen vor einer Datei aus minutes/ im Editor; ausgeliefert als v4.1.0; die Wirkung im laufenden Buendel ist nicht abgenommen",
+    "evidence": [
+      {
+        "ref": {
+          "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+          "record_id": "833cf794-ace5-4f21-ada9-add8c9437399",
+          "revision": "sha256:406a6b21d30e611ba6023dc429eba3d2e3a02a9ace5296df94266102f004bd4d"
+        },
+        "policy": "claude-guided"
+      }
+    ]
+  },
   "provenance": {
     "source": "created",
     "legacy_fields": {}
