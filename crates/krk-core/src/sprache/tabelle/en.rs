@@ -582,6 +582,8 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::AnlegenFrageOrdner => "What should the new folder be called?",
         Text::AnlegenFrageDatei => "What should the new file be called?",
         Text::AnlegenBestaetigen => "Create",
+        Text::ProtokollnameHinweis => "Date, time and .md are added: YYMMDD-HHMM-<name>.md",
+        Text::DatumUnbestimmt => "Today’s date could not be determined.",
         Text::AngelegtOrdner => "Folder “{name}” created",
         Text::AngelegtDatei => "File “{name}” created",
         Text::AnlegenKeineRechteOrdner => "no permission to create the folder “{name}” here",
@@ -887,7 +889,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::EintragZelleBleibt => "the cell stays in editing",
         Text::EintragAufgabeMitEscUebernommen => "task accepted; cmd+z takes it back",
         Text::EintragGeheimnisMitEscUebernommen => "entry accepted; cmd+z takes it back",
-        Text::EintragHeuteUnbestimmt => "Today’s date could not be determined.",
         Text::EintragKeineTrenntexttabelle => "the Editor shows no table of a CSV file",
         Text::EintragKeineZeileGewaehlt => "no row is selected",
         Text::EintragZeileHinzugefuegt => {

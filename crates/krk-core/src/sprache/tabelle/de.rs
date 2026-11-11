@@ -612,6 +612,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::AnlegenFrageOrdner => "Wie soll der neue Ordner heißen?",
         Text::AnlegenFrageDatei => "Wie soll die neue Datei heißen?",
         Text::AnlegenBestaetigen => "Anlegen",
+        Text::ProtokollnameHinweis => {
+            "Datum, Uhrzeit und .md werden ergänzt: JJMMTT-HHMM-<Name>.md"
+        }
+        Text::DatumUnbestimmt => "Das heutige Datum ließ sich nicht bestimmen.",
         Text::AngelegtOrdner => "Ordner „{name}“ angelegt",
         Text::AngelegtDatei => "Datei „{name}“ angelegt",
         Text::AnlegenKeineRechteOrdner => "keine Rechte, hier den Ordner „{name}“ anzulegen",
@@ -933,7 +937,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::EintragZelleBleibt => "die Zelle bleibt in Bearbeitung",
         Text::EintragAufgabeMitEscUebernommen => "Aufgabe übernommen; cmd+z nimmt es zurück",
         Text::EintragGeheimnisMitEscUebernommen => "Eintrag übernommen; cmd+z nimmt es zurück",
-        Text::EintragHeuteUnbestimmt => "Das heutige Datum ließ sich nicht bestimmen.",
         Text::EintragKeineTrenntexttabelle => "der Editor zeigt keine Tabelle einer CSV-Datei",
         Text::EintragKeineZeileGewaehlt => "es ist keine Zeile gewählt",
         Text::EintragZeileHinzugefuegt => {

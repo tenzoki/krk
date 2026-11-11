@@ -10,32 +10,38 @@
 //!
 //! ```text
 //!  Kommando::OrdnerAnlegen ─┐
-//!                           ├──> zeigen ──> frei_zeigen ──┐
-//!  Kommando::DateiAnlegen ──┘        (Result<String, Namensfehler>)
+//!                           ├──> zeigen ───────────────────┐
+//!  Kommando::DateiAnlegen ──┘   (Result<String, Namensfehler>)
 //!                                                          │
 //!  Lesezeichen anlegen / umbenennen ──> frei_zeigen ───────┤
 //!                                            (String)      │
-//!                                                          ├──> geprueft_zeigen ──> Blatt::neu
+//!                                                          ├──> geprueft_zeigen ──> blatt_bauen ──> Blatt::neu
 //!  Duplizieren (Schritt 3) ──> geprueft_zeigen ────────────┘        (Option<String>)
 //! ```
 //!
 //! # Zwei Gestalten, ein Bauer
 //!
 //! [`geprueft_zeigen`] ist der eine Bauer, und [`Blatt::neu`] steht in dieser
-//! Datei genau einmal, in seinem Rumpf. Seine [`Vorlage`] traegt neben Frage,
+//! Datei genau einmal, im Rumpf von `blatt_bauen`, das er als Erstes ruft und
+//! das allein dafuer abgetrennt ist, dass eine Probe das Blatt bauen kann,
+//! ohne es an einem Fenster zu zeigen. Seine [`Vorlage`] traegt neben Frage,
 //! Beschriftung und Vorgabe einen wahlfreien Grund und eine wahlfreie
 //! Pruefung, und an diesen zwei Feldern entscheidet sich die Gestalt:
 //!
 //! - **Ohne Grund und ohne Pruefung** ist das Blatt das Feld allein unter der
-//!   Frage, wie seit der Runde 1. So rufen es [`zeigen`] und [`frei_zeigen`],
-//!   und das Anlegen und die zwei Lesezeichenblaetter sehen aus und wirken wie
-//!   vor dem 260930.
+//!   Frage, wie seit der Runde 1. So rufen es [`frei_zeigen`] und [`zeigen`]
+//!   ohne Hinweis, und das Anlegen ausserhalb von `minutes/` und die zwei
+//!   Lesezeichenblaetter sehen aus und wirken wie vor dem 260930.
 //! - **Mit Grund oder Pruefung** steht unter dem Feld eine Zeile, nach dem
 //!   Vorbild des PIN-Blattes ([`super::pin`]). Die Zeile zeigt beim Aufgehen
 //!   den Grund, aus dem die Pruefung die Vorgabe abweist, sonst den
 //!   uebergebenen Grund, sonst nichts; mit dem ersten Anschlag faellt der
 //!   uebergebene Grund, und die Zeile zeigt allein das Urteil der Pruefung
-//!   ueber den neuen Text. Die bestaetigende Schaltflaeche ist genau dann
+//!   ueber den neuen Text. **Ein Grund mit [`Vorlage::grund_bleibt`] faellt
+//!   nicht**: er sagt nichts ueber die Eingabe von vorhin, sondern etwas, das
+//!   fuer jede Eingabe gilt, und steht, solange der Nutzer tippt. So traegt
+//!   das Anlegen in `minutes/` seinen Hinweis ([`zeigen`]). Die bestaetigende
+//!   Schaltflaeche ist genau dann
 //!   eingeschaltet, wenn die Pruefung die getrimmte Eingabe annimmt, und die
 //!   Eingabetaste im Feld bestaetigt allein dann
 //!   ([`super::Blatt::bestaetigung_pruefen`]); sonst schreibt sie den Grund in
@@ -81,7 +87,7 @@
 //! `NSTextField` (ueber `NSControl`, `NSView` und `NSResponder`), `NSView`,
 //! `NSWindow` und `NSString` stehen seit macOS 10.0 zur Verfuegung, ebenso
 //! `alloc`, `initWithFrame:`, `setStringValue:`, `stringValue`, `selectText:`,
-//! `setFrame:`, `addSubview:` und `setEnabled:`. `NSPoint`, `NSRect` und
+//! `setFrame:`, `frame`, `sizeToFit`, `addSubview:` und `setEnabled:`. `NSPoint`, `NSRect` und
 //! `NSSize` sind blosse Strukturen und tragen keine Verfuegbarkeitsangabe;
 //! `MainThreadMarker` gehoert `objc2` und nicht AppKit, `Rc` der
 //! Standardbibliothek.
@@ -160,9 +166,28 @@ pub struct Vorlage<'a> {
     /// Ein Grund, der beim Aufgehen unter dem Feld steht und mit dem ersten
     /// Anschlag faellt; beim Duplizieren der vergebene Name.
     pub grund: Option<&'a str>,
+    /// Ob der Grund ueber den ersten Anschlag hinaus stehen bleibt. `false`
+    /// fuer einen Grund, der die Eingabe von vorhin betrifft (der vergebene
+    /// Name beim Duplizieren); `true` fuer einen Hinweis, der fuer jede
+    /// Eingabe gilt (C4.10 des Spec
+    /// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`).
+    /// Ein bleibender Grund bekommt ausserdem die Breite, die sein Text
+    /// braucht, weil er laenger ist als das Feld und sonst abgeschnitten
+    /// dastuende. Ohne Grund ohne Wirkung.
+    pub grund_bleibt: bool,
     /// Die Pruefung der getrimmten Eingabe; ohne sie darf jede Eingabe
     /// bestaetigt werden.
     pub pruefen: Option<Namenspruefung>,
+}
+
+impl<'a> Vorlage<'a> {
+    /// Der Grund, der nach einer Textaenderung noch gilt: der bleibende, sonst
+    /// keiner. Die eine Stelle der Regel, gefragt bei jeder Textaenderung und
+    /// von der Eingabetaste im Feld.
+    #[must_use]
+    pub fn grund_nach_anschlag(&self) -> Option<&'a str> {
+        self.grund.filter(|_| self.grund_bleibt)
+    }
 }
 
 /// Der Stand des Blattes zu einer Eingabe: ob bestaetigt werden darf, und was
@@ -207,16 +232,49 @@ pub fn blattstand(
 /// an: fuehrende und schliessende Leerzeichen sind so gut wie immer ein
 /// Versehen, und ein Ordner, den man von seinem Nachbarn nicht unterscheiden
 /// kann, ist keine Hilfe.
+///
+/// `hinweis` ist die Zeile unter dem Feld, die steht, solange der Nutzer
+/// tippt ([`anlegevorlage`]); ohne ihn ist das Blatt das Feld allein. Gesetzt
+/// ist er, wenn der entstehende Name vom getippten abweicht, heute allein fuer
+/// eine Datei in `minutes/` des Notizordners. Geprueft wird der Name in beiden
+/// Gestalten erst nach dem Bestaetigen, mit [`name_pruefen`], und der Grund
+/// einer Abweisung geht an `fertig`.
 pub fn zeigen(
     mtm: MainThreadMarker,
     fenster: &NSWindow,
     frage: &str,
     bestaetigen: &str,
+    hinweis: Option<&str>,
     fertig: impl Fn(Result<String, Namensfehler>) + 'static,
 ) -> Blattgriff {
-    frei_zeigen(mtm, fenster, frage, bestaetigen, "", move |name| {
-        fertig(name_pruefen(&name).map(|()| name))
+    let vorlage = anlegevorlage(frage, bestaetigen, hinweis);
+    geprueft_zeigen(mtm, fenster, vorlage, move |name| {
+        // Der Abbruch ist die Abwesenheit einer Eingabe, wie in `frei_zeigen`.
+        if let Some(name) = name {
+            fertig(name_pruefen(&name).map(|()| name));
+        }
     })
+}
+
+/// Die Vorlage des Anlegeblatts: leeres Feld, keine Pruefung im Blatt, und
+/// der Hinweis als Grund, der bleibt.
+///
+/// Eine eigene Funktion, damit die Probe zu C4.10 dieselbe Vorlage baut wie
+/// [`zeigen`] und nicht eine, die ihr nur gleicht.
+#[must_use]
+fn anlegevorlage<'a>(
+    frage: &'a str,
+    bestaetigen: &'a str,
+    hinweis: Option<&'a str>,
+) -> Vorlage<'a> {
+    Vorlage {
+        frage,
+        bestaetigen,
+        vorgabe: "",
+        grund: hinweis,
+        grund_bleibt: hinweis.is_some(),
+        pruefen: None,
+    }
 }
 
 /// Zeigt dieselbe Namenseingabe, ohne den Namen gegen das Dateisystem zu
@@ -228,10 +286,10 @@ pub fn zeigen(
 /// deshalb der Aufrufer; fuer das Lesezeichen ist es
 /// `krk_core::ablage::lesezeichen::name_pruefen`.
 ///
-/// **Ein Blatt und kein zweites.** [`zeigen`] laeuft ueber dieselbe Funktion
-/// und legt seine Pruefung darum; diese Funktion wiederum ruft
-/// [`geprueft_zeigen`] ohne Grund und ohne Pruefung und laesst den Abbruch
-/// fallen, den jener meldet. Zwei Eingabeblaetter fuer einen Namen waeren
+/// **Ein Blatt und kein zweites.** [`zeigen`] und diese Funktion rufen beide
+/// [`geprueft_zeigen`]: diese ohne Grund und ohne Pruefung, [`zeigen`] mit
+/// seinem wahlfreien Hinweis und der Namenspruefung nach dem Bestaetigen.
+/// Beide lassen den Abbruch fallen, den jener meldet. Zwei Eingabeblaetter fuer einen Namen waeren
 /// zwei Erscheinungsbilder und zwei Tastaturbedienungen fuer dieselbe Frage.
 ///
 /// `vorgabe` steht beim Aufgehen im Feld und ist ausgewaehlt: beim Umbenennen
@@ -250,6 +308,7 @@ pub fn frei_zeigen(
         bestaetigen,
         vorgabe,
         grund: None,
+        grund_bleibt: false,
         pruefen: None,
     };
     geprueft_zeigen(mtm, fenster, vorlage, move |name| {
@@ -277,46 +336,8 @@ pub fn geprueft_zeigen(
     vorlage: Vorlage<'_>,
     fertig: impl Fn(Option<String>) + 'static,
 ) -> Blattgriff {
-    let feld = feld_bauen(mtm, vorlage.vorgabe);
+    let Gebaut { blatt, feld, .. } = blatt_bauen(mtm, vorlage);
     let pruefen = vorlage.pruefen;
-
-    let mut blatt = Blatt::neu(mtm, vorlage.frage, vorlage.bestaetigen);
-    if vorlage.grund.is_none() && pruefen.is_none() {
-        // Die Gestalt ohne Zeile: das Feld allein als Beigabe, Ersthelfer und
-        // bewachtes Feld in einem Zug, wie seit der Runde 1.
-        blatt.textfeld_setzen(mtm, &feld);
-    } else {
-        let (beigabe, zeile) = beigabe_mit_zeile(mtm, &feld);
-        blatt.beigabe_setzen(&beigabe);
-        blatt.ersthelfer_setzen(&feld);
-        blatt.waechter_anhaengen(mtm, &feld);
-
-        // Der eine Weg, auf dem Zeile und Schaltflaeche gesetzt werden: er
-        // fragt `blattstand` und sagt, ob bestaetigt werden darf. Drei Rufer,
-        // das Aufgehen, jede Textaenderung und die Eingabetaste im Feld.
-        let anwenden: Standanwender = {
-            let feld = feld.clone();
-            let knopf = blatt.bestaetigende_schaltflaeche();
-            Rc::new(move |grund| {
-                let (darf, satz) = blattstand(&feld.stringValue().to_string(), grund, pruefen);
-                if let Some(knopf) = &knopf {
-                    knopf.setEnabled(darf);
-                }
-                zeile.setStringValue(&NSString::from_str(&satz));
-                darf
-            })
-        };
-        // Beim Aufgehen zaehlt der uebergebene Grund; mit dem ersten Anschlag
-        // faellt er, und die Zeile zeigt allein das Urteil der Pruefung.
-        anwenden(vorlage.grund);
-        {
-            let anwenden = Rc::clone(&anwenden);
-            blatt.textaenderung_melden(Box::new(move || {
-                anwenden(None);
-            }));
-        }
-        blatt.bestaetigung_pruefen(Box::new(move || anwenden(None)));
-    }
 
     blatt.zeigen(fenster, move |bestaetigt| {
         // Noch einmal gerechnet und nicht vorausgesetzt: Schaltflaeche und
@@ -327,6 +348,89 @@ pub fn geprueft_zeigen(
         let name = (bestaetigt && darf).then(|| eingabe.trim().to_owned());
         fertig(name);
     })
+}
+
+/// Was [`blatt_bauen`] liefert: das Blatt, sein Feld und, in der Gestalt mit
+/// Zeile, die Zeile unter dem Feld.
+struct Gebaut {
+    /// Das Blatt, noch an keinem Fenster.
+    blatt: Blatt,
+    /// Das Eingabefeld; der Abschluss liest daraus den Namen.
+    feld: Retained<NSTextField>,
+    /// Die Zeile unter dem Feld, `None` in der Gestalt ohne Zeile. Gelesen
+    /// allein von den Proben; das Blatt haelt sie ueber seine Beigabe.
+    #[cfg_attr(
+        not(test),
+        expect(dead_code, reason = "allein die Proben lesen die Zeile")
+    )]
+    zeile: Option<Retained<NSTextField>>,
+}
+
+/// Baut das Blatt einer [`Vorlage`], ohne es zu zeigen: Feld, Zeile,
+/// Schaltflaechen und die Rueckrufe des Waechters.
+///
+/// Abgetrennt von [`geprueft_zeigen`], seinem einen Rufer im Betriebscode,
+/// damit eine Probe das Blatt bauen und seine Zeile lesen kann; ein Blatt an
+/// einem Fenster zu zeigen braucht eine Ereignisschleife, die keine Probe hat.
+fn blatt_bauen(mtm: MainThreadMarker, vorlage: Vorlage<'_>) -> Gebaut {
+    let feld = feld_bauen(mtm, vorlage.vorgabe);
+    let pruefen = vorlage.pruefen;
+
+    let mut blatt = Blatt::neu(mtm, vorlage.frage, vorlage.bestaetigen);
+    if vorlage.grund.is_none() && pruefen.is_none() {
+        // Die Gestalt ohne Zeile: das Feld allein als Beigabe, Ersthelfer und
+        // bewachtes Feld in einem Zug, wie seit der Runde 1.
+        blatt.textfeld_setzen(mtm, &feld);
+        return Gebaut {
+            blatt,
+            feld,
+            zeile: None,
+        };
+    }
+
+    // Was nach dem ersten Anschlag noch unter dem Feld steht: der bleibende
+    // Grund, sonst nichts. Eine eigene Abschrift, weil die Rueckrufe das
+    // Blatt ueberleben muessen und die Vorlage nur geliehen ist.
+    let bleibend = vorlage.grund_nach_anschlag().map(str::to_owned);
+    let (beigabe, zeile) = beigabe_mit_zeile(mtm, &feld, bleibend.as_deref());
+    blatt.beigabe_setzen(&beigabe);
+    blatt.ersthelfer_setzen(&feld);
+    blatt.waechter_anhaengen(mtm, &feld);
+
+    // Der eine Weg, auf dem Zeile und Schaltflaeche gesetzt werden: er
+    // fragt `blattstand` und sagt, ob bestaetigt werden darf. Drei Rufer,
+    // das Aufgehen, jede Textaenderung und die Eingabetaste im Feld.
+    let anwenden: Standanwender = {
+        let feld = feld.clone();
+        let zeile = zeile.clone();
+        let knopf = blatt.bestaetigende_schaltflaeche();
+        Rc::new(move |grund| {
+            let (darf, satz) = blattstand(&feld.stringValue().to_string(), grund, pruefen);
+            if let Some(knopf) = &knopf {
+                knopf.setEnabled(darf);
+            }
+            zeile.setStringValue(&NSString::from_str(&satz));
+            darf
+        })
+    };
+    // Beim Aufgehen zaehlt der uebergebene Grund; mit dem ersten Anschlag
+    // faellt er, wenn er nicht bleibt, und die Zeile zeigt dann allein das
+    // Urteil der Pruefung.
+    anwenden(vorlage.grund);
+    {
+        let anwenden = Rc::clone(&anwenden);
+        let bleibend = bleibend.clone();
+        blatt.textaenderung_melden(Box::new(move || {
+            anwenden(bleibend.as_deref());
+        }));
+    }
+    blatt.bestaetigung_pruefen(Box::new(move || anwenden(bleibend.as_deref())));
+
+    Gebaut {
+        blatt,
+        feld,
+        zeile: Some(zeile),
+    }
 }
 
 /// Das Eingabefeld mit der Vorgabe, ausgewaehlt, noch an keiner Ansicht.
@@ -357,34 +461,188 @@ fn feld_bauen(mtm: MainThreadMarker, vorgabe: &str) -> Retained<NSTextField> {
 /// misst; derselbe Zuschnitt wie im PIN-Blatt.
 ///
 /// Liefert die Beigabe und die Zeile; das Feld haengt danach in der Beigabe.
+///
+/// **Ein bleibender Grund bestimmt die Breite mit.** Er steht, solange das
+/// Blatt steht, und ist laenger als das Feld; eine Zeile in dessen Breite
+/// schnitte ihn ab. Die Beigabe ist deshalb so breit wie sein Text, gemessen
+/// mit `sizeToFit` an der Zeile selbst, mindestens aber [`FELDBREITE`], und
+/// das Feld reicht ueber dieselbe Breite. Ohne bleibenden Grund bleibt es bei
+/// [`FELDBREITE`], wie beim Duplizieren seit dem 260930: dessen Grund nennt
+/// einen Namen beliebiger Laenge und darf das Blatt nicht aufziehen.
 fn beigabe_mit_zeile(
     mtm: MainThreadMarker,
     feld: &NSTextField,
+    bleibend: Option<&str>,
 ) -> (Retained<NSView>, Retained<NSTextField>) {
+    let zeile = NSTextField::labelWithString(&NSString::from_str(bleibend.unwrap_or("")), mtm);
+    let breite = if bleibend.is_some() {
+        zeile.sizeToFit();
+        zeile.frame().size.width.ceil().max(FELDBREITE)
+    } else {
+        FELDBREITE
+    };
     let beigabe = NSView::initWithFrame(
         NSView::alloc(mtm),
         NSRect::new(
             NSPoint::ZERO,
-            NSSize::new(FELDBREITE, FELDHOEHE + ZEILENABSTAND + GRUNDHOEHE),
+            NSSize::new(breite, FELDHOEHE + ZEILENABSTAND + GRUNDHOEHE),
         ),
     );
-    let zeile = NSTextField::labelWithString(&NSString::from_str(""), mtm);
-    zeile.setFrame(NSRect::new(
-        NSPoint::ZERO,
-        NSSize::new(FELDBREITE, GRUNDHOEHE),
-    ));
+    zeile.setFrame(NSRect::new(NSPoint::ZERO, NSSize::new(breite, GRUNDHOEHE)));
     beigabe.addSubview(&zeile);
     feld.setFrame(NSRect::new(
         NSPoint::new(0.0, GRUNDHOEHE + ZEILENABSTAND),
-        NSSize::new(FELDBREITE, FELDHOEHE),
+        NSSize::new(breite, FELDHOEHE),
     ));
     beigabe.addSubview(feld);
     (beigabe, zeile)
 }
 
 #[cfg(test)]
+pub(in crate::appkit) use tests::HAUPTFADENPROBEN;
+
+#[cfg(test)]
 mod tests {
+    use krk_core::heimordner::Heimordner;
+    use krk_core::heimordner::ort::Notizort;
+    use krk_core::ort::Ort;
+    use krk_core::sprache::{Sprache, Text};
+
+    use crate::kommandos::operationen::{Anlegeart, anlegehinweis, im_protokollordner};
+
+    use super::super::super::hauptfaden::{Probe, hauptfadenprobe};
     use super::*;
+
+    /// Die Proben dieses Moduls, die ein Blatt bauen und deshalb im Pruefziel
+    /// `hauptfaden` auf dem Hauptfaden laufen und nicht unter `libtest`.
+    ///
+    /// Eine Funktion `fn(MainThreadMarker)` dieses Moduls, die hier fehlt, ist
+    /// im Bau von `libtest` toter Code und macht `make lint` rot.
+    pub(crate) const HAUPTFADENPROBEN: &[Probe] = &[hauptfadenprobe!(
+        das_anlegeblatt_traegt_den_hinweis_allein_fuer_eine_datei_in_minutes
+    )];
+
+    /// Die Zeile, die das Anlegeblatt fuer diese Art an diesem Ort traegt,
+    /// oder `None`, wenn es das Feld allein ist: gebaut auf dem Weg von
+    /// [`zeigen`], aus [`anlegehinweis`] ueber [`anlegevorlage`] und
+    /// [`blatt_bauen`], nur ohne Fenster.
+    fn zeile_des_anlegeblatts(
+        mtm: MainThreadMarker,
+        notizort: &Notizort,
+        art: Anlegeart,
+        ort: &Ort,
+    ) -> Option<String> {
+        let hinweis = anlegehinweis(art, im_protokollordner(notizort, ort));
+        let gebaut = blatt_bauen(mtm, anlegevorlage(art.frage(), art.bestaetigen(), hinweis));
+        gebaut.zeile.map(|zeile| zeile.stringValue().to_string())
+    }
+
+    /// C4.10: das Blatt von „Leere Datei anlegen“ traegt in `minutes/` des
+    /// Notizordners die Zeile mit dem Hinweis, und in jedem anderen Ordner und
+    /// fuer „Ordner anlegen“ ist es das Feld allein wie vorher.
+    ///
+    /// Dazu, was die Zeile ausmacht: sie steht nach einer Textaenderung noch
+    /// da (die Regel dafuer, [`Vorlage::grund_nach_anschlag`], ist die, die
+    /// der Rueckruf des Waechters fragt), sie macht keine Eingabe
+    /// unbestaetigbar, und sie ist in jeder der drei Sprachen so breit wie ihr
+    /// Text.
+    ///
+    /// **Was sie nicht sieht:** das Blatt am Fenster. Ob AppKit die Zeile dort
+    /// so zeichnet, wie ihr Rahmen es sagt, und ob der Waechter die
+    /// Textaenderung meldet, zeigt allein das laufende Buendel.
+    fn das_anlegeblatt_traegt_den_hinweis_allein_fuer_eine_datei_in_minutes(mtm: MainThreadMarker) {
+        let heim = Heimordner::ohne_aufloesung(
+            std::path::PathBuf::from("/pruefpfad/notizen"),
+            Some(std::path::Path::new("/pruefpfad")),
+        );
+        let minutes = heim.protokollordner();
+        let notizort: Notizort = Ok(heim.clone());
+
+        assert_eq!(
+            zeile_des_anlegeblatts(
+                mtm,
+                &notizort,
+                Anlegeart::Datei,
+                &Ort::Lokal(minutes.clone())
+            ),
+            Some("Datum, Uhrzeit und .md werden ergänzt: JJMMTT-HHMM-<Name>.md".to_owned()),
+            "eine Datei in minutes/ bekommt den Hinweis nicht"
+        );
+        for (art, ordner) in [
+            (Anlegeart::Ordner, minutes.clone()),
+            (Anlegeart::Datei, heim.geschrieben().to_path_buf()),
+            (Anlegeart::Datei, minutes.join("2026")),
+            (
+                Anlegeart::Datei,
+                std::path::PathBuf::from("/pruefpfad/minutes"),
+            ),
+            (Anlegeart::Ordner, std::path::PathBuf::from("/pruefpfad")),
+        ] {
+            assert_eq!(
+                zeile_des_anlegeblatts(mtm, &notizort, art, &Ort::Lokal(ordner.clone())),
+                None,
+                "{art:?} in {} traegt eine Zeile unter dem Feld",
+                ordner.display()
+            );
+        }
+
+        // Die Zeile bleibt ueber den ersten Anschlag hinaus und haelt keine
+        // Eingabe an.
+        let hinweis = Sprache::De.text(Text::ProtokollnameHinweis);
+        let vorlage = anlegevorlage("Frage", "Anlegen", Some(hinweis));
+        assert_eq!(vorlage.grund_nach_anschlag(), Some(hinweis));
+        assert_eq!(
+            blattstand(
+                "besprechung",
+                vorlage.grund_nach_anschlag(),
+                vorlage.pruefen
+            ),
+            (true, hinweis.to_owned())
+        );
+        assert_eq!(
+            blattstand("", vorlage.grund_nach_anschlag(), vorlage.pruefen),
+            (true, hinweis.to_owned()),
+            "der Hinweis macht eine Eingabe unbestaetigbar"
+        );
+
+        // In jeder Sprache ist die Zeile so breit wie ihr Text, und das Feld
+        // reicht ueber dieselbe Breite.
+        for sprache in [Sprache::De, Sprache::En, Sprache::Fr] {
+            let hinweis = sprache.text(Text::ProtokollnameHinweis);
+            let gebaut = blatt_bauen(mtm, anlegevorlage("Frage", "Anlegen", Some(hinweis)));
+            let zeile = gebaut.zeile.expect("mit Hinweis steht die Zeile");
+            assert_eq!(zeile.stringValue().to_string(), hinweis);
+            let breite = zeile.frame().size.width;
+            let zeuge = NSTextField::labelWithString(&NSString::from_str(hinweis), mtm);
+            zeuge.sizeToFit();
+            assert!(
+                breite >= zeuge.frame().size.width && breite >= FELDBREITE,
+                "{sprache:?}: die Zeile ist {breite} breit und schneidet ihren Text ab"
+            );
+            assert_eq!(gebaut.feld.frame().size.width, breite);
+        }
+    }
+
+    /// Ein Grund, der nicht bleibt, faellt mit dem ersten Anschlag wie seit
+    /// dem 260930, und ohne Grund aendert das Kennzeichen nichts.
+    #[test]
+    fn allein_ein_bleibender_grund_uebersteht_den_anschlag() {
+        let vorlage = |grund, grund_bleibt| Vorlage {
+            frage: "Frage",
+            bestaetigen: "Los",
+            vorgabe: "",
+            grund,
+            grund_bleibt,
+            pruefen: None,
+        };
+        assert_eq!(vorlage(Some("vergeben"), false).grund_nach_anschlag(), None);
+        assert_eq!(
+            vorlage(Some("Hinweis"), true).grund_nach_anschlag(),
+            Some("Hinweis")
+        );
+        assert_eq!(vorlage(None, true).grund_nach_anschlag(), None);
+        assert_eq!(vorlage(None, false).grund_nach_anschlag(), None);
+    }
 
     /// Die Pruefung, die die Tafel mitbringt: ein leerer Name und ein
     /// Schraegstrich werden abgewiesen, alles andere angenommen.

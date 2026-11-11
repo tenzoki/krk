@@ -930,6 +930,19 @@ pub enum Text {
     /// `Anlegeart::bestaetigen`: die bestaetigende Schaltflaeche; ebenso im
     /// Namensblatt eines neuen Lesezeichens.
     AnlegenBestaetigen,
+    /// `operationen::anlegehinweis`: die Zeile unter dem Feld des
+    /// Namensblatts, wenn „Leere Datei anlegen“ in `minutes/` des
+    /// Notizordners anlegt (C4.10 des Spec
+    /// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`).
+    /// Sie nennt die Form des entstehenden Namens; die Buchstaben fuer
+    /// Jahr, Monat und Tag folgen der Sprache.
+    ProtokollnameHinweis,
+    /// `operationen::Anlegehindernis::OhneOrtszeit`: die Ortszeit liess sich
+    /// beim Bestaetigen nicht bestimmen, und in `minutes/` wird dann nichts
+    /// angelegt. Bis zum 261111 hiess der Schluessel `EintragHeuteUnbestimmt`
+    /// und war die Antwort der Termintabelle auf einen neuen Termin ohne Uhr;
+    /// die drei Wortlaute sind dieselben.
+    DatumUnbestimmt,
     /// `operationen::angelegt_text` fuer einen Ordner; `{name}`.
     AngelegtOrdner,
     /// `angelegt_text` fuer eine Datei; `{name}`.
@@ -1451,13 +1464,6 @@ pub enum Text {
     EintragAufgabeMitEscUebernommen,
     /// `Eintragsantwort::MitEscUebernommen`, Geheimnisse.
     EintragGeheimnisMitEscUebernommen,
-    /// „Das heutige Datum ließ sich nicht bestimmen.“ Bis zum 261111 die
-    /// Antwort der Termintabelle auf einen neuen Termin ohne Uhr; seitdem
-    /// ohne Leser und stehen gelassen, weil Schritt 6 des Plans
-    /// `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md` den
-    /// Satz fuer das Anlegen in `minutes/` braucht und den Schluessel dort
-    /// umbenennt.
-    EintragHeuteUnbestimmt,
     /// `Eintragsantwort::KeineTabelle`, Tabelle einer CSV.
     EintragKeineTrenntexttabelle,
     /// `Eintragsantwort::KeinEintragGewaehlt`, Tabelle einer CSV.
@@ -1895,7 +1901,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 765] = [
+    pub const ALLE: [Text; 766] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -2270,6 +2276,8 @@ impl Text {
         Text::AnlegenFrageOrdner,
         Text::AnlegenFrageDatei,
         Text::AnlegenBestaetigen,
+        Text::ProtokollnameHinweis,
+        Text::DatumUnbestimmt,
         Text::AngelegtOrdner,
         Text::AngelegtDatei,
         Text::AnlegenKeineRechteOrdner,
@@ -2493,7 +2501,6 @@ impl Text {
         Text::EintragZelleBleibt,
         Text::EintragAufgabeMitEscUebernommen,
         Text::EintragGeheimnisMitEscUebernommen,
-        Text::EintragHeuteUnbestimmt,
         Text::EintragKeineTrenntexttabelle,
         Text::EintragKeineZeileGewaehlt,
         Text::EintragZeileHinzugefuegt,

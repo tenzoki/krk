@@ -655,6 +655,10 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::AnlegenFrageOrdner => "Quel nom donner au nouveau dossier\u{202f}?",
         Text::AnlegenFrageDatei => "Quel nom donner au nouveau fichier\u{202f}?",
         Text::AnlegenBestaetigen => "Créer",
+        Text::ProtokollnameHinweis => {
+            "La date, l’heure et .md sont ajoutées\u{a0}: AAMMJJ-HHMM-<nom>.md"
+        }
+        Text::DatumUnbestimmt => "La date du jour n’a pas pu être déterminée.",
         Text::AngelegtOrdner => "Dossier «\u{a0}{name}\u{a0}» créé",
         Text::AngelegtDatei => "Fichier «\u{a0}{name}\u{a0}» créé",
         Text::AnlegenKeineRechteOrdner => {
@@ -1002,7 +1006,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::EintragZelleBleibt => "la cellule reste en cours de modification",
         Text::EintragAufgabeMitEscUebernommen => "tâche validée\u{202f}; cmd+z annule",
         Text::EintragGeheimnisMitEscUebernommen => "entrée validée\u{202f}; cmd+z annule",
-        Text::EintragHeuteUnbestimmt => "La date du jour n’a pas pu être déterminée.",
         Text::EintragKeineTrenntexttabelle => "l’Éditeur n’affiche pas de tableau de fichier CSV",
         Text::EintragKeineZeileGewaehlt => "aucune ligne n’est sélectionnée",
         Text::EintragZeileHinzugefuegt => {

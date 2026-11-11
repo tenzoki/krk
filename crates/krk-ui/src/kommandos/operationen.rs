@@ -125,13 +125,17 @@ use krk_core::ablage::neuerungen::gekuerzt;
 // Kuerzer haelt sie im Kern.
 #[cfg(test)]
 use krk_core::ablage::neuerungen::HOECHSTENS_EINZELN;
+use krk_core::heimordner::ort::Notizort;
+use krk_core::heimordner::protokollname;
 use krk_core::operation::{
     Abbruchgriff, Abschluss, Anlegetyp, Art, Bericht, Fernart, Fortschritt, Konfliktentscheid,
     Namensfehler, Uebersprungen, fehlerart, name_pruefen,
 };
+use krk_core::ort::Ort;
 use krk_core::sprache::{Text, Zahlwort, anzahl, satz, text};
 use krk_core::tasten::Kommando;
 use krk_core::verzeichnis::Ordnermodell;
+use krk_core::verzeichnis::sys::Ortszeit;
 use krk_core::zwischenablage::Einfuegehindernis;
 
 /// Wie lange eine Operation laufen muss, bevor die Vorgangsanzeige erscheint.
@@ -1049,6 +1053,98 @@ impl Anlegeart {
     pub fn bestaetigen(self) -> &'static str {
         text(Text::AnlegenBestaetigen)
     }
+}
+
+/// Ob „Leere Datei anlegen“ an diesem Ort den Namen eines Protokolls bildet:
+/// der Ort ist lokal und liegt unmittelbar als `minutes/` im geltenden
+/// Notizordner (C4.2 und C4.6 des Spec
+/// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`).
+///
+/// **Kein Systemaufruf**: gefragt wird
+/// [`Heimordner::ist_protokollordner`](krk_core::heimordner::Heimordner::ist_protokollordner),
+/// ein Textvergleich gegen die zwei Formen, die der Notizordner haelt. Ein
+/// Ordner auf einem Server und einer in einem Archiv sind es nie, und ohne
+/// geltenden Notizort ist es keiner; der Schutzort aus `heimgriff::lesen`
+/// zaehlt hier nicht, denn dort legt KRK nichts an. Unter einer dritten
+/// Schreibweise desselben Ordners ist die Antwort nein, und die Datei
+/// entsteht unter dem getippten Namen.
+#[must_use]
+pub fn im_protokollordner(notizort: &Notizort, ort: &Ort) -> bool {
+    match (notizort, ort) {
+        (Ok(heim), Ort::Lokal(ordner)) => heim.ist_protokollordner(ordner),
+        (Ok(_), Ort::Fern(_) | Ort::Archiv(_)) | (Err(_), _) => false,
+    }
+}
+
+/// Ob dieses Anlegen den Namen eines Protokolls bildet: allein eine Datei im
+/// Protokollordner. Die eine Stelle der Bedingung, gefragt vom Hinweis im
+/// Blatt ([`anlegehinweis`]) und vom Namen ([`anlegename`]), damit das Blatt
+/// nie etwas anderes ankuendigt, als entsteht.
+fn bildet_protokollnamen(art: Anlegeart, im_protokollordner: bool) -> bool {
+    match art {
+        Anlegeart::Datei => im_protokollordner,
+        Anlegeart::Ordner => false,
+    }
+}
+
+/// Die Zeile unter dem Feld des Namensblatts, oder `None`, wenn der getippte
+/// Name der entstehende ist (C4.10).
+#[must_use]
+pub fn anlegehinweis(art: Anlegeart, im_protokollordner: bool) -> Option<&'static str> {
+    bildet_protokollnamen(art, im_protokollordner).then(|| text(Text::ProtokollnameHinweis))
+}
+
+/// Warum [`anlegename`] keinen Namen nennt.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Anlegehindernis {
+    /// Die Ortszeit liess sich nicht bestimmen, und ohne sie hat ein
+    /// Protokoll keinen Namen. Angelegt wird dann nichts: eine Datei unter
+    /// dem getippten Namen waere in `minutes/` genau die, die der Hinweis im
+    /// Blatt ausgeschlossen hat.
+    OhneOrtszeit,
+}
+
+impl Anlegehindernis {
+    /// Der Satz fuer die Statuszeile.
+    #[must_use]
+    pub fn grund(self) -> &'static str {
+        match self {
+            Anlegehindernis::OhneOrtszeit => text(Text::DatumUnbestimmt),
+        }
+    }
+}
+
+/// Unter welchem Namen ein Eintrag entsteht (C4.2 bis C4.7).
+///
+/// Eine Datei im Protokollordner bekommt Datum, Uhrzeit und `.md` ueber
+/// [`protokollname`]; jeder andere Eintrag entsteht unter genau dem getippten
+/// Namen, also ein Ordner in `minutes/` und jede Datei an jedem anderen Ort.
+/// **`protokollname` hat im Betriebscode dieser Kiste diesen einen Rufer**,
+/// und diese Funktion ihrerseits einen, `anlegen_ausfuehren` im lokalen Zweig;
+/// Umbenennen, Stapelumbenennen, Duplizieren, Kopieren und Verschieben
+/// erreichen die Namensregel deshalb nicht (C4.7). Gehalten von
+/// `die_namensregel_hat_genau_einen_rufer` im Pruefmodul dieser Datei.
+///
+/// `uhr` wird allein gefragt, wenn ein Protokollname entsteht, und dann genau
+/// einmal: der Rufer liest darin die Ortszeit im Augenblick des Bestaetigens,
+/// und ein Anlegen an jedem anderen Ort liest keine Uhr. Antwortet sie `None`,
+/// entsteht kein Name.
+///
+/// # Errors
+///
+/// [`Anlegehindernis::OhneOrtszeit`], wenn ein Protokollname zu bilden ist
+/// und `uhr` keine Ortszeit liefert.
+pub fn anlegename(
+    art: Anlegeart,
+    im_protokollordner: bool,
+    getippt: &str,
+    uhr: impl FnOnce() -> Option<Ortszeit>,
+) -> Result<String, Anlegehindernis> {
+    if !bildet_protokollnamen(art, im_protokollordner) {
+        return Ok(getippt.to_owned());
+    }
+    let zeit = uhr().ok_or(Anlegehindernis::OhneOrtszeit)?;
+    Ok(protokollname(getippt, zeit))
 }
 
 /// Die Meldung, wenn ein Eintrag angelegt wurde (C4).
@@ -2181,6 +2277,306 @@ mod tests {
         modell.anhaengen(namen.iter().map(|(name, typ)| eintrag(name, *typ)));
         modell.abschliessen();
         modell
+    }
+
+    /// Der 11.11.2026 um 14:32 Uhr, das Beispiel aus C4.2.
+    fn beispielzeit() -> Ortszeit {
+        Ortszeit {
+            jahr: 2026,
+            monat: 11,
+            tag: 11,
+            stunde: 14,
+            minute: 32,
+            sekunde: 7,
+        }
+    }
+
+    /// Ein Notizordner in einem Pruefpfad, gebaut ohne Systemaufruf; auf der
+    /// Platte steht er nicht, und die Erkennung fragt sie auch nicht.
+    fn probeheim() -> krk_core::heimordner::Heimordner {
+        krk_core::heimordner::Heimordner::ohne_aufloesung(
+            PathBuf::from("/pruefpfad/notizen"),
+            Some(Path::new("/pruefpfad")),
+        )
+    }
+
+    /// Die Tafel von [`anlegename`] (C4.2 bis C4.7): allein eine Datei im
+    /// Protokollordner bekommt Datum, Uhrzeit und `.md`; ein Ordner dort und
+    /// jede Datei an jedem anderen Ort entstehen unter dem getippten Namen,
+    /// und ohne Ortszeit entsteht in `minutes/` kein Name.
+    #[test]
+    fn die_tafel_des_anzulegenden_namens() {
+        let uhr = || Some(beispielzeit());
+        let tafel: [(Anlegeart, bool, &str, &str); 9] = [
+            // C4.2: das Beispiel der Spezifikation.
+            (
+                Anlegeart::Datei,
+                true,
+                "besprechung",
+                "261111-1432-besprechung.md",
+            ),
+            // C4.4: eine vorhandene Endung `.md` wird nicht verdoppelt.
+            (
+                Anlegeart::Datei,
+                true,
+                "besprechung.md",
+                "261111-1432-besprechung.md",
+            ),
+            (
+                Anlegeart::Datei,
+                true,
+                "Besprechung.MD",
+                "261111-1432-Besprechung.MD",
+            ),
+            // C4.5: eine andere Endung bleibt und bekommt `.md` dahinter.
+            (
+                Anlegeart::Datei,
+                true,
+                "liste.txt",
+                "261111-1432-liste.txt.md",
+            ),
+            // C4.7: ein Ordner in `minutes/` bleibt, wie er getippt ist.
+            (Anlegeart::Ordner, true, "besprechung", "besprechung"),
+            (Anlegeart::Ordner, true, "liste.md", "liste.md"),
+            // C4.6: in jedem anderen Ordner entsteht der getippte Name.
+            (Anlegeart::Datei, false, "besprechung", "besprechung"),
+            (Anlegeart::Datei, false, "liste.txt", "liste.txt"),
+            (Anlegeart::Ordner, false, "besprechung", "besprechung"),
+        ];
+        for (art, im_protokollordner, getippt, erwartet) in tafel {
+            assert_eq!(
+                anlegename(art, im_protokollordner, getippt, uhr),
+                Ok(erwartet.to_owned()),
+                "{art:?}, im Protokollordner: {im_protokollordner}, getippt: {getippt}"
+            );
+        }
+
+        // Ohne Ortszeit die Abweisung, und allein dort, wo sie gebraucht wird.
+        assert_eq!(
+            anlegename(Anlegeart::Datei, true, "besprechung", || None),
+            Err(Anlegehindernis::OhneOrtszeit)
+        );
+        assert_eq!(
+            Anlegehindernis::OhneOrtszeit.grund(),
+            "Das heutige Datum ließ sich nicht bestimmen."
+        );
+        for (art, im_protokollordner) in [
+            (Anlegeart::Ordner, true),
+            (Anlegeart::Datei, false),
+            (Anlegeart::Ordner, false),
+        ] {
+            assert_eq!(
+                anlegename(art, im_protokollordner, "besprechung", || None),
+                Ok("besprechung".to_owned()),
+                "{art:?}, im Protokollordner: {im_protokollordner}: braucht keine Uhr"
+            );
+        }
+    }
+
+    /// Die Uhr wird allein gelesen, wenn ein Protokollname entsteht, und dann
+    /// genau einmal: ein Anlegen an jedem anderen Ort liest keine.
+    #[test]
+    fn die_uhr_wird_allein_fuer_einen_protokollnamen_gelesen() {
+        for (art, im_protokollordner, erwartet) in [
+            (Anlegeart::Datei, true, 1),
+            (Anlegeart::Ordner, true, 0),
+            (Anlegeart::Datei, false, 0),
+            (Anlegeart::Ordner, false, 0),
+        ] {
+            let mut gelesen = 0;
+            let _ = anlegename(art, im_protokollordner, "a", || {
+                gelesen += 1;
+                Some(beispielzeit())
+            });
+            assert_eq!(
+                gelesen, erwartet,
+                "{art:?}, im Protokollordner: {im_protokollordner}"
+            );
+        }
+    }
+
+    /// Der Hinweis des Blattes steht genau dort, wo [`anlegename`] einen
+    /// anderen Namen bildet als den getippten, und in allen drei Sprachen
+    /// (C4.10).
+    #[test]
+    fn der_hinweis_steht_genau_wo_ein_protokollname_entsteht() {
+        assert_eq!(
+            anlegehinweis(Anlegeart::Datei, true),
+            Some("Datum, Uhrzeit und .md werden ergänzt: JJMMTT-HHMM-<Name>.md")
+        );
+        assert_eq!(anlegehinweis(Anlegeart::Ordner, true), None);
+        assert_eq!(anlegehinweis(Anlegeart::Datei, false), None);
+        assert_eq!(anlegehinweis(Anlegeart::Ordner, false), None);
+
+        use krk_core::sprache::Sprache;
+        assert_eq!(
+            Sprache::En.text(Text::ProtokollnameHinweis),
+            "Date, time and .md are added: YYMMDD-HHMM-<name>.md"
+        );
+        assert_eq!(
+            Sprache::Fr.text(Text::ProtokollnameHinweis),
+            "La date, l’heure et .md sont ajoutées\u{a0}: AAMMJJ-HHMM-<nom>.md"
+        );
+    }
+
+    /// Die Tafel von [`im_protokollordner`] (C4.6): allein `minutes`
+    /// unmittelbar im geltenden Notizordner, an einem lokalen Ort.
+    #[test]
+    fn der_protokollordner_ist_allein_minutes_im_geltenden_notizordner() {
+        let heim = probeheim();
+        let gilt: Notizort = Ok(heim.clone());
+        let minutes = heim.protokollordner();
+        assert_eq!(minutes, PathBuf::from("/pruefpfad/notizen/minutes"));
+
+        assert!(im_protokollordner(&gilt, &Ort::Lokal(minutes.clone())));
+        for anders in [
+            minutes.join("2026"),
+            heim.geschrieben().to_path_buf(),
+            PathBuf::from("/pruefpfad/minutes"),
+            PathBuf::from("/pruefpfad/anderswo/minutes"),
+            PathBuf::from("/pruefpfad/notizen/Minutes"),
+        ] {
+            assert!(
+                !im_protokollordner(&gilt, &Ort::Lokal(anders.clone())),
+                "{} gilt als Protokollordner",
+                anders.display()
+            );
+        }
+
+        // Ein Ordner auf einem Server ist es nie, auch unter demselben Pfad.
+        let fern = Ort::Fern(crate::fernprobe::ferner_ort(
+            "rechner",
+            None,
+            "/pruefpfad/notizen/minutes",
+        ));
+        assert!(!im_protokollordner(&gilt, &fern));
+
+        // Ohne geltenden Notizort ist es keiner.
+        let ohne: Notizort = Err(krk_core::heimordner::ort::Ortsfehler::Leer);
+        assert!(!im_protokollordner(&ohne, &Ort::Lokal(minutes)));
+    }
+
+    /// C4.8: steht in `minutes/` schon eine Datei mit dem entstehenden Namen,
+    /// wird sie nicht ueberschrieben, und die Meldung nennt den entstehenden
+    /// Namen und nicht den getippten, in demselben Satz wie in jedem anderen
+    /// Ordner.
+    #[test]
+    fn ein_vergebener_protokollname_wird_mit_dem_entstehenden_namen_gemeldet() {
+        let pruefordner = Pruefordner::neu("protokollname-vergeben");
+        let minutes = pruefordner.ordner("minutes");
+        let vorhanden = pruefordner.datei("minutes/261111-1432-besprechung.md", "steht schon da");
+
+        let name = anlegename(Anlegeart::Datei, true, "besprechung", || {
+            Some(beispielzeit())
+        })
+        .expect("mit Ortszeit entsteht ein Name");
+        let fehler = krk_core::operation::datei_anlegen(&minutes, &name)
+            .expect_err("der Name ist vergeben, das Anlegen muss scheitern");
+        assert_eq!(fehler.kind(), io::ErrorKind::AlreadyExists);
+
+        let meldung = anlegefehler(Anlegeart::Datei, &name, &fehler);
+        assert_eq!(
+            meldung,
+            satz(
+                Text::NameSchonVergeben,
+                &[("name", &"261111-1432-besprechung.md")]
+            )
+        );
+        assert!(
+            meldung.contains("261111-1432-besprechung.md"),
+            "die Meldung nennt den entstehenden Namen nicht: {meldung}"
+        );
+        assert_eq!(
+            std::fs::read(&vorhanden).expect("die vorhandene Datei ist lesbar"),
+            b"steht schon da",
+            "die vorhandene Datei ist ueberschrieben"
+        );
+        assert!(
+            !minutes.join("besprechung").exists(),
+            "unter dem getippten Namen ist etwas entstanden"
+        );
+
+        // Derselbe Weg ohne vergebenen Namen legt genau die eine Datei an.
+        let frei = anlegename(Anlegeart::Datei, true, "frei", || Some(beispielzeit()))
+            .expect("mit Ortszeit entsteht ein Name");
+        let pfad = krk_core::operation::datei_anlegen(&minutes, &frei)
+            .expect("ein freier Name laesst sich anlegen");
+        assert_eq!(pfad, minutes.join("261111-1432-frei.md"));
+    }
+
+    /// Der Betriebscode einer Datei dieser Kiste: alles vor ihrem ersten
+    /// Pruefmodul, also vor der ersten Zeile `mod …` unmittelbar unter der
+    /// Attributzeile des Probenbaus. Derselbe Schnitt wie `betriebscode` in
+    /// `appkit/anwendung.rs`; eine `use`-Zeile unter dem Attribut schneidet
+    /// nicht.
+    fn vor_dem_pruefmodul(inhalt: &str) -> &str {
+        let attribut = concat!("#[cfg(", "test)]");
+        let mut stelle = 0;
+        let mut davor_attribut = None;
+        for zeile in inhalt.split_inclusive('\n') {
+            let kern = zeile.trim_end();
+            if let Some(beginn) = davor_attribut
+                && ["mod ", "pub(super) mod ", "pub(crate) mod "]
+                    .iter()
+                    .any(|kopf| kern.starts_with(kopf))
+            {
+                return &inhalt[..beginn];
+            }
+            davor_attribut = (kern == attribut).then_some(stelle);
+            stelle += zeile.len();
+        }
+        inhalt
+    }
+
+    /// C4.7: die Namensregel hat im Betriebscode von `krk-ui` genau einen
+    /// Rufer, [`anlegename`] in dieser Datei, und der seinerseits genau
+    /// einen, `anlegen_ausfuehren`. „Ordner anlegen“, Umbenennen,
+    /// Stapelumbenennen, Duplizieren, Kopieren und Verschieben erreichen sie
+    /// damit nicht.
+    ///
+    /// **Was sie nicht sieht:** einen Aufruf unter anderem Namen (`use … as`)
+    /// und einen Rufer im Kern; dort hat die Regel keinen im Betriebscode,
+    /// und das haelt diese Probe nicht.
+    #[test]
+    fn die_namensregel_hat_genau_einen_rufer() {
+        let mut regel = Vec::new();
+        let mut name = Vec::new();
+        for (datei, inhalt) in crate::quellbaum::quelldateien() {
+            if !datei.starts_with("krk-ui/src/") {
+                continue;
+            }
+            let code = vor_dem_pruefmodul(&inhalt);
+            for _ in 0..crate::quellbaum::aufrufstellen(code, "protokollname") {
+                regel.push(datei.clone());
+            }
+            for _ in 0..crate::quellbaum::aufrufstellen(code, "anlegename") {
+                name.push(datei.clone());
+            }
+        }
+        assert_eq!(
+            regel,
+            ["krk-ui/src/kommandos/operationen.rs"],
+            "die Namensregel hat einen Rufer zu viel oder keinen"
+        );
+        assert_eq!(
+            name,
+            ["krk-ui/src/appkit/anwendung.rs"],
+            "die Entscheidung ueber den Namen hat einen Rufer zu viel oder keinen"
+        );
+        let anwendung = crate::quellbaum::quelldateien()
+            .into_iter()
+            .find(|(datei, _)| datei == "krk-ui/src/appkit/anwendung.rs")
+            .expect("anwendung.rs steht im Quellbaum")
+            .1;
+        let kopf = concat!("fn anlegen_", "ausfuehren(");
+        let beginn = anwendung.find(kopf).expect("der Rumpf steht in der Datei");
+        let rumpf = &anwendung[beginn..];
+        let rumpf = &rumpf[..rumpf.find("\n    }\n").expect("der Rumpf endet")];
+        assert_eq!(
+            crate::quellbaum::aufrufstellen(rumpf, "anlegename"),
+            1,
+            "der eine Rufer ist nicht das Anlegen im lokalen Zweig"
+        );
     }
 
     #[test]

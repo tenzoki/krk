@@ -301,7 +301,7 @@ use krk_core::tasten::belegung;
 use krk_core::tasten::normalisierung::ModMaske;
 use krk_core::tasten::{Belegung, Kommando, Tastendruck, code_von_pflicht};
 use krk_core::terminalskript;
-use krk_core::verzeichnis::{Erlaubnisbefund, Warnbefund, arbeitsbaum, umfang};
+use krk_core::verzeichnis::{Erlaubnisbefund, Warnbefund, arbeitsbaum, sys, umfang};
 
 use crate::angezeigtedatei;
 use crate::auffrischung::{self, Dateifenstersicht};
@@ -9591,12 +9591,42 @@ impl Anwendungsdelegierter {
     /// **An einem fernen Ort derselbe Weg bis nach dem Blatt** (Entscheidung
     /// 11 des Plans der sftp-Ordner); erst [`Self::anlegen_ausfuehren`]
     /// verzweigt am Ort, gelesen am Wert des Tabs.
+    ///
+    /// Der Rumpf steht in [`Self::anlegen_in`], das Seite und Art als Werte
+    /// nimmt; hier kommt allein das aktive Dateifenster dazu.
     fn anlegen(&self, art: Anlegeart) -> bool {
+        let seite = self.ivars().modell.borrow().aktiv();
+        self.anlegen_in(seite, art)
+    }
+
+    /// Der Rumpf von [`Self::anlegen`] mit Seite und Art als Werten: fragt den
+    /// Namen fuer den Ordner, den der aktive Tab **dieser** Seite zeigt.
+    ///
+    /// Zwei Rufer: [`Self::anlegen`] mit dem aktiven Dateifenster, und ab
+    /// Schritt 7 des Plans
+    /// `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md` der
+    /// Befehl „Protokoll anlegen“, der den Tab der Seite vorher auf
+    /// `minutes/` stellt. Der Ordner ist der Wert des Tabs und nicht sein
+    /// gelesener Bestand; das Blatt geht deshalb auf, auch wenn der
+    /// Lesevorgang des Tabs noch laeuft.
+    ///
+    /// **Ob der Ordner `minutes/` des Notizordners ist, steht hier einmal
+    /// fest und reist mit** (C4.2, C4.10): das Blatt zeigt fuer eine Datei
+    /// dort den Hinweis, dass Datum, Uhrzeit und `.md` ergaenzt werden, und
+    /// [`Self::anlegen_ausfuehren`] bildet den Namen nach derselben Antwort.
+    /// Eine zweite Erhebung beim Bestaetigen koennte dem Blatt
+    /// widersprechen. Gefragt wird [`operationen::im_protokollordner`] am
+    /// geltenden Notizort aus [`heimgriff::lage`], ein Textvergleich:
+    /// **kein Systemaufruf**, wie im ganzen Rumpf.
+    ///
+    /// Liefert `true`, sobald das Blatt steht.
+    fn anlegen_in(&self, seite: Fensterseite, art: Anlegeart) -> bool {
         let Some(fenster) = self.ivars().fenster.get() else {
             return false;
         };
-        let seite = self.ivars().modell.borrow().aktiv();
         let ordner = self.dateifenster(seite).quelle().angezeigter_ort();
+        let im_protokollordner =
+            operationen::im_protokollordner(&heimgriff::lage(&self.ivars().heim), &ordner);
 
         let schwach = objc2::rc::Weak::from_retained(&self.retain());
         let griff = namenseingabe::zeigen(
@@ -9604,9 +9634,10 @@ impl Anwendungsdelegierter {
             fenster,
             art.frage(),
             art.bestaetigen(),
+            operationen::anlegehinweis(art, im_protokollordner),
             move |ergebnis| {
                 if let Some(selbst) = schwach.load() {
-                    selbst.anlegen_ausfuehren(seite, art, &ordner, ergebnis);
+                    selbst.anlegen_ausfuehren(seite, art, &ordner, im_protokollordner, ergebnis);
                 }
             },
         );
@@ -9646,13 +9677,27 @@ impl Anwendungsdelegierter {
     /// behandelt: gemeldet wird nichts.
     ///
     /// **Ein ferner Ort und ein Ort im Archiv gehen an [`Self::fern_anlegen`]**,
-    /// nach derselben Namenspruefung; der lokale Zweig darunter ist der von
-    /// vorher.
+    /// nach derselben Namenspruefung und mit dem getippten Namen; der lokale
+    /// Zweig darunter ist der von vorher bis auf den Namen.
+    ///
+    /// **Unter welchem Namen angelegt wird, entscheidet im lokalen Zweig
+    /// [`operationen::anlegename`]**, aus der Art, aus `im_protokollordner`
+    /// (erhoben vor dem Blatt in [`Self::anlegen_in`]) und aus dem getippten
+    /// Namen: eine Datei in `minutes/` des Notizordners bekommt Datum,
+    /// Uhrzeit und `.md` davor und dahinter, jeder andere Eintrag bleibt, wie
+    /// er getippt ist (C4.2 bis C4.7). Die Uhr wird allein in jenem Fall
+    /// gelesen, hier und damit im Augenblick des Bestaetigens. Laesst sich
+    /// die Ortszeit nicht bestimmen, wird nichts angelegt, und die
+    /// Statuszeile nennt den Grund. Angelegt, gewaehlt und gemeldet wird
+    /// unter dem **entstehenden** Namen; ein vergebener Name scheitert an
+    /// `create_new` wie in jedem anderen Ordner und wird mit ihm gemeldet
+    /// (C4.8, C4.9).
     fn anlegen_ausfuehren(
         &self,
         seite: Fensterseite,
         art: Anlegeart,
         ort: &Dateiort,
+        im_protokollordner: bool,
         ergebnis: Result<String, Namensfehler>,
     ) {
         let name = match ergebnis {
@@ -9668,6 +9713,14 @@ impl Anwendungsdelegierter {
             // Auftrag an einen Umbau (E10 des Plans der Archive).
             Dateiort::Fern(_) | Dateiort::Archiv(_) => {
                 return self.fern_anlegen(seite, art, ort, name);
+            }
+        };
+        let uhr = || sys::ortszeit(SystemTime::now());
+        let name = match operationen::anlegename(art, im_protokollordner, &name, uhr) {
+            Ok(name) => name,
+            Err(hindernis) => {
+                self.antwort_zeigen(seite, hindernis.grund());
+                return;
             }
         };
         let angelegt = match art {
@@ -10574,6 +10627,7 @@ impl Anwendungsdelegierter {
                 bestaetigen: operationen::duplikat_bestaetigen(),
                 vorgabe: &name,
                 grund: None,
+                grund_bleibt: false,
                 pruefen: Some(operationen::namensgrund),
             },
             move |antwort| {
@@ -10677,6 +10731,7 @@ impl Anwendungsdelegierter {
                 bestaetigen: operationen::duplikat_bestaetigen(),
                 vorgabe: &versucht,
                 grund: Some(&grund),
+                grund_bleibt: false,
                 pruefen: Some(operationen::namensgrund),
             },
             move |antwort| {
@@ -19231,7 +19286,7 @@ mod fernvorgangsproben {
     #[test]
     fn das_ferne_umbenennen_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
         let datei = diese_datei();
-        for name in ["fern_umbenennen", "fern_anlegen", "anlegen"] {
+        for name in ["fern_umbenennen", "fern_anlegen", "anlegen", "anlegen_in"] {
             let rumpf = rumpf(&datei, name);
             for nadel in [
                 "fs::",
@@ -19272,6 +19327,78 @@ mod fernvorgangsproben {
                 "{name} ruft den lokalen Weg vor dem Abzweig an den fernen"
             );
         }
+    }
+
+    /// Der Name eines Protokolls entsteht im lokalen Zweig des Anlegens, und
+    /// alles danach arbeitet mit dem entstehenden Namen (C4.3, C4.6, C4.8,
+    /// C4.9 des Spec
+    /// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`).
+    ///
+    /// Gehalten wird am Rumpf von `anlegen_ausfuehren` die Reihenfolge: erst
+    /// der Abzweig an den fernen Weg, der damit den getippten Namen bekommt,
+    /// dann `anlegename`, dann das Anlegen, die Auswahl und die Meldung. Dazu
+    /// am Rumpf von `anlegen_in`, dass die Erkennung von `minutes/` dort
+    /// einmal erhoben wird, den Hinweis des Blattes bestimmt und mit dem
+    /// Rueckruf reist, und dass `anlegen` nichts tut, als diesen Rumpf mit dem
+    /// aktiven Dateifenster zu rufen: Taste und Menueeintrag nehmen so
+    /// denselben Weg wie jeder spaetere Rufer des Rumpfs.
+    ///
+    /// **Was sie nicht sieht:** ob `name` zwischen den Stellen neu gebunden
+    /// wird. Sie liest Reihenfolge und Nennung und keinen Datenfluss.
+    #[test]
+    fn das_anlegen_bildet_den_namen_im_lokalen_zweig_vor_dem_anlegen() {
+        let datei = diese_datei();
+        let ausfuehren = rumpf(&datei, "anlegen_ausfuehren");
+        let stelle = |nadel: &str| {
+            ausfuehren
+                .find(nadel)
+                .unwrap_or_else(|| panic!("anlegen_ausfuehren enthaelt {nadel} nicht"))
+        };
+        let folge = [
+            stelle(concat!("self.fern_", "anlegen(")),
+            stelle(concat!("operationen::anlege", "name(")),
+            stelle(concat!("operation::", "ordner_anlegen(ordner, &name)")),
+            stelle(concat!("operation::", "datei_anlegen(ordner, &name)")),
+            stelle(concat!("eintrag_", "waehlen(&name)")),
+            stelle(concat!("operationen::", "angelegt_text(art, &name)")),
+        ];
+        assert!(
+            folge.is_sorted(),
+            "anlegen_ausfuehren haelt die Reihenfolge nicht: {folge:?}"
+        );
+        assert!(
+            ausfuehren.contains(concat!(
+                "operationen::",
+                "anlegefehler(art, &name, &fehler)"
+            )),
+            "ein gescheitertes Anlegen nennt nicht den entstehenden Namen"
+        );
+
+        let erheben = rumpf(&datei, "anlegen_in");
+        for nadel in [
+            concat!("operationen::", "im_protokollordner("),
+            concat!("heimgriff::", "lage("),
+            concat!("operationen::", "anlegehinweis(art, im_protokollordner)"),
+            concat!(
+                "anlegen_",
+                "ausfuehren(seite, art, &ordner, im_protokollordner, ergebnis)"
+            ),
+        ] {
+            assert!(erheben.contains(nadel), "anlegen_in enthaelt {nadel} nicht");
+        }
+        assert!(
+            !erheben.contains(concat!("heimgriff::", "lesen(")),
+            "anlegen_in fragt den Schutzort: dort legt KRK nichts an"
+        );
+        let huelle = rumpf(&datei, "anlegen");
+        assert!(
+            huelle.contains(concat!("self.anlegen_", "in(seite, art)")),
+            "anlegen ruft den Rumpf mit Seite und Art nicht"
+        );
+        assert!(
+            !huelle.contains(concat!("namenseingabe", "::")),
+            "anlegen baut ein eigenes Blatt neben dem Rumpf"
+        );
     }
 
     /// Der Loeschweg an einem fernen Ort stellt auf dem Hauptfaden keinen
