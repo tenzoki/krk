@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "28989d77-8e99-40a7-b304-5dc5691a024b",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261111-2242-minutes-editor-traegt-kopieren-singlestrip-format/issues/261112-0002-singlestrip-ohne-auswahl-leert-ein-protokoll-das-mit-einer-markdown-ueberschrift-beginnt-und-meldet-nichts.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}

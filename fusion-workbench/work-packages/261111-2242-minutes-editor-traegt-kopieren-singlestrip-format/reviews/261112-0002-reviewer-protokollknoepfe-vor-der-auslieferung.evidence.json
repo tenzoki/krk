@@ -1,0 +1,28 @@
+{
+  "schema": "fusion.evidence/v1",
+  "id": "833cf794-ace5-4f21-ada9-add8c9437399",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "subject": {
+    "git_tree": "1affa73ff6db5aeac67c7cb0d02d18192275e39f",
+    "git_range": null
+  },
+  "brief_revision": "sha256:ddc0c97004fd79dab96c3867252506a4203a1ef4fbb02664c15b4c7e56700128",
+  "plan_revision": "sha256:1feffadc9446df71444b96bd266b37df96beb6224bf6daddc4962c6e1c327eeb",
+  "role": {
+    "profile": "reviewer",
+    "version": "13.5.0"
+  },
+  "host": "claude-code",
+  "execution_policy": "claude-guided",
+  "verdict": "revise",
+  "uncertainties": [],
+  "checks": [],
+  "report": {
+    "path": "work-packages/261111-2242-minutes-editor-traegt-kopieren-singlestrip-format/reviews/261112-0002-reviewer-protokollknoepfe-vor-der-auslieferung.md",
+    "sha256": "sha256:cdf60e29ade894510cc5988370482e901c212820d246df487f455a3f71b56291",
+    "kind": "review"
+  },
+  "predecessor": null,
+  "accepted_at": "2026-11-11T23:03:58Z",
+  "extensions": {}
+}
