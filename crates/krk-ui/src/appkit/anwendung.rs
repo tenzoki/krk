@@ -953,10 +953,54 @@ struct Notizordnerstand {
     ort: Option<PathBuf>,
 }
 
+/// Wohin ein Befehl des Notizordners das Dateifenster fuehrt (E11 des Plans
+/// `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`).
+///
+/// **F2 und „Protokoll anlegen“ sind ein Weg mit zwei Zielen und nicht zwei
+/// Wege.** Der Wert reist mit dem Befehl durch
+/// [`Anwendungsdelegierter::notizordner_oeffnen`], die Arbeit auf dem Faden und
+/// [`Anwendungsdelegierter::notizordner_einziehen`]; Nummernfolge
+/// ([`Notizordnerbefehle`]), Stand ([`Notizordnerstand`]) und
+/// `Plattenbefehl::Notizordner` gelten fuer beide, sodass der spaetere der zwei
+/// Befehle den frueheren ueberholt. Angelegt wird fuer beide dasselbe; das Ziel
+/// entscheidet allein, welcher Tab danach steht und ob das Namensblatt aufgeht.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Notizordnerziel {
+    /// F2: der Notizordner selbst.
+    Wurzel,
+    /// „Protokoll anlegen“: `minutes/` darin, und danach das Namensblatt von
+    /// „Leere Datei anlegen“.
+    Protokolle,
+}
+
+impl Notizordnerziel {
+    /// Der Ordner, auf den ein neuer Tab geht, in der geschriebenen Form,
+    /// damit der Tab den Pfad zeigt, den der Nutzer kennt. Rein, **kein
+    /// Systemaufruf**.
+    fn ordner(self, heim: &Heimordner) -> PathBuf {
+        match self {
+            Notizordnerziel::Wurzel => heim.geschrieben().to_path_buf(),
+            Notizordnerziel::Protokolle => heim.protokollordner(),
+        }
+    }
+
+    /// Ob `ordner` das Ziel ist, in einer der zwei Formen, die der
+    /// [`Heimordner`] haelt. Ein Textvergleich, **kein Systemaufruf**.
+    fn erkennt(self, heim: &Heimordner, ordner: &Path) -> bool {
+        match self {
+            Notizordnerziel::Wurzel => heim.ist(ordner),
+            Notizordnerziel::Protokolle => heim.ist_protokollordner(ordner),
+        }
+    }
+}
+
 /// Was die Arbeit von [`Anwendungsdelegierter::notizordner_erheben`] mitbekommt;
 /// allein Werte, damit sie den Faden wechseln kann.
 #[derive(Debug)]
 struct Notizordnerauftrag {
+    /// Wohin der Befehl fuehrt; die Arbeit liest es nicht und reicht es mit
+    /// der Antwort zurueck.
+    ziel: Notizordnerziel,
     /// Der geltende Notizordner. Bis zum 261111 reisten der Ort der Ablage
     /// und ihr Ordner mit, fuer die Uebernahme der alten Zettel; seit sie
     /// gefallen ist, beruehrt F2 die Ablage nicht mehr.
@@ -966,6 +1010,8 @@ struct Notizordnerauftrag {
 /// Die Antwort von [`Anwendungsdelegierter::notizordner_erheben`].
 #[derive(Debug)]
 struct Notizordnerantwort {
+    /// Das Ziel des Befehls, so wie es im Auftrag stand.
+    ziel: Notizordnerziel,
     /// Der Notizordner; nach einem gelungenen Anlegen mit erneuerter Aufloesung.
     heim: Heimordner,
     /// Was das Anlegen getan hat oder was es verhindert hat.
@@ -978,11 +1024,21 @@ enum Notizordnerfolge {
     /// Ein neuerer F2 hat sie ueberholt: ihre Saetze warten auf die juengste
     /// Antwort ([`Notizordnerbefehle`]).
     Zurueckstellen,
-    /// Es ist die juengste, aber der Stand ist ein anderer: die Saetze und kein
-    /// Tab und kein Fokus.
+    /// Die Saetze und kein Tab, kein Fokus und kein Blatt. In zwei Lagen: es
+    /// ist die juengste Antwort, aber der Stand ist ein anderer; oder das Ziel
+    /// ist `minutes/`, und der Ordner liess sich nicht anlegen (C5.8). Im
+    /// zweiten Fall nennen die Saetze den Grund, denn
+    /// [`heimordner::Bereitstellung::meldungen`] fuehrt ihn.
     NurSaetze,
-    /// Alles ist beim Stand des Befehls: Tab, Saetze und Fokus.
+    /// Alles ist beim Stand des Befehls: Tab, Saetze und Fokus. Die Folge von
+    /// F2 ([`Notizordnerziel::Wurzel`]), auch wenn `minutes/` sich nicht
+    /// anlegen liess; den Grund nennen dann die Saetze.
     TabUndFokus,
+    /// Wie [`Self::TabUndFokus`] mit dem Tab auf `minutes/`, und danach das
+    /// Namensblatt von „Leere Datei anlegen“. Die Folge von „Protokoll
+    /// anlegen“ ([`Notizordnerziel::Protokolle`]), und allein, wenn `minutes/`
+    /// steht.
+    TabFokusUndBlatt,
 }
 
 /// Was aus der Antwort von F2 folgt ([`notizordnerausgang`]).
@@ -1005,10 +1061,18 @@ enum Notizordnerausgang {
     },
 }
 
-/// Die Dreiwege-Entscheidung ueber die Antwort von F2, aus dem Stand des Befehls,
-/// dem jetzigen und dem, was das Anlegen ergeben hat. Rein und ohne Systemaufruf;
-/// die Faelle haelt die Tafel `f2_entscheidet_je_stand_und_hindernis`.
+/// Die Dreiwege-Entscheidung ueber die Antwort von F2 und von „Protokoll
+/// anlegen“, aus dem Ziel, dem Stand des Befehls, dem jetzigen und dem, was das
+/// Anlegen ergeben hat. Rein und ohne Systemaufruf; die Faelle haelt die Tafel
+/// `f2_entscheidet_je_stand_und_hindernis`.
+///
+/// **Ein Hindernis an `minutes/` ist kein Hindernis der Bereitstellung**
+/// ([`heimordner::Bereitstellung::protokollordner`]): der Notizordner steht,
+/// sein [`Heimordner`] geht in den Griff, und die Saetze nennen den Grund. F2
+/// oeffnet seinen Tab trotzdem; „Protokoll anlegen“ hat dann kein Ziel und
+/// zeigt allein die Saetze, ohne Tab und ohne Blatt (C5.8).
 fn notizordnerausgang(
+    ziel: Notizordnerziel,
     gefragt: &Notizordnerstand,
     jetzt: &Notizordnerstand,
     ausgang: Result<heimordner::Bereitstellung, heimordner::Hindernis>,
@@ -1021,10 +1085,16 @@ fn notizordnerausgang(
     };
     let folge = if gefragt.nummer != jetzt.nummer {
         Notizordnerfolge::Zurueckstellen
-    } else if gilt {
-        Notizordnerfolge::TabUndFokus
-    } else {
+    } else if !gilt {
         Notizordnerfolge::NurSaetze
+    } else {
+        match ziel {
+            Notizordnerziel::Wurzel => Notizordnerfolge::TabUndFokus,
+            Notizordnerziel::Protokolle if bereitstellung.protokollordner.is_ok() => {
+                Notizordnerfolge::TabFokusUndBlatt
+            }
+            Notizordnerziel::Protokolle => Notizordnerfolge::NurSaetze,
+        }
     };
     Notizordnerausgang::Bereit {
         bereitstellung: Box::new(bereitstellung),
@@ -5805,7 +5875,15 @@ impl Anwendungsdelegierter {
             // taete nichts**, und der Uebersetzer sagte dazu kein Wort; gehalten
             // wird die Stelle von
             // `zweigproben::jeder_dieser_befehle_hat_einen_eigenen_ausfuehrungszweig`.
-            Kommando::Notizordner => self.notizordner_oeffnen(),
+            Kommando::Notizordner => self.notizordner_oeffnen(Notizordnerziel::Wurzel),
+            // „Protokoll anlegen“ (C5 des Spec
+            // `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`)
+            // ist F2 mit dem Ziel `minutes/` und steht aus demselben Grund
+            // hier: `Wirkungsbereich::Ueberall`, und ohne diesen Zweig taete
+            // `cmd+m` still nichts. Gehalten von derselben Zweigprobe und, mit
+            // Namen, von
+            // `notizordnerproben::der_start_erreicht_weder_das_anlegen_noch_das_aufloesen`.
+            Kommando::ProtokollAnlegen => self.notizordner_oeffnen(Notizordnerziel::Protokolle),
             // „Ort waehlen…“ aus H3 des einstellbaren Orts, aus demselben
             // Grund wie F2 darueber: `Wirkungsbereich::Ueberall`, ein Blatt am
             // Hauptfenster als Gegenstand, und der Auffangzweig unten schluckte
@@ -6839,7 +6917,8 @@ impl Anwendungsdelegierter {
     ///    [`Self::notizordner_erheben`], **auf dem Faden** [`PLATTENFRAGE`].
     ///    Jene hat zwei Rufer, diese Funktion und den Helfer
     ///    [`Self::notizordner_bereitstellen`] fuer „Verbinden…“; diese Funktion
-    ///    hat ihrerseits genau einen, den Zweig in `kommando_ausfuehren`; die Probe
+    ///    hat ihrerseits zwei, die Zweige von F2 und von „Protokoll anlegen“ in
+    ///    `kommando_ausfuehren_bei`, je mit seinem [`Notizordnerziel`]; die Probe
     ///    `notizordnerproben::der_start_erreicht_weder_das_anlegen_noch_das_aufloesen`
     ///    haelt alles mit Namen. Damit legt der Start nichts an, auch nicht fuer
     ///    einen wiederhergestellten Tab auf den Ordner. Jede Meldung geht als
@@ -6861,10 +6940,18 @@ impl Anwendungsdelegierter {
     ///    Tab den Pfad zeigt, den der Nutzer kennt.
     ///
     /// Zuletzt geht der Fokus in das Dateifenster, auch wenn der Tab schon
-    /// sichtbar war. Ein Blatt oeffnet sich auf keinem dieser Wege.
-    fn notizordner_oeffnen(&self) -> bool {
+    /// sichtbar war.
+    ///
+    /// **Zwei Ziele, ein Weg** ([`Notizordnerziel`]): F2 fuehrt auf den
+    /// Notizordner, und ein Blatt oeffnet sich dabei nie; „Protokoll anlegen“
+    /// (`cmd+m`) fuehrt auf `minutes/` darin und oeffnet danach das Namensblatt
+    /// von „Leere Datei anlegen“ ueber [`Self::anlegen_in`]. Die Schritte 1 und
+    /// 2 sind fuer beide dieselben, die Schritte 3 und 4 fragen das Ziel
+    /// ([`Self::notizordnertab_zeigen`]), und ein Hindernis an `minutes/`
+    /// oeffnet fuer das zweite Ziel weder Tab noch Blatt.
+    fn notizordner_oeffnen(&self, ziel: Notizordnerziel) -> bool {
         let aktiv = self.ivars().modell.borrow().aktiv();
-        let Some(auftrag) = self.notizordnerauftrag(aktiv) else {
+        let Some(auftrag) = self.notizordnerauftrag(aktiv, ziel) else {
             return true;
         };
         self.ivars().notizordnerbefehle.neuer();
@@ -6883,6 +6970,7 @@ impl Anwendungsdelegierter {
             // Ohne Faden geschah nichts auf der Platte, und das sagt das
             // Hindernis, das auch eine unerreichbare Platte nennt.
             move |fehler| Notizordnerantwort {
+                ziel,
                 heim: fuer_den_startfehler,
                 ausgang: Err(heimordner::Hindernis::Unerreichbar(fehler.to_string())),
             },
@@ -6931,12 +7019,23 @@ impl Anwendungsdelegierter {
     /// Faelle**, anders als die Meldung der Pfadeingabe: sie antworten nicht auf
     /// einen Befehl, sondern sagen, was auf der Platte entstanden ist, und tragen
     /// ihren Gegenstand selbst.
+    ///
+    /// **Mit dem Ziel `minutes/` folgt auf Tab, Saetze und Fokus das
+    /// Namensblatt** ([`Notizordnerfolge::TabFokusUndBlatt`]), in dieser
+    /// Reihenfolge: [`Self::anlegen_in`] liest den Ordner am Wert des Tabs, der
+    /// eben gesetzt ist, und wartet nicht auf dessen Lesevorgang. Liess sich
+    /// `minutes/` nicht anlegen, bleibt es bei den Saetzen, die den Grund
+    /// nennen (C5.8).
     fn notizordner_einziehen(&self, gefragt: Notizordnerstand, antwort: Notizordnerantwort) {
         let jetzt = self.notizordnerstand();
         let seite = gefragt.seite;
-        let Notizordnerantwort { heim, ausgang } = antwort;
+        let Notizordnerantwort {
+            ziel,
+            heim,
+            ausgang,
+        } = antwort;
         let (bereitstellung, griff_ersetzen, folge) =
-            match notizordnerausgang(&gefragt, &jetzt, ausgang) {
+            match notizordnerausgang(ziel, &gefragt, &jetzt, ausgang) {
                 Notizordnerausgang::HindernisFaellt => return,
                 Notizordnerausgang::HindernisZeigen(hindernis) => {
                     self.antwort_zeigen(seite, &hindernis.meldung(heim.anzeigename()));
@@ -6953,25 +7052,18 @@ impl Anwendungsdelegierter {
         }
         let saetze = bereitstellung.meldungen();
         let befehle = &self.ivars().notizordnerbefehle;
-        let tab_und_fokus = match folge {
+        let (tab_und_fokus, blatt) = match folge {
             Notizordnerfolge::Zurueckstellen => {
                 befehle.zurueckstellen(saetze);
                 return;
             }
-            Notizordnerfolge::NurSaetze => false,
-            Notizordnerfolge::TabUndFokus => true,
+            Notizordnerfolge::NurSaetze => (false, false),
+            Notizordnerfolge::TabUndFokus => (true, false),
+            Notizordnerfolge::TabFokusUndBlatt => (true, true),
         };
         let saetze = befehle.saetze_mit(saetze);
         if tab_und_fokus {
-            let tabelle = self.dateifenster(seite).quelle();
-            let vorhanden = tabelle
-                .tabordner()
-                .iter()
-                .position(|ordner| ordner.as_deref().is_some_and(|ordner| heim.ist(ordner)));
-            match vorhanden {
-                Some(stelle) => tabelle.tab_waehlen(stelle),
-                None => tabelle.tab_oeffnen(heim.geschrieben()),
-            }
+            self.notizordnertab_zeigen(seite, &heim, ziel);
         }
         // **Die Meldungen erst nach dem Tabwechsel**, damit sie in der
         // Statuszeile des Tabs stehen, den der Nutzer jetzt ansieht. Mehrere
@@ -6984,6 +7076,36 @@ impl Anwendungsdelegierter {
         if tab_und_fokus {
             let _ = self.fokus_holen(Fokus::Dateifenster);
         }
+        // **Das Blatt zuletzt**: der Tab steht, die Saetze stehen in seiner
+        // Statuszeile, und der Fokus ist in der Liste, in die `esc` ihn
+        // zuruecklaesst (C5.6). Der Rumpf ist der von „Leere Datei anlegen“;
+        // dass der Ordner `minutes/` ist, erhebt er selbst am Wert des Tabs,
+        // und Praefix und Hinweis folgen daraus (C4.3).
+        if blatt {
+            let _ = self.anlegen_in(seite, Anlegeart::Datei);
+        }
+    }
+
+    /// Die Schritte 3 und 4 von [`Self::notizordner_oeffnen`] fuer ein Ziel:
+    /// der erste Tab von `seite`, dessen Ordner das Ziel ist, wird sichtbar;
+    /// sonst entsteht ein neuer Tab auf der geschriebenen Form.
+    ///
+    /// Ein zweiter Tab auf denselben Ordner entsteht so nicht (C5.4 fuer
+    /// `minutes/`, wie seit der krkhome-Arbeit fuer den Notizordner). Gefragt
+    /// wird am Tab-Ordner ueber [`Notizordnerziel::erkennt`]: **kein
+    /// Systemaufruf**, gehalten von
+    /// `notizordnerproben::f2_stellt_auf_dem_hauptfaden_keinen_systemaufruf`.
+    fn notizordnertab_zeigen(&self, seite: Fensterseite, heim: &Heimordner, ziel: Notizordnerziel) {
+        let tabelle = self.dateifenster(seite).quelle();
+        let vorhanden = tabelle.tabordner().iter().position(|ordner| {
+            ordner
+                .as_deref()
+                .is_some_and(|ordner| ziel.erkennt(heim, ordner))
+        });
+        match vorhanden {
+            Some(stelle) => tabelle.tab_waehlen(stelle),
+            None => tabelle.tab_oeffnen(&ziel.ordner(heim)),
+        }
     }
 
     /// Was die Schritte 1 und 2 von [`Self::notizordner_oeffnen`] brauchen, oder
@@ -6991,7 +7113,11 @@ impl Anwendungsdelegierter {
     ///
     /// **Gilt kein Ort**, nennt die Statuszeile den Grund aus
     /// [`heimgriff::lage`], und angelegt wird nichts. **Kein Systemaufruf.**
-    fn notizordnerauftrag(&self, seite: Fensterseite) -> Option<Notizordnerauftrag> {
+    fn notizordnerauftrag(
+        &self,
+        seite: Fensterseite,
+        ziel: Notizordnerziel,
+    ) -> Option<Notizordnerauftrag> {
         // **`lage` und nicht `lesen`**: gilt kein Ort, nennt F2 den Grund und
         // legt nichts an. Den Schutzort, den `lesen` dann liefert, darf F2
         // nicht sehen; an ihm anzulegen waere der stille Rueckfall, den H2
@@ -7003,7 +7129,7 @@ impl Anwendungsdelegierter {
                 return None;
             }
         };
-        Some(Notizordnerauftrag { heim })
+        Some(Notizordnerauftrag { ziel, heim })
     }
 
     /// Die Schritte 1 und 2 von [`Self::notizordner_oeffnen`]: anlegen, was
@@ -7011,9 +7137,11 @@ impl Anwendungsdelegierter {
     /// ruft sie auf dem Faden [`PLATTENFRAGE`].
     ///
     /// **Der eine Rufer von [`heimordner::bereitstellen`]**, und er selbst hat
-    /// zwei: F2 und, seit dem 261016, ueber [`Self::notizordner_bereitstellen`]
-    /// „Verbinden…“, wenn `secrets.txt` fehlt (Entscheidung 14 des Plans der
-    /// sechs Felder). Beide sind Befehle; der Start erreicht keinen, und die Probe
+    /// zwei: [`Self::notizordner_oeffnen`], also F2 und seit dem 261111
+    /// „Protokoll anlegen“, und, seit dem 261016, ueber
+    /// [`Self::notizordner_bereitstellen`] „Verbinden…“, wenn `secrets.txt`
+    /// fehlt (Entscheidung 14 des Plans der sechs Felder). Alle sind Befehle;
+    /// der Start erreicht keinen, und die Probe
     /// `notizordnerproben::der_start_erreicht_weder_das_anlegen_noch_das_aufloesen`
     /// haelt beides mit Namen.
     ///
@@ -7026,14 +7154,18 @@ impl Anwendungsdelegierter {
     /// eine haengende Freigabe unter `~/krkhome` haelt seitdem allein diesen
     /// Faden an und keinen Durchgang des Hauptfadens.
     fn notizordner_erheben(auftrag: Notizordnerauftrag) -> Notizordnerantwort {
-        let Notizordnerauftrag { heim } = auftrag;
+        let Notizordnerauftrag { ziel, heim } = auftrag;
         let ausgang = heimordner::bereitstellen(&heim);
         let heim = if ausgang.is_ok() {
             heim.aufgeloest_erneuern()
         } else {
             heim
         };
-        Notizordnerantwort { heim, ausgang }
+        Notizordnerantwort {
+            ziel,
+            heim,
+            ausgang,
+        }
     }
 
     /// [`Self::notizordner_erheben`] fuer „Verbinden…“, **auf dem Hauptfaden**:
@@ -7048,8 +7180,10 @@ impl Anwendungsdelegierter {
     /// Die Probe `der_verbindungsweg_stellt_auf_dem_hauptfaden_nur_den_einen_stat`
     /// fuehrt sie als benannte Ausnahme.
     fn notizordner_bereitstellen(&self, seite: Fensterseite) -> Option<(Heimordner, Vec<String>)> {
-        let auftrag = self.notizordnerauftrag(seite)?;
-        let Notizordnerantwort { heim, ausgang } = Self::notizordner_erheben(auftrag);
+        // „Verbinden…“ oeffnet keinen Tab; das Ziel reist allein mit, weil
+        // der Auftrag es traegt, und wird hier nicht gelesen.
+        let auftrag = self.notizordnerauftrag(seite, Notizordnerziel::Wurzel)?;
+        let Notizordnerantwort { heim, ausgang, .. } = Self::notizordner_erheben(auftrag);
         let bereitstellung = match ausgang {
             Ok(bereitstellung) => bereitstellung,
             Err(hindernis) => {
@@ -9602,11 +9736,11 @@ impl Anwendungsdelegierter {
     /// Der Rumpf von [`Self::anlegen`] mit Seite und Art als Werten: fragt den
     /// Namen fuer den Ordner, den der aktive Tab **dieser** Seite zeigt.
     ///
-    /// Zwei Rufer: [`Self::anlegen`] mit dem aktiven Dateifenster, und ab
-    /// Schritt 7 des Plans
-    /// `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md` der
-    /// Befehl „Protokoll anlegen“, der den Tab der Seite vorher auf
-    /// `minutes/` stellt. Der Ordner ist der Wert des Tabs und nicht sein
+    /// Zwei Rufer: [`Self::anlegen`] mit dem aktiven Dateifenster, und
+    /// [`Self::notizordner_einziehen`] fuer den Befehl „Protokoll anlegen“
+    /// (Schritt 7 des Plans
+    /// `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`), das
+    /// den Tab der Seite vorher auf `minutes/` stellt. Der Ordner ist der Wert des Tabs und nicht sein
     /// gelesener Bestand; das Blatt geht deshalb auf, auch wenn der
     /// Lesevorgang des Tabs noch laeuft.
     ///
@@ -14913,9 +15047,10 @@ mod zweigproben {
     ///
     /// `NeuerungenZeigen` ist der erste, und bis zur krkhome-Arbeit hielt ihn
     /// eine eigene Probe im Pruefmodul der Neuerungen.
-    const BEFEHLE: [&str; 25] = [
+    const BEFEHLE: [&str; 26] = [
         "NeuerungenZeigen",
         "Notizordner",
+        "ProtokollAnlegen",
         "OrtWaehlen",
         "EintragHinzufuegen",
         "EintragBearbeiten",
@@ -15496,8 +15631,9 @@ mod geraeteproben {
 /// hier nicht fahren, und ein Lauf saehe ohnehin nur den einen Weg, den er
 /// nimmt. Die Kette ist deshalb am Quelltext festgehalten: das Anlegen hat im
 /// ausgelieferten Code genau einen Rufer, `notizordner_erheben`; dieses hat
-/// zwei, `notizordner_oeffnen` und den Helfer von „Verbinden…“, und jene haben je
-/// einen Befehl als Rufer; das Aufloesen steht in `notizordner_erheben` und in
+/// zwei, `notizordner_oeffnen` und den Helfer von „Verbinden…“; der Helfer hat
+/// einen Befehl als Rufer und `notizordner_oeffnen` zwei, F2 und seit dem 261111
+/// „Protokoll anlegen“, beide als Zweig in `kommando_ausfuehren_bei`; das Aufloesen steht in `notizordner_erheben` und in
 /// der Arbeit von „Ort waehlen…“. Die
 /// Sitzungswiederherstellung kommt an keinem der drei vorbei, denn sie ist kein
 /// Befehl.
@@ -15520,7 +15656,8 @@ mod notizordnerproben {
 
     use super::quelltextproben::{diese_datei, rumpf};
     use super::{
-        Fokus, Notizordnerausgang, Notizordnerfolge, Notizordnerstand, notizordnerausgang,
+        Fokus, Notizordnerausgang, Notizordnerfolge, Notizordnerstand, Notizordnerziel,
+        notizordnerausgang,
     };
     use crate::quellbaum::{aufrufstellen, quelldateien};
     use crate::tabs::{Tabliste, Tabstand};
@@ -15702,15 +15839,55 @@ mod notizordnerproben {
             "der eine Rufer von ort_aufloesen ist nicht ort_uebernehmen"
         );
 
+        // Zwei Rufer seit „Protokoll anlegen“ (Schritt 7 des Plans
+        // `261111-0852-…`): F2 und `cmd+m`, beide als Zweig eines Befehls und
+        // je mit ihrem Ziel. Keiner ist der Start, und ein wiederhergestellter
+        // Tab auf `minutes/` kommt an keinem vorbei.
         assert_eq!(
             rufer(oeffnen),
-            [(datei, 1)],
-            "{oeffnen} hat nicht genau einen Rufer"
+            [(datei, 2)],
+            "{oeffnen} hat nicht genau zwei Rufer"
+        );
+        let zweige = rumpf(&quelle, "kommando_ausfuehren_bei");
+        assert_eq!(
+            aufrufstellen(&zweige, oeffnen),
+            2,
+            "die zwei Rufer von {oeffnen} sind nicht die Zweige in kommando_ausfuehren_bei"
+        );
+        for (befehl, ziel) in [
+            ("Notizordner", "Wurzel"),
+            ("ProtokollAnlegen", "Protokolle"),
+        ] {
+            let zweig = format!(
+                "{}::{befehl} => self.{oeffnen}(Notizordnerziel::{ziel})",
+                concat!("Kom", "mando")
+            );
+            assert_eq!(
+                zweige.matches(&zweig).count(),
+                1,
+                "der Zweig `{zweig}` steht nicht genau einmal in kommando_ausfuehren_bei"
+            );
+        }
+
+        // Das Namensblatt von „Protokoll anlegen“ geht allein in der
+        // Einzugsmethode auf, also hinter der Antwort eines Befehls: der
+        // Rumpf des Anlegens hat genau die zwei Rufer, die sein Doc-Kommentar
+        // nennt.
+        let blatt = concat!("anlegen_", "in");
+        assert_eq!(
+            rufer(blatt),
+            [("krk-ui/src/appkit/anwendung.rs".to_owned(), 2)],
+            "{blatt} hat nicht genau zwei Rufer"
         );
         assert_eq!(
-            aufrufstellen(&rumpf(&quelle, "kommando_ausfuehren_bei"), oeffnen),
+            aufrufstellen(&rumpf(&quelle, concat!("notizordner_", "einziehen")), blatt),
             1,
-            "der eine Rufer von {oeffnen} ist nicht der Zweig in kommando_ausfuehren"
+            "{blatt} wird nicht genau einmal aus der Einzugsmethode gerufen"
+        );
+        assert_eq!(
+            aufrufstellen(&rumpf(&quelle, "anlegen"), blatt),
+            1,
+            "der zweite Rufer von {blatt} ist nicht `anlegen`"
         );
     }
 
@@ -15724,6 +15901,14 @@ mod notizordnerproben {
     /// den Helfer von „Verbinden…“, der dieselbe Arbeit auf dem Hauptfaden ruft
     /// und in `der_verbindungsweg_stellt_auf_dem_hauptfaden_nur_den_einen_stat`
     /// benannt ist.
+    ///
+    /// **Seit „Protokoll anlegen“ liest sie auch, was das Ziel `minutes/`
+    /// hinzufuegt:** den Rumpf, der den Tab stellt, die zwei reinen Fragen von
+    /// `Notizordnerziel`, die reine Entscheidung und `anlegen_in`, den Rumpf des
+    /// Namensblatts. Das Bestaetigen dahinter (`anlegen_ausfuehren`) liest sie
+    /// nicht: es legt lokal auf dem Hauptfaden an, wie bei „Leere Datei
+    /// anlegen“ in jedem Ordner, und das ist der aeltere Rest aus dem Defekt
+    /// `261111-0852-anlegen-und-umbenennen-im-lokalen-ordner-stellen-ihren-systemaufruf-auf-dem-hauptfaden.md`.
     #[test]
     fn f2_stellt_auf_dem_hauptfaden_keinen_systemaufruf() {
         let datei = diese_datei();
@@ -15732,6 +15917,11 @@ mod notizordnerproben {
             "notizordner_einziehen",
             "notizordnerstand",
             "notizordnerauftrag",
+            "notizordnertab_zeigen",
+            "notizordnerausgang",
+            "ordner",
+            "erkennt",
+            "anlegen_in",
         ] {
             let rumpf = rumpf(&datei, name);
             for nadel in [
@@ -15742,6 +15932,9 @@ mod notizordnerproben {
                 concat!("heimordner::", "bereitstellen("),
                 concat!("unter_der_", "sperre("),
                 concat!(".durch", "gang("),
+                "exists(",
+                "is_dir(",
+                "read_dir(",
             ] {
                 assert!(
                     !rumpf.contains(nadel),
@@ -15749,6 +15942,45 @@ mod notizordnerproben {
                 );
             }
         }
+        // Die zwei Fragen des Ziels sind die des `Notizordnerziel` und keine
+        // gleichnamigen anderswo in der Datei.
+        for (name, nadel) in [
+            ("ordner", "heim.protokollordner()"),
+            ("erkennt", "heim.ist_protokollordner(ordner)"),
+        ] {
+            assert!(
+                rumpf(&datei, name).contains(nadel),
+                "der gelesene Rumpf von {name} ist nicht der des Notizordnerziels"
+            );
+        }
+        // Tab vor Blatt, und das Blatt allein hinter der Folge, die es
+        // verlangt: ein Hindernis an `minutes/` erreicht es nicht (C5.8).
+        let einzug = rumpf(&datei, "notizordner_einziehen");
+        let tab = einzug
+            .find(concat!(
+                "self.notizordnertab_",
+                "zeigen(seite, &heim, ziel)"
+            ))
+            .expect("die Einzugsmethode stellt den Tab nicht ueber den einen Rumpf");
+        let fokus = einzug
+            .find("self.fokus_holen(Fokus::Dateifenster)")
+            .expect("die Einzugsmethode holt den Fokus nicht in das Dateifenster");
+        let blatt = einzug
+            .find(concat!("self.anlegen_", "in(seite, Anlegeart::Datei)"))
+            .expect("die Einzugsmethode oeffnet das Namensblatt nicht");
+        assert!(
+            tab < fokus && fokus < blatt,
+            "Tab, Fokus und Blatt stehen nicht in dieser Reihenfolge"
+        );
+        assert!(
+            einzug.contains("Notizordnerfolge::TabFokusUndBlatt => (true, true)")
+                && einzug.contains("Notizordnerfolge::TabUndFokus => (true, false)")
+                && einzug.contains("Notizordnerfolge::NurSaetze => (false, false)")
+                && einzug[..blatt]
+                    .trim_end()
+                    .ends_with("if blatt {\n            let _ ="),
+            "das Blatt haengt nicht allein an der Folge, die es verlangt"
+        );
         let ausloeser = rumpf(&datei, "notizordner_oeffnen");
         for nadel in [
             concat!("nebenfaden::befehl_", "fragen_lassen("),
@@ -15772,8 +16004,15 @@ mod notizordnerproben {
         );
     }
 
-    /// Die Tafel der Antwort von F2: je Feld des Stands ein Abweichen, jeweils mit
-    /// und ohne Hindernis.
+    /// Die Tafel der Antwort von F2 und von „Protokoll anlegen“: je Ziel und je
+    /// Feld des Stands ein Abweichen, jeweils mit und ohne Hindernis, und
+    /// danach je Ziel der Ausgang von `minutes/`.
+    ///
+    /// **Die zwei Ziele unterscheiden sich an genau zwei Stellen**: beim
+    /// geltenden Stand folgt auf `cmd+m` zusaetzlich das Blatt, und ein
+    /// Hindernis an `minutes/` haelt allein `cmd+m` auf (C5.8). Jede andere
+    /// Zeile ist fuer beide dieselbe, und die Schleife ueber die Ziele haelt
+    /// das.
     #[test]
     fn f2_entscheidet_je_stand_und_hindernis() {
         let gefragt = Notizordnerstand {
@@ -15856,27 +16095,111 @@ mod notizordnerproben {
                 Notizordnerfolge::Zurueckstellen,
             ),
         ];
-        for (fall, jetzt, griff_ersetzen, folge) in tafel {
+        for ziel in [Notizordnerziel::Wurzel, Notizordnerziel::Protokolle] {
+            for (fall, jetzt, griff_ersetzen, folge) in &tafel {
+                // Allein beim geltenden Stand kommt fuer `minutes/` das Blatt
+                // dazu; „Stand gilt nicht mehr: allein die Saetze“ ist jede
+                // Zeile mit `NurSaetze`, fuer beide Ziele.
+                let folge = match (ziel, *folge) {
+                    (Notizordnerziel::Protokolle, Notizordnerfolge::TabUndFokus) => {
+                        Notizordnerfolge::TabFokusUndBlatt
+                    }
+                    (_, folge) => folge,
+                };
+                assert_eq!(
+                    notizordnerausgang(ziel, &gefragt, jetzt, Ok(bereitstellung())),
+                    Notizordnerausgang::Bereit {
+                        bereitstellung: Box::new(bereitstellung()),
+                        griff_ersetzen: *griff_ersetzen,
+                        folge,
+                    },
+                    "{fall}, Ziel {ziel:?}"
+                );
+                // Ein Hindernis am Notizordner selbst: beim geltenden Stand
+                // gezeigt, sonst faellt es mit dem Befehl. Kein Tab und kein
+                // Blatt, fuer beide Ziele (C5.8).
+                let hindernis = if *jetzt == gefragt {
+                    Notizordnerausgang::HindernisZeigen(Hindernis::KeinOrdner)
+                } else {
+                    Notizordnerausgang::HindernisFaellt
+                };
+                assert_eq!(
+                    notizordnerausgang(ziel, &gefragt, jetzt, Err(Hindernis::KeinOrdner)),
+                    hindernis,
+                    "{fall}, Ziel {ziel:?}, mit Hindernis"
+                );
+            }
+        }
+
+        // Der Ausgang von `minutes/`: der Notizordner steht, der Unterordner
+        // liess sich nicht anlegen. Die Bereitstellung ist gelungen, also geht
+        // der Griff mit, und die Saetze nennen den Grund.
+        let ohne_minutes = || Bereitstellung {
+            protokollordner: Err(Hindernis::KeinOrdner),
+            ..bereitstellung()
+        };
+        let grund = ohne_minutes().meldungen();
+        assert_eq!(grund.len(), 1, "der Grund an minutes/ ist nicht ein Satz");
+        assert!(
+            grund[0].contains("heim/minutes"),
+            "der Satz nennt minutes/ nicht: {grund:?}"
+        );
+        let neuerer = mit(|jetzt| jetzt.nummer = 3);
+        let anderer_tab = mit(|jetzt| jetzt.tab = tabstand());
+        let minutes_tafel = [
+            (
+                "Ziel Wurzel, minutes/ nicht anlegbar: F2 oeffnet seinen Tab trotzdem",
+                Notizordnerziel::Wurzel,
+                &gefragt,
+                Notizordnerfolge::TabUndFokus,
+            ),
+            (
+                "Ziel Protokolle, minutes/ nicht anlegbar: Hindernis zeigen, kein Tab, kein Blatt",
+                Notizordnerziel::Protokolle,
+                &gefragt,
+                Notizordnerfolge::NurSaetze,
+            ),
+            (
+                "Ziel Protokolle, minutes/ nicht anlegbar, Stand gilt nicht mehr: allein die Saetze",
+                Notizordnerziel::Protokolle,
+                &anderer_tab,
+                Notizordnerfolge::NurSaetze,
+            ),
+            (
+                "Ziel Protokolle, minutes/ nicht anlegbar, neuerer Befehl: die Saetze warten",
+                Notizordnerziel::Protokolle,
+                &neuerer,
+                Notizordnerfolge::Zurueckstellen,
+            ),
+        ];
+        for (fall, ziel, jetzt, folge) in minutes_tafel {
             assert_eq!(
-                notizordnerausgang(&gefragt, &jetzt, Ok(bereitstellung())),
+                notizordnerausgang(ziel, &gefragt, jetzt, Ok(ohne_minutes())),
                 Notizordnerausgang::Bereit {
-                    bereitstellung: Box::new(bereitstellung()),
-                    griff_ersetzen,
+                    bereitstellung: Box::new(ohne_minutes()),
+                    griff_ersetzen: true,
                     folge,
                 },
                 "{fall}"
             );
-            let hindernis = if jetzt == gefragt {
-                Notizordnerausgang::HindernisZeigen(Hindernis::KeinOrdner)
-            } else {
-                Notizordnerausgang::HindernisFaellt
-            };
-            assert_eq!(
-                notizordnerausgang(&gefragt, &jetzt, Err(Hindernis::KeinOrdner)),
-                hindernis,
-                "{fall}, mit Hindernis"
-            );
         }
+        // „Ziel Protokolle, Stand gilt nicht mehr: allein die Saetze“, mit
+        // stehendem `minutes/` und ausgeschrieben, weil der Plan die Zeile
+        // nennt: kein Tab, kein Fokus, kein Blatt.
+        assert_eq!(
+            notizordnerausgang(
+                Notizordnerziel::Protokolle,
+                &gefragt,
+                &anderer_tab,
+                Ok(bereitstellung())
+            ),
+            Notizordnerausgang::Bereit {
+                bereitstellung: Box::new(bereitstellung()),
+                griff_ersetzen: true,
+                folge: Notizordnerfolge::NurSaetze,
+            },
+            "Ziel Protokolle, Stand gilt nicht mehr"
+        );
     }
 
     /// Eine ueberholte Antwort oeffnet nichts, und ihre Saetze gehen nicht

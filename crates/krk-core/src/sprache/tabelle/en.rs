@@ -346,7 +346,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::OrtGewaehlt => "The notes folder is now “{neu}”, and F2 leads there",
         Text::OrtSchonDerOrt => "“{neu}” is already the notes folder; settings.toml stays as it is",
         Text::HeimKeinOrdner => {
-            "{ordner} is not a folder; KRK creates nothing there and opens no tab"
+            "{ordner} is not a folder; KRK creates nothing there and opens no tab on it"
         }
         Text::HeimNichtErreichbar => "{ordner} is not reachable: {grund}",
         Text::HeimNichtAnlegbar => "{name} cannot be created: {grund}",
@@ -1381,6 +1381,7 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::Beenden => "Quit KRK",
         Kommando::WeitereInstanz => "Launch Another Instance",
         Kommando::Notizordner => "Open Notes Folder",
+        Kommando::ProtokollAnlegen => "New Minutes File",
         Kommando::OrtWaehlen => "Choose Location…",
         Kommando::VorschauVergroessern => "Zoom In Preview",
         Kommando::VorschauVerkleinern => "Zoom Out Preview",

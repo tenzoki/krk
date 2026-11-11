@@ -1288,6 +1288,121 @@ fn eine_eigene_belegung_ohne_die_quicknote_laedt_und_fuehrt_sie_unbelegt() {
     );
 }
 
+/// C5.1 des Spec
+/// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`: `cmd+m`
+/// traegt in der Auslieferung allein `protokoll_anlegen`, und die Funktion
+/// traegt allein diese Kombination und ihr Kommando.
+///
+/// **`Nachschlag::Funktion` und nicht `Geteilt`**, anders als die Proben ueber
+/// den Helfer [`getroffene`]: die Zusage ist gerade, dass keine zweite Funktion
+/// die Taste teilt.
+#[test]
+fn cmd_m_traegt_in_der_auslieferung_allein_protokoll_anlegen() {
+    let belegung = Belegung::auslieferung();
+    let traeger: Vec<&str> = belegung
+        .funktionen()
+        .iter()
+        .filter(|funktion| funktion.tasten().contains(&kombi("cmd+m")))
+        .map(|funktion| funktion.kennung())
+        .collect();
+    assert_eq!(traeger, ["protokoll_anlegen"]);
+    assert!(matches!(
+        belegung.nachschlag(kombi("cmd+m").tastendruck()),
+        Nachschlag::Funktion(funktion) if funktion.kennung() == "protokoll_anlegen"
+    ));
+    let funktion = belegung
+        .funktion("protokoll_anlegen")
+        .expect("die Auslieferung fuehrt protokoll_anlegen");
+    assert_eq!(funktion.tasten(), [kombi("cmd+m")]);
+    assert_eq!(funktion.kommando(), Some(Kommando::ProtokollAnlegen));
+    assert_eq!(
+        Kommando::ProtokollAnlegen.wirkungsbereich(),
+        Kommando::Notizordner.wirkungsbereich(),
+        "„Protokoll anlegen“ wirkt nicht ueberall wie F2 (C5.2)"
+    );
+    assert_eq!(
+        Kommando::ProtokollAnlegen.ortsbedarf(),
+        Kommando::Notizordner.ortsbedarf(),
+        "„Protokoll anlegen“ traegt nicht den Ortsbedarf von F2"
+    );
+    assert!(belegung.konflikte().is_empty());
+}
+
+/// C5.10: eine Nutzerbelegung von vor dem Befehl laedt ohne Ersetzung, fuehrt
+/// „Protokoll anlegen“ unbelegt, `cmd+m` trifft darin keine Funktion, und
+/// „Zuweisen“ legt den Befehl auf `cmd+m`, ohne die uebrige Belegung zu
+/// beruehren.
+///
+/// Der Beleg fuer den Satz am Eintrag in `resources/default-keymap.toml`, dass
+/// `cmd+m` bei einer eigenen `keymap.toml` erst nach „Zuweisen“ wirkt.
+#[test]
+fn eine_eigene_belegung_ohne_protokoll_anlegen_fuehrt_es_unbelegt_und_nimmt_cmd_m_an() {
+    let beginn = belegung::AUSLIEFERUNGSTEXT
+        .find("[[funktion]]\nid = \"protokoll_anlegen\"\n")
+        .expect("der Block von protokoll_anlegen steht in der Auslieferung");
+    let ende = belegung::AUSLIEFERUNGSTEXT
+        .find("[[funktion]]\nid = \"ort_waehlen\"\n")
+        .expect("der Block von ort_waehlen folgt");
+    assert!(beginn < ende, "protokoll_anlegen steht vor ort_waehlen");
+    let ohne = format!(
+        "{}{}",
+        &belegung::AUSLIEFERUNGSTEXT[..beginn],
+        &belegung::AUSLIEFERUNGSTEXT[ende..]
+    );
+    assert!(!ohne.contains("id = \"protokoll_anlegen\""));
+    assert!(
+        !ohne.contains("\"cmd+m\""),
+        "eine zweite Tastenliste der Auslieferung nennt cmd+m"
+    );
+
+    let ordner = Pruefordner::neu("protokoll-ohne");
+    let ablage = ablage_mit(&ordner, &ohne);
+    let geladen = geladene_belegung(&ablage);
+    assert!(
+        !geladen.ist_ersetzt(),
+        "eine Belegung ohne protokoll_anlegen wurde abgewiesen"
+    );
+    let mut eigene = geladen.wert;
+    let funktion = eigene
+        .funktion("protokoll_anlegen")
+        .expect("protokoll_anlegen kommt nicht hinzu");
+    assert!(
+        funktion.tasten().is_empty(),
+        "protokoll_anlegen kommt belegt an"
+    );
+    assert_eq!(funktion.kommando(), Some(Kommando::ProtokollAnlegen));
+    assert!(
+        !matches!(
+            eigene.nachschlag(kombi("cmd+m").tastendruck()),
+            Nachschlag::Funktion(_) | Nachschlag::Geteilt(..)
+        ),
+        "cmd+m trifft in einer Belegung ohne protokoll_anlegen eine Funktion"
+    );
+
+    // Die uebrige Belegung vor und nach dem Zuweisen: jede andere Funktion
+    // traegt, was sie trug.
+    let uebrige = |belegung: &Belegung| -> Vec<(String, Vec<Kombination>)> {
+        belegung
+            .funktionen()
+            .iter()
+            .filter(|funktion| funktion.kennung() != "protokoll_anlegen")
+            .map(|funktion| (funktion.kennung().to_owned(), funktion.tasten().to_vec()))
+            .collect()
+    };
+    let vorher = uebrige(&eigene);
+    assert_eq!(eigene.zuweisen("protokoll_anlegen", kombi("cmd+m")), Ok(()));
+    assert_eq!(
+        uebrige(&eigene),
+        vorher,
+        "das Zuweisen beruehrt eine andere Funktion"
+    );
+    assert!(matches!(
+        eigene.nachschlag(kombi("cmd+m").tastendruck()),
+        Nachschlag::Funktion(funktion) if funktion.kennung() == "protokoll_anlegen"
+    ));
+    assert!(eigene.konflikte().is_empty());
+}
+
 /// C1.2 der Werkseinstellungen: eine Nutzerbelegung von vor dem Befehl laedt
 /// ohne Ersetzung und fuehrt „Auf Werkseinstellungen zuruecksetzen…“
 /// unbelegt; die Auslieferung fuehrt ihn ebenso ohne Kombination.

@@ -1990,22 +1990,29 @@ mod tests {
     /// Die Schleife selbst haelt daneben die Gegenrichtung fest: ohne Blatt
     /// wirkt der Befehl aus jedem Fokuswert, und genau dafuer traegt
     /// er [`Wirkungsbereich::Ueberall`].
+    ///
+    /// **Seit dem 261111 gilt dieselbe Probe „Protokoll anlegen“** (`cmd+m`),
+    /// das F2 mit einem anderen Ziel ist: es wirkt aus jedem Fokuswert (C5.2
+    /// des Spec `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`)
+    /// und tut nichts, solange ein Blatt steht (C5.9), auch nicht waehrend
+    /// des Namensblatts, das es selbst oeffnet.
     #[test]
     fn der_notizordner_kommt_bei_stehendem_blatt_nicht_durch() {
-        let kommando = Kommando::Notizordner;
-        assert_eq!(kommando.wirkungsbereich(), Wirkungsbereich::Ueberall);
-        assert!(!immer_erreichbar(kommando));
-        assert!(!operationen::waehrend_blatt_erlaubt(kommando));
+        for kommando in [Kommando::Notizordner, Kommando::ProtokollAnlegen] {
+            assert_eq!(kommando.wirkungsbereich(), Wirkungsbereich::Ueberall);
+            assert!(!immer_erreichbar(kommando));
+            assert!(!operationen::waehrend_blatt_erlaubt(kommando));
 
-        for fokus in JEDER_FOKUS {
-            assert!(
-                zulaessig(kommando, lage(false, false, true, fokus)),
-                "der Notizordner kommt ohne Blatt in {fokus:?} nicht durch"
-            );
-            assert!(
-                !zulaessig(kommando, lage(true, false, true, fokus)),
-                "der Notizordner kommt bei stehendem Blatt in {fokus:?} durch"
-            );
+            for fokus in JEDER_FOKUS {
+                assert!(
+                    zulaessig(kommando, lage(false, false, true, fokus)),
+                    "{kommando:?} kommt ohne Blatt in {fokus:?} nicht durch"
+                );
+                assert!(
+                    !zulaessig(kommando, lage(true, false, true, fokus)),
+                    "{kommando:?} kommt bei stehendem Blatt in {fokus:?} durch"
+                );
+            }
         }
     }
 

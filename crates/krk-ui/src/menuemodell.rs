@@ -1217,6 +1217,110 @@ mod tests {
         );
     }
 
+    /// C5.1 des Spec
+    /// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`: das
+    /// Menue „Home“ fuehrt „Protokoll anlegen“ unmittelbar hinter „Notizordner
+    /// öffnen“, mit dem Kuerzel `cmd+m` und einem Kommando, und der Name
+    /// steht in allen drei Sprachen.
+    ///
+    /// **Was sie nicht sieht:** ob macOS `cmd+m` am laufenden Buendel an KRK
+    /// zustellt oder das Fenster minimiert; das zeigt allein ein Lauf des
+    /// Nutzers. Am Quelltext haelt
+    /// `kein_menueeintrag_und_kein_code_minimiert_das_fenster` daneben, dass
+    /// KRK selbst das Minimieren an keiner Stelle ruft.
+    #[test]
+    fn protokoll_anlegen_steht_unter_home_hinter_dem_notizordner_mit_cmd_m() {
+        use krk_core::sprache::Sprache;
+        use krk_core::tasten::belegung::Funktionsschluessel;
+
+        let belegung = Belegung::auslieferung();
+        let leiste = aufbau(&belegung);
+        let home = leiste
+            .iter()
+            .find(|obermenue| obermenue.titel == Funktionsbereich::Home.name())
+            .expect("die Leiste fuehrt das Obermenue Home");
+        let befehle: Vec<_> = home
+            .eintraege
+            .iter()
+            .filter_map(|eintrag| match eintrag {
+                Eintrag::Befehl {
+                    beschriftung,
+                    kennung,
+                    kombination,
+                    kommando,
+                } => Some((*kennung, *beschriftung, *kombination, *kommando)),
+                _ => None,
+            })
+            .collect();
+        let stelle = befehle
+            .iter()
+            .position(|(kennung, ..)| *kennung == "notizzettel")
+            .expect("Home fuehrt „Notizordner öffnen“");
+        let (kennung, beschriftung, kombination, kommando) = befehle
+            .get(stelle + 1)
+            .copied()
+            .expect("hinter „Notizordner öffnen“ steht kein Befehl");
+        assert_eq!(
+            kennung, "protokoll_anlegen",
+            "unmittelbar hinter „Notizordner öffnen“ steht ein anderer Befehl"
+        );
+        assert_eq!(beschriftung, "Protokoll anlegen");
+        assert_eq!(
+            kombination,
+            Some(Kombination::lesen("cmd+m").expect("eine Kombination")),
+            "der Menueeintrag zeigt nicht cmd+m"
+        );
+        assert_eq!(kommando, Some(Kommando::ProtokollAnlegen));
+        for (sprache, name) in [
+            (Sprache::De, "Protokoll anlegen"),
+            (Sprache::En, "New Minutes File"),
+            (Sprache::Fr, "Créer un compte rendu"),
+        ] {
+            assert_eq!(
+                sprache.funktionsname(Funktionsschluessel::Kommando(Kommando::ProtokollAnlegen)),
+                name,
+                "der Befehlsname in {sprache:?}"
+            );
+        }
+    }
+
+    /// `cmd+m` minimiert auf dem Mac gewoehnlich das Fenster. KRK ruft das
+    /// Minimieren an keiner Stelle selbst: der Selektor steht in keiner
+    /// Codezeile unter `crates/krk-ui/src`, also traegt ihn auch kein
+    /// Menueeintrag, und der Ereignisabgriff bekommt den Tastendruck vor der
+    /// Menueleiste (Schritt 7 des Plans
+    /// `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`).
+    ///
+    /// **Was sie nicht sieht:** was macOS mit der Taste tut, bevor oder
+    /// nachdem KRK sie sieht, und einen Selektor, der aus Teilen
+    /// zusammengesetzt wird, wie die Nadel dieser Probe selbst. Kommentare
+    /// fallen heraus; dort darf das Wort stehen.
+    #[test]
+    fn kein_menueeintrag_und_kein_code_minimiert_das_fenster() {
+        let nadel = concat!("perform", "Miniaturize");
+        let treffer: Vec<String> = crate::quellbaum::quelldateien()
+            .into_iter()
+            .filter(|(datei, _)| datei.starts_with("krk-ui/src/"))
+            .flat_map(|(datei, inhalt)| {
+                crate::quellbaum::codezeilen(&inhalt)
+                    .filter(|zeile| zeile.contains(nadel))
+                    .map(|zeile| format!("{datei}: {}", zeile.trim()))
+                    .collect::<Vec<_>>()
+            })
+            .collect();
+        assert!(
+            treffer.is_empty(),
+            "eine Codezeile unter crates/krk-ui/src nennt {nadel}: {treffer:?}"
+        );
+        // Die Gegenprobe: die Suche liest wirklich Dateien dieser Kiste.
+        assert!(
+            crate::quellbaum::quelldateien()
+                .iter()
+                .any(|(datei, _)| datei == "krk-ui/src/menuemodell.rs"),
+            "die Suche liest krk-ui/src nicht; sie bestaetigte dann alles"
+        );
+    }
+
     /// `opt+cmd+e` zeigt im Menue „Im Terminal bearbeiten“, und „Editor
     /// schließen“ steht ohne Kuerzel da (Schritt 4c des Plans
     /// `261029-0920-plan-datei-im-terminal-mit-vim-und-sudo-e-oeffnen.md`,

@@ -386,7 +386,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "«\u{a0}{neu}\u{a0}» est déjà le dossier de notes\u{202f}; settings.toml reste tel quel"
         }
         Text::HeimKeinOrdner => {
-            "{ordner} n’est pas un dossier\u{202f}; KRK n’y crée rien et n’ouvre aucun onglet"
+            "{ordner} n’est pas un dossier\u{202f}; KRK n’y crée rien et n’y ouvre aucun onglet"
         }
         Text::HeimNichtErreichbar => "{ordner} est inaccessible\u{a0}: {grund}",
         Text::HeimNichtAnlegbar => "{name} ne peut pas être créé\u{a0}: {grund}",
@@ -1547,6 +1547,7 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::Beenden => "Quitter KRK",
         Kommando::WeitereInstanz => "Lancer une autre instance",
         Kommando::Notizordner => "Ouvrir le dossier de notes",
+        Kommando::ProtokollAnlegen => "Créer un compte rendu",
         Kommando::OrtWaehlen => "Choisir l’emplacement…",
         Kommando::VorschauVergroessern => "Agrandir l’Aperçu",
         Kommando::VorschauVerkleinern => "Réduire l’Aperçu",

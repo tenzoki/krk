@@ -1292,6 +1292,24 @@ pub enum Kommando {
     /// Zeile der Belegung; die Begruendung steht bei ihrem Eintrag in
     /// `resources/default-keymap.toml`.
     Notizordner,
+    /// Das aktive Dateifenster auf `minutes/` im Notizordner fuehren und dort
+    /// sofort das Namensblatt von „Leere Datei anlegen“ oeffnen (C5 des Spec
+    /// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`).
+    ///
+    /// **Derselbe Weg wie [`Kommando::Notizordner`], mit einem anderen Ziel**
+    /// (E11 des Plans
+    /// `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`):
+    /// angelegt wird, was fehlt, auf dem Faden der Plattenfrage; steht im
+    /// aktiven Dateifenster schon ein Tab auf `minutes/`, wird er sichtbar,
+    /// sonst entsteht einer. Danach steht das Namensblatt, und die Datei
+    /// bekommt Datum, Uhrzeit und `.md` wie bei jedem Anlegen in `minutes/`.
+    /// Laesst sich `minutes/` nicht anlegen, nennt die Statuszeile den Grund,
+    /// und weder Tab noch Blatt geht auf.
+    ///
+    /// Ausgeliefert auf `cmd+m`, vom Nutzer gewaehlt; die Begruendung steht
+    /// bei seinem Eintrag in `resources/default-keymap.toml`. **Wirkt
+    /// ueberall**, aus dem Grund von F2: der Befehl stellt den Fokus selbst.
+    ProtokollAnlegen,
     /// Den Ort des Notizordners ueber einen Ordnerdialog waehlen und in
     /// `settings.toml` schreiben (H3 des Spec
     /// `260926-1451_*_spec-home-menue-und-einstellbarer-ort.md`).
@@ -1439,7 +1457,7 @@ const _: () = assert!(Kommando::KENNUNGEN.len() <= u16::MAX as usize);
 impl Kommando {
     /// Die Kennung, unter der die Belegungsdatei die zugehoerige Funktion
     /// fuehrt, je Kommando.
-    pub const KENNUNGEN: [(Kommando, &'static str); 111] = [
+    pub const KENNUNGEN: [(Kommando, &'static str); 112] = [
         (Kommando::AuswahlHoch, "auswahl_hoch"),
         (Kommando::AuswahlRunter, "auswahl_runter"),
         (Kommando::SeiteHoch, "seite_hoch"),
@@ -1580,6 +1598,7 @@ impl Kommando {
         // Kennung ab und setzt dann die ganze Auslieferungsbelegung ein (C1 des
         // Spec `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
         (Kommando::Notizordner, "notizzettel"),
+        (Kommando::ProtokollAnlegen, "protokoll_anlegen"),
         (Kommando::OrtWaehlen, "ort_waehlen"),
         (Kommando::VorschauVergroessern, "vorschau_vergroessern"),
         (Kommando::VorschauVerkleinern, "vorschau_verkleinern"),
@@ -1741,6 +1760,9 @@ impl Kommando {
             // Wirkungsbereich, der einen Bereich verlangte, verlangte damit
             // den Zustand, den der Befehl erst herstellt.
             | Kommando::Notizordner
+            // „Protokoll anlegen“ ist F2 mit einem anderen Ziel und wirkt
+            // aus demselben Grund aus jedem Bereich heraus (C5.2).
+            | Kommando::ProtokollAnlegen
             // „Ort waehlen…“ aus demselben Grund wie F2 darueber: sein Dialog
             // haengt am Hauptfenster und nicht an einem Bereich, und wer den
             // Ort aus dem Editor heraus wechseln will, soll dafuer nicht erst
@@ -2168,6 +2190,7 @@ impl Kommando {
             | Kommando::Beenden
             | Kommando::WeitereInstanz
             | Kommando::Notizordner
+            | Kommando::ProtokollAnlegen
             | Kommando::OrtWaehlen
             | Kommando::VorschauVergroessern
             | Kommando::VorschauVerkleinern

@@ -364,7 +364,7 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "„{neu}“ ist schon der Notizordner; settings.toml bleibt, wie sie ist"
         }
         Text::HeimKeinOrdner => {
-            "{ordner} ist kein Ordner; KRK legt dort nichts an und öffnet keinen Tab"
+            "{ordner} ist kein Ordner; KRK legt dort nichts an und öffnet dort keinen Tab"
         }
         Text::HeimNichtErreichbar => "{ordner} ist nicht erreichbar: {grund}",
         Text::HeimNichtAnlegbar => "{name} lässt sich nicht anlegen: {grund}",
@@ -1451,6 +1451,7 @@ pub(in super::super) const fn kommandoname(schluessel: Kommando) -> &'static str
         Kommando::Beenden => "KRK beenden",
         Kommando::WeitereInstanz => "Weitere Instanz starten",
         Kommando::Notizordner => "Notizordner öffnen",
+        Kommando::ProtokollAnlegen => "Protokoll anlegen",
         Kommando::OrtWaehlen => "Ort wählen…",
         Kommando::VorschauVergroessern => "Vorschau vergrößern",
         Kommando::VorschauVerkleinern => "Vorschau verkleinern",

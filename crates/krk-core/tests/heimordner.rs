@@ -1646,7 +1646,7 @@ fn die_hindernisse_melden_sich_im_wortlaut() {
     assert_eq!(ort, "~/krkhome");
     assert_eq!(
         Hindernis::KeinOrdner.meldung(ort),
-        "~/krkhome ist kein Ordner; KRK legt dort nichts an und öffnet keinen Tab"
+        "~/krkhome ist kein Ordner; KRK legt dort nichts an und öffnet dort keinen Tab"
     );
     assert_eq!(
         Hindernis::Unerreichbar("Grund".to_owned()).meldung(ort),
@@ -1781,7 +1781,7 @@ fn eine_datei_namens_minutes_steht_im_feld_und_haelt_f2_nicht_auf() {
     assert_eq!(
         bereitstellung.meldungen(),
         vec![
-            "~/krkhome/minutes ist kein Ordner; KRK legt dort nichts an und öffnet keinen Tab"
+            "~/krkhome/minutes ist kein Ordner; KRK legt dort nichts an und öffnet dort keinen Tab"
                 .to_owned()
         ]
     );
@@ -2286,7 +2286,9 @@ fn die_meldungen_nennen_den_eingestellten_ort() {
         for (hindernis, satz) in [
             (
                 Hindernis::KeinOrdner,
-                format!("{anzeige} ist kein Ordner; KRK legt dort nichts an und öffnet keinen Tab"),
+                format!(
+                    "{anzeige} ist kein Ordner; KRK legt dort nichts an und öffnet dort keinen Tab"
+                ),
             ),
             (
                 Hindernis::Unerreichbar("Grund".to_owned()),

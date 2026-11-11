@@ -39,7 +39,7 @@
 #
 # Eine Funktion traegt genau einen Eintrag, auch wenn sie mehrere
 # Kombinationen hat. Das ist die Ein-Zeilen-Regel der Belegungsansicht aus C3.
-# Ausgeliefert sind 118 Funktionen mit zusammen 117 Kombinationen.
+# Ausgeliefert sind 119 Funktionen mit zusammen 118 Kombinationen.
 #
 # Die Reihenfolge der Bloecke ist nicht gleichgueltig. `belegungsmodell::
 # nach_bereichen` gibt die Funktionen einer Gruppe in der Reihenfolge zurueck,
@@ -562,6 +562,14 @@ gehalten_von = "menue"
 id = "datei_anlegen"
 tasten = ["ctrl+cmd+n"]
 # Parallel zu shift+cmd+n fuer den neuen Ordner.
+#
+# **opt+shift+n bleibt ab Werk frei** und steht in keiner Tastenliste dieser
+# Datei. Die Anfrage zum Ordner `minutes/` nannte die Kombination fuer ein
+# eigenes Anlegen von Protokollen; der Nutzer hat stattdessen einen Befehl ohne
+# zweite Taste gewaehlt, der in `minutes/` immer das Praefix setzt, und am
+# 261111 zur Taste dieses Befehls geantwortet: "die bestehende Taste bleibt,
+# also Ctrl+Cmd+N, Cmd+Shift+N bleibt Ordner anlegen." Wer opt+shift+n will,
+# vergibt es in der Belegungsansicht.
 
 [[funktion]]
 id = "umbenennen"
@@ -1403,6 +1411,31 @@ gehalten_von = "menue"
 [[funktion]]
 id = "notizzettel"
 tasten = ["f2", "cmd+k"]
+
+[[funktion]]
+id = "protokoll_anlegen"
+tasten = ["cmd+m"]
+# C5 des Spec `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`:
+# zeigt `minutes/` des Notizordners im aktiven Dateifenster und oeffnet sofort
+# das Namensblatt von "Leere Datei anlegen"; die Datei bekommt dort Datum,
+# Uhrzeit und `.md` wie bei jedem Anlegen in `minutes/`. Der Befehl ist F2 mit
+# einem anderen Ziel und wirkt wie F2 aus jedem Bereich. Der Eintrag steht
+# unmittelbar hinter "notizzettel" und vor "ort_waehlen", weil die Reihenfolge
+# der Bloecke die Reihenfolge im Menue "Home" ist und der Spec ihn unmittelbar
+# hinter "Notizordner oeffnen" verlangt (C5.1).
+#
+# **Die Taste hat der Nutzer gewaehlt** (Spec vom 261111, C5): `m` wie
+# "minutes". cmd+m war am 261111 ueber alle Tastenlisten dieser Datei frei.
+# Auf dem Mac minimiert cmd+m gewoehnlich das Fenster; KRK fuehrt keinen
+# Menueeintrag "Minimieren", und der Ereignisabgriff bekommt den Tastendruck
+# vor der Menueleiste. Was das laufende Buendel damit tut, zeigt allein ein
+# Lauf des Nutzers; faengt macOS die Taste ab, waehlt der Nutzer eine andere.
+#
+# **Wer eine eigene keymap.toml hat, findet den Befehl ohne Taste im Menue
+# "Home"** und legt ihn in der Belegungsansicht (F1) ueber "Zuweisen" auf
+# cmd+m; die uebrige eigene Belegung bleibt dabei unberuehrt (C5.10).
+# Zuruecksetzen (cmd+r) ist dafuer der falsche Weg, denn es nimmt jede eigene
+# Zuweisung mit.
 
 [[funktion]]
 id = "ort_waehlen"

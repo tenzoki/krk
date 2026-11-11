@@ -189,7 +189,11 @@ pub struct Bereitstellung {
 /// eine einzelne Datei, die sich nicht anlegen laesst, haelt den Tab nicht auf
 /// und steht in [`Bereitstellung::nicht_angelegt`]. **Dieselben vier Werte
 /// beschreiben seit dem 261111 den Unterordner [`PROTOKOLLORDNER`]**, im Feld
-/// [`Bereitstellung::protokollordner`]; dort halten sie F2 nicht auf. Dass es gar keinen Ort
+/// [`Bereitstellung::protokollordner`]; dort halten sie F2 nicht auf, wohl
+/// aber „Protokoll anlegen“, das ohne `minutes/` kein Ziel hat. Der Satz von
+/// [`Hindernis::KeinOrdner`] sagt deshalb „öffnet dort keinen Tab“ und nicht
+/// „öffnet keinen Tab“: bei F2 geht der Tab auf den Notizordner trotzdem auf,
+/// und der Satz muss fuer beide Befehle wahr sein. Dass es gar keinen Ort
 /// gibt, etwa ohne Benutzerverzeichnis, ist kein Hindernis, sondern ein
 /// [`super::ort::Ortsfehler`]: dann gibt es keinen [`Heimordner`], den dieser
 /// Weg bekommen koennte.

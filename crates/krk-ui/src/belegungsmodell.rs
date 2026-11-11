@@ -576,6 +576,10 @@ const fn bereich_des_kommandos(kommando: Kommando) -> Funktionsbereich {
         // ändern" wirken weiter allein im Editor, F2 weiter ueberall. Nur die
         // Stelle in der Leiste zieht um.
         Kommando::Notizordner
+        // „Protokoll anlegen“ steht beim Notizordner, dessen `minutes/` es
+        // oeffnet, und nicht bei den Dateioperationen, obwohl es eine Datei
+        // anlegt: dieselbe Frage nach dem Gegenstand (C5.1).
+        | Kommando::ProtokollAnlegen
         | Kommando::OrtWaehlen
         | Kommando::EintragHinzufuegen
         | Kommando::EintragBearbeiten
@@ -1648,8 +1652,12 @@ mod tests {
         // Der Zeilenbefehl der Tabelle einer CSV stand bis zum 261019 hier
         // zwischen „Eintrag bearbeiten" und „Eintrag nach oben"; seitdem steht
         // er unter „Editor" (Nutzerentscheid vom 261019).
-        const HOMEBEFEHLE: [&str; 9] = [
+        // „Protokoll anlegen“ steht seit dem 261111 unmittelbar hinter
+        // „Notizordner öffnen“ (C5.1 des Spec
+        // `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`).
+        const HOMEBEFEHLE: [&str; 10] = [
             "notizzettel",
+            "protokoll_anlegen",
             "ort_waehlen",
             "eintrag_hinzufuegen",
             "eintrag_bearbeiten",
