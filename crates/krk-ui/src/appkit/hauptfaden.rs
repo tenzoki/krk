@@ -113,6 +113,7 @@ fn alle() -> Vec<&'static Probe> {
         super::tabelle::HAUPTFADENPROBEN,
         super::blaetter::HAUPTFADENPROBEN,
         super::blaetter::namenseingabe::HAUPTFADENPROBEN,
+        super::knopfzeile::HAUPTFADENPROBEN,
         super::nebenfaden::HAUPTFADENPROBEN,
     ]
     .into_iter()

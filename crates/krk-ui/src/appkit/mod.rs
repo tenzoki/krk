@@ -274,6 +274,7 @@ mod git;
 #[cfg(test)]
 pub(crate) mod hauptfaden;
 mod hinweis;
+mod knopfzeile;
 mod koordinaten;
 mod leiste;
 mod menue;
