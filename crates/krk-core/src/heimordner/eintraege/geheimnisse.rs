@@ -1,8 +1,9 @@
 //! Die Form der Geheimnisse im Klartext von `secrets.txt`, ihre Handlungen
 //! und die Suche eines Eintrags nach seinem Namen.
 //!
-//! **Ein Geheimnis ist eine Notiz, deren Text mit bis zu vier Feldzeilen
-//! beginnt** (Modulkopf von `heimordner/eintraege.rs`), und jede Handlung hier
+//! **Ein Geheimnis ist ein Eintrag aus Themenzeile und Text, dessen Text mit
+//! bis zu vier Feldzeilen beginnt** (Modulkopf von `heimordner/eintraege.rs`,
+//! dort auch, warum die Form `Notizen` heisst), und jede Handlung hier
 //! rechnet ueber [`notizen`]:
 //! dieselbe Zerlegung, dieselbe Byte-Treue, dasselbe Dateiende.
 //!
@@ -16,8 +17,7 @@
 //! stand. Die erste andere Zeile beendet die Folge, und alles ab ihr sind die
 //! Notizen. Der Wert ist der Rest der Zeile nach dem einen Leerzeichen, ohne
 //! Zeilenumbruch und ohne ein `\r` davor: eine von Hand mit CRLF geschriebene
-//! Feldzeile traegt ihr `\r` nicht in den Wert. Name und Notizen bleiben roh,
-//! wie bei einer Notiz.
+//! Feldzeile traegt ihr `\r` nicht in den Wert. Name und Notizen bleiben roh.
 //!
 //! **Die Grundform schreibt alle vier Feldzeilen**, eine leere als
 //! `protocol:` ohne Leerzeichen dahinter. Nach einer Grundform endet die
@@ -33,7 +33,7 @@
 //! Feldzeilen immer; die Notizzeilen allein bei geaenderten Notizen neu, sonst
 //! roh; der Trenner bleibt. Jeder andere Eintrag bleibt Byte fuer Byte.
 //! [`hinzufuegen`] haengt einen Eintrag in der Grundform an, [`loeschen`] und
-//! [`verschieben`] sind die der Notizen.
+//! [`verschieben`] sind die aus [`notizen`].
 //!
 //! # Das Passwort
 //!
@@ -430,7 +430,7 @@ fn notizen_pruefen(notizen: &str) -> Result<(), Abweisung> {
 
 /// Haengt einen Eintrag in der Grundform ans Ende des Klartexts; er ist
 /// danach gewaehlt. Das Dateiende bleibt wie bei
-/// [`notizen::hinzufuegen`], dessen Rumpf das hier ist.
+/// [`super::aufgaben::hinzufuegen`]; angehaengt wird ueber `notizen::angehaengt`.
 ///
 /// Ob der Name frei ist, fragt diese Handlung nicht; das fragt der Rufer
 /// mit [`name_frei`], denn der Editor legt mit „Eintrag hinzufuegen“ einen
@@ -477,7 +477,8 @@ pub fn hinzufuegen(stand: &str, entwurf: &Geheimnisentwurf) -> Result<Neustand, 
 /// mit Zeilenumbruch ist [`Abweisung::UmbruchImGeheimnisfeld`], geaenderte
 /// Notizen mit einer Zeile `## …` sind
 /// [`Abweisung::KopfzeileInGeheimnisnotizen`]. Notizen werden ohne ihre
-/// Schlussumbrueche genommen, wie bei [`notizen::aendern`].
+/// Schlussumbrueche genommen: Leerzeilen am Ende eines Eintrags sind sein
+/// Trenner und nicht sein Text.
 #[must_use = "der Neustand ist die ganze Wirkung; fallengelassen ist nichts geaendert"]
 pub fn aendern(
     stand: &str,
@@ -539,15 +540,14 @@ pub fn aendern(
     }))
 }
 
-/// Entfernt den Eintrag an `stelle` ganz, wie [`notizen::loeschen`] eine
-/// Notiz.
+/// Entfernt den Eintrag an `stelle` ganz, ueber [`notizen::loeschen`].
 #[must_use = "der Neustand ist die ganze Wirkung; fallengelassen ist nichts geloescht"]
 pub fn loeschen(stand: &str, stelle: usize) -> Option<Neustand> {
     notizen::loeschen(stand, stelle)
 }
 
-/// Tauscht den Eintrag an `stelle` mit seinem Nachbarn, wie
-/// [`notizen::verschieben`] eine Notiz.
+/// Tauscht den Eintrag an `stelle` mit seinem Nachbarn, ueber
+/// [`notizen::verschieben`].
 #[must_use = "der Neustand ist die ganze Wirkung; fallengelassen ist nichts verschoben"]
 pub fn verschieben(stand: &str, stelle: usize, richtung: Richtung) -> Option<Neustand> {
     notizen::verschieben(stand, stelle, richtung)

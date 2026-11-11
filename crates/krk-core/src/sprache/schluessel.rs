@@ -3,7 +3,7 @@
 //!
 //! **Ein Schluessel heisst nach der Flaeche und der Sache**, ASCII und ohne
 //! Umschrift-Zweideutigkeit: `WirkungsbereichDateifenster`,
-//! `AbweisungUmbruchImThema`, `EinheitKilobyte`. Ein Text, der heute an zwei
+//! `AbweisungUmbruchImAufgabentext`, `EinheitKilobyte`. Ein Text, der heute an zwei
 //! Stellen gleich steht, bekommt einen Schluessel und nicht zwei; so traegt
 //! `NameLeer` den Grund fuer einen leeren Dateinamen und fuer einen leeren
 //! Lesezeichennamen.
@@ -96,10 +96,6 @@ pub enum Text {
     PinKeineVierZiffern,
     /// `Abweisung::UmbruchImAufgabentext` in der Statuszeile des Editors.
     AbweisungUmbruchImAufgabentext,
-    /// `Abweisung::UmbruchImThema`.
-    AbweisungUmbruchImThema,
-    /// `Abweisung::ThemenzeileImNotiztext`.
-    AbweisungThemenzeileImNotiztext,
     /// `Abweisung::UmbruchImGeheimnisfeld`.
     AbweisungUmbruchImGeheimnisfeld,
     /// `Abweisung::KopfzeileInGeheimnisnotizen`.
@@ -503,10 +499,6 @@ pub enum Text {
     HeimNichtAnlegbar,
     /// `Hindernis::ObererOrdnerFehlt`; `{ordner}`.
     HeimObererOrdnerFehlt,
-    /// `Zettelmerker::NichtVermerkt`; `{grund}`, `{ort}`.
-    HeimMerkerNichtVermerkt,
-    /// `Zettelmerker::OhneAblage` nach einer Uebernahme; `{ort}`.
-    HeimMerkerOhneAblage,
     /// `Umbenennung::Umbenannt`; `{alt}`, `{neu}`. Die vier Saetze der
     /// Umbenennung nennen keine Datei selbst und gelten fuer `.secrets.txt`
     /// wie fuer die fruehere Quicknote-Datei; bis zum 261111 hiessen ihre
@@ -518,22 +510,6 @@ pub enum Text {
     HeimUmbenennungAlterNameBleibt,
     /// `Umbenennung::Gescheitert`; `{alt}`, `{neu}`, `{grund}`.
     HeimNichtUmbenannt,
-    /// `Uebernahmeausgang::NotizenStandenSchon`; `{notizen}`, `{dateien}`.
-    HeimZettelNotizenStandenSchon,
-    /// `Uebernahmeausgang::Gescheitert`; `{grund}`, `{dateien}`.
-    HeimZettelGescheitert,
-    /// `Zettelbefund::Themenzeile`; `{thema}`, `{datei}`.
-    HeimZettelThemenzeile,
-    /// `Zettelbefund::Unlesbar`; `{thema}`, `{grund}`, `{datei}`.
-    HeimZettelUnlesbar,
-    /// `zettel_lesen`: der Grund fuer einen zu grossen Zettel; `{groesse}` in
-    /// Bytes.
-    HeimZettelZuGross,
-    /// `zettel_lesen`: der Grund fuer einen Zettel, der kein Text ist.
-    HeimZettelKeinText,
-    /// `exklusiv_anlegen`: die angefangene Datei blieb liegen; `{fehler}`,
-    /// `{entfernen}`.
-    HeimAngefangeneDateiBleibt,
     /// Das Bindewort zwischen zwei Gliedern einer Aufzaehlung („a und b“).
     Und,
     /// `Tresorfehler::KeinZufall` in der Statuszeile; `{grund}`.
@@ -780,10 +756,6 @@ pub enum Text {
     TypVerknuepfung,
     /// Die Spalte der Aufgabentabelle im Editor.
     EintragsspalteAufgabe,
-    /// Die erste Spalte der Notiztabelle.
-    EintragsspalteThema,
-    /// Die zweite Spalte der Notiztabelle.
-    EintragsspalteNotiz,
     /// Die erste Spalte der Geheimnistabelle, der Name des Eintrags.
     EintragsspalteName,
     /// Die zweite Spalte der Geheimnistabelle, `protocol:`.
@@ -1431,52 +1403,54 @@ pub enum Text {
     QuicknoteGrundLesefehler,
     /// `Eintragsantwort::KeineTabelle` in der Aufgabentabelle.
     EintragKeineAufgabentabelle,
-    /// `Eintragsantwort::KeineTabelle` in der Notiztabelle.
-    EintragKeineNotiztabelle,
+    /// `Eintragsantwort::KeineTabelle` in der Geheimnistabelle. Die Familie
+    /// `EintragGeheimnis…` hiess bis zum 261111 `EintragNotiz…` und sprach von
+    /// der Notiz; seit die Notiztabelle gefallen ist, spricht sie vom Eintrag.
+    EintragKeineGeheimnistabelle,
     /// `Eintragsantwort::KeinEintragGewaehlt`, Aufgaben.
     EintragKeineAufgabeGewaehlt,
-    /// `Eintragsantwort::KeinEintragGewaehlt`, Notizen.
-    EintragKeineNotizGewaehlt,
+    /// `Eintragsantwort::KeinEintragGewaehlt`, Geheimnisse.
+    EintragKeinGeheimnisGewaehlt,
     /// `Eintragsantwort::Hinzugefuegt`, Aufgaben.
     EintragAufgabeHinzugefuegt,
-    /// `Eintragsantwort::Hinzugefuegt`, Notizen.
-    EintragNotizHinzugefuegt,
+    /// `Eintragsantwort::Hinzugefuegt`, Geheimnisse.
+    EintragGeheimnisHinzugefuegt,
     /// `Eintragsantwort::BearbeitungBegonnen`, Aufgaben.
     EintragAufgabeBearbeitung,
-    /// `Eintragsantwort::BearbeitungBegonnen`, Notizen.
-    EintragNotizBearbeitung,
+    /// `Eintragsantwort::BearbeitungBegonnen`, Geheimnisse.
+    EintragGeheimnisBearbeitung,
     /// `Eintragsantwort::Uebernommen`, Aufgaben.
     EintragAufgabeUebernommen,
-    /// `Eintragsantwort::Uebernommen`, Notizen.
-    EintragNotizUebernommen,
+    /// `Eintragsantwort::Uebernommen`, Geheimnisse.
+    EintragGeheimnisUebernommen,
     /// `Eintragsantwort::Abgehakt`, Aufgaben.
     EintragAufgabeAbgehakt,
-    /// `Eintragsantwort::Abgehakt` und `WiederOffen` in der Notiztabelle.
-    EintragNotizOhneKaestchen,
+    /// `Eintragsantwort::Abgehakt` und `WiederOffen` in der Geheimnistabelle.
+    EintragGeheimnisOhneKaestchen,
     /// `Eintragsantwort::WiederOffen`, Aufgaben.
     EintragAufgabeWiederOffen,
     /// `Eintragsantwort::Verschoben`, Aufgaben.
     EintragAufgabeVerschoben,
-    /// `Eintragsantwort::Verschoben`, Notizen.
-    EintragNotizVerschoben,
+    /// `Eintragsantwort::Verschoben`, Geheimnisse.
+    EintragGeheimnisVerschoben,
     /// `Eintragsantwort::SchonOben`, Aufgaben.
     EintragAufgabeSchonOben,
-    /// `Eintragsantwort::SchonOben`, Notizen.
-    EintragNotizSchonOben,
+    /// `Eintragsantwort::SchonOben`, Geheimnisse.
+    EintragGeheimnisSchonOben,
     /// `Eintragsantwort::SchonUnten`, Aufgaben.
     EintragAufgabeSchonUnten,
-    /// `Eintragsantwort::SchonUnten`, Notizen.
-    EintragNotizSchonUnten,
+    /// `Eintragsantwort::SchonUnten`, Geheimnisse.
+    EintragGeheimnisSchonUnten,
     /// `Eintragsantwort::Geloescht`, Aufgaben.
     EintragAufgabeGeloescht,
-    /// `Eintragsantwort::Geloescht`, Notizen.
-    EintragNotizGeloescht,
+    /// `Eintragsantwort::Geloescht`, Geheimnisse.
+    EintragGeheimnisGeloescht,
     /// `Eintragsantwort::ZelleBleibt`, jede Tabelle.
     EintragZelleBleibt,
     /// `Eintragsantwort::MitEscUebernommen`, Aufgaben.
     EintragAufgabeMitEscUebernommen,
-    /// `Eintragsantwort::MitEscUebernommen`, Notizen.
-    EintragNotizMitEscUebernommen,
+    /// `Eintragsantwort::MitEscUebernommen`, Geheimnisse.
+    EintragGeheimnisMitEscUebernommen,
     /// „Das heutige Datum ließ sich nicht bestimmen.“ Bis zum 261111 die
     /// Antwort der Termintabelle auf einen neuen Termin ohne Uhr; seitdem
     /// ohne Leser und stehen gelassen, weil Schritt 6 des Plans
@@ -1751,9 +1725,6 @@ pub enum Text {
     /// `lesezeichen_laden`: die Schreibsperre der Ablage ist nicht zu nehmen;
     /// `{fehler}`.
     StartLesezeichenNichtGeladen,
-    /// `heimordner_oeffnen`: F2 hat ohne die Schreibsperre der Ablage
-    /// angelegt; `{fehler}`.
-    HeimOhneSperreAngelegt,
     /// `Teil::Verbindungen`: die Ueberschrift der Gruppe der Verbindungen in der
     /// Leiste.
     LeisteUeberschriftVerbindungen,
@@ -1924,7 +1895,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 779] = [
+    pub const ALLE: [Text; 765] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -1959,8 +1930,6 @@ impl Text {
         Text::ErsatzNichts,
         Text::PinKeineVierZiffern,
         Text::AbweisungUmbruchImAufgabentext,
-        Text::AbweisungUmbruchImThema,
-        Text::AbweisungThemenzeileImNotiztext,
         Text::AbweisungUmbruchImGeheimnisfeld,
         Text::AbweisungKopfzeileInGeheimnisnotizen,
         Text::VerbindungProtokollUnbekannt,
@@ -2120,19 +2089,10 @@ impl Text {
         Text::HeimNichtErreichbar,
         Text::HeimNichtAnlegbar,
         Text::HeimObererOrdnerFehlt,
-        Text::HeimMerkerNichtVermerkt,
-        Text::HeimMerkerOhneAblage,
         Text::HeimUmbenannt,
         Text::HeimUmbenennungBeideStehen,
         Text::HeimUmbenennungAlterNameBleibt,
         Text::HeimNichtUmbenannt,
-        Text::HeimZettelNotizenStandenSchon,
-        Text::HeimZettelGescheitert,
-        Text::HeimZettelThemenzeile,
-        Text::HeimZettelUnlesbar,
-        Text::HeimZettelZuGross,
-        Text::HeimZettelKeinText,
-        Text::HeimAngefangeneDateiBleibt,
         Text::Und,
         Text::TresorKeinZufall,
         Text::TresorAbleitung,
@@ -2236,8 +2196,6 @@ impl Text {
         Text::TypDatei,
         Text::TypVerknuepfung,
         Text::EintragsspalteAufgabe,
-        Text::EintragsspalteThema,
-        Text::EintragsspalteNotiz,
         Text::EintragsspalteName,
         Text::EintragsspalteProtokoll,
         Text::EintragsspalteAdresse,
@@ -2512,29 +2470,29 @@ impl Text {
         Text::QuicknoteGrundKeinText,
         Text::QuicknoteGrundLesefehler,
         Text::EintragKeineAufgabentabelle,
-        Text::EintragKeineNotiztabelle,
+        Text::EintragKeineGeheimnistabelle,
         Text::EintragKeineAufgabeGewaehlt,
-        Text::EintragKeineNotizGewaehlt,
+        Text::EintragKeinGeheimnisGewaehlt,
         Text::EintragAufgabeHinzugefuegt,
-        Text::EintragNotizHinzugefuegt,
+        Text::EintragGeheimnisHinzugefuegt,
         Text::EintragAufgabeBearbeitung,
-        Text::EintragNotizBearbeitung,
+        Text::EintragGeheimnisBearbeitung,
         Text::EintragAufgabeUebernommen,
-        Text::EintragNotizUebernommen,
+        Text::EintragGeheimnisUebernommen,
         Text::EintragAufgabeAbgehakt,
-        Text::EintragNotizOhneKaestchen,
+        Text::EintragGeheimnisOhneKaestchen,
         Text::EintragAufgabeWiederOffen,
         Text::EintragAufgabeVerschoben,
-        Text::EintragNotizVerschoben,
+        Text::EintragGeheimnisVerschoben,
         Text::EintragAufgabeSchonOben,
-        Text::EintragNotizSchonOben,
+        Text::EintragGeheimnisSchonOben,
         Text::EintragAufgabeSchonUnten,
-        Text::EintragNotizSchonUnten,
+        Text::EintragGeheimnisSchonUnten,
         Text::EintragAufgabeGeloescht,
-        Text::EintragNotizGeloescht,
+        Text::EintragGeheimnisGeloescht,
         Text::EintragZelleBleibt,
         Text::EintragAufgabeMitEscUebernommen,
-        Text::EintragNotizMitEscUebernommen,
+        Text::EintragGeheimnisMitEscUebernommen,
         Text::EintragHeuteUnbestimmt,
         Text::EintragKeineTrenntexttabelle,
         Text::EintragKeineZeileGewaehlt,
@@ -2637,7 +2595,6 @@ impl Text {
         Text::StartNeuerungenNichtVermerkt,
         Text::StartSitzungsrechtNichtAngefordert,
         Text::StartLesezeichenNichtGeladen,
-        Text::HeimOhneSperreAngelegt,
         Text::LeisteUeberschriftVerbindungen,
         Text::LeisteSinnbildVerbindung,
         Text::KontextVerbinden,
@@ -2718,10 +2675,6 @@ pub enum Zahlwort {
     /// `neuerungen::startzeile`: die Zahl der neuen Eintraege je Datei;
     /// `{datei}` ist der Dateiname.
     NeuerungenEintraegeIn,
-    /// `Uebernahme::meldungen`: die alten Zettel sind als Notiz oder als
-    /// Notizen uebernommen; gezaehlt werden die Themen `{themen}`, und beide
-    /// Formen lassen `{n}` aus; `{notizen}` ist der Dateiname.
-    HeimZettelUebernommen,
     /// `Marke::Geaendert` in der Zusammenfassung des Git-Bereichs, hinter
     /// seiner Zahl.
     MarkeGeaendert,
@@ -2854,10 +2807,9 @@ pub enum Zahlwort {
 
 impl Zahlwort {
     /// Alle Zahlwoerter, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Zahlwort; 45] = [
+    pub const ALLE: [Zahlwort; 44] = [
         Zahlwort::Byte,
         Zahlwort::NeuerungenEintraegeIn,
-        Zahlwort::HeimZettelUebernommen,
         Zahlwort::MarkeGeaendert,
         Zahlwort::MarkeVorgemerkt,
         Zahlwort::MarkeNeu,

@@ -1131,7 +1131,8 @@ tasten = ["ctrl+cmd+r"]
 # geht an AppKit. Alle fuenf stehen im Menue "Editor" (Nutzerentscheid vom
 # 261019; bis dahin stand "trenntext_zeile_einfuegen" unter "Home"). Die
 # Eintragsbefehle, die auch auf Zeilen der CSV wirken (anhaengen, bearbeiten,
-# verschieben, loeschen), teilt die Tabelle mit den Notizen, und sie stehen
+# verschieben, loeschen), teilt die Tabelle mit den Aufgaben und den
+# Geheimnissen, und sie stehen
 # deshalb weiter im Menue "Home". Die Reihenfolge der Bloecke dieser Datei ist
 # die Reihenfolge im Menue; darum steht der Zeilenbefehl hier und nicht mehr
 # bei den Eintragsbefehlen.
@@ -1414,8 +1415,9 @@ tasten = []
 # "Home", ohne an seiner Belegung etwas zu tun.
 
 # ── Einträge im Editor ───────────────────────────────────────────────────────
-# Sechs Funktionen fuer die Tabelle, in der die Formatansicht des Editors
-# `tasks.txt` zeigt. Der Block steht unmittelbar hinter "notizzettel", weil die
+# Sechs Funktionen fuer die Tabellen, in denen die Formatansicht des Editors
+# `tasks.txt` und `secrets.txt` zeigt (bis zum 261111 auch `notes.txt` und
+# `appointments.md`, die seitdem gewoehnliche Dateien sind). Der Block steht unmittelbar hinter "notizzettel", weil die
 # Reihenfolge der Bloecke die Reihenfolge im Menue ist und der Spec
 # "Notizordner oeffnen" vor den Eintragsbefehlen verlangt; im Menue "Home"
 # folgen sie ihm, wie hier dem Block darueber
@@ -1434,7 +1436,7 @@ tasten = []
 # Tabellenbefehl teilen, weil Dateifenster und Editor einander ausschliessen.
 #
 # **Geteilt ist seit dem 261005 genau eine, das nackte `delete`.** Es loescht
-# in jeder der vier Eintragstabellen den gewaehlten Eintrag und bleibt im
+# in jeder Eintragstabelle den gewaehlten Eintrag und bleibt im
 # Dateifenster der Weg in den Papierkorb; welche der zwei Funktionen ein
 # Anschlag meint, entscheidet der Fokus (Nutzerauftrag vom 261005: die
 # Rueckschritt-Taste loescht den gewaehlten Eintrag, `cmd+z` nimmt es

@@ -285,8 +285,8 @@ fn die_mehrzahlregel_je_sprache() {
 /// die nie mit null gerufen wuerden: das waere eine Behauptung ueber Rufer,
 /// die keine Probe entscheiden kann. Die uebrigen Platzhalter bekommen einen
 /// Wert ohne Ziffer, damit die 0 allein aus `{n}` kommen kann. Ein Zahlwort,
-/// das in keiner Form `{n}` traegt (`HeimZettelUebernommen`), besteht ueber
-/// den zweiten Zweig. Die Regel steht in `Sprache::form`.
+/// das in keiner Form `{n}` traegt, besteht ueber den zweiten Zweig; bis zum
+/// 261111 war `HeimZettelUebernommen` ein solches. Die Regel steht in `Sprache::form`.
 #[test]
 fn bei_null_sagt_keine_mengenangabe_eins() {
     for sprache in Sprache::ALLE {

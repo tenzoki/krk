@@ -1,22 +1,22 @@
-//! Die Form der Eintraege in `notes.txt` und `tasks.txt` und im Klartext von
-//! `secrets.txt`, an einer Stelle.
+//! Die Form der Eintraege in `tasks.txt` und im Klartext von `secrets.txt`, an
+//! einer Stelle.
 //!
 //! Die Dateien stehen in einer Markdown-nahen Textform, die der Nutzer auch
 //! ohne Sondereditor in jedem Textprogramm pflegen kann
 //! (`260926-0007_*_in-welchem-format-stehen-notes-txt-und-tasks-txt.md`,
 //! Moeglichkeit 1, mit den vier Regeln der Zweitlesung des Spec):
 //!
-//! - **Eine Notiz** beginnt mit einer Themenzeile `## <Thema>`
-//!   ([`ist_themenzeile`]); alles bis zur naechsten Themenzeile ist ihr Text,
-//!   auch Zeilen mit `#` und `###`. Leerzeilen am Ende einer Notiz sind ihr
-//!   **Trenner** zur naechsten und nicht ihr Text ([`Notiz`]).
 //! - **Eine Aufgabe** ist eine Zeile `- [ ] <Text>`, erledigt `- [x] <Text>`.
 //!   Gelesen wird grosszuegig ([`aufgabenzeile`]): `*` statt `-`, `[X]` statt
 //!   `[x]` und eine Einrueckung davor gelten ebenso. Geschrieben wird eine
 //!   Zeile allein dann neu, wenn eine Handlung sie beruehrt hat, und dann in der
 //!   Grundform ([`aufgabe_in_grundform`]).
-//! - **Ein Geheimnis** im Klartext von `secrets.txt` ist eine Notiz, deren Text
-//!   mit bis zu vier **Feldzeilen** beginnt
+//! - **Ein Eintrag aus Themenzeile und Text** beginnt mit einer Themenzeile
+//!   `## <Thema>` ([`ist_themenzeile`]); alles bis zur naechsten Themenzeile
+//!   ist sein Text, auch Zeilen mit `#` und `###`. Leerzeilen an seinem Ende
+//!   sind sein **Trenner** zum naechsten und nicht sein Text ([`Notiz`]).
+//! - **Ein Geheimnis** im Klartext von `secrets.txt` ist ein solcher Eintrag,
+//!   dessen Text mit bis zu vier **Feldzeilen** beginnt
 //!   (`261016-0306_*_in-welcher-form-traegt-secrets-txt-sechs-felder-und-was-wird-aus-den-alten-eintraegen.md`,
 //!   Moeglichkeit 1): `## <Name>`, darunter hoechstens je einmal `protocol:`,
 //!   `address:`, `account:` und `password:`, alles danach sind die Notizen.
@@ -29,9 +29,24 @@
 //!   dieselben Bytes; beim Uebergang geht also nichts verloren, weil nichts
 //!   geschrieben wird, das der Nutzer nicht beruehrt hat.
 //! - **Eine fremde Zeile**, die keiner Eintragsform folgt, bleibt erhalten. In
-//!   `tasks.txt` haengt sie an der Aufgabe ueber ihr und wandert mit ihr; in
-//!   `notes.txt` ist alles nach einer Themenzeile Notiztext. Was vor dem ersten
-//!   Eintrag steht, ist der **Vorspann** und bleibt oben stehen.
+//!   `tasks.txt` haengt sie an der Aufgabe ueber ihr und wandert mit ihr; nach
+//!   einer Themenzeile ist alles Text des Eintrags. Was vor dem ersten Eintrag
+//!   steht, ist der **Vorspann** und bleibt oben stehen.
+//!
+//! # Die Notizform ist die Form der Geheimnisse
+//!
+//! [`Notizen`], [`Notiz`] und das Modul [`notizen`] tragen ihren Namen aus der
+//! Zeit, als `notes.txt` eine Eintragsdatei war. **Seit dem 261111 ist sie
+//! gewoehnlicher Text, und die Form aus Themenzeile und Text hat allein einen
+//! Nutzer, `secrets.txt`** (E4 des Plans
+//! `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`, zweite
+//! Klausel unter `## Stops when` des Spec
+//! `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`): Tabelle
+//! und Dateiformat der Geheimnisse brauchen keine `notes.txt`, wohl aber diese
+//! Form. Die Namen sind geblieben, damit das Format der Geheimnisse und seine
+//! Proben unberuehrt bleiben. Aus [`notizen`] ist gefallen, was allein die
+//! Notiztabelle rief (das Hinzufuegen und das Aendern einer Notiz samt ihrer
+//! Pruefung); geblieben ist, worueber [`geheimnisse`] rechnet.
 //!
 //! # Roh gehalten, roh zusammengesetzt
 //!
@@ -56,19 +71,16 @@
 //!
 //! Eine Handlung ist eine reine Funktion vom alten Stand auf einen
 //! [`Neustand`]: sie rechnet, der Editor wendet an. Die fuenf an `tasks.txt`
-//! stehen in [`aufgaben`], die vier an `notes.txt` in [`notizen`], die vier am Klartext von
-//! `secrets.txt` in [`geheimnisse`], dort neben der Suche eines Eintrags nach
-//! seinem Namen.
+//! stehen in [`aufgaben`], die vier am Klartext von `secrets.txt` in
+//! [`geheimnisse`], dort neben der Suche eines Eintrags nach seinem Namen; was
+//! sie an der Form aus Themenzeile und Text teilen, steht in [`notizen`].
 //!
 //! **Eine Handlung schreibt allein die Zeilen neu, die sie beruehrt**, und die
 //! in der Grundform: Abhaken und Textaendern ersetzen die Kopfzeile ihres
 //! Blocks, Hinzufuegen haengt einen Eintrag an, Loeschen nimmt eine
-//! Aufgabenzeile oder eine ganze Notiz weg, Verschieben schreibt gar keine
-//! Zeile neu. Das Aendern einer Notiz schreibt die Themenzeile nur, wenn sich
-//! das Thema geaendert hat, und die Textzeilen nur, wenn sich der Text
-//! geaendert hat; ihr Trenner bleibt in jedem Fall. Jede andere Zeile bleibt
-//! Byte fuer Byte, und fuer das Dateiende gilt die Regel aus dem vorigen
-//! Abschnitt.
+//! Aufgabenzeile oder einen ganzen Eintrag weg, Verschieben schreibt gar keine
+//! Zeile neu. Jede andere Zeile bleibt Byte fuer Byte, und fuer das Dateiende
+//! gilt die Regel aus dem vorigen Abschnitt.
 //!
 //! **Keine Handlung liefert einen Neustand, der nichts aendert.** `None` heisst
 //! bei jeder: es gibt nichts zu tun, weil der Eintrag fehlt, am Rand steht oder
@@ -87,10 +99,11 @@ pub const GRUNDFORM_OFFEN: &str = "- [ ] ";
 /// Die Grundform einer erledigten Aufgabe, bis vor den Text.
 pub const GRUNDFORM_ERLEDIGT: &str = "- [x] ";
 
-/// Ob die Zeile eine Notiz eroeffnet: sie beginnt mit `## `.
+/// Ob die Zeile einen Eintrag aus Themenzeile und Text eroeffnet: sie beginnt
+/// mit `## `.
 ///
 /// `## ` und nicht `# `, damit eine Zeile `# …` als Ueberschrift der ganzen
-/// Datei frei bleibt und im Notiztext `#` und `###` stehen duerfen. Die Zeile
+/// Datei frei bleibt und im Text eines Eintrags `#` und `###` stehen duerfen. Die Zeile
 /// darf ihren Umbruch tragen; er aendert die Antwort nicht.
 pub fn ist_themenzeile(zeile: &str) -> bool {
     zeile.starts_with(THEMENMARKE)
@@ -154,7 +167,7 @@ pub fn aufgabe_in_grundform(erledigt: bool, text: &str) -> String {
 ///
 /// Die erste Zeile ist die Kopfzeile: die Aufgabenzeile oder die Themenzeile.
 /// Die uebrigen sind in `tasks.txt` die fremden Zeilen, die an der Aufgabe
-/// haengen, in `notes.txt` der Notiztext.
+/// haengen, im Klartext von `secrets.txt` der Text des Eintrags.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Block<'a> {
     zeilen: Vec<&'a str>,
@@ -355,7 +368,9 @@ impl<'a> Aufgaben<'a> {
     }
 }
 
-/// Der Inhalt von `notes.txt`, zerlegt in Vorspann und Notizen.
+/// Ein Stand aus Eintraegen mit Themenzeile und Text, zerlegt in Vorspann und
+/// Eintraege; seit dem 261111 allein der Klartext von `secrets.txt`
+/// (Modulkopf, „Die Notizform ist die Form der Geheimnisse“).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Notizen<'a> {
     zerlegung: Zerlegung<'a>,
@@ -363,7 +378,7 @@ pub struct Notizen<'a> {
 
 impl<'a> Notizen<'a> {
     /// Zerlegt einen Stand: jede Themenzeile eroeffnet einen Block, alles
-    /// danach bis zur naechsten ist Notiztext, alles davor Vorspann.
+    /// danach bis zur naechsten ist Text des Eintrags, alles davor Vorspann.
     pub fn lesen(stand: &'a str) -> Self {
         Self {
             zerlegung: Zerlegung::lesen(stand, ist_themenzeile),
@@ -375,7 +390,7 @@ impl<'a> Notizen<'a> {
         &self.zerlegung.vorspann
     }
 
-    /// Die Notizen in der Reihenfolge der Datei.
+    /// Die Eintraege in der Reihenfolge der Datei.
     pub fn bloecke(&self) -> &[Block<'a>] {
         &self.zerlegung.bloecke
     }
@@ -385,8 +400,8 @@ impl<'a> Notizen<'a> {
         self.zerlegung.schreiben()
     }
 
-    /// Die Notiz an `index` mit Thema und Text, oder `None`, wenn es sie nicht
-    /// gibt.
+    /// Der Eintrag an `index` mit Thema und Text, oder `None`, wenn es ihn
+    /// nicht gibt.
     pub fn notiz(&self, index: usize) -> Option<Notiz<'a>> {
         let block = self.bloecke().get(index)?;
         let kopf = block.kopf();
@@ -401,19 +416,20 @@ impl<'a> Notizen<'a> {
     }
 }
 
-/// Eine Notiz, wie die Tabelle sie zeigt.
+/// Ein Eintrag aus Thema und Text, ohne die Feldzeilen eines Geheimnisses zu
+/// deuten.
 ///
 /// **Der Text ist der Anhang der Themenzeile ohne seinen Trenner**: die
-/// Leerzeilen am Ende des Blocks trennen die Notiz von der naechsten und
-/// gehoeren nicht in die Zelle, sonst zeigte jede von Hand mit Abstand
-/// geschriebene Notiz eine leere Zeile am Ende. Der Schlussumbruch der letzten
+/// Leerzeilen am Ende des Blocks trennen den Eintrag vom naechsten und
+/// gehoeren nicht in die Zelle, sonst zeigte jeder von Hand mit Abstand
+/// geschriebene Eintrag eine leere Zeile am Ende. Der Schlussumbruch der letzten
 /// Textzeile gehoert ebenso nicht dazu. Leerzeilen **im** Text, zwischen zwei
 /// Absaetzen, sind Text.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Notiz<'a> {
     /// Das Thema, ohne `## ` davor und ohne Zeilenumbruch.
     pub thema: &'a str,
-    /// Der Notiztext, Zeilen durch `\n` getrennt, ohne Schlussumbruch.
+    /// Der Text, Zeilen durch `\n` getrennt, ohne Schlussumbruch.
     pub text: String,
 }
 
@@ -459,23 +475,16 @@ pub enum Abweisung {
     /// Zeile; der Rest hinter dem Umbruch waere eine fremde Zeile oder eine
     /// zweite Aufgabe, und keins von beiden hat der Nutzer verlangt.
     UmbruchImAufgabentext,
-    /// Das Thema einer Notiz traegt einen Zeilenumbruch. Das Thema ist die
-    /// eine Themenzeile; was hinter dem Umbruch stuende, waere Notiztext.
-    UmbruchImThema,
-    /// Eine Zeile im Notiztext beginnt mit `## ` ([`ist_themenzeile`]). In der
-    /// Datei eroeffnete sie eine zweite Notiz und teilte die eine, die der
-    /// Nutzer bearbeitet; abgewiesen und nicht umgeschrieben
-    /// (`260926-0007_*_in-welchem-format-stehen-notes-txt-und-tasks-txt.md`).
-    ThemenzeileImNotiztext,
     /// Name, Protokoll, Adresse, Konto oder Passwort eines Geheimnisses
     /// traegt einen Zeilenumbruch (`\n` oder `\r`). Jedes dieser fuenf Felder
     /// ist eine Zeile der Datei; was hinter dem Umbruch stuende, laese sich als
     /// Notiz oder als naechstes Feld zurueck.
     UmbruchImGeheimnisfeld,
-    /// Eine Zeile in den Notizen eines Geheimnisses beginnt mit `## `.
-    /// Dieselbe Regel wie [`Abweisung::ThemenzeileImNotiztext`], mit eigenem
-    /// Wortlaut, weil die naechste Zeile dort einen Eintrag und keine Notiz
-    /// eroeffnete.
+    /// Eine Zeile in den Notizen eines Geheimnisses beginnt mit `## `
+    /// ([`ist_themenzeile`]). In der Datei eroeffnete sie einen zweiten
+    /// Eintrag und teilte den einen, den der Nutzer bearbeitet; abgewiesen und
+    /// nicht umgeschrieben
+    /// (`260926-0007_*_in-welchem-format-stehen-notes-txt-und-tasks-txt.md`).
     KopfzeileInGeheimnisnotizen,
 }
 
@@ -485,9 +494,6 @@ impl Abweisung {
     pub fn meldung(self) -> &'static str {
         match self {
             Self::UmbruchImAufgabentext => text(Text::AbweisungUmbruchImAufgabentext),
-            Self::UmbruchImThema => text(Text::AbweisungUmbruchImThema),
-            Self::ThemenzeileImNotiztext => text(Text::AbweisungThemenzeileImNotiztext),
-
             Self::UmbruchImGeheimnisfeld => text(Text::AbweisungUmbruchImGeheimnisfeld),
             Self::KopfzeileInGeheimnisnotizen => text(Text::AbweisungKopfzeileInGeheimnisnotizen),
         }
@@ -636,39 +642,23 @@ pub mod aufgaben {
     }
 }
 
-/// Die Handlungen an `notes.txt`.
+/// Was die Handlungen an `secrets.txt` an der Form aus Themenzeile und Text
+/// teilen.
 ///
-/// `index` zaehlt jeweils ueber die Notizen ohne den Vorspann, wie
-/// [`Notizen::bloecke`] und [`Neustand::auswahl`]. Ein uebergebener Notiztext
-/// wird ohne seine Schlussumbrueche genommen: Leerzeilen am Ende einer Notiz
-/// sind ihr Trenner und nicht ihr Text ([`Notiz`]), und so ergibt
-/// [`Notizen::notiz`] nach jeder Handlung genau den Text, der geschrieben
-/// wurde.
+/// Bis zum 261111 standen hier die vier Handlungen an `notes.txt`. Geblieben
+/// ist, worueber [`geheimnisse`] rechnet: die Themenzeile und die Textzeilen in
+/// der Grundform, das Anhaengen, das Loeschen und das Verschieben. `index`
+/// zaehlt jeweils ueber die Eintraege ohne den Vorspann, wie
+/// [`Notizen::bloecke`] und [`Neustand::auswahl`].
 pub mod notizen {
-    use super::{
-        Abweisung, Neustand, Notizen, Richtung, THEMENMARKE, auswahl_nach_loeschen,
-        ist_themenzeile, text_und_trenner,
-    };
-
-    /// Weist ein Thema mit Umbruch und einen Text mit Themenzeile ab und gibt
-    /// den Text ohne Schlussumbrueche zurueck.
-    fn pruefen<'t>(thema: &str, text: &'t str) -> Result<&'t str, Abweisung> {
-        if thema.contains('\n') {
-            return Err(Abweisung::UmbruchImThema);
-        }
-        if text.split('\n').any(ist_themenzeile) {
-            return Err(Abweisung::ThemenzeileImNotiztext);
-        }
-        Ok(text.trim_end_matches('\n'))
-    }
+    use super::{Neustand, Notizen, Richtung, THEMENMARKE, auswahl_nach_loeschen};
 
     /// Die Themenzeile in der Grundform, samt Umbruch.
     pub(super) fn themenzeile(thema: &str) -> String {
         format!("{THEMENMARKE}{thema}\n")
     }
 
-    /// Die Textzeilen eines Notiztextes, samt Umbruch; ein leerer Text hat
-    /// keine.
+    /// Die Textzeilen eines Textes, samt Umbruch; ein leerer Text hat keine.
     pub(super) fn textzeilen(text: &str) -> String {
         if text.is_empty() {
             String::new()
@@ -677,26 +667,13 @@ pub mod notizen {
         }
     }
 
-    /// Haengt eine Notiz mit `thema` und `text` ans Ende der Datei; sie ist
-    /// danach gewaehlt.
+    /// Haengt einen Eintrag mit `thema` und `text` ans Ende der Datei; er ist
+    /// danach gewaehlt. `thema` traegt keinen Umbruch, `text` keine
+    /// Themenzeile und keinen Schlussumbruch; das prueft der Rufer.
     ///
     /// Das Dateiende bleibt wie bei [`super::aufgaben::hinzufuegen`]: endet
-    /// die Datei ohne Umbruch, bekommt ihre letzte Zeile einen, und die neue
-    /// Notiz endet ohne. Ein leeres Thema und ein leerer Text sind zulaessig;
-    /// der Editor legt so eine Notiz an, die der Nutzer danach fuellt. Einen
-    /// Trenner schreibt die Handlung nicht dazu.
-    #[must_use = "der Neustand ist die ganze Wirkung; fallengelassen ist nichts hinzugefuegt"]
-    pub fn hinzufuegen(stand: &str, thema: &str, text: &str) -> Result<Neustand, Abweisung> {
-        let text = pruefen(thema, text)?;
-        Ok(angehaengt(stand, thema, text))
-    }
-
-    /// Der Rumpf von [`hinzufuegen`] nach der Pruefung: `thema` traegt keinen
-    /// Umbruch, `text` keine Themenzeile und keinen Schlussumbruch.
-    ///
-    /// Eigens herausgezogen, damit ein Rufer mit einer Kopfzeile, die schon
-    /// als gueltig feststeht, ohne eine Abweisung anhaengen kann, die es nie
-    /// geben kann; die Mechanik bleibt eine.
+    /// die Datei ohne Umbruch, bekommt ihre letzte Zeile einen, und der neue
+    /// Eintrag endet ohne. Einen Trenner schreibt die Handlung nicht dazu.
     pub(super) fn angehaengt(stand: &str, thema: &str, text: &str) -> Neustand {
         let anzahl = Notizen::lesen(stand).bloecke().len();
         let mut neu = String::with_capacity(stand.len() + thema.len() + text.len() + 8);
@@ -725,63 +702,13 @@ pub mod notizen {
         }
     }
 
-    /// Ersetzt Thema und Text der Notiz an `index`.
-    ///
-    /// Die Themenzeile wird allein neu geschrieben, wenn sich das Thema
-    /// geaendert hat, die Textzeilen allein, wenn sich der Text geaendert hat;
-    /// der Trenner am Ende bleibt, wie er war. `Ok(None)`, wenn es die Notiz
-    /// nicht gibt oder sie Thema und Text schon traegt: eine Zelle, die ohne
-    /// Aenderung verlassen wird, ergibt keine Handlung.
-    #[must_use = "der Neustand ist die ganze Wirkung; fallengelassen ist nichts geaendert"]
-    pub fn aendern(
-        stand: &str,
-        index: usize,
-        thema: &str,
-        text: &str,
-    ) -> Result<Option<Neustand>, Abweisung> {
-        let text = pruefen(thema, text)?;
-        let notizen = Notizen::lesen(stand);
-        let Some(alt) = notizen.notiz(index) else {
-            return Ok(None);
-        };
-        if alt.thema == thema && alt.text == text {
-            return Ok(None);
-        }
-        let block = &notizen.bloecke()[index];
-        let (alte_textzeilen, trenner) = text_und_trenner(block.anhang());
-
-        let mut ersatz = if alt.thema == thema {
-            let mut kopf = block.kopf().to_owned();
-            if !kopf.ends_with('\n') {
-                kopf.push('\n');
-            }
-            kopf
-        } else {
-            themenzeile(thema)
-        };
-        if alt.text == text {
-            ersatz.push_str(&alte_textzeilen.concat());
-            if !ersatz.ends_with('\n') {
-                ersatz.push('\n');
-            }
-        } else {
-            ersatz.push_str(&textzeilen(text));
-        }
-        ersatz.push_str(&trenner.concat());
-
-        Ok(Some(Neustand {
-            text: notizen.zerlegung.mit_block(index, Some(&ersatz), stand),
-            auswahl: Some(index),
-        }))
-    }
-
-    /// Entfernt die Notiz an `index` ganz: Themenzeile, Text und Trenner.
+    /// Entfernt den Eintrag an `index` ganz: Themenzeile, Text und Trenner.
     ///
     /// Anders als bei einer Aufgabe gibt es hier nichts Fremdes, das stehen
-    /// bleiben muesste: alles nach einer Themenzeile ist Text dieser Notiz, und
-    /// die Tabelle hat ihn gezeigt. Gewaehlt ist danach die nachrueckende Notiz,
-    /// sonst die davor; `None` als Auswahl, wenn keine bleibt. `None`
-    /// insgesamt, wenn es die Notiz nicht gibt.
+    /// bleiben muesste: alles nach einer Themenzeile ist Text dieses Eintrags,
+    /// und die Tabelle hat ihn gezeigt. Gewaehlt ist danach der nachrueckende
+    /// Eintrag, sonst der davor; `None` als Auswahl, wenn keiner bleibt. `None`
+    /// insgesamt, wenn es den Eintrag nicht gibt.
     #[must_use = "der Neustand ist die ganze Wirkung; fallengelassen ist nichts geloescht"]
     pub fn loeschen(stand: &str, index: usize) -> Option<Neustand> {
         let notizen = Notizen::lesen(stand);
@@ -795,10 +722,10 @@ pub mod notizen {
         })
     }
 
-    /// Tauscht die Notiz an `index` mit ihrer Nachbarin in `richtung`; jeder
+    /// Tauscht den Eintrag an `index` mit seinem Nachbarn in `richtung`; jeder
     /// Block behaelt seine Bytes samt Trenner, der Vorspann bleibt oben, und
-    /// das Dateiende bleibt (Modulkopf). `None`, wenn es die Notiz nicht gibt
-    /// oder sie in dieser Richtung schon am Rand steht.
+    /// das Dateiende bleibt (Modulkopf). `None`, wenn es den Eintrag nicht gibt
+    /// oder er in dieser Richtung schon am Rand steht.
     #[must_use = "der Neustand ist die ganze Wirkung; fallengelassen ist nichts verschoben"]
     pub fn verschieben(stand: &str, index: usize, richtung: Richtung) -> Option<Neustand> {
         Notizen::lesen(stand)

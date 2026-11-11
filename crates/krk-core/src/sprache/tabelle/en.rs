@@ -46,10 +46,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::ErsatzNichts => "and nothing takes its place",
         Text::PinKeineVierZiffern => "The PIN consists of exactly four digits.",
         Text::AbweisungUmbruchImAufgabentext => "A task is one line and contains no line break.",
-        Text::AbweisungUmbruchImThema => "A topic is one line and contains no line break.",
-        Text::AbweisungThemenzeileImNotiztext => {
-            "A line in the note text must not begin with “## ”, because that is how the next note begins."
-        }
         Text::AbweisungUmbruchImGeheimnisfeld => {
             "Name, protocol, address, account and password are one line each and contain no line break."
         }
@@ -357,12 +353,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::HeimObererOrdnerFehlt => {
             "{ordner} cannot be created because the folder above it is missing, such as a volume that is not mounted; KRK creates nothing"
         }
-        Text::HeimMerkerNichtVermerkt => {
-            "KRK cannot remember that the old notes have been taken over ({grund}); the next F2 tries again, and if {ort} is deleted before then, it takes them over once more"
-        }
-        Text::HeimMerkerOhneAblage => {
-            "Without its data folder KRK cannot remember that the old notes have been taken over; a later F2 catches up on that, and if {ort} is deleted before then, it takes them over once more"
-        }
         Text::HeimUmbenannt => "{alt} is now called {neu}",
         Text::HeimUmbenennungBeideStehen => {
             "{neu} and {alt} both exist in {ort}; KRK renames neither, and {neu} counts"
@@ -372,23 +362,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::HeimNichtUmbenannt => {
             "{alt} cannot be renamed to {neu} ({grund}); it stays unchanged, and {neu} is not created"
-        }
-        Text::HeimZettelNotizenStandenSchon => {
-            "The old notes have not been taken over because {notizen} already existed; {dateien} remain unchanged in the data folder"
-        }
-        Text::HeimZettelGescheitert => {
-            "The old notes have not been taken over ({grund}); {dateien} remain unchanged in the data folder"
-        }
-        Text::HeimZettelThemenzeile => {
-            "{thema} has not been taken over because it carries a line starting with “## ”; {datei} remains unchanged in the data folder"
-        }
-        Text::HeimZettelUnlesbar => {
-            "{thema} has not been taken over ({grund}); {datei} remains unchanged in the data folder"
-        }
-        Text::HeimZettelZuGross => "too large at {groesse} bytes",
-        Text::HeimZettelKeinText => "no readable text",
-        Text::HeimAngefangeneDateiBleibt => {
-            "{fehler}; the started file cannot be removed: {entfernen}"
         }
         Text::Und => "and",
         Text::TresorKeinZufall => "The system provides no random value: {grund}",
@@ -511,8 +484,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::TypDatei => "file",
         Text::TypVerknuepfung => "symbolic link",
         Text::EintragsspalteAufgabe => "Task",
-        Text::EintragsspalteThema => "Topic",
-        Text::EintragsspalteNotiz => "Note",
         Text::EintragsspalteName => "Name",
         Text::EintragsspalteProtokoll => "Protocol",
         Text::EintragsspalteAdresse => "Address",
@@ -889,33 +860,33 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::QuicknoteGrundKeinText => "it is not readable as text",
         Text::QuicknoteGrundLesefehler => "the system reports a read error",
         Text::EintragKeineAufgabentabelle => "the Editor shows no task table",
-        Text::EintragKeineNotiztabelle => "the Editor shows no note table",
+        Text::EintragKeineGeheimnistabelle => "the Editor shows no secrets table",
         Text::EintragKeineAufgabeGewaehlt => "no task is selected",
-        Text::EintragKeineNotizGewaehlt => "no note is selected",
+        Text::EintragKeinGeheimnisGewaehlt => "no entry is selected",
         Text::EintragAufgabeHinzugefuegt => "new task at the end; return accepts the text",
-        Text::EintragNotizHinzugefuegt => {
-            "new note at the end; tab moves to the text, cmd+return accepts"
+        Text::EintragGeheimnisHinzugefuegt => {
+            "new entry at the end; tab changes the cell, cmd+return accepts"
         }
         Text::EintragAufgabeBearbeitung => "return accepts, esc discards",
-        Text::EintragNotizBearbeitung => {
+        Text::EintragGeheimnisBearbeitung => {
             "cmd+return accepts, tab changes the cell, return writes a line break in the text"
         }
         Text::EintragAufgabeUebernommen => "task accepted",
-        Text::EintragNotizUebernommen => "note accepted",
+        Text::EintragGeheimnisUebernommen => "entry accepted",
         Text::EintragAufgabeAbgehakt => "task checked off",
-        Text::EintragNotizOhneKaestchen => "a note has no checkbox",
+        Text::EintragGeheimnisOhneKaestchen => "an entry has no checkbox",
         Text::EintragAufgabeWiederOffen => "task open again",
         Text::EintragAufgabeVerschoben => "task moved",
-        Text::EintragNotizVerschoben => "note moved",
+        Text::EintragGeheimnisVerschoben => "entry moved",
         Text::EintragAufgabeSchonOben => "the task is already at the top",
-        Text::EintragNotizSchonOben => "the note is already at the top",
+        Text::EintragGeheimnisSchonOben => "the entry is already at the top",
         Text::EintragAufgabeSchonUnten => "the task is already at the bottom",
-        Text::EintragNotizSchonUnten => "the note is already at the bottom",
+        Text::EintragGeheimnisSchonUnten => "the entry is already at the bottom",
         Text::EintragAufgabeGeloescht => "task deleted; cmd+z brings it back",
-        Text::EintragNotizGeloescht => "note deleted; cmd+z brings it back",
+        Text::EintragGeheimnisGeloescht => "entry deleted; cmd+z brings it back",
         Text::EintragZelleBleibt => "the cell stays in editing",
         Text::EintragAufgabeMitEscUebernommen => "task accepted; cmd+z takes it back",
-        Text::EintragNotizMitEscUebernommen => "note accepted; cmd+z takes it back",
+        Text::EintragGeheimnisMitEscUebernommen => "entry accepted; cmd+z takes it back",
         Text::EintragHeuteUnbestimmt => "Today’s date could not be determined.",
         Text::EintragKeineTrenntexttabelle => "the Editor shows no table of a CSV file",
         Text::EintragKeineZeileGewaehlt => "no row is selected",
@@ -1090,9 +1061,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::StartLesezeichenNichtGeladen => {
             "the bookmarks could not be loaded, the write lock of the data folder cannot be taken: {fehler}"
         }
-        Text::HeimOhneSperreAngelegt => {
-            "the write lock of the data folder cannot be taken ({fehler}); F2 created without it"
-        }
         Text::LeisteUeberschriftVerbindungen => "Connections",
         Text::LeisteSinnbildVerbindung => "Connection",
         Text::KontextVerbinden => "Connect…",
@@ -1215,10 +1183,6 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
     match schluessel {
         Zahlwort::Byte => ("{n} byte", "{n} bytes"),
         Zahlwort::NeuerungenEintraegeIn => ("{n} entry in {datei}", "{n} entries in {datei}"),
-        Zahlwort::HeimZettelUebernommen => (
-            "{themen} taken over as a note into {notizen}",
-            "{themen} taken over as notes into {notizen}",
-        ),
         Zahlwort::MarkeGeaendert => ("{n} modified", "{n} modified"),
         Zahlwort::MarkeVorgemerkt => ("{n} staged", "{n} staged"),
         Zahlwort::MarkeNeu => ("{n} new", "{n} new"),

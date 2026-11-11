@@ -52,12 +52,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::AbweisungUmbruchImAufgabentext => {
             "Une tâche tient sur une ligne et ne contient pas de saut de ligne."
         }
-        Text::AbweisungUmbruchImThema => {
-            "Un sujet tient sur une ligne et ne contient pas de saut de ligne."
-        }
-        Text::AbweisungThemenzeileImNotiztext => {
-            "Une ligne du texte de la note ne peut pas commencer par «\u{a0}##\u{a0}», car c’est ainsi que commence la note suivante."
-        }
         Text::AbweisungUmbruchImGeheimnisfeld => {
             "Le nom, le protocole, l’adresse, le compte et le mot de passe tiennent chacun sur une ligne et ne contiennent pas de saut de ligne."
         }
@@ -399,12 +393,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::HeimObererOrdnerFehlt => {
             "{ordner} ne peut pas être créé, car le dossier parent manque, par exemple un volume non monté\u{202f}; KRK ne crée rien"
         }
-        Text::HeimMerkerNichtVermerkt => {
-            "KRK ne peut pas retenir que les anciennes notes ont été reprises ({grund})\u{202f}; le prochain F2 réessaiera, et si {ort} est supprimé avant, il les reprendra une nouvelle fois"
-        }
-        Text::HeimMerkerOhneAblage => {
-            "Sans son dossier de données, KRK ne peut pas retenir que les anciennes notes ont été reprises\u{202f}; un F2 ultérieur le rattrapera, et si {ort} est supprimé avant, il les reprendra une nouvelle fois"
-        }
         Text::HeimUmbenannt => "{alt} s’appelle maintenant {neu}",
         Text::HeimUmbenennungBeideStehen => {
             "{neu} et {alt} existent tous deux dans {ort}\u{202f}; KRK n’en renomme aucun, et c’est {neu} qui compte"
@@ -414,23 +402,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::HeimNichtUmbenannt => {
             "{alt} ne peut pas être renommé en {neu} ({grund})\u{202f}; il reste inchangé, et {neu} n’est pas créé"
-        }
-        Text::HeimZettelNotizenStandenSchon => {
-            "Les anciennes notes n’ont pas été reprises, car {notizen} existait déjà\u{202f}; {dateien} restent inchangés dans le dossier de données"
-        }
-        Text::HeimZettelGescheitert => {
-            "Les anciennes notes n’ont pas été reprises ({grund})\u{202f}; {dateien} restent inchangés dans le dossier de données"
-        }
-        Text::HeimZettelThemenzeile => {
-            "{thema} n’a pas été repris, car il contient une ligne commençant par «\u{a0}##\u{a0}»\u{202f}; {datei} reste inchangé dans le dossier de données"
-        }
-        Text::HeimZettelUnlesbar => {
-            "{thema} n’a pas été repris ({grund})\u{202f}; {datei} reste inchangé dans le dossier de données"
-        }
-        Text::HeimZettelZuGross => "trop volumineux avec {groesse} octets",
-        Text::HeimZettelKeinText => "pas de texte lisible",
-        Text::HeimAngefangeneDateiBleibt => {
-            "{fehler}\u{202f}; le fichier commencé ne peut pas être supprimé\u{a0}: {entfernen}"
         }
         Text::Und => "et",
         Text::TresorKeinZufall => "Le système ne fournit aucune valeur aléatoire\u{a0}: {grund}",
@@ -565,8 +536,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::TypDatei => "fichier",
         Text::TypVerknuepfung => "lien symbolique",
         Text::EintragsspalteAufgabe => "Tâche",
-        Text::EintragsspalteThema => "Sujet",
-        Text::EintragsspalteNotiz => "Note",
         Text::EintragsspalteName => "Nom",
         Text::EintragsspalteProtokoll => "Protocole",
         Text::EintragsspalteAdresse => "Adresse",
@@ -1004,35 +973,35 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::QuicknoteGrundKeinText => "il n’est pas lisible comme texte",
         Text::QuicknoteGrundLesefehler => "le système signale une erreur de lecture",
         Text::EintragKeineAufgabentabelle => "l’Éditeur n’affiche pas de tableau des tâches",
-        Text::EintragKeineNotiztabelle => "l’Éditeur n’affiche pas de tableau des notes",
+        Text::EintragKeineGeheimnistabelle => "l’Éditeur n’affiche pas de tableau des secrets",
         Text::EintragKeineAufgabeGewaehlt => "aucune tâche n’est sélectionnée",
-        Text::EintragKeineNotizGewaehlt => "aucune note n’est sélectionnée",
+        Text::EintragKeinGeheimnisGewaehlt => "aucune entrée n’est sélectionnée",
         Text::EintragAufgabeHinzugefuegt => {
             "nouvelle tâche à la fin\u{202f}; return valide le texte"
         }
-        Text::EintragNotizHinzugefuegt => {
-            "nouvelle note à la fin\u{202f}; tab passe au texte, cmd+return valide"
+        Text::EintragGeheimnisHinzugefuegt => {
+            "nouvelle entrée à la fin\u{202f}; tab change de cellule, cmd+return valide"
         }
         Text::EintragAufgabeBearbeitung => "return valide, esc abandonne",
-        Text::EintragNotizBearbeitung => {
+        Text::EintragGeheimnisBearbeitung => {
             "cmd+return valide, tab change de cellule, return insère un saut de ligne dans le texte"
         }
         Text::EintragAufgabeUebernommen => "tâche validée",
-        Text::EintragNotizUebernommen => "note validée",
+        Text::EintragGeheimnisUebernommen => "entrée validée",
         Text::EintragAufgabeAbgehakt => "tâche cochée",
-        Text::EintragNotizOhneKaestchen => "une note n’a pas de case à cocher",
+        Text::EintragGeheimnisOhneKaestchen => "une entrée n’a pas de case à cocher",
         Text::EintragAufgabeWiederOffen => "tâche de nouveau ouverte",
         Text::EintragAufgabeVerschoben => "tâche déplacée",
-        Text::EintragNotizVerschoben => "note déplacée",
+        Text::EintragGeheimnisVerschoben => "entrée déplacée",
         Text::EintragAufgabeSchonOben => "la tâche est déjà en haut",
-        Text::EintragNotizSchonOben => "la note est déjà en haut",
+        Text::EintragGeheimnisSchonOben => "l’entrée est déjà en haut",
         Text::EintragAufgabeSchonUnten => "la tâche est déjà en bas",
-        Text::EintragNotizSchonUnten => "la note est déjà en bas",
+        Text::EintragGeheimnisSchonUnten => "l’entrée est déjà en bas",
         Text::EintragAufgabeGeloescht => "tâche supprimée\u{202f}; cmd+z la rétablit",
-        Text::EintragNotizGeloescht => "note supprimée\u{202f}; cmd+z la rétablit",
+        Text::EintragGeheimnisGeloescht => "entrée supprimée\u{202f}; cmd+z la rétablit",
         Text::EintragZelleBleibt => "la cellule reste en cours de modification",
         Text::EintragAufgabeMitEscUebernommen => "tâche validée\u{202f}; cmd+z annule",
-        Text::EintragNotizMitEscUebernommen => "note validée\u{202f}; cmd+z annule",
+        Text::EintragGeheimnisMitEscUebernommen => "entrée validée\u{202f}; cmd+z annule",
         Text::EintragHeuteUnbestimmt => "La date du jour n’a pas pu être déterminée.",
         Text::EintragKeineTrenntexttabelle => "l’Éditeur n’affiche pas de tableau de fichier CSV",
         Text::EintragKeineZeileGewaehlt => "aucune ligne n’est sélectionnée",
@@ -1227,9 +1196,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::StartLesezeichenNichtGeladen => {
             "les signets n’ont pas pu être chargés, le verrou d’écriture du dossier de données ne peut pas être pris\u{a0}: {fehler}"
         }
-        Text::HeimOhneSperreAngelegt => {
-            "le verrou d’écriture du dossier de données ne peut pas être pris ({fehler})\u{202f}; F2 a créé sans lui"
-        }
         Text::LeisteUeberschriftVerbindungen => "Connexions",
         Text::LeisteSinnbildVerbindung => "Connexion",
         Text::KontextVerbinden => "Se connecter…",
@@ -1374,10 +1340,6 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
     match schluessel {
         Zahlwort::Byte => ("{n} octet", "{n} octets"),
         Zahlwort::NeuerungenEintraegeIn => ("{n} entrée dans {datei}", "{n} entrées dans {datei}"),
-        Zahlwort::HeimZettelUebernommen => (
-            "{themen} repris comme note dans {notizen}",
-            "{themen} repris comme notes dans {notizen}",
-        ),
         Zahlwort::MarkeGeaendert => ("{n} modifié", "{n} modifiés"),
         Zahlwort::MarkeVorgemerkt => ("{n} indexé", "{n} indexés"),
         Zahlwort::MarkeNeu => ("{n} nouveau", "{n} nouveaux"),

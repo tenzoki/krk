@@ -84,7 +84,7 @@
 //!   und der Faden sperrt sich ebenso.
 //! - **Der Notizordner fehlt** ([`Sicherungsmeldung::OrdnerFehlt`]): das sperrt
 //!   nicht. Geschrieben wird nichts und kein Ordner angelegt, denn allein F2
-//!   legt ihn an und entscheidet dabei ueber die Uebernahme der alten Zettel;
+//!   legt ihn an, samt den Eintragsdateien darin;
 //!   die naechste Aenderung, das Verlassen und das Beenden versuchen es
 //!   wieder ([`Vormerkung`]). Ohne Heimordner (kein
 //!   Benutzerverzeichnis) gilt dasselbe.

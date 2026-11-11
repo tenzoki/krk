@@ -1127,10 +1127,10 @@ fn oeffnen_liefert_denselben_stand_wie_einlesen() {
 ///
 /// Der fuenfte Ausgang, den es nicht gibt: eine fehlende Datei ist kein eigener
 /// Wert, sondern das Feld `fehlt` an `KeinGueltigesZiel`. Die Probe haelt beide
-/// Haelften fest, denn allein daran haengt die Zusage, dass ein fehlender
+/// Haelften fest. Bis zum 261111 hing daran die Zusage, dass ein fehlender
 /// alter Zettel bei der einmaligen Uebernahme in `~/krkhome/notes.txt` keine
-/// Meldung nach sich zieht (`heimordner::bereitstellen`, `Zettelbefund::Fehlt`),
-/// waehrend der Editor beide Faelle gleich abweist. Dasselbe gilt seit dem
+/// Meldung nach sich zog; die Uebernahme ist gefallen, das Feld steht weiter,
+/// und der Editor weist beide Faelle gleich ab. Dasselbe gilt seit dem
 /// 260908 fuer das zweite Feld `mangel`: es steht hier auf `false`, weil weder ein Ordner noch
 /// eine fehlende Datei ein Deskriptormangel ist. Gemessen wird der Mangel
 /// selbst in der Kindprobe unter `ulimit -n`, wie bei den zwei

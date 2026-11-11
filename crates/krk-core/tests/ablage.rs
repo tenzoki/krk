@@ -5907,3 +5907,75 @@ fn der_merker_wird_nicht_verglichen() {
         "der Merker steht im Bestand der Neuerungen"
     );
 }
+
+/// E7 des Plans `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`:
+/// der Merker `zettel_uebernommen` bleibt als Feld in `reported.toml` stehen,
+/// obwohl ihn seit dem 261111 niemand mehr setzt oder fragt.
+///
+/// Eine `reported.toml` aus einer frueheren Fassung mit `zettel_uebernommen =
+/// true` laedt ohne Ersetzung, und das Vermerken einer neuen Fassung schreibt
+/// den Wert zurueck, im geladenen Merker wie im Text der Datei. Fiele das Feld
+/// aus der Struktur, loeschte dieses Vermerken den Wert, und eine aeltere
+/// Fassung von KRK uebernaehme die alten Zettel ein zweites Mal. Die
+/// Gegenrichtung steht dabei: eine Datei ohne das Feld laedt ebenso ohne
+/// Ersetzung und liest `false`.
+#[test]
+fn ein_gesetzter_zettelmerker_ueberlebt_das_vermerken_der_fassung() {
+    let (_ordner, ablage) = ablage("merker-zettelfeld-bleibt");
+    fs::write(
+        ablage.pfad(Datei::Merker),
+        "gemeldete_fassung = \"0.0.1-vor-dem-fall\"\nzettel_uebernommen = true\n",
+    )
+    .expect("reported.toml");
+
+    let gelesen = gelesener_merker(&ablage);
+    assert!(!gelesen.ist_ersetzt(), "{:?}", gelesen.ersetzung);
+    assert_eq!(
+        gelesen.wert,
+        Merker {
+            gemeldete_fassung: "0.0.1-vor-dem-fall".to_owned(),
+            zettel_uebernommen: true,
+        }
+    );
+
+    for fassung in ["9.9.9", LAUFENDE_FASSUNG] {
+        merker_vermerken(&ablage, fassung);
+        let danach = gelesener_merker(&ablage);
+        assert!(!danach.ist_ersetzt(), "{:?}", danach.ersetzung);
+        assert_eq!(
+            danach.wert,
+            Merker {
+                gemeldete_fassung: fassung.to_owned(),
+                zettel_uebernommen: true,
+            },
+            "das Vermerken von {fassung} hat den Zettelmerker nicht stehen lassen"
+        );
+        let text = fs::read_to_string(ablage.pfad(Datei::Merker)).expect("reported.toml");
+        let dokument: toml::Table = toml::from_str(&text).expect("KRK schreibt gueltiges TOML");
+        assert_eq!(
+            dokument.get("zettel_uebernommen"),
+            Some(&toml::Value::Boolean(true)),
+            "{text}"
+        );
+    }
+
+    // Eine Datei, die das Feld nicht kennt, liest `false` und bleibt dabei.
+    let (_ordner, ohne) = ablage_ohne_feld();
+    let gelesen = gelesener_merker(&ohne);
+    assert!(!gelesen.ist_ersetzt(), "{:?}", gelesen.ersetzung);
+    assert!(!gelesen.wert.zettel_uebernommen);
+    merker_vermerken(&ohne, "9.9.9");
+    assert!(!gelesener_merker(&ohne).wert.zettel_uebernommen);
+}
+
+/// Eine Ablage, deren `reported.toml` das Feld `zettel_uebernommen` nicht
+/// kennt, wie die erste Fassung mit `~/krkhome` sie schrieb.
+fn ablage_ohne_feld() -> (Pruefordner, Ablage) {
+    let (ordner, ablage) = ablage("merker-ohne-zettelfeld");
+    fs::write(
+        ablage.pfad(Datei::Merker),
+        "gemeldete_fassung = \"0.0.1-ohne-zettelfeld\"\n",
+    )
+    .expect("reported.toml ohne Zettelfeld");
+    (ordner, ablage)
+}

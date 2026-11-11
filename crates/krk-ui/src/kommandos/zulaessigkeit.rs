@@ -250,7 +250,7 @@ pub struct Lage {
     /// Oeffnen fragt ohnehin nach einer neuen.
     pub pin_aenderbar: bool,
     /// Ob der Editor eine Eintragsdatei des Notizordners haelt (`tasks.txt`,
-    /// `notes.txt`, `secrets.txt` entsperrt), gleich in
+    /// `secrets.txt` entsperrt), gleich in
     /// welcher Ansicht.
     ///
     /// Erhoben von `Anwendungsdelegierter::lage` ueber
@@ -309,29 +309,25 @@ pub struct Lage {
 /// Dateityp ableitet; ohne AppKit bleibt dieses Modul trotzdem, denn der Wert
 /// ist eine Aufzaehlung und keine Flaeche.
 ///
-/// **Gewachsen mit den Eintragsdateien**: die Notiztabelle ist mit Schritt 4.3
-/// als `Notizen` dazugekommen, die Geheimnisse mit Schritt 5.4b als
-/// `Geheimnisse`. Vom 260926 bis zum 261111 stand daneben die Termintabelle
-/// als eigener Wert; sie ist gefallen, und `appointments.md` zeigt der Editor
-/// seitdem in der Form `Text`. Jede vollstaendige Fallunterscheidung ueber
+/// **Gewachsen mit den Eintragsdateien**: die Geheimnisse sind mit Schritt
+/// 5.4b als `Geheimnisse` dazugekommen. Bis zum 261111 standen daneben die
+/// Notiztabelle (`Notizen`, seit Schritt 4.3) und die Termintabelle als eigene
+/// Werte; beide sind gefallen, und `notes.txt` und `appointments.md` zeigt der
+/// Editor seitdem in der Form `Text`. Jede vollstaendige Fallunterscheidung ueber
 /// diesen Typ haelt den Bau an, sobald einer dazukommt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Editorform {
     /// Die Textflaeche: jede Datei in der Rohansicht und jede Datei ausser
-    /// `tasks.txt` und `notes.txt` im erkannten Heimordner in der
-    /// Formatansicht.
+    /// `tasks.txt` und `secrets.txt` im erkannten Heimordner und einer CSV-
+    /// oder TSV-Datei in der Formatansicht.
     Text,
     /// Die Aufgabentabelle: `tasks.txt` im erkannten Heimordner in der
     /// Formatansicht.
     Aufgaben,
-    /// Die Notiztabelle: `notes.txt` im erkannten Heimordner in der
-    /// Formatansicht (Schritt 4.3).
-    Notizen,
     /// Die Tabelle der Geheimnisse: `secrets.txt` im erkannten Heimordner in
-    /// der Formatansicht, entsperrt mit der PIN (Schritt 5.4b). Sie zeigt
-    /// dieselbe Tabelle wie [`Self::Notizen`], weil ihre Eintraege dieselbe
-    /// Form tragen, und nimmt dieselben Befehle an; ein eigener Wert, weil
-    /// „PIN ändern" aus Schritt 5.5 allein hier wirkt.
+    /// der Formatansicht, entsperrt mit der PIN (Schritt 5.4b). Eine
+    /// Eintragstabelle ohne Kaestchen; „PIN ändern" aus Schritt 5.5 wirkt
+    /// allein vor dieser Datei.
     Geheimnisse,
     /// Die Tabelle einer CSV- oder TSV-Datei in der Formatansicht (Plan
     /// `261018-0822_*_plan-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md`,
@@ -575,7 +571,7 @@ fn ort_passt(bedarf: Ortsbedarf, ort: Ortsart, fokus: Fokus) -> bool {
 ///
 /// **Vollstaendig ueber beide Aufzaehlungen und ohne Auffangzweig.** Ein
 /// weiterer Wirkungsbereich haelt den Bau hier an und bekommt seine Antwort
-/// bewusst, ebenso eine weitere Form: die Notiztabelle aus Schritt 4.3 sagt
+/// bewusst, ebenso eine weitere Form: die Geheimnistabelle sagt
 /// hier, dass sie eine Eintragstabelle ist und keine Kaestchen traegt. Die
 /// Bereiche ohne eigene Form antworten ja, gleich was der Editor zeigt; das
 /// Sichern, das Schliessen und der Ansichtswechsel wirken damit auch aus der
@@ -592,7 +588,6 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
         Wirkungsbereich::Editortext => match form {
             Editorform::Text => true,
             Editorform::Aufgaben
-            | Editorform::Notizen
             | Editorform::Geheimnisse
             | Editorform::Trenntext
             | Editorform::Quicknote => false,
@@ -604,10 +599,7 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
         // gefallen.
         Wirkungsbereich::Eintraege => match form {
             Editorform::Text | Editorform::Quicknote => false,
-            Editorform::Aufgaben
-            | Editorform::Notizen
-            | Editorform::Geheimnisse
-            | Editorform::Trenntext => true,
+            Editorform::Aufgaben | Editorform::Geheimnisse | Editorform::Trenntext => true,
         },
         // Das Anlegen wirkt in jeder Tabellenform und in der Textflaeche,
         // denn die Rohansicht einer Eintragsdatei ist eine Textflaeche
@@ -618,16 +610,14 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
         Wirkungsbereich::Eintragsdatei => match form {
             Editorform::Text
             | Editorform::Aufgaben
-            | Editorform::Notizen
             | Editorform::Geheimnisse
             | Editorform::Trenntext => true,
             Editorform::Quicknote => false,
         },
-        // Die Notiztabelle traegt keine Kaestchen, die der Geheimnisse als
-        // dieselbe Tabelle ebenso wenig, und die einer CSV auch nicht.
+        // Die Tabelle der Geheimnisse traegt keine Kaestchen, und die einer
+        // CSV auch nicht.
         Wirkungsbereich::Aufgaben => match form {
             Editorform::Text
-            | Editorform::Notizen
             | Editorform::Geheimnisse
             | Editorform::Trenntext
             | Editorform::Quicknote => false,
@@ -638,7 +628,6 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
         Wirkungsbereich::Quicknote => match form {
             Editorform::Text
             | Editorform::Aufgaben
-            | Editorform::Notizen
             | Editorform::Geheimnisse
             | Editorform::Trenntext => false,
             Editorform::Quicknote => true,
@@ -651,7 +640,6 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
         Wirkungsbereich::Editor => match form {
             Editorform::Text
             | Editorform::Aufgaben
-            | Editorform::Notizen
             | Editorform::Geheimnisse
             | Editorform::Trenntext => true,
             Editorform::Quicknote => false,
@@ -664,7 +652,6 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
         Wirkungsbereich::Geheimnisse => match form {
             Editorform::Text
             | Editorform::Aufgaben
-            | Editorform::Notizen
             | Editorform::Geheimnisse
             | Editorform::Trenntext => true,
             Editorform::Quicknote => false,
@@ -675,7 +662,6 @@ fn form_passt(bereich: Wirkungsbereich, form: Editorform) -> bool {
         Wirkungsbereich::Trenntext | Wirkungsbereich::Csv => match form {
             Editorform::Text
             | Editorform::Aufgaben
-            | Editorform::Notizen
             | Editorform::Geheimnisse
             | Editorform::Quicknote => false,
             Editorform::Trenntext => true,
@@ -1130,10 +1116,9 @@ mod tests {
     /// aus dem Quelltext und nicht die Feldbreite; ein Programmfeld
     /// `Editorform::ALLE` gibt es nicht, weil nur Proben ueber die Formen
     /// laufen.
-    const JEDE_FORM: [Editorform; 6] = [
+    const JEDE_FORM: [Editorform; 5] = [
         Editorform::Text,
         Editorform::Aufgaben,
-        Editorform::Notizen,
         Editorform::Geheimnisse,
         Editorform::Trenntext,
         Editorform::Quicknote,
@@ -1314,8 +1299,8 @@ mod tests {
             [false, false, false, false, false, false],
         ];
         // Wie die Aufgabentabelle, nur ohne die Zeile `Aufgaben`: die
-        // Notiztabelle traegt keine Kaestchen (Schritt 4.3).
-        const IN_DER_NOTIZTABELLE: [[bool; 6]; 17] = [
+        // Geheimnistabelle traegt keine Kaestchen.
+        const IN_DER_GEHEIMNISTABELLE: [[bool; 6]; 17] = [
             [true, false, false, false, false, false],
             [false, true, false, false, false, false],
             [true, false, true, true, false, false],
@@ -1376,7 +1361,7 @@ mod tests {
             // Csv: ohne `csv` nirgends
             [false, false, false, false, false, false],
         ];
-        // Wie die Notiztabelle, dazu die Zeile `Trenntext`: die Befehle allein
+        // Wie die Geheimnistabelle, dazu die Zeile `Trenntext`: die Befehle allein
         // der Tabelle einer CSV wirken hier und sonst nirgends (E14 des Plans
         // der CSV-Tabelle). Die Zeile `Csv` bleibt ohne `csv` leer.
         const IN_DER_TRENNTEXTTABELLE: [[bool; 6]; 17] = [
@@ -1414,10 +1399,8 @@ mod tests {
         let ohne_sperre = |form: Editorform| match form {
             Editorform::Text => IN_DER_TEXTFLAECHE,
             Editorform::Aufgaben => IN_DER_AUFGABENTABELLE,
-            // Die Geheimnisse zeigen dieselbe Tabelle wie die Notizen und
-            // nehmen dieselben Befehle an (Schritt 5.4b).
-            Editorform::Notizen | Editorform::Geheimnisse => IN_DER_NOTIZTABELLE,
-            // Die Tabelle einer CSV antwortet wie die Notiztabelle:
+            Editorform::Geheimnisse => IN_DER_GEHEIMNISTABELLE,
+            // Die Tabelle einer CSV antwortet wie die Geheimnistabelle:
             // Zeilenbefehle und Verschieben ja, Kaestchen und
             // Textflaeche nein (E13 des Plans der CSV-Tabelle), und dazu ihre
             // eigenen Befehle (E14).
@@ -2252,10 +2235,9 @@ mod tests {
     /// 3.3 der krkhome-Arbeit).
     ///
     /// Ueber jeden Fokuswert und jede Form, ohne Hindernis der Lage. In der
-    /// Textflaeche wirkt keiner. **Seit der Notiztabelle aus Schritt 4.3
-    /// trennen sie sich**: die fuenf `Eintrag*` wirken in jeder Tabellenform,
-    /// `AufgabeAbhaken` allein in der Aufgabentabelle und in der Notiztabelle
-    /// nicht (C5: dieselben Befehle und keine zweiten). Die Erwartung steht
+    /// Textflaeche wirkt keiner. **Sie trennen sich**: die fuenf `Eintrag*`
+    /// wirken in jeder Tabellenform, `AufgabeAbhaken` allein in der
+    /// Aufgabentabelle und in der Geheimnistabelle nicht (C5: dieselben Befehle und keine zweiten). Die Erwartung steht
     /// deshalb als `match` ueber Befehl und Form, und eine weitere Form haelt
     /// den Bau hier an, statt still als „keine Tabelle" zu gelten.
     ///
@@ -2283,9 +2265,7 @@ mod tests {
                     // der Quicknote).
                     Editorform::Quicknote => false,
                     Editorform::Aufgaben => true,
-                    Editorform::Notizen | Editorform::Geheimnisse => {
-                        kommando != Kommando::AufgabeAbhaken
-                    }
+                    Editorform::Geheimnisse => kommando != Kommando::AufgabeAbhaken,
                     // Die Tabelle einer CSV: jeder Zeilenbefehl, kein
                     // Kaestchen (E13 des Plans der CSV-Tabelle).
                     Editorform::Trenntext => kommando != Kommando::AufgabeAbhaken,
@@ -2336,11 +2316,7 @@ mod tests {
                 ),
                 "{kommando:?} wirkt in der Textflaeche nicht mehr"
             );
-            for tabelle in [
-                Editorform::Aufgaben,
-                Editorform::Notizen,
-                Editorform::Geheimnisse,
-            ] {
+            for tabelle in [Editorform::Aufgaben, Editorform::Geheimnisse] {
                 assert!(
                     !zulaessig(
                         kommando,

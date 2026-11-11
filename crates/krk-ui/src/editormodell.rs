@@ -365,9 +365,11 @@ impl Ansicht {
 ///
 /// # Die Eintragsdateien in `~/krkhome/`
 ///
-/// `notes.txt` und `tasks.txt` im erkannten Heimordner sind ein eigener Wert,
+/// `tasks.txt` und `secrets.txt` im erkannten Heimordner sind ein eigener Wert,
 /// [`Dateityp::Eintraege`], und **keine zweite Endungsregel**: sie tragen die
-/// Endung `.txt` und waeren nach der Endung `Sonstiges`. Erkannt werden sie
+/// Endung `.txt` und waeren nach der Endung `Sonstiges`. `notes.txt` und
+/// `appointments.md` waren es bis zum 261111 ebenso; seitdem sind sie dort
+/// `Sonstiges` und `Markdown` wie an jedem anderen Ort. Erkannt werden sie
 /// allein ueber [`Heimordner::sonderdatei`], die eine Stelle der Erkennung,
 /// und die stellt keinen Systemaufruf; `von_pfad` bleibt damit so billig wie
 /// vorher und kostet die Vorschau vor der Endbedingung von L7 nichts. Jede
@@ -401,7 +403,7 @@ pub enum Dateityp {
     Sonstiges,
     /// Eine der Eintragsdateien im erkannten `~/krkhome/`.
     ///
-    /// Die Vorschau rendert `notes.txt` und `tasks.txt` als Markdown mit
+    /// Die Vorschau rendert `tasks.txt` als Markdown mit
     /// Aufgabenkaestchen (`crate::markdown::Lesart::Eintragsdatei`); die
     /// Formatansicht des Editors zeigt sie als Tabelle. `secrets.txt` ist
     /// seit Schritt 5.2 ebenfalls ein Wert dieser Art, und Vorschau und Editor
@@ -4039,7 +4041,8 @@ mod tests {
     }
 
     /// Ein Pruef-krkhome: `zuhause/krkhome` als Verweis auf `ziel`, mit
-    /// `notes.txt` und `tasks.txt` darin, und der Heimordner dazu.
+    /// `tasks.txt` und einer `notes.txt` aus frueherer Zeit darin, und der
+    /// Heimordner dazu.
     fn pruef_krkhome(ordner: &Pruefordner) -> (Heimordner, PathBuf, PathBuf) {
         let zuhause = ordner.ordner("zuhause");
         let ziel = ordner.ordner("ziel");
@@ -4052,9 +4055,14 @@ mod tests {
         (heim, geschrieben, ziel)
     }
 
-    /// C4.1 fuer den Dateityp: die drei Dateien im erkannten Ordner sind
-    /// Eintragsdateien, ueber die geschriebene und ueber die aufgeloeste Form,
-    /// und eine gleichnamige Datei anderswo bleibt, was ihre Endung sagt.
+    /// C4.1 fuer den Dateityp: `tasks.txt` und `secrets.txt` im erkannten
+    /// Ordner sind Eintragsdateien, ueber die geschriebene und ueber die
+    /// aufgeloeste Form, und eine gleichnamige Datei anderswo bleibt, was ihre
+    /// Endung sagt. **`notes.txt` ist seit dem 261111 auch im erkannten Ordner,
+    /// was ihre Endung sagt** (C3.1 des Spec
+    /// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`):
+    /// daraus folgt, dass der Editor ihr keine Tabelle anbietet und die
+    /// Eintragsbefehle vor ihr ausgegraut sind.
     #[test]
     fn die_eintragsdateien_erkennt_der_dateityp_ueber_den_heimordner() {
         let ordner = Pruefordner::neu("dateityp-eintraege");
@@ -4062,8 +4070,8 @@ mod tests {
         for basis in [&geschrieben, &ziel] {
             assert_eq!(
                 Dateityp::von_pfad(&basis.join("notes.txt"), Some(&heim)),
-                Dateityp::Eintraege(Sonderdatei::Notizen),
-                "{}",
+                Dateityp::Sonstiges,
+                "notes.txt unter {}",
                 basis.display()
             );
             assert_eq!(
@@ -4079,13 +4087,13 @@ mod tests {
                 basis.display()
             );
         }
-        let daneben = ordner.datei("notes.txt", "## Thema\n");
+        let daneben = ordner.datei("tasks.txt", "- [ ] a\n");
         assert_eq!(
             Dateityp::von_pfad(&daneben, Some(&heim)),
             Dateityp::Sonstiges
         );
         assert_eq!(
-            Dateityp::von_pfad(&geschrieben.join("notes.txt"), None),
+            Dateityp::von_pfad(&geschrieben.join("tasks.txt"), None),
             Dateityp::Sonstiges,
             "ohne Heimordner entscheidet die Endung"
         );
@@ -4364,7 +4372,7 @@ mod tests {
     }
 
     /// Die Gegenprobe: jede andere Datei bekommt ihre Textmarke, auch
-    /// `notes.txt` und `tasks.txt` im erkannten Ordner und eine `secrets.txt`
+    /// `tasks.txt` und eine `notes.txt` im erkannten Ordner und eine `secrets.txt`
     /// ausserhalb davon, die eine gewoehnliche Textdatei ist.
     #[test]
     fn jede_andere_datei_bekommt_ihre_textmarke() {
@@ -4438,7 +4446,7 @@ mod tests {
     /// C7.8 im Sicherungsteil: nach `sichern` steht der Klartext weder in der
     /// Datei noch im Bild der Nachbardatei vor dem `rename`, das die Probe am
     /// Schreibweg abfaengt. Ein Stand ohne Schlussumbruch kommt nach Sichern
-    /// und Oeffnen mit einem zurueck, wie bei `notes.txt`. Das Salz bleibt das
+    /// und Oeffnen mit einem zurueck, wie bei `tasks.txt`. Das Salz bleibt das
     /// der geoeffneten Datei.
     #[test]
     fn nach_dem_sichern_steht_kein_klartext_auf_der_platte() {

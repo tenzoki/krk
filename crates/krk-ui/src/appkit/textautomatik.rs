@@ -15,7 +15,8 @@
 //! darueber gewesen, was „abgeschaltet" heisst. Seit F2 nach `~/krkhome/`
 //! fuehrt, ist das Notizblatt fort; die zweite Flaeche ist seither der eigene
 //! Feldeditor der Eintragszellen ([`super::eintragsansicht`]), in denen
-//! `tasks.txt`, `notes.txt` und `secrets.txt` bearbeitet werden. Er fragte
+//! `tasks.txt` und `secrets.txt` bearbeitet werden (bis zum 261111 auch
+//! `notes.txt`). Er fragte
 //! hier bis zur Schlussdurchsicht des Arbeitspakets nicht, und seine Zellen
 //! ersetzten beim Tippen still, etwa `omw` durch `On my way!` — in
 //! `secrets.txt` vor dem Verschluesseln

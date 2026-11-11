@@ -43,9 +43,10 @@
 //! nicht bei jedem Start. Sie ist die zuletzt hinzugekommene Ablagedatei und
 //! die einzige, die keinen Bestand des Nutzers traegt; warum der Wert nicht als
 //! Feld auf
-//! [`Sitzung`] steht, sagt der Kopf jenes Moduls. Seit dem 260926 traegt sie
-//! aus demselben Grund eine zweite Auskunft, dass F2 die alten Zettel schon
-//! nach `notes.txt` uebernommen hat.
+//! [`Sitzung`] steht, sagt der Kopf jenes Moduls. Vom 260926 bis zum 261111
+//! trug sie aus demselben Grund eine zweite Auskunft, dass F2 die alten Zettel
+//! schon nach `notes.txt` uebernommen hat; das Feld steht weiter in der Datei
+//! und wird nicht mehr gesetzt (Kopf von [`merker`]).
 //!
 //! [`werkszustand`] haelt ebenfalls keinen eigenen Inhalt. Es setzt die von
 //! Hand gepflegten Dateien auf den Zustand eines ersten Starts zurueck,

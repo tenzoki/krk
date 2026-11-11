@@ -1239,8 +1239,9 @@ pub enum Kommando {
     /// Die gewaehlte Aufgabe abhaken oder wieder oeffnen (C6).
     ///
     /// Traegt [`Wirkungsbereich::Aufgaben`] und nicht
-    /// [`Wirkungsbereich::Eintraege`]: eine Notiz hat kein Kaestchen, und in
-    /// der Notiztabelle soll der Befehl ausgegraut sein.
+    /// [`Wirkungsbereich::Eintraege`]: ein Geheimnis und eine Zeile einer CSV
+    /// haben kein Kaestchen, und in ihren Tabellen soll der Befehl ausgegraut
+    /// sein.
     AufgabeAbhaken,
     /// Die PIN der offenen `secrets.txt` aendern: alte PIN, neue PIN
     /// zweimal, dann verschluesselt KRK den Stand auf der Platte mit einem

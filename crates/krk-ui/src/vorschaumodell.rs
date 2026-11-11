@@ -1551,7 +1551,7 @@ impl Vorschaumodell {
     /// Auftrag.
     ///
     /// **Der Ladeauftrag haelt eine Abschrift des Werts vom Auftrag**
-    /// ([`crate::heimgriff`]), und ob `notes.txt` gerendert oder als Text
+    /// ([`crate::heimgriff`]), und ob `tasks.txt` gerendert oder als Text
     /// erscheint, haengt an ihr; ein Wechsel des Orts erreicht einen Tab also
     /// erst mit einem neuen Auftrag. Dasselbe gilt fuer den Profilsatz. Gefragt
     /// wird die Datei, die gerade geladen wird, sonst die angezeigte: ein
@@ -2982,14 +2982,15 @@ mod tests {
         );
     }
 
-    /// Ein Pruef-krkhome: `zuhause/krkhome` als Verweis auf `ziel`, mit den
-    /// zwei Eintragsdateien darin, und der Heimordner dazu.
+    /// Ein Pruef-krkhome: `zuhause/krkhome` als Verweis auf `ziel`, mit
+    /// `tasks.txt` und einer `notes.txt` aus der Zeit, als sie eine
+    /// Eintragsdatei war, und der Heimordner dazu.
     fn pruef_krkhome(ordner: &Pruefordner) -> (Heimordner, PathBuf, PathBuf) {
         let zuhause = ordner.ordner("zuhause");
         let ziel = ordner.ordner("ziel");
         std::os::unix::fs::symlink(&ziel, zuhause.join(krk_core::heimordner::ORDNERNAME))
             .expect("der Verweis laesst sich anlegen");
-        std::fs::write(ziel.join("notes.txt"), "## Einkauf\nBrot\n").expect("notes.txt");
+        std::fs::write(ziel.join("notes.txt"), NOTIZBESTAND).expect("notes.txt");
         std::fs::write(
             ziel.join("tasks.txt"),
             "- [ ] offen\n- [x] erledigt\nfremd\n",
@@ -3000,6 +3001,10 @@ mod tests {
         (heim, geschrieben, ziel)
     }
 
+    /// Eine `notes.txt`, wie die Fassungen bis zum 261111 sie fuehrten, mit
+    /// einer Zeile, die als Eintragsdatei ein Kaestchen bekaeme.
+    const NOTIZBESTAND: &str = "## Einkauf\n- [ ] Brot\n";
+
     /// Der gerenderte Text, oder ein Abbruch mit dem, was statt dessen kam.
     fn gerenderter_text(inhalt: Inhalt) -> String {
         match inhalt {
@@ -3008,11 +3013,14 @@ mod tests {
         }
     }
 
-    /// C4.1: die zwei Eintragsdateien im erkannten Ordner kommen als Markdown,
-    /// ueber die geschriebene und ueber die aufgeloeste Form, die Aufgaben mit
-    /// Kaestchen; eine gleichnamige Datei daneben bleibt Text.
+    /// C4.1: `tasks.txt` im erkannten Ordner kommt als Markdown mit Kaestchen,
+    /// ueber die geschriebene und ueber die aufgeloeste Form; eine gleichnamige
+    /// Datei daneben bleibt Text. **C3.3 des Spec
+    /// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`:
+    /// `notes.txt` erscheint im erkannten Ordner wie jede andere Textdatei**,
+    /// Byte fuer Byte und ohne Kaestchen, ueber beide Formen.
     #[test]
-    fn die_eintragsdateien_im_heimordner_kommen_gerendert() {
+    fn tasks_txt_kommt_im_heimordner_gerendert_und_notes_txt_als_text() {
         let ordner = Pruefordner::neu("eintraege-gerendert");
         let (heim, geschrieben, ziel) = pruef_krkhome(&ordner);
         for basis in [&geschrieben, &ziel] {
@@ -3022,7 +3030,12 @@ mod tests {
                 &Profile::default(),
                 Some(&heim),
             );
-            assert_eq!(gerenderter_text(notizen), "Einkauf\n\nBrot");
+            assert_eq!(
+                notizen,
+                Inhalt::Text(NOTIZBESTAND.to_owned()),
+                "notes.txt unter {}",
+                basis.display()
+            );
             let aufgaben = laden(
                 &basis.join("tasks.txt"),
                 Tafel::Hell,
@@ -3031,15 +3044,15 @@ mod tests {
             );
             assert_eq!(gerenderter_text(aufgaben), "☐ offen\n☑ erledigt\nfremd");
         }
-        let daneben = ordner.datei("notes.txt", "## Einkauf\nBrot\n");
+        let daneben = ordner.datei("tasks.txt", "- [ ] offen\n");
         assert_eq!(
             laden(&daneben, Tafel::Hell, &Profile::default(), Some(&heim)),
-            Inhalt::Text("## Einkauf\nBrot\n".to_owned()),
+            Inhalt::Text("- [ ] offen\n".to_owned()),
             "eine gleichnamige Datei in einem anderen Ordner erscheint wie bisher"
         );
     }
 
-    /// H2.12: am eingestellten Ort kommt `notes.txt` gerendert, am alten
+    /// H2.12: am eingestellten Ort kommt `tasks.txt` gerendert, am alten
     /// Vorgabeort wie jede andere Textdatei. `secrets.txt` am eingestellten Ort
     /// bekommt den Hinweis statt ihres Inhalts, am alten nicht mehr.
     #[test]
@@ -3047,19 +3060,19 @@ mod tests {
         let ordner = Pruefordner::neu("eintraege-anderswo");
         let (_, alt, _) = pruef_krkhome(&ordner);
         let anderswo = ordner.ordner("anderswo");
-        std::fs::write(anderswo.join("notes.txt"), "## Einkauf\nBrot\n").expect("notes.txt");
+        std::fs::write(anderswo.join("tasks.txt"), "- [ ] Brot\n").expect("tasks.txt");
         std::fs::write(anderswo.join("secrets.txt"), "klar\n").expect("secrets.txt");
         std::fs::write(alt.join("secrets.txt"), "klar\n").expect("secrets.txt");
         let heim = Heimordner::am_ort(anderswo.clone(), None);
 
         let lies = |pfad: &Path| laden(pfad, Tafel::Hell, &Profile::default(), Some(&heim));
         assert_eq!(
-            gerenderter_text(lies(&anderswo.join("notes.txt"))),
-            "Einkauf\n\nBrot"
+            gerenderter_text(lies(&anderswo.join("tasks.txt"))),
+            "☐ Brot"
         );
         assert_eq!(
-            lies(&alt.join("notes.txt")),
-            Inhalt::Text("## Einkauf\nBrot\n".to_owned())
+            lies(&alt.join("tasks.txt")),
+            Inhalt::Text("- [ ] offen\n- [x] erledigt\nfremd\n".to_owned())
         );
         assert_eq!(
             lies(&anderswo.join("secrets.txt")),
@@ -3091,7 +3104,7 @@ mod tests {
         }
     }
 
-    /// C4.3: die Vorschau schreibt keine der beiden Dateien. Gemessen an
+    /// C4.3: die Vorschau schreibt weder `tasks.txt` noch `notes.txt`. Gemessen an
     /// Bytes und Aenderungszeit vor und nach dem Laden.
     #[test]
     fn das_laden_laesst_beide_eintragsdateien_unberuehrt() {
@@ -4605,7 +4618,7 @@ mod tests {
     }
 
     /// H3.11, Schritt 3.4: nach einem Wechsel des Orts bekommt ein Tab mit
-    /// `notes.txt` des alten Orts einen neuen Ladeauftrag mit dem neuen Wert
+    /// `tasks.txt` des alten Orts einen neuen Ladeauftrag mit dem neuen Wert
     /// und erscheint danach als Text; ein Tab mit einer fremden Datei bekommt
     /// keinen.
     #[test]
@@ -4613,7 +4626,7 @@ mod tests {
         let ordner = Pruefordner::neu("vorschau-wechsel");
         let alt_ort = ordner.ordner("alt");
         let neu_ort = ordner.ordner("neu");
-        std::fs::write(alt_ort.join("notes.txt"), "## Einkauf\nBrot\n").expect("notes.txt");
+        std::fs::write(alt_ort.join("tasks.txt"), "- [ ] Brot\n").expect("tasks.txt");
         let fremd = ordner.datei("fremd.txt", "fremd\n");
         let alt = Heimordner::am_ort(alt_ort.clone(), None);
         let neu = Heimordner::am_ort(neu_ort, None);
@@ -4621,7 +4634,7 @@ mod tests {
 
         let mut modell = Vorschaumodell::neu();
         modell.datei_anzeigen(
-            &alt_ort.join("notes.txt"),
+            &alt_ort.join("tasks.txt"),
             Tafel::Hell,
             Arc::clone(&profile),
             Some(alt.clone()),
@@ -4633,16 +4646,13 @@ mod tests {
             std::thread::yield_now();
         }
         assert!(modell.waehlen(0));
-        assert_eq!(
-            gerenderter_text(modell.aktiver_inhalt().clone()),
-            "Einkauf\n\nBrot"
-        );
+        assert_eq!(gerenderter_text(modell.aktiver_inhalt().clone()), "☐ Brot");
 
         let treffer = |tab: &Tabstand<'_>| {
             neu.sonderdatei(tab.pfad).is_some() || alt.sonderdatei(tab.pfad).is_some()
         };
         let auftraege = modell.neu_laden_wo(treffer, Tafel::Hell, &profile, Some(&neu));
-        assert_eq!(auftraege, 1, "allein der Tab mit notes.txt laedt neu");
+        assert_eq!(auftraege, 1, "allein der Tab mit tasks.txt laedt neu");
         assert!(modell.tabs[0].ladevorgang.is_some());
         assert!(modell.tabs[1].ladevorgang.is_none());
         while modell.laedt_noch() {
@@ -4651,8 +4661,8 @@ mod tests {
         }
         assert_eq!(
             *modell.aktiver_inhalt(),
-            Inhalt::Text("## Einkauf\nBrot\n".to_owned()),
-            "am alten Ort erscheint notes.txt nach dem Wechsel als Text"
+            Inhalt::Text("- [ ] Brot\n".to_owned()),
+            "am alten Ort erscheint tasks.txt nach dem Wechsel als Text"
         );
     }
 

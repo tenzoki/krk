@@ -22,9 +22,10 @@
 //! [`super::Zugang::sichern`]. Bis zur krkhome-Arbeit standen daneben die zwei
 //! Notizzettel der Runde 9 als nackter Text, und mit ihnen eine Aufzaehlung
 //! `Format` samt der Frage `Datei::format`, ueber die sich beide Sorten
-//! trennten. Seit die Notizen in `~/krkhome/notes.txt` liegen, liest und
-//! schreibt KRK die alten Zetteldateien nicht mehr; ihre Namen stehen allein
-//! noch in `heimordner::ALTE_ZETTEL`, fuer die einmalige Uebernahme. Eine
+//! trennten. Seit der krkhome-Arbeit schreibt KRK die alten Zetteldateien
+//! nicht mehr, und seit dem 261111 liest es sie auch nicht mehr: die einmalige
+//! Uebernahme nach `~/krkhome/notes.txt` ist gefallen, und ihre Namen
+//! `note-1.txt` und `note-2.txt` nennt der Betriebscode an keiner Stelle. Eine
 //! Aufzaehlung mit einem Wert entschiede nichts und ist mit ihnen gefallen.
 //!
 //! Der Ort ist `~/Library/Application Support/KRK/`, so wie `### Frage 4` des

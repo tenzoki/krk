@@ -1,6 +1,7 @@
 //! `reported.toml`: fuer welche Fassung von KRK die Neuerungen an den von Hand
-//! gepflegten Ablagedateien schon gemeldet sind, und seit dem 260926 auch, ob
-//! die alten Zettel schon in `notes.txt` uebernommen sind.
+//! gepflegten Ablagedateien schon gemeldet sind. Vom 260926 bis zum 261111
+//! hielt sie daneben, ob die alten Zettel schon in `notes.txt` uebernommen
+//! sind; das Feld dazu steht weiter in der Datei und wird nicht mehr gesetzt.
 //!
 //! ```text
 //! env!("CARGO_PKG_VERSION") ──> LAUFENDE_FASSUNG ──┐
@@ -40,31 +41,31 @@
 //! **gemeldet** wurde, und die beiden Werte laufen auseinander, sobald eine
 //! Fassung startet, nichts meldet und schreibt.
 //!
-//! # Die zweite Auskunft: die alten Zettel sind uebernommen
+//! # Das zweite Feld: `zettel_uebernommen` bleibt stehen und wird nicht mehr gesetzt
 //!
-//! [`Merker::zettel_uebernommen`] haelt fest, dass F2 die Zettel des
-//! Notizblatts der Runde 9 nicht mehr uebernimmt. Die Uebernahme ist einmalig
-//! beantwortet (`260926-0007_*_was-geschieht-mit-den-zwei-zetteln-des-bisherigen-notizblatts.md`),
-//! und die zwei alten Dateien bleiben unangetastet liegen; an ihnen selbst
-//! laesst sich also nicht ablesen, dass sie schon uebernommen sind, und am
-//! Heimordner auch nicht, sobald der Nutzer ihn loescht. Der Wert gehoert
-//! deshalb in eine Ablagedatei, und in **diese** aus denselben zwei Gruenden
-//! wie die Fassung: `session.toml` schreibt eine Instanz ohne Sitzungsrecht
-//! nie, und eine beschaedigte `session.toml` ersetzt der Auslieferungszustand;
-//! dieser Merker geht dagegen unter der Schreibsperre ueber [`Zugang::sichern`],
-//! die jede Instanz nimmt (`260926-1527_*_die-alten-zettel-werden-bei-jedem-neuen-anlegen-von-krkhome-erneut-uebernommen.md`).
-//! Eine weitere Ablagedatei waere dieselbe Bauart mit einem Eintrag mehr in
-//! [`Datei::ALLE`] und in jeder Prosastelle, die die Ablage zaehlt.
+//! [`Merker::zettel_uebernommen`] hielt vom 260926 bis zum 261111 fest, dass
+//! F2 die Zettel `note-1.txt` und `note-2.txt` des Notizblatts der Runde 9
+//! schon nach `notes.txt` uebernommen hat
+//! (`260926-0007_*_was-geschieht-mit-den-zwei-zetteln-des-bisherigen-notizblatts.md`,
+//! `260926-1527_*_die-alten-zettel-werden-bei-jedem-neuen-anlegen-von-krkhome-erneut-uebernommen.md`).
+//! Mit `notes.txt` ist die Uebernahme gefallen: diese Fassung liest die Zettel
+//! nicht, fragt das Feld nicht und setzt es nicht.
 //!
-//! **Die zwei Felder sind zwei Fragen, und keine schreibt die andere mit.**
-//! [`vermerken`] und [`zettel_vermerken`] lesen den Merker und setzen allein
-//! ihr eigenes Feld; ein Schreiber, der den ganzen Wert aus einem Feld baute,
-//! loeschte bei jedem Fassungswechsel die Auskunft ueber die Zettel.
+//! **Das Feld bleibt trotzdem in der Struktur** (E7 des Plans
+//! `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`).
+//! [`vermerken`] liest den Merker und schreibt die ganze Struktur zurueck;
+//! fiele das Feld, loeschte der naechste Start mit einer neuen Fassung einen
+//! gesetzten Wert aus `reported.toml`, und eine aeltere Fassung von KRK, die
+//! der Nutzer danach wieder startet, uebernaehme die Zettel in ein neu
+//! angelegtes `~/krkhome` ein zweites Mal. Ein gesetzter Wert ueberlebt
+//! deshalb jedes [`vermerken`]; die Probe
+//! `ein_gesetzter_zettelmerker_ueberlebt_das_vermerken_der_fassung` in
+//! `crates/krk-core/tests/ablage.rs` haelt das.
 //!
 //! # Was diese Datei nicht traegt
 //!
 //! Einen Schalter „nicht mehr melden" traegt sie nicht, und auch keine Liste
-//! der gemeldeten Namen. Beides waere eine weitere Frage neben den zweien, die
+//! der gemeldeten Namen. Beides waere eine weitere Frage neben der einen, die
 //! der Merker beantwortet, und beide Antworten liessen sich aus ihm nicht
 //! ablesen. Die Fassung ist eine Zeichenkette und keine zerlegte Fassungsnummer:
 //! verglichen wird auf Gleichheit, und „welche ist neuer" fragt hier niemand.
@@ -77,14 +78,10 @@
 //! Fallunterscheidung dafuer gibt es deshalb nicht. Verloren geht der Merker
 //! auch dann, wenn ein Loeschwerkzeug den Ablageordner mitnimmt (der Fall vom
 //! 17.08.); dann kommt die Meldung ein zweites Mal, und das ist der bekannte
-//! und angenommene Preis. Die alten Zettel liegen in demselben Ablageordner
-//! und gehen mit ihm; eine zweite Uebernahme gibt es dann nicht mehr.
+//! und angenommene Preis.
 //!
-//! Fuer die Zettel heisst ein fehlender oder beschaedigter Merker „noch nicht
-//! uebernommen", `false` ist der Auslieferungszustand, und `#[serde(default)]`
-//! liest eine `reported.toml` aus der ersten Fassung mit `~/krkhome`, die das Feld noch nicht
-//! kennt, ohne Ersetzung. Was F2 daraus fuer einen Nutzer macht, der mit
-//! jener Fassung schon uebernommen hat, steht im Kopf von `heimordner/bereitstellen.rs`.
+//! `#[serde(default)]` liest eine `reported.toml`, die das Feld
+//! `zettel_uebernommen` nicht kennt, ohne Ersetzung; es steht dann auf `false`.
 
 use std::io;
 
@@ -114,10 +111,18 @@ pub struct Merker {
     ///
     /// Leer heisst „noch nie gemeldet"; siehe den Modulkopf.
     pub gemeldete_fassung: String,
-    /// Ob F2 die alten Zettel schon in `notes.txt` uebernommen hat, oder am
-    /// Vorgabeort eine `notes.txt` vorgefunden hat, die an ihre Stelle tritt.
+    /// Ob eine Fassung bis zum 261111 die alten Zettel `note-1.txt` und
+    /// `note-2.txt` schon nach `notes.txt` uebernommen hat.
     ///
-    /// `false` heisst „noch nicht"; siehe den Modulkopf.
+    /// **Diese Fassung fragt das Feld nicht und setzt es nicht; es bleibt
+    /// allein stehen, damit [`vermerken`] einen gesetzten Wert zurueckschreibt**
+    /// (E7 des Plans
+    /// `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`).
+    /// Ohne das Feld loeschte der naechste Fassungswechsel den Wert, und eine
+    /// aeltere Fassung von KRK uebernaehme die Zettel in ein neu angelegtes
+    /// `~/krkhome` ein zweites Mal. Wer das Feld beim Aufraeumen streicht,
+    /// weil es keinen Leser hat, baut genau das ein; der Modulkopf sagt es
+    /// ausfuehrlich.
     pub zettel_uebernommen: bool,
 }
 
@@ -154,21 +159,11 @@ pub fn laden(zugang: &Zugang<'_>) -> Geladen<Merker> {
 ///
 /// Geschrieben wird ueber [`Zugang::sichern`], also unter der Schreibsperre und
 /// atomar — derselbe Weg wie fuer `session.toml` und `bookmarks.toml` und kein
-/// zweiter daneben. **Das Feld der Zettel bleibt, wie es gelesen wurde**; der
-/// Modulkopf sagt, warum.
+/// zweiter daneben. **Das Feld der Zettel bleibt, wie es gelesen wurde**: es
+/// wird gelesen und mit der ganzen Struktur zurueckgeschrieben, obwohl diese
+/// Fassung es nie setzt; der Modulkopf sagt, warum.
 pub fn vermerken(zugang: &Zugang<'_>, fassung: &str) -> io::Result<()> {
     let mut merker = laden(zugang).wert;
     merker.gemeldete_fassung = fassung.to_owned();
-    zugang.sichern(Datei::Merker, &merker)
-}
-
-/// Vermerkt, dass die alten Zettel uebernommen sind; die gemeldete Fassung
-/// bleibt, wie sie gelesen wurde.
-///
-/// Derselbe Schreibweg wie [`vermerken`]. Gerufen wird er allein aus
-/// `heimordner::bereitstellen`, im selben Durchgang, der `notes.txt` anlegt.
-pub fn zettel_vermerken(zugang: &Zugang<'_>) -> io::Result<()> {
-    let mut merker = laden(zugang).wert;
-    merker.zettel_uebernommen = true;
     zugang.sichern(Datei::Merker, &merker)
 }

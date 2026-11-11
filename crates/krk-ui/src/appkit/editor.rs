@@ -551,7 +551,7 @@ use objc2_foundation::{NSDate, NSDefaultRunLoopMode};
 
 use krk_core::heimordner::eintraege::geheimnisse::{self, Geheimnisentwurf};
 use krk_core::heimordner::eintraege::{
-    self, Aufgaben, Block, Neustand, Notizen, Richtung, aufgaben, notizen,
+    self, Aufgaben, Block, Neustand, Notizen, Richtung, aufgaben,
 };
 use krk_core::heimordner::schluesselmerker::Schluesselmerker;
 use krk_core::heimordner::tresor::{Oeffnungsmittel, Pin, Schluessel};
@@ -766,8 +766,8 @@ pub enum Editormeldung {
     /// hier nicht ein zweites Mal gebaut, wie bei [`Self::Abgewiesen`].
     EintragAbgewiesen(eintraege::Abweisung),
     /// Die Antwort einer Handlung an der Eintragstabelle (C6 und C5 desselben
-    /// Arbeitspakets), mit der Art der Tabelle, weil der Satz eine Aufgabe oder
-    /// eine Notiz nennt.
+    /// Arbeitspakets), mit der Art der Tabelle, weil der Satz eine Aufgabe,
+    /// einen Eintrag der Geheimnisse oder eine Zeile nennt.
     Eintrag(Eintragsart, Eintragsantwort),
     /// Die PIN der Datei ist geaendert, und ab jetzt oeffnet sie allein die
     /// neue (C7.15, Schritt 5.5 der krkhome-Arbeit).
@@ -1477,9 +1477,9 @@ pub enum Eintragsantwort {
 impl Eintragsantwort {
     /// Der Satz fuer die Statuszeile, in der Tabelle dieser Art.
     ///
-    /// `Abgehakt` und `WiederOffen` gibt es in der Notiztabelle nicht, die
+    /// `Abgehakt` und `WiederOffen` gibt es in der Geheimnistabelle nicht, die
     /// Zulaessigkeit laesst das Abhaken dort nicht durch; ihre Saetze nennen
-    /// die Notiz trotzdem, damit die Tafel vollstaendig bleibt und nichts
+    /// den Eintrag trotzdem, damit die Tafel vollstaendig bleibt und nichts
     /// Falsches sagt.
     #[must_use]
     pub fn text(self, art: Eintragsart) -> &'static str {
@@ -1487,17 +1487,19 @@ impl Eintragsantwort {
         #[derive(Clone, Copy)]
         enum Satzfamilie {
             A,
-            N,
+            G,
             Z,
         }
-        use Satzfamilie::{A, N, Z};
-        // Die Geheimnistabelle antwortet mit den Saetzen der Notiztabelle,
-        // wie bis zum 261016, als sie sich als Notizen zeigte: ein Geheimnis
-        // traegt die Form einer Notiz, und eigene Saetze sagten nichts
-        // anderes. Vollstaendig und ohne Auffangzweig.
+        use Satzfamilie::{A, G, Z};
+        // Die Familie der Geheimnistabelle war bis zum 261111 die der
+        // Notiztabelle, mit der sie die Saetze teilte. Seit die Notiztabelle
+        // gefallen ist, gehoert sie allein den Geheimnissen und spricht vom
+        // Eintrag statt von der Notiz (E4 des Plans
+        // `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`).
+        // Vollstaendig und ohne Auffangzweig.
         let art = match art {
             Eintragsart::Aufgaben => A,
-            Eintragsart::Notizen | Eintragsart::Geheimnisse => N,
+            Eintragsart::Geheimnisse => G,
             // Die Tabelle einer CSV spricht von Zeilen und Zellen (Schritt 3
             // des Plans der CSV-Tabelle).
             Eintragsart::Trenntext => Z,
@@ -1515,29 +1517,29 @@ impl Eintragsantwort {
             (Self::SchonUnten, Z) => Text::EintragZeileSchonUnten,
             (Self::Geloescht, Z) => Text::EintragZeileGeloescht,
             (Self::MitEscUebernommen, Z) => Text::EintragZelleMitEscUebernommen,
-            (Self::KeineTabelle, N) => Text::EintragKeineNotiztabelle,
+            (Self::KeineTabelle, G) => Text::EintragKeineGeheimnistabelle,
             (Self::KeinEintragGewaehlt, A) => Text::EintragKeineAufgabeGewaehlt,
-            (Self::KeinEintragGewaehlt, N) => Text::EintragKeineNotizGewaehlt,
+            (Self::KeinEintragGewaehlt, G) => Text::EintragKeinGeheimnisGewaehlt,
             (Self::Hinzugefuegt, A) => Text::EintragAufgabeHinzugefuegt,
-            (Self::Hinzugefuegt, N) => Text::EintragNotizHinzugefuegt,
+            (Self::Hinzugefuegt, G) => Text::EintragGeheimnisHinzugefuegt,
             (Self::BearbeitungBegonnen, A) => Text::EintragAufgabeBearbeitung,
-            (Self::BearbeitungBegonnen, N) => Text::EintragNotizBearbeitung,
+            (Self::BearbeitungBegonnen, G) => Text::EintragGeheimnisBearbeitung,
             (Self::Uebernommen, A) => Text::EintragAufgabeUebernommen,
-            (Self::Uebernommen, N) => Text::EintragNotizUebernommen,
+            (Self::Uebernommen, G) => Text::EintragGeheimnisUebernommen,
             (Self::Abgehakt, A) => Text::EintragAufgabeAbgehakt,
-            (Self::Abgehakt | Self::WiederOffen, N) => Text::EintragNotizOhneKaestchen,
+            (Self::Abgehakt | Self::WiederOffen, G) => Text::EintragGeheimnisOhneKaestchen,
             (Self::WiederOffen, A) => Text::EintragAufgabeWiederOffen,
             (Self::Verschoben, A) => Text::EintragAufgabeVerschoben,
-            (Self::Verschoben, N) => Text::EintragNotizVerschoben,
+            (Self::Verschoben, G) => Text::EintragGeheimnisVerschoben,
             (Self::SchonOben, A) => Text::EintragAufgabeSchonOben,
-            (Self::SchonOben, N) => Text::EintragNotizSchonOben,
+            (Self::SchonOben, G) => Text::EintragGeheimnisSchonOben,
             (Self::SchonUnten, A) => Text::EintragAufgabeSchonUnten,
-            (Self::SchonUnten, N) => Text::EintragNotizSchonUnten,
+            (Self::SchonUnten, G) => Text::EintragGeheimnisSchonUnten,
             (Self::Geloescht, A) => Text::EintragAufgabeGeloescht,
-            (Self::Geloescht, N) => Text::EintragNotizGeloescht,
-            (Self::ZelleBleibt, A | N | Z) => Text::EintragZelleBleibt,
+            (Self::Geloescht, G) => Text::EintragGeheimnisGeloescht,
+            (Self::ZelleBleibt, A | G | Z) => Text::EintragZelleBleibt,
             (Self::MitEscUebernommen, A) => Text::EintragAufgabeMitEscUebernommen,
-            (Self::MitEscUebernommen, N) => Text::EintragNotizMitEscUebernommen,
+            (Self::MitEscUebernommen, G) => Text::EintragGeheimnisMitEscUebernommen,
         };
         text(schluessel)
     }
@@ -1586,7 +1588,7 @@ enum Handlung {
 /// letzten zaehlt wie keine. Ein `None` als Neustand heisst: kein Umbau, auch
 /// nicht ein leerer, und damit keine Handlung im Rueckgaengigstapel.
 ///
-/// **Die Notiztabelle kennt kein Abhaken**: die Zulaessigkeit haelt den
+/// **Die Geheimnistabelle kennt kein Abhaken**: die Zulaessigkeit haelt den
 /// Befehl dort an, und kommt er trotzdem an, antwortet er wie in der
 /// Textflaeche, ohne Umbau. `zeile` ist die Stelle im Stand und nie die Zeile
 /// auf dem Schirm; die Umrechnung steht in der Tabelle.
@@ -1600,7 +1602,7 @@ fn handlung_rechnen(
     let antwort = |antwort| Editormeldung::Eintrag(art, antwort);
     let anzahl = match art {
         Eintragsart::Aufgaben => Aufgaben::lesen(stand).bloecke().len(),
-        Eintragsart::Notizen | Eintragsart::Geheimnisse => Notizen::lesen(stand).bloecke().len(),
+        Eintragsart::Geheimnisse => Notizen::lesen(stand).bloecke().len(),
         // Die Tabelle einer CSV rechnet ueber `trenntext_handlung_rechnen`,
         // das den Index der Datei braucht und das der Rufer statt dieser
         // Funktion waehlt. Ein Rufer, der trotzdem hier ankommt, bekommt die
@@ -1613,7 +1615,6 @@ fn handlung_rechnen(
         Handlung::Hinzufuegen => {
             let neu = match art {
                 Eintragsart::Aufgaben => aufgaben::hinzufuegen(stand, ""),
-                Eintragsart::Notizen => notizen::hinzufuegen(stand, "", ""),
                 // Ein leerer Eintrag in der Grundform, mit allen vier
                 // Feldzeilen (Entscheidung 1 des Plans der sechs Felder).
                 Eintragsart::Geheimnisse => {
@@ -1637,7 +1638,6 @@ fn handlung_rechnen(
             };
             let verschoben = match art {
                 Eintragsart::Aufgaben => aufgaben::verschieben(stand, stelle, richtung),
-                Eintragsart::Notizen => notizen::verschieben(stand, stelle, richtung),
                 Eintragsart::Geheimnisse => geheimnisse::verschieben(stand, stelle, richtung),
                 // Oben beantwortet; die Zeile steht, damit die Unterscheidung
                 // vollstaendig bleibt.
@@ -1654,7 +1654,6 @@ fn handlung_rechnen(
         Handlung::Loeschen => {
             let geloescht = gewaehlt.and_then(|stelle| match art {
                 Eintragsart::Aufgaben => aufgaben::loeschen(stand, stelle),
-                Eintragsart::Notizen => notizen::loeschen(stand, stelle),
                 Eintragsart::Geheimnisse => geheimnisse::loeschen(stand, stelle),
                 Eintragsart::Trenntext => None,
             });
@@ -2295,9 +2294,7 @@ fn quicknotekopf() -> &'static str {
 /// Was der Text einer Zelle am Stand aendert; die Rechnung des Kerns.
 ///
 /// **Rein und ohne Fenster pruefbar.** In der Aufgabentabelle ist es der Text
-/// der Aufgabe, in der Notiztabelle Thema oder Text der Notiz je nach Spalte,
-/// und die andere Haelfte
-/// bleibt, wie die Ableitung sie zeigt. In der Geheimnistabelle ist es das
+/// der Aufgabe. In der Geheimnistabelle ist es das
 /// Feld der Spalte, und der Eintrag geht in die Grundform. Die Zelle nennt eine Stelle im Stand
 /// und keine Zeile des Schirms. `Ok(None)`: kein
 /// Umbau, weil nichts geaendert ist, es den Eintrag nicht gibt oder der Editor
@@ -2323,16 +2320,6 @@ fn zellenrechnung(
             Some(feld) => geheimnisse::aendern(stand, zelle.stelle, feld, text),
             None => Ok(None),
         },
-        Editorform::Notizen => {
-            let Some(alt) = Notizen::lesen(stand).notiz(zelle.stelle) else {
-                return Ok(None);
-            };
-            if zelle.spalte == eintragsansicht::NOTIZSPALTE {
-                notizen::aendern(stand, zelle.stelle, alt.thema, text)
-            } else {
-                notizen::aendern(stand, zelle.stelle, text, &alt.text)
-            }
-        }
     }
 }
 
@@ -2341,14 +2328,14 @@ fn zellenrechnung(
 ///
 /// **Rein und ohne Fenster pruefbar.** Jede Form richtet sich nach sich
 /// selbst, bis auf zwei: eine einzeilige Zelle richtet sich nach der
-/// Aufgabenzelle, die verwirft, und eine Zelle mit Absaetzen nach der
-/// Notizzelle, die uebernimmt, weil ein Verwerfen ohne Meldung mehrere
-/// Absaetze verloere.
+/// Aufgabenzelle, die verwirft, und eine Zelle mit Absaetzen bleibt bei
+/// [`Editorform::Geheimnisse`] und uebernimmt, weil ein Verwerfen ohne
+/// Meldung mehrere Absaetze verloere.
 ///
 /// **Die Geheimnistabelle unterscheidet nach Spalte** (Entscheidung 18
 /// des Plans der sechs Felder): Name, Protokoll, Adresse, Konto und Passwort
 /// sind einzeilig und verwerfen, die Notizen tragen
-/// Absaetze und uebernehmen wie die Notizzelle. Ohne laufende Zelle gilt die
+/// Absaetze und uebernehmen. Ohne laufende Zelle gilt die
 /// Notizenzelle; `zelle_uebernehmen` findet dann keine und tut nichts.
 #[must_use]
 fn esc_regel(form: Editorform, spalte: Option<usize>) -> Editorform {
@@ -2364,7 +2351,6 @@ fn esc_regel(form: Editorform, spalte: Option<usize>) -> Editorform {
         Editorform::Trenntext => Editorform::Aufgaben,
         Editorform::Text
         | Editorform::Aufgaben
-        | Editorform::Notizen
         | Editorform::Geheimnisse
         | Editorform::Quicknote => form,
     }
@@ -2375,7 +2361,7 @@ fn esc_regel(form: Editorform, spalte: Option<usize>) -> Editorform {
 /// **Drei Flaechen, eine Ansicht.** Alle liegen deckungsgleich unter dem
 /// Kopf; die Textflaeche zeigt jede Datei in der Rohansicht und fast jede in
 /// der Formatansicht, die [`Eintragsansicht`] zeigt `tasks.txt` und
-/// `notes.txt` im erkannten `~/krkhome/` in der Formatansicht, und die
+/// `secrets.txt` im erkannten `~/krkhome/` in der Formatansicht, und die
 /// [`Quicknote`] zeigt ihren Puffer, solange sie offen ist. Welche es ist,
 /// folgt aus der [`Editorform`] ueber [`flaeche_der_form`], und gewechselt wird
 /// allein in [`Editorbereich::flaeche_waehlen`].
@@ -2409,14 +2395,13 @@ enum Tauschschritt {
 ///
 /// **Die eine Stelle, an der das entschieden wird**, und vollstaendig ohne
 /// Auffangzweig: ein neuer Dateityp und eine neue Sonderdatei halten hier den
-/// Bau an. `notes.txt` zeigt seit Schritt 4.3 des Plans in der Formatansicht
-/// die Notiztabelle; bis dahin zeigte sie Markdown in der Textflaeche.
+/// Bau an. `notes.txt` ist seit dem 261111 keine Sonderdatei mehr und kommt
+/// hier als [`Dateityp::Sonstiges`] an, also in beiden Ansichten als Text.
 ///
 /// **`secrets.txt` hat seit Schritt 5.4b ihre eigene Form**,
 /// [`Editorform::Geheimnisse`], ein eigener Wert, weil der Befehl „PIN
 /// ändern" aus Schritt 5.5 allein in ihr wirkt. Seit dem 261016 zeigt sie die
-/// Geheimnistabelle mit sechs Spalten ([`eintragsart_der_form`]); bis dahin
-/// zeigte sie die Notiztabelle.
+/// Geheimnistabelle mit sechs Spalten ([`eintragsart_der_form`]).
 #[must_use]
 fn editorform(ansicht: Ansicht, typ: Dateityp) -> Editorform {
     match (ansicht, typ) {
@@ -2424,13 +2409,10 @@ fn editorform(ansicht: Ansicht, typ: Dateityp) -> Editorform {
             Ansicht::Roh,
             Dateityp::Markdown
             | Dateityp::Sonstiges
-            | Dateityp::Eintraege(
-                Sonderdatei::Notizen | Sonderdatei::Aufgaben | Sonderdatei::Geheimnisse,
-            ),
+            | Dateityp::Eintraege(Sonderdatei::Aufgaben | Sonderdatei::Geheimnisse),
         )
         | (Ansicht::Format, Dateityp::Markdown | Dateityp::Sonstiges) => Editorform::Text,
         (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Aufgaben)) => Editorform::Aufgaben,
-        (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Notizen)) => Editorform::Notizen,
         (Ansicht::Format, Dateityp::Eintraege(Sonderdatei::Geheimnisse)) => Editorform::Geheimnisse,
     }
 }
@@ -2467,7 +2449,7 @@ fn oeffnungsweg(
     haelt_bereits: bool,
 ) -> Oeffnungsweg {
     match sonderdatei {
-        None | Some(Sonderdatei::Notizen | Sonderdatei::Aufgaben) => Oeffnungsweg::Laden,
+        None | Some(Sonderdatei::Aufgaben) => Oeffnungsweg::Laden,
         Some(Sonderdatei::Geheimnisse) if haelt_bereits => Oeffnungsweg::Laden,
         Some(Sonderdatei::Geheimnisse) => {
             if herkunft.ist_aus_sitzung() {
@@ -2508,24 +2490,19 @@ fn geheimnisgroesse_gilt(gefragt: &Oeffnungsstand, jetzt: &Oeffnungsstand) -> bo
 fn flaeche_der_form(form: Editorform) -> Flaeche {
     match form {
         Editorform::Text => Flaeche::Textflaeche,
-        Editorform::Aufgaben
-        | Editorform::Notizen
-        | Editorform::Geheimnisse
-        | Editorform::Trenntext => Flaeche::Tabelle,
+        Editorform::Aufgaben | Editorform::Geheimnisse | Editorform::Trenntext => Flaeche::Tabelle,
         Editorform::Quicknote => Flaeche::Quicknote,
     }
 }
 
 /// Die Art der Eintragstabelle, die eine Form zeigt; `None` fuer die
 /// Textflaeche. Die Geheimnisse haben seit dem 261016 ihre eigene Art mit
-/// sechs Spalten (Plan der sechs Felder, Schritt 4); bis dahin standen sie
-/// hier als Notizen.
+/// sechs Spalten (Plan der sechs Felder, Schritt 4).
 #[must_use]
 fn eintragsart_der_form(form: Editorform) -> Option<Eintragsart> {
     match form {
         Editorform::Text | Editorform::Quicknote => None,
         Editorform::Aufgaben => Some(Eintragsart::Aufgaben),
-        Editorform::Notizen => Some(Eintragsart::Notizen),
         Editorform::Geheimnisse => Some(Eintragsart::Geheimnisse),
         Editorform::Trenntext => Some(Eintragsart::Trenntext),
     }
@@ -2543,7 +2520,6 @@ fn eintragsart_des_typs(typ: Dateityp) -> Option<Eintragsart> {
     match typ {
         Dateityp::Markdown | Dateityp::Sonstiges => None,
         Dateityp::Eintraege(Sonderdatei::Aufgaben) => Some(Eintragsart::Aufgaben),
-        Dateityp::Eintraege(Sonderdatei::Notizen) => Some(Eintragsart::Notizen),
         Dateityp::Eintraege(Sonderdatei::Geheimnisse) => Some(Eintragsart::Geheimnisse),
     }
 }
@@ -2604,7 +2580,7 @@ fn dargestellte_ansicht(ansicht: Ansicht, verweigert: bool) -> Ansicht {
 /// Umbruch, als Stelle in Bytes.
 ///
 /// Die Kopfzeile ist, was die Tabelle nach dem Anlegen als erste Zelle
-/// oeffnet: der Aufgabentext hinter dem Kaestchen, das Thema einer Notiz.
+/// oeffnet: der Aufgabentext hinter dem Kaestchen, der Name eines Geheimnisses.
 /// Wo sie liegt, sagt der Leser des Kerns und keine
 /// zweite Fassung der Grammatik hier; der letzte Block reicht bis ans
 /// Dateiende, also beginnt er dort, wo seine Zeilen vom Ende her anfangen.
@@ -2618,7 +2594,7 @@ fn schreibstelle_im_letzten_eintrag(art: Eintragsart, stand: &str) -> usize {
     };
     match art {
         Eintragsart::Aufgaben => stelle(Aufgaben::lesen(stand).bloecke()),
-        Eintragsart::Notizen | Eintragsart::Geheimnisse => stelle(Notizen::lesen(stand).bloecke()),
+        Eintragsart::Geheimnisse => stelle(Notizen::lesen(stand).bloecke()),
         // Eine Zeile einer CSV hat keine Kopfzeile: die Marke steht am Anfang
         // der angehaengten Zeile, die mit dem Zeilenende des Standes endet
         // (E7, E13 des Plans der CSV-Tabelle).
@@ -3015,7 +2991,7 @@ pub struct EditorIvars {
     /// Dieselbe Bauart wie [`Self::zellenabweisung`]: geleert von
     /// [`Editorbereich::zelle_uebernehmen`], gesetzt von
     /// `zelle_festschreiben` und gelesen allein von
-    /// [`Editorbereich::zelle_abbrechen`], das nur einer geaenderten Notizzelle
+    /// [`Editorbereich::zelle_abbrechen`], das nur einer geaenderten Notizenzelle
     /// sagt, dass `esc` uebernommen hat (C5). AppKit meldet das Ende einer
     /// Zelle ohne Auskunft darueber, ob sich etwas geaendert hat.
     zelle_umgebaut: Cell<bool>,
@@ -3158,7 +3134,7 @@ impl Editorbereich {
     ///
     /// `heim` ist der eine geteilte Griff des Anwendungsdelegierten; das
     /// Modell fragt ihn, wenn es eine gelesene Datei uebernimmt, und ordnet
-    /// `notes.txt` und `tasks.txt` im erkannten `~/krkhome/` damit als
+    /// `tasks.txt` und `secrets.txt` im erkannten `~/krkhome/` damit als
     /// [`crate::editormodell::Dateityp::Eintraege`] ein.
     ///
     /// `merker` ist der Schluesselmerker des Prozesses, ebenfalls geteilt;
@@ -3898,7 +3874,7 @@ impl Editorbereich {
     /// [`Self::ansicht_umschalten`], [`Self::handlung_ausfuehren`] und beim
     /// Anwendungsdelegierten `editor_stand_befragen`, die Frage vor dem
     /// Schliessen und dem Beenden. Dazu seit Schritt 4.3
-    /// [`Self::zelle_abbrechen`], das eine Notizzelle mit `esc` uebernimmt,
+    /// [`Self::zelle_abbrechen`], das eine Notizenzelle mit `esc` uebernimmt,
     /// und seit Schritt 5.5 [`Self::pin_aendern`] vor dem PIN-Blatt,
     /// seit dem 261017 [`Self::verbindungsname`] vor `cmd+d`
     /// in der Tabelle von `secrets.txt`. Die Liste haelt die Probe
@@ -3931,23 +3907,23 @@ impl Editorbereich {
     /// **Die eine Stelle der Regel aus
     /// `260926-0115_*_was-tut-esc-in-einer-geaenderten-zelle-der-eintragstabellen.md`**
     /// (Moeglichkeit 2): die Aufgabenzelle verwirft und zeigt danach den
-    /// abgeleiteten Text. **Die Notizzelle uebernimmt** (Schritt 4.3, C5),
+    /// abgeleiteten Text. **Die Notizenzelle der Geheimnisse uebernimmt** (C5),
     /// ueber [`Self::zelle_uebernehmen`] und damit ueber dieselben zwei
     /// Delegiertenwege wie jedes andere Ende: eine geaenderte Zelle wird eine
     /// Handlung, die `cmd+z` zuruecknimmt, und die Statuszeile sagt es; eine
     /// unveraenderte endet ohne Umbau und ohne Meldung; eine abgewiesene bleibt
     /// offen, und ihren Grund hat die Pruefung schon gemeldet. Verworfen wird
-    /// dort nicht, weil eine Notizzelle mehrere Absaetze tragen kann, die ein
+    /// dort nicht, weil eine Notizenzelle mehrere Absaetze tragen kann, die ein
     /// Verwerfen ohne Meldung verloere. Die Tabelle der Geheimnisse folgt
     /// seit dem 261016 je Spalte einer der beiden Regeln, nach [`esc_regel`]
     /// (Entscheidung 18 des Plans der sechs Felder): die fuenf einzeiligen
     /// Spalten verwerfen, die Notizen uebernehmen.
     pub fn zelle_abbrechen(&self) {
         let form = self.form();
-        let art = eintragsart_der_form(form).unwrap_or(Eintragsart::Notizen);
+        let art = eintragsart_der_form(form).unwrap_or(Eintragsart::Geheimnisse);
         match esc_regel(form, self.laufende_spalte()) {
             Editorform::Aufgaben => self.zelle_verwerfen(),
-            Editorform::Notizen | Editorform::Geheimnisse => {
+            Editorform::Geheimnisse => {
                 if self.zelle_uebernehmen() == Zellenausgang::Uebernommen
                     && self.ivars().zelle_umgebaut.get()
                 {
@@ -4066,7 +4042,6 @@ impl Editorbereich {
         match self.form() {
             Editorform::Text => self.eintrag_im_text_hinzufuegen(),
             Editorform::Aufgaben
-            | Editorform::Notizen
             | Editorform::Geheimnisse
             | Editorform::Trenntext
             | Editorform::Quicknote => self.handlung_ausfuehren(Handlung::Hinzufuegen, None),
@@ -4151,8 +4126,8 @@ impl Editorbereich {
         self.handlung_ausfuehren(Handlung::Verschieben(Richtung::Runter), None)
     }
 
-    /// Der gewaehlte Eintrag fort: die Aufgabenzeile, oder die ganze Notiz
-    /// (C6, C5).
+    /// Der gewaehlte Eintrag fort: die Aufgabenzeile, oder der ganze Eintrag
+    /// der Geheimnisse (C6, C5).
     pub fn eintrag_loeschen(&self) -> Editormeldung {
         self.handlung_ausfuehren(Handlung::Loeschen, None)
     }
@@ -4335,7 +4310,7 @@ impl Editorbereich {
     /// zurueck, auch wenn sie ausgeblendet ist, und meldet es ueber
     /// `textDidChange:` —, und ohne diesen Ruf zeigte die Tabelle danach den
     /// Stand vor dem Rueckgaengig. Fuer jede andere Datei als `tasks.txt` und
-    /// `notes.txt` kommt die leere Aufgabenliste an, und
+    /// `secrets.txt` kommt die leere Aufgabenliste an, und
     /// [`Eintragsansicht::zeilen_zeigen`] tut dann nichts, solange die Tabelle
     /// schon Aufgaben zeigt.
     fn tabelle_nachziehen(&self) {
@@ -4353,9 +4328,6 @@ impl Editorbereich {
             match modell.typ() {
                 Dateityp::Eintraege(Sonderdatei::Aufgaben) => {
                     Zeilen::Aufgaben(eintragsansicht::aufgabenzeilen(modell.stand()))
-                }
-                Dateityp::Eintraege(Sonderdatei::Notizen) => {
-                    Zeilen::Notizen(eintragsansicht::notizzeilen(modell.stand()))
                 }
                 Dateityp::Eintraege(Sonderdatei::Geheimnisse) => {
                     Zeilen::Geheimnisse(eintragsansicht::geheimniszeilen(modell.stand()))
@@ -7092,7 +7064,6 @@ mod tests {
         hauptfadenprobe!(den_eigenen_feldeditor_bekommen_allein_die_felder_der_eintragstabelle),
         hauptfadenprobe!(cmd_z_in_der_zelle_endet_am_anfang_der_zelle_und_laesst_den_umbau),
         hauptfadenprobe!(umkehren_und_eine_eingetroffene_datei_lassen_keine_offene_zelle_stehen),
-        hauptfadenprobe!(die_notiztabelle_leitet_zwei_zeilen_mit_thema_und_mehrzeiligem_text_ab),
         hauptfadenprobe!(eine_csv_oeffnet_als_tabelle_mit_spalten_aus_der_datei),
         hauptfadenprobe!(
             der_kopf_zeigt_buchstabe_und_text_der_ersten_zeile_und_die_erste_zeile_bleibt_zeile
@@ -9656,10 +9627,12 @@ mod tests {
         assert!(quicknote.rolle().isHidden(), "die Rolle entsteht sichtbar");
     }
 
-    /// Die Tabelle gehoert zu `tasks.txt` und seit Schritt 4.3 zu `notes.txt`
+    /// Die Tabelle gehoert zu `tasks.txt` und zu `secrets.txt`
     /// in der Formatansicht; eine `.md` und jede Datei in der Rohansicht zeigen
     /// die Textflaeche. Beide Tabellenformen zeigen dieselbe Flaeche, in ihrer
-    /// eigenen Art.
+    /// eigenen Art. `notes.txt` ist seit dem 261111 `Sonstiges` und zeigt in
+    /// beiden Ansichten die Textflaeche (C3.1 des Spec
+    /// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`).
     #[test]
     fn die_form_folgt_aus_ansicht_und_dateityp() {
         let aufgaben = Dateityp::Eintraege(Sonderdatei::Aufgaben);
@@ -9667,18 +9640,10 @@ mod tests {
         assert_eq!(flaeche_der_form(Editorform::Aufgaben), Flaeche::Tabelle);
         assert_eq!(editorform(Ansicht::Roh, aufgaben), Editorform::Text);
         assert_eq!(flaeche_der_form(Editorform::Text), Flaeche::Textflaeche);
-        let notizen = Dateityp::Eintraege(Sonderdatei::Notizen);
-        assert_eq!(editorform(Ansicht::Format, notizen), Editorform::Notizen);
-        assert_eq!(flaeche_der_form(Editorform::Notizen), Flaeche::Tabelle);
-        assert_eq!(editorform(Ansicht::Roh, notizen), Editorform::Text);
         assert_eq!(eintragsart_der_form(Editorform::Text), None);
         assert_eq!(
             eintragsart_der_form(Editorform::Aufgaben),
             Some(Eintragsart::Aufgaben)
-        );
-        assert_eq!(
-            eintragsart_der_form(Editorform::Notizen),
-            Some(Eintragsart::Notizen)
         );
         // Seit Schritt 5.4b eine eigene Form in derselben Tabelle, seit dem
         // 261016 mit eigener Art und sechs Spalten (Plan der sechs Felder,
@@ -9723,11 +9688,7 @@ mod tests {
         );
         assert_eq!(oeffnungsweg(Befehl, geheim, true), Oeffnungsweg::Laden);
         for herkunft in [Befehl, Sitzung] {
-            for sonderdatei in [
-                None,
-                Some(Sonderdatei::Notizen),
-                Some(Sonderdatei::Aufgaben),
-            ] {
+            for sonderdatei in [None, Some(Sonderdatei::Aufgaben)] {
                 for haelt in [false, true] {
                     assert_eq!(
                         oeffnungsweg(herkunft, sonderdatei, haelt),
@@ -10498,8 +10459,8 @@ mod tests {
     /// `zelle_abbrechen` verwirft die Aufgabenzelle (Moeglichkeit 2 von
     /// `260926-0115_*_was-tut-esc-*`), und nach dem Abbruch ist der Stand
     /// unveraendert: der Weg dorthin, `zelle_verwerfen`, fuehrt in keinen
-    /// Umbau, und die Uebernahme der Notizzelle steht allein in ihrem eigenen
-    /// Zweig (Schritt 4.3); waehrend
+    /// Umbau, und die Uebernahme der Notizenzelle der Geheimnisse steht allein
+    /// in ihrem eigenen Zweig (Schritt 4.3); waehrend
     /// `bearbeitung_verwerfen` den Ersthelfer wechselt, sagt die Pruefung ja,
     /// ohne zu fragen, und das Ende schreibt nichts fest. **Gelesen am Rumpf**,
     /// weil der Wechsel ein Fenster braucht; ausserhalb des Wechsels gilt die
@@ -10534,20 +10495,21 @@ mod tests {
             "die Aufgabenzelle verwirft (Moeglichkeit 2)"
         );
         let notizzweig = abbrechen
-            // Seit Schritt 5.4b teilt die Tabelle der Geheimnisse den Zweig.
-            .split_once("Editorform::Notizen | Editorform::Geheimnisse =>")
+            // Bis zum 261111 teilte die Notiztabelle den Zweig; seitdem
+            // gehoert er allein der Tabelle der Geheimnisse.
+            .split_once(concat!("Editorform::Geheimnisse ", "=> {"))
             .map(|(_, rest)| rest)
             .and_then(|rest| rest.split_once("Editorform::Text =>"))
             .map(|(zweig, _)| zweig)
-            .expect("zelle_abbrechen traegt den Zweig der Notizzelle vor dem der Textflaeche");
+            .expect("zelle_abbrechen traegt den Zweig der Notizenzelle vor dem der Textflaeche");
         assert!(
             notizzweig.contains(concat!("self.zelle_", "uebernehmen()")),
-            "die Notizzelle uebernimmt (Moeglichkeit 2)"
+            "die Notizenzelle uebernimmt (Moeglichkeit 2)"
         );
         assert_eq!(
             abbrechen.matches(concat!("zelle_", "uebernehmen(")).count(),
             1,
-            "uebernommen wird allein im Zweig der Notizzelle"
+            "uebernommen wird allein im Zweig der Notizenzelle"
         );
         for nadel in [
             concat!("umbau_", "anwenden("),
@@ -10692,7 +10654,9 @@ mod tests {
         eintraege
             .tabelle()
             .selectRowIndexes_byExtendingSelection(&objc2_foundation::NSIndexSet::new(), false);
-        eintraege.zeilen_zeigen(Zeilen::Notizen(eintragsansicht::notizzeilen(NOTIZEN)));
+        eintraege.zeilen_zeigen(Zeilen::Geheimnisse(eintragsansicht::geheimniszeilen(
+            GEHEIMNISSE,
+        )));
         assert_eq!(
             eintraege.tabelle().selectedRow(),
             0,
@@ -10716,7 +10680,7 @@ mod tests {
     /// Befehlen auch keine Taste.
     fn ein_doppelklick_unter_die_zeilen_legt_an_und_die_kopfzeile_nicht(mtm: MainThreadMarker) {
         let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-        eintraege.zeilen_zeigen(Zeilen::Notizen(Vec::new()));
+        eintraege.zeilen_zeigen(Zeilen::Geheimnisse(Vec::new()));
         assert_eq!(
             eintraege.tabelle().numberOfRows(),
             0,
@@ -10880,7 +10844,7 @@ mod tests {
 
     /// **Die eine Uebernahmestelle und ihre Rufer.** `zelle_uebernehmen` wird
     /// von genau den Rufern der Liste darunter gerufen — seit Schritt 4.3 auch
-    /// von `zelle_abbrechen`, das eine Notizzelle mit `esc` uebernimmt, seit
+    /// von `zelle_abbrechen`, das eine Notizenzelle mit `esc` uebernimmt, seit
     /// Schritt 5.5 von `pin_aendern` vor dem PIN-Blatt —, von jedem vor allem anderen, was den
     /// Stand liest oder die Flaeche wechselt; und die Uebernahme selbst geht
     /// ueber `bearbeitung_beenden`, also ueber die zwei Delegiertenwege, und
@@ -11343,8 +11307,15 @@ mod tests {
     }
 
     // ------------------------------------------------------------------
-    // Die Notiztabelle (Schritt 4.3 der krkhome-Arbeit, C5)
+    // Die mehrzeilige Zelle und die Regeln der Zellen (Schritt 4.3 der
+    // krkhome-Arbeit, C5)
     // ------------------------------------------------------------------
+    //
+    // Gebaut fuer die Notiztabelle, die am 261111 gefallen ist (Schritt 4 des
+    // Plans `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`);
+    // mit ihr sind die Proben gefallen, die ihre zwei Spalten, ihre Zellen und
+    // ihre Handlungen fuhren. Was hier steht, haelt die Bauart, die die
+    // Geheimnistabelle von ihr hat.
     //
     // Dieselbe Zerlegung wie in 3.2a und 3.2b, aus demselben gemessenen Grund:
     // was ein Fenster braucht — `makeFirstResponder:`, der Feldeditor im Feld,
@@ -11352,58 +11323,11 @@ mod tests {
     // Buendel. Gefahren werden die reinen Regeln, die Tabelle ohne Fenster und
     // die Ruempfe.
 
-    /// `notes.txt` der Proben: Vorspann, eine Notiz mit zwei Absaetzen und
-    /// Trenner, eine ohne Text.
-    const NOTIZEN: &str = "Vorspann\n## Einkauf\nBrot\n\nMilch\n\n## Reise\n";
+    /// Ein Klartext von `secrets.txt` im frueheren Format, ohne Feldzeilen:
+    /// Vorspann, ein Eintrag mit zwei Absaetzen und Trenner, einer ohne Text.
+    const FRUEHERES_FORMAT: &str = "Vorspann\n## Einkauf\nBrot\n\nMilch\n\n## Reise\n";
 
-    /// C5: aus Vorspann und zwei Notizen entstehen zwei Zeilen mit Thema und
-    /// mehrzeiligem Text; die Tabelle traegt dann zwei Spalten mit Kopfzeile
-    /// und Zeilenhoehe nach dem Inhalt, und mit Aufgaben wieder eine ohne
-    /// Kopfzeile in fester Hoehe.
-    fn die_notiztabelle_leitet_zwei_zeilen_mit_thema_und_mehrzeiligem_text_ab(
-        mtm: MainThreadMarker,
-    ) {
-        use eintragsansicht::Notizzeile;
-        assert_eq!(
-            eintragsansicht::notizzeilen(NOTIZEN),
-            vec![
-                Notizzeile {
-                    thema: "Einkauf".to_owned(),
-                    text: "Brot\n\nMilch".to_owned(),
-                },
-                Notizzeile {
-                    thema: "Reise".to_owned(),
-                    text: String::new(),
-                },
-            ],
-            "der Vorspann ist keine Zeile, der Trenner gehoert nicht zum Text"
-        );
-        let eintraege = Eintragsansicht::bauen(mtm, probenrahmen());
-        let tabelle = eintraege.tabelle();
-        assert_eq!(tabelle.numberOfColumns(), 1);
-        assert!(tabelle.headerView().is_none());
-
-        eintraege.zeilen_zeigen(eintragsansicht::notizzeilen(NOTIZEN));
-        assert_eq!(eintraege.art(), Eintragsart::Notizen);
-        assert_eq!(tabelle.numberOfRows(), 2);
-        assert_eq!(tabelle.numberOfColumns(), 2, "Thema und Notiz");
-        assert!(
-            tabelle.headerView().is_some(),
-            "die Spalten tragen ihre Namen"
-        );
-        assert!(
-            tabelle.usesAutomaticRowHeights(),
-            "die Zeile waechst mit dem Text"
-        );
-
-        eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
-        assert_eq!(eintraege.art(), Eintragsart::Aufgaben);
-        assert_eq!(tabelle.numberOfColumns(), 1);
-        assert!(tabelle.headerView().is_none());
-        assert!(!tabelle.usesAutomaticRowHeights());
-    }
-
-    /// Die Zellen der Notiztabelle, **am Rumpf gelesen**: eine Zelle mit Auto
+    /// Die Zellen der Geheimnistabelle, **am Rumpf gelesen**: eine Zelle mit Auto
     /// Layout laesst sich auf dem Faden von `libtest` nicht bauen (gemessen am
     /// 260926: `viewAtColumn:row:makeIfNecessary:` wirft dort „Modifications to
     /// the layout engine must not be performed from a background thread",
@@ -11458,9 +11382,9 @@ mod tests {
         );
     }
 
-    /// `tab` in der Notiztabelle uebernimmt ueber den Weg jedes Endes und
+    /// `tab` in der Geheimnistabelle uebernimmt ueber den Weg jedes Endes und
     /// beginnt die naechste Zelle erst danach, und nur, wenn AppKit den
-    /// Wechsel angenommen hat; `return` in der Notizspalte schreibt den Umbruch
+    /// Wechsel angenommen hat; `return` in der Notizenspalte schreibt den Umbruch
     /// am Feldeditor vorbei an AppKits Ende. Am Rumpf gelesen, weil beides ein
     /// Fenster braucht.
     #[test]
@@ -11479,38 +11403,40 @@ mod tests {
         assert!(ausfuehren.contains("insertNewlineIgnoringFieldEditor"));
     }
 
-    /// C5: in der Notizspalte schreibt `return` einen Zeilenumbruch und beendet
-    /// die Zelle nicht; in der Themenspalte und in der Aufgabenzelle beendet es
-    /// sie wie bisher. `tab` wechselt in der Notiztabelle die Zelle, zeilenweise.
+    /// C5, C6: in der Notizenspalte der Geheimnistabelle schreibt `return`
+    /// einen Zeilenumbruch und beendet die Zelle nicht; in ihren einzeiligen
+    /// Spalten und in der Aufgabenzelle beendet es sie. `tab` wechselt in der
+    /// Geheimnistabelle die Zelle, in der Aufgabentabelle nicht.
     #[test]
-    fn return_schreibt_in_der_notizzelle_einen_umbruch_und_beendet_die_aufgabenzelle() {
-        use eintragsansicht::{NOTIZSPALTE, THEMENSPALTE, Zelle, Zellenbefehl, zellenbefehl};
+    fn return_schreibt_in_der_notizenzelle_einen_umbruch_und_beendet_die_aufgabenzelle() {
+        use eintragsansicht::{THEMENSPALTE, Zellenbefehl, zellenbefehl};
         let zeilenende = sel!(insertNewline:);
+        let notizen = eintragsansicht::spalte_des_feldes(Feld::Notizen);
         assert_eq!(
-            zellenbefehl(Eintragsart::Notizen, NOTIZSPALTE, zeilenende),
+            zellenbefehl(Eintragsart::Geheimnisse, notizen, zeilenende),
             Zellenbefehl::Umbruch
         );
         assert_eq!(
-            zellenbefehl(Eintragsart::Notizen, THEMENSPALTE, zeilenende),
+            zellenbefehl(Eintragsart::Geheimnisse, THEMENSPALTE, zeilenende),
             Zellenbefehl::Appkit,
-            "ein Thema traegt keinen Umbruch"
+            "ein Name traegt keinen Umbruch"
         );
         assert_eq!(
             zellenbefehl(Eintragsart::Aufgaben, THEMENSPALTE, zeilenende),
             Zellenbefehl::Appkit,
             "die Aufgabenzelle endet mit return"
         );
-        for spalte in [THEMENSPALTE, NOTIZSPALTE] {
+        for spalte in [THEMENSPALTE, notizen] {
             assert_eq!(
-                zellenbefehl(Eintragsart::Notizen, spalte, sel!(insertTab:)),
+                zellenbefehl(Eintragsart::Geheimnisse, spalte, sel!(insertTab:)),
                 Zellenbefehl::Weiter(true)
             );
             assert_eq!(
-                zellenbefehl(Eintragsart::Notizen, spalte, sel!(insertBacktab:)),
+                zellenbefehl(Eintragsart::Geheimnisse, spalte, sel!(insertBacktab:)),
                 Zellenbefehl::Weiter(false)
             );
             assert_eq!(
-                zellenbefehl(Eintragsart::Notizen, spalte, sel!(cancelOperation:)),
+                zellenbefehl(Eintragsart::Geheimnisse, spalte, sel!(cancelOperation:)),
                 Zellenbefehl::Appkit
             );
         }
@@ -11518,173 +11444,18 @@ mod tests {
             zellenbefehl(Eintragsart::Aufgaben, THEMENSPALTE, sel!(insertTab:)),
             Zellenbefehl::Appkit
         );
-
-        let zelle = |stelle, spalte| Zelle { stelle, spalte };
-        let weiter = eintragsansicht::naechste_zelle;
-        let zwei = eintragsansicht::Zeilen::from(eintragsansicht::notizzeilen(NOTIZEN));
-        assert_eq!(weiter(zelle(0, 0), true, &zwei), Some(zelle(0, 1)));
-        assert_eq!(weiter(zelle(0, 1), true, &zwei), Some(zelle(1, 0)));
-        assert_eq!(
-            weiter(zelle(1, 1), true, &zwei),
-            None,
-            "nach der letzten Zelle"
-        );
-        assert_eq!(weiter(zelle(1, 0), false, &zwei), Some(zelle(0, 1)));
-        assert_eq!(weiter(zelle(1, 1), false, &zwei), Some(zelle(1, 0)));
-        assert_eq!(
-            weiter(zelle(0, 0), false, &zwei),
-            None,
-            "vor der ersten Zelle"
-        );
     }
 
-    /// Die Zelle der Notiztabelle rechnet ueber den Kern: ein geaenderter Text
-    /// oder ein geaendertes Thema ergibt einen Umbau mit genau dieser Haelfte,
-    /// ein unveraenderter keinen, eine Zeile mit `## ` im Text und ein Umbruch
-    /// im Thema eine Abweisung ohne Umbau, deren Satz der Kern stellt.
-    #[test]
-    fn die_notizzelle_rechnet_ueber_den_kern_und_weist_eine_themenzeile_ab() {
-        use eintragsansicht::{NOTIZSPALTE, THEMENSPALTE, Zelle};
-        use krk_core::heimordner::eintraege::Abweisung as Eintragsabweisung;
-        let text = Zelle {
-            stelle: 0,
-            spalte: NOTIZSPALTE,
-        };
-        let thema = Zelle {
-            stelle: 0,
-            spalte: THEMENSPALTE,
-        };
-        let rechnen = |zelle, eingabe| zellenrechnung(Editorform::Notizen, NOTIZEN, zelle, eingabe);
-
-        let neu = rechnen(text, "Brot\n\nMilch\nKaese")
-            .expect("ein Text ohne Themenzeile")
-            .expect("der Text ist neu");
-        assert_eq!(
-            neu.text, "Vorspann\n## Einkauf\nBrot\n\nMilch\nKaese\n\n## Reise\n",
-            "der Text ist ersetzt, Thema und Trenner bleiben"
-        );
-        let neu = rechnen(thema, "Markt")
-            .expect("ein Thema ohne Umbruch")
-            .expect("das Thema ist neu");
-        assert_eq!(neu.text, "Vorspann\n## Markt\nBrot\n\nMilch\n\n## Reise\n");
-
-        assert_eq!(rechnen(text, "Brot\n\nMilch"), Ok(None), "unveraendert");
-        assert_eq!(rechnen(thema, "Einkauf"), Ok(None), "unveraendert");
-        assert_eq!(
-            rechnen(text, "Brot\n## x"),
-            Err(Eintragsabweisung::ThemenzeileImNotiztext)
-        );
-        assert_eq!(
-            rechnen(thema, "Ein\nkauf"),
-            Err(Eintragsabweisung::UmbruchImThema)
-        );
-        assert_eq!(
-            Editormeldung::EintragAbgewiesen(Eintragsabweisung::ThemenzeileImNotiztext).text(),
-            Eintragsabweisung::ThemenzeileImNotiztext.meldung()
-        );
-        assert_eq!(
-            zellenrechnung(Editorform::Text, NOTIZEN, text, "egal"),
-            Ok(None),
-            "ohne Tabelle rechnet keine Zelle"
-        );
-    }
-
-    /// Jede Handlung an der Notiztabelle rechnet ueber den Kern und antwortet
-    /// in Saetzen ueber Notizen; eine neue Notiz ist leer und gewaehlt, und
-    /// das Abhaken gibt es hier nicht.
-    #[test]
-    fn jede_notizhandlung_rechnet_ueber_den_kern_und_antwortet() {
-        use Eintragsantwort as A;
-        let umbau = |handlung, zeile| {
-            let (meldung, neustand) =
-                handlung_rechnen(NOTIZEN, Eintragsart::Notizen, handlung, zeile);
-            (
-                meldung,
-                neustand.map(|neustand| (neustand.text, neustand.auswahl)),
-            )
-        };
-        let antwort = |antwort| Editormeldung::Eintrag(Eintragsart::Notizen, antwort);
-
-        assert_eq!(
-            umbau(Handlung::Hinzufuegen, None),
-            (
-                antwort(A::Hinzugefuegt),
-                Some((format!("{NOTIZEN}## \n"), Some(2)))
-            )
-        );
-        assert_eq!(
-            umbau(Handlung::Verschieben(Richtung::Runter), Some(0)),
-            (
-                antwort(A::Verschoben),
-                Some((
-                    "Vorspann\n## Reise\n## Einkauf\nBrot\n\nMilch\n\n".to_owned(),
-                    Some(1)
-                ))
-            )
-        );
-        assert_eq!(
-            umbau(Handlung::Verschieben(Richtung::Hoch), Some(0)),
-            (antwort(A::SchonOben), None)
-        );
-        assert_eq!(
-            umbau(Handlung::Loeschen, Some(0)),
-            (
-                antwort(A::Geloescht),
-                Some(("Vorspann\n## Reise\n".to_owned(), Some(0)))
-            )
-        );
-        assert_eq!(
-            umbau(Handlung::Bearbeiten, Some(1)),
-            (antwort(A::BearbeitungBegonnen), None)
-        );
-        assert_eq!(
-            umbau(Handlung::Abhaken, Some(0)),
-            (
-                Editormeldung::Eintrag(Eintragsart::Aufgaben, A::KeineTabelle),
-                None
-            ),
-            "eine Notiz hat kein Kaestchen"
-        );
-        assert_eq!(
-            umbau(Handlung::Loeschen, Some(2)),
-            (antwort(A::KeinEintragGewaehlt), None)
-        );
-        assert!(antwort(A::Geloescht).text().contains("Notiz"));
-        assert!(antwort(A::KeinEintragGewaehlt).text().contains("Notiz"));
-    }
-
-    /// Jede Handlung des Kerns an `notes.txt` ist ueber einen [`Umkehrpunkt`]
-    /// Byte fuer Byte zuruecknehmbar und wiederherstellbar — das ist, was
-    /// `umbau_anwenden` in den Verwalter legt, fuer Notizen wie in 3.2a fuer
-    /// Aufgaben. Es gibt keinen zweiten Stapel.
-    #[test]
-    fn jede_notizhandlung_ist_ueber_einen_umkehrpunkt_zuruecknehmbar() {
-        let neustaende = [
-            notizen::hinzufuegen(NOTIZEN, "Neu", "zwei\nZeilen").expect("zulaessig"),
-            notizen::aendern(NOTIZEN, 0, "Einkauf", "Brot\nButter")
-                .expect("zulaessig")
-                .expect("der Text ist neu"),
-            notizen::loeschen(NOTIZEN, 0).expect("die erste Notiz steht"),
-            notizen::verschieben(NOTIZEN, 1, Richtung::Hoch).expect("sie hat eine darueber"),
-        ];
-        for neustand in neustaende {
-            let punkt = Umkehrpunkt::zwischen(NOTIZEN, &neustand.text, NSRange::new(0, 0));
-            let zurueck = punkt.angewandt_auf(&neustand.text);
-            assert_eq!(zurueck, NOTIZEN, "zurueck aus {:?}", neustand.text);
-            let gegenweg = Umkehrpunkt::zwischen(&neustand.text, &zurueck, NSRange::new(0, 0));
-            assert_eq!(gegenweg.angewandt_auf(&zurueck), neustand.text);
-        }
-    }
-
-    /// C5: `esc` in einer geaenderten Notizzelle uebernimmt und meldet `cmd+z`;
+    /// C5: `esc` in einer geaenderten Notizenzelle der Geheimnistabelle
+    /// uebernimmt und meldet `cmd+z`;
     /// in einer unveraenderten endet die Zelle ohne Umbau und ohne Meldung.
     /// **Am Rumpf gelesen**, weil die Uebernahme ein Fenster braucht: die
     /// Meldung haengt an der Marke, die allein das Festschreiben eines Umbaus
     /// setzt und die `zelle_uebernehmen` vorher loescht; dass eine
     /// unveraenderte Zelle keinen Umbau ergibt, faehrt
-    /// `die_notizzelle_rechnet_ueber_den_kern_und_weist_eine_themenzeile_ab`.
+    /// `jede_spalte_der_geheimnistabelle_aendert_genau_ihr_feld`.
     #[test]
-    fn esc_uebernimmt_eine_geaenderte_notizzelle_und_meldet_cmd_z() {
+    fn esc_uebernimmt_eine_geaenderte_notizenzelle_und_meldet_cmd_z() {
         use super::super::anwendung::quelltextproben::{datei, rumpf};
         let quelle = datei("krk-ui/src/appkit/editor.rs");
         let uebernehmen = rumpf(&quelle, "zelle_uebernehmen");
@@ -11714,7 +11485,8 @@ mod tests {
         assert!(abbrechen.contains(concat!("zelle_umgebaut.", "get()")));
         assert!(abbrechen.contains(concat!("Eintragsantwort::MitEsc", "Uebernommen")));
         let satz =
-            Editormeldung::Eintrag(Eintragsart::Notizen, Eintragsantwort::MitEscUebernommen).text();
+            Editormeldung::Eintrag(Eintragsart::Geheimnisse, Eintragsantwort::MitEscUebernommen)
+                .text();
         assert!(
             satz.contains("übernommen") && satz.contains("cmd+z"),
             "{satz}"
@@ -11901,18 +11673,18 @@ mod tests {
     ///
     /// Gerechnet wird ueber [`handlung_rechnen`], den Weg von
     /// `eintrag_loeschen`, und je Form ueber [`eintragsart_der_form`]: die
-    /// Geheimnisse gehen damit denselben Weg wie die Notizen. Der Umkehrpunkt
+    /// Geheimnisse gehen damit denselben Weg wie die Aufgaben, im frueheren
+    /// Format wie in der Grundform. Der Umkehrpunkt
     /// ist, was `umbau_anwenden` in den Verwalter legt
     /// (`der_umbau_geht_den_weg_des_ersetzens`), und `cmd+z` mit der Tabelle
     /// als Ersthelfer erreicht diesen Verwalter
     /// (`textflaeche_und_tabelle_finden_denselben_verwalter`). Der Gegenweg
     /// ist der, den `umkehren` fuer `shift+cmd+z` anmeldet.
     #[test]
-    fn das_loeschen_ist_in_jeder_der_vier_tabellen_zuruecknehmbar() {
+    fn das_loeschen_ist_in_jeder_tabelle_des_notizordners_zuruecknehmbar() {
         for (form, stand) in [
             (Editorform::Aufgaben, AUFGABEN),
-            (Editorform::Notizen, NOTIZEN),
-            (Editorform::Geheimnisse, NOTIZEN),
+            (Editorform::Geheimnisse, FRUEHERES_FORMAT),
             (Editorform::Geheimnisse, GEHEIMNISSE),
         ] {
             let art = eintragsart_der_form(form).expect("eine Tabellenform");
@@ -11943,7 +11715,6 @@ mod tests {
             Dateityp::Markdown,
             Dateityp::Sonstiges,
             Dateityp::Eintraege(Sonderdatei::Aufgaben),
-            Dateityp::Eintraege(Sonderdatei::Notizen),
             Dateityp::Eintraege(Sonderdatei::Geheimnisse),
         ] {
             assert_eq!(
@@ -11978,12 +11749,6 @@ mod tests {
                 AUFGABEN,
                 aufgaben::hinzufuegen(AUFGABEN, "").expect("ein leerer Text ist zulaessig"),
                 "- [ ] ",
-            ),
-            (
-                Eintragsart::Notizen,
-                NOTIZEN,
-                notizen::hinzufuegen(NOTIZEN, "", "").expect("eine leere Notiz ist zulaessig"),
-                "## ",
             ),
             // Ein leeres Geheimnis in der Grundform, alle vier Feldzeilen.
             (
@@ -12027,7 +11792,7 @@ mod tests {
         let stelle = schreibstelle_im_letzten_eintrag(Eintragsart::Aufgaben, &ohne_umbruch.text);
         assert_eq!(&ohne_umbruch.text[..stelle], "- [ ] Brot\n- [ ] ");
         assert_eq!(
-            schreibstelle_im_letzten_eintrag(Eintragsart::Notizen, ""),
+            schreibstelle_im_letzten_eintrag(Eintragsart::Geheimnisse, ""),
             0
         );
 
@@ -12049,6 +11814,49 @@ mod tests {
         );
         let anlegen = rumpf(&quelle, "eintrag_hinzufuegen");
         assert!(anlegen.contains("Editorform::Text => self.eintrag_im_text_hinzufuegen()"));
+    }
+
+    /// C3.1 des Spec
+    /// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`:
+    /// `notes.txt` im erkannten Notizordner ist gewoehnlicher Text. Der
+    /// Dateityp folgt der Endung, beide Ansichten zeigen die Textflaeche und
+    /// keine Tabelle, und die Datei fuehrt keine Eintragsart: daran haengt
+    /// `Lage::eintragsdatei`, also sind die Eintragsbefehle unter „Home“ vor
+    /// ihr ausgegraut wie vor jeder anderen Textdatei. `tasks.txt` daneben
+    /// behaelt ihre Tabelle (C3.8).
+    #[test]
+    fn notes_txt_im_notizordner_ist_gewoehnlicher_text() {
+        let zuhause = Path::new("/pruefung-ohne-platte/zuhause");
+        let heim = krk_core::heimordner::Heimordner::im_benutzerverzeichnis(zuhause);
+        let pfad = heim.geschrieben().join("notes.txt");
+        let typ = Dateityp::von_pfad(&pfad, Some(&heim));
+        assert_eq!(typ, Dateityp::Sonstiges);
+        assert_eq!(
+            typ,
+            Dateityp::von_pfad(Path::new("/anderswo/notes.txt"), Some(&heim)),
+            "im Notizordner wie anderswo"
+        );
+        for ansicht in [Ansicht::Roh, Ansicht::Format] {
+            assert_eq!(editorform(ansicht, typ), Editorform::Text, "{ansicht:?}");
+        }
+        assert_eq!(
+            flaeche_der_form(editorform(Ansicht::Format, typ)),
+            Flaeche::Textflaeche
+        );
+        assert_eq!(eintragsart_des_typs(typ), None);
+        assert_eq!(eintragsart_der_datei(typ, None), None);
+
+        let aufgaben = Dateityp::von_pfad(&heim.geschrieben().join("tasks.txt"), Some(&heim));
+        assert_eq!(aufgaben, Dateityp::Eintraege(Sonderdatei::Aufgaben));
+        assert_eq!(
+            editorform(Ansicht::Format, aufgaben),
+            Editorform::Aufgaben,
+            "tasks.txt behaelt ihre Tabelle"
+        );
+        assert_eq!(
+            eintragsart_der_datei(aufgaben, None),
+            Some(Eintragsart::Aufgaben)
+        );
     }
 
     /// C3.2 des Spec
@@ -12081,13 +11889,13 @@ mod tests {
     }
 
     /// `esc` in einer einzeiligen Zelle der Geheimnistabelle richtet sich
-    /// nach der Aufgabenzelle und verwirft, in ihren Notizen nach der
-    /// Notizzelle und uebernimmt; jede andere Form nach sich selbst. Der Rang
+    /// nach der Aufgabenzelle und verwirft, in ihren Notizen bleibt sie bei
+    /// ihrer eigenen Form und uebernimmt; jede andere Form nach sich selbst. Der Rang
     /// der Zelle in `abbrechen` bleibt, also leert keines von beiden den
     /// Filtertext.
     #[test]
     fn esc_verwirft_die_einzeiligen_zellen_und_uebernimmt_die_notizen() {
-        use eintragsansicht::{NOTIZSPALTE, THEMENSPALTE};
+        use eintragsansicht::THEMENSPALTE;
         // Die Geheimnistabelle (Entscheidung 18 des Plans der sechs Felder):
         // die fuenf einzeiligen Spalten verwerfen, die Notizen uebernehmen.
         for feld in Feld::ALLE {
@@ -12107,8 +11915,8 @@ mod tests {
             esc_regel(Editorform::Geheimnisse, None),
             Editorform::Geheimnisse
         );
-        for form in [Editorform::Text, Editorform::Aufgaben, Editorform::Notizen] {
-            for spalte in [None, Some(THEMENSPALTE), Some(NOTIZSPALTE)] {
+        for form in [Editorform::Text, Editorform::Aufgaben] {
+            for spalte in [None, Some(THEMENSPALTE), Some(1)] {
                 assert_eq!(esc_regel(form, spalte), form, "{form:?} {spalte:?}");
             }
         }
@@ -12127,7 +11935,7 @@ mod tests {
         use super::super::anwendung::quelltextproben::{datei, rumpf};
         let quelle = datei("krk-ui/src/appkit/editor.rs");
         let nachziehen = rumpf(&quelle, "tabelle_nachziehen");
-        assert!(nachziehen.contains(concat!("eintragsansicht::notiz", "zeilen(")));
+        assert!(nachziehen.contains(concat!("eintragsansicht::geheimnis", "zeilen(")));
         for nadel in [
             concat!("borrow_", "mut("),
             concat!(".bear", "beiten("),
@@ -12565,15 +12373,12 @@ mod tests {
         pruefen(Eintragsart::Aufgaben);
         eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
         pruefen(Eintragsart::Trenntext);
-        eintraege.zeilen_zeigen(eintragsansicht::notizzeilen(NOTIZEN));
-        pruefen(Eintragsart::Notizen);
         eintraege.zeilen_zeigen(eintragsansicht::geheimniszeilen(GEHEIMNISSE));
         pruefen(Eintragsart::Geheimnisse);
         eintraege.zeilen_zeigen(eintragsansicht::aufgabenzeilen(AUFGABEN));
         pruefen(Eintragsart::Aufgaben);
         for art in [
             Eintragsart::Aufgaben,
-            Eintragsart::Notizen,
             Eintragsart::Geheimnisse,
             Eintragsart::Trenntext,
         ] {
@@ -12632,7 +12437,6 @@ mod tests {
         assert_ne!(dritte, zweite, "ein neuer Stand ist eine neue Generation");
         for form in [
             Editorform::Aufgaben,
-            Editorform::Notizen,
             Editorform::Geheimnisse,
             Editorform::Quicknote,
         ] {
@@ -12696,13 +12500,13 @@ mod tests {
         assert_eq!(zeilen.feld_der_tabellenspalte(3), Some(2));
         assert_eq!(zeilen.feld_der_tabellenspalte(4), None);
         assert_eq!(zeilen.tabellenspalte_des_feldes(2), 3);
-        let notizen = Zeilen::from(eintragsansicht::notizzeilen(NOTIZEN));
+        let geheimnisse = Zeilen::from(eintragsansicht::geheimniszeilen(GEHEIMNISSE));
         assert_eq!(
-            notizen.feld_der_tabellenspalte(1),
+            geheimnisse.feld_der_tabellenspalte(1),
             Some(1),
             "sonst die Gleichheit"
         );
-        assert_eq!(notizen.tabellenspalte_des_feldes(1), 1);
+        assert_eq!(geheimnisse.tabellenspalte_des_feldes(1), 1);
     }
 
     /// `naechste_zelle` unter dem Namen, den die Probe darueber liest.
@@ -13107,7 +12911,11 @@ mod tests {
         assert_eq!(klickort(&zeilen_der_csv, -1, 1), None);
         assert_eq!(klickort(&zeilen_der_csv, 0, 4), None);
         assert_eq!(
-            klickort(&Zeilen::from(eintragsansicht::notizzeilen(NOTIZEN)), 0, 0),
+            klickort(
+                &Zeilen::from(eintragsansicht::geheimniszeilen(GEHEIMNISSE)),
+                0,
+                0
+            ),
             None,
             "allein die Tabelle einer CSV traegt eine Zellauswahl"
         );
@@ -13385,8 +13193,8 @@ mod tests {
             assert_eq!(eintraege.gewaehlte_stelle(), Some(1), "{art:?}");
             assert!(!eintraege.alles_waehlen(), "{art:?}: cmd+a geht an AppKit");
         };
-        eintraege.zeilen_zeigen(eintragsansicht::notizzeilen(NOTIZEN));
-        zeilenweise(&eintraege, Eintragsart::Notizen);
+        eintraege.zeilen_zeigen(eintragsansicht::geheimniszeilen(FRUEHERES_FORMAT));
+        zeilenweise(&eintraege, Eintragsart::Geheimnisse);
         eintraege.zeilen_zeigen(csv_sicht(CSV, 1));
         assert_eq!(tabelle.selectionHighlightStyle(), Hervorhebung::None);
         assert_eq!(
@@ -13403,11 +13211,7 @@ mod tests {
         zeilenweise(&eintraege, Eintragsart::Aufgaben);
         eintraege.zeilen_zeigen(eintragsansicht::geheimniszeilen(GEHEIMNISSE));
         zeilenweise(&eintraege, Eintragsart::Geheimnisse);
-        for art in [
-            Eintragsart::Aufgaben,
-            Eintragsart::Notizen,
-            Eintragsart::Geheimnisse,
-        ] {
+        for art in [Eintragsart::Aufgaben, Eintragsart::Geheimnisse] {
             assert_eq!(eintragsansicht::hervorhebung(art), Hervorhebung::Regular);
         }
         assert_eq!(

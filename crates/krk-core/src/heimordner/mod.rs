@@ -1,12 +1,14 @@
 //! Der Notizordner, ab Werk `~/krkhome/`: die eine Stelle, die ihn erkennt.
 //!
 //! F2 fuehrt in einen Dateilisten-Tab auf den Notizordner, und an diesem Ordner
-//! haengen mehrere Regeln: die Vorschau rendert `notes.txt` und `tasks.txt`
-//! dort mit Aufgabenkaestchen, der Editor zeigt sie in der Formatansicht als
-//! Tabelle, und `secrets.txt` bekommt dort vom Inhaltsfilter keinen Auftrag.
-//! Eine `appointments.md` im Notizordner war bis zum 261111 die vierte
-//! Eintragsdatei; seitdem ist sie gewoehnliches Markdown, KRK legt sie nicht
-//! mehr an und fasst eine vorhandene nicht an. Daneben
+//! haengen mehrere Regeln: die Vorschau rendert `tasks.txt` dort mit
+//! Aufgabenkaestchen, der Editor zeigt `tasks.txt` und `secrets.txt` in der
+//! Formatansicht als Tabelle, und `secrets.txt` bekommt dort vom Inhaltsfilter
+//! keinen Auftrag. **`notes.txt` und `appointments.md` waren bis zum 261111
+//! Eintragsdateien; seitdem sind sie gewoehnlicher Text und gewoehnliches
+//! Markdown**, an jedem Ort: KRK legt sie nicht mehr an und fasst eine
+//! vorhandene nicht an (C3 des Spec
+//! `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`). Daneben
 //! liegt `quicknote.txt` ([`QUICKNOTEDATEI`]), der gesicherte Inhalt der
 //! Quicknote; sie ist **keine** Eintragsdatei und steht deshalb nicht in
 //! [`Sonderdatei`]. Bis zum 261111 hiess sie anders
@@ -14,10 +16,12 @@
 //! Datei unter dem frueheren Namen vor ihrem ersten Lesen.
 //! **Jede dieser Regeln fragt dieses Modul und keine eigene Erkennung** (C2 des Spec
 //! `260926-0007_*_spec-f2-oeffnet-krkhome-mit-notizen-aufgaben-geheimnissen.md`).
-//! Die Form der Eintraege in `notes.txt` und `tasks.txt`
-//! steht in [`eintraege`], das
-//! Anlegen von Ordner und Dateien samt der einmaligen Uebernahme der alten
-//! Zettel in [`bereitstellen`], das Dateiformat von `secrets.txt` mit Kopf,
+//! Die Form der Eintraege in `tasks.txt` und im Klartext von `secrets.txt`
+//! steht in [`eintraege`]; **die Form aus Themenzeile und Text, die dort
+//! `Notizen` und `Notiz` heisst, ist seit dem 261111 allein die Form der
+//! Geheimnisse** (E4 des Plans
+//! `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`). Das
+//! Anlegen von Ordner und Dateien steht in [`bereitstellen`], das Dateiformat von `secrets.txt` mit Kopf,
 //! Ableitung und Verschluesselung in [`tresor`], der zehn Minuten gemerkte
 //! Schluessel dazu in [`schluesselmerker`], die Protokolle und Ziele einer
 //! Verbindung aus `secrets.txt` in [`verbindung`], das Lesen und Pruefen des
@@ -60,8 +64,8 @@
 //! **Eine dritte Schreibweise desselben Ordners wird nicht erkannt**: ein
 //! zweiter Verweis an anderer Stelle, der auf denselben Ordner zeigt, oder ein
 //! Pfad, dessen Bestandteile selbst Verweise sind, die die aufgeloeste Form
-//! aufloest und der gefragte Pfad nicht. Dort zeigt KRK `notes.txt` und
-//! `tasks.txt` wie jede andere Textdatei und verliert nichts. So entschieden vom
+//! aufloest und der gefragte Pfad nicht. Dort zeigt KRK `tasks.txt` wie jede
+//! andere Textdatei und verliert nichts. So entschieden vom
 //! Nutzer am 260926
 //! (`260926-0115_*_erkennt-krk-den-heimordner-an-zwei-pfadformen-oder-an-jeder-schreibweise.md`,
 //! Moeglichkeit 1). **Die Gegenmoeglichkeit liegt ausgearbeitet in demselben
@@ -95,10 +99,11 @@
 //!
 //! [`ORDNERNAME`] ist der Name des **Vorgabeorts** `~/krkhome` und die einzige
 //! Stelle im Code, die `krkhome` schreibt; die Auslieferungsfassung von
-//! `settings.toml` traegt denselben Ort als Daten. Am Vorgabeort haengt eine
-//! Regel, die an keinem anderen gilt: allein dort uebernimmt F2 die alten
-//! Zettel, und nur ein einziges Mal, gehalten vom Merker in `reported.toml`
-//! ([`Heimordner::ist_vorgabeort`], Modulkopf von `bereitstellen`).
+//! `settings.toml` traegt denselben Ort als Daten. **Am Vorgabeort haengt seit
+//! dem 261111 keine eigene Regel mehr**: bis dahin uebernahm F2 allein dort die
+//! Zettel `note-1.txt` und `note-2.txt` aus dem Ablageordner nach `notes.txt`.
+//! Die Uebernahme ist mit `notes.txt` gefallen; die zwei Dateien bleiben im
+//! Ablageordner liegen, und KRK liest sie nicht mehr.
 
 mod bereitstellen;
 pub mod eintraege;
@@ -108,8 +113,7 @@ pub mod tresor;
 pub mod verbindung;
 
 pub use bereitstellen::{
-    ALTE_ZETTEL, ALTER_GEHEIMNISNAME, AlterZettel, Bereitstellung, Hindernis, Uebernahme,
-    Uebernahmeausgang, Umbenennung, Zettelbefund, Zettelmerker, bereitstellen,
+    ALTER_GEHEIMNISNAME, Bereitstellung, Hindernis, Umbenennung, bereitstellen,
     ohne_ersetzen_umbenennen,
 };
 
@@ -130,7 +134,7 @@ pub const ORDNERNAME: &str = "krkhome";
 /// Tabellenansicht, zu den Eintragsbefehlen, zur Vorschau mit
 /// Aufgabenkaestchen und zum Anlegen bei F2. `quicknote.txt` ist nichts davon:
 /// im Editor und in der Vorschau eine gewoehnliche Textdatei, und F2 legt sie
-/// nicht an; sie entsteht beim ersten Sichern der Quicknote. Eine fuenfte
+/// nicht an; sie entsteht beim ersten Sichern der Quicknote. Eine weitere
 /// Variante brauchte an jeder dieser Stellen eine Ausnahme, die sagt, dass sie
 /// gar keine Eintragsdatei ist.
 ///
@@ -165,14 +169,12 @@ pub fn quicknote_uebernahmemeldung(ausgang: &Umbenennung, ort: &str) -> String {
 /// jeder Stelle anhaelt, die nach der Sorte fragt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Sonderdatei {
-    /// `notes.txt`: Notizen aus Thema und Text.
-    Notizen,
     /// `tasks.txt`: Aufgaben mit Erledigt-Kaestchen.
     Aufgaben,
-    /// `secrets.txt`: Eintraege wie in `notes.txt`, verschluesselt nach dem
-    /// Format aus [`tresor`].
+    /// `secrets.txt`: Eintraege aus Themenzeile und Text, verschluesselt nach
+    /// dem Format aus [`tresor`].
     ///
-    /// Sie entsteht bei F2 wie die zwei anderen ueber [`bereitstellen`] und
+    /// Sie entsteht bei F2 wie `tasks.txt` ueber [`bereitstellen`] und
     /// dort **mit null Bytes**: eine leere Datei traegt noch keinen Kopf, und
     /// die PIN legt erst das erste Oeffnen im Editor fest
     /// (`260926-0007_*_wann-entsteht-secrets-txt-und-was-geschieht-mit-fehlenden-dateien.md`).
@@ -187,16 +189,11 @@ pub enum Sonderdatei {
 
 impl Sonderdatei {
     /// Jede Eintragsdatei, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Sonderdatei; 3] = [
-        Sonderdatei::Notizen,
-        Sonderdatei::Aufgaben,
-        Sonderdatei::Geheimnisse,
-    ];
+    pub const ALLE: [Sonderdatei; 2] = [Sonderdatei::Aufgaben, Sonderdatei::Geheimnisse];
 
     /// Der Dateiname im Heimordner.
     pub const fn dateiname(self) -> &'static str {
         match self {
-            Sonderdatei::Notizen => "notes.txt",
             Sonderdatei::Aufgaben => "tasks.txt",
             Sonderdatei::Geheimnisse => "secrets.txt",
         }
@@ -349,8 +346,7 @@ impl Heimordner {
 
     /// Ob der Ort der Vorgabeort `<benutzerverzeichnis>/krkhome` ist.
     ///
-    /// Ein Vergleich der geschriebenen Form beim Bau, kein Systemaufruf. Allein
-    /// dort uebernimmt F2 die alten Zettel (Modulkopf von `bereitstellen`).
+    /// Ein Vergleich der geschriebenen Form beim Bau, kein Systemaufruf.
     pub fn ist_vorgabeort(&self) -> bool {
         self.vorgabeort
     }
@@ -398,8 +394,8 @@ impl Heimordner {
     /// Moeglichkeit 1): erkennt der Pfadtext die Datei nicht, heisst sie aber
     /// `secrets.txt`, fragt diese Funktion das Dateisystem, und zwar mit
     /// `metadata` an beiden Pfaden, also dem Verweis folgend. Jeder andere Name
-    /// kommt ohne Systemaufruf zurueck, und die zwei Formen fuer `notes.txt` und
-    /// `tasks.txt` bleiben, wie sie sind: an ihnen haengt kein Klartext.
+    /// kommt ohne Systemaufruf zurueck, und die zwei Formen fuer `tasks.txt`
+    /// bleiben, wie sie sind: an ihr haengt kein Klartext.
     ///
     /// **Der Name wird ohne Ruecksicht auf Gross- und Kleinschreibung
     /// verglichen**, weil `Secrets.txt` auf einem Volume ohne diese

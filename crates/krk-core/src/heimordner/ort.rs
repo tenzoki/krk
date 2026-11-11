@@ -345,7 +345,7 @@ pub fn zu_merken(geltend: &Notizort, gemerkt: Option<&Path>) -> Option<PathBuf> 
 /// bis gestern galt, verloere still jede Regel: eine leere ginge im Editor
 /// ueber den Klartextweg, und der Inhaltsfilter laese sie. **F2 und „Ort
 /// waehlen…“ sehen diesen Ordner nicht**; sie lesen den Fehler und legen
-/// nichts an. Der Preis: die Regeln fuer `notes.txt` und `tasks.txt` gelten
+/// nichts an. Der Preis: die Regeln fuer `tasks.txt` gelten
 /// an diesem Ordner ebenfalls weiter, denn die Erkennung trennt sie nicht von
 /// denen fuer `secrets.txt`.
 #[must_use]

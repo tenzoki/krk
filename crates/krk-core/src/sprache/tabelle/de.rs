@@ -50,10 +50,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::AbweisungUmbruchImAufgabentext => {
             "Eine Aufgabe ist eine Zeile und trägt keinen Zeilenumbruch."
         }
-        Text::AbweisungUmbruchImThema => "Ein Thema ist eine Zeile und trägt keinen Zeilenumbruch.",
-        Text::AbweisungThemenzeileImNotiztext => {
-            "Eine Zeile im Notiztext darf nicht mit „## “ beginnen, denn so beginnt die nächste Notiz."
-        }
         Text::AbweisungUmbruchImGeheimnisfeld => {
             "Name, Protokoll, Adresse, Konto und Passwort sind je eine Zeile und tragen keinen Zeilenumbruch."
         }
@@ -375,12 +371,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::HeimObererOrdnerFehlt => {
             "{ordner} lässt sich nicht anlegen, weil der Ordner darüber fehlt, etwa ein nicht eingehängtes Laufwerk; KRK legt nichts an"
         }
-        Text::HeimMerkerNichtVermerkt => {
-            "KRK kann sich nicht merken, dass die alten Zettel übernommen sind ({grund}); das nächste F2 versucht es wieder, und wird {ort} vorher gelöscht, übernimmt es sie noch einmal"
-        }
-        Text::HeimMerkerOhneAblage => {
-            "KRK kann sich ohne seinen Ablageordner nicht merken, dass die alten Zettel übernommen sind; ein späteres F2 holt das nach, und wird {ort} vorher gelöscht, übernimmt es sie noch einmal"
-        }
         Text::HeimUmbenannt => "{alt} heißt jetzt {neu}",
         Text::HeimUmbenennungBeideStehen => {
             "{neu} und {alt} stehen beide in {ort}; KRK benennt keine um, und es gilt {neu}"
@@ -390,23 +380,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         }
         Text::HeimNichtUmbenannt => {
             "{alt} lässt sich nicht in {neu} umbenennen ({grund}); sie bleibt unverändert, und {neu} ist nicht angelegt"
-        }
-        Text::HeimZettelNotizenStandenSchon => {
-            "Die alten Zettel sind nicht übernommen, weil {notizen} schon stand; {dateien} liegen unverändert im Ablageordner"
-        }
-        Text::HeimZettelGescheitert => {
-            "Die alten Zettel sind nicht übernommen ({grund}); {dateien} liegen unverändert im Ablageordner"
-        }
-        Text::HeimZettelThemenzeile => {
-            "{thema} ist nicht übernommen, weil er eine Zeile mit „## “ trägt; {datei} liegt unverändert im Ablageordner"
-        }
-        Text::HeimZettelUnlesbar => {
-            "{thema} ist nicht übernommen ({grund}); {datei} liegt unverändert im Ablageordner"
-        }
-        Text::HeimZettelZuGross => "mit {groesse} Bytes zu groß",
-        Text::HeimZettelKeinText => "kein lesbarer Text",
-        Text::HeimAngefangeneDateiBleibt => {
-            "{fehler}; die angefangene Datei lässt sich nicht entfernen: {entfernen}"
         }
         Text::Und => "und",
         Text::TresorKeinZufall => "Das System liefert keinen Zufallswert: {grund}",
@@ -539,8 +512,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::TypDatei => "Datei",
         Text::TypVerknuepfung => "Verknüpfung",
         Text::EintragsspalteAufgabe => "Aufgabe",
-        Text::EintragsspalteThema => "Thema",
-        Text::EintragsspalteNotiz => "Notiz",
         Text::EintragsspalteName => "Name",
         Text::EintragsspalteProtokoll => "Protokoll",
         Text::EintragsspalteAdresse => "Adresse",
@@ -935,33 +906,33 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::QuicknoteGrundKeinText => "sie ist nicht als Text lesbar",
         Text::QuicknoteGrundLesefehler => "das System meldet einen Lesefehler",
         Text::EintragKeineAufgabentabelle => "der Editor zeigt keine Aufgabentabelle",
-        Text::EintragKeineNotiztabelle => "der Editor zeigt keine Notiztabelle",
+        Text::EintragKeineGeheimnistabelle => "der Editor zeigt keine Tabelle der Geheimnisse",
         Text::EintragKeineAufgabeGewaehlt => "es ist keine Aufgabe gewählt",
-        Text::EintragKeineNotizGewaehlt => "es ist keine Notiz gewählt",
+        Text::EintragKeinGeheimnisGewaehlt => "es ist kein Eintrag gewählt",
         Text::EintragAufgabeHinzugefuegt => "neue Aufgabe am Ende; return übernimmt den Text",
-        Text::EintragNotizHinzugefuegt => {
-            "neue Notiz am Ende; tab wechselt zum Text, cmd+return übernimmt"
+        Text::EintragGeheimnisHinzugefuegt => {
+            "neuer Eintrag am Ende; tab wechselt die Zelle, cmd+return übernimmt"
         }
         Text::EintragAufgabeBearbeitung => "return übernimmt, esc verwirft",
-        Text::EintragNotizBearbeitung => {
+        Text::EintragGeheimnisBearbeitung => {
             "cmd+return übernimmt, tab wechselt die Zelle, return schreibt im Text einen Zeilenumbruch"
         }
         Text::EintragAufgabeUebernommen => "Aufgabe übernommen",
-        Text::EintragNotizUebernommen => "Notiz übernommen",
+        Text::EintragGeheimnisUebernommen => "Eintrag übernommen",
         Text::EintragAufgabeAbgehakt => "Aufgabe abgehakt",
-        Text::EintragNotizOhneKaestchen => "eine Notiz hat kein Kästchen",
+        Text::EintragGeheimnisOhneKaestchen => "ein Eintrag hat kein Kästchen",
         Text::EintragAufgabeWiederOffen => "Aufgabe wieder offen",
         Text::EintragAufgabeVerschoben => "Aufgabe verschoben",
-        Text::EintragNotizVerschoben => "Notiz verschoben",
+        Text::EintragGeheimnisVerschoben => "Eintrag verschoben",
         Text::EintragAufgabeSchonOben => "die Aufgabe steht schon oben",
-        Text::EintragNotizSchonOben => "die Notiz steht schon oben",
+        Text::EintragGeheimnisSchonOben => "der Eintrag steht schon oben",
         Text::EintragAufgabeSchonUnten => "die Aufgabe steht schon unten",
-        Text::EintragNotizSchonUnten => "die Notiz steht schon unten",
+        Text::EintragGeheimnisSchonUnten => "der Eintrag steht schon unten",
         Text::EintragAufgabeGeloescht => "Aufgabe gelöscht; cmd+z holt sie zurück",
-        Text::EintragNotizGeloescht => "Notiz gelöscht; cmd+z holt sie zurück",
+        Text::EintragGeheimnisGeloescht => "Eintrag gelöscht; cmd+z holt ihn zurück",
         Text::EintragZelleBleibt => "die Zelle bleibt in Bearbeitung",
         Text::EintragAufgabeMitEscUebernommen => "Aufgabe übernommen; cmd+z nimmt es zurück",
-        Text::EintragNotizMitEscUebernommen => "Notiz übernommen; cmd+z nimmt es zurück",
+        Text::EintragGeheimnisMitEscUebernommen => "Eintrag übernommen; cmd+z nimmt es zurück",
         Text::EintragHeuteUnbestimmt => "Das heutige Datum ließ sich nicht bestimmen.",
         Text::EintragKeineTrenntexttabelle => "der Editor zeigt keine Tabelle einer CSV-Datei",
         Text::EintragKeineZeileGewaehlt => "es ist keine Zeile gewählt",
@@ -1144,9 +1115,6 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::StartLesezeichenNichtGeladen => {
             "die Lesezeichen ließen sich nicht laden, die Schreibsperre der Ablage ist nicht zu nehmen: {fehler}"
         }
-        Text::HeimOhneSperreAngelegt => {
-            "die Schreibsperre der Ablage lässt sich nicht nehmen ({fehler}); F2 hat ohne sie angelegt"
-        }
         Text::LeisteUeberschriftVerbindungen => "Verbindungen",
         Text::LeisteSinnbildVerbindung => "Verbindung",
         Text::KontextVerbinden => "Verbinden…",
@@ -1271,10 +1239,6 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
     match schluessel {
         Zahlwort::Byte => ("{n} Byte", "{n} Bytes"),
         Zahlwort::NeuerungenEintraegeIn => ("{n} Eintrag in {datei}", "{n} Einträge in {datei}"),
-        Zahlwort::HeimZettelUebernommen => (
-            "{themen} als Notiz in {notizen} übernommen",
-            "{themen} als Notizen in {notizen} übernommen",
-        ),
         Zahlwort::MarkeGeaendert => ("{n} geändert", "{n} geändert"),
         Zahlwort::MarkeVorgemerkt => ("{n} vorgemerkt", "{n} vorgemerkt"),
         Zahlwort::MarkeNeu => ("{n} neu", "{n} neu"),

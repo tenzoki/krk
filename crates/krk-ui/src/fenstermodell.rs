@@ -3283,7 +3283,7 @@ mod tests {
         }
     }
 
-    /// Die Regel greift allein `secrets.txt` im erkannten Ordner: `notes.txt`
+    /// Die Regel greift allein `secrets.txt` im erkannten Ordner: `tasks.txt`
     /// daneben, eine `secrets.txt` in einem anderen Ordner und jede Datei ohne
     /// Heimordner bleiben in der Sitzung stehen.
     #[test]
@@ -3293,7 +3293,7 @@ mod tests {
         let modell = modell();
         let anderswo = ordner.pfad().join("secrets.txt");
         for (datei, heim) in [
-            (geschrieben.join("notes.txt"), Some(&heim)),
+            (geschrieben.join("tasks.txt"), Some(&heim)),
             (anderswo, Some(&heim)),
             (geschrieben.join("secrets.txt"), None),
         ] {

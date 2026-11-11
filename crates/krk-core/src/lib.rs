@@ -40,7 +40,7 @@
 //! Bibliotheksziel hat; die Herleitung steht im Kopf jenes Moduls.
 //!
 //! `heimordner` erkennt `~/krkhome/` und beschreibt die Form der Eintraege in
-//! `notes.txt` und `tasks.txt`. Es liegt aus demselben Grund hier: jede Regel,
+//! `tasks.txt` und im Klartext von `secrets.txt`. Es liegt aus demselben Grund hier: jede Regel,
 //! die am Ordner haengt, fragt diese eine Stelle, und die Stelle ist ohne
 //! Fenster pruefbar.
 //!

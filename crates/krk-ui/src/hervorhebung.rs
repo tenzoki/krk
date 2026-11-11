@@ -504,9 +504,10 @@ fn sprache_fuer(pfad: Option<&Path>) -> Option<&'static SyntaxReference> {
 /// zwei Antworten nebeneinander waeren eine Datei mit fester Schrift ohne
 /// Einfaerbung oder umgekehrt.
 ///
-/// **Eine Eintragsdatei aus `~/krkhome/` ist Markdown**, obwohl sie `.txt`
+/// **`tasks.txt` aus `~/krkhome/` ist Markdown**, obwohl sie `.txt`
 /// heisst: die Vorschau rendert sie, und die Formatansicht des Editors zeigt
-/// sie bis zur Tabellenform ebenso (Schritt 2.1 des Arbeitspakets
+/// sie bis zur Tabellenform ebenso. `notes.txt` war es bis zum 261111 ebenso
+/// und ist seitdem `Sonstiges` wie jede andere `.txt` (Schritt 2.1 des Arbeitspakets
 /// `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`).
 ///
 /// **`secrets.txt` ist einfacher Text.** Erreicht wird der Wert hier nie:
@@ -516,7 +517,7 @@ fn sprache_fuer(pfad: Option<&Path>) -> Option<&'static SyntaxReference> {
 /// Sonderdatei still als Markdown durchgeht.
 pub fn art(pfad: Option<&Path>, typ: Dateityp) -> Darstellungsart {
     match typ {
-        Dateityp::Markdown | Dateityp::Eintraege(Sonderdatei::Notizen | Sonderdatei::Aufgaben) => {
+        Dateityp::Markdown | Dateityp::Eintraege(Sonderdatei::Aufgaben) => {
             Darstellungsart::Markdown
         }
         Dateityp::Eintraege(Sonderdatei::Geheimnisse) => Darstellungsart::EinfacherText,
@@ -1759,13 +1760,15 @@ mod tests {
         assert!(formatierung.auszeichnungen.is_empty());
     }
 
-    /// Eine Eintragsdatei aus `~/krkhome/` zeigt die Formatansicht als
-    /// Markdown, mit ihren Themen als Ueberschriften, obwohl ihre Endung
+    /// `tasks.txt` aus `~/krkhome/` zeigt die Formatansicht als
+    /// Markdown, mit ihren Ueberschriften, obwohl ihre Endung
     /// `.txt` ist; dieselbe Datei nach der Endung bekaeme keine (Schritt 2.1).
+    /// So steht seit dem 261111 `notes.txt` da, die keine Eintragsdatei mehr
+    /// ist: nach der Endung, ohne Ueberschriften.
     #[test]
     fn eine_eintragsdatei_traegt_in_der_formatansicht_ihre_ueberschriften() {
-        let datei = pfad("notes.txt");
-        let typ = Dateityp::Eintraege(krk_core::heimordner::Sonderdatei::Notizen);
+        let datei = pfad("tasks.txt");
+        let typ = Dateityp::Eintraege(krk_core::heimordner::Sonderdatei::Aufgaben);
         assert_eq!(art(Some(&datei), typ), Darstellungsart::Markdown);
         let ueberschrift = |formatierung: &Formatierung| {
             formatierung
@@ -1779,6 +1782,12 @@ mod tests {
         assert!(ueberschrift(&eintraege), "{:?}", eintraege.auszeichnungen);
         let nach_endung = formatieren(quelle, Some(&datei), Dateityp::Sonstiges, Tafel::Hell);
         assert!(!ueberschrift(&nach_endung));
+        let notizen = pfad("notes.txt");
+        assert_ne!(
+            art(Some(&notizen), Dateityp::Sonstiges),
+            Darstellungsart::Markdown,
+            "notes.txt ist gewoehnlicher Text"
+        );
     }
 
     /// `secrets.txt` ist fuer die Darstellung einfacher Text und keine

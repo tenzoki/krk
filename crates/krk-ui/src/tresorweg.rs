@@ -118,7 +118,7 @@ impl Chiffrat {
     /// Der Stand in seiner Sicherungsform, verschlossen mit dem gehaltenen
     /// Schluessel: frische Nonce, Salz und Parameter aus dem Schluessel,
     /// **keine Ableitung**. Die Sicherungsform zuerst, damit der Rundlauf
-    /// derselbe ist wie bei `notes.txt` (ein Stand ohne Schlussumbruch kommt
+    /// derselbe ist wie bei `tasks.txt` (ein Stand ohne Schlussumbruch kommt
     /// mit einem zurueck).
     ///
     /// Eine Sicherungsform, die eine eigene Zeichenkette braucht (der Stand

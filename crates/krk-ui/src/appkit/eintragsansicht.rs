@@ -1,9 +1,15 @@
-//! Die Eintragsansicht: `tasks.txt` und `notes.txt` aus dem
+//! Die Eintragsansicht: `tasks.txt` und `secrets.txt` aus dem
 //! erkannten `~/krkhome/` als Tabelle in der Formatansicht des Editors (C6 und
-//! C5 des Arbeitspakets `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`).
-//! Vom 260926 bis zum 261111 zeigte sie daneben `appointments.md` als
-//! Termintabelle, nach dem Datum geordnet; die ist gefallen (Schritt 3 des
-//! Plans `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`).
+//! C5 des Arbeitspakets `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`),
+//! dazu die Tabelle einer CSV- oder TSV-Datei.
+//! Bis zum 261111 zeigte sie daneben `notes.txt` als Notiztabelle mit den
+//! Spalten Thema und Notiz und `appointments.md` als Termintabelle, nach dem
+//! Datum geordnet; beide sind gefallen (Schritte 3 und 4 des Plans
+//! `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`). **Was
+//! hier noch `Notizfeld`, `notizzelle` und `THEMENSPALTE` heisst, ist seitdem
+//! allein die Bauart der Geheimnistabelle**: ihre Zellen sind die der frueheren
+//! Notiztabelle, und die Namen sind geblieben, damit Tabelle und Proben der
+//! Geheimnisse unberuehrt bleiben (E4 desselben Plans).
 //!
 //! ```text
 //! ┌──────────────────────────────┐
@@ -19,11 +25,11 @@
 //!
 //! # Eine Ansicht fuer jede Art
 //!
-//! **Aufgaben und Notizen teilen sich diese eine Ansicht**, und welche
+//! **Aufgaben und Geheimnisse teilen sich diese eine Ansicht**, und welche
 //! Art sie zeigt, sagen die Zeilen selbst: [`Zeilen::Aufgaben`] traegt eine
-//! Spalte mit Kaestchen und Text in fester Zeilenhoehe, [`Zeilen::Notizen`]
-//! zwei Spalten, Thema und Notiz, mit Kopfzeile und einer Zeilenhoehe nach dem
-//! Inhalt (Schritt 4.3). [`Eintragsansicht::zeilen_zeigen`] richtet die Spalten neu
+//! Spalte mit Kaestchen und Text in fester Zeilenhoehe, [`Zeilen::Geheimnisse`]
+//! sechs Spalten mit Kopfzeile und einer Zeilenhoehe nach dem
+//! Inhalt. [`Eintragsansicht::zeilen_zeigen`] richtet die Spalten neu
 //! ein, wenn die Art wechselt, und an keiner anderen Stelle. **Eine Ansicht und
 //! nicht zwei**, weil alles, was an der Naemlichkeit der Tabelle haengt, damit
 //! eine Stelle behaelt: [`Eintragsansicht::laufende_zelle`], der eigene
@@ -32,16 +38,15 @@
 //! ein zweites Mal beantworten, und der Fensterdelegierte fragte sonst die
 //! falsche. [`Zeilen::Geheimnisse`] traegt seit dem 261016 sechs Spalten,
 //! Name, Protokoll, Adresse, Konto, Passwort und Notizen, in der Folge der
-//! Datei ([`geheimniszeilen`]); fuenf sind einzeilig wie das Thema, die
-//! Notizen mehrzeilig wie die Notiz ([`mehrzeilige_spalte`]). Bis dahin
-//! zeigten sich die Geheimnisse als Notizen.
+//! Datei ([`geheimniszeilen`]); fuenf sind einzeilig, die Notizen mehrzeilig
+//! ([`mehrzeilige_spalte`]).
 //!
 //! # Die Tabelle einer CSV- oder TSV-Datei
 //!
 //! Seit Schritt 3 des Plans
 //! `261018-0822_*_plan-csv-und-tsv-als-tabelle-in-vorschau-und-editor.md`
-//! zeigt dieselbe Ansicht eine fuenfte Art, [`Zeilen::Trenntext`], und sie
-//! unterscheidet sich von den vier anderen in drei Stuecken:
+//! zeigt dieselbe Ansicht eine weitere Art, [`Zeilen::Trenntext`], und sie
+//! unterscheidet sich von den anderen in drei Stuecken:
 //!
 //! - **Die Spalten kommen aus der Datei** und nicht aus der Art: so viele, wie
 //!   der Satzindex des Kerns meldet, davor eine schmale Nummernspalte
@@ -53,7 +58,7 @@
 //!   auch hier allein in Feldern**: [`Zelle::spalte`] ist in dieser Art das
 //!   Feld der Datei, und jede Spaltennummer von AppKit (`columnForView:`,
 //!   `clickedColumn`, `editColumn:row:`) geht durch die zwei Umrechnungen.
-//!   Fuer die vier anderen Arten sind beide die Gleichheit.
+//!   Fuer die anderen Arten sind beide die Gleichheit.
 //! - **Die Zeilen sind keine abgeleiteten Werte, sondern eine Sicht auf den
 //!   Index** ([`Trenntextsicht`]): Text und Satzindex hinter einem `Rc`, dazu
 //!   eine Generation, an der [`Eintragsansicht::zeilen_zeigen`] einen neuen
@@ -63,7 +68,7 @@
 //!   dreissig sichtbaren Zellen einmal zerlegt wird (E9).
 //! - **Die Tabelle rollt waagerecht** und richtet ihre Spaltenbreiten nicht
 //!   nach der Rolle, sondern nach dem Inhalt der ersten Saetze (E8); die
-//!   vier anderen Arten behalten `LastColumnOnly` ohne waagerechten
+//!   anderen Arten behalten `LastColumnOnly` ohne waagerechten
 //!   Rollbalken. Beides stellt [`spalten_einrichten`] je Art ein, an der einen
 //!   Stelle, an der es die Spalten einrichtet.
 //!
@@ -75,6 +80,9 @@
 //! beginnt keine Bearbeitung, die sonst den gezeigten Ersatz als Text naehme.
 //!
 //! # Die mehrzeilige Notizzelle
+//!
+//! Die Zelle heisst nach der Notiztabelle, an der sie gemessen wurde; heute ist
+//! sie die Notizenzelle der Geheimnistabelle, mit derselben Bauart.
 //!
 //! Gemessen in `messungen/260926-0818-mehrzeilige-zelle.txt` (Belege unter
 //! `spikes/mehrzeilige-zelle/`): **eine Zeile waechst beim Tippen nicht von
@@ -92,20 +100,21 @@
 //! ueberlangen Zeile; die Umbruchbreite folgt der Spaltenbreite ueber
 //! `tableViewColumnDidResize:`.
 //!
-//! In der Notizspalte schreibt `return` einen Zeilenumbruch
+//! In der Notizenspalte der Geheimnistabelle schreibt `return` einen
+//! Zeilenumbruch
 //! (`260926-0112_*_was-tut-return-in-einer-notizzelle-und-welche-tasten-tragen-die-editoren.md`,
 //! Moeglichkeit 1), und `tab` wechselt uebernehmend in die naechste Zelle;
-//! beides entscheidet die reine Regel [`zellenbefehl`]. In der Themenspalte
-//! und in der Aufgabenzelle beendet `return` die Zelle wie bisher, denn ein
-//! Thema traegt keinen Umbruch (`Abweisung::UmbruchImThema`).
+//! beides entscheidet die reine Regel [`zellenbefehl`]. In ihren fuenf
+//! einzeiligen Spalten und in der Aufgabenzelle beendet `return` die Zelle,
+//! denn sie tragen keinen Umbruch (`Abweisung::UmbruchImGeheimnisfeld`).
 //!
 //! # Eine Sicht auf den Stand des Editors und kein eigenes Modell
 //!
 //! **Die Tabelle haelt keine Eintraege, sondern eine Ableitung.** Ihre Zeilen
 //! entstehen aus dem Stand, den das [`crate::editormodell::Editormodell`] haelt,
-//! ueber [`aufgabenzeilen`] und [`notizzeilen`], je Art die eine Stelle der
+//! ueber [`aufgabenzeilen`] und [`geheimniszeilen`], je Art die eine Stelle der
 //! Ableitung; sie lesen den Stand mit `krk_core::heimordner::eintraege::Aufgaben`
-//! und `Notizen`, derselben Zerlegung, mit der die Handlungen des Kerns
+//! und `Geheimnisse`, derselben Zerlegung, mit der die Handlungen des Kerns
 //! rechnen. Gerufen wird sie vom
 //! Editorbereich nach jeder Aenderung des Standes, und
 //! [`Eintragsansicht::zeilen_zeigen`] laedt die Tabelle nur dann neu, wenn sich
@@ -166,13 +175,13 @@
 //!
 //! ```text
 //!   Klick daneben, tab, return ──> control:textShouldEndEditing: ──> pruefen
-//!   (return in der Notizspalte: Zeilenumbruch, kein Ende)
+//!   (return in der Notizenspalte: Zeilenumbruch, kein Ende)
 //!                                   │ ja                            (nein: Zelle bleibt)
 //!                                   └> controlTextDidEndEditing:  ──> festschreiben
 //!   Editorbereich::zelle_uebernehmen ──> bearbeitung_beenden ──┘ (derselbe Weg)
 //!   esc (Rang in `abbrechen`)        ──> bearbeitung_verwerfen  ──> Anzeige zurueck
-//!                                        (Notizzelle: zelle_uebernehmen, Schritt 4.3)
-//!   tab in der Notiztabelle          ──> bearbeitung_beenden, dann naechste Zelle
+//!                                        (Notizenzelle: zelle_uebernehmen, Schritt 4.3)
+//!   tab in der Geheimnistabelle      ──> bearbeitung_beenden, dann naechste Zelle
 //!   Ankreuzfeld                      ──> abhaken, dann Fokus in die Tabelle
 //!   Doppelklick auf eine Zelle       ──> zelle_beginnen
 //!   Doppelklick unter die Zeilen     ──> anlegen (auch in der leeren Tabelle)
@@ -379,7 +388,7 @@ use objc2_foundation::{
 };
 
 use krk_core::heimordner::eintraege::geheimnisse::{Feld, Geheimnisse};
-use krk_core::heimordner::eintraege::{Aufgaben, Notizen, aufgabenzeile};
+use krk_core::heimordner::eintraege::{Aufgaben, aufgabenzeile};
 use krk_core::sprache::{Text, text};
 use krk_core::tasten::{ModMaske, Tastendruck};
 use krk_core::trenntext::{self, Satzindex, Zellbereich};
@@ -409,12 +418,10 @@ const KASTENBREITE: f64 = 22.0;
 /// Breite behaelt beim Auslegen ihren rechten Abstand.
 const AUFBAUBREITE: f64 = 400.0;
 
-/// Die erste Spalte: der Aufgabentext, in der Notiztabelle das Thema.
+/// Die erste Spalte: der Aufgabentext, in der Geheimnistabelle der Name, in
+/// der Tabelle einer CSV das erste Feld. Der Name stammt von der Notiztabelle,
+/// deren erste Spalte das Thema war (Modulkopf).
 pub const THEMENSPALTE: usize = 0;
-
-/// Die zweite Spalte der Notiztabelle, der Notiztext; die Aufgabentabelle hat
-/// sie nicht.
-pub const NOTIZSPALTE: usize = 1;
 
 /// Die Spalte der Geheimnistabelle, die ein Feld zeigt: seine Stelle in
 /// `Feld::ALLE`, denn die Spalten stehen in der Folge der Felder
@@ -440,15 +447,14 @@ pub fn feld_der_spalte(spalte: usize) -> Option<Feld> {
 /// Aufgabentabelle, die keine hat.
 ///
 /// **Die eine Stelle dieser Frage**: [`zellenbefehl`], die Zellen und die
-/// Umbruchbreite fragen hier und nicht nach [`NOTIZSPALTE`], denn in der
-/// Geheimnistabelle sind die Notizen die sechste Spalte.
+/// Umbruchbreite fragen hier und nicht nach einer festen Spaltennummer; in
+/// der Geheimnistabelle sind die Notizen die sechste Spalte.
 #[must_use]
 pub fn mehrzeilige_spalte(art: Eintragsart) -> Option<usize> {
     match art {
         // Eine Zelle einer CSV zeigt eine Zeile; ihr Umbruch erscheint als
         // `⏎` ([`zellanzeige`]), und `opt+return` schreibt ihn beim Bearbeiten.
         Eintragsart::Aufgaben | Eintragsart::Trenntext => None,
-        Eintragsart::Notizen => Some(NOTIZSPALTE),
         Eintragsart::Geheimnisse => Some(spalte_des_feldes(Feld::Notizen)),
     }
 }
@@ -461,7 +467,6 @@ pub fn mehrzeilige_spalte(art: Eintragsart) -> Option<usize> {
 pub fn spaltenzahl(art: Eintragsart) -> usize {
     match art {
         Eintragsart::Aufgaben | Eintragsart::Trenntext => 1,
-        Eintragsart::Notizen => 2,
         Eintragsart::Geheimnisse => Feld::ALLE.len(),
     }
 }
@@ -656,10 +661,6 @@ struct Satzspeicher {
     werte: Vec<String>,
 }
 
-/// Die Breite, mit der die Themenspalte entsteht; der Nutzer kann sie ziehen,
-/// die Notizspalte nimmt den Rest.
-const THEMENBREITE: f64 = 160.0;
-
 /// Der Abstand eines Notizfeldes zu den Kanten seiner Zelle, waagrecht.
 const RAND: f64 = 4.0;
 
@@ -671,12 +672,9 @@ const RAND_OBEN: f64 = 2.0;
 pub enum Eintragsart {
     /// Eine Spalte mit Kaestchen und Text, `tasks.txt`.
     Aufgaben,
-    /// Zwei Spalten, Thema und Notiz, `notes.txt`.
-    Notizen,
     /// Sechs Spalten, Name, Protokoll, Adresse, Konto, Passwort und Notizen,
     /// `secrets.txt` (Entscheidungen 17 und 18 des Plans
     /// `261016-0306_*_plan-secrets-mit-sechs-feldern-schluesselmerker-und-verbindungen.md`).
-    /// Bis dahin zeigten sich die Geheimnisse als Notizen.
     Geheimnisse,
     /// Eine CSV- oder TSV-Datei: so viele Spalten, wie die Datei traegt, davor
     /// die Nummer jeder Zeile (Schritt 3 des Plans der CSV-Tabelle); der
@@ -694,8 +692,6 @@ pub enum Eintragsart {
 pub enum Zeilen {
     /// Die Zeilen der Aufgabentabelle.
     Aufgaben(Vec<Eintragszeile>),
-    /// Die Zeilen der Notiztabelle.
-    Notizen(Vec<Notizzeile>),
     /// Die Zeilen der Geheimnistabelle, in der Folge der Datei.
     Geheimnisse(Vec<Geheimniszeile>),
     /// Die Sicht auf eine CSV- oder TSV-Datei, in der Folge der Datei; ihre
@@ -709,7 +705,6 @@ impl Zeilen {
     pub fn art(&self) -> Eintragsart {
         match self {
             Self::Aufgaben(_) => Eintragsart::Aufgaben,
-            Self::Notizen(_) => Eintragsart::Notizen,
             Self::Geheimnisse(_) => Eintragsart::Geheimnisse,
             Self::Trenntext(_) => Eintragsart::Trenntext,
         }
@@ -720,7 +715,6 @@ impl Zeilen {
     pub fn len(&self) -> usize {
         match self {
             Self::Aufgaben(zeilen) => zeilen.len(),
-            Self::Notizen(zeilen) => zeilen.len(),
             Self::Geheimnisse(zeilen) => zeilen.len(),
             Self::Trenntext(sicht) => sicht.index().zeilenzahl(),
         }
@@ -733,7 +727,7 @@ impl Zeilen {
     pub fn spaltenzahl(&self) -> usize {
         match self {
             Self::Trenntext(sicht) => sicht.index().spaltenzahl(),
-            Self::Aufgaben(_) | Self::Notizen(_) | Self::Geheimnisse(_) => spaltenzahl(self.art()),
+            Self::Aufgaben(_) | Self::Geheimnisse(_) => spaltenzahl(self.art()),
         }
     }
 
@@ -747,7 +741,7 @@ impl Zeilen {
     pub fn feld_der_tabellenspalte(&self, spalte: usize) -> Option<usize> {
         let feld = match self {
             Self::Trenntext(_) => spalte.checked_sub(NUMMERNSPALTE + 1)?,
-            Self::Aufgaben(_) | Self::Notizen(_) | Self::Geheimnisse(_) => spalte,
+            Self::Aufgaben(_) | Self::Geheimnisse(_) => spalte,
         };
         (feld < self.spaltenzahl()).then_some(feld)
     }
@@ -758,7 +752,7 @@ impl Zeilen {
     pub fn tabellenspalte_des_feldes(&self, feld: usize) -> usize {
         match self {
             Self::Trenntext(_) => feld + NUMMERNSPALTE + 1,
-            Self::Aufgaben(_) | Self::Notizen(_) | Self::Geheimnisse(_) => feld,
+            Self::Aufgaben(_) | Self::Geheimnisse(_) => feld,
         }
     }
 
@@ -860,41 +854,6 @@ impl From<Vec<Eintragszeile>> for Zeilen {
     }
 }
 
-impl From<Vec<Notizzeile>> for Zeilen {
-    fn from(zeilen: Vec<Notizzeile>) -> Self {
-        Self::Notizen(zeilen)
-    }
-}
-
-/// Eine Zeile der Notiztabelle, abgeleitet aus einem Block des Standes.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Notizzeile {
-    /// Das Thema, ohne `## ` davor.
-    pub thema: String,
-    /// Der Notiztext, Zeilen durch `\n` getrennt, ohne Schlussumbruch und
-    /// ohne den Trenner zur naechsten Notiz (`krk_core::heimordner::eintraege::Notiz`).
-    pub text: String,
-}
-
-/// Die Zeilen der Notiztabelle zu einem Stand von `notes.txt`.
-///
-/// **Die eine Stelle der Ableitung fuer Notizen**, und sie zaehlt wie der
-/// Kern: eine Zeile je Block aus `Notizen::bloecke`, der Vorspann ohne Zeile,
-/// Thema und Text ueber `Notizen::notiz`, dieselbe Lesart, gegen die
-/// `notizen::aendern` eine unveraenderte Zelle erkennt. Damit ist die Stelle
-/// einer Zeile die Zahl, die jede Handlung des Kerns als `index` fuehrt.
-#[must_use = "die Zeilen sind die ganze Auskunft"]
-pub fn notizzeilen(stand: &str) -> Vec<Notizzeile> {
-    let notizen = Notizen::lesen(stand);
-    (0..notizen.bloecke().len())
-        .filter_map(|index| notizen.notiz(index))
-        .map(|notiz| Notizzeile {
-            thema: notiz.thema.to_owned(),
-            text: notiz.text,
-        })
-        .collect()
-}
-
 /// Was ein Befehl des Feldeditors in einer Zelle bewirkt.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Zellenbefehl {
@@ -904,28 +863,27 @@ pub enum Zellenbefehl {
     /// Ein Zeilenumbruch in den Text der Zelle; die Bearbeitung laeuft weiter.
     Umbruch,
     /// Die Zelle uebernehmen und die naechste (`true`) oder vorige (`false`)
-    /// Zelle der Notiztabelle in Bearbeitung setzen.
+    /// Zelle der Tabelle in Bearbeitung setzen.
     Weiter(bool),
 }
 
 /// Die Regel fuer `return` und `tab` in einer Zelle (C5, C6).
 ///
-/// **Rein und ohne Fenster pruefbar.** In der Notizspalte schreibt `return`
-/// einen Umbruch (`260926-0112_*_was-tut-return-in-einer-notizzelle-…`,
-/// Moeglichkeit 1); in der Themenspalte und in der Aufgabenzelle nicht, denn
-/// beide tragen keinen Umbruch, und `return` beendet dort die Zelle. `tab` und
-/// `shift+tab` wechseln in der Notiztabelle von Zelle zu Zelle; in der
-/// Aufgabentabelle gibt es keine zweite Zelle der Zeile, und `tab` beendet wie
-/// bisher. Die Geheimnistabelle folgt der Notiztabelle,
-/// mit fuenf einzeiligen Spalten und den Notizen als der einen mehrzeiligen
-/// ([`mehrzeilige_spalte`]). Die Tabelle einer CSV hat keine mehrzeilige
+/// **Rein und ohne Fenster pruefbar.** In der Notizenspalte der
+/// Geheimnistabelle schreibt `return` einen Umbruch
+/// (`260926-0112_*_was-tut-return-in-einer-notizzelle-…`, Moeglichkeit 1); in
+/// ihren fuenf einzeiligen Spalten und in der Aufgabenzelle nicht, denn sie
+/// tragen keinen Umbruch, und `return` beendet dort die Zelle
+/// ([`mehrzeilige_spalte`]). `tab` und `shift+tab` wechseln in der
+/// Geheimnistabelle von Zelle zu Zelle; in der Aufgabentabelle gibt es keine
+/// zweite Zelle der Zeile, und `tab` beendet wie bisher. Die Tabelle einer CSV hat keine mehrzeilige
 /// Spalte: `return` uebernimmt, `opt+return` schreibt den Umbruch ueber die
 /// Belegung des Feldeditors von AppKit, und `tab` geht durch die Felder (E16).
 #[must_use]
 pub fn zellenbefehl(art: Eintragsart, spalte: usize, befehl: Sel) -> Zellenbefehl {
     match art {
         Eintragsart::Aufgaben => Zellenbefehl::Appkit,
-        Eintragsart::Notizen | Eintragsart::Geheimnisse | Eintragsart::Trenntext => {
+        Eintragsart::Geheimnisse | Eintragsart::Trenntext => {
             if befehl == sel!(insertNewline:) && mehrzeilige_spalte(art) == Some(spalte) {
                 Zellenbefehl::Umbruch
             } else if befehl == sel!(insertTab:) {
@@ -940,11 +898,12 @@ pub fn zellenbefehl(art: Eintragsart, spalte: usize, befehl: Sel) -> Zellenbefeh
 }
 
 /// Die Zelle, in die `tab` (`vorwaerts`) oder `shift+tab` aus `zelle` fuehrt,
-/// in der Notiztabelle mit diesen `zeilen`; `None` am Rand.
+/// in der Tabelle mit diesen `zeilen`; `None` am Rand.
 ///
-/// Zeilenweise, wie gelesen wird: Thema, Notiz, dann das Thema der
-/// **naechsten Zeile auf dem Schirm**; in der Geheimnistabelle ebenso durch
-/// alle sechs Spalten und in der Tabelle einer CSV durch jedes Feld
+/// Zeilenweise, wie gelesen wird: durch die Spalten einer Zeile, dann die
+/// erste Spalte der **naechsten Zeile auf dem Schirm**; in der
+/// Geheimnistabelle durch alle sechs Spalten und in der Tabelle einer CSV
+/// durch jedes Feld
 /// ([`Zeilen::spaltenzahl`]). Die Zelle kommt und geht als Stelle;
 /// gezaehlt wird dazwischen in Zeilen, ueber die zwei Umrechnungen an
 /// [`Zeilen`] (Modulkopf, „Stelle und Zeile").
@@ -1009,7 +968,7 @@ pub struct Zelle {
     /// und **nie** die Zeilennummer von AppKit (Modulkopf, „Stelle und
     /// Zeile").
     pub stelle: usize,
-    /// Die Spalte: [`THEMENSPALTE`] oder [`NOTIZSPALTE`]; die Aufgabentabelle
+    /// Die Spalte, ab [`THEMENSPALTE`] gezaehlt; die Aufgabentabelle
     /// hat allein die erste, die Geheimnistabelle sechs
     /// ([`spalte_des_feldes`]). In der Tabelle einer CSV das Feld der Datei
     /// und **nie** AppKits Tabellenspalte, die die Nummernspalte mitzaehlt
@@ -1043,7 +1002,7 @@ pub enum Doppelklick {
 /// Flaeche unter den Zeilen, auch die ganze Flaeche einer leeren Tabelle, und
 /// dann entsteht ein Eintrag; oder die Kopfzeile, fuer die AppKit dieselbe -1
 /// meldet, und dann geschieht nichts: wer eine Spalte breiter ziehen will,
-/// soll dabei keine Notiz anlegen.
+/// soll dabei keinen Eintrag anlegen.
 #[must_use]
 pub fn doppelklick(stelle: Option<usize>, spalte: NSInteger, in_der_tabelle: bool) -> Doppelklick {
     match stelle {
@@ -1669,7 +1628,8 @@ impl Zelleneditor {
 }
 
 define_class!(
-    /// Das Textfeld einer Zelle der Notiztabelle.
+    /// Das Textfeld einer Zelle der Geheimnistabelle; bis zum 261111 auch das
+    /// der Notiztabelle, daher der Name.
     ///
     /// **Es meldet waehrend der Bearbeitung die Hoehe des Feldeditortexts als
     /// Eigenhoehe**, und nur deshalb gibt es die Klasse: ohne sie meldet
@@ -1753,13 +1713,14 @@ pub struct EintragsansichtIvars {
     /// Die Tabelle selbst; sie nimmt den Ersthelferrang an.
     tabelle: Retained<Eintragstabelle>,
     /// Die Kopfzeile mit den Spaltennamen; eingehaengt allein in der
-    /// Notiztabelle, die Aufgabentabelle traegt keine.
+    /// Geheimnistabelle und der Tabelle einer CSV, die Aufgabentabelle traegt
+    /// keine.
     kopfzeile: Retained<NSTableHeaderView>,
     /// Die zuletzt abgeleiteten Zeilen.
     ///
     /// Keine zweite Wahrheit neben dem Stand: sie werden allein von
     /// [`Eintragsansicht::zeilen_zeigen`] geschrieben, und das bekommt sie aus
-    /// [`aufgabenzeilen`] oder [`notizzeilen`] ueber den Stand des Editors.
+    /// [`aufgabenzeilen`] oder [`geheimniszeilen`] ueber den Stand des Editors.
     zeilen: RefCell<Zeilen>,
     /// Die Wege in den Editor; `None`, bis der Editorbereich sie eintraegt.
     wege: RefCell<Option<Zellenwege>>,
@@ -1868,7 +1829,7 @@ define_class!(
         }
 
         /// Der Feldeditor fragt, ob jemand anders diesen Befehl uebernimmt:
-        /// `return` und `tab` in der Notiztabelle, nach [`zellenbefehl`].
+        /// `return` und `tab` in der Geheimnistabelle, nach [`zellenbefehl`].
         // SAFETY: Die Signatur entspricht der des Protokolls (`NSControl.h`),
         // wie beim Eingabewaechter der Blaetter.
         #[unsafe(method(control:textView:doCommandBySelector:))]
@@ -1935,7 +1896,7 @@ define_class!(
                         });
                     self.kopf_angeklickt(stelle, umschalt);
                 }
-                Eintragsart::Aufgaben | Eintragsart::Notizen | Eintragsart::Geheimnisse => {}
+                Eintragsart::Aufgaben | Eintragsart::Geheimnisse => {}
             }
         }
 
@@ -2033,13 +1994,13 @@ impl Eintragsansicht {
         // die Tabelle einer CSV waehlt ihre Spalte selbst.
         tabelle.setAllowsColumnSelection(false);
         // Die letzte Spalte nimmt jede Aenderung der Breite: in der
-        // Aufgabentabelle die einzige, in der Notiztabelle die Notiz, und das
-        // Thema behaelt die Breite, die der Nutzer ihm gezogen hat.
+        // Aufgabentabelle die einzige, in der Geheimnistabelle die Notizen, und
+        // jede Spalte davor behaelt die Breite, die der Nutzer ihr gezogen hat.
         tabelle.setColumnAutoresizingStyle(
             NSTableViewColumnAutoresizingStyle::LastColumnOnlyAutoresizingStyle,
         );
         // Die Kopfzeile, die AppKit der Tabelle mitgibt, wird gehalten und
-        // allein in der Notiztabelle eingehaengt; `spalten_einrichten` nimmt
+        // allein in einer Tabelle mit Spaltentiteln eingehaengt; `spalten_einrichten` nimmt
         // sie der Aufgabentabelle gleich wieder ab.
         let kopfzeile = tabelle.headerView().unwrap_or_else(|| {
             NSTableHeaderView::initWithFrame(
@@ -2175,7 +2136,7 @@ impl Eintragsansicht {
     /// den sie begonnen hat.
     ///
     /// **Wechselt die Art, werden zuerst die Spalten neu eingerichtet**, und
-    /// die Auswahl faellt: eine Stelle in den Aufgaben meint keine Notiz.
+    /// die Auswahl faellt: eine Stelle in den Aufgaben meint kein Geheimnis.
     pub fn zeilen_zeigen(&self, zeilen: impl Into<Zeilen>) {
         let zeilen = zeilen.into();
         self.fremde_zelle_verwerfen();
@@ -2256,7 +2217,7 @@ impl Eintragsansicht {
                 zeilen: sicht.index().zeilenzahl(),
                 spalten: sicht.index().spaltenzahl(),
             }),
-            Zeilen::Aufgaben(_) | Zeilen::Notizen(_) | Zeilen::Geheimnisse(_) => None,
+            Zeilen::Aufgaben(_) | Zeilen::Geheimnisse(_) => None,
         }
     }
 
@@ -2626,13 +2587,9 @@ impl Eintragsansicht {
 
     /// Der abgeleitete Text des gewaehlten Eintrags, fuer `copy:`.
     ///
-    /// Von einer Notiz ihr Text, und das Thema nur, wenn sie keinen Text
-    /// traegt: kopiert wird, was der Nutzer woanders einsetzen will, und bei
-    /// einer Notiz ist das der Inhalt und nicht die Ueberschrift.
-    ///
-    /// Von
-    /// einem Geheimnis seine Notizen, und der Name nur ohne Notizen: dieselbe
-    /// Regel wie bei der Notiz, deren Form es traegt.
+    /// Von einem Geheimnis seine Notizen, und der Name nur ohne Notizen:
+    /// kopiert wird, was der Nutzer woanders einsetzen will, und das ist der
+    /// Inhalt und nicht die Ueberschrift.
     #[must_use]
     pub(super) fn gewaehlter_text(&self) -> Option<String> {
         // Die Tabelle einer CSV kopiert ihr Rechteck als TSV (E11).
@@ -2654,9 +2611,6 @@ impl Eintragsansicht {
         };
         match &*self.ivars().zeilen.borrow() {
             Zeilen::Aufgaben(zeilen) => zeilen.get(zeile).map(|eintrag| eintrag.text.clone()),
-            Zeilen::Notizen(zeilen) => zeilen
-                .get(zeile)
-                .map(|notiz| text_oder(&notiz.text, &notiz.thema)),
             Zeilen::Geheimnisse(zeilen) => zeilen.get(zeile).map(|geheimnis| {
                 text_oder(geheimnis.feld(Feld::Notizen), geheimnis.feld(Feld::Name))
             }),
@@ -2713,7 +2667,7 @@ impl Eintragsansicht {
 
     /// Setzt die erste Zelle des Eintrags an der genannten **Stelle** in
     /// Bearbeitung, der Text ist ausgewaehlt: den Aufgabentext, in der
-    /// Notiztabelle das Thema.
+    /// Geheimnistabelle den Namen.
     ///
     /// Liefert `false`, wenn es den Eintrag nicht gibt.
     pub fn bearbeitung_beginnen(&self, stelle: usize) -> bool {
@@ -2757,7 +2711,7 @@ impl Eintragsansicht {
     fn trenntextfeld_oeffnen(&self, zelle: Zelle, zeile: NSInteger, spalte: NSInteger) {
         let wert = match &*self.ivars().zeilen.borrow() {
             Zeilen::Trenntext(sicht) => sicht.wert(zelle.stelle, zelle.spalte),
-            Zeilen::Aufgaben(_) | Zeilen::Notizen(_) | Zeilen::Geheimnisse(_) => {
+            Zeilen::Aufgaben(_) | Zeilen::Geheimnisse(_) => {
                 return;
             }
         };
@@ -2804,7 +2758,7 @@ impl Eintragsansicht {
     /// Pruefung hat den Text abgewiesen, und die Zelle steht weiter in
     /// Bearbeitung. Zwei Rufer: `Editorbereich::zelle_uebernehmen` fuer KRKs
     /// eigene Wege und [`Self::zellenbefehl_ausfuehren`] fuer `tab` in der
-    /// Notiztabelle, der dort den Weg von AppKit ersetzt und nicht einen der
+    /// Geheimnistabelle, der dort den Weg von AppKit ersetzt und nicht einen der
     /// Wege, die `zelle_uebernehmen` sammelt.
     #[must_use = "ein abgelehnter Wechsel heisst, dass die Zelle weiter bearbeitet wird"]
     pub fn bearbeitung_beenden(&self, fenster: &NSWindow) -> bool {
@@ -2921,13 +2875,6 @@ impl Eintragsansicht {
         let zeile = self.zeile_von(zelle.stelle)?;
         match &*self.ivars().zeilen.borrow() {
             Zeilen::Aufgaben(zeilen) => zeilen.get(zeile).map(|eintrag| eintrag.text.clone()),
-            Zeilen::Notizen(zeilen) => zeilen.get(zeile).map(|notiz| {
-                if zelle.spalte == NOTIZSPALTE {
-                    notiz.text.clone()
-                } else {
-                    notiz.thema.clone()
-                }
-            }),
             Zeilen::Geheimnisse(zeilen) => zeilen
                 .get(zeile)
                 .map(|geheimnis| geheimnis.wert(zelle.spalte).to_owned()),
@@ -3029,17 +2976,8 @@ impl Eintragsansicht {
         let zeilen = self.ivars().zeilen.borrow().clone();
         match &zeilen {
             Zeilen::Aufgaben(zeilen) => Some(self.aufgabenzelle(zeilen.get(zeile)?)),
-            Zeilen::Notizen(zeilen) => {
-                let notiz = zeilen.get(zeile)?;
-                let inhalt = if spalte == NOTIZSPALTE {
-                    &notiz.text
-                } else {
-                    &notiz.thema
-                };
-                Some(self.notizzelle(inhalt, spalte, Eintragsart::Notizen))
-            }
-            // Sechs Zellen derselben Bauart: fuenf einzeilige wie das Thema,
-            // die Notizen mehrzeilig wie die Notiz.
+            // Sechs Zellen derselben Bauart: fuenf einzeilige und die Notizen
+            // mehrzeilig.
             Zeilen::Geheimnisse(zeilen) => {
                 let geheimnis = zeilen.get(zeile)?;
                 Some(self.notizzelle(geheimnis.wert(spalte), spalte, Eintragsart::Geheimnisse))
@@ -3155,17 +3093,17 @@ impl Eintragsansicht {
         zelle
     }
 
-    /// Die Zelle einer Notiz in der genannten Spalte: ein [`Notizfeld`] ueber
-    /// Auto Layout an den Kanten einer `NSTableCellView`.
+    /// Die Zelle eines Geheimnisses in der genannten Spalte: ein [`Notizfeld`]
+    /// ueber Auto Layout an den Kanten einer `NSTableCellView`. Bis zum 261111
+    /// baute hier auch die Notiztabelle ihre zwei Zellen, daher der Name.
     ///
-    /// **Die Notizspalte bricht um und waechst**: mehrzeilig, Umbruch nach
+    /// **Die mehrzeilige Spalte bricht um und waechst**: Umbruch nach
     /// Woertern, Umbruchbreite nach der Spalte, vertikaler Stauchwiderstand
     /// `required` und an allen vier Kanten gebunden, wie gemessen (Modulkopf).
-    /// **Die Themenspalte bleibt eine Zeile** und haengt unten nur mit
-    /// „hoechstens" an der Zelle, damit eine hohe Notiz daneben die Zeile
-    /// strecken darf, ohne dass die zwei Bindungen einander widersprechen.
+    /// **Eine einzeilige Spalte bleibt eine Zeile** und haengt unten nur mit
+    /// „hoechstens" an der Zelle, damit hohe Notizen daneben die Zeile
+    /// strecken duerfen, ohne dass die zwei Bindungen einander widersprechen.
     ///
-    /// Die Geheimnistabelle baut ihre sechs Zellen hier ebenso.
     /// Mehrzeilig ist allein die Spalte, die [`mehrzeilige_spalte`] der Art
     /// nennt; `inhalt` ist der Text der Zelle.
     fn notizzelle(&self, inhalt: &str, spalte: usize, art: Eintragsart) -> Retained<NSView> {
@@ -3330,8 +3268,8 @@ fn geheimnisspalte(feld: Feld) -> (&'static NSString, Text, f64) {
 /// **Gerufen beim Bau und bei einem Wechsel der Art in
 /// [`Eintragsansicht::zeilen_zeigen`], und sonst nie**: die Spalten sind eine
 /// Eigenschaft der Art und nicht des Standes. Die Aufgabentabelle traegt eine
-/// Spalte in fester Zeilenhoehe und keine Kopfzeile, die Notiztabelle Thema und
-/// Notiz mit Kopfzeile und automatischer Zeilenhoehe.
+/// Spalte in fester Zeilenhoehe und keine Kopfzeile, die Geheimnistabelle ihre
+/// sechs Spalten mit Kopfzeile und automatischer Zeilenhoehe.
 ///
 /// **Die Tabelle einer CSV** traegt die Nummernspalte und so viele Spalten,
 /// wie die Datei Felder hat, eine Kopfzeile, eine feste Zeilenhoehe und als
@@ -3380,24 +3318,8 @@ fn spalten_einrichten(
             tabelle.setUsesAutomaticRowHeights(false);
             tabelle.setHeaderView(None);
         }
-        Eintragsart::Notizen => {
-            let thema = spalte_bauen(ns_string!("thema"), Text::EintragsspalteThema);
-            thema.setResizingMask(NSTableColumnResizingOptions::UserResizingMask);
-            thema.setWidth(THEMENBREITE);
-            thema.setMinWidth(THEMENBREITE / 2.0);
-            tabelle.addTableColumn(&thema);
-            let notiz = spalte_bauen(ns_string!("notiz"), Text::EintragsspalteNotiz);
-            notiz.setResizingMask(
-                NSTableColumnResizingOptions::AutoresizingMask
-                    | NSTableColumnResizingOptions::UserResizingMask,
-            );
-            notiz.setMinWidth(THEMENBREITE / 2.0);
-            tabelle.addTableColumn(&notiz);
-            tabelle.setUsesAutomaticRowHeights(true);
-            tabelle.setHeaderView(Some(kopfzeile));
-        }
         // Sechs Spalten in der Folge von `Feld::ALLE` (Entscheidung 18 des
-        // Plans); die Notizen nehmen den Rest der Breite wie die Notizspalte.
+        // Plans); die Notizen nehmen den Rest der Breite.
         Eintragsart::Geheimnisse => {
             for feld in Feld::ALLE {
                 let (kennung, titel, breite) = geheimnisspalte(feld);
@@ -3449,7 +3371,7 @@ fn trenntextfeld_schalten(feld: &NSTextField, bearbeitbar: bool) {
 pub fn hervorhebung(art: Eintragsart) -> NSTableViewSelectionHighlightStyle {
     match art {
         Eintragsart::Trenntext => NSTableViewSelectionHighlightStyle::None,
-        Eintragsart::Aufgaben | Eintragsart::Notizen | Eintragsart::Geheimnisse => {
+        Eintragsart::Aufgaben | Eintragsart::Geheimnisse => {
             NSTableViewSelectionHighlightStyle::Regular
         }
     }
@@ -3527,7 +3449,7 @@ pub fn tabellentaste(druck: Tastendruck) -> Option<Tabellentaste> {
 pub fn rollt_waagerecht(art: Eintragsart) -> bool {
     match art {
         Eintragsart::Trenntext => true,
-        Eintragsart::Aufgaben | Eintragsart::Notizen | Eintragsart::Geheimnisse => false,
+        Eintragsart::Aufgaben | Eintragsart::Geheimnisse => false,
     }
 }
 
@@ -3645,7 +3567,7 @@ mod tests {
             doppelklick(Some(2), 1, true),
             Doppelklick::Zelle(Zelle {
                 stelle: 2,
-                spalte: NOTIZSPALTE
+                spalte: 1
             })
         );
         assert_eq!(
@@ -3661,16 +3583,15 @@ mod tests {
     }
 
     /// Die zwei Umrechnungen zwischen Stelle und Zeile (Modulkopf, „Stelle
-    /// und Zeile"): fuer Aufgaben, Notizen und Geheimnisse die Gleichheit,
+    /// und Zeile"): fuer Aufgaben und Geheimnisse die Gleichheit,
     /// jenseits der Laenge `None` in beiden Richtungen, und in der leeren
     /// Tabelle immer `None`. Die Probe an einer umgeordneten Tabelle ist am
     /// 261111 mit der Termintabelle gefallen.
     #[test]
     fn stelle_und_zeile_sind_in_den_tabellen_des_notizordners_dieselbe_zahl() {
         let aufgaben = Zeilen::from(aufgabenzeilen("- [ ] a\n- [x] b\n- [ ] c\n"));
-        let notizen = Zeilen::from(notizzeilen("Vorspann\n## a\n## b\n"));
-        let geheimnisse = Zeilen::from(geheimniszeilen("## a\n## b\n"));
-        for zeilen in [&aufgaben, &notizen, &geheimnisse] {
+        let geheimnisse = Zeilen::from(geheimniszeilen("Vorspann\n## a\n## b\n"));
+        for zeilen in [&aufgaben, &geheimnisse] {
             for zahl in 0..zeilen.len() {
                 assert_eq!(zeilen.stelle_der_zeile(zahl), Some(zahl), "{zeilen:?}");
                 assert_eq!(zeilen.zeile_der_stelle(zahl), Some(zahl), "{zeilen:?}");

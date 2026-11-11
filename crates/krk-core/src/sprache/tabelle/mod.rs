@@ -62,7 +62,6 @@
 //! | Git-Bereich | zone Git | Git area |
 //! | Auslieferungszustand | version livrée | shipped version |
 //! | Byte, kB, MB, GB, TB | octet, ko, Mo, Go, To | byte, kB, MB, GB, TB |
-//! | Thema (einer Notiz) | sujet | topic |
 //! | Platzhalter `*` | joker | wildcard |
 //! | vorgemerkt (Git) | indexé | staged |
 //! | Eintrag (eines Ordners, eines Archivs) | entrée | entry |
@@ -83,8 +82,6 @@
 //! | Home (Menue) | Home | Home |
 //! | beiseitelegen (eine Sicherung) | mettre de côté | set aside |
 //! | zuruecksetzen (auf Werkseinstellungen) | réinitialiser | reset |
-//! | Zettel (die alten Notizzettel) | note | note |
-//! | uebernehmen (die alten Zettel) | reprendre | take over |
 //! | Baustein (eines Leseprofils) | brique | building block |
 //! | Pfadmuster / Kennzeichendatei | motif de chemin / fichier repère | path pattern / marker file |
 //! | Zusatztaste | touche de modification | modifier key |
@@ -122,7 +119,7 @@
 //! | Geraete und Orte (Leiste) | Volumes et emplacements | Volumes and Locations |
 //! | fehlt (ein Lesezeichen ohne Ziel) | absent | missing |
 //! | Textstelle (eines Lesezeichens) | passage de texte | text location |
-//! | Aufgabe / Thema / Notiz (Spalten des Editors) | Tâche / Sujet / Note | Task / Topic / Note |
+//! | Aufgabe (Spalte des Editors) | Tâche | Task |
 //! | Zuweisen (F1-Ansicht) | Attribuer | Assign |
 //! | Fertig (Schaltflaeche) | Terminé | Done |
 //! | Aufnahme (einer Kombination) | saisie | recording |
@@ -188,7 +185,7 @@
 //! | verdeckter Tab | onglet masqué | hidden tab |
 //! | eine Fassung, hinter der eine Datei zurueckliegt | version sur laquelle un fichier est en retard | version a file lags behind |
 //! | Auswahl (die gewaehlte Zeile des Dateifensters) | sélection | selection |
-//! | Tabelle (Aufgaben- und Notiztabelle des Editors) | tableau | table |
+//! | Tabelle (Aufgaben- und Geheimnistabelle des Editors) | tableau | table |
 //! | Kombination (einer Belegung) | combinaison | combination |
 //! | Funktion (der Belegung) | fonction | function |
 //! | Unterbaum | sous-arborescence | subtree |

@@ -256,14 +256,15 @@
 //! genauso einrueckt; die Nummer einer geordneten Liste steht in der [`Ebene`]
 //! der Liste und wird vom Punkt verbraucht.
 //!
-//! # Zwei Lesarten, und die zweite gilt zwei Dateien
+//! # Zwei Lesarten, und die zweite gilt einer Datei
 //!
 //! [`Lesart::Markdown`] ist der Grundumfang von CommonMark mit genau einem
 //! Merkmal der Kiste, `ENABLE_TABLES` (seit dem Arbeitspaket
 //! `261031-1645-markdown-vorschau-richtet-tabellenspalten-aus`), und so bleibt
 //! es fuer jede Markdown-Datei. [`Lesart::Eintragsdatei`] gilt allein
-//! `notes.txt` und `tasks.txt` im erkannten `~/krkhome/` (C4 des
-//! Arbeitspakets `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`) und
+//! `tasks.txt` im erkannten `~/krkhome/` (C4 des
+//! Arbeitspakets `260925-2356-f2-oeffnet-krkhome-statt-notizfenster`; bis zum
+//! 261111 auch `notes.txt`, die seitdem gewoehnlicher Text ist) und
 //! schaltet dazu genau ein Merkmal hinzu, `ENABLE_TASKLISTS`. **Welche Lesart gilt,
 //! entscheidet der Dateityp und nicht diese Datei** ([`Lesart::von_dateityp`]);
 //! eine `.md` mit `- [ ]` an anderem Ort erscheint deshalb wie vor dieser
@@ -373,8 +374,8 @@ use crate::hervorhebung::{
 pub enum Lesart {
     /// Der Grundumfang von CommonMark mit Tabellen, fuer jede Markdown-Datei.
     Markdown,
-    /// Dazu die Aufgabenkaestchen, allein fuer `notes.txt` und `tasks.txt` im
-    /// erkannten Ordner.
+    /// Dazu die Aufgabenkaestchen, allein fuer `tasks.txt` im erkannten
+    /// Ordner.
     Eintragsdatei,
 }
 
@@ -397,9 +398,7 @@ impl Lesart {
     #[must_use]
     pub fn von_dateityp(typ: Dateityp) -> Self {
         match typ {
-            Dateityp::Eintraege(Sonderdatei::Notizen | Sonderdatei::Aufgaben) => {
-                Lesart::Eintragsdatei
-            }
+            Dateityp::Eintraege(Sonderdatei::Aufgaben) => Lesart::Eintragsdatei,
             Dateityp::Eintraege(Sonderdatei::Geheimnisse)
             | Dateityp::Markdown
             | Dateityp::Sonstiges => Lesart::Markdown,
@@ -409,7 +408,7 @@ impl Lesart {
     /// Die Merkmale der Kiste, die diese Lesart einschaltet.
     ///
     /// **Tabellen gelten in beiden Lesarten**, denn eine Tabelle in
-    /// `notes.txt` sieht aus wie in jeder `.md` (Frage 2 des Plans
+    /// `tasks.txt` sieht aus wie in jeder `.md` (Frage 2 des Plans
     /// `261031-1720-plan-markdown-vorschau-richtet-tabellenspalten-aus.md`).
     /// Die Eintragsdatei bekommt dazu ihre Kaestchen.
     ///
@@ -4256,17 +4255,6 @@ mod tests {
         );
     }
 
-    /// Die Notizen: ein Thema ist eine Ueberschrift, sein Text steht darunter.
-    #[test]
-    fn eine_notizdatei_zeigt_ihre_themen_als_ueberschriften() {
-        let ergebnis = als_eintragsdatei("## Einkauf\nBrot und Milch\n\n## Idee\nmehr\n");
-        assert_eq!(ergebnis.text, "Einkauf\n\nBrot und Milch\n\nIdee\n\nmehr");
-        assert_eq!(
-            stellen(&ergebnis, Auszeichnung::Ueberschrift { stufe: 2 }).len(),
-            2
-        );
-    }
-
     /// Der Quellbezug der Runde 14 deckt das Kaestchen in einer engen Liste
     /// mit `[ ]` beziehungsweise `[x]`, und die Kachelung bleibt in jeder
     /// Form lueckenlos.
@@ -4328,13 +4316,16 @@ mod tests {
     }
 
     /// Ein Dateityp wird an genau einer Stelle zur Lesart, und allein
-    /// `notes.txt` und `tasks.txt` bekommen Kaestchen;
+    /// `tasks.txt` bekommt Kaestchen;
     /// `secrets.txt` erreicht das Rendern nie und steht beim Grundumfang.
+    /// `notes.txt` ist seit dem 261111 keine Sonderdatei mehr und kommt als
+    /// `Sonstiges` an (C3.3 des Spec
+    /// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`).
     #[test]
     fn allein_eine_eintragsdatei_wird_als_eintragsdatei_gelesen() {
         for sonderdatei in Sonderdatei::ALLE {
             let erwartet = match sonderdatei {
-                Sonderdatei::Notizen | Sonderdatei::Aufgaben => Lesart::Eintragsdatei,
+                Sonderdatei::Aufgaben => Lesart::Eintragsdatei,
                 Sonderdatei::Geheimnisse => Lesart::Markdown,
             };
             assert_eq!(

@@ -1134,7 +1134,7 @@ impl Vorschaufenster {
     /// Der Treffer ist `alt.sonderdatei(p)` oder `neu.sonderdatei(p)`, zwei
     /// Textvergleiche **ohne Systemaufruf**; der neue Auftrag nimmt die
     /// Abschrift aus dem Griff, den der Rufer vorher auf den neuen Ort gesetzt
-    /// hat. `notes.txt` am alten Ort erscheint danach als Text, am neuen
+    /// hat. `tasks.txt` am alten Ort erscheint danach als Text, am neuen
     /// gerendert, ohne dass der Nutzer sie neu waehlt.
     pub fn heimordner_gewechselt(&self, alt: Option<&Heimordner>, neu: &Heimordner) {
         let profile = Arc::clone(&self.ivars().profile.borrow());

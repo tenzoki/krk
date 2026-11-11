@@ -898,8 +898,8 @@ fn leistenauswahl_gilt(
 ///
 /// **Die Saetze einer ueberholten Antwort liegen hier, bis die juengste ankommt.**
 /// Zwei F2 kurz nacheinander legen zweimal an, und nur eine der beiden Antworten
-/// kann melden, was wirklich entstanden ist; verfiele sie, verschwaende etwa ein
-/// abgewiesener alter Zettel ohne ein Wort. Sofort gezeigt nuetzte das nichts,
+/// kann melden, was wirklich entstanden ist; verfiele sie, verschwaende etwa eine
+/// Datei, die sich nicht anlegen liess, ohne ein Wort. Sofort gezeigt nuetzte das nichts,
 /// denn der Tabwechsel der juengsten raeumt die Statuszeile. Kommt die juengste
 /// nie an, bleiben sie liegen.
 #[derive(Debug, Default)]
@@ -957,12 +957,10 @@ struct Notizordnerstand {
 /// allein Werte, damit sie den Faden wechseln kann.
 #[derive(Debug)]
 struct Notizordnerauftrag {
-    /// Der geltende Notizordner.
+    /// Der geltende Notizordner. Bis zum 261111 reisten der Ort der Ablage
+    /// und ihr Ordner mit, fuer die Uebernahme der alten Zettel; seit sie
+    /// gefallen ist, beruehrt F2 die Ablage nicht mehr.
     heim: Heimordner,
-    /// Der Ort der Ablage, wenn eine offen ist.
-    ablageort: Option<krk_core::ablage::Ablageort>,
-    /// Der Ordner der alten Zettel.
-    ablageordner: PathBuf,
 }
 
 /// Die Antwort von [`Anwendungsdelegierter::notizordner_erheben`].
@@ -972,8 +970,6 @@ struct Notizordnerantwort {
     heim: Heimordner,
     /// Was das Anlegen getan hat oder was es verhindert hat.
     ausgang: Result<heimordner::Bereitstellung, heimordner::Hindernis>,
-    /// Der Satz, wenn die Sperre sich nicht nehmen liess.
-    sperrsatz: Option<String>,
 }
 
 /// Was nach dem Griff aus einer gelungenen Bereitstellung von F2 folgt.
@@ -6889,7 +6885,6 @@ impl Anwendungsdelegierter {
             move |fehler| Notizordnerantwort {
                 heim: fuer_den_startfehler,
                 ausgang: Err(heimordner::Hindernis::Unerreichbar(fehler.to_string())),
-                sperrsatz: None,
             },
             move |mtm, antwort| {
                 if let Some(selbst) = Self::delegierter(mtm) {
@@ -6939,11 +6934,7 @@ impl Anwendungsdelegierter {
     fn notizordner_einziehen(&self, gefragt: Notizordnerstand, antwort: Notizordnerantwort) {
         let jetzt = self.notizordnerstand();
         let seite = gefragt.seite;
-        let Notizordnerantwort {
-            heim,
-            ausgang,
-            sperrsatz,
-        } = antwort;
+        let Notizordnerantwort { heim, ausgang } = antwort;
         let (bereitstellung, griff_ersetzen, folge) =
             match notizordnerausgang(&gefragt, &jetzt, ausgang) {
                 Notizordnerausgang::HindernisFaellt => return,
@@ -6960,8 +6951,7 @@ impl Anwendungsdelegierter {
         if griff_ersetzen {
             heimgriff::ersetzen(&self.ivars().heim, Notizlage::gilt(heim.clone()));
         }
-        let mut saetze = bereitstellung.meldungen();
-        saetze.extend(sperrsatz);
+        let saetze = bereitstellung.meldungen();
         let befehle = &self.ivars().notizordnerbefehle;
         let tab_und_fokus = match folge {
             Notizordnerfolge::Zurueckstellen => {
@@ -7013,16 +7003,7 @@ impl Anwendungsdelegierter {
                 return None;
             }
         };
-        Some(Notizordnerauftrag {
-            heim,
-            ablageort: self
-                .ivars()
-                .ablage
-                .borrow()
-                .as_ref()
-                .map(|ablage| ablage.ort().clone()),
-            ablageordner: self.ablageordner(),
-        })
+        Some(Notizordnerauftrag { heim })
     }
 
     /// Die Schritte 1 und 2 von [`Self::notizordner_oeffnen`]: anlegen, was
@@ -7036,55 +7017,23 @@ impl Anwendungsdelegierter {
     /// `notizordnerproben::der_start_erreicht_weder_das_anlegen_noch_das_aufloesen`
     /// haelt beides mit Namen.
     ///
-    /// **Allein am Vorgabeort unter der Sperre der Ablage**: der Merker der
-    /// Uebernahme in `reported.toml` wird unter derselben Sperre gelesen und
-    /// gesetzt, unter der `notes.txt` entsteht (Modulkopf von
-    /// `krk_core::heimordner`, Abschnitt „Einmal heisst einmal“). An jedem anderen
-    /// Ort beruehrt das Anlegen den Merker nicht, und eine Freigabe, die dort
-    /// haengt, soll die Sperre nicht halten: jeder Durchgang des Hauptfadens
-    /// wartete sonst auf sie.
-    ///
-    /// **Die Ablage hier ist eine eigene**, ein zweiter Deskriptor auf dieselbe
-    /// Sperrdatei, denn die bleibende gehoert dem Hauptfaden und reist nicht. Die
-    /// beiden schliessen einander aus, wie zwei Prozesse (Modulkopf von
-    /// `krk_core::ablage::sperre`). **Solange dieser Faden die Sperre haelt, wartet
-    /// jeder Durchgang des Hauptfadens.** Haengt `~/krkhome` als Verweis an einer
-    /// Freigabe, soll der Faden deshalb schon vor dem Durchgang stehen bleiben:
-    /// dafuer die erste Zeile. Reisst die Freigabe erst danach ab, bleibt die
-    /// Sperre stehen, und das ist ein benannter Rest.
+    /// **Die Ablage beruehrt dieser Weg nicht**, an keinem Ort. Bis zum 261111
+    /// lief er am Vorgabeort in einem Durchgang unter der Schreibsperre der
+    /// Ablage, weil dort der Merker der Zetteluebernahme in `reported.toml`
+    /// gelesen und gesetzt wurde; mit der Uebernahme ist der Durchgang gefallen
+    /// (E7 des Plans
+    /// `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`), und
+    /// eine haengende Freigabe unter `~/krkhome` haelt seitdem allein diesen
+    /// Faden an und keinen Durchgang des Hauptfadens.
     fn notizordner_erheben(auftrag: Notizordnerauftrag) -> Notizordnerantwort {
-        let Notizordnerauftrag {
-            heim,
-            ablageort,
-            ablageordner,
-        } = auftrag;
-        let _ = std::fs::metadata(heim.geschrieben());
-        let anlegen =
-            |zugang: Option<&Zugang<'_>>| heimordner::bereitstellen(&heim, &ablageordner, zugang);
-        let mut sperrsatz = None;
-        let ausgang = match ablageort.filter(|_| heim.ist_vorgabeort()) {
-            // Ohne Ablageordner: der Start hat sein Fehlen schon gemeldet.
-            None => anlegen(None),
-            Some(ort) => match Ablage::oeffnen(ort)
-                .and_then(|ablage| ablage.durchgang(|zugang| anlegen(Some(zugang))))
-            {
-                Ok(ausgang) => ausgang,
-                Err(fehler) => {
-                    sperrsatz = Some(satz(Text::HeimOhneSperreAngelegt, &[("fehler", &fehler)]));
-                    anlegen(None)
-                }
-            },
-        };
+        let Notizordnerauftrag { heim } = auftrag;
+        let ausgang = heimordner::bereitstellen(&heim);
         let heim = if ausgang.is_ok() {
             heim.aufgeloest_erneuern()
         } else {
             heim
         };
-        Notizordnerantwort {
-            heim,
-            ausgang,
-            sperrsatz,
-        }
+        Notizordnerantwort { heim, ausgang }
     }
 
     /// [`Self::notizordner_erheben`] fuer „Verbinden…“, **auf dem Hauptfaden**:
@@ -7100,11 +7049,7 @@ impl Anwendungsdelegierter {
     /// fuehrt sie als benannte Ausnahme.
     fn notizordner_bereitstellen(&self, seite: Fensterseite) -> Option<(Heimordner, Vec<String>)> {
         let auftrag = self.notizordnerauftrag(seite)?;
-        let Notizordnerantwort {
-            heim,
-            ausgang,
-            sperrsatz,
-        } = Self::notizordner_erheben(auftrag);
+        let Notizordnerantwort { heim, ausgang } = Self::notizordner_erheben(auftrag);
         let bereitstellung = match ausgang {
             Ok(bereitstellung) => bereitstellung,
             Err(hindernis) => {
@@ -7113,21 +7058,18 @@ impl Anwendungsdelegierter {
             }
         };
         heimgriff::ersetzen(&self.ivars().heim, Notizlage::gilt(heim.clone()));
-        let mut meldungen = bereitstellung.meldungen();
-        meldungen.extend(sperrsatz);
-        Some((heim, meldungen))
+        Some((heim, bereitstellung.meldungen()))
     }
 
-    /// Der Ordner, in dem die alten Zettel `note-1.txt` und `note-2.txt`
-    /// liegen: der Ablageordner.
+    /// Der Ablageordner, gegen den „Ort waehlen…“ einen gewaehlten Ort
+    /// haelt: ein Notizordner darin gilt nicht.
     ///
     /// Aus der geoeffneten Ablage, wenn es eine gibt. Liess sie sich beim Start
     /// nicht oeffnen, gilt der Ort, an dem sie liegen sollte; das ist eine
-    /// Frage an den Pfad und kein Zugriff, und findet die Uebernahme dort
-    /// nichts, uebernimmt sie nichts. Nennt das System kein
-    /// Benutzerverzeichnis, bleibt ein leerer Pfad, und dann ist
-    /// [`Self::notizordner_oeffnen`] schon vorher am fehlenden Heimordner
-    /// ausgestiegen.
+    /// Frage an den Pfad und kein Zugriff. Nennt das System kein
+    /// Benutzerverzeichnis, bleibt ein leerer Pfad. Bis zum 261111 reichte F2
+    /// denselben Ordner an die Uebernahme der alten Zettel; der Rufer ist mit
+    /// ihr gefallen.
     fn ablageordner(&self) -> PathBuf {
         if let Some(ablage) = self.ivars().ablage.borrow().as_ref() {
             return ablage.ort().wurzel().to_path_buf();
@@ -15519,7 +15461,7 @@ mod notizordnerproben {
     use std::path::PathBuf;
 
     use krk_core::ablage::Fensterseite;
-    use krk_core::heimordner::{Bereitstellung, Hindernis, Zettelmerker};
+    use krk_core::heimordner::{Bereitstellung, Hindernis};
 
     use super::quelltextproben::{diese_datei, rumpf};
     use super::{
@@ -15791,9 +15733,6 @@ mod notizordnerproben {
             ordner_angelegt: false,
             angelegt: Vec::new(),
             nicht_angelegt: Vec::new(),
-            uebernahme: None,
-            zettelmerker: Zettelmerker::NichtsZuVermerken,
-            merkerersetzung: None,
             umbenennung: None,
             ort: "heim".to_owned(),
         };

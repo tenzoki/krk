@@ -6,7 +6,7 @@
 //!     │
 //!     └──> lesen ──> Textstand ──> oeffnen ──> Abweisung (kein gueltiges
 //!            │           │                       Ziel, zu gross, kein Text)
-//!            │           └───────> heimordner::bereitstellen ──> die alten Zettel
+//!            │
 //!            │
 //!            │  die Bytes, und zwar erst nach der Groessenpruefung
 //!            v
@@ -138,19 +138,19 @@
 //! **[`lesen`] ist die einzige Stelle im Programm, die einen Pfad daraufhin
 //! ansieht, ob eine Textdatei dahintersteht.** Beide Einstiege des Editors aus
 //! C2, F4 und das Menue, kommen ueber [`oeffnen`] dort an, der Sprung auf eine
-//! Textmarke aus C6 ebenfalls, und die einmalige Uebernahme der alten
-//! Notizzettel in `heimordner::bereitstellen`. Von der Runde 9 bis zur
-//! krkhome-Arbeit kam hier auch der Notizzettel selbst an, ueber einen Ladeweg
-//! der Ablage, der mit ihm gefallen ist. Genau das meint C2 mit "beide Einstiege legen
+//! Textmarke aus C6 ebenfalls. Bis zum 261111 kam hier auch die einmalige
+//! Uebernahme der alten Notizzettel in `heimordner::bereitstellen` an, und von
+//! der Runde 9 bis zur krkhome-Arbeit der Notizzettel selbst, ueber einen
+//! Ladeweg der Ablage; beide sind gefallen. Genau das meint C2 mit "beide Einstiege legen
 //! dieselbe Pruefung an"; ein zweiter Leseweg daneben waere die zweite Wahrheit
 //! darueber, welche Datei KRK als Text annimmt, und die erste Abweichung
 //! zwischen beiden faende keine Pruefung. Es ist derselbe Zuschnitt, den
 //! `krk-ui`s `kommandos::pfadeingabe` fuer den Pfad zieht.
 //!
-//! **Die zwei Aufrufer uebersetzen denselben Befund verschieden, und das ist
+//! **Zwei Aufrufer haben denselben Befund verschieden uebersetzt, und das war
 //! der Grund fuer die Trennung.** Der Editor weist ab und wirft die Bytes weg;
-//! die Uebernahme der alten Zettel trennt die fehlende Datei von der
-//! unlesbaren und meldet allein die zweite. [`Textstand::Unlesbar`] traegt den
+//! die Uebernahme der alten Zettel trennte bis zum 261111 die fehlende Datei
+//! von der unlesbaren und meldete allein die zweite. [`Textstand::Unlesbar`] traegt den
 //! offenen Deskriptor mit, und [`Abweisung`] tut es nicht; gebraucht hat ihn
 //! der Notizzettel, der eine unlesbare Datei beiseitelegte, und seit dessen
 //! Wegfall liest ihn kein Aufrufer mehr.
@@ -366,8 +366,8 @@ pub enum Unlesbarkeit {
 /// Was hinter einem Pfad steht, gemessen an dem, was KRK als Textdatei annimmt.
 ///
 /// **Der eine Befund, und zwei Uebersetzungen leben davon.** Der Editor macht
-/// daraus eine [`Abweisung`] ([`oeffnen`]), die Uebernahme der alten Zettel
-/// einen Befund je Zettel (`heimordner::bereitstellen`). Von der Runde 9 bis
+/// daraus eine [`Abweisung`] ([`oeffnen`]); die Uebernahme der alten Zettel
+/// machte bis zum 261111 einen Befund je Zettel daraus. Von der Runde 9 bis
 /// zur krkhome-Arbeit war die zweite der Notizzettel, der eine unlesbare Datei
 /// samt Inhalt beiseitelegte; fuer ihn traegt [`Textstand::Unlesbar`] den
 /// Deskriptor. Vor der Runde 9
@@ -407,10 +407,11 @@ pub enum Textstand {
         /// **Ein Feld und kein fuenfter Ausgang**, und der Unterschied ist
         /// tragend. Fuer den Editor ist eine fehlende Datei dasselbe wie ein
         /// Ordner: beide werden abgewiesen, mit demselben Wert und demselben
-        /// Satz. Die Uebernahme der alten Zettel trennt sie, weil ein fehlender
-        /// Zettel nichts zu uebernehmen hat und keine Meldung wert ist —
-        /// dieselbe Regel, die `ablage::Zugang::laden` fuer eine fehlende
-        /// Ablagedatei anwendet. Ein
+        /// Satz. Die Uebernahme der alten Zettel trennte sie bis zum 261111,
+        /// weil ein fehlender Zettel nichts zu uebernehmen hatte und keine
+        /// Meldung wert war — dieselbe Regel, die `ablage::Zugang::laden` fuer
+        /// eine fehlende Ablagedatei anwendet. Seit die Uebernahme gefallen
+        /// ist, liest kein Aufrufer im Betriebscode das Feld. Ein
         /// eigener Wert daneben machte aus vier Ausgaengen fuenf und zwaenge
         /// den Editor zu einer Unterscheidung, die er nicht trifft.
         fehlt: bool,
@@ -739,8 +740,7 @@ fn geoeffnet_oder_abgewiesen(
             pfad: pfad.to_path_buf(),
         }),
         // Die fehlende Datei ist fuer den Editor kein eigener Fall: sie hat so
-        // wenig Text zu zeigen wie ein Ordner. Die Uebernahme der alten Zettel
-        // trennt sie, siehe das Feld `fehlt`.
+        // wenig Text zu zeigen wie ein Ordner; siehe das Feld `fehlt`.
         (Textstand::KeinGueltigesZiel { grund, mangel, .. }, _) => {
             Err(Abweisung::KeinGueltigesZiel {
                 pfad: pfad.to_path_buf(),
