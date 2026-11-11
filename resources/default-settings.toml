@@ -64,8 +64,8 @@
 # wechseln, und KRK kann den Unterschied nicht feststellen (C11).
 terminal = "com.apple.Terminal"
 
-# Der Notizordner, den F2 und cmd+k oeffnen: dort liegen notes.txt, tasks.txt
-# und secrets.txt (Datensatz
+# Der Notizordner, den F2 und cmd+k oeffnen: dort liegen tasks.txt, secrets.txt,
+# quicknote.txt und der Unterordner minutes/ (Datensatz
 # `260926-1447_*_bekommt-krkhome-ein-eigenes-menue-und-einen-einstellbaren-ort.md`).
 #
 # Der Wert beginnt mit `~/` fuer das Benutzerverzeichnis oder mit `/`; ein
@@ -86,8 +86,8 @@ terminal = "com.apple.Terminal"
 # legt KRK nie etwas an. Gesetzt wird der Wert von Hand hier, dann gilt er ab
 # dem naechsten Start und die Statuszeile nennt einmal den alten Ort, oder ueber
 # "Ort waehlen..." im Menue "Home", dann gilt er sofort. Die
-# alten Notizzettel aus der Zeit vor dem Notizordner werden allein am
-# Vorgabeort `~/krkhome` uebernommen und nirgends sonst.
+# alten Notizzettel aus der Zeit vor dem Notizordner uebernimmt KRK nicht mehr,
+# an keinem Ort.
 #
 # Ist diese Datei beschaedigt oder nicht lesbar, gilt kein Notizordner, bis
 # sie berichtigt und KRK neu gestartet ist oder bis "Ort waehlen..." sie nach

@@ -204,12 +204,10 @@ F1-Ansicht die Funktion wählen, **Zuweisen** (`cmd+t`), die Kombination
 drücken und die Ansicht verlassen; die eigene Belegung bleibt dabei bis auf
 diese eine Zuweisung, wie sie war. „Auf Werkseinstellungen zurücksetzen…“ ist
 dafür der falsche Weg, denn es nimmt alle eigenen Zuweisungen aus dem Betrieb.
-Das nächstliegende Beispiel ist „Termine:
-Sortierrichtung umkehren“: die Auslieferung legt sie auf `cmd+1`, eine eigene
-`keymap.toml` von vorher führt sie unbelegt, und `cmd+1` lässt sich ihr
-zuweisen, obwohl „Nach Name sortieren“ dieselbe Kombination trägt. Die eine
-wirkt allein im Editor, die andere allein im Dateifenster, und so ist das kein
-Konflikt; die Regel steht in `HowTo.md` unter „Die Tastaturbelegung“. Das
+Das nächstliegende Beispiel ist „Protokoll anlegen“: die Auslieferung legt es
+auf `cmd+m`, eine eigene `keymap.toml` von vorher führt es unbelegt, und
+`cmd+m` bekommt es auf diesem Weg; die Einzelheiten stehen in `HowTo.md` unter
+„Protokolle in `minutes/`“. Das
 zweite Beispiel ist die Quicknote: die Auslieferung legt „Quicknote öffnen und
 schließen“ auf `f10` und „Quicknote kopieren und schließen“ auf `shift+f10`,
 eine eigene `keymap.toml` von vorher führt beide unbelegt, und jede bekommt
@@ -221,7 +219,9 @@ nackte `delete` und „Eintrag hinzufügen“ zusätzlich auf `cmd+n`, eine eige
 beide Tasten lassen sich einzeln zuweisen, obwohl `delete` schon „In den
 Papierkorb räumen“ und `cmd+n` schon „Fenster einblenden“ gehört. Das erste
 Paar trennt der Fokus, im zweiten geht „Eintrag hinzufügen“ mit dem Fokus im
-Editor vor einer Eintragsdatei vor, in der Tabelle wie in der Rohansicht.
+Editor vor einer Eintragsdatei vor, in der Tabelle wie in der Rohansicht; die
+Regel, nach der zwei Funktionen eine Kombination teilen dürfen, steht in
+`HowTo.md` unter „Die Tastaturbelegung“.
 
 **Beiseitelegen und nicht löschen.** Es ist derselbe Grund wie beim
 Installieren: was KRK sich merkt, liegt außerhalb des Bündels, und ein
@@ -238,8 +238,8 @@ Datei", welche Einträge das sind.
 Notizordner liegt, steht in `settings.toml` unter `notizordner`, ab Werk
 `~/krkhome`, gesetzt von Hand oder über „Ort wählen…“ im Menü „Home“; wie man die Geheimnisse in KRK bedient und wovor die PIN schützt,
 steht in `HowTo.md`.
-Neben ihr liegen im selben Ordner `notes.txt`, `tasks.txt` und
-`appointments.md`, die Termine; alle drei sind unverschlüsselter Text, und
+Neben ihr liegen im selben Ordner `tasks.txt`, `quicknote.txt` und der
+Unterordner `minutes/` mit den Protokollen; sie sind unverschlüsselter Text, und
 keine davon braucht eine PIN.
 **Dieser Abschnitt beschreibt die Datei so, dass sich ihr Inhalt mit der PIN
 auch ohne KRK entschlüsseln lässt.** Die verbindliche Quelle ist der Modulkopf
@@ -275,7 +275,7 @@ vorzeichenlose Ganzzahlen in der Bytefolge *little-endian*.
    Kopf, Chiffrat samt Prüfwert ab Byte 60. **Die ganzen 60 Byte des Kopfes sind
    die zusätzlichen authentifizierten Daten**, so wie sie in der Datei stehen.
 
-Heraus kommt Text in UTF-8, in der Form von `notes.txt` mit einer Verengung: je
+Heraus kommt Text in UTF-8: je
 Eintrag eine Zeile `## <Name>`, darunter bis zu vier Feldzeilen und danach die
 Notizen, mit einem Zeilenumbruch am Ende. Ein Eintrag mit allen sechs Feldern
 sieht so aus:

@@ -57,10 +57,10 @@ Alles liegt in `~/Library/Application Support/KRK/`, außerhalb des Bündels:
 |---|---|---|
 | `keymap.toml` | die eigene Tastenbelegung | KRK beim Verlassen der F1-Ansicht mit einer Änderung, und der Nutzer von Hand; von selbst legt KRK sie nie an, und „Auf Werkseinstellungen zurücksetzen…“ legt sie beiseite |
 | `bookmarks.toml` | die Lesezeichen | KRK |
-| `session.toml` | Ordner, Tabs, Sortierung, Spalten, sichtbare Bereiche, Breiten, die Richtung der Termintabelle | KRK |
+| `session.toml` | Ordner, Tabs, Sortierung, Spalten, sichtbare Bereiche, Breiten | KRK |
 | `settings.toml` | Einstellungen ohne Oberfläche, heute die Terminal-Anwendung und der Ort des Notizordners | der Nutzer; KRK beim ersten Start, beim Zurücksetzen auf Werkseinstellungen und dazwischen allein den Ort des Notizordners, über „Ort wählen…“ |
 | `readers.toml` | die Leseprofile der Vorschau | der Nutzer; KRK beim ersten Start und beim Zurücksetzen auf Werkseinstellungen |
-| `reported.toml` | für welche Fassung die Neuerungen an den eigenen Dateien gemeldet sind, und ob die alten Zettel schon nach `notes.txt` übernommen sind | KRK |
+| `reported.toml` | für welche Fassung die Neuerungen an den eigenen Dateien gemeldet sind; ein Vermerk früherer Fassungen über die alten Zettel bleibt darin stehen | KRK |
 
 Wer die Liste am Baum nachlesen will, liest sie an ihrer Quelle und nicht hier:
 
@@ -68,13 +68,14 @@ Wer die Liste am Baum nachlesen will, liest sie an ihrer Quelle und nicht hier:
 awk '/pub const ALLE: \[Datei;/,/\];/' crates/krk-core/src/ablage/pfade.rs
 ```
 
-**Die Notizen liegen nicht hier, sondern im Notizordner, ab Werk `~/krkhome/`**
-(siehe „Der Notizordner“ weiter unten). Ein Löschwerkzeug, das den Ablageordner
-mitnimmt, lässt den Notizordner stehen; im Ablageordner selbst lässt KRK ihn
-deshalb gar nicht erst einstellen. Wer KRK aus der Zeit des Notizblatts kennt,
-findet im Ablageordner vielleicht noch `note-1.txt` und `note-2.txt`. KRK hat
-sie einmal nach `notes.txt` im Notizordner übernommen und liest und schreibt
-sie seither nicht mehr. Sie liegen ohne Leser da und dürfen bleiben oder gehen.
+**Aufgaben, Geheimnisse, Protokolle und der Text der Quicknote liegen nicht
+hier, sondern im Notizordner, ab Werk `~/krkhome/`** (siehe „Der Notizordner“
+weiter unten). Ein Löschwerkzeug, das den Ablageordner mitnimmt, lässt den
+Notizordner stehen; im Ablageordner selbst lässt KRK ihn deshalb gar nicht erst
+einstellen. Wer KRK aus der Zeit des Notizblatts kennt, findet im Ablageordner
+vielleicht noch `note-1.txt` und `note-2.txt`. KRK liest und schreibt sie nicht
+und übernimmt sie auch nicht mehr in den Notizordner. Sie liegen ohne Leser da
+und dürfen bleiben oder gehen.
 
 **`readers.toml` legt KRK beim ersten Start an und schreibt sie danach allein
 auf ausdrücklichen Befehl**, beim Zurücksetzen auf Werkseinstellungen (siehe
@@ -133,8 +134,8 @@ einem Zug zurück, nach einer Rückfrage, in der „Abbrechen“ vorbelegt ist:
 - `readers.toml` steht als Auslieferungsfassung da, samt allen Kommentaren.
 - `settings.toml` steht als Auslieferungsfassung da, mit einer Ausnahme: der
   Wert von `notizordner` bleibt der bisherige. **Der Notizordner und alle
-  Dateien darin bleiben unberührt**; Notizen, Aufgaben, Termine und
-  `secrets.txt` liegen danach am selben Ort wie vorher.
+  Dateien darin bleiben unberührt**; Aufgaben, Protokolle, der Text der
+  Quicknote und `secrets.txt` liegen danach am selben Ort wie vorher.
 - `keymap.toml` fehlt, und es gilt die mitgelieferte Tastenbelegung. **Alle
   eigenen Tastenzuweisungen gehen damit aus dem Betrieb**; sie liegen danach
   allein in der Sicherung.
@@ -773,11 +774,11 @@ wirken können. Das trifft auf zwei Fälle zu:
   etwa in einem Textfeld. So liegt `cmd+a` auf „Alle Einträge markieren“ und auf
   „Alles auswählen“.
 - Beide bekommen ihn über KRK, aber die eine wirkt allein im Editor und die
-  andere allein außerhalb davon. So liegt `cmd+1` auf „Nach Name sortieren“ im
-  Dateifenster und auf „Termine: Sortierrichtung umkehren“ in der Termintabelle
-  des Editors. Welche der beiden ein Anschlag auslöst, entscheidet der Ort des
-  Fokus. Ebenso liegt `delete` auf „In den Papierkorb räumen“ im Dateifenster
-  und auf „Eintrag löschen“ in den Eintragstabellen des Editors.
+  andere allein außerhalb davon. So liegt `opt+cmd+e` auf „Im Terminal
+  bearbeiten“ im Dateifenster und auf „Editor schließen“ im Editor. Welche der
+  beiden ein Anschlag auslöst, entscheidet der Ort des Fokus. Ebenso liegt
+  `delete` auf „In den Papierkorb räumen“ im Dateifenster und auf „Eintrag
+  löschen“ in den Eintragstabellen des Editors.
 - Beide bekommen ihn über KRK, und die eine wirkt nur in einem Teil der Lagen,
   in denen die andere wirkt. Dann geht die engere vor. So liegt `cmd+n` auf
   „Eintrag hinzufügen“, solange der Fokus im Editor vor einer der
@@ -794,9 +795,9 @@ Konflikt ergibt, nimmt die Ansicht an, und beide Funktionen behalten sie; ergibt
 sie einen, bleibt die Belegung, wie sie war, und die Ansicht nennt beide
 Funktionen.
 **Im Hauptmenü zeigt dann nur einer der beiden Einträge das Kürzel**, nämlich
-der, der in der Menüleiste weiter links steht. „Termine: Sortierrichtung
-umkehren“ unter „Home“ zeigt `⌘1`, und „Nach Name sortieren“ steht ohne Kürzel
-da, sortiert mit `cmd+1` im Dateifenster aber weiter.
+der, der in der Menüleiste weiter links steht. „Im Terminal bearbeiten“ unter
+„Dateioperation“ zeigt `⌥⌘E`, und „Editor schließen“ steht ohne Kürzel da,
+schließt mit `opt+cmd+e` im Editor aber weiter.
 
 ### Eine Datei im Terminal bearbeiten
 
@@ -804,7 +805,7 @@ da, sortiert mit `cmd+1` im Dateifenster aber weiter.
 `settings.toml` unter `terminal` eingestellt ist. **`opt+cmd+e` öffnet dort die
 Datei unter dem Cursor zum Bearbeiten**, und der Arbeitsordner im Terminal ist
 ihr Ordner. Der Befehl heißt im Hauptmenü „Im Terminal bearbeiten“ und steht
-unter „Dateioperationen“.
+unter „Dateioperation“.
 
 **Welches Programm die Datei bekommt, entscheidet KRK beim Tastendruck**, und
 eine zweite Taste dafür gibt es nicht. Gefragt wird, ob der Nutzer die Datei
@@ -895,7 +896,7 @@ Git-Bereich. Nie sind zwei von ihnen zugleich zu sehen.
 damit dieselbe Nachfrage aus wie `opt+cmd+e`. Wer den Editor nur kurz aus dem
 Weg haben will und seinen Stand behalten, nimmt `opt+cmd+b`.
 
-Im Hauptmenü zeigt „Im Terminal bearbeiten“ unter „Dateioperationen“ das
+Im Hauptmenü zeigt „Im Terminal bearbeiten“ unter „Dateioperation“ das
 Kürzel `⌥⌘E`, und „Editor schließen“ steht ohne Kürzel da. Mit dem Fokus im
 Editor schließt `opt+cmd+e` den Editor trotzdem wie bisher.
 
@@ -1098,7 +1099,8 @@ steht an ihrem Anfang.
 
 „Zeile darüber einfügen“, die Spaltenbefehle und „Trennzeichen wechseln“
 stehen im Menü „Editor“. Die Befehle für eine Zeile am Ende, das Verschieben
-und das Löschen von Zeilen teilt die Tabelle mit den Notizen, und sie stehen
+und das Löschen von Zeilen teilt die Tabelle mit den Eintragsdateien des
+Notizordners, und sie stehen
 deshalb im Menü „Home“ bei den Eintragsbefehlen. Sie wirken nur,
 solange der Fokus im Editor steht und dieser die Tabelle einer CSV- oder
 TSV-Datei zeigt; sonst sind sie ausgegraut. „Aufgabe abhaken oder öffnen“
@@ -1217,9 +1219,9 @@ Editor einzublenden, sagt sie „Für die Quicknote ist das Fenster zu schmal.�
 
 ### Wo der Text der Quicknote liegt
 
-**Der Text steht in `scratch.txt` im Notizordner**, neben `notes.txt`,
-`tasks.txt`, `secrets.txt` und `appointments.md` (ab Werk `~/krkhome`). KRK
-schreibt ihn ohne Zutun dorthin: eine Sekunde nach der letzten Änderung, beim
+**Der Text steht in `quicknote.txt` im Notizordner**, neben `tasks.txt`,
+`secrets.txt` und `minutes/` (ab Werk `~/krkhome`). KRK schreibt ihn ohne Zutun
+dorthin: eine Sekunde nach der letzten Änderung, beim
 Schließen der Quicknote und beim Beenden von KRK. Nach einem Neustart steht er
 beim ersten `f10` wieder da. Ein Absturz verliert höchstens die letzte Sekunde.
 Bis der Inhalt der Datei beim ersten `f10` gelesen ist, nimmt die Quicknote
@@ -1227,10 +1229,15 @@ für einen Augenblick keine Eingabe an. **Leeren** und **Kopieren** leeren mit
 der Quicknote auch die Datei, und `cmd+z` nach dem Leeren bringt den Text in
 beide zurück.
 
-**`scratch.txt` ist eine gewöhnliche Textdatei** und keine der Dateien, die F2
-mit einer Tabelle zeigt. F2 legt sie nicht an; sie entsteht beim ersten
+**`quicknote.txt` ist eine gewöhnliche Textdatei** und keine der Dateien, die
+der Editor als Tabelle zeigt. F2 legt sie nicht an; sie entsteht beim ersten
 Sichern, mit Rechten allein für das eigene Konto (`-rw-------`). Im Editor und
 in der Vorschau ist sie eine Datei wie jede andere.
+
+**Eine `scratch.txt` aus einer früheren Fassung benennt KRK beim ersten Öffnen
+der Quicknote einmal in `quicknote.txt` um, und nie über eine vorhandene
+`quicknote.txt` hinweg: stehen beide, bleiben beide liegen, es gilt
+`quicknote.txt`, und die Statuszeile sagt, was geschehen ist.**
 
 **Ohne Notizordner sichert die Quicknote nicht.** Fehlt der Ordner, legt die
 Quicknote ihn nicht selbst an und sagt „Die Quicknote wird nicht gesichert: der
@@ -1238,25 +1245,25 @@ Notizordner … fehlt. F2 legt ihn an.“ Nach F2 sichert sie bei der nächsten
 Änderung von selbst, und ohne weitere Änderung beim Schließen der Quicknote
 oder beim Beenden von KRK. Dasselbe gilt, wenn ein Schreiben gescheitert ist,
 etwa an einem vollen Datenträger: ist die Ursache behoben, landet der letzte
-Stand spätestens beim Schließen oder Beenden in `scratch.txt`.
+Stand spätestens beim Schließen oder Beenden in `quicknote.txt`.
 
 **Nach einer Änderung von außen sichert die Quicknote bis zum nächsten Start
 nicht mehr**: wenn eine zweite KRK-Instanz, der Editor von KRK oder ein anderes
-Programm `scratch.txt` geändert hat, seit die Quicknote sie gelesen oder
+Programm `quicknote.txt` geändert hat, seit die Quicknote sie gelesen oder
 zuletzt geschrieben hat. Die Datei bleibt dann, wie die andere Hand sie
-hinterlassen hat, und die Statuszeile sagt „scratch.txt wurde außerhalb der
+hinterlassen hat, und die Statuszeile sagt „quicknote.txt wurde außerhalb der
 Quicknote geändert; die Quicknote sichert bis zum nächsten Start nicht mehr.“
 Der Text in der Quicknote bleibt stehen; wer ihn behalten will, kopiert ihn.
-Ebenso, wenn sich `scratch.txt` nicht lesen lässt, etwa weil sie zu groß oder
+Ebenso, wenn sich `quicknote.txt` nicht lesen lässt, etwa weil sie zu groß oder
 kein Text ist: dann öffnet die Quicknote leer, die Datei bleibt Byte für Byte,
 und die Statuszeile nennt den Grund.
 
 **„Ort wählen…“ wirkt für die Quicknote erst nach dem nächsten Start.** Bis
-dahin sichert sie weiter in `scratch.txt` am bisherigen Ort, damit KRK am neuen
+dahin sichert sie weiter in `quicknote.txt` am bisherigen Ort, damit KRK am neuen
 Ort keine vorhandene Datei überschreibt oder ungefragt einliest.
 
 **Text aus `secrets.txt` darf in die Quicknote, und dann steht er im Klartext
-in `scratch.txt`.** Wer ein Passwort oder einen anderen Eintrag aus
+in `quicknote.txt`.** Wer ein Passwort oder einen anderen Eintrag aus
 `secrets.txt` in die Quicknote einfügt, hat ihn eine Sekunde später
 unverschlüsselt im Notizordner liegen, lesbar allein für das eigene Konto, aber
 ohne PIN, bis er geleert oder kopiert wird; „Leeren“ und „Kopieren“ leeren die
@@ -1751,8 +1758,9 @@ der Notizordner liegt, wählt man über „Ort wählen…“ oder trägt es in
 `settings.toml` ein; davon handelt „Der Ort des Notizordners“ weiter unten.
 
 **Alle Befehle zum Notizordner stehen im Hauptmenü „Home“**, gleich hinter
-dem Anwendungsmenü: „Notizordner öffnen“, „Ort wählen…“, die sechs Befehle der
-Tabellen im Editor, „PIN ändern“ und „Termine: Sortierrichtung umkehren“. Unter „Anwendung“ und „Editor“ stehen sie
+dem Anwendungsmenü: „Notizordner öffnen“, „Protokoll anlegen“, „Ort wählen…“,
+die sechs Befehle der Tabellen im Editor und „PIN ändern“. Unter „Anwendung“ und
+„Editor“ stehen sie
 nicht mehr. Tasten und Wirkung der älteren Befehle sind geblieben, nur der Platz
 in der Menüleiste hat sich geändert. „Ort wählen…“ hat ab Werk keine Taste; wer
 eine will, weist sie in der Belegungsansicht (F1) zu. Mit einer eigenen
@@ -1760,12 +1768,17 @@ eine will, weist sie in der Belegungsansicht (F1) zu. Mit einer eigenen
 die die eigene Datei dort nennt, und dafür ist an der eigenen Belegung nichts zu
 tun.
 
-**Beim ersten `f2` legt KRK den Ordner an**, und darin `notes.txt`,
-`tasks.txt`, `secrets.txt` und `appointments.md`. Fehlt später eine dieser
-Dateien, legt der nächste `f2` sie leer wieder an, mit null Bytes. Wer den
-Ordner schon aus einer früheren Fassung hat, bekommt `appointments.md` beim
-nächsten `f2` dazu; die übrigen Dateien bleiben, wie sie sind. Eine vorhandene Datei
-überschreibt KRK nie. Wer aus einer früheren Fassung noch eine `.secrets.txt`
+**Der Notizordner führt `tasks.txt`, `secrets.txt`, `quicknote.txt` und den
+Unterordner `minutes/`.** Beim ersten `f2` legt KRK den Ordner an, und darin
+`tasks.txt`, `secrets.txt` und `minutes/`; `quicknote.txt` entsteht erst, wenn
+die Quicknote zum ersten Mal sichert (siehe „Wo der Text der Quicknote liegt“).
+Fehlt später eine der zwei Dateien oder der Unterordner, legt der nächste `f2`
+sie wieder an, die Dateien leer mit null Bytes. Wer den Ordner schon aus einer
+früheren Fassung hat, bekommt `minutes/` beim nächsten `f2` dazu; alles andere
+bleibt, wie es ist. Eine vorhandene Datei überschreibt KRK nie. Vorhandene
+`notes.txt` und `appointments.md` aus einer früheren Fassung bleiben liegen und
+sind gewöhnliche Dateien, die KRK nicht mehr anlegt und nicht mehr als Tabelle
+zeigt. Wer aus einer früheren Fassung noch eine `.secrets.txt`
 mit Punkt hat, findet sie nach dem nächsten `f2` als `secrets.txt` wieder;
 was dabei im Einzelnen geschieht, steht unter „Geheimnisse in `secrets.txt`“.
 Fehlt `secrets.txt`, legt „Verbinden…“ im Kontextmenü der Dateiliste Ordner
@@ -1773,27 +1786,13 @@ und Dateien auf demselben Weg an wie `f2`, nur ohne einen Tab zu öffnen. Beim S
 wiederhergestellten Tab auf den Ordner. Steht an der Stelle des Notizordners
 eine gewöhnliche Datei, oder fehlt der Ordner darüber, etwa weil ein Laufwerk
 nicht eingehängt ist, nennt die Statuszeile den Grund, und kein Tab geht auf.
+Steht dagegen allein an der Stelle von `minutes` eine gewöhnliche Datei, öffnet
+`f2` den Notizordner trotzdem, und die Statuszeile nennt den Grund.
 
-**Bearbeitet wird im Editor**, mit `f4` auf der ausgewählten Datei. `notes.txt`,
-`tasks.txt` und `appointments.md` sind reiner Text und lassen sich genauso in
+**Bearbeitet wird im Editor**, mit `f4` auf der ausgewählten Datei. `tasks.txt`
+und die Protokolle in `minutes/` sind reiner Text und lassen sich genauso in
 jedem anderen Textprogramm pflegen. `secrets.txt` ist verschlüsselt und öffnet sich allein in
 KRK mit einer PIN; davon handelt der letzte Teil dieses Abschnitts.
-
-**Eine Notiz in `notes.txt`** beginnt mit einer Zeile `## <Thema>`. Alles
-darunter bis zur nächsten solchen Zeile ist ihr Text:
-
-```text
-## Einkauf
-Brot, Milch
-und Kaffee für das Büro
-
-## Idee
-### Zwischenüberschrift im Text
-Eine Zeile mit # oder ### eröffnet keine neue Notiz.
-```
-
-`## ` und nicht `# `, damit eine Zeile `# …` als Überschrift der ganzen Datei
-frei bleibt.
 
 **Eine Aufgabe in `tasks.txt`** ist eine Zeile `- [ ] <Text>`, erledigt
 `- [x] <Text>`. Die Reihenfolge der Zeilen ist die Reihenfolge der Aufgaben:
@@ -1809,13 +1808,12 @@ KRK liest großzügig: `- [X]`, `* [ ]`, `* [x]` und eingerückte Aufgaben gelte
 ebenso. Eine Zeile, die keiner dieser Formen folgt, bleibt erhalten. In
 `tasks.txt` gehört sie zur Aufgabe über ihr, wie die Werkstattzeile im Beispiel.
 
-**Die Vorschau zeigt beide Dateien gerendert.** In `notes.txt` steht jedes Thema
-als Überschrift, sein Text darunter. In `tasks.txt` trägt jede Aufgabe ein
+**Die Vorschau zeigt `tasks.txt` gerendert.** Jede Aufgabe trägt ein
 Kästchen: ☐ für offen, ☑ für erledigt, in der Reihenfolge der Datei. Das
 Aufzählungszeichen davor fällt weg, eine Nummer wie in `1. [x] …` bleibt
 stehen. Die Vorschau liest nur: ein Klick auf das Kästchen hakt nichts ab, und
-keine der beiden Dateien wird dabei geschrieben. Abgehakt wird im Editor, in
-der Aufgabentabelle (siehe unten).
+die Datei wird dabei nicht geschrieben. Abgehakt wird im Editor, in der
+Aufgabentabelle (siehe unten).
 
 Eine Zeile ohne Eintragsform erscheint in der Vorschau als gewöhnlicher Text.
 Wo sie steht, entscheidet, wie: unmittelbar unter einer Aufgabe zeigt die
@@ -1823,35 +1821,22 @@ Vorschau sie als Fortsetzungszeile dieser Aufgabe, so wie die Werkstattzeile im
 Beispiel. Mit einer Leerzeile davor steht sie als eigener Absatz. KRK folgt
 dabei den Regeln von CommonMark, nach denen jede Markdown-Datei gelesen wird.
 
-**Die Formatansicht des Editors zeigt beide Dateien als Tabelle**
-(`ctrl+cmd+e`): `tasks.txt` mit einer Zeile je Aufgabe, `notes.txt` mit den
-Spalten Thema und Notiz. Wie man die zwei Tabellen bedient, steht am Ende
-dieses Abschnitts. `appointments.md` folgt der Form von `notes.txt` mit einem
-Datum als Thema; wie sie in Vorschau und Editor erscheint, steht unter „Termine
-in `appointments.md`“.
+**Die Formatansicht des Editors zeigt `tasks.txt` und `secrets.txt` als
+Tabelle** (`ctrl+cmd+e`): `tasks.txt` mit einer Zeile je Aufgabe, `secrets.txt`
+mit sechs Spalten je Eintrag. Wie man die zwei Tabellen bedient, steht am Ende
+dieses Abschnitts.
 
-**Die Kästchen gibt es nur für diese zwei Dateien im Notizordner.** Eine
-`.md`-Datei mit `- [ ]` an einem anderen Ort zeigt die Vorschau wie bisher,
-ohne Kästchen. Eine `notes.txt` oder `tasks.txt` in einem anderen Ordner bleibt
-gewöhnlicher Text.
+**Die Kästchen gibt es nur für `tasks.txt` im Notizordner.** Eine `.md`-Datei
+mit `- [ ]` an einem anderen Ort zeigt die Vorschau wie bisher, ohne Kästchen.
+Eine `tasks.txt` in einem anderen Ordner bleibt gewöhnlicher Text.
 
-**Die Zettel des früheren Notizblatts stehen als Notizen in `notes.txt`.**
-Übernommen wird genau einmal, nämlich in dem Augenblick, in dem ein `f2` den
-Vorgabeort `~/krkhome/` zum ersten Mal selbst anlegt. KRK merkt sich das in
-`reported.toml`: wer `~/krkhome/` später löscht, bekommt beim nächsten `f2`
-eine leere `notes.txt` und die alten Zettel kein weiteres Mal. Wer schon mit
-der Fassung 2.0.0 übernommen hat, dem setzt das nächste `f2` auf den Vorgabeort
-denselben Vermerk, ohne ein zweites Mal zu übernehmen. An jedem anderen Ort entsteht
-`notes.txt` leer, auch wenn `f2` den Ordner dort neu anlegt. Jeder nicht leere Zettel wird dabei zu einer
-Notiz mit dem Thema „Zettel 1“ beziehungsweise „Zettel 2“, und sein Text bleibt
-unverändert. Ein Zettel, der selbst eine Zeile mit `## ` trägt, wird nicht
-übernommen, weil diese Zeile eine eigene Notiz eröffnete; die Statuszeile nennt
-ihn. Gab es den Ordner schon, übernimmt KRK nichts, auch wenn `notes.txt` darin
-fehlt und neu entsteht. `note-1.txt` und `note-2.txt` bleiben in jedem Fall
-unverändert im Ablageordner liegen.
+**Die Zettel des früheren Notizblatts übernimmt KRK nicht mehr.** `note-1.txt`
+und `note-2.txt` bleiben unverändert im Ablageordner liegen (siehe „Wo KRK
+seine eigenen Dateien ablegt“); wer ihren Text braucht, öffnet sie dort wie
+jede andere Datei.
 
-**Wer die Notizen auf mehreren Geräten haben will, stellt den Notizordner auf
-einen Ordner in einem synchronisierten Speicher** (siehe „Der Ort des
+**Wer den Notizordner auf mehreren Geräten haben will, stellt ihn auf einen
+Ordner in einem synchronisierten Speicher** (siehe „Der Ort des
 Notizordners“). Der ältere, zweite Weg bleibt: `~/krkhome` als symbolischen
 Verweis anlegen. Nötig ist er allein für den Vorgabeort, denn einen anderen Ort
 wählt man über „Ort wählen…“ oder nennt ihn in `settings.toml` gleich selbst:
@@ -1865,8 +1850,9 @@ schon angelegter Ordner zieht vorher mit seinem Inhalt an das Ziel um. KRK
 behandelt dann das Ziel des Verweises als `~/krkhome/` und legt fehlende
 Dateien dort an. Erkannt wird der Ordner über den Verweis `~/krkhome` und über
 sein Ziel. Ein weiterer Verweis, den man selbst anderswo auf denselben Ordner
-setzt, wird nicht erkannt: dort erscheinen `notes.txt` und `tasks.txt` wie
-gewöhnliche Textdateien, und verloren geht nichts.
+setzt, wird nicht erkannt: dort erscheint `tasks.txt` wie eine gewöhnliche
+Textdatei, eine in `minutes/` angelegte Datei bekommt dort weder Datum noch
+`.md`, und verloren geht nichts.
 
 **Auch mit einer eigenen `keymap.toml` heißt der Menüeintrag „Notizordner
 öffnen“.** Der Name eines Befehls kommt aus KRK selbst, in der Sprache, die
@@ -1882,6 +1868,60 @@ heutigen Namen im Menü „Home“. **Einen Handgriff an der eigenen Belegung
 braucht das nicht**, und `cmd+r` in der Belegungsansicht ist dafür nicht nötig:
 es setzt die ganze eigene Belegung auf die Auslieferungsfassung zurück, also
 auch jede eigene Tastenzuweisung, und am Namen änderte es nichts.
+
+### Protokolle in `minutes/`
+
+**`minutes/` ist der Unterordner des Notizordners für Protokolle**, und `f2`
+legt ihn an, wenn er fehlt. Er ist ein Ordner wie jeder andere, mit einer
+Besonderheit: dem Namen einer Datei, die man dort neu anlegt.
+
+**„Leere Datei anlegen“ (`ctrl+cmd+n`) setzt unmittelbar in `minutes/` Datum und
+Uhrzeit vor den getippten Namen und hängt `.md` an.** Die Datei heißt dann
+`JJMMTT-HHMM-<Name>.md`, mit der Ortszeit in dem Augenblick, in dem man den
+Namen bestätigt. Wer am 11. November 2026 um 14:05 Uhr `Besprechung` tippt,
+bekommt `261111-1405-Besprechung.md`. Das Namensblatt sagt es dort unter dem
+Feld: „Datum, Uhrzeit und .md werden ergänzt: JJMMTT-HHMM-<Name>.md“. Getippt
+wird also allein der Name:
+
+| Getippt | Angelegt um 14:05 Uhr am 11.11.2026 |
+|---|---|
+| `Besprechung` | `261111-1405-Besprechung.md` |
+| `Besprechung.md` | `261111-1405-Besprechung.md`, `.md` wird nicht verdoppelt |
+| `Besprechung.MD` | `261111-1405-Besprechung.MD`, die Schreibweise der Endung bleibt |
+| `liste.txt` | `261111-1405-liste.txt.md`, eine andere Endung bleibt, und `.md` kommt dahinter |
+
+Ein vergebener Name wird auch hier nie überschrieben. Lässt sich die Ortszeit
+nicht bestimmen, legt KRK nichts an, und die Statuszeile sagt „Das heutige
+Datum ließ sich nicht bestimmen.“
+
+**Die Regel gilt allein für „Leere Datei anlegen“, und allein unmittelbar in
+`minutes/`.** In jedem anderen Ordner entsteht die Datei unter dem getippten
+Namen, auch in einem Unterordner von `minutes/` und in einem Ordner, der
+anderswo `minutes` heißt. „Ordner anlegen“, Umbenennen, Stapelumbenennen,
+Duplizieren, Kopieren und Verschieben lassen jeden Namen, wie er ist, auch in
+`minutes/`: eine hineinkopierte Datei behält ihren Namen, und wer ein Protokoll
+umbenennt, bekommt genau den Namen, den er tippt.
+
+**„Protokoll anlegen“ (`cmd+m`) führt aus jeder Lage dorthin und fragt sofort
+nach dem Namen.** Der Befehl steht im Menü „Home“ gleich hinter „Notizordner
+öffnen“ und wirkt wie `f2`, gleich wo der Fokus steht: das aktive Dateifenster
+zeigt `minutes/`, in einem vorhandenen Tab auf diesen Ordner oder sonst in einem
+neuen, und das Namensblatt von „Leere Datei anlegen“ geht auf, mit dem Hinweis
+von oben. Die Eingabetaste legt die Datei mit Datum, Uhrzeit und `.md` an;
+`esc` legt nichts an, und der Tab auf `minutes/` bleibt stehen. Fehlen der
+Notizordner oder `minutes/`, legt der Befehl sie an wie `f2`. Lässt sich
+`minutes/` nicht anlegen, etwa weil an seiner Stelle eine gewöhnliche Datei
+steht, nennt die Statuszeile den Grund, und es geht weder ein Tab noch das Blatt
+auf. Geschrieben wird das Protokoll danach im Editor, mit `f4` auf der neuen
+Datei.
+
+**Mit einer eigenen `keymap.toml` trägt „Protokoll anlegen“ keine Taste.** KRK
+hängt den Befehl beim Start unbelegt an, und über das Menü „Home“ wirkt er
+trotzdem. Wer `cmd+m` dafür will, weist es einzeln zu: **F1**, „Protokoll
+anlegen“ wählen, **Zuweisen** (`cmd+t`), `cmd+m` drücken, die Ansicht mit
+„Fertig“ verlassen. **Nicht `cmd+r`**: es brächte die Taste zwar mit, setzt aber
+die ganze eigene Belegung auf die Auslieferungsfassung zurück, also auch jede
+eigene Tastenzuweisung.
 
 ### Der Ort des Notizordners
 
@@ -1919,7 +1959,7 @@ nichts ändert sich.
 > alles liegen, und F2 führt zum neuen
 
 Jeder Tab auf dem alten oder dem neuen Ort liest seinen Ordner neu, auch ein
-verdeckter. Die Vorschau zeigt `notes.txt` und `tasks.txt` ohne neue Auswahl so,
+verdeckter. Die Vorschau zeigt `tasks.txt` ohne neue Auswahl so,
 wie es zum neuen Ort passt: dort gerendert, am alten Ort als Text. **Angelegt
 wird dabei nichts, und kein Tab geht auf.** Was am neuen Ort fehlt, legt erst
 der nächste `f2` an. Ist der gewählte Ordner schon der Notizordner, bleibt alles,
@@ -1933,12 +1973,11 @@ dem Start einen anderen Ort; jetzt steht dort wieder „~/krkhome“, und der
 Notizordner bleibt, wo er ist“.
 
 **Solange der Editor eine Datei des Notizordners hält, wählt KRK keinen anderen
-Ort.** Gemeint sind `notes.txt`, `tasks.txt`, `secrets.txt` und
-`appointments.md`, am geltenden
-Ort wie am gewählten; das zweite trifft etwa eine `notes.txt`, die am gewählten
-Ort noch als gewöhnlicher Text offen ist. Die Statuszeile nennt die Datei:
+Ort.** Gemeint sind `tasks.txt` und `secrets.txt`, am geltenden Ort wie am
+gewählten; das zweite trifft etwa eine `tasks.txt`, die am gewählten Ort noch
+als gewöhnlicher Text offen ist. Die Statuszeile nennt die Datei:
 
-> Zuerst notes.txt im Editor schließen; solange der Editor eine Datei des
+> Zuerst tasks.txt im Editor schließen; solange der Editor eine Datei des
 > Notizordners hält, wählt KRK keinen anderen Ort
 
 Ein gewählter Ordner, der nach den Regeln oben nicht gilt, wird mit derselben
@@ -1971,7 +2010,8 @@ am alten Ort bleiben liegen, und was am neuen Ort fehlt, legt erst der nächste
 `f2` dort leer an; beim Start legt KRK nie etwas an. Ein Wechsel von Hand in
 `settings.toml` gilt ab dem nächsten Start, und die Statuszeile nennt dann einmal
 den neuen und den alten Ort. Die Regeln des Notizordners (die gerenderte
-Vorschau, die Tabellen im Editor, die PIN für `secrets.txt`, der Inhaltsfilter)
+Vorschau, die Tabellen im Editor, die PIN für `secrets.txt`, der Inhaltsfilter,
+der Dateiname in `minutes/`)
 gelten danach am neuen Ort und am alten nicht mehr. Eine `secrets.txt` am alten
 Ort ist dann eine gewöhnliche Datei; ihr Chiffrat öffnet der Editor nicht als
 Text.
@@ -2048,9 +2088,8 @@ zum Anfang der Datei.
 
 Die sechs Befehle mit Tasten stehen auch im Hauptmenü „Home“. Wirken können
 sie nur, solange der Fokus im Editor steht und dieser eine der Tabellen
-zeigt; das Abhaken wirkt allein in der Aufgabentabelle, und das Verschieben
-wirkt in der Termintabelle nicht. Allein das Anlegen wirkt auch in der
-Rohansicht einer Eintragsdatei. Sonst sind sie
+zeigt; das Abhaken wirkt allein in der Aufgabentabelle. Allein das Anlegen
+wirkt auch in der Rohansicht einer Eintragsdatei. Sonst sind sie
 ausgegraut, und ihre Tasten wirken so, als wären sie nicht belegt.
 Nach dem Öffnen ist die erste Aufgabe gewählt, damit die Tasten sofort eine
 Zeile vor sich haben, und ein Klick auf das Kästchen holt den Fokus in die
@@ -2063,7 +2102,7 @@ Aufgabe, die als `* [X]` dastand, kommt deshalb als `- [ ] ` zurück, wenn man
 sie wieder öffnet; ihre Nachbarn bleiben Zeichen für Zeichen, wie sie waren.
 
 **`delete` und `shift+cmd+delete` fragen nicht nach.** Beide löschen den
-gewählten Eintrag, in jeder der vier Tabellen, und `cmd+z` holt ihn zurück;
+gewählten Eintrag, in jeder der Tabellen, und `cmd+z` holt ihn zurück;
 `shift+cmd+z` löscht ihn wieder. Die Statuszeile sagt es dazu. `delete` ist die
 Rückschritt-Taste (⌫). Im Dateifenster räumt sie weiter in den Papierkorb, mit
 Rückfrage; welche der zwei Bedeutungen gilt, entscheidet der Fokus.
@@ -2079,13 +2118,12 @@ offenen Zelle heraus den ganzen Eintrag löschen will, nimmt
 **`cmd+n` legt einen Eintrag an, gleich wo der Fokus im Editor steht.** In der
 Tabelle entsteht die leere Zeile am Ende, und ihre erste Zelle ist offen; aus
 einer offenen Zelle heraus wird diese zuerst übernommen, und lässt sie sich
-nicht übernehmen, entsteht nichts. **In der Rohansicht einer der vier
-Eintragsdateien wirkt derselbe Befehl ebenso**, auch über `shift+cmd+return`:
-KRK hängt den leeren Eintrag als Text ans Ende, also `- [ ] ` in `tasks.txt`,
-`## ` in `notes.txt`, `## ` mit den vier leeren Feldzeilen `protocol:`,
-`address:`, `account:` und `password:` darunter in `secrets.txt` und `## ` mit
-dem heutigen Datum in `appointments.md`, und die Schreibmarke steht am Ende der
-ersten Zeile des neuen Eintrags. Ein
+nicht übernehmen, entsteht nichts. **In der Rohansicht einer Eintragsdatei
+wirkt derselbe Befehl ebenso**, auch über `shift+cmd+return`: KRK hängt den
+leeren Eintrag als Text ans Ende, also `- [ ] ` in `tasks.txt` und `## ` mit den
+vier leeren Feldzeilen `protocol:`, `address:`, `account:` und `password:`
+darunter in `secrets.txt`, und die Schreibmarke steht am Ende der ersten Zeile
+des neuen Eintrags. Ein
 `cmd+z` nimmt ihn zurück. In jeder anderen Datei, in der Quicknote und
 außerhalb des Editors holt `cmd+n` wie bisher das Fenster zurück („Fenster
 einblenden“); vor einer Eintragsdatei bleibt dieser Befehl über das Menü
@@ -2131,173 +2169,6 @@ will, weist sie in der Belegungsansicht einzeln zu: **F1**, den Befehl wählen,
 `cmd+t`, die Taste drücken, „Fertig“. `cmd+r` ist dafür nicht nötig; es setzt
 die ganze eigene Belegung zurück, also auch jede eigene Tastenzuweisung.
 
-### Notizen in der Tabelle bearbeiten
-
-**In der Formatansicht des Editors steht `notes.txt` als Tabelle mit zwei
-Spalten**, links das Thema, rechts der Text der Notiz. Die Kopfzeile trägt die
-Namen „Thema“ und „Notiz“. Eine Zeile ist so hoch wie ihr Text: eine Notiz mit
-drei Zeilen belegt drei Zeilen, und beim Tippen wächst sie mit. Eine lange
-Zeile bricht an der Spaltenbreite um. Die Themenspalte lässt sich an ihrer
-Kante in der Kopfzeile breiter oder schmaler ziehen.
-
-**Die Tabelle zeigt allein die Notizen.** Text vor dem ersten `## ` sieht man
-nur in der Rohansicht, und er bleibt beim Verschieben und Löschen oben stehen.
-Löschen nimmt eine Notiz ganz, also Thema und Text.
-
-| Griff | Wirkung |
-|---|---|
-| Doppelklick auf eine Zelle | diese Zelle öffnet sich, ihr Text ist ausgewählt |
-| Doppelklick unter die letzte Notiz, auch in die leere Tabelle | eine leere Notiz ans Ende, ihr Thema gleich offen |
-| `cmd+return` | das Thema der gewählten Notiz öffnen; in einer offenen Zelle den Text übernehmen |
-| `cmd+n`, `shift+cmd+return` | eine leere Notiz ans Ende, ihr Thema gleich offen |
-| `opt+cmd+up`, `opt+cmd+down` | die gewählte Notiz eine Stelle nach oben oder unten |
-| `delete`, `shift+cmd+delete` | die gewählte Notiz löschen, ohne Rückfrage |
-| `cmd+c` | den Text der gewählten Notiz kopieren; ist er leer, das Thema |
-| `cmd+z` | jede dieser Handlungen zurücknehmen |
-
-Es sind dieselben Befehle wie in der Aufgabentabelle. „Aufgabe abhaken oder
-öffnen“ bleibt hier ausgegraut, denn eine Notiz hat kein Kästchen. Wie dort
-kommt jede Handlung erst mit `cmd+s` auf die Platte, und Suchen, Ersetzen und
-der Zeilensprung sind in der Tabelle ausgegraut. Nach dem Öffnen ist auch hier
-die erste Notiz gewählt, sodass die Befehle für die gewählte Notiz sofort
-wirken.
-
-**In einer offenen Zelle gelten andere Regeln als in der Aufgabentabelle:**
-
-- `return` schreibt im Text der Notiz einen Zeilenumbruch, und die Zelle bleibt
-  offen. Im Thema übernimmt `return` die Zelle, denn ein Thema ist eine Zeile.
-- `tab` übernimmt die Zelle und öffnet die nächste: vom Thema in den Text
-  derselben Notiz, vom Text in das Thema der nächsten. `shift+tab` geht
-  denselben Weg zurück. Nach der letzten Zelle bleibt der Fokus in der Tabelle,
-  und keine Zelle ist mehr offen.
-- `cmd+return` oder ein Klick daneben übernehmen den Text.
-- `esc` übernimmt eine geänderte Zelle und verwirft sie nicht. Die Statuszeile
-  sagt dazu, dass `cmd+z` die Übernahme zurücknimmt. Eine unveränderte Zelle
-  schließt `esc` einfach. Der Grund für diese Regel: eine Notiz kann mehrere
-  Absätze tragen, und ein Verwerfen nähme sie ohne Warnung mit.
-- Eine Zeile im Text, die mit `## ` beginnt, weist KRK ab, denn so beginnt die
-  nächste Notiz. Die Zelle bleibt offen, und die Statuszeile nennt den Grund.
-  `#` und `###` am Zeilenanfang sind erlaubt.
-- Ein Thema mit Zeilenumbruch, etwa aus der Zwischenablage eingefügt, weist
-  KRK ebenso ab.
-- Das Übernehmen vor `cmd+s`, `ctrl+cmd+e`, dem Schließen des Editors und
-  `cmd+q` gilt wie in der Aufgabentabelle, und `cmd+z` nimmt in einer offenen
-  Zelle nur das Getippte zurück.
-
-Wer mit `shift+cmd+return` eine Notiz anlegt und die Zelle ohne Eingabe
-schließt, behält eine leere Notiz in der Datei. Ein `cmd+z` nimmt sie zurück.
-
-### Termine in `appointments.md`
-
-**`appointments.md` hat dieselbe Form wie `notes.txt`, nur steht in der
-Kopfzeile statt eines Themas ein Datum.** Ein Termin beginnt mit einer Zeile
-`## YYMMDD` oder `## YYMMDD HH:MM`, und alles darunter bis zur nächsten solchen
-Zeile ist sein Text:
-
-```text
-## 261002 09:30
-Zahnarzt, Praxis am Markt
-
-## 261002
-Geburtstag Anna
-Geschenk nicht vergessen
-
-## 261015
-Steuererklärung abgeben
-```
-
-**Ein Datum gilt, wenn es genau so dasteht:** sechs Ziffern für Jahr, Monat
-und Tag, wahlweise ein Leerzeichen und die Uhrzeit mit je zwei Ziffern für
-Stunde und Minute. Der Tag muss im Kalender stehen, also kein 30. Februar, der
-29. Februar nur im Schaltjahr; die Jahre reichen von 2000 bis 2099, die
-Uhrzeiten von 00:00 bis 23:59. `261002`
-und `261002 09:30` gelten, `26102`, `261002 9:30`, `261002 09:30 Uhr` und
-`261302` nicht. **Ein ungültiges Datum bleibt als Termin stehen**, geht nicht
-verloren und steht in der Tabelle am Ende, in beiden Richtungen. Text vor dem
-ersten `## ` gehört zu keinem Termin; er bleibt oben in der Datei stehen und
-erscheint allein in der Rohansicht.
-
-**In der Formatansicht des Editors steht `appointments.md` als Tabelle mit zwei
-Spalten**, „Datum“ und „Termin“, und bedient wird sie wie die Notiztabelle.
-Sie ist nach dem Datum sortiert, ab Werk aufsteigend, also der früheste Termin
-oben. Ein Termin ohne Uhrzeit steht vor einem am selben Tag mit Uhrzeit. Die
-Datei selbst bleibt dabei in ihrer eigenen Reihenfolge; die Rohansicht zeigt
-sie so, wie sie auf der Platte steht, und ein neuer Termin kommt ans Ende der
-Datei, auch wenn er in der Tabelle weiter oben steht.
-
-| Griff | Wirkung |
-|---|---|
-| Doppelklick auf eine Zelle | diese Zelle öffnet sich, ihr Text ist ausgewählt |
-| Doppelklick unter den letzten Termin, auch in die leere Tabelle | ein Termin mit dem heutigen Datum, sein Datum gleich offen |
-| `cmd+return` | das Datum des gewählten Termins öffnen; in einer offenen Zelle den Text übernehmen |
-| `cmd+n`, `shift+cmd+return` | ein Termin mit dem heutigen Datum, sein Datum gleich offen |
-| `delete`, `shift+cmd+delete` | den gewählten Termin löschen, ohne Rückfrage |
-| `cmd+1`, Klick auf den Kopf „Datum“ | die Richtung umkehren, aufsteigend oder absteigend |
-| `cmd+c` | den Text des gewählten Termins kopieren; ist er leer, das Datum |
-| `cmd+z` | jede dieser Handlungen zurücknehmen |
-
-**Ein neuer Termin trägt das heutige Datum** und keine Uhrzeit, damit er dort
-steht, wo man weiterschreibt, und nicht als ungültiger am Ende. „Eintrag nach
-oben“ und „Eintrag nach unten“ sind in der Termintabelle ausgegraut, denn ihre
-Reihenfolge ist das Datum; wer einen Termin verlegen will, ändert sein Datum,
-und die Zeile wandert an ihren neuen Platz und bleibt gewählt. „Aufgabe
-abhaken oder öffnen“ und „PIN ändern“ bleiben hier ebenso ausgegraut.
-
-**In einer offenen Zelle unterscheiden sich die zwei Spalten:**
-
-- Das Datum ist eine Zeile. `return` übernimmt es, und `esc` verwirft das
-  Getippte, wie in der Aufgabentabelle.
-- Der Text eines Termins trägt Absätze. `return` schreibt einen
-  Zeilenumbruch, und `esc` übernimmt eine geänderte Zelle, wie in der
-  Notiztabelle; die Statuszeile sagt dazu, dass `cmd+z` es zurücknimmt.
-- `tab` und `shift+tab` wechseln wie in der Notiztabelle, in der Folge, in der
-  die Tabelle die Termine zeigt.
-- Ein geändertes Datum, das nicht gilt, weist KRK ab; die Zelle bleibt offen,
-  und die Statuszeile nennt die zwei gültigen Formen. Leerzeichen am Anfang und
-  am Ende zählen nicht mit. Ein ungültiges Datum, das man unverändert lässt,
-  prüft KRK nicht, sodass sich auch der Text eines solchen Termins bearbeiten
-  lässt.
-- Eine Zeile im Text, die mit `## ` beginnt, weist KRK ab, denn so beginnt der
-  nächste Termin.
-
-**`cmd+1` oder ein Klick auf den Kopf „Datum“ kehrt die Richtung um.** Ein
-Pfeil im Spaltenkopf zeigt, in welche Richtung die Tabelle gerade ordnet, und
-die Statuszeile meldet „Termine absteigend sortiert“ oder „Termine aufsteigend
-sortiert“. Der gewählte Termin bleibt gewählt. Die Datei ändert sich dabei
-nicht, und `cmd+s` ist nicht nötig. Die Richtung übersteht einen Neustart:
-KRK merkt sie sich in `session.toml` als `terminrichtung`. **Dieselbe
-Kombination sortiert im Dateifenster weiter nach Namen**; welche der beiden
-Funktionen wirkt, entscheidet der Fokus (siehe „Die Tastaturbelegung“). Im
-Hauptmenü trägt deshalb nur „Termine: Sortierrichtung umkehren“ unter „Home“
-das Kürzel `⌘1`, und „Nach Name sortieren“ steht ohne Kürzel da.
-
-**Jeder Termin des heutigen Tages ist in der Tabelle gelb hinterlegt**, mit
-und ohne Uhrzeit. Eine gewählte Zeile zeigt die Farbe der Auswahl; sobald die
-Auswahl weiterwandert, kommt die Hervorhebung wieder. Wer KRK über Mitternacht
-offen lässt, sieht den neuen Tag, sobald das Fenster wieder in den Vordergrund
-kommt oder der Fokus wechselt. Solange eine Zelle offen ist, bleibt die Tabelle
-dabei, wie sie ist, damit nichts Getipptes verloren geht; nachgeholt wird beim
-nächsten solchen Wechsel.
-
-**Die Vorschau zeigt `appointments.md` gerendert und immer aufsteigend**,
-gleich in welche Richtung die Tabelle im Editor gerade ordnet: den Text vor dem
-ersten Termin oben, jedes Datum als Überschrift, ungültige Termine am Ende.
-Hervorgehoben ist dort nichts, und geschrieben wird dabei nichts. Wer aus der
-Vorschau kopiert, bekommt den Text in dieser Ordnung und nicht in der der
-Datei. Eine `appointments.md` in einem anderen Ordner ist gewöhnliches Markdown,
-ohne Tabelle und in der Reihenfolge der Datei.
-
-**Mit einer eigenen `keymap.toml` trägt „Termine: Sortierrichtung umkehren“
-keine Taste.** KRK hängt den Befehl beim Start unbelegt an, und über das Menü
-„Home“ und den Klick auf den Kopf „Datum“ wirkt er trotzdem. Wer `cmd+1` dafür
-will, weist es vor der ersten Benutzung einzeln zu: **F1**, „Termine:
-Sortierrichtung umkehren“ wählen, `cmd+t`, `cmd+1` drücken, die Ansicht mit
-„Fertig“ verlassen. Dass `cmd+1` schon auf „Nach Name sortieren“ liegt, ist
-dabei kein Konflikt, und die Sortierung im Dateifenster behält die Taste.
-**Nicht `cmd+r`**: es brächte die Taste zwar mit, setzt aber die ganze eigene
-Belegung auf die Auslieferungsfassung zurück, also auch jede eigene
-Tastenzuweisung.
-
 ### Geheimnisse in `secrets.txt`
 
 **`secrets.txt` hält Einträge, die kein Programm nebenbei mitlesen soll.** Jeder
@@ -2307,8 +2178,8 @@ sie mit einer vierstelligen PIN. Die Felder Protokoll, Adresse, Konto und
 Passwort braucht man nur für eine Verbindung (unter „Verbindungen“); ein
 Eintrag, der allein einen Namen und Notizen trägt, ist ebenso gültig.
 
-Im entschlüsselten Text ist ein Eintrag eine Notiz wie in `notes.txt`, deren
-Text mit bis zu vier Feldzeilen beginnt:
+Im entschlüsselten Text beginnt ein Eintrag mit einer Zeile `## <Name>`, und
+sein Text darunter beginnt mit bis zu vier Feldzeilen:
 
 ```text
 ## NAS Büro
@@ -2325,8 +2196,8 @@ ununterbrochene Folge von Zeilen als Felder, solange jede mit `protocol:`,
 gleich) und ihr Schlüssel in dieser Folge noch nicht stand. Die erste andere
 Zeile beendet die Felder, und alles ab ihr sind die Notizen.
 
-**Einträge aus der Zeit vor den sechs Feldern bleiben, wie sie sind.** Ihr
-Thema erscheint als Name, ihr Text als Notizen, die vier mittleren Spalten
+**Einträge aus der Zeit vor den sechs Feldern bleiben, wie sie sind.** Ihre
+Zeile `## …` erscheint als Name, der Text darunter als Notizen, die vier mittleren Spalten
 sind leer. KRK schreibt dafür nichts um: erst wer eine Zelle eines solchen
 Eintrags ändert, gibt ihm die volle Form mit allen vier Feldzeilen, leere als
 `protocol:` ohne Wert. Jeder andere Eintrag bleibt dabei Byte für Byte. Beginnt
@@ -2413,20 +2284,27 @@ nicht erst mit der neuen PIN.
 
 **Die Formatansicht zeigt sechs Spalten**: Name, Protokoll, Adresse, Konto,
 Passwort und Notizen, die Einträge in der Reihenfolge der Datei. Die Griffe
-sind die der Notiztabelle (unter „Notizen in der Tabelle bearbeiten“):
-Doppelklick öffnet eine Zelle, `cmd+n` und `shift+cmd+return` legen einen
-leeren Eintrag ans Ende, `opt+cmd+up` und `opt+cmd+down` verschieben, `delete`
-und `shift+cmd+delete` löschen den ganzen Eintrag, `cmd+z` nimmt jede Handlung
-zurück, und erst `cmd+s` schreibt.
+sind die der Aufgabentabelle (unter „Aufgaben in der Tabelle bearbeiten“), nur
+ohne Kästchen: Doppelklick öffnet eine Zelle, `cmd+return` öffnet den Namen des
+gewählten Eintrags, `cmd+n` und `shift+cmd+return` legen einen leeren Eintrag
+ans Ende, `opt+cmd+up` und `opt+cmd+down` verschieben, `delete` und
+`shift+cmd+delete` löschen den ganzen Eintrag ohne Rückfrage, `cmd+z` nimmt jede
+Handlung zurück, und erst `cmd+s` schreibt. „Aufgabe abhaken oder öffnen“ ist
+hier ausgegraut, ebenso Suchen, Ersetzen und der Zeilensprung. Eine Zeile ist so
+hoch wie ihr Text und wächst beim Tippen mit.
 
 **Fünf Spalten sind einzeilig, die Notizen nicht.** In Name, Protokoll,
 Adresse, Konto und Passwort beendet `return` die Zelle, ein Zeilenumbruch,
 etwa aus der Zwischenablage, wird abgewiesen, und **`esc` verwirft eine
-geänderte Zelle**, wie die Datumszelle der Termine. In den Notizen schreibt
-`return` einen Umbruch, und `esc` übernimmt die geänderte Zelle wie in der
-Notiztabelle. Eine Zeile in den Notizen, die mit `## ` beginnt, weist KRK ab,
-denn so beginnt der nächste Eintrag. `tab` und `shift+tab` gehen von Zelle zu
-Zelle.
+geänderte Zelle**, wie in der Aufgabentabelle. In den Notizen schreibt
+`return` einen Umbruch, und die Zelle bleibt offen; `cmd+return` oder ein Klick
+daneben übernehmen sie. **`esc` übernimmt dort eine geänderte Zelle und verwirft
+sie nicht**, und die Statuszeile sagt dazu, dass `cmd+z` die Übernahme
+zurücknimmt; der Grund ist, dass Notizen mehrere Absätze tragen können und ein
+Verwerfen sie ohne Warnung mitnähme. Eine Zeile in den Notizen, die mit `## `
+beginnt, weist KRK ab, denn so beginnt der nächste Eintrag; die Zelle bleibt
+offen, und die Statuszeile nennt den Grund. `tab` und `shift+tab` übernehmen die
+Zelle und gehen zur nächsten oder vorigen.
 
 **Die Passwortspalte zeigt das Passwort im Klartext.** Die Rohansicht derselben
 Datei zeigt es ohnehin, und eine Verdeckung allein in der Tabelle verspräche
@@ -2715,7 +2593,7 @@ bedienbar, abbrechen lässt es sich aber nicht.
 
 **Mit einer eigenen `keymap.toml` trägt „Verbindung herstellen“ keine Taste.**
 Der Klick wirkt trotzdem. `opt+return` weist man einzeln zu: **F1**, den Befehl
-in der Gruppe „Leiste und Fokus“ wählen, `cmd+t`, `opt+return` drücken,
+in der Gruppe „Leiste“ wählen, `cmd+t`, `opt+return` drücken,
 „Fertig“.
 
 #### Ordner auf einem Server
