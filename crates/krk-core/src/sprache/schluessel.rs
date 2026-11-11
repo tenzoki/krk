@@ -1378,6 +1378,11 @@ pub enum Text {
     QuicknoteNichtKopiert,
     /// `Editormeldung::QuicknoteZuGross`.
     QuicknoteZuGross,
+    /// `Editormeldung::ProtokolltextLeer`: „Kopieren“ vor einer leeren
+    /// Protokolldatei aus `minutes/`.
+    ProtokolltextLeer,
+    /// `Editormeldung::ProtokolltextNichtKopiert`.
+    ProtokolltextNichtKopiert,
     /// `Editorbereich::textmarke_verweigert` bei offener Quicknote.
     QuicknoteKeineTextmarken,
     /// Die Schaltflaeche „Leeren“ in der Rolle der Quicknote.
@@ -1901,7 +1906,7 @@ pub enum Text {
 
 impl Text {
     /// Alle Schluessel, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Text; 766] = [
+    pub const ALLE: [Text; 768] = [
         Text::WirkungsbereichDateifenster,
         Text::WirkungsbereichLeiste,
         Text::WirkungsbereichDateibereiche,
@@ -2462,6 +2467,8 @@ impl Text {
         Text::QuicknoteLeer,
         Text::QuicknoteNichtKopiert,
         Text::QuicknoteZuGross,
+        Text::ProtokolltextLeer,
+        Text::ProtokolltextNichtKopiert,
         Text::QuicknoteKeineTextmarken,
         Text::QuicknoteLeeren,
         Text::QuicknoteKopieren,
@@ -2765,6 +2772,9 @@ pub enum Zahlwort {
     EditorZeilenHinterDerLetzten,
     /// `Editormeldung::QuicknoteKopiert`: die Zahl der kopierten Zeichen.
     QuicknoteKopiert,
+    /// `Editormeldung::ProtokolltextKopiert`: die Zahl der kopierten Zeichen
+    /// einer Protokolldatei aus `minutes/`.
+    ProtokolltextKopiert,
     /// `vorschaumodell::vorbereitungshinweis`: der Satz, solange das Foto an
     /// der Stelle nicht geladen ist, mit der Zahl der Fotos der Folge.
     BildfolgeVorbereitet,
@@ -2814,7 +2824,7 @@ pub enum Zahlwort {
 
 impl Zahlwort {
     /// Alle Zahlwoerter, in der Reihenfolge der Aufzaehlung.
-    pub const ALLE: [Zahlwort; 44] = [
+    pub const ALLE: [Zahlwort; 45] = [
         Zahlwort::Byte,
         Zahlwort::NeuerungenEintraegeIn,
         Zahlwort::MarkeGeaendert,
@@ -2846,6 +2856,7 @@ impl Zahlwort {
         Zahlwort::EditorTrefferErsetzt,
         Zahlwort::EditorZeilenHinterDerLetzten,
         Zahlwort::QuicknoteKopiert,
+        Zahlwort::ProtokolltextKopiert,
         Zahlwort::BildfolgeVorbereitet,
         Zahlwort::AuswurfDateifensterUndVerdeckteTabs,
         Zahlwort::AuswurfVerdeckteTabs,

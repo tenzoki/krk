@@ -800,6 +800,17 @@ pub enum Editormeldung {
     /// Eine Aenderung haette den Puffer der Quicknote ueber ihre Grenze
     /// gebracht und ist unterblieben (Q3 des Spec der Quicknote).
     QuicknoteZuGross,
+    /// Der ganze Text einer Protokolldatei liegt in der Zwischenablage; Datei
+    /// und Editor bleiben, wie sie sind (E7 des Plans
+    /// `261111-2248-plan-protokolldatei-traegt-kopieren-singlestrip-format.md`).
+    ProtokolltextKopiert {
+        /// Wie viele Zeichen kopiert sind.
+        zeichen: usize,
+    },
+    /// Die Protokolldatei war leer; die Zwischenablage bleibt, wie sie war.
+    ProtokolltextLeer,
+    /// Die Zwischenablage hat den Text der Protokolldatei nicht angenommen.
+    ProtokolltextNichtKopiert,
     /// Die Sicherung der Quicknote findet den Notizordner nicht und schreibt
     /// nichts, bis er steht (Entscheidung 2 des Plans der Sicherung); `ort`
     /// ist der Notizordner, wie die Statuszeile ihn nennt, `None` ohne
@@ -1013,6 +1024,13 @@ impl Editormeldung {
             }
             Self::QuicknoteNichtKopiert => text(Text::QuicknoteNichtKopiert).to_owned(),
             Self::QuicknoteZuGross => text(Text::QuicknoteZuGross).to_owned(),
+            Self::ProtokolltextKopiert { zeichen } => anzahl(
+                Zahlwort::ProtokolltextKopiert,
+                u64::try_from(*zeichen).unwrap_or(u64::MAX),
+                &[],
+            ),
+            Self::ProtokolltextLeer => text(Text::ProtokolltextLeer).to_owned(),
+            Self::ProtokolltextNichtKopiert => text(Text::ProtokolltextNichtKopiert).to_owned(),
             Self::QuicknoteOrdnerFehlt { ort: Some(ort) } => {
                 satz(Text::QuicknoteOrdnerFehlt, &[("ort", ort)])
             }
@@ -3765,6 +3783,25 @@ impl Editorbereich {
         let laenge = self.ivars().modell.borrow().stand().len();
         self.stelle_zeigen(anfang.min(laenge), ende.min(laenge));
         None
+    }
+
+    /// Der ganze Text der Protokolldatei, wie der Editor ihn haelt, auch der
+    /// ungesicherte; `None`, wenn der Editor nicht den Text einer
+    /// Protokolldatei zeigt.
+    ///
+    /// Gelesen wird der Stand des Modells und nicht die Auswahl der Flaeche:
+    /// „Kopieren“ nimmt im Protokoll wie in der Quicknote den ganzen Text (E7
+    /// des Plans
+    /// `261111-2248-plan-protokolldatei-traegt-kopieren-singlestrip-format.md`).
+    /// Die Bedingung ist dieselbe wie an [`Self::protokoll_umformen`] und steht
+    /// hier ausgeschrieben, bis Schritt 4 des Plans sie als eine Funktion in
+    /// `kommandos/zulaessigkeit.rs` fuehrt.
+    #[must_use]
+    pub fn protokolltext(&self) -> Option<String> {
+        if !matches!(self.form(), Editorform::Text) || !self.haelt_protokolldatei() {
+            return None;
+        }
+        Some(self.ivars().modell.borrow().stand().to_owned())
     }
 
     /// Singlestrip oder Format an dem Notiztext, den der Editor zeigt: an der
@@ -9523,6 +9560,68 @@ mod tests {
                 "„{satz}“ nennt die Quicknote nicht"
             );
         }
+    }
+
+    /// Die drei Saetze des Kopierens im Protokoll sind in jeder Sprache
+    /// paarweise verschieden, nennen die Quicknote nicht und versprechen weder
+    /// ein Leeren noch ein Schliessen (E7 des Plans
+    /// `261111-2248-plan-protokolldatei-traegt-kopieren-singlestrip-format.md`):
+    /// im Protokoll kopiert der Befehl allein.
+    #[test]
+    fn die_saetze_des_protokolls_sind_verschieden_und_nennen_die_quicknote_nicht() {
+        use krk_core::sprache::Sprache;
+        for sprache in Sprache::ALLE {
+            let (einzahl, mehrzahl) = sprache.zahlwort(Zahlwort::ProtokolltextKopiert);
+            let saetze = [
+                einzahl,
+                mehrzahl,
+                sprache.text(Text::ProtokolltextLeer),
+                sprache.text(Text::ProtokolltextNichtKopiert),
+            ];
+            // Einzahl und Mehrzahl duerfen gleich lauten (deutsch „Zeichen“);
+            // verschieden sind die drei Meldungen untereinander.
+            for (stelle, satz) in saetze.iter().enumerate() {
+                for (weiter, anderer) in saetze.iter().enumerate().skip(stelle + 1) {
+                    if (stelle, weiter) != (0, 1) {
+                        assert_ne!(satz, anderer, "{sprache:?}");
+                    }
+                }
+            }
+            for satz in saetze {
+                let klein = satz.to_lowercase();
+                for wort in [
+                    "quicknote",
+                    "geleert",
+                    "geschlossen",
+                    "emptied",
+                    "cleared",
+                    "closed",
+                    "vidé",
+                    "fermé",
+                ] {
+                    assert!(
+                        !klein.contains(wort),
+                        "{sprache:?}: „{satz}“ nennt „{wort}“"
+                    );
+                }
+            }
+        }
+        let gemeldet: Vec<String> = [
+            Editormeldung::ProtokolltextKopiert { zeichen: 7 },
+            Editormeldung::ProtokolltextLeer,
+            Editormeldung::ProtokolltextNichtKopiert,
+        ]
+        .iter()
+        .map(Editormeldung::text)
+        .collect();
+        assert!(
+            gemeldet[0].contains('7'),
+            "„{}“ nennt die Zahl nicht",
+            gemeldet[0]
+        );
+        assert_ne!(gemeldet[0], gemeldet[1]);
+        assert_ne!(gemeldet[1], gemeldet[2]);
+        assert_ne!(gemeldet[0], gemeldet[2]);
     }
 
     /// Die Quicknote zeigt ihre eigene Flaeche, keine Tabelle, und `esc` in

@@ -951,6 +951,12 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
         Text::QuicknoteZuGross => {
             "Le texte est trop long pour la Quicknote\u{202f}; rien n’a été collé."
         }
+        Text::ProtokolltextLeer => {
+            "Le compte rendu est vide\u{202f}; le presse-papiers reste tel qu’il était."
+        }
+        Text::ProtokolltextNichtKopiert => {
+            "Le compte rendu n’a pas pu être copié dans le presse-papiers."
+        }
         Text::QuicknoteKeineTextmarken => "Dans la Quicknote, il n’y a pas de signets de texte.",
         Text::QuicknoteLeeren => "Vider",
         Text::QuicknoteKopieren => "Copier",
@@ -1406,6 +1412,10 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::QuicknoteKopiert => (
             "La Quicknote est dans le presse-papiers\u{a0}: {n} caractère.",
             "La Quicknote est dans le presse-papiers\u{a0}: {n} caractères.",
+        ),
+        Zahlwort::ProtokolltextKopiert => (
+            "Le compte rendu est dans le presse-papiers\u{a0}: {n} caractère.",
+            "Le compte rendu est dans le presse-papiers\u{a0}: {n} caractères.",
         ),
         Zahlwort::BildfolgeVorbereitet => (
             "La série de photos se prépare\u{a0}: {n} photo.",

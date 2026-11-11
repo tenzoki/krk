@@ -838,6 +838,8 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "The Quicknote could not be copied to the clipboard; its text stays in place."
         }
         Text::QuicknoteZuGross => "The text is too large for the Quicknote; nothing was pasted.",
+        Text::ProtokolltextLeer => "The minutes file is empty; the clipboard stays as it was.",
+        Text::ProtokolltextNichtKopiert => "The minutes file could not be copied to the clipboard.",
         Text::QuicknoteKeineTextmarken => "There are no text bookmarks in the Quicknote.",
         Text::QuicknoteLeeren => "Clear",
         Text::QuicknoteKopieren => "Copy",
@@ -1240,6 +1242,10 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::QuicknoteKopiert => (
             "The Quicknote is in the clipboard: {n} character.",
             "The Quicknote is in the clipboard: {n} characters.",
+        ),
+        Zahlwort::ProtokolltextKopiert => (
+            "The minutes file is in the clipboard: {n} character.",
+            "The minutes file is in the clipboard: {n} characters.",
         ),
         Zahlwort::BildfolgeVorbereitet => (
             "The photo sequence is being prepared: {n} photo.",

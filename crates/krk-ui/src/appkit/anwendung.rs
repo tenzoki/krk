@@ -5850,7 +5850,9 @@ impl Anwendungsdelegierter {
             // `zweigproben::jeder_dieser_befehle_hat_einen_eigenen_ausfuehrungszweig`.
             Kommando::QuicknoteUmschalten => self.quicknote_umschalten(fokus),
             // Kopieren und Leeren der Quicknote; gehalten von derselben Probe.
-            Kommando::QuicknoteKopieren => self.quicknote_kopieren(),
+            // Kopieren waehlt zwischen der Quicknote und dem Text einer
+            // Protokolldatei (`notiztext_kopieren`).
+            Kommando::QuicknoteKopieren => self.notiztext_kopieren(),
             Kommando::QuicknoteLeeren => self.quicknote_leeren(),
             // Singlestrip und Format (Entscheidung 13 des Plans
             // `261031-1034-plan-quicknote-sichert-sich-als-scratch-txt-und-traegt-strip-und-format.md`);
@@ -13302,6 +13304,67 @@ impl Anwendungsdelegierter {
         true
     }
 
+    /// Kopiert den ganzen Text der Protokolldatei in die Zwischenablage und
+    /// sonst nichts: die Datei bleibt, wie sie ist, und der Editor bleibt offen
+    /// (E7 des Plans
+    /// `261111-2248-plan-protokolldatei-traegt-kopieren-singlestrip-format.md`,
+    /// Moeglichkeit 1 des Datensatzes
+    /// `261111-2248-leert-und-schliesst-kopieren-auch-eine-protokolldatei-oder-kopiert-es-dort-allein.md`).
+    ///
+    /// **Ueber die eine Huelle um `NSPasteboard`**,
+    /// `super::zwischenablage::text_schreiben`, wie [`Self::quicknote_kopieren`],
+    /// und ueber dieselbe reine Funktion `quicknote::kopieren`; was deren
+    /// [`Kopierausgang`] ueber Leeren und Schliessen sagt, gilt der Quicknote
+    /// und wird hier nicht gelesen. Eine Protokolldatei ist eine Datei des
+    /// Nutzers und kein fluechtiger Puffer.
+    ///
+    /// **`Editorbereich::haelt_geheimnisse` wird hier bewusst nicht gefragt**,
+    /// obwohl dieser Weg, anders als der der Quicknote, den Stand des
+    /// `Editormodell` liest: die Zwischenablage ist eine Ausfuhr durch den
+    /// Nutzer selbst, die
+    /// `260926-0033_*_darf-text-aus-secrets-txt-in-die-zwischenablage.md`
+    /// erlaubt, und eine Protokolldatei liegt nach ihrem Pfad unmittelbar in
+    /// `minutes/` und ist damit nie `secrets.txt`.
+    ///
+    /// Zeigt der Editor nicht den Text einer Protokolldatei, geschieht nichts;
+    /// die Zulaessigkeit laesst den Befehl dann gar nicht erst durch.
+    fn protokoll_kopieren(&self) -> bool {
+        let Some(editor) = self.ivars().editor.get() else {
+            return false;
+        };
+        let Some(text) = editor.protokolltext() else {
+            return false;
+        };
+        let meldung = match quicknote::kopieren(&text, super::zwischenablage::text_schreiben) {
+            Kopierausgang::Kopiert { zeichen } => Editormeldung::ProtokolltextKopiert { zeichen },
+            Kopierausgang::Leer => Editormeldung::ProtokolltextLeer,
+            Kopierausgang::Gescheitert => Editormeldung::ProtokolltextNichtKopiert,
+        };
+        self.editormeldung_zeigen(&meldung);
+        true
+    }
+
+    /// „Kopieren“ an dem Notiztext, den der Editor zeigt: an der Quicknote,
+    /// solange sie offen ist, sonst am Text der Protokolldatei.
+    ///
+    /// Dieselbe Wahl wie [`Editorbereich::notiztext_umformen`], und aus
+    /// demselben Grund geht die offene Quicknote vor: sie verdeckt die Datei
+    /// darunter, und der Befehl gilt dem, was der Nutzer sieht. Die zwei Wege
+    /// tun Verschiedenes: [`Self::quicknote_kopieren`] leert und schliesst,
+    /// [`Self::protokoll_kopieren`] kopiert allein.
+    fn notiztext_kopieren(&self) -> bool {
+        let quicknote_offen = self
+            .ivars()
+            .editor
+            .get()
+            .is_some_and(|editor| editor.quicknote_offen());
+        if quicknote_offen {
+            self.quicknote_kopieren()
+        } else {
+            self.protokoll_kopieren()
+        }
+    }
+
     /// Leert den Puffer der Quicknote; `cmd+z` nimmt es zurueck (Q2, A13).
     fn quicknote_leeren(&self) -> bool {
         let Some(editor) = self.ivars().editor.get() else {
@@ -15232,6 +15295,51 @@ mod quicknoteproben {
             !rumpf.contains(concat!("haelt_", "geheimnisse")),
             "das Kopieren der Quicknote fragt die Geheimnisse (Entscheidung 4)"
         );
+    }
+
+    /// Das Kopieren im Protokoll schreibt ueber die eine Huelle und tut sonst
+    /// nichts: es leert nicht und schliesst nicht (E7 des Plans
+    /// `261111-2248-plan-protokolldatei-traegt-kopieren-singlestrip-format.md`),
+    /// und es fragt die Geheimnisse nicht (Schritt 3 desselben Plans).
+    #[test]
+    fn das_kopieren_im_protokoll_schreibt_ueber_die_eine_huelle_und_kopiert_allein() {
+        let rumpf = rumpf(&diese_datei(), "protokoll_kopieren");
+        assert!(
+            rumpf.contains(concat!("zwischenablage::text_", "schreiben")),
+            "protokoll_kopieren schreibt nicht ueber die eine Huelle"
+        );
+        assert!(
+            rumpf.contains(concat!("editor.protokoll", "text()")),
+            "protokoll_kopieren liest nicht den Text der Protokolldatei"
+        );
+        for nadel in [
+            concat!("nach_kopie_", "leeren"),
+            concat!("quicknote_", "schliessen"),
+            concat!("leert_den_", "puffer"),
+            concat!("haelt_", "geheimnisse"),
+        ] {
+            assert!(
+                !rumpf.contains(nadel),
+                "`{nadel}` steht im Rumpf von protokoll_kopieren"
+            );
+        }
+    }
+
+    /// Die Wahl zwischen den zwei Orten des Kopierens: die offene Quicknote
+    /// geht vor, sonst gilt der Befehl dem Protokoll.
+    #[test]
+    fn kopieren_waehlt_zwischen_quicknote_und_protokoll() {
+        let rumpf = rumpf(&diese_datei(), "notiztext_kopieren");
+        let frage = rumpf
+            .find(concat!("editor.quicknote_", "offen()"))
+            .expect("notiztext_kopieren fragt nicht, ob die Quicknote offen ist");
+        let quicknote = rumpf
+            .find(concat!("self.quicknote_", "kopieren()"))
+            .expect("notiztext_kopieren ruft den Weg der Quicknote nicht");
+        let protokoll = rumpf
+            .find(concat!("self.protokoll_", "kopieren()"))
+            .expect("notiztext_kopieren ruft den Weg des Protokolls nicht");
+        assert!(frage < quicknote && quicknote < protokoll);
     }
 
     /// Teilen und „Ordner der Datei zeigen" sehen nicht durch die Quicknote:

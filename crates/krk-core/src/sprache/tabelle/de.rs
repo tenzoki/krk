@@ -886,6 +886,12 @@ pub(in super::super) const fn text(schluessel: Text) -> &'static str {
             "Die Quicknote ließ sich nicht in die Zwischenablage kopieren; ihr Text bleibt stehen."
         }
         Text::QuicknoteZuGross => "Der Text ist zu groß für die Quicknote; eingefügt wurde nichts.",
+        Text::ProtokolltextLeer => {
+            "Das Protokoll ist leer; die Zwischenablage bleibt, wie sie war."
+        }
+        Text::ProtokolltextNichtKopiert => {
+            "Das Protokoll ließ sich nicht in die Zwischenablage kopieren."
+        }
         Text::QuicknoteKeineTextmarken => "In der Quicknote gibt es keine Textmarken.",
         Text::QuicknoteLeeren => "Leeren",
         Text::QuicknoteKopieren => "Kopieren",
@@ -1310,6 +1316,10 @@ pub(in super::super) const fn zahlwort(schluessel: Zahlwort) -> (&'static str, &
         Zahlwort::QuicknoteKopiert => (
             "Die Quicknote ist in der Zwischenablage: {n} Zeichen.",
             "Die Quicknote ist in der Zwischenablage: {n} Zeichen.",
+        ),
+        Zahlwort::ProtokolltextKopiert => (
+            "Das Protokoll ist in der Zwischenablage: {n} Zeichen.",
+            "Das Protokoll ist in der Zwischenablage: {n} Zeichen.",
         ),
         Zahlwort::BildfolgeVorbereitet => (
             "Die Bildfolge wird vorbereitet: {n} Foto.",
