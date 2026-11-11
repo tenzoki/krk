@@ -1255,6 +1255,17 @@ pub struct Editormodell {
     /// ohne dass sie fuer CSV etwas anderes taeten als heute. Gesetzt allein
     /// zusammen mit dem Typ, in [`Self::uebernehmen`] und [`Self::schliessen`].
     trenntext: Option<trenntext::Art>,
+    /// Ob die gehaltene Datei unmittelbar in `minutes/` des geltenden
+    /// Notizordners liegt (E2 des Plans
+    /// `261111-2248-plan-protokolldatei-traegt-kopieren-singlestrip-format.md`).
+    ///
+    /// Die Antwort von [`Heimordner::ist_protokolldatei`] auf den Pfadtext,
+    /// einmal beim Laden gefragt, damit die Lage je Tastenbefehl einen
+    /// Wahrheitswert liest. **Gesetzt allein zusammen mit [`Self::typ`]**, in
+    /// [`Self::uebernehmen`] und [`Self::schliessen`]; ohne Datei und ohne
+    /// Heimordner `false`. Ein Wechsel des Notizordners bei offener Datei
+    /// laesst es beim alten Stand, wie den Typ: es gilt ab dem naechsten Laden.
+    protokolldatei: bool,
     /// In welcher Form der Stand auf die Platte geht: fuer eine CSV oder TSV
     /// die Form, in der sie gelesen wurde, fuer jede andere Datei
     /// [`Dateiform::GEHALTEN`] (Schritt 6 des Plans, Entscheid
@@ -1505,6 +1516,13 @@ impl Editormodell {
     #[must_use]
     pub fn typ(&self) -> Dateityp {
         self.typ
+    }
+
+    /// Ob die gehaltene Datei eine Protokolldatei ist, also unmittelbar in
+    /// `minutes/` des Notizordners liegt; siehe das Feld gleichen Namens.
+    #[must_use]
+    pub fn protokolldatei(&self) -> bool {
+        self.protokolldatei
     }
 
     /// Ob die gehaltene Datei nach ihrer Endung CSV oder TSV ist (E1); siehe
@@ -1785,11 +1803,17 @@ impl Editormodell {
                 // Ein Schluessel heisst `secrets.txt`, auch unter einer
                 // dritten Schreibweise, die der Pfadtext nicht erkennt; die
                 // Datei zeigt sich dann dennoch als Tabelle der Geheimnisse.
+                let heim = heimgriff::lesen(&self.heim);
                 self.typ = if matches!(schutz, Schutz::Verschluesselt { .. }) {
                     Dateityp::Eintraege(Sonderdatei::Geheimnisse)
                 } else {
-                    Dateityp::von_pfad(&pfad, heimgriff::lesen(&self.heim).as_ref())
+                    Dateityp::von_pfad(&pfad, heim.as_ref())
                 };
+                // Am Pfadtext und ohne Systemaufruf, wie der Typ; ohne
+                // Heimordner ist keine Datei ein Protokoll.
+                self.protokolldatei = heim
+                    .as_ref()
+                    .is_some_and(|heim| heim.ist_protokolldatei(&pfad));
                 self.trenntext = trenntextart(&pfad, self.typ);
                 // Eine Datei, die als Trenntext gelesen wurde und keiner ist,
                 // kommt in die gehaltene Form, damit ihr Stand die Zusage aus
@@ -2408,6 +2432,7 @@ impl Editormodell {
         self.schutz = Schutz::Klartext;
         self.abweichung = false;
         self.typ = Dateityp::default();
+        self.protokolldatei = false;
         self.trenntext = None;
         self.dateiform = Dateiform::GEHALTEN;
         self.suchlauf = None;
@@ -4102,6 +4127,68 @@ mod tests {
             Dateityp::Markdown,
             "eine andere Datei im Heimordner bleibt bei ihrer Endung"
         );
+    }
+
+    /// E2 des Plans der Protokollknoepfe: das Modell merkt beim Uebernehmen,
+    /// ob die Datei unmittelbar in `minutes/` des Notizordners liegt, unter
+    /// der geschriebenen und unter der aufgeloesten Form, und fuer keine
+    /// andere Datei; ohne Heimordner im Griff und nach dem Schliessen ist die
+    /// Antwort nein.
+    #[test]
+    fn das_modell_merkt_die_protokolldatei_unter_beiden_pfadformen() {
+        let ordner = Pruefordner::neu("editor-protokoll");
+        let (heim, geschrieben, ziel) = pruef_krkhome(&ordner);
+        let minutes = ziel.join(krk_core::heimordner::PROTOKOLLORDNER);
+        std::fs::create_dir_all(minutes.join("2026")).expect("minutes/2026");
+        std::fs::write(minutes.join("treffen.md"), "# Treffen\n").expect("treffen.md");
+        std::fs::write(minutes.join("liste.csv"), "a;b\n").expect("liste.csv");
+        std::fs::write(minutes.join("2026").join("alt.md"), "# Alt\n").expect("alt.md");
+        let anderswo = ordner.ordner("anderswo").join("minutes");
+        std::fs::create_dir_all(&anderswo).expect("anderswo/minutes");
+        std::fs::write(anderswo.join("fremd.md"), "# Fremd\n").expect("fremd.md");
+
+        let griff = crate::heimgriff::ungelesen();
+        let mut modell = Editormodell::neu(std::rc::Rc::clone(&griff));
+        assert!(!modell.protokolldatei(), "ohne Datei");
+        let protokoll = geschrieben
+            .join(krk_core::heimordner::PROTOKOLLORDNER)
+            .join("treffen.md");
+        assert_eq!(modell.oeffnen(&protokoll, None), None);
+        assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
+        assert!(!modell.protokolldatei(), "noch kein Heimordner im Griff");
+
+        heimgriff::ersetzen(&griff, crate::heimgriff::Notizlage::gilt(heim));
+        for basis in [&geschrieben, &ziel] {
+            let minutes = basis.join(krk_core::heimordner::PROTOKOLLORDNER);
+            for name in ["treffen.md", "liste.csv"] {
+                let pfad = minutes.join(name);
+                modell.schliessen();
+                assert_eq!(modell.oeffnen(&pfad, None), None);
+                assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
+                assert!(modell.protokolldatei(), "{}", pfad.display());
+            }
+            for pfad in [
+                basis.join("tasks.txt"),
+                basis.join("notes.txt"),
+                minutes.join("2026").join("alt.md"),
+            ] {
+                modell.schliessen();
+                assert_eq!(modell.oeffnen(&pfad, None), None);
+                assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
+                assert!(!modell.protokolldatei(), "{}", pfad.display());
+            }
+        }
+        modell.schliessen();
+        assert_eq!(modell.oeffnen(&anderswo.join("fremd.md"), None), None);
+        assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
+        assert!(!modell.protokolldatei(), "minutes/ in einem fremden Ordner");
+
+        modell.schliessen();
+        assert_eq!(modell.oeffnen(&protokoll, None), None);
+        assert_eq!(abwarten(&mut modell), Ladeausgang::Geoeffnet);
+        assert!(modell.protokolldatei());
+        modell.schliessen();
+        assert!(!modell.protokolldatei(), "nach dem Schliessen");
     }
 
     /// Der Editor fragt beim Uebernehmen den geteilten Griff, und ein

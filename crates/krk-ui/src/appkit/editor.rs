@@ -2265,6 +2265,51 @@ fn umgeformt(art: Umformung, vorher: &str) -> Option<String> {
     (nachher != vorher).then_some(nachher)
 }
 
+/// Was Singlestrip oder Format aus dem Stand einer Protokolldatei machen: der
+/// ganze neue Stand und der Bereich des Ergebnisses darin.
+#[derive(Debug, PartialEq, Eq)]
+struct Protokollumbau {
+    /// Der ganze neue Stand der Datei.
+    text: String,
+    /// Wo das Ergebnis der Umformung im neuen Stand beginnt, als Byteversatz.
+    anfang: usize,
+    /// Wo es endet, als Byteversatz.
+    ende: usize,
+}
+
+/// Singlestrip oder Format am Stand einer Protokolldatei (E6 des Plans
+/// `261111-2248-plan-protokolldatei-traegt-kopieren-singlestrip-format.md`):
+/// an der Auswahl der Textflaeche, bei leerer Auswahl am ganzen Stand, ueber
+/// dasselbe [`umgeformt`] wie in der Quicknote. `None`, wenn die Umformung
+/// nichts aendert.
+///
+/// **`auswahl` zaehlt UTF-16-Einheiten, der Stand Bytes**, und der Schnitt
+/// geht deshalb ueber [`koordinaten::in_bytes`]: beide Enden liegen danach auf
+/// einer Zeichengrenze, auch hinter einem Zeichen ausserhalb der BMP, und ein
+/// Bereich hinter dem Textende endet am Textende, sodass eine Flaeche, die in
+/// einem Augenblick nicht den Stand des Modells traegt, den Text nicht
+/// verdirbt. Rein und ohne Flaeche, damit genau diese Rechnung pruefbar ist.
+fn protokoll_umgeformt(art: Umformung, stand: &str, auswahl: NSRange) -> Option<Protokollumbau> {
+    let (anfang, ende) = if auswahl.length == 0 {
+        (0, stand.len())
+    } else {
+        (
+            koordinaten::in_bytes(stand, auswahl.location),
+            koordinaten::in_bytes(stand, auswahl.location.saturating_add(auswahl.length)),
+        )
+    };
+    let nachher = umgeformt(art, &stand[anfang..ende])?;
+    let mut text = String::with_capacity(stand.len() - (ende - anfang) + nachher.len());
+    text.push_str(&stand[..anfang]);
+    text.push_str(&nachher);
+    text.push_str(&stand[ende..]);
+    Some(Protokollumbau {
+        text,
+        anfang,
+        ende: anfang + nachher.len(),
+    })
+}
+
 /// Die Sicherung der Quicknote samt dem Ort, den ihre Meldungen nennen.
 ///
 /// **Beide gelten ab dem ersten F10 fuer den ganzen Prozess** (Entscheidung 8
@@ -3666,6 +3711,75 @@ impl Editorbereich {
         // Flaeche vor dem Einlesen, an der noch nichts zu aendern ist.
         let _ = quicknote.ersetzen(bereich, &nachher);
         None
+    }
+
+    /// Ob der Editor eine Protokolldatei haelt, also eine Datei unmittelbar in
+    /// `minutes/` des Notizordners, gleich in welcher Ansicht.
+    ///
+    /// Gelesen am Kennzeichen des Modells, das seit dem Laden feststeht
+    /// ([`Editormodell::protokolldatei`]); die Frage stellt keinen
+    /// Systemaufruf.
+    #[must_use]
+    pub fn haelt_protokolldatei(&self) -> bool {
+        self.ivars().modell.borrow().protokolldatei()
+    }
+
+    /// Singlestrip oder Format am Text einer Protokolldatei (E6 des Plans
+    /// `261111-2248-plan-protokolldatei-traegt-kopieren-singlestrip-format.md`):
+    /// an der Auswahl der Textflaeche, sonst am ganzen Stand, als eine
+    /// Handlung, die `cmd+z` zuruecknimmt, und danach ist das Ergebnis
+    /// ausgewaehlt. Gesichert wird wie bei jeder Datei erst mit `cmd+s`.
+    ///
+    /// **Geschrieben wird ueber [`Self::umbau_anwenden`] und keinen zweiten
+    /// Weg**: gerechnet wird in [`protokoll_umgeformt`], und der Neustand geht
+    /// durch denselben Umkehrpunkt und dieselbe Schreibstelle wie jeder Umbau
+    /// des Standes. Antwortet wie [`Self::quicknote_umformen`]: „nichts zu
+    /// aendern", wenn die Umformung den Text gleich laesst, und `None` nach
+    /// einem Umbau.
+    ///
+    /// **[`Self::zelle_uebernehmen`] ruft dieser Weg nicht**, aus dem Grund an
+    /// [`Self::eintrag_im_text_hinzufuegen`]: er wirkt allein in der Textform,
+    /// dort ist die Tabelle ausgeblendet, und eine ausgeblendete Tabelle haelt
+    /// keine laufende Zelle.
+    ///
+    /// Zeigt der Editor nicht den Text einer Protokolldatei, geschieht nichts;
+    /// die Zulaessigkeit laesst den Befehl dann gar nicht erst durch. Die
+    /// Bedingung steht hier ausgeschrieben, bis Schritt 4 des Plans sie als
+    /// eine Funktion in `kommandos/zulaessigkeit.rs` fuehrt.
+    #[must_use = "die Meldung „nichts zu aendern“ gehoert in die Statuszeile"]
+    pub fn protokoll_umformen(&self, art: Umformung) -> Option<Editormeldung> {
+        if !matches!(self.form(), Editorform::Text) || !self.haelt_protokolldatei() {
+            return None;
+        }
+        let auswahl = self.ivars().text.selectedRange();
+        let umbau = protokoll_umgeformt(art, self.ivars().modell.borrow().stand(), auswahl);
+        let Some(Protokollumbau { text, anfang, ende }) = umbau else {
+            return Some(Editormeldung::QuicknoteUnveraendert(art));
+        };
+        self.umbau_anwenden(Neustand {
+            text,
+            auswahl: None,
+        });
+        // Gegen den Stand geklemmt, den das Modell danach haelt: greift die
+        // Wandlung in die gehaltene Form zu, kann er kuerzer sein.
+        let laenge = self.ivars().modell.borrow().stand().len();
+        self.stelle_zeigen(anfang.min(laenge), ende.min(laenge));
+        None
+    }
+
+    /// Singlestrip oder Format an dem Notiztext, den der Editor zeigt: an der
+    /// Quicknote, solange sie offen ist, sonst am Text der Protokolldatei.
+    ///
+    /// **Die eine Wahl zwischen den zwei Orten**, gefragt vom
+    /// Anwendungsdelegierten; die offene Quicknote geht vor, weil sie die
+    /// Datei darunter verdeckt und der Befehl dem gilt, was der Nutzer sieht.
+    #[must_use = "die Meldung „nichts zu aendern“ gehoert in die Statuszeile"]
+    pub fn notiztext_umformen(&self, art: Umformung) -> Option<Editormeldung> {
+        if self.quicknote_offen() {
+            self.quicknote_umformen(art)
+        } else {
+            self.protokoll_umformen(art)
+        }
     }
 
     /// Leert den Puffer der Quicknote als zuruecknehmbare Handlung (A13).
@@ -9550,6 +9664,177 @@ mod tests {
             .find(concat!("quicknote.", "ersetzen("))
             .expect("die Umformung ersetzt nicht ueber den einen Weg");
         assert!(unveraendert < ersetzen);
+    }
+
+    /// E6 des Plans der Protokollknoepfe: die Umformung am Stand einer
+    /// Protokolldatei rechnet an der Auswahl, bei leerer Auswahl am ganzen
+    /// Stand, und nennt den Bereich des Ergebnisses im neuen Stand; aendert
+    /// sie nichts, antwortet sie `None`. Je fuer Singlestrip und Format.
+    ///
+    /// **Mit einem Zeichen ausserhalb der BMP vor der Auswahl**: es zaehlt in
+    /// der Flaeche zwei Einheiten und im Stand vier Bytes, und ein Schnitt in
+    /// der falschen Koordinate verduerbe den Text oder braeche an einer
+    /// Zeichengrenze ab.
+    #[test]
+    fn die_umformung_am_protokoll_rechnet_an_auswahl_oder_ganzem_stand() {
+        // Singlestrip am ganzen Stand, bei leerer Auswahl gleich an welcher
+        // Stelle die Schreibmarke steht.
+        for marke in [NSRange::new(0, 0), NSRange::new(4, 0)] {
+            assert_eq!(
+                protokoll_umgeformt(Umformung::Singlestrip, "  ls -la  \n", marke),
+                Some(Protokollumbau {
+                    text: "ls -la".to_owned(),
+                    anfang: 0,
+                    ende: 6,
+                })
+            );
+        }
+
+        // Singlestrip an der Auswahl; davor steht ein Zeichen ausserhalb der
+        // BMP (zwei Einheiten, vier Bytes) und ein Umbruch.
+        let stand = "\u{1F600}\n  ls -la  \nRest\n";
+        let vor = "\u{1F600}\n";
+        let gewaehlt = "  ls -la  ";
+        let auswahl = NSRange::new(
+            koordinaten::einheiten(vor),
+            koordinaten::einheiten(gewaehlt),
+        );
+        assert_eq!(auswahl.location, 3, "zwei Einheiten und der Umbruch");
+        let umbau = protokoll_umgeformt(Umformung::Singlestrip, stand, auswahl)
+            .expect("die Auswahl aendert sich");
+        assert_eq!(umbau.text, "\u{1F600}\nls -la\nRest\n");
+        assert_eq!(&umbau.text[umbau.anfang..umbau.ende], "ls -la");
+        assert_eq!(umbau.anfang, vor.len());
+
+        // Format an der Auswahl und am ganzen Stand: das Ergebnis ist, was
+        // `umgeformt` aus dem Ausschnitt macht, und der Rest steht Byte fuer
+        // Byte.
+        let absatz = "- ein Punkt, der im Terminal\n  umgebrochen wurde\n";
+        let geformt = umgeformt(Umformung::Format, absatz);
+        let stand = format!("\u{1F600} Kopf\n\n{absatz}\nFuss\n");
+        let vor = "\u{1F600} Kopf\n\n";
+        let auswahl = NSRange::new(koordinaten::einheiten(vor), koordinaten::einheiten(absatz));
+        match (
+            geformt,
+            protokoll_umgeformt(Umformung::Format, &stand, auswahl),
+        ) {
+            (Some(geformt), Some(umbau)) => {
+                assert_eq!(umbau.text, format!("{vor}{geformt}\nFuss\n"));
+                assert_eq!(&umbau.text[umbau.anfang..umbau.ende], geformt);
+            }
+            (None, None) => panic!("das Beispiel der Probe aendert sich unter Format nicht"),
+            anderes => panic!("Ausschnitt und Stand antworten verschieden: {anderes:?}"),
+        }
+        let ganz = protokoll_umgeformt(Umformung::Format, &stand, NSRange::new(0, 0));
+        assert_eq!(
+            ganz.map(|umbau| (umbau.anfang, umbau.ende, Some(umbau.text))),
+            umgeformt(Umformung::Format, &stand).map(|text| (0, text.len(), Some(text))),
+            "bei leerer Auswahl der ganze Stand"
+        );
+
+        // Unveraendert: keine Handlung, an der Auswahl wie am ganzen Stand.
+        for art in [Umformung::Singlestrip, Umformung::Format] {
+            assert_eq!(protokoll_umgeformt(art, "", NSRange::new(0, 0)), None);
+        }
+        assert_eq!(
+            protokoll_umgeformt(Umformung::Singlestrip, "ls -la", NSRange::new(0, 0)),
+            None
+        );
+        assert_eq!(
+            protokoll_umgeformt(Umformung::Format, "Ein Satz.\n", NSRange::new(0, 0)),
+            None
+        );
+        assert_eq!(
+            protokoll_umgeformt(Umformung::Singlestrip, "\u{1F600}  x  \nls -la", {
+                let vor = koordinaten::einheiten("\u{1F600}  x  \n");
+                NSRange::new(vor, 6)
+            }),
+            None,
+            "die gewaehlte Zeile ist schon ein Befehl"
+        );
+        assert_eq!(
+            protokoll_umgeformt(Umformung::Format, "  x  \nEin Satz.\n", NSRange::new(6, 10)),
+            None
+        );
+
+        // Ein Bereich hinter dem Textende und einer mitten in einem
+        // Ersatzzeichenpaar brechen nicht ab und schneiden auf Zeichengrenzen.
+        assert_eq!(
+            protokoll_umgeformt(Umformung::Singlestrip, "ls", NSRange::new(40, 5)),
+            None
+        );
+        let umbau = protokoll_umgeformt(
+            Umformung::Singlestrip,
+            "\u{1F600}  ls  ",
+            NSRange::new(1, 40),
+        )
+        .expect("der Rest aendert sich");
+        assert!(umbau.text.is_char_boundary(umbau.anfang));
+        assert!(umbau.text.is_char_boundary(umbau.ende));
+    }
+
+    /// E6 des Plans der Protokollknoepfe am Quelltext: `protokoll_umformen`
+    /// schreibt ueber den einen Umbauweg des Editors und nach der Meldung
+    /// „nichts zu aendern“, `quicknote_umformen` bleibt bei dem einen
+    /// Ersetzungsweg der Quicknote, und die Wahl zwischen beiden steht in
+    /// `notiztext_umformen`, die der Anwendungsdelegierte ruft.
+    ///
+    /// **Was sie nicht sieht:** ob die Flaeche nach dem Umbau das Ergebnis
+    /// wirklich ausgewaehlt zeigt und ob `cmd+z` ihn zuruecknimmt; das zeigt
+    /// allein das laufende Buendel.
+    #[test]
+    fn das_protokoll_wird_ueber_den_umbauweg_umgeformt_und_die_quicknote_ueber_ihren() {
+        use super::super::anwendung::quelltextproben::{datei, rumpf};
+
+        let quelle = datei("krk-ui/src/appkit/editor.rs");
+        let protokoll = rumpf(&quelle, "protokoll_umformen");
+        let unveraendert = protokoll
+            .find("Editormeldung::QuicknoteUnveraendert(art)")
+            .expect("die Umformung am Protokoll meldet „nichts zu aendern“ nicht");
+        let umbau = protokoll
+            .find(concat!("self.", "umbau_anwenden("))
+            .expect("das Protokoll wird nicht ueber den einen Umbauweg umgeformt");
+        assert!(unveraendert < umbau);
+        assert!(protokoll.contains(concat!("protokoll_", "umgeformt(")));
+        for fremd in [
+            concat!("quicknote.", "ersetzen("),
+            concat!("stand_", "einsetzen("),
+            concat!("stand_", "erneuern("),
+            concat!("zelle_", "uebernehmen("),
+        ] {
+            assert!(
+                !protokoll.contains(fremd),
+                "protokoll_umformen nennt {fremd}"
+            );
+        }
+
+        let quicknote = rumpf(&quelle, "quicknote_umformen");
+        assert!(quicknote.contains(concat!("quicknote.", "ersetzen(")));
+        assert!(
+            !quicknote.contains(concat!("umbau_", "anwenden(")),
+            "die Quicknote hat keinen Stand im Modell"
+        );
+
+        let wahl = rumpf(&quelle, "notiztext_umformen");
+        let offen = wahl
+            .find(concat!("self.quicknote_", "offen()"))
+            .expect("die Wahl fragt nicht, ob die Quicknote offen ist");
+        let erst = wahl
+            .find(concat!("self.quicknote_", "umformen(art)"))
+            .expect("die Wahl erreicht die Quicknote nicht");
+        let sonst = wahl
+            .find(concat!("self.protokoll_", "umformen(art)"))
+            .expect("die Wahl erreicht das Protokoll nicht");
+        assert!(offen < erst && erst < sonst);
+
+        let delegierter = rumpf(
+            &datei("krk-ui/src/appkit/anwendung.rs"),
+            "quicknote_umformen",
+        );
+        assert!(
+            delegierter.contains(concat!("editor.notiztext_", "umformen(art)")),
+            "der Anwendungsdelegierte ruft die Wahl nicht"
+        );
     }
 
     /// Die Textmarke fragt die Quicknote vor dem Modell (Entscheidung 8 des

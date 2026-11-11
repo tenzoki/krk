@@ -13311,7 +13311,9 @@ impl Anwendungsdelegierter {
         true
     }
 
-    /// Singlestrip oder Format an der Quicknote.
+    /// Singlestrip oder Format an der Quicknote oder, ist sie nicht offen, am
+    /// Text einer Protokolldatei; die Wahl trifft
+    /// [`Editorbereich::notiztext_umformen`].
     ///
     /// **Derselbe Zuschnitt wie [`Self::editorbefehl`], bis auf die Meldung**:
     /// eine gelungene Umformung zeigt ihr Ergebnis ausgewaehlt in der Flaeche
@@ -13320,7 +13322,7 @@ impl Anwendungsdelegierter {
         let Some(editor) = self.ivars().editor.get() else {
             return false;
         };
-        if let Some(meldung) = editor.quicknote_umformen(art) {
+        if let Some(meldung) = editor.notiztext_umformen(art) {
             self.editormeldung_zeigen(&meldung);
         }
         true
