@@ -1,0 +1,26 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "8eb315ff-3f7f-4fcf-bec1-1dd09269f283",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "decision",
+  "narrative": {
+    "path": "work-packages/261111-2242-minutes-editor-traegt-kopieren-singlestrip-format/decisions/261111-2248-leert-und-schliesst-kopieren-auch-eine-protokolldatei-oder-kopiert-es-dort-allein.md"
+  },
+  "filed_by": {
+    "actor": "implementation-planner",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "answer_ref": null,
+    "implementation_ref": null,
+    "superseded_by": null,
+    "deferral": null
+  }
+}

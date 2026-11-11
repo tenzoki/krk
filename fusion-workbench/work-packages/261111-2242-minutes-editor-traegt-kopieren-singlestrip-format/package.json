@@ -1,0 +1,53 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "6f7dcb6e-8753-4cbb-b317-0fcc467258f5",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "claimed",
+  "claim": {
+    "checkout_id": "9be83618",
+    "person": "Kai Stalmann <ks@qantr.com>",
+    "claimed_at": "2026-11-11T21:42:47Z"
+  },
+  "mode": {
+    "value": "autonomous",
+    "source": {
+      "kind": "user-word",
+      "ref": {
+        "path": "work-packages/261111-2242-minutes-editor-traegt-kopieren-singlestrip-format/261111-2242-minutes-editor-traegt-kopieren-singlestrip-format.md",
+        "sha256": "sha256:ddc0c97004fd79dab96c3867252506a4203a1ef4fbb02664c15b4c7e56700128",
+        "kind": "other"
+      }
+    }
+  },
+  "origin": {
+    "kind": "user-request",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "user",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "narrative": {
+    "path": "work-packages/261111-2242-minutes-editor-traegt-kopieren-singlestrip-format/261111-2242-minutes-editor-traegt-kopieren-singlestrip-format.md"
+  },
+  "depends_on": [],
+  "active_documents": [
+    {
+      "ref": {
+        "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+        "record_id": "5d7b80ab-7b92-4a25-a44f-0069e1b2a3a5"
+      },
+      "role": "plan",
+      "revision": "sha256:1feffadc9446df71444b96bd266b37df96beb6224bf6daddc4962c6e1c327eeb"
+    }
+  ],
+  "references": [],
+  "evidence": [],
+  "outcome": null,
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {}
+}
