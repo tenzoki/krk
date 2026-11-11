@@ -53,8 +53,10 @@ use krk_core::heimordner::verbindung::{
 };
 use krk_core::heimordner::{
     ALTE_QUICKNOTEDATEI, ALTER_GEHEIMNISNAME, Bereitstellung, Heimordner, Hindernis, ORDNERNAME,
-    QUICKNOTEDATEI, Sonderdatei, Umbenennung, bereitstellen, ohne_ersetzen_umbenennen,
+    PROTOKOLLORDNER, QUICKNOTEDATEI, Sonderdatei, Umbenennung, bereitstellen,
+    ohne_ersetzen_umbenennen, protokollname,
 };
+use krk_core::verzeichnis::sys::Ortszeit;
 
 /// Der Pruefordner in der Schreibweise, die `canonicalize` fuer ihn liefert.
 fn kanonisch(ordner: &Pruefordner) -> PathBuf {
@@ -591,7 +593,7 @@ fn rumpf(inhalt: &str, name: &str) -> String {
 }
 
 /// `ist` und `sonderdatei` stellen keinen Systemaufruf, und
-/// `ohne_inhaltsauftrag` ebenso wenig.
+/// `ohne_inhaltsauftrag` und `ist_protokollordner` ebenso wenig.
 ///
 /// Gefragt werden sie je Lesevorgang eines Tabs auf dem Hauptfaden; ein
 /// Dateisystemaufruf dort blockierte an einem haengenden Netzlaufwerk die
@@ -604,6 +606,8 @@ fn rumpf(inhalt: &str, name: &str) -> String {
 /// Hilfsfunktion einzieht, nimmt ihren Namen hier auf. `ohne_inhaltsauftrag`
 /// (bis zum 260926 `immer_gelistet`) steht seit Schritt 5.2 dabei, weil
 /// `Tabliste::lesen_starten` es je Lesevorgang auf dem Hauptfaden fragt.
+/// `ist_protokollordner` steht seit dem 261111 dabei: „Leere Datei anlegen“
+/// fragt es auf dem Hauptfaden, und es ruft wie die zwei anderen allein `ist`.
 #[test]
 fn ist_und_sonderdatei_stellen_keinen_systemaufruf() {
     let inhalt = fs::read_to_string(concat!(
@@ -623,7 +627,12 @@ fn ist_und_sonderdatei_stellen_keinen_systemaufruf() {
         "is_symlink(",
         "File::",
     ];
-    for name in ["ist", "sonderdatei", "ohne_inhaltsauftrag"] {
+    for name in [
+        "ist",
+        "sonderdatei",
+        "ohne_inhaltsauftrag",
+        "ist_protokollordner",
+    ] {
         let rumpf = rumpf(&inhalt, name);
         // Ein leer geschnittener Rumpf bestuende jede Nadel; er muss mindestens
         // den Wert befragen, den er pruefen soll.
@@ -1233,8 +1242,8 @@ nicht anfassen\r\n\xef\xbb\xbf";
 /// C3.5 des Spec `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`,
 /// C2 und C7.1 des frueheren: in einem fehlenden und in einem leeren
 /// Notizordner legt der Aufruf genau `tasks.txt` und `secrets.txt` an und
-/// sonst nichts, weder `notes.txt` noch `appointments.md`; beide haben null
-/// Bytes.
+/// sonst keine Datei, weder `notes.txt` noch `appointments.md`; beide haben
+/// null Bytes. Daneben steht seit C4.1 der Unterordner `minutes/`.
 #[test]
 fn der_erste_aufruf_legt_genau_tasks_txt_und_secrets_txt_an() {
     for (zweck, ordner_steht) in [("heim-erster-fehlt", false), ("heim-erster-leer", true)] {
@@ -1253,12 +1262,12 @@ fn der_erste_aufruf_legt_genau_tasks_txt_und_secrets_txt_an() {
         );
         assert_eq!(
             namen_in(&lage.heimpfad()),
-            vec!["secrets.txt", "tasks.txt"],
+            vec!["minutes", "secrets.txt", "tasks.txt"],
             "{zweck}"
         );
-        for name in namen_in(&lage.heimpfad()) {
+        for name in Sonderdatei::ALLE.map(Sonderdatei::dateiname) {
             assert_eq!(
-                fs::metadata(lage.heimpfad().join(&name))
+                fs::metadata(lage.heimpfad().join(name))
                     .unwrap_or_else(|_| panic!("{name} fehlt"))
                     .len(),
                 0,
@@ -1298,7 +1307,7 @@ fn ein_neu_angelegter_vorgabeort_uebernimmt_die_alten_zettel_nicht() {
         );
         assert_eq!(
             namen_in(&lage.heimpfad()),
-            vec!["secrets.txt", "tasks.txt"],
+            vec!["minutes", "secrets.txt", "tasks.txt"],
             "{durchgang} Aufruf"
         );
         assert_eq!(lage.lesen(Sonderdatei::Aufgaben), "", "{durchgang} Aufruf");
@@ -1348,7 +1357,10 @@ fn eine_alte_secrets_txt_wird_umbenannt_und_bleibt_byte_fuer_byte() {
         !bereitstellung.angelegt.contains(&Sonderdatei::Geheimnisse),
         "{bereitstellung:?}"
     );
-    assert_eq!(namen_in(&lage.heimpfad()), vec!["secrets.txt", "tasks.txt"]);
+    assert_eq!(
+        namen_in(&lage.heimpfad()),
+        vec!["minutes", "secrets.txt", "tasks.txt"]
+    );
     let meldungen = bereitstellung.meldungen().join("\n");
     assert!(
         meldungen.contains(".secrets.txt heißt jetzt secrets.txt"),
@@ -1526,7 +1538,13 @@ fn vorhandene_notes_txt_und_appointments_md_bleiben_byte_fuer_byte() {
     }
     assert_eq!(
         namen_in(&lage.heimpfad()),
-        vec!["appointments.md", "notes.txt", "secrets.txt", "tasks.txt"]
+        vec![
+            "appointments.md",
+            "minutes",
+            "notes.txt",
+            "secrets.txt",
+            "tasks.txt"
+        ]
     );
     lage.zettel_unveraendert();
 }
@@ -1555,7 +1573,10 @@ fn eine_vorhandene_geheimnisdatei_bleibt_byte_fuer_byte() {
             !bereitstellung.angelegt.contains(&Sonderdatei::Geheimnisse),
             "{bereitstellung:?}"
         );
-        assert_eq!(namen_in(&lage.heimpfad()), vec!["secrets.txt", "tasks.txt"]);
+        assert_eq!(
+            namen_in(&lage.heimpfad()),
+            vec!["minutes", "secrets.txt", "tasks.txt"]
+        );
     }
 }
 
@@ -1586,7 +1607,7 @@ fn ein_verweis_auf_einen_ordner_laesst_die_dateien_im_ziel_entstehen() {
 
     let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
 
-    assert_eq!(namen_in(&ziel), vec!["secrets.txt", "tasks.txt"]);
+    assert_eq!(namen_in(&ziel), vec!["minutes", "secrets.txt", "tasks.txt"]);
     assert!(!bereitstellung.ordner_angelegt);
     assert!(
         fs::symlink_metadata(lage.heimpfad())
@@ -1643,6 +1664,303 @@ fn die_hindernisse_melden_sich_im_wortlaut() {
         Ortsfehler::KeinBenutzerverzeichnis.meldung(),
         "Das System nennt kein Benutzerverzeichnis, also gibt es keinen Notizordner"
     );
+}
+
+// ---------------------------------------------------------------------------
+// `minutes/` (Schritt 5 des Plans
+// `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`, C4 des
+// Spec `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`)
+// ---------------------------------------------------------------------------
+
+/// C4.1: F2 legt `minutes/` an, wenn der Notizordner fehlt und wenn er schon
+/// steht, auch neben vorhandenen Dateien; der Ordner entsteht leer, das Feld
+/// sagt `Ok`, und kein Satz der Statuszeile nennt das Anlegen.
+#[test]
+fn f2_legt_minutes_an_wenn_es_fehlt() {
+    for (zweck, ordner_steht) in [("minutes-heim-fehlt", false), ("minutes-heim-steht", true)] {
+        let lage = Lage::neu(zweck, [None, None]);
+        let aufgaben = b"- [ ] bleibt\n";
+        if ordner_steht {
+            fs::create_dir(lage.heimpfad()).expect("Heimordner");
+            fs::write(lage.heimpfad().join("tasks.txt"), aufgaben).expect("tasks.txt");
+        }
+
+        let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
+
+        let minutes = lage.heimpfad().join("minutes");
+        assert_eq!(lage.heim().protokollordner(), minutes, "{zweck}");
+        assert!(
+            fs::symlink_metadata(&minutes)
+                .unwrap_or_else(|_| panic!("{zweck}: minutes/ fehlt"))
+                .is_dir(),
+            "{zweck}: minutes ist kein Ordner"
+        );
+        assert!(namen_in(&minutes).is_empty(), "{zweck}");
+        assert_eq!(bereitstellung.protokollordner, Ok(()), "{zweck}");
+        assert_eq!(bereitstellung.ordner_angelegt, !ordner_steht, "{zweck}");
+        assert!(bereitstellung.meldungen().is_empty(), "{bereitstellung:?}");
+        if ordner_steht {
+            assert_eq!(
+                fs::read(lage.heimpfad().join("tasks.txt")).expect("tasks.txt"),
+                aufgaben,
+                "{zweck}"
+            );
+        }
+    }
+}
+
+/// C4.1, zweiter Satz: ein vorhandenes `minutes/` und sein Inhalt bleiben
+/// Byte fuer Byte, samt einem Unterordner darin, auch ueber zwei Aufrufe.
+#[test]
+fn ein_vorhandenes_minutes_und_sein_inhalt_bleiben_byte_fuer_byte() {
+    let lage = Lage::neu("minutes-vorhanden", [None, None]);
+    let minutes = lage.heimpfad().join("minutes");
+    fs::create_dir_all(minutes.join("alt")).expect("Unterordner");
+    let dateien: [(&str, &[u8]); 3] = [
+        (
+            "261110-0900-besprechung.md",
+            b"# Besprechung\r\n\xef\xbb\xbfohne Schlussumbruch",
+        ),
+        ("ohne-praefix.txt", b""),
+        ("alt/260101-0000-neujahr.md", b"lange her\n"),
+    ];
+    for (name, inhalt) in dateien {
+        fs::write(minutes.join(name), inhalt).expect("Protokoll");
+    }
+
+    for durchgang in ["erster", "zweiter"] {
+        let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
+
+        assert_eq!(bereitstellung.protokollordner, Ok(()), "{durchgang} Aufruf");
+        assert!(bereitstellung.meldungen().is_empty(), "{bereitstellung:?}");
+        assert_eq!(
+            namen_in(&minutes),
+            vec!["261110-0900-besprechung.md", "alt", "ohne-praefix.txt"],
+            "{durchgang} Aufruf"
+        );
+        assert_eq!(
+            namen_in(&minutes.join("alt")),
+            vec!["260101-0000-neujahr.md"]
+        );
+        for (name, inhalt) in dateien {
+            assert_eq!(
+                fs::read(minutes.join(name)).expect("das Protokoll ist weg"),
+                inhalt,
+                "{durchgang} Aufruf: {name}"
+            );
+        }
+    }
+}
+
+/// C4.1 und E8: eine gewoehnliche Datei namens `minutes` ergibt `KeinOrdner`
+/// im Feld und **kein** Hindernis der Funktion. Die Datei bleibt Byte fuer
+/// Byte, die Eintragsdateien entstehen wie sonst, und die Statuszeile nennt
+/// den Grund mit dem Pfad des Unterordners.
+#[test]
+fn eine_datei_namens_minutes_steht_im_feld_und_haelt_f2_nicht_auf() {
+    let lage = Lage::neu("minutes-datei", [None, None]);
+    fs::create_dir(lage.heimpfad()).expect("Heimordner");
+    let minutes = lage.heimpfad().join("minutes");
+    fs::write(&minutes, b"ich bin eine Datei").expect("Datei");
+
+    let bereitstellung = lage.bereitstellen().expect("F2 gelingt trotzdem");
+
+    assert_eq!(bereitstellung.protokollordner, Err(Hindernis::KeinOrdner));
+    assert_eq!(
+        fs::read(&minutes).expect("die Datei ist weg"),
+        b"ich bin eine Datei"
+    );
+    assert_eq!(
+        bereitstellung.angelegt,
+        vec![Sonderdatei::Aufgaben, Sonderdatei::Geheimnisse]
+    );
+    assert_eq!(
+        namen_in(&lage.heimpfad()),
+        vec!["minutes", "secrets.txt", "tasks.txt"]
+    );
+    assert_eq!(
+        bereitstellung.meldungen(),
+        vec![
+            "~/krkhome/minutes ist kein Ordner; KRK legt dort nichts an und öffnet keinen Tab"
+                .to_owned()
+        ]
+    );
+}
+
+/// Ein Verweis ins Leere an der Stelle von `minutes`: `Unerreichbar` im Feld,
+/// F2 gelingt, und das fehlende Ziel entsteht nicht. Ein Verweis auf einen
+/// Ordner gilt als Ordner und bleibt ein Verweis.
+#[test]
+fn ein_verweis_an_der_stelle_von_minutes_folgt_der_regel_des_notizordners() {
+    let lage = Lage::neu("minutes-verweis", [None, None]);
+    fs::create_dir(lage.heimpfad()).expect("Heimordner");
+    let minutes = lage.heimpfad().join("minutes");
+    let ziel = lage.zuhause.join("gibt-es-nicht");
+    std::os::unix::fs::symlink(&ziel, &minutes).expect("Verweis");
+
+    let bereitstellung = lage.bereitstellen().expect("F2 gelingt trotzdem");
+
+    assert!(
+        matches!(
+            bereitstellung.protokollordner,
+            Err(Hindernis::Unerreichbar(_))
+        ),
+        "{bereitstellung:?}"
+    );
+    assert!(!ziel.exists(), "das Ziel ist entstanden");
+    let meldungen = bereitstellung.meldungen();
+    assert_eq!(meldungen.len(), 1, "{meldungen:?}");
+    assert!(
+        meldungen[0].starts_with("~/krkhome/minutes ist nicht erreichbar: "),
+        "{meldungen:?}"
+    );
+
+    fs::create_dir(&ziel).expect("Zielordner");
+    let bereitstellung = lage.bereitstellen().expect("kein Hindernis erwartet");
+    assert_eq!(bereitstellung.protokollordner, Ok(()));
+    assert!(bereitstellung.meldungen().is_empty(), "{bereitstellung:?}");
+    assert!(
+        fs::symlink_metadata(&minutes)
+            .expect("der Verweis ist weg")
+            .file_type()
+            .is_symlink(),
+        "der Verweis ist ersetzt"
+    );
+}
+
+/// Der Name des Unterordners und sein Pfad in der geschriebenen Form, auch
+/// wenn der Notizordner ein Verweis ist.
+#[test]
+fn der_protokollordner_liegt_an_der_geschriebenen_form() {
+    assert_eq!(PROTOKOLLORDNER, "minutes");
+    let ordner = Pruefordner::neu("minutes-pfad");
+    let zuhause = kanonisch(&ordner);
+    let ziel = zuhause.join("anderswo");
+    fs::create_dir(&ziel).expect("Zielordner");
+    std::os::unix::fs::symlink(&ziel, zuhause.join(ORDNERNAME)).expect("Verweis");
+
+    let heim = Heimordner::im_benutzerverzeichnis(&zuhause);
+
+    assert_eq!(heim.aufgeloest(), Some(ziel.as_path()));
+    assert_eq!(
+        heim.protokollordner(),
+        zuhause.join(ORDNERNAME).join("minutes")
+    );
+}
+
+/// Eine Ortszeit der Tafel; die Sekunde zaehlt im Namen nicht.
+fn zeit(jahr: i32, monat: u8, tag: u8, stunde: u8, minute: u8) -> Ortszeit {
+    Ortszeit {
+        jahr,
+        monat,
+        tag,
+        stunde,
+        minute,
+        sekunde: 59,
+    }
+}
+
+/// C4.2, C4.4 und C4.5: `JJMMTT-HHMM-` davor und `.md` dahinter, ausser der
+/// Name endet ohne Ruecksicht auf Gross- und Kleinschreibung schon darauf;
+/// jedes der fuenf Zeitfelder steht zweistellig.
+#[test]
+fn der_protokollname_traegt_datum_uhrzeit_und_md() {
+    let beispiel = zeit(2026, 11, 11, 14, 32);
+    let tafel = [
+        // C4.2: das Beispiel der Spezifikation.
+        ("besprechung", beispiel, "261111-1432-besprechung.md"),
+        // C4.4: die Endung wird nicht verdoppelt, in keiner Schreibweise, und
+        // die Schreibweise des Nutzers bleibt stehen.
+        ("besprechung.md", beispiel, "261111-1432-besprechung.md"),
+        ("Besprechung.MD", beispiel, "261111-1432-Besprechung.MD"),
+        ("notiz.Md", beispiel, "261111-1432-notiz.Md"),
+        // C4.5: eine andere Endung bleibt und bekommt `.md` dahinter.
+        ("liste.txt", beispiel, "261111-1432-liste.txt.md"),
+        // `.md` mitten im Namen oder ohne Punkt ist keine Endung.
+        ("plan.md.txt", beispiel, "261111-1432-plan.md.txt.md"),
+        ("md", beispiel, "261111-1432-md.md"),
+        ("amd", beispiel, "261111-1432-amd.md"),
+        // Ein Name mit Umlaut und Leerzeichen bleibt, wie er getippt ist.
+        ("Jour fixe März", beispiel, "261111-1432-Jour fixe März.md"),
+        ("ä", beispiel, "261111-1432-ä.md"),
+        // Einstellige Werte fuer Monat, Tag, Stunde und Minute, und fuer das
+        // Jahr im Jahrhundert.
+        ("kurz", zeit(2027, 1, 2, 3, 4), "270102-0304-kurz.md"),
+        ("kurz", zeit(2105, 9, 9, 0, 0), "050909-0000-kurz.md"),
+        ("spaet", zeit(2026, 12, 31, 23, 59), "261231-2359-spaet.md"),
+    ];
+    for (name, zeit, erwartet) in tafel {
+        assert_eq!(protokollname(name, zeit), erwartet, "{name} um {zeit:?}");
+    }
+}
+
+/// C4.6, Kernhaelfte: `ist_protokollordner` erkennt `minutes` unmittelbar im
+/// Notizordner in der geschriebenen und in der aufgeloesten Form und sonst
+/// nichts.
+#[test]
+fn ist_protokollordner_erkennt_minutes_allein_unmittelbar_im_notizordner() {
+    let ordner = Pruefordner::neu("minutes-erkennung");
+    let zuhause = kanonisch(&ordner);
+    let ziel = zuhause.join("anderswo");
+    fs::create_dir(&ziel).expect("Zielordner");
+    std::os::unix::fs::symlink(&ziel, zuhause.join(ORDNERNAME)).expect("Verweis");
+    let heim = Heimordner::im_benutzerverzeichnis(&zuhause);
+    let geschrieben = zuhause.join(ORDNERNAME);
+    assert_eq!(heim.aufgeloest(), Some(ziel.as_path()));
+
+    let tafel = [
+        ("geschriebene Form", geschrieben.join("minutes"), true),
+        ("aufgeloeste Form", ziel.join("minutes"), true),
+        (
+            "mit Schlussstrich",
+            PathBuf::from(format!("{}/minutes/", geschrieben.display())),
+            true,
+        ),
+        (
+            "Unterordner von minutes",
+            geschrieben.join("minutes/alt"),
+            false,
+        ),
+        (
+            "Unterordner in der aufgeloesten Form",
+            ziel.join("minutes/alt"),
+            false,
+        ),
+        ("minutes ausserhalb", zuhause.join("minutes"), false),
+        (
+            "minutes in einem anderen Ordner",
+            zuhause.join("projekt/minutes"),
+            false,
+        ),
+        (
+            "minutes in einem Unterordner des Notizordners",
+            geschrieben.join("alt/minutes"),
+            false,
+        ),
+        ("der Notizordner selbst", geschrieben.clone(), false),
+        ("der Notizordner aufgeloest", ziel.clone(), false),
+        (
+            "andere Schreibweise des Namens",
+            geschrieben.join("Minutes"),
+            false,
+        ),
+        ("ein laengerer Name", geschrieben.join("minutes-alt"), false),
+        ("die Wurzel", PathBuf::from("/"), false),
+        ("ein nackter Name", PathBuf::from("minutes"), false),
+    ];
+    for (fall, pfad, erwartet) in tafel {
+        assert_eq!(
+            heim.ist_protokollordner(&pfad),
+            erwartet,
+            "{fall}: {}",
+            pfad.display()
+        );
+    }
+
+    // Ohne aufgeloeste Form gilt allein die geschriebene.
+    let ohne = Heimordner::ohne_aufloesung(geschrieben.clone(), Some(&zuhause));
+    assert!(ohne.ist_protokollordner(&geschrieben.join("minutes")));
+    assert!(!ohne.ist_protokollordner(&ziel.join("minutes")));
 }
 
 // ---------------------------------------------------------------------------
@@ -1918,13 +2236,16 @@ fn ein_anderer_ort_bekommt_dieselben_zwei_leeren_dateien_wie_der_vorgabeort() {
 
     assert!(anderswo.ordner_angelegt);
     assert_eq!(anderswo.angelegt, Sonderdatei::ALLE.to_vec());
-    assert_eq!(namen_in(&ort), vec!["secrets.txt", "tasks.txt"]);
+    assert_eq!(namen_in(&ort), vec!["minutes", "secrets.txt", "tasks.txt"]);
     assert!(anderswo.meldungen().is_empty(), "{anderswo:?}");
     lage.zettel_unveraendert();
 
     let vorgabe = lage.bereitstellen().expect("kein Hindernis erwartet");
     assert_eq!(vorgabe.angelegt, anderswo.angelegt);
-    assert_eq!(namen_in(&lage.heimpfad()), vec!["secrets.txt", "tasks.txt"]);
+    assert_eq!(
+        namen_in(&lage.heimpfad()),
+        vec!["minutes", "secrets.txt", "tasks.txt"]
+    );
     assert!(vorgabe.meldungen().is_empty(), "{vorgabe:?}");
     lage.zettel_unveraendert();
 }

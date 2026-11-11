@@ -54,6 +54,21 @@
 //! die Namen jener Liste hier einen Pfad bekommen, fasst die Bereitstellung
 //! eine vorhandene `notes.txt` oder `appointments.md` auch nicht an.
 //!
+//! # `minutes/` entsteht nach den Dateien und haelt den Tab nicht auf
+//!
+//! Nach den Eintragsdateien legt derselbe Aufruf den Unterordner
+//! [`PROTOKOLLORDNER`] an, wenn er fehlt, auch in einem Notizordner, den es
+//! schon gibt (C4.1 des Spec
+//! `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`). Die
+//! Frage, ob er fehlt, beantwortet wie beim Notizordner selbst `mkdir(2)` und
+//! keine Pruefung davor; ein vorhandener Ordner wird nicht geoeffnet und nicht
+//! gelesen, sein Inhalt bleibt also, wie er ist. **Der Ausgang ist ein Feld
+//! und kein Hindernis der Funktion** ([`Bereitstellung::protokollordner`]):
+//! steht an der Stelle eine gewoehnliche Datei namens `minutes`, bleibt sie
+//! unveraendert, F2 oeffnet den Notizordner trotzdem, und die Statuszeile
+//! nennt den Grund (E8 des Plans
+//! `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`).
+//!
 //! # Eine `.secrets.txt` von vorher wird zu `secrets.txt`
 //!
 //! Bis zum 260926 hiess die Datei `.secrets.txt`, mit Punkt
@@ -79,7 +94,7 @@ use std::fs::{self, OpenOptions};
 use std::io;
 use std::path::Path;
 
-use super::{Heimordner, Sonderdatei};
+use super::{Heimordner, PROTOKOLLORDNER, Sonderdatei};
 use crate::sprache::{Text, satz};
 
 /// Der Name der Geheimnisdatei bis zum 260926, allein fuer das Umbenennen.
@@ -156,6 +171,13 @@ pub struct Bereitstellung {
     /// Heimordner keine stand. Bis zum 261111 hiess das Feld
     /// `alte_geheimnisse`.
     pub umbenennung: Option<Umbenennung>,
+    /// Ob [`PROTOKOLLORDNER`] im Notizordner steht: `Ok`, wenn dieser Aufruf
+    /// ihn angelegt oder als Ordner vorgefunden hat, sonst der Grund in den
+    /// Werten von [`Hindernis`], gelesen am Unterordner statt am Notizordner.
+    ///
+    /// **Ein `Err` hier haelt F2 nicht auf**; es ist das Hindernis allein fuer
+    /// den, der in den Unterordner will.
+    pub protokollordner: Result<(), Hindernis>,
     /// Der Ort, wie die Statuszeile ihn nennt ([`Heimordner::anzeigename`]),
     /// fuer die Saetze, die den Ordner nennen.
     pub ort: String,
@@ -165,7 +187,9 @@ pub struct Bereitstellung {
 ///
 /// **Vollstaendig und ohne Auffangzweig.** Ein Hindernis betrifft den Ordner;
 /// eine einzelne Datei, die sich nicht anlegen laesst, haelt den Tab nicht auf
-/// und steht in [`Bereitstellung::nicht_angelegt`]. Dass es gar keinen Ort
+/// und steht in [`Bereitstellung::nicht_angelegt`]. **Dieselben vier Werte
+/// beschreiben seit dem 261111 den Unterordner [`PROTOKOLLORDNER`]**, im Feld
+/// [`Bereitstellung::protokollordner`]; dort halten sie F2 nicht auf. Dass es gar keinen Ort
 /// gibt, etwa ohne Benutzerverzeichnis, ist kein Hindernis, sondern ein
 /// [`super::ort::Ortsfehler`]: dann gibt es keinen [`Heimordner`], den dieser
 /// Weg bekommen koennte.
@@ -228,12 +252,19 @@ impl Bereitstellung {
                 &self.ort,
             ));
         }
+        if let Err(hindernis) = &self.protokollordner {
+            // Der Unterordner so, wie die Statuszeile den Notizordner nennt,
+            // mit dem Namen dahinter; `join` setzt den Trennstrich auch dann
+            // richtig, wenn der Ort die Wurzel ist.
+            let unterordner = Path::new(&self.ort).join(PROTOKOLLORDNER);
+            saetze.push(hindernis.meldung(&unterordner.display().to_string()));
+        }
         saetze
     }
 }
 
-/// Legt den Heimordner an, falls er fehlt, und darin jede fehlende
-/// Eintragsdatei.
+/// Legt den Heimordner an, falls er fehlt, darin jede fehlende
+/// Eintragsdatei und danach den Unterordner [`PROTOKOLLORDNER`].
 ///
 /// Angelegt wird an der geschriebenen Form des Heimordners; ist sie ein Verweis
 /// auf einen Ordner, entstehen die Dateien in dessen Ziel. **Allein fuer F2
@@ -256,30 +287,15 @@ fn anlegen_mit_vorlauf(
     vorlauf: &mut dyn FnMut(&Path),
 ) -> Result<Bereitstellung, Hindernis> {
     let ordner = heim.geschrieben.as_path();
-    let ordner_angelegt = match fs::create_dir(ordner) {
-        Ok(()) => true,
-        Err(fehler) if fehler.kind() == io::ErrorKind::AlreadyExists => {
-            // Es steht etwas da. `metadata` folgt einem Verweis, und genau das
-            // ist die Frage: ist dort, wohin der Name fuehrt, ein Ordner?
-            match fs::metadata(ordner) {
-                Ok(angaben) if angaben.is_dir() => false,
-                Ok(_) => return Err(Hindernis::KeinOrdner),
-                Err(fehler) => return Err(Hindernis::Unerreichbar(fehler.to_string())),
-            }
-        }
-        // Angelegt wird allein die letzte Pfadstufe; fehlt die darueber, ist
-        // das ein eigenes Hindernis und kein `create_dir_all`.
-        Err(fehler) if fehler.kind() == io::ErrorKind::NotFound => {
-            return Err(Hindernis::ObererOrdnerFehlt);
-        }
-        Err(fehler) => return Err(Hindernis::NichtAnlegbar(fehler.to_string())),
-    };
+    let ordner_angelegt = ordner_anlegen(ordner)?;
 
     let mut bereitstellung = Bereitstellung {
         ordner_angelegt,
         angelegt: Vec::new(),
         nicht_angelegt: Vec::new(),
         umbenennung: None,
+        // Gesetzt nach den Dateien, unten.
+        protokollordner: Ok(()),
         ort: heim.anzeigename().to_owned(),
     };
     for sorte in Sonderdatei::ALLE {
@@ -312,7 +328,38 @@ fn anlegen_mit_vorlauf(
             }
         }
     }
+    // Nach den Dateien, und ohne `?`: ein Hindernis am Unterordner ist ein
+    // Feld und haelt den Tab auf den Notizordner nicht auf.
+    bereitstellung.protokollordner = ordner_anlegen(&heim.protokollordner()).map(|_| ());
     Ok(bereitstellung)
+}
+
+/// Legt die letzte Pfadstufe als Ordner an, falls sie fehlt; `true`, wenn
+/// dieser Aufruf sie angelegt hat, `false`, wenn dort schon ein Ordner stand.
+///
+/// Die eine Regel fuer den Notizordner und fuer [`PROTOKOLLORDNER`] darin. Ob
+/// der Ordner fehlt, beantwortet `mkdir(2)` selbst (Modulkopf, „Wer anlegt,
+/// entscheidet der Systemaufruf, der anlegt“); ein vorhandener Ordner wird
+/// nicht geoeffnet, und was sonst an der Stelle steht, bleibt unveraendert.
+fn ordner_anlegen(ordner: &Path) -> Result<bool, Hindernis> {
+    match fs::create_dir(ordner) {
+        Ok(()) => Ok(true),
+        Err(fehler) if fehler.kind() == io::ErrorKind::AlreadyExists => {
+            // Es steht etwas da. `metadata` folgt einem Verweis, und genau das
+            // ist die Frage: ist dort, wohin der Name fuehrt, ein Ordner?
+            match fs::metadata(ordner) {
+                Ok(angaben) if angaben.is_dir() => Ok(false),
+                Ok(_) => Err(Hindernis::KeinOrdner),
+                Err(fehler) => Err(Hindernis::Unerreichbar(fehler.to_string())),
+            }
+        }
+        // Angelegt wird allein die letzte Pfadstufe; fehlt die darueber, ist
+        // das ein eigenes Hindernis und kein `create_dir_all`.
+        Err(fehler) if fehler.kind() == io::ErrorKind::NotFound => {
+            Err(Hindernis::ObererOrdnerFehlt)
+        }
+        Err(fehler) => Err(Hindernis::NichtAnlegbar(fehler.to_string())),
+    }
 }
 
 /// Gibt der Datei `alt` den Namen `neu`, **ohne je eine vorhandene Datei zu

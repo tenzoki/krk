@@ -21,7 +21,8 @@
 //! `Notizen` und `Notiz` heisst, ist seit dem 261111 allein die Form der
 //! Geheimnisse** (E4 des Plans
 //! `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`). Das
-//! Anlegen von Ordner und Dateien steht in [`bereitstellen`], das Dateiformat von `secrets.txt` mit Kopf,
+//! Anlegen von Ordner und Dateien steht in [`bereitstellen`], der Unterordner
+//! [`PROTOKOLLORDNER`] mit seiner Namensregel in [`protokoll`], das Dateiformat von `secrets.txt` mit Kopf,
 //! Ableitung und Verschluesselung in [`tresor`], der zehn Minuten gemerkte
 //! Schluessel dazu in [`schluesselmerker`], die Protokolle und Ziele einer
 //! Verbindung aus `secrets.txt` in [`verbindung`], das Lesen und Pruefen des
@@ -108,6 +109,7 @@
 mod bereitstellen;
 pub mod eintraege;
 pub mod ort;
+mod protokoll;
 pub mod schluesselmerker;
 pub mod tresor;
 pub mod verbindung;
@@ -116,6 +118,7 @@ pub use bereitstellen::{
     ALTER_GEHEIMNISNAME, Bereitstellung, Hindernis, Umbenennung, bereitstellen,
     ohne_ersetzen_umbenennen,
 };
+pub use protokoll::protokollname;
 
 use std::path::{Component, Path, PathBuf};
 
@@ -152,6 +155,15 @@ pub const QUICKNOTEDATEI: &str = "quicknote.txt";
 /// (C2.2 bis C2.4 des Spec
 /// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`).
 pub const ALTE_QUICKNOTEDATEI: &str = "scratch.txt";
+
+/// Der Name des Unterordners fuer Protokolle im Notizordner.
+///
+/// [`bereitstellen`] legt ihn bei F2 an, wenn er fehlt; erkannt wird er wie der
+/// Notizordner am Pfadtext ([`Heimordner::ist_protokollordner`]), und eine
+/// Datei, die „Leere Datei anlegen“ unmittelbar darin anlegt, bekommt ihren
+/// Namen von [`protokollname`] (C4 des Spec
+/// `261111-0809-spec-menue-navigation-und-notizordner-mit-minutes.md`).
+pub const PROTOKOLLORDNER: &str = "minutes";
 
 /// Der Satz fuer die Statuszeile nach der Uebernahme der frueheren
 /// Quicknote-Datei; `ort` ist der Notizordner, wie
@@ -335,6 +347,15 @@ impl Heimordner {
         self.geschrieben.join(ALTE_QUICKNOTEDATEI)
     }
 
+    /// Der Pfad von [`PROTOKOLLORDNER`] im Notizordner, in der geschriebenen
+    /// Form.
+    ///
+    /// Ein `join` und kein Systemaufruf, wie [`Self::quicknotedatei`]: ob der
+    /// Ordner steht, sagt [`Bereitstellung::protokollordner`] nach F2.
+    pub fn protokollordner(&self) -> PathBuf {
+        self.geschrieben.join(PROTOKOLLORDNER)
+    }
+
     /// Die aufgeloeste Form, falls es eine gibt.
     ///
     /// Gefragt von „Ort waehlen…“: gleicht die kanonische Form des gewaehlten
@@ -370,6 +391,28 @@ impl Heimordner {
                 .aufgeloest
                 .as_deref()
                 .is_some_and(|aufgeloest| ordner == aufgeloest)
+    }
+
+    /// Ob der gefragte Ordner [`PROTOKOLLORDNER`] unmittelbar im Notizordner
+    /// ist, `<geschrieben>/minutes` oder `<aufgeloest>/minutes`.
+    ///
+    /// Gefragt wird erst der Name und nur bei ihm der Elternordner ueber
+    /// [`Heimordner::ist`]. **Kein Systemaufruf**, aus dem Grund des
+    /// Modulkopfs: gefragt wird auf dem Hauptfaden, vor dem Namensblatt und
+    /// beim Anlegen. Ein Unterordner von `minutes/`, ein Ordner dieses Namens
+    /// anderswo und der Notizordner selbst sind es nicht (C4.6), und ein
+    /// Name in anderer Gross- und Kleinschreibung ebenso wenig.
+    ///
+    /// **Unter einer dritten Schreibweise des Notizordners antwortet sie
+    /// nein**, wie [`Heimordner::ist`]; eine Datei entsteht dort unter dem
+    /// getippten Namen, die sichere Seite des Irrtums (Kopf des Plans
+    /// `261111-0852-plan-menue-navigation-und-notizordner-mit-minutes.md`,
+    /// `**Decidability:**`).
+    pub fn ist_protokollordner(&self, ordner: &Path) -> bool {
+        ordner
+            .file_name()
+            .is_some_and(|name| name == PROTOKOLLORDNER)
+            && ordner.parent().is_some_and(|eltern| self.ist(eltern))
     }
 
     /// Welche Eintragsdatei der gefragte Pfad ist, oder `None`.

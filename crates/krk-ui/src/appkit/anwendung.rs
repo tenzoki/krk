@@ -15734,6 +15734,7 @@ mod notizordnerproben {
             angelegt: Vec::new(),
             nicht_angelegt: Vec::new(),
             umbenennung: None,
+            protokollordner: Ok(()),
             ort: "heim".to_owned(),
         };
         let mit = |aenderung: fn(&mut Notizordnerstand)| {
