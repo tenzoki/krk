@@ -297,46 +297,126 @@ mod tests {
         );
     }
 
-    /// `abwarten` kehrt nach einem Nein binnen 20 ms mit `false` zurueck und
-    /// mit Ja nach der Dauer mit `true`.
+    /// `abwarten` kehrt mit dem ersten Nein zurueck, ohne zu warten, und
+    /// wartet mit lauter Ja die Dauer.
+    ///
+    /// Die erste Haelfte steht an Zustaenden: genau eine Frage, und sie war
+    /// die mit dem Nein. Ihre einzige Zeitgrenze ist [`HAENGT`], gegen eine
+    /// Dauer weit darueber; sie faengt ein `abwarten`, das trotz Nein die
+    /// Dauer wartet, und nicht mehr eines, das vor der ersten Frage weniger
+    /// als [`HAENGT`] schlaeft.
+    ///
+    /// Die zweite Haelfte traegt die eine echte Zeitaussage, und allein als
+    /// untere Schranke: nicht kuerzer als die Dauer. Last macht ein Warten
+    /// laenger und nie kuerzer, also faellt sie unter Last nicht. Eine obere
+    /// Schranke an der Wanduhr steht hier nicht; dass `abwarten` in Takten
+    /// fragt, statt die Dauer in einem Stueck zu verschlafen oder ohne Schlaf
+    /// zu kreisen, haelt die Zahl der Fragen.
     #[test]
     fn abwarten_bricht_ab_oder_wartet_die_dauer() {
+        use std::sync::atomic::AtomicUsize;
+
+        let fragen = AtomicUsize::new(0);
         let beginn = Instant::now();
-        assert!(!abwarten(Duration::from_secs(5), &|| false));
+        assert!(!abwarten(HAENGT.saturating_mul(10), &|| {
+            fragen.fetch_add(1, Ordering::SeqCst);
+            false
+        }));
+        assert_eq!(
+            fragen.load(Ordering::SeqCst),
+            1,
+            "das erste Nein beendet das Warten; ein zweites Mal wird nicht gefragt"
+        );
         assert!(
-            beginn.elapsed() < Duration::from_millis(20),
-            "das Nein ab dem ersten Schritt brauchte {:?}",
+            beginn.elapsed() < HAENGT,
+            "das Nein auf die erste Frage brauchte {:?}; abwarten wartet trotz Nein",
             beginn.elapsed()
         );
 
+        let dauer = SCHRITT.saturating_mul(5);
+        let fragen = AtomicUsize::new(0);
         let beginn = Instant::now();
-        assert!(abwarten(Duration::from_millis(50), &|| true));
+        assert!(abwarten(dauer, &|| {
+            fragen.fetch_add(1, Ordering::SeqCst);
+            true
+        }));
         assert!(
-            beginn.elapsed() >= Duration::from_millis(50),
+            beginn.elapsed() >= dauer,
             "mit Ja kehrt abwarten erst nach der Dauer zurueck"
+        );
+        // Jeder Schlaf dauert mindestens einen Schritt oder den Rest der
+        // Dauer, also liegen in fuenf Schritten Dauer hoechstens fuenf Schlaefe
+        // und damit hoechstens sechs Fragen; unter Last werden es weniger,
+        // aber nie weniger als die erste vor dem Warten und die letzte danach.
+        let gefragt = fragen.load(Ordering::SeqCst);
+        assert!(
+            (2..=6).contains(&gefragt),
+            "in fuenf Schritten Dauer wurde {gefragt} Mal gefragt"
         );
     }
 
-    /// Ein Nein mitten in der Wartezeit beendet sie binnen 20 ms.
+    /// Ein Nein mitten in der Wartezeit beendet sie: der Wartende fragt in
+    /// Takten weiter, liest die Marke und kehrt mit dem ersten Nein zurueck.
+    ///
+    /// Geprueft wird an Zustaenden und nicht an Millisekunden, wie in
+    /// `ein_wartender_gibt_nach_dem_abbruch_ohne_belegung_auf`: wie oft
+    /// `weiter` gefragt wurde und wie oft die Antwort nein war. Die einzige
+    /// Zeitgrenze ist [`HAENGT`], und die Dauer liegt weit ueber ihr, sodass
+    /// eine Rueckkehr unter ihr vom Nein kommt und nicht vom Ablauf.
     #[test]
     fn ein_nein_mitten_in_der_wartezeit_beendet_sie() {
+        use std::sync::atomic::AtomicUsize;
+
         let marke = Arc::new(AtomicBool::new(false));
+        let fragen = Arc::new(AtomicUsize::new(0));
+        let neins = Arc::new(AtomicUsize::new(0));
+        let (meldung, ankunft) = std::sync::mpsc::channel();
         let faden = {
             let marke = Arc::clone(&marke);
+            let fragen = Arc::clone(&fragen);
+            let neins = Arc::clone(&neins);
             thread::spawn(move || {
-                let ergebnis = abwarten(Duration::from_secs(5), &|| !marke.load(Ordering::Relaxed));
-                (ergebnis, Instant::now())
+                let weiter = || {
+                    fragen.fetch_add(1, Ordering::SeqCst);
+                    let abgebrochen = marke.load(Ordering::SeqCst);
+                    if abgebrochen {
+                        neins.fetch_add(1, Ordering::SeqCst);
+                    }
+                    !abgebrochen
+                };
+                let ergebnis = abwarten(HAENGT.saturating_mul(10), &weiter);
+                meldung.send(ergebnis).expect("die Probe hoert zu");
             })
         };
-        thread::sleep(Duration::from_millis(30));
-        let abgebrochen = Instant::now();
-        marke.store(true, Ordering::Relaxed);
-        let (ergebnis, zurueck) = faden.join().expect("der Faden endet ohne Absturz");
-        assert!(!ergebnis);
+        // Die erste Frage steht vor dem ersten Schlaf, jede weitere nach
+        // einem: drei Fragen heissen, dass der Wartende mitten in der
+        // Wartezeit steht und zweimal aus dem Schlaf an die Marke
+        // zurueckgekommen ist.
+        let beginn = Instant::now();
+        while fragen.load(Ordering::SeqCst) < 3 {
+            assert!(
+                beginn.elapsed() < HAENGT,
+                "der Wartende hat nach {HAENGT:?} erst {} Mal gefragt; er schlaeft an der Marke vorbei",
+                fragen.load(Ordering::SeqCst)
+            );
+            thread::sleep(SCHRITT);
+        }
         assert!(
-            zurueck.duration_since(abgebrochen) < Duration::from_millis(20),
-            "das Nein brauchte {:?}",
-            zurueck.duration_since(abgebrochen)
+            ankunft.try_recv().is_err(),
+            "vor dem Nein kehrt der Wartende nicht zurueck"
+        );
+
+        marke.store(true, Ordering::SeqCst);
+        let ergebnis = ankunft
+            .recv_timeout(HAENGT)
+            .expect("der Wartende kehrt nach dem Nein zurueck");
+        faden.join().expect("der Faden endet ohne Absturz");
+
+        assert!(!ergebnis, "nach dem Nein liefert abwarten false");
+        assert_eq!(
+            neins.load(Ordering::SeqCst),
+            1,
+            "das erste Nein beendet das Warten; ein zweites Mal wird nicht gefragt"
         );
     }
 }

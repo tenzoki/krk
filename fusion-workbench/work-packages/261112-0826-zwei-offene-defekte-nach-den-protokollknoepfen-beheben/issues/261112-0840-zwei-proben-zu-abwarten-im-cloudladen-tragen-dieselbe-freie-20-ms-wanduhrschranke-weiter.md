@@ -8,3 +8,6 @@ Zwei Proben zu `abwarten` im Cloudladen tragen dieselbe freie 20-ms-Wanduhrschra
 Beleg: die `Resolved:`-Zeile des zitierten Datensatzes nennt die zwei Proben als nicht mitbehoben. Die Lösung dort (Fragen zählen statt Millisekunden messen, als einzige Zeitgrenze die Hängegrenze `HAENGT` am Takt des Betriebscodes) passt nach dem Bericht der Behebung unmittelbar.
 
 Abnahme: keine der zwei Proben trägt eine freie Wanduhrschranke dieser Größe mehr; was sie über `abwarten` zusagen (bricht beim ersten Nein ab, wartet sonst die Dauer), halten sie an Zuständen oder an einer Grenze, die am Takt des Betriebscodes hängt und sagt, was sie nicht mehr fängt. `cargo test -p krk-ui --bin krk` läuft zwanzigmal in Folge grün.
+
+---
+Resolved: `crates/krk-ui/src/cloudladen.rs`, allein das Prüfmodul. `abwarten_bricht_ab_oder_wartet_die_dauer` hält den Abbruch an der Zahl der Fragen (genau eine) und an `HAENGT` gegen eine Dauer weit darüber, die Dauer an der unteren Schranke und den Takt an der Zahl der Fragen (zwei bis sechs in fünf Schritten); `ein_nein_mitten_in_der_wartezeit_beendet_sie` zählt Fragen und Nein-Antworten und hat `HAENGT` als einzige Zeitgrenze. Keine der zwei trägt mehr eine freie Wanduhrschranke; der Betriebscode ist unverändert. `cargo test -p krk-ui --bin krk` zwanzigmal in Folge grün.
