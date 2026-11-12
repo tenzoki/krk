@@ -30,3 +30,9 @@ Die Zwischenablage erreicht KRK allein über `zwischenablage::text_schreiben`. E
 ## Recommendation
 
 Möglichkeit 1. Der Plan ist darauf geschrieben (Entscheidung E7 dort). Leeren und Schließen gehören zur Quicknote, weil ihr Puffer ein Durchgangsort ist; ein Protokoll soll nach dem Kopieren noch dastehen. Eine andere Antwort ändert allein Schritt 5 des Plans und die Sätze in Schritt 2 und 7.
+
+---
+Answered: 261112, vom Nutzer im Chat („1:nur kopieren“) — Möglichkeit 1: „Kopieren“ legt vor einer Protokolldatei allein den Text in die Zwischenablage, Datei und Editor bleiben; ruled by user, Kai Stalmann <ks@qantr.com>
+
+---
+Implemented: `crates/krk-ui/src/appkit/anwendung.rs`, `protokoll_kopieren` und `notiztext_kopieren` — vor einer Protokolldatei wird allein kopiert, nichts geleert und nichts geschlossen; der Stand ist der vor der Antwort gebaute

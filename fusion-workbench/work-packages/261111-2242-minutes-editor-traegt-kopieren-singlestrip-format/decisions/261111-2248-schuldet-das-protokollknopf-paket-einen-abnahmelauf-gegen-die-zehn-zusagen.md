@@ -27,3 +27,6 @@ Kein Agent kann den Lauf fahren. Keine der zehn Zahlen wird geändert.
 ## Recommendation
 
 Möglichkeit 2. Der Umbau legt dem gemessenen Weg einen Feldzugriff auf, und die Pakete, die dieselbe Stelle um `eintragsdatei` und `csv` erweitert haben, sind ebenso verfahren. Die Auslieferung wartet nach dem Plan nicht auf diese Antwort; lautet sie „messen“, ist der Lauf eine Nutzerarbeit nach der Auslieferung.
+
+---
+Answered: 261112, vom Nutzer im Chat („2:nein“) — Möglichkeit 2: kein Abnahmelauf; die zehn Zusagen bleiben auf den Gegenständen der späteren Messrunde; ruled by user, Kai Stalmann <ks@qantr.com>

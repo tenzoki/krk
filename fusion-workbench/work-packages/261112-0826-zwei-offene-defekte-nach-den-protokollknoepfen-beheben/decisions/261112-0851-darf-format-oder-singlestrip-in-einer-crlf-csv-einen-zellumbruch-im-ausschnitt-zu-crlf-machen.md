@@ -34,3 +34,9 @@ Der Defekt vom 261019 hat denselben Wandel beim Sichern als Fehler behandelt. Do
 ## Recommendation
 
 Möglichkeit 1, bis ein Nutzer den Fall trifft. Der Wandel folgt einem Klick, ist sichtbar und rücknehmbar, und Format über eine CSV mit Zellumbrüchen ändert die Datei ohnehin stärker als an ihren Zeilenenden. Möglichkeit 2 lohnt, wenn Format vor CSV-Dateien wirklich benutzt wird.
+
+---
+Answered: 261112, vom Nutzer im Chat („3:ja“) — Möglichkeit 1: so lassen, ein geändertes Ergebnis trägt eine einzige Zeilenendeform; ruled by user, Kai Stalmann <ks@qantr.com>
+
+---
+Implemented: `crates/krk-ui/src/appkit/editor.rs`, `protokoll_umgeformt` mit `zeilenende_des_ausschnitts` — ein geändertes Ergebnis trägt eine Form, gehalten von der Probe `die_umformung_am_protokoll_haelt_die_zeilenenden_des_ausschnitts`; der Stand ist der vor der Antwort gebaute
