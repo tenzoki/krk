@@ -98,6 +98,7 @@ use serde::Deserialize;
 
 use super::{Beiseite, Datei, Ersetzung, Geladen, Grund, Zugang, atomar, einzeilig};
 use crate::sprache::{self, Text, satz};
+use crate::text::zeilenende;
 
 /// Die Auslieferungsfassung der Einstellungen, in das Programm einkompiliert.
 ///
@@ -562,10 +563,10 @@ fn ist_einzelwert(bereich: &str, wert: &toml::Value) -> bool {
 ///
 /// **Das Anhaengen gilt, solange die Datei keine Tabelle kennt**; siehe den
 /// Modulkopf. Jede angehaengte Zeile endet wie die erste Zeile der Datei (O2
-/// der Zweitlesung), damit eine Datei mit `\r\n` keine gemischten Zeilenenden
+/// der Zweitlesung; die Regel ist [`zeilenende::des_textes`]), damit eine Datei mit `\r\n` keine gemischten Zeilenenden
 /// bekommt. `quelltext` ist der Wert in seiner TOML-Schreibweise.
 fn angehaengt(text: &str, quelltext: &str) -> String {
-    let ende = zeilenende(text);
+    let ende = zeilenende::des_textes(text);
     let mut neu = String::from(text);
     if !neu.is_empty() {
         if !neu.ends_with('\n') {
@@ -579,14 +580,6 @@ fn angehaengt(text: &str, quelltext: &str) -> String {
     neu.push_str(quelltext);
     neu.push_str(ende);
     neu
-}
-
-/// `\r\n`, wenn die erste Zeile der Datei so endet, sonst `\n`.
-fn zeilenende(text: &str) -> &'static str {
-    match text.find('\n') {
-        Some(stelle) if text[..stelle].ends_with('\r') => "\r\n",
-        _ => "\n",
-    }
 }
 
 /// Die zweite Lesung: der neue Text laedt als Einstellungsdatei, traegt als

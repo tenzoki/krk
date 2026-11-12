@@ -49,9 +49,10 @@
 //! steht.
 //!
 //! **Kein Zustand, und das Dateisystem an genau einer Stelle.** [`zeilen`],
-//! [`suche`] und [`glaetten`] bekommen den Text als Zeichenkette und liefern
-//! Versaetze oder eine neue Zeichenkette; sie lesen keine Datei und schreiben
-//! keine. Daraus faellt
+//! [`suche`], [`glaetten`] und [`zeilenende`] bekommen den Text als
+//! Zeichenkette und liefern Versaetze, eine neue Zeichenkette oder, im Fall
+//! von [`zeilenende`], die Form des Zeilenendes; sie lesen keine Datei und
+//! schreiben keine. Daraus faellt
 //! das neunte Abnahmekriterium von C5 von selbst an: die Suche geht ueber den
 //! gehaltenen Stand des Editors und nicht ueber die Datei auf der Platte, weil
 //! sie einen Pfad gar nicht entgegennehmen kann.
@@ -85,12 +86,13 @@ pub mod glaetten;
 pub mod marke;
 pub mod suche;
 pub mod zeilen;
+pub mod zeilenende;
 
 // Die Typen stehen hier, die Funktionen nicht: `text::alle` und
 // `text::naechster` sagten am Aufrufort nicht mehr, wovon sie handeln.
 // `suche::alle` und `suche::naechster` sagen es. `datei::einlesen`,
 // `datei::sichern` und `datei::in_gehaltene_form` folgen derselben Regel und
-// bleiben deshalb unter ihrem Modulnamen.
+// bleiben deshalb unter ihrem Modulnamen, ebenso `zeilenende::des_textes`.
 pub use datei::Abweisung;
 pub use marke::{Fund, Markensprung};
 pub use suche::{Ersetzung, Sammelersetzung, Treffer};

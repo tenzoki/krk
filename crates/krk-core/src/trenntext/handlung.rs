@@ -132,8 +132,23 @@ fn spleissen(text: &str, mut ersetzungen: Vec<Ersetzung>) -> String {
     spleiss.fertig()
 }
 
-/// Das Zeilenende, das eine Handlung neu schreibt: die Form des ersten im
-/// Text.
+/// Das Zeilenende, das eine Handlung neu schreibt: die Form des ersten
+/// **Satzendes** im Text.
+///
+/// Das ist nicht `crate::text::zeilenende::des_textes`, und die zwei
+/// antworten an drei Stellen verschieden, weshalb die Fassung hier eine eigene
+/// bleibt. Jene liest das erste `\n` des Textes; diese fragt den Satzindex,
+/// was hinter dem ersten Satz steht:
+///
+/// - Ein Umbruch in einer angefuehrten Zelle des ersten Satzes ist kein
+///   Satzende. Bei `"a\nb";c\r\n` gilt hier `\r\n`, dort `\n`.
+/// - Das Ende einer `sep=`-Zeile gehoert zum Vorspann und nicht zu einem
+///   Satz. Bei `sep=;\na;b\r\n` gilt hier `\r\n`, dort `\n`; allein ohne
+///   jeden Satz entscheidet der Vorspann.
+/// - Steht der erste Satz ohne Zeilenende am Textende, gilt hier `\n`, auch
+///   wenn eine angefuehrte Zelle darin `\r\n` traegt.
+///
+/// Die Proben am Ende der Datei halten die drei Faelle.
 fn zeilenende_des_textes<'a>(text: &'a str, index: &Satzindex) -> &'a str {
     let erstes = if index.zeilenzahl() > 0 {
         &text[index.zeilenende(0)]
@@ -567,4 +582,40 @@ pub fn spalten_loeschen(
             spalten: gewaehlt..gewaehlt + 1,
         },
     }))
+}
+
+#[cfg(test)]
+mod proben {
+    use super::zeilenende_des_textes;
+    use crate::text::zeilenende;
+    use crate::trenntext::{Art, dialekt_erkennen, indexieren};
+
+    /// Die Antwort ueber den Satzindex neben der ueber das erste `\n`.
+    fn beide(text: &str) -> (&str, &'static str) {
+        let index = indexieren(text, &dialekt_erkennen(Art::Csv, text));
+        (
+            zeilenende_des_textes(text, &index),
+            zeilenende::des_textes(text),
+        )
+    }
+
+    /// Warum `zeilenende_des_textes` nicht `text::zeilenende::des_textes`
+    /// ruft: an diesen drei Texten antworten die zwei verschieden.
+    #[test]
+    fn der_satzindex_antwortet_anders_als_das_erste_lf_des_textes() {
+        // Ein Umbruch in einer angefuehrten Zelle ist kein Satzende.
+        assert_eq!(beide("\"a\nb\";c\r\nd;e\r\n"), ("\r\n", "\n"));
+        // Das Ende der `sep=`-Zeile gehoert zum Vorspann.
+        assert_eq!(beide("sep=;\na;b\r\nc;d\r\n"), ("\r\n", "\n"));
+        // Der erste Satz steht ohne Zeilenende am Textende.
+        assert_eq!(beide("\"a\r\nb\";c"), ("\n", "\r\n"));
+    }
+
+    /// Wo kein solcher Fall vorliegt, sagen beide dasselbe.
+    #[test]
+    fn ohne_angefuehrten_umbruch_und_vorspann_sind_sich_beide_einig() {
+        assert_eq!(beide("a;b\r\nc;d\r\n"), ("\r\n", "\r\n"));
+        assert_eq!(beide("a;b\nc;d\n"), ("\n", "\n"));
+        assert_eq!(beide(""), ("\n", "\n"));
+    }
 }

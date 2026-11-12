@@ -2334,7 +2334,7 @@ struct Protokollumbau {
 ///    Antwort ist `None`: der Ausschnitt bleibt Byte fuer Byte, auch mit
 ///    gemischten Zeilenenden und einem einzelnen `\r`.
 /// 3. **Aendert sich mehr, bekommt das Ergebnis eine einzige Form**, die von
-///    [`zeilenende_des_ausschnitts`]: `\r\n`, wenn das erste `\n` des
+///    [`krk_core::text::zeilenende::des_textes`]: `\r\n`, wenn das erste `\n` des
 ///    Ausschnitts hinter einem `\r` steht, in jedem anderen Fall `\n`.
 ///    Gemischte Zeilenenden im Ausschnitt kommen dann einheitlich zurueck,
 ///    und ein einzelnes `\r` darin als Zeilenende dieser Form; welche Zeile
@@ -2364,7 +2364,7 @@ fn protokoll_umgeformt(art: Umformung, stand: &str, auswahl: NSRange) -> Option<
     let nachher = if ausschnitt.contains('\r') {
         let gelesen = ausschnitt.replace("\r\n", "\n").replace('\r', "\n");
         let nachher = umgeformt(art, &gelesen)?;
-        match zeilenende_des_ausschnitts(ausschnitt) {
+        match krk_core::text::zeilenende::des_textes(ausschnitt) {
             "\n" => nachher,
             form => nachher.replace('\n', form),
         }
@@ -2402,21 +2402,6 @@ fn ohne_geteiltes_zeilenende(stand: &str, anfang: usize, ende: usize) -> (usize,
         ende
     };
     (anfang, ende)
-}
-
-/// Schritt 3 der Zeilenenden in [`protokoll_umgeformt`]: `\r\n`, wenn das
-/// erste `\n` des Ausschnitts hinter einem `\r` steht, sonst `\n`, also
-/// auch ohne jedes `\n` und bei einzelnen `\r` als einzigen Zeilenenden.
-///
-/// Dieselbe Regel wie `zeilenende` in `krk-core/src/ablage/einstellungen.rs`,
-/// die dort der Einstellungsdatei gehoert und nicht oeffentlich ist; die
-/// Handlungen einer Trenntexttabelle fragen dagegen den Satzindex, den die
-/// Rohansicht nicht hat.
-fn zeilenende_des_ausschnitts(ausschnitt: &str) -> &'static str {
-    match ausschnitt.find('\n') {
-        Some(stelle) if ausschnitt[..stelle].ends_with('\r') => "\r\n",
-        _ => "\n",
-    }
 }
 
 /// Die Sicherung der Quicknote samt dem Ort, den ihre Meldungen nennen.
