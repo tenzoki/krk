@@ -309,9 +309,13 @@ mod tests {
     /// Die zweite Haelfte traegt die eine echte Zeitaussage, und allein als
     /// untere Schranke: nicht kuerzer als die Dauer. Last macht ein Warten
     /// laenger und nie kuerzer, also faellt sie unter Last nicht. Eine obere
-    /// Schranke an der Wanduhr steht hier nicht; dass `abwarten` in Takten
-    /// fragt, statt die Dauer in einem Stueck zu verschlafen oder ohne Schlaf
-    /// zu kreisen, haelt die Zahl der Fragen.
+    /// Schranke an der Wanduhr steht hier nicht.
+    ///
+    /// Die Zahl der Fragen haelt zweierlei und nicht mehr: `abwarten` kreist
+    /// nicht ohne Schlaf (hoechstens sechs Fragen), und es antwortet nicht mit
+    /// Ja, ohne gefragt zu haben (mindestens eine). Dass es die Dauer nicht in
+    /// einem Stueck verschlaeft, sondern in Takten fragt, haelt sie nicht; das
+    /// haelt `ein_nein_mitten_in_der_wartezeit_beendet_sie`.
     #[test]
     fn abwarten_bricht_ab_oder_wartet_die_dauer() {
         use std::sync::atomic::AtomicUsize;
@@ -344,13 +348,17 @@ mod tests {
             beginn.elapsed() >= dauer,
             "mit Ja kehrt abwarten erst nach der Dauer zurueck"
         );
-        // Jeder Schlaf dauert mindestens einen Schritt oder den Rest der
-        // Dauer, also liegen in fuenf Schritten Dauer hoechstens fuenf Schlaefe
-        // und damit hoechstens sechs Fragen; unter Last werden es weniger,
-        // aber nie weniger als die erste vor dem Warten und die letzte danach.
+        // Oben: jeder Schlaf dauert mindestens einen Schritt oder den Rest der
+        // Dauer, und nach einem Schlaf ueber den Rest ist die Dauer um. Also
+        // liegen in fuenf Schritten Dauer hoechstens fuenf Schlaefe und damit
+        // hoechstens sechs Fragen; Last macht jeden Schlaf laenger und die
+        // Fragen weniger, nie mehr. Unten: die erste Frage steht vor jeder
+        // Rueckkehr. Eine Zwei steht dort nicht, weil ein Faden, der zwischen
+        // dem Beginn und dem Lesen der verstrichenen Zeit die ganze Dauer lang
+        // nicht zugeteilt wird, zu Recht nach einer Frage zurueckkehrt.
         let gefragt = fragen.load(Ordering::SeqCst);
         assert!(
-            (2..=6).contains(&gefragt),
+            (1..=6).contains(&gefragt),
             "in fuenf Schritten Dauer wurde {gefragt} Mal gefragt"
         );
     }
