@@ -2316,6 +2316,34 @@ struct Protokollumbau {
 /// dasselbe [`umgeformt`] wie in der Quicknote. `None`, wenn die Umformung
 /// nichts aendert.
 ///
+/// # Zeilenenden
+///
+/// Der Stand einer CSV oder TSV traegt die Zeilenenden ihrer Datei selbst
+/// (`Zeilenenden::WieGelesen` in `krk_core::text::datei`), und die Umformung
+/// steht auch vor ihrer Rohansicht. `glaetten` liest jedes `\r\n` und jedes
+/// einzelne `\r` als `\n` und antwortet allein mit `\n`; verglichen und
+/// geschrieben wird hier deshalb in drei ueberschneidungsfreien Schritten, die
+/// jeden Ausschnitt abdecken:
+///
+/// 1. **Der Schnitt trennt kein `\r\n`.** Faellt ein Ende des Ausschnitts
+///    zwischen `\r` und `\n`, rueckt es so, dass das Paar ganz ausserhalb
+///    steht: der Anfang hinter das `\n`, das Ende vor das `\r`.
+/// 2. **Verglichen wird ohne Ruecksicht auf die Form der Zeilenenden.**
+///    Unterscheidet sich das Ergebnis vom Ausschnitt allein darin, dass
+///    `\r\n` und `\r` als `\n` stehen, ist nichts zu aendern, und die
+///    Antwort ist `None`: der Ausschnitt bleibt Byte fuer Byte, auch mit
+///    gemischten Zeilenenden und einem einzelnen `\r`.
+/// 3. **Aendert sich mehr, bekommt das Ergebnis eine einzige Form**, die von
+///    [`zeilenende_des_ausschnitts`]: `\r\n`, wenn das erste `\n` des
+///    Ausschnitts hinter einem `\r` steht, in jedem anderen Fall `\n`.
+///    Gemischte Zeilenenden im Ausschnitt kommen dann einheitlich zurueck,
+///    und ein einzelnes `\r` darin als Zeilenende dieser Form; welche Zeile
+///    des Ergebnisses zu welcher des Ausschnitts gehoert, sagt `glaetten`
+///    nicht, weil es Zeilen verbindet.
+///
+/// Ein Stand in gehaltener Form traegt kein `\r`, und die drei Schritte
+/// aendern an ihm nichts; die Quicknote geht nicht hier durch.
+///
 /// **`auswahl` zaehlt UTF-16-Einheiten, der Stand Bytes**, und der Schnitt
 /// geht deshalb ueber [`koordinaten::in_bytes`]: beide Enden liegen danach auf
 /// einer Zeichengrenze, auch hinter einem Zeichen ausserhalb der BMP, und ein
@@ -2331,7 +2359,18 @@ fn protokoll_umgeformt(art: Umformung, stand: &str, auswahl: NSRange) -> Option<
             koordinaten::in_bytes(stand, auswahl.location.saturating_add(auswahl.length)),
         )
     };
-    let nachher = umgeformt(art, &stand[anfang..ende])?;
+    let (anfang, ende) = ohne_geteiltes_zeilenende(stand, anfang, ende);
+    let ausschnitt = &stand[anfang..ende];
+    let nachher = if ausschnitt.contains('\r') {
+        let gelesen = ausschnitt.replace("\r\n", "\n").replace('\r', "\n");
+        let nachher = umgeformt(art, &gelesen)?;
+        match zeilenende_des_ausschnitts(ausschnitt) {
+            "\n" => nachher,
+            form => nachher.replace('\n', form),
+        }
+    } else {
+        umgeformt(art, ausschnitt)?
+    };
     let mut text = String::with_capacity(stand.len() - (ende - anfang) + nachher.len());
     text.push_str(&stand[..anfang]);
     text.push_str(&nachher);
@@ -2341,6 +2380,43 @@ fn protokoll_umgeformt(art: Umformung, stand: &str, auswahl: NSRange) -> Option<
         anfang,
         ende: anfang + nachher.len(),
     })
+}
+
+/// Schritt 1 der Zeilenenden in [`protokoll_umgeformt`]: die Enden eines
+/// Ausschnitts so, dass keines zwischen `\r` und `\n` faellt. Der Anfang
+/// rueckt hinter das `\n`, das Ende vor das `\r`; das Paar steht danach
+/// ganz ausserhalb des Ausschnitts und bleibt, wie es ist.
+fn ohne_geteiltes_zeilenende(stand: &str, anfang: usize, ende: usize) -> (usize, usize) {
+    let bytes = stand.as_bytes();
+    let geteilt = |stelle: usize| {
+        stelle > 0 && bytes.get(stelle - 1) == Some(&b'\r') && bytes.get(stelle) == Some(&b'\n')
+    };
+    let anfang = if anfang < ende && geteilt(anfang) {
+        anfang + 1
+    } else {
+        anfang
+    };
+    let ende = if anfang < ende && geteilt(ende) {
+        ende - 1
+    } else {
+        ende
+    };
+    (anfang, ende)
+}
+
+/// Schritt 3 der Zeilenenden in [`protokoll_umgeformt`]: `\r\n`, wenn das
+/// erste `\n` des Ausschnitts hinter einem `\r` steht, sonst `\n`, also
+/// auch ohne jedes `\n` und bei einzelnen `\r` als einzigen Zeilenenden.
+///
+/// Dieselbe Regel wie `zeilenende` in `krk-core/src/ablage/einstellungen.rs`,
+/// die dort der Einstellungsdatei gehoert und nicht oeffentlich ist; die
+/// Handlungen einer Trenntexttabelle fragen dagegen den Satzindex, den die
+/// Rohansicht nicht hat.
+fn zeilenende_des_ausschnitts(ausschnitt: &str) -> &'static str {
+    match ausschnitt.find('\n') {
+        Some(stelle) if ausschnitt[..stelle].ends_with('\r') => "\r\n",
+        _ => "\n",
+    }
 }
 
 /// Die Sicherung der Quicknote samt dem Ort, den ihre Meldungen nennen.
@@ -10030,6 +10106,110 @@ mod tests {
         .expect("der Rest aendert sich");
         assert!(umbau.text.is_char_boundary(umbau.anfang));
         assert!(umbau.text.is_char_boundary(umbau.ende));
+    }
+
+    /// Der Stand einer CSV oder TSV traegt ihre Zeilenenden selbst, und die
+    /// drei Schaltflaechen stehen vor ihrer Rohansicht in `minutes/`
+    /// (Defekt `261112-0002-format-und-singlestrip-stellen-eine-crlf-csv-in-minutes-auf-lf-auch-wenn-sonst-nichts-zu-aendern-ist.md`):
+    /// eine Umformung, die ausser den Zeilenenden nichts aendert, ist keine
+    /// Handlung, und ein umgeformter Ausschnitt eines Standes mit `\r\n`
+    /// traegt kein einzelnes `\n`. Je fuer Singlestrip und Format.
+    #[test]
+    fn die_umformung_am_protokoll_haelt_die_zeilenenden_des_ausschnitts() {
+        /// Ob jedes `\n` hinter einem `\r` steht.
+        fn ohne_einzelnes_lf(text: &str) -> bool {
+            text.replace("\r\n", "").find('\n').is_none()
+        }
+
+        // Nichts zu aendern, am ganzen Stand und an der Auswahl: `None`, und
+        // zwar auch bei gemischten Zeilenenden und einem einzelnen `\r`.
+        for stand in [
+            "a,b\r\n1,2\r\n",
+            "a,b\r\n1,2",
+            "a,b\r\n1,2\n3,4\r\n",
+            "a,b\r1,2\r\n",
+        ] {
+            assert_eq!(
+                protokoll_umgeformt(Umformung::Format, stand, NSRange::new(0, 0)),
+                None,
+                "Format an {stand:?}"
+            );
+            assert_eq!(
+                protokoll_umgeformt(
+                    Umformung::Format,
+                    stand,
+                    NSRange::new(0, koordinaten::einheiten(stand))
+                ),
+                None,
+                "Format an der Auswahl von {stand:?}"
+            );
+        }
+        for stand in ["ls -la", "kopf\r\nls -la\r\n"] {
+            let vor = stand.len() - stand.trim_start_matches("kopf\r\n").len();
+            assert_eq!(
+                protokoll_umgeformt(Umformung::Singlestrip, stand, NSRange::new(vor, 6)),
+                None,
+                "Singlestrip an {stand:?}"
+            );
+        }
+
+        // Singlestrip an zwei Zeilen eines Standes mit `\r\n`: der Rest
+        // steht Byte fuer Byte, und kein `\n` steht allein.
+        let stand = "kopf\r\n  ls \\\r\n  -la  \r\nfuss\r\n";
+        let vor = "kopf\r\n";
+        let gewaehlt = "  ls \\\r\n  -la  ";
+        let umbau = protokoll_umgeformt(
+            Umformung::Singlestrip,
+            stand,
+            NSRange::new(vor.len(), gewaehlt.len()),
+        )
+        .expect("die Auswahl aendert sich");
+        assert_eq!(umbau.text, "kopf\r\nls -la\r\nfuss\r\n");
+        assert_eq!(&umbau.text[umbau.anfang..umbau.ende], "ls -la");
+
+        // Format am ganzen Stand mit `\r\n`: dasselbe Ergebnis wie am Stand
+        // mit `\n`, mit `\r\n` an jedem Zeilenende.
+        let lf = "- ein Punkt, der im Terminal\n  umgebrochen wurde\n\nZweiter Absatz, der im Kopf\n  umgebrochen wurde\n";
+        let geformt = umgeformt(Umformung::Format, lf).expect("das Beispiel aendert sich");
+        assert!(geformt.contains('\n'), "das Ergebnis traegt Zeilenenden");
+        let crlf = lf.replace('\n', "\r\n");
+        let umbau = protokoll_umgeformt(Umformung::Format, &crlf, NSRange::new(0, 0))
+            .expect("der Stand aendert sich");
+        assert_eq!(umbau.text, geformt.replace('\n', "\r\n"));
+        assert!(ohne_einzelnes_lf(&umbau.text));
+        assert_eq!((umbau.anfang, umbau.ende), (0, umbau.text.len()));
+
+        // Gemischt und geaendert: das erste Zeilenende des Ausschnitts
+        // entscheidet, hier `\r\n`, und ein einzelnes `\r` zaehlt als
+        // Zeilenende, entscheidet aber nichts.
+        let gemischt = lf.replacen('\n', "\r\n", 1).replacen("\n\n", "\r\r", 1);
+        let umbau = protokoll_umgeformt(Umformung::Format, &gemischt, NSRange::new(0, 0))
+            .expect("der Stand aendert sich");
+        assert_eq!(umbau.text, geformt.replace('\n', "\r\n"));
+        // Steht das erste `\n` allein, bleibt es bei `\n`.
+        let umgekehrt = lf.replacen("\n\n", "\r\n\r\n", 1);
+        let umbau = protokoll_umgeformt(Umformung::Format, &umgekehrt, NSRange::new(0, 0))
+            .expect("der Stand aendert sich");
+        assert_eq!(umbau.text, geformt);
+
+        // Ein Schnitt zwischen `\r` und `\n` laesst das Paar ganz ausserhalb
+        // des Ausschnitts, am Anfang wie am Ende.
+        let stand = "kopf\r\n  ls  \r\nfuss\r\n";
+        let umbau = protokoll_umgeformt(
+            Umformung::Singlestrip,
+            stand,
+            NSRange::new("kopf\r".len(), "\n  ls  \r".len()),
+        )
+        .expect("die Auswahl aendert sich");
+        assert_eq!(umbau.text, "kopf\r\nls\r\nfuss\r\n");
+        assert_eq!(&umbau.text[umbau.anfang..umbau.ende], "ls");
+        for auswahl in [NSRange::new(4, 1), NSRange::new(5, 1)] {
+            assert_eq!(
+                protokoll_umgeformt(Umformung::Singlestrip, stand, auswahl),
+                None,
+                "die Haelfte eines Zeilenendes allein: {auswahl:?}"
+            );
+        }
     }
 
     /// E6 des Plans der Protokollknoepfe am Quelltext: `protokoll_umformen`

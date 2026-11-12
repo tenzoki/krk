@@ -19,3 +19,6 @@ Die Zusage, dass eine CSV oder TSV ihre Zeilenenden behält, steht im zitierten 
 Richtung: `protokoll_umgeformt` vergleicht und schreibt in der Zeilenendeform des Standes. Trägt der Ausschnitt `\r\n`, bekommt das Ergebnis vor dem Vergleich `\r\n` an jedes `\n`; ein Ausschnitt, an dem sich sonst nichts ändert, ergibt dann `None`.
 
 Abnahme: eine Probe an `protokoll_umgeformt` hält, dass ein Stand mit `\r\n`, an dem Format nichts zu ändern hat, `None` ergibt, und dass ein umgeformter Ausschnitt eines solchen Standes kein einzelnes `\n` trägt.
+
+---
+Resolved: `crates/krk-ui/src/appkit/editor.rs`, `protokoll_umgeformt` mit `ohne_geteiltes_zeilenende` und `zeilenende_des_ausschnitts`. Verglichen wird ohne Rücksicht auf die Form der Zeilenenden: ändert die Umformung allein `\r\n` und `\r` zu `\n`, ist die Antwort `None`, auch bei gemischten Zeilenenden. Ein geändertes Ergebnis bekommt `\r\n`, wenn das erste `\n` des Ausschnitts hinter einem `\r` steht, sonst `\n`; ein Schnitt zwischen `\r` und `\n` rückt so, dass das Paar ganz außerhalb des Ausschnitts bleibt. Die Regel steht im Doc-Kommentar unter „Zeilenenden“ und in `.claude/rules/coding-was-man-nicht-sieht.md` im Absatz über Singlestrip und Format; die Probe ist `die_umformung_am_protokoll_haelt_die_zeilenenden_des_ausschnitts`, je für Singlestrip und Format. Der Weg der Quicknote ist unverändert.

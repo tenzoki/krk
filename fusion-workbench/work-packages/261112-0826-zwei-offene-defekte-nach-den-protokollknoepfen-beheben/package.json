@@ -1,0 +1,44 @@
+{
+  "schema": "fusion.package/v1",
+  "id": "432389d0-d374-46de-9913-67935a3e844d",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "domain": "code",
+  "status": "claimed",
+  "claim": {
+    "checkout_id": "9be83618",
+    "person": "Kai Stalmann <ks@qantr.com>",
+    "claimed_at": "2026-11-12T07:27:03Z"
+  },
+  "mode": {
+    "value": "autonomous",
+    "source": {
+      "kind": "user-word",
+      "ref": {
+        "path": "work-packages/261112-0826-zwei-offene-defekte-nach-den-protokollknoepfen-beheben/261112-0826-zwei-offene-defekte-nach-den-protokollknoepfen-beheben.md",
+        "sha256": "sha256:75098f5695024ea96cf850be0a7383dfd1033a83492f34aa8bf3a8ba922ff454",
+        "kind": "other"
+      }
+    }
+  },
+  "origin": {
+    "kind": "user-request",
+    "ref": null
+  },
+  "filed_by": {
+    "actor": "user",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "narrative": {
+    "path": "work-packages/261112-0826-zwei-offene-defekte-nach-den-protokollknoepfen-beheben/261112-0826-zwei-offene-defekte-nach-den-protokollknoepfen-beheben.md"
+  },
+  "depends_on": [],
+  "active_documents": [],
+  "references": [],
+  "evidence": [],
+  "outcome": null,
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {}
+}

@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "4eaa7ef4-c7f6-4797-8590-60b0665d115b",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261112-0826-zwei-offene-defekte-nach-den-protokollknoepfen-beheben/issues/261112-0840-die-regel-welches-zeilenende-ein-text-traegt-steht-an-drei-stellen-und-keine-ruft-die-andere.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}
