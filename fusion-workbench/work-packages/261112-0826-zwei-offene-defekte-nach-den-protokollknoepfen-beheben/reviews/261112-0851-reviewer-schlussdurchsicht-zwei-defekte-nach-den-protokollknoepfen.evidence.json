@@ -1,0 +1,28 @@
+{
+  "schema": "fusion.evidence/v1",
+  "id": "4ebb7f43-345a-468e-86f3-ab9e9d3e0ab1",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "subject": {
+    "git_tree": "2f597acd61dfa45b755eec5b12fece8c06b8bb9c",
+    "git_range": null
+  },
+  "brief_revision": "sha256:75098f5695024ea96cf850be0a7383dfd1033a83492f34aa8bf3a8ba922ff454",
+  "plan_revision": null,
+  "role": {
+    "profile": "reviewer",
+    "version": "13.5.0"
+  },
+  "host": "claude-code",
+  "execution_policy": "claude-guided",
+  "verdict": "accept",
+  "uncertainties": [],
+  "checks": [],
+  "report": {
+    "path": "work-packages/261112-0826-zwei-offene-defekte-nach-den-protokollknoepfen-beheben/reviews/261112-0851-reviewer-schlussdurchsicht-zwei-defekte-nach-den-protokollknoepfen.md",
+    "sha256": "sha256:185dad225fb2c25b48d8f22484e70883d166bcab8c60f6a502e950ecf17b2997",
+    "kind": "review"
+  },
+  "predecessor": null,
+  "accepted_at": "2026-11-12T07:52:46Z",
+  "extensions": {}
+}

@@ -3,7 +3,7 @@
   "id": "432389d0-d374-46de-9913-67935a3e844d",
   "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
   "domain": "code",
-  "status": "claimed",
+  "status": "done",
   "claim": {
     "checkout_id": "9be83618",
     "person": "Kai Stalmann <ks@qantr.com>",
@@ -35,7 +35,20 @@
   "active_documents": [],
   "references": [],
   "evidence": [],
-  "outcome": null,
+  "outcome": {
+    "class": "completed",
+    "reason": "Format und Singlestrip lassen einer CSV in minutes/ ihre Zeilenenden; die drei Zeitproben im Cloudladen pruefen Zustaende statt Millisekunden; nicht ausgeliefert",
+    "evidence": [
+      {
+        "ref": {
+          "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+          "record_id": "4ebb7f43-345a-468e-86f3-ab9e9d3e0ab1",
+          "revision": "sha256:ad1b7c56a615c3da69154b8d42558605db4fc88979bc09e66cd2ab3b52b32e08"
+        },
+        "policy": "claude-guided"
+      }
+    ]
+  },
   "provenance": {
     "source": "created",
     "legacy_fields": {}

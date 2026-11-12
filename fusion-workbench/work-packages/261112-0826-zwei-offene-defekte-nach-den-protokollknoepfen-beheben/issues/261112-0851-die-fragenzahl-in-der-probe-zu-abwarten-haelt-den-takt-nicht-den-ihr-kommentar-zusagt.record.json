@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "cce3453a-b7bd-4b16-af76-3e5ad645ad3e",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261112-0826-zwei-offene-defekte-nach-den-protokollknoepfen-beheben/issues/261112-0851-die-fragenzahl-in-der-probe-zu-abwarten-haelt-den-takt-nicht-den-ihr-kommentar-zusagt.md"
+  },
+  "filed_by": {
+    "actor": "reviewer",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "open",
+    "disposition": null
+  }
+}
