@@ -207,43 +207,94 @@ mod tests {
         assert_eq!(platz.hoechstens_zugleich(), 1);
     }
 
-    /// Ein Faden, der auf einen belegten Platz wartet, gibt binnen 20 ms nach
-    /// dem Abbruch auf, ohne zu belegen.
+    /// Wie lange die Probe hoechstens auf einen Faden wartet, bevor sie ihn
+    /// fuer haengend haelt: zweihundert Schritte des Wartens.
+    ///
+    /// **Keine Reaktionszeit, sondern eine Haengegrenze.** Sie ist am Takt
+    /// [`SCHRITT`] festgemacht und nicht an einer freien Zahl, und sie liegt so
+    /// weit ueber ihm, dass die Zuteilung des Fadens unter der Last der
+    /// parallel laufenden Proben sie nicht erreicht; eine Wanduhrschranke in
+    /// der Groesse des Takts selbst faellt dort (Defekt
+    /// `261111-2349-die-zeitprobe-zum-abbruch-eines-wartenden-im-cloudladen-faellt-unter-last-an-ihrer-20-ms-schranke.md`).
+    /// Was sie nicht faengt: einen Takt, der laenger wird und unter ihr bleibt.
+    const HAENGT: Duration = SCHRITT.saturating_mul(200);
+
+    /// Ein Faden, der auf einen belegten Platz wartet, liest seine Marke, ohne
+    /// dass ihn jemand weckt, und gibt mit dem ersten Nein auf, ohne zu
+    /// belegen.
+    ///
+    /// Geprueft wird an Zustaenden und nicht an Millisekunden: wie oft der
+    /// Wartende `weiter` gefragt hat, wie oft die Antwort nein war und was der
+    /// Platz danach zaehlt. Die einzige Zeitgrenze ist [`HAENGT`].
     #[test]
     fn ein_wartender_gibt_nach_dem_abbruch_ohne_belegung_auf() {
+        use std::sync::atomic::AtomicUsize;
+
         let platz = Arc::new(Ladeplatz::neu());
         let gehalten = platz
             .belegen(&|| true)
             .expect("der freie Platz wird belegt");
         let marke = Arc::new(AtomicBool::new(false));
+        let fragen = Arc::new(AtomicUsize::new(0));
+        let neins = Arc::new(AtomicUsize::new(0));
         let (meldung, ankunft) = std::sync::mpsc::channel();
         let faden = {
             let platz = Arc::clone(&platz);
             let marke = Arc::clone(&marke);
+            let fragen = Arc::clone(&fragen);
+            let neins = Arc::clone(&neins);
             thread::spawn(move || {
-                let belegt = platz.belegen(&|| !marke.load(Ordering::Relaxed)).is_some();
-                meldung.send(Instant::now()).expect("die Probe hoert zu");
-                belegt
+                let weiter = || {
+                    fragen.fetch_add(1, Ordering::SeqCst);
+                    let abgebrochen = marke.load(Ordering::SeqCst);
+                    if abgebrochen {
+                        neins.fetch_add(1, Ordering::SeqCst);
+                    }
+                    !abgebrochen
+                };
+                let belegt = platz.belegen(&weiter).is_some();
+                meldung.send(belegt).expect("die Probe hoert zu");
             })
         };
-        // Der Faden steht jetzt im Warten auf den Platz.
-        thread::sleep(Duration::from_millis(50));
-        let abgebrochen = Instant::now();
-        marke.store(true, Ordering::Relaxed);
-        let zurueck = ankunft
-            .recv_timeout(Duration::from_secs(5))
-            .expect("der Wartende kehrt zurueck");
+        // Die erste Frage steht vor dem ersten Versuch, jede weitere nach
+        // einem Warten. Der Platz wird nie frei, also weckt den Faden niemand:
+        // drei Fragen heissen, dass er zweimal von selbst aus dem Warten
+        // zurueckgekommen ist und seine Marke gelesen hat.
+        let beginn = Instant::now();
+        while fragen.load(Ordering::SeqCst) < 3 {
+            assert!(
+                beginn.elapsed() < HAENGT,
+                "der Wartende hat nach {HAENGT:?} erst {} Mal gefragt; er schlaeft an der Marke vorbei",
+                fragen.load(Ordering::SeqCst)
+            );
+            thread::sleep(SCHRITT);
+        }
         assert!(
-            zurueck.duration_since(abgebrochen) < Duration::from_millis(20),
-            "der Wartende brauchte {:?} nach dem Abbruch",
-            zurueck.duration_since(abgebrochen)
+            ankunft.try_recv().is_err(),
+            "vor dem Abbruch kehrt der Wartende nicht zurueck"
         );
-        assert!(
-            !faden.join().expect("der Faden endet ohne Absturz"),
-            "nach dem Abbruch wird nicht belegt"
+
+        marke.store(true, Ordering::SeqCst);
+        let belegt = ankunft
+            .recv_timeout(HAENGT)
+            .expect("der Wartende kehrt nach dem Abbruch zurueck");
+        faden.join().expect("der Faden endet ohne Absturz");
+
+        assert!(!belegt, "nach dem Abbruch wird nicht belegt");
+        assert_eq!(
+            neins.load(Ordering::SeqCst),
+            1,
+            "das erste Nein beendet das Warten; ein zweites Mal wird nicht gefragt"
         );
-        drop(gehalten);
+        // Der Platz war die ganze Zeit gehalten: zurueckgekehrt ist der
+        // Wartende wegen der Marke und nicht, weil der Platz frei wurde.
         assert_eq!(platz.belegungen(), 1, "allein die Probe hat belegt");
+        assert_eq!(platz.hoechstens_zugleich(), 1);
+        drop(gehalten);
+        assert!(
+            platz.belegen(&|| true).is_some(),
+            "der Abbruch des Wartenden laesst den Platz benutzbar"
+        );
     }
 
     /// `abwarten` kehrt nach einem Nein binnen 20 ms mit `false` zurueck und

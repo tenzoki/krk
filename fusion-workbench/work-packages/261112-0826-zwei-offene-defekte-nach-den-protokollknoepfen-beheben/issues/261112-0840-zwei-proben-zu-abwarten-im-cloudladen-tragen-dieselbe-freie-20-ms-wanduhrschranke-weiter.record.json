@@ -1,0 +1,23 @@
+{
+  "schema": "fusion.record/v1",
+  "id": "72f030ec-28c0-44be-9630-36ad0005a18a",
+  "workbench_id": "c7696ae5-2068-4e85-968d-64a4d8f23845",
+  "kind": "issue",
+  "narrative": {
+    "path": "work-packages/261112-0826-zwei-offene-defekte-nach-den-protokollknoepfen-beheben/issues/261112-0840-zwei-proben-zu-abwarten-im-cloudladen-tragen-dieselbe-freie-20-ms-wanduhrschranke-weiter.md"
+  },
+  "filed_by": {
+    "actor": "orchestrator",
+    "person": "Kai Stalmann <ks@qantr.com>"
+  },
+  "references": [],
+  "provenance": {
+    "source": "created",
+    "legacy_fields": {}
+  },
+  "extensions": {},
+  "control": {
+    "state": "in_progress",
+    "disposition": null
+  }
+}
