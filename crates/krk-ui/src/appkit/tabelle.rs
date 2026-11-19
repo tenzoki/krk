@@ -4281,8 +4281,8 @@ impl DateifensterQuelle {
         self.meldung_gewechselt();
     }
 
-    /// Sortiert nach diesem Schluessel und schaltet bei Wiederholung die
-    /// Richtung um (C2).
+    /// Sortiert nach diesem Schluessel aufsteigend, auch bei Wiederholung
+    /// (C2); die Richtung kehrt allein [`Self::sortierrichtung_umkehren`] um.
     fn nach_schluessel_sortieren(&self, schluessel: Schluessel) {
         {
             let mut tabs = self.ivars().tabs.borrow_mut();

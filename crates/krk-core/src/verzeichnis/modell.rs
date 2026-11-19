@@ -643,15 +643,19 @@ impl Ordnermodell {
         self.sicht_neu_aufbauen();
     }
 
-    /// Schaltet die Richtung um, wenn derselbe Schluessel erneut gewaehlt wird,
-    /// und wechselt sonst auf den neuen Schluessel aufsteigend.
+    /// Sortiert nach dem Schluessel, immer aufsteigend.
+    ///
+    /// **Der Befehl ist idempotent, und das ist der Zweck.** Bis zum 261119
+    /// kehrte ein zweites Waehlen desselben Schluessels die Richtung um. Dann
+    /// machte `cmd+1` aus einer Liste, die schon nach Name aufsteigend stand,
+    /// eine von z nach a, und weil die Sortierung je Tab in `session.toml`
+    /// steht, kam diese Liste nach jedem Neustart so wieder; der Nutzer drueckte
+    /// `cmd+1` erneut, um a–z zu bekommen, und hielt die Vorbelegung fuer
+    /// falsch. Die Richtung hat ihren eigenen Befehl,
+    /// `Kommando::SortierrichtungUmkehren`; so sagt es auch die Belegung
+    /// („die Richtung auf einer eigenen Kombination“).
     pub fn nach_schluessel_sortieren(&mut self, schluessel: Schluessel) {
-        let richtung = if self.sortierung.schluessel == schluessel {
-            self.sortierung.richtung.umgekehrt()
-        } else {
-            Richtung::Aufsteigend
-        };
-        self.sortierung_setzen(Sortierung::neu(schluessel, richtung));
+        self.sortierung_setzen(Sortierung::neu(schluessel, Richtung::Aufsteigend));
     }
 
     /// Wahr, wenn versteckte Eintraege ausgeblendet sind.

@@ -596,8 +596,10 @@ fn die_auswahl_ueberlebt_einen_sortierwechsel() {
     );
 }
 
+/// Ein Sortierbefehl setzt seinen Schluessel aufsteigend und kehrt die
+/// Richtung nie um; das tut allein `sortierrichtung_umkehren`.
 #[test]
-fn nach_schluessel_sortieren_schaltet_die_richtung_um() {
+fn nach_schluessel_sortieren_setzt_immer_aufsteigend() {
     let ordner = sortierordner();
     let mut modell = geladenes_modell(ordner.pfad());
 
@@ -610,14 +612,37 @@ fn nach_schluessel_sortieren_schaltet_die_richtung_um() {
     modell.nach_schluessel_sortieren(Schluessel::Groesse);
     assert_eq!(
         modell.sortierung(),
-        Sortierung::neu(Schluessel::Groesse, Richtung::Absteigend)
+        Sortierung::neu(Schluessel::Groesse, Richtung::Aufsteigend),
+        "ein zweites Waehlen desselben Schluessels dreht die Richtung nicht"
     );
 
+    modell.sortierung_setzen(Sortierung::neu(Schluessel::Name, Richtung::Absteigend));
     modell.nach_schluessel_sortieren(Schluessel::Name);
     assert_eq!(
         modell.sortierung(),
-        Sortierung::neu(Schluessel::Name, Richtung::Aufsteigend)
+        Sortierung::neu(Schluessel::Name, Richtung::Aufsteigend),
+        "aus jeder Richtung fuehrt der Befehl nach aufsteigend"
     );
+}
+
+/// Der Anfangszustand einer frisch gelesenen Liste ist der Stand nach
+/// `cmd+1` (Nach Name sortieren): `cmd+1` aendert an ihr nichts, auch beim
+/// zweiten und dritten Mal nicht.
+#[test]
+fn der_anfangszustand_ist_der_stand_nach_dem_namensbefehl() {
+    let ordner = sortierordner();
+    let mut modell = geladenes_modell(ordner.pfad());
+    let anfang: Vec<String> = namen(&modell).into_iter().map(str::to_owned).collect();
+    assert_eq!(
+        anfang,
+        vec!["dir-a", "dir-b", "Alpha.txt", "Beta.txt", "zeta.txt"]
+    );
+
+    for _ in 0..3 {
+        modell.nach_schluessel_sortieren(Schluessel::Name);
+        assert_eq!(modell.sortierung(), Sortierung::default());
+        assert_eq!(namen(&modell), anfang);
+    }
 }
 
 /// Ein Stapel fremder Generation kommt nicht ins Modell.
