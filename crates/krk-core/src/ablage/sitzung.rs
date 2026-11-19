@@ -92,6 +92,14 @@ pub struct Tab {
     /// Ob versteckte Eintraege ausgeblendet sind.
     pub verstecke_ausgeblendet: bool,
     /// Nach welchem Schluessel und in welche Richtung sortiert ist.
+    ///
+    /// **Geschrieben, aber seit dem 261119 nicht mehr angewendet**: ein
+    /// wiederhergestellter Tab beginnt nach Name aufsteigend wie jeder
+    /// betretene Ordner (Nutzerentscheid vom 261119, die Regel steht bei
+    /// `Tabliste::ort_setzen_an` in `krk-ui/src/tabs.rs`). Das Feld bleibt,
+    /// damit jede vorhandene `session.toml` weiter gelesen wird und eine
+    /// aeltere Fassung von KRK nach einem Rueckweg ihre Sortierung wiederfindet;
+    /// fehlt es, gilt die Vorbelegung ueber `#[serde(default)]`.
     pub sortierung: Sortierung,
     /// Die Bildlaufposition in Punkten, vom oberen Rand der Liste aus.
     ///

@@ -126,6 +126,29 @@ pub enum Tabort {
 }
 
 impl Tabort {
+    /// Ob beide denselben Ordner zeigen, am Wert und ohne Systemaufruf.
+    ///
+    /// Die Frage hinter der Sortierregel in [`Tabliste::ort_setzen_an`]: wer
+    /// denselben Ordner noch einmal betritt, frischt ihn auf und behaelt seine
+    /// Sortierung, jeder andere Ordner beginnt nach Name aufsteigend.
+    /// Verglichen wird allein der Ort und nicht der Rueckkehrordner: ein ferner
+    /// Ordner bleibt derselbe, gleich von wo aus der Tab ihn betreten hat.
+    /// Lokal gilt der Pfadvergleich von [`Path`], also Glied fuer Glied; zwei
+    /// Schreibweisen desselben Ordners ueber einen symbolischen Verweis sind
+    /// hier zwei Ordner, weil die Antwort sonst eine Frage an die Platte
+    /// braeuchte.
+    #[must_use]
+    pub fn gleicher_ort(&self, anderer: &Tabort) -> bool {
+        match (self, anderer) {
+            (Tabort::Lokal(links), Tabort::Lokal(rechts)) => links == rechts,
+            (Tabort::Fern { ort: links, .. }, Tabort::Fern { ort: rechts, .. }) => links == rechts,
+            (Tabort::Archiv { ort: links, .. }, Tabort::Archiv { ort: rechts, .. }) => {
+                links == rechts
+            }
+            (Tabort::Lokal(_) | Tabort::Fern { .. } | Tabort::Archiv { .. }, _) => false,
+        }
+    }
+
     /// Der Ort als Wert des Kerns.
     #[must_use]
     pub fn ort(&self) -> Ort {
@@ -370,10 +393,16 @@ impl Tabinhalt {
     /// Heimordner nicht. [`Tabliste::lesen_starten`] setzt sie je Lesevorgang
     /// ein weiteres Mal, und das ist die Stelle, die zaehlt; hier steht sie,
     /// damit auch ein ungelesenes Modell die Eigenschaft seines Ordners traegt.
+    ///
+    /// **`zustand.sortierung` wird hier nicht angewendet** (Nutzerentscheid vom
+    /// 261119): jeder Ordner, den ein Tab betritt, beginnt nach Name
+    /// aufsteigend, auch der wiederhergestellte nach einem Neustart. Die
+    /// Vorbelegung dafuer ist die von [`Ordnermodell::neu`]. Allein
+    /// [`Tabliste::ort_setzen_an`] traegt eine gewaehlte Sortierung in den neuen
+    /// Tab, und nur, wenn er denselben Ordner zeigt.
     fn aus_zustand(zustand: &Tabzustand, ohne_inhaltsauftrag: Option<&'static str>) -> Self {
         let mut modell = Ordnermodell::neu(GENERATION_LEER);
         modell.verstecke_ausblenden_setzen(zustand.verstecke_ausgeblendet);
-        modell.sortierung_setzen(zustand.sortierung);
         modell.ohne_inhaltsauftrag_setzen(ohne_inhaltsauftrag);
         Self {
             stand: Tabstand(NAECHSTER_TABSTAND.fetch_add(1, Ordering::Relaxed)),
@@ -1123,10 +1152,10 @@ impl Tabliste {
         if stelle >= self.tabs.len() || stelle == self.aktiv {
             return;
         }
-        let sortierung = self.tabs[stelle].modell.sortierung();
+        // Ein anderer Ordner, also beginnt er nach Name aufsteigend; die
+        // Sortierung des alten Tabs geht nicht mit (siehe `ort_setzen_an`).
         let verstecke = self.tabs[stelle].modell.verstecke_ausgeblendet();
         let mut zustand = Tabzustand::auf(ordner);
-        zustand.sortierung = sortierung;
         zustand.verstecke_ausgeblendet = verstecke;
         self.tabs[stelle] = self.tab_bauen(&zustand);
     }
@@ -1283,6 +1312,10 @@ impl Tabliste {
     /// unbedingt, wie der von „Deep" (C1.12, C2.4). Genau davon lebt die
     /// Zusage, dass der neue Ordner sofort anfaengt, seine Dateien zu lesen.
     ///
+    /// **Die Sortierung uebersteht den Wechsel seit dem 261119 nicht mehr**,
+    /// ausser der Tab betritt denselben Ordner noch einmal; die Regel steht
+    /// bei [`Tabliste::ort_setzen_an`].
+    ///
     /// **Eine Regel und keine Fallunterscheidung:** der Filtertext uebersteht
     /// jeden Ordnerwechsel, gleich ob der Filter der Tiefe an oder aus ist
     /// (C1.9, C1.10). Kein Ordnerwechsel und keine Auffrischung loescht ihn.
@@ -1419,7 +1452,16 @@ impl Tabliste {
     /// Der Rumpf von [`Tabliste::ordner_setzen`] und [`Tabliste::fern_setzen`]
     /// fuer einen genannten Tab; der Doc-Kommentar von `ordner_setzen` sagt,
     /// was hinuebergeht.
+    ///
+    /// **Die Sortierung geht allein mit, wenn der Tab denselben Ordner noch
+    /// einmal betritt** ([`Tabort::gleicher_ort`]), etwa mit einem weiteren
+    /// Klick auf das Lesezeichen des offenen Ordners. Jeder andere Ordner
+    /// beginnt nach Name aufsteigend, gleich auf welchem Weg der Tab ihn
+    /// betritt (Nutzerentscheid vom 261119); `cmd+2` bis `cmd+4` und `cmd+r`
+    /// gelten damit nur, solange der Tab in seinem Ordner bleibt. Bis dahin
+    /// ging die Sortierung bei jedem Ordnerwechsel mit.
     fn ort_setzen_an(&mut self, stelle: usize, ort: Tabort, auswahl: Option<Vormerkung>) {
+        let derselbe = self.tabs[stelle].ort.gleicher_ort(&ort);
         let sortierung = self.tabs[stelle].modell.sortierung();
         let verstecke = self.tabs[stelle].modell.verstecke_ausgeblendet();
         let tief = self.tabs[stelle].modell.tief();
@@ -1434,7 +1476,6 @@ impl Tabliste {
         // gibt. Der Doc-Kommentar darueber schreibt die Regel aus.
         let filtertext = self.tabs[stelle].modell.filtertext().to_owned();
         let mut zustand = Tabzustand::auf(ort.sitzungsordner());
-        zustand.sortierung = sortierung;
         zustand.verstecke_ausgeblendet = verstecke;
         let melden = auswahl
             .as_ref()
@@ -1454,6 +1495,9 @@ impl Tabliste {
         modell.tief_setzen(tief);
         modell.inhalt_setzen(inhalt);
         modell.filtertext_setzen(&filtertext);
+        if derselbe {
+            modell.sortierung_setzen(sortierung);
+        }
         self.lesen_starten(stelle);
     }
 
@@ -4673,11 +4717,13 @@ mod tests {
         }
         let mut liste = liste(&[&ordner.pfad().display().to_string()]);
         for sortierung in krk_core::verzeichnis::Sortierung::alle() {
+            liste.ordner_setzen(&monat, Some(gemeldet("b.jpg")));
+            // Nach dem Wechsel gesetzt: ein anderer Ordner beginnt nach Name
+            // aufsteigend, und die Sortierung gilt dann fuer diesen Lesevorgang.
             liste
                 .aktiver_mut()
                 .modell_mut()
                 .sortierung_setzen(sortierung);
-            liste.ordner_setzen(&monat, Some(gemeldet("b.jpg")));
             fertig_lesen(&mut liste);
             assert_eq!(
                 liste.aktiver().auswahlname().as_deref(),
@@ -4686,6 +4732,84 @@ mod tests {
             );
             assert_eq!(liste.aktiver().meldung(), None, "{sortierung:?}");
         }
+    }
+
+    /// Die Namen der Zeilen des sichtbaren Tabs, in der Reihenfolge der Sicht.
+    fn sichtnamen(liste: &Tabliste) -> Vec<String> {
+        liste
+            .aktiver()
+            .modell()
+            .zeilen()
+            .map(|eintrag| eintrag.name.clone())
+            .collect()
+    }
+
+    /// Nutzerentscheid vom 261119: jeder betretene Ordner beginnt nach Name
+    /// aufsteigend, das Auffrischen desselben Ordners behaelt die gewaehlte
+    /// Sortierung, und ein wiederhergestellter Tab beginnt ebenfalls a–z.
+    #[test]
+    fn ein_betretener_ordner_beginnt_nach_name_und_eine_auffrischung_behaelt_die_wahl() {
+        use krk_core::verzeichnis::{Richtung, Schluessel, Sortierung};
+        let ordner = Pruefordner::neu("sortierung-je-ordner");
+        let erster = ordner.ordner("erster");
+        let zweiter = ordner.ordner("zweiter");
+        for name in ["b.txt", "a.txt", "c.txt"] {
+            ordner.datei(&format!("zweiter/{name}"), "");
+        }
+        let name_auf = Sortierung::default();
+        let datum_auf = Sortierung::neu(Schluessel::Geaendert, Richtung::Aufsteigend);
+
+        let mut liste = liste(&[&erster.display().to_string()]);
+        fertig_lesen(&mut liste);
+        // `cmd+3` im ersten Ordner.
+        liste
+            .aktiver_mut()
+            .modell_mut()
+            .nach_schluessel_sortieren(Schluessel::Geaendert);
+        assert_eq!(liste.aktiver().modell().sortierung(), datum_auf);
+
+        // Ein anderer Ordner beginnt nach Name aufsteigend.
+        liste.ordner_setzen(&zweiter, None);
+        fertig_lesen(&mut liste);
+        assert_eq!(liste.aktiver().modell().sortierung(), name_auf);
+        assert_eq!(sichtnamen(&liste), vec!["a.txt", "b.txt", "c.txt"]);
+
+        // `cmd+3` hier, dann zweimal derselbe Ordner: die Auffrischung aus
+        // FSEvents und ein weiterer Klick auf sein Lesezeichen behalten sie.
+        liste
+            .aktiver_mut()
+            .modell_mut()
+            .nach_schluessel_sortieren(Schluessel::Geaendert);
+        liste.aktiven_neu_lesen();
+        fertig_lesen(&mut liste);
+        assert_eq!(liste.aktiver().modell().sortierung(), datum_auf);
+        liste.ordner_setzen(&zweiter, None);
+        fertig_lesen(&mut liste);
+        assert_eq!(liste.aktiver().modell().sortierung(), datum_auf);
+
+        // Der Aufstieg ist ein anderer Ordner.
+        liste.ordner_setzen(ordner.pfad(), None);
+        fertig_lesen(&mut liste);
+        assert_eq!(liste.aktiver().modell().sortierung(), name_auf);
+
+        // Ein neuer Tab beginnt nach Name aufsteigend.
+        liste
+            .aktiver_mut()
+            .modell_mut()
+            .nach_schluessel_sortieren(Schluessel::Geaendert);
+        liste.oeffnen(&zweiter);
+        assert_eq!(liste.aktiver().modell().sortierung(), name_auf);
+    }
+
+    /// Ein gespeichertes Sortierfeld in `session.toml` wird geduldet und nicht
+    /// angewendet: der wiederhergestellte Tab beginnt nach Name aufsteigend.
+    #[test]
+    fn ein_wiederhergestellter_tab_beginnt_nach_name_aufsteigend() {
+        use krk_core::verzeichnis::{Richtung, Schluessel, Sortierung};
+        let mut vorher = zustand(&["/a"]);
+        vorher.tabs[0].sortierung = Sortierung::neu(Schluessel::Geaendert, Richtung::Absteigend);
+        let liste = Tabliste::aus_zustand(&vorher, ohne_heim());
+        assert_eq!(liste.aktiver().modell().sortierung(), Sortierung::default());
     }
 
     /// C4.4: ein ausgefilterter Name wird ausgewaehlt und gemeldet.

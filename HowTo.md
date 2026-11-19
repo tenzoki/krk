@@ -1705,8 +1705,8 @@ Aufsteigen geht dort mit Pfeil links.
   vorige. Am ersten und am letzten Foto tut die Taste nichts, und die Folge
   beginnt nicht von vorn. Die Auswahl in der Dateiliste bleibt dabei stehen.
 - **Zum Foto springen:** Return führt die Dateiliste in den Ordner des
-  angezeigten Fotos und wählt es dort aus; die Liste behält ihre Sortierung,
-  und ein Filtertext bleibt nach derselben Regel stehen wie bei jedem
+  angezeigten Fotos und wählt es dort aus; die Liste beginnt dort wie jeder
+  betretene Ordner nach Name aufsteigend, und ein Filtertext bleibt nach derselben Regel stehen wie bei jedem
   Ordnerwechsel. Verdeckt er das Foto, sagt die Statuszeile „IMG_0970.jpg ist
   ausgefiltert.“, ist das Foto inzwischen fort, „IMG_0970.jpg ist nicht mehr
   da.“. Solange das angezeigte Foto noch vorbereitet wird, springt Return

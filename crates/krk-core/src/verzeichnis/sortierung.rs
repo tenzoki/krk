@@ -36,9 +36,10 @@ pub enum Schluessel {
     /// Nach der Dateiendung, ueber den vorberechneten Endungsschluessel.
     ///
     /// Die Variante heisst `Typ` und nicht `Endung`, weil ihr Name in
-    /// `session.toml` steht: die Sortierung je Tab ueberlebt das Beenden der
-    /// Anwendung, und eine Umbenennung liesse jede bereits geschriebene
-    /// Sitzung auf die Vorbelegung zurueckfallen. In der Oberflaeche heisst
+    /// `session.toml` steht: die Sitzung schreibt die Sortierung je Tab
+    /// weiter, auch wenn ein Neustart sie seit dem 261119 nicht mehr anwendet,
+    /// und eine Umbenennung machte jede bereits geschriebene Sitzung fuer
+    /// diese Fassung oder eine aeltere unlesbar. In der Oberflaeche heisst
     /// die Sortierung weiterhin "nach Typ"; die Endung ist das, wonach sie
     /// ordnet.
     Typ,
