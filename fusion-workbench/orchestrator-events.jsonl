@@ -5005,3 +5005,4 @@
 {"ts":"2026-11-19T07:34:41","event":"gate_response","person":"Kai Stalmann <ks@qantr.com>","checkout":"9be83618","session_id":"276bdb9c-9746-41dd-b393-f8b7171816d3","task":"T2","detail":"proceed"}
 {"ts":"2026-11-19T07:34:42","event":"commit","person":"Kai Stalmann <ks@qantr.com>","checkout":"9be83618","session_id":"276bdb9c-9746-41dd-b393-f8b7171816d3","detail":"e80f2405 fix(sortierung): cmd+1 bis cmd+4 sortieren immer aufsteigend"}
 {"ts":"2026-11-19T07:41:04","event":"commit","person":"Kai Stalmann <ks@qantr.com>","checkout":"9be83618","session_id":"276bdb9c-9746-41dd-b393-f8b7171816d3","detail":"a9317d68 fix(tabs): jeder betretene Ordner beginnt nach Name aufsteigend"}
+{"ts":"2026-11-19T07:53:44","event":"session_end","person":"Kai Stalmann <ks@qantr.com>","checkout":"9be83618","session_id":"276bdb9c-9746-41dd-b393-f8b7171816d3","detail":"Drei Behebungen (Lesezeichenklick, Sortierbefehle, Ordner beginnt a-z), ausgeliefert als 5.0.0"}
