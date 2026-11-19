@@ -84,28 +84,27 @@
 //!
 //! **Was eine haengende Freigabe kostet**, steht bei [`plattengruppe`].
 //!
-//! # Eine Zeile kann gewaehlt sein, ohne dass ihre Auswahl gewirkt hat
+//! # Ein Klick auf die gewaehlte Zeile loest ihre Auswahl erneut aus
 //!
-//! Die Auswahl eines Lesezeichens wartet auf ihre Frage an die Platte, und die
-//! Antwort kann verfallen, weil der Nutzer inzwischen Tab oder Dateifenster
-//! gewechselt hat. Die Zeile bleibt dann gewaehlt, damit er sieht, worauf er
-//! geklickt hat, und **ein Klick auf sie loest die Auswahl erneut aus**. Nach einer
-//! vollzogenen Auswahl tut derselbe Klick nichts.
+//! Die Zeile bleibt nach ihrer Auswahl gewaehlt, damit der Nutzer sieht, worauf er
+//! geklickt hat; eine `NSTableView` meldet einen Klick auf sie aber nicht als
+//! Auswahlwechsel. **Jeder Mausklick auf die gewaehlte Zeile loest ihre Auswahl
+//! deshalb noch einmal aus** (261119), gleich ob die vorige gewirkt hat. Bis dahin
+//! tat er das allein, solange die Antwort der vorigen ausstand oder verworfen war
+//! (261105), und ein Lesezeichen, dessen Ordner der Tab schon einmal ueber die
+//! Leiste bekommen und danach verlassen hatte, liess sich erst nach einem Klick auf
+//! eine andere Zeile wieder oeffnen.
 //!
 //! ```text
-//!  auswahl_zum_melden   die Auswahl ist offen, bis sie vollzogen ist
-//!  auswahl_vollzogen    nur die juengste Antwort kommt hierher
-//!  klick_loest_aus      offen und dieselbe Zeile: noch einmal melden
+//!  waehlen           ein Klick auf eine neue Zeile: melden und den Klick merken
+//!  klick_loest_aus   die `action` desselben Klicks: nichts; jeder weitere auf die
+//!                    gewaehlte Zeile: noch einmal melden
 //! ```
 //!
-//! **Eine verworfene und eine ausstehende Antwort sind hier dasselbe**: es gibt
-//! keinen Uebergang „verworfen“, denn eine verfallene Antwort aendert nichts. Ein
-//! Klick bei noch ausstehender Antwort zieht beim Delegierten eine neue Nummer; die
-//! erste Antwort verfaellt, und die juengste gilt.
-//!
-//! **Offen ist ein Ziel und keine Zeile**, aus dem Grund, aus dem auch eine Antwort
-//! je Ziel gilt: die Liste kann sich aendern, und unter derselben Stelle steht dann
-//! ein anderer Eintrag, dessen Auswahl niemand gemeldet hat.
+//! Ein Klick bei noch ausstehender Antwort zieht beim Delegierten eine neue Nummer;
+//! die erste Antwort verfaellt, und die juengste gilt. Gemeldet wird, was die Zeile
+//! **jetzt** traegt, auch wenn die Liste sich seit der vorigen Meldung geaendert hat:
+//! der Klick gilt dem Eintrag, den der Nutzer sieht.
 
 use std::cell::Cell;
 use std::collections::BTreeMap;
@@ -485,13 +484,11 @@ pub struct Leistenmodell {
     /// Antwort abgeben kann; die Zahl ist die der Datentraeger, die je in einem
     /// Lesezeichen standen.
     fragen: BTreeMap<PathBuf, Fragetakt>,
-    /// Das Ziel der Auswahl, die gemeldet und noch nicht vollzogen ist.
-    offene_auswahl: Option<Ziel>,
     /// Ob die Auswahl des laufenden Mausklicks schon gemeldet ist.
     ///
     /// AppKit schickt die `action` der Tabelle nach der Auswahlmeldung, also kaeme
-    /// jeder Klick auf eine neue Zeile mit offener Auswahl bei
-    /// [`Self::klick_loest_aus`] an und fragte die Platte ein zweites Mal.
+    /// jeder Klick auf eine neue Zeile bei [`Self::klick_loest_aus`] an und meldete
+    /// seine Auswahl ein zweites Mal.
     klick_gemeldet: bool,
 }
 
@@ -756,31 +753,16 @@ impl Leistenmodell {
         true
     }
 
-    /// Was an den Halter zu melden ist; die Auswahl ist von hier an offen, bis
-    /// [`Self::auswahl_vollzogen`] sie schliesst.
-    #[must_use = "die Auswahl steht schon als offen im Modell; ungemeldet wird sie nie vollzogen"]
-    pub fn auswahl_zum_melden(&mut self) -> Option<Auswahl> {
-        let auswahl = self.gewaehlt()?;
-        self.offene_auswahl = Some(auswahl.ziel.clone());
-        Some(auswahl)
-    }
-
-    /// Die zuletzt gemeldete Auswahl hat gewirkt.
-    ///
-    /// **Sie meldet nicht, wofuer**: der Halter kommt allein mit der juengsten
-    /// Auswahl hierher, eine ueberholte Antwort also nie. Auch der Satz ueber ein
-    /// fehlendes Ziel zaehlt als Wirkung, denn der Nutzer hat seine Antwort.
-    pub fn auswahl_vollzogen(&mut self) {
-        self.offene_auswahl = None;
-    }
-
     /// Ein Mausklick auf die Zeile `geklickt`, `None` neben die Zeilen: `true`
     /// heisst, der Rufer meldet die Auswahl noch einmal.
     ///
-    /// Allein fuer die gewaehlte Zeile, solange ihr Ziel offen ist, und nicht fuer
-    /// den Klick, dessen Auswahl eben erst gemeldet ist.
+    /// Fuer jeden Klick auf die gewaehlte Zeile, ausser dem, dessen Auswahl eben
+    /// erst ueber [`Self::waehlen`] gemeldet ist. Ob die vorige Meldung gewirkt hat,
+    /// fragt sie nicht: ein Klick auf das Lesezeichen, dessen Ordner der Tab zeigte
+    /// und wieder verlassen hat, muss ihn ebenso oeffnen wie einer nach einer
+    /// verworfenen Antwort (261119).
     ///
-    /// **Bei noch ausstehender Antwort startet jeder weitere Klick einen weiteren
+    /// **Jeder solche Klick startet bei einem Lesezeichen mit Pfad einen weiteren
     /// Faden**, auch der zweite eines Doppelklicks; die Auswahl hat dafuer keine
     /// Obergrenze (`crate::appkit::anwendung`, `Leistenauswahlstand`).
     #[must_use = "bei true schuldet der Rufer die Meldung, und der Merker fuer den laufenden Klick ist schon verbraucht"]
@@ -788,14 +770,7 @@ impl Leistenmodell {
         if std::mem::take(&mut self.klick_gemeldet) {
             return false;
         }
-        let Some(offen) = &self.offene_auswahl else {
-            return false;
-        };
-        geklickt.is_some()
-            && geklickt == self.auswahl
-            && self
-                .gewaehlt()
-                .is_some_and(|gewaehlt| gewaehlt.ziel == *offen)
+        geklickt.is_some() && geklickt == self.auswahl && self.gewaehlt().is_some()
     }
 
     /// Bewegt die Auswahl um eine waehlbare Zeile nach oben oder unten (C5).
@@ -2177,42 +2152,29 @@ mod tests {
     /// `action` die Auswahl ein zweites Mal ausgeloest haette.
     fn neue_zeile_klicken(modell: &mut Leistenmodell, zeile: usize) -> bool {
         assert!(modell.waehlen(zeile));
-        assert!(modell.auswahl_zum_melden().is_some());
+        assert!(modell.gewaehlt().is_some());
         modell.klick_loest_aus(Some(zeile))
     }
 
-    /// Die Abnahme des Defekts: nach einer verworfenen Antwort loest derselbe Klick
-    /// die Auswahl erneut aus, nach einer vollzogenen nicht.
+    /// Die Abnahme des Defekts vom 261119: ein weiterer Klick auf die gewaehlte
+    /// Zeile loest ihre Auswahl erneut aus, jedes Mal, und nicht nur, solange die
+    /// vorige Antwort aussteht. So oeffnet das Lesezeichen seinen Ordner auch, wenn
+    /// der Tab ihn ueber dieselbe Zeile schon gezeigt und danach verlassen hat.
     #[test]
-    fn nach_verworfener_antwort_loest_der_klick_erneut_aus_nach_vollzogener_nicht() {
+    fn jeder_weitere_klick_auf_die_gewaehlte_zeile_loest_erneut_aus() {
         let mut modell = modell_fuer_klicks();
-
         assert!(
             !neue_zeile_klicken(&mut modell, 1),
-            "der erste Klick hat seine Auswahl schon gemeldet und fragt nicht zweimal"
+            "der erste Klick hat seine Auswahl schon gemeldet und meldet nicht zweimal"
         );
-        // Die Antwort faellt: es kommt kein `auswahl_vollzogen`.
-        assert!(modell.klick_loest_aus(Some(1)), "verworfen: noch einmal");
-        assert!(modell.auswahl_zum_melden().is_some());
-        modell.auswahl_vollzogen();
-        assert!(!modell.klick_loest_aus(Some(1)), "vollzogen: nichts");
-        assert!(!modell.klick_loest_aus(Some(1)), "und bleibt so");
-        assert_eq!(modell.auswahl(), Some(1), "die Zeile bleibt gewaehlt");
-    }
-
-    /// Ein Klick bei noch ausstehender Antwort loest aus, und der Stand wartet auf
-    /// die juengste: eine ueberholte Antwort erreicht `auswahl_vollzogen` nie.
-    #[test]
-    fn jeder_klick_bei_ausstehender_antwort_loest_aus_bis_die_juengste_gilt() {
-        let mut modell = modell_fuer_klicks();
-        assert!(!neue_zeile_klicken(&mut modell, 1));
-
-        for _ in 0..2 {
+        for _ in 0..3 {
             assert!(modell.klick_loest_aus(Some(1)));
-            assert!(modell.auswahl_zum_melden().is_some());
+            assert_eq!(
+                modell.gewaehlt().map(|auswahl| auswahl.name),
+                Some("Eins".to_owned())
+            );
         }
-        modell.auswahl_vollzogen();
-        assert!(!modell.klick_loest_aus(Some(1)));
+        assert_eq!(modell.auswahl(), Some(1), "die Zeile bleibt gewaehlt");
     }
 
     /// Die Tastatur meldet wie die Maus, aber ihr folgt keine `action`: der erste
@@ -2223,26 +2185,13 @@ mod tests {
         let mut modell = modell_fuer_klicks();
         assert!(modell.auswahl_bewegen(1), "ohne Auswahl die erste Zeile");
         assert_eq!(modell.auswahl(), Some(1));
-        assert!(modell.auswahl_zum_melden().is_some());
         assert!(modell.klick_loest_aus(Some(1)));
 
         let mut modell = modell_fuer_klicks();
         // Der Merker bleibt liegen: der Klick endet ohne `action`.
         assert!(modell.waehlen(1));
-        assert!(modell.auswahl_zum_melden().is_some());
         assert!(modell.auswahl_bewegen(1));
-        assert!(modell.auswahl_zum_melden().is_some());
         assert!(modell.klick_loest_aus(Some(2)));
-    }
-
-    /// Eine vollzogene Auswahl von der Tastatur ist so vollzogen wie eine der Maus.
-    #[test]
-    fn nach_vollzogener_auswahl_von_der_tastatur_tut_der_klick_nichts() {
-        let mut modell = modell_fuer_klicks();
-        assert!(modell.auswahl_bewegen(1));
-        assert!(modell.auswahl_zum_melden().is_some());
-        modell.auswahl_vollzogen();
-        assert!(!modell.klick_loest_aus(Some(1)));
     }
 
     /// Ausgeloest wird allein die gewaehlte Zeile, und ein Klick daneben verbraucht
@@ -2258,48 +2207,33 @@ mod tests {
         assert!(modell.klick_loest_aus(Some(1)));
 
         assert!(modell.waehlen(2));
-        assert!(modell.auswahl_zum_melden().is_some());
         assert!(!modell.klick_loest_aus(None), "der Merker faellt auch hier");
         assert!(modell.klick_loest_aus(Some(2)));
 
         let mut leer = Leistenmodell::neu();
         assert!(!leer.klick_loest_aus(None), "ohne Auswahl nichts");
+        assert!(!leer.klick_loest_aus(Some(1)), "ohne Auswahl nichts");
     }
 
-    /// Offen ist das Ziel und nicht die Zeile: rueckt unter derselben Stelle ein
-    /// anderer Eintrag nach, hat niemand dessen Auswahl gemeldet.
+    /// Gemeldet wird, was die gewaehlte Zeile jetzt traegt: rueckt unter derselben
+    /// Stelle ein anderer Eintrag nach, oeffnet der Klick diesen, denn ihn sieht der
+    /// Nutzer gewaehlt.
     #[test]
-    fn offen_bleibt_das_ziel_und_nicht_die_stelle() {
+    fn der_klick_meldet_den_eintrag_den_die_zeile_jetzt_traegt() {
         let mut modell = modell_fuer_klicks();
         assert!(!neue_zeile_klicken(&mut modell, 1));
-
-        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![
-            Lesezeichen::neu("Zwei", "/zwei"),
-            Lesezeichen::verbindung("NAS"),
-        ]));
-        assert_eq!(modell.auswahl(), Some(1));
-        assert!(!modell.klick_loest_aus(Some(1)), "ein anderes Ziel");
 
         modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![
             Lesezeichen::neu("Null", "/null"),
             Lesezeichen::neu("Eins", "/eins"),
         ]));
         assert_eq!(modell.auswahl(), Some(1));
-        assert!(!modell.klick_loest_aus(Some(1)), "dieselbe Stelle, /null");
-        assert!(!modell.klick_loest_aus(Some(2)), "/eins ist nicht gewaehlt");
-    }
-
-    /// Eine umbenannte Marke bleibt offen, weil ihr Ziel dasselbe ist.
-    #[test]
-    fn eine_umbenannte_marke_bleibt_offen() {
-        let mut modell = modell_fuer_klicks();
-        assert!(!neue_zeile_klicken(&mut modell, 1));
-        modell.lesezeichen_setzen(&Lesezeichenliste::aus(vec![
-            Lesezeichen::neu("Umbenannt", "/eins"),
-            Lesezeichen::neu("Zwei", "/zwei"),
-            Lesezeichen::verbindung("NAS"),
-        ]));
         assert!(modell.klick_loest_aus(Some(1)));
+        assert_eq!(
+            modell.gewaehlt().map(|auswahl| auswahl.name),
+            Some("Null".to_owned())
+        );
+        assert!(!modell.klick_loest_aus(Some(2)), "/eins ist nicht gewaehlt");
     }
 
     /// Die Einteilung liest allein den Pfadtext.

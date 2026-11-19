@@ -36,12 +36,12 @@
 //! ueber dieselbe Senke. Zeigt ein Lesezeichen ins Leere, geht statt des
 //! Ordners der Grund an den Aufrufer.
 //!
-//! **Hat die Auswahl nicht gewirkt, loest ein Klick auf dieselbe Zeile sie erneut
-//! aus** (261105): die Antwort einer Frage an die Platte kann verfallen, und die
-//! Zeile bleibt dann gewaehlt. Dafuer gibt es die `action` der Tabelle, die auch auf
-//! eine schon gewaehlte Zeile kommt; die Tastatur hat keine solche Geste, denn eine
-//! Bewegung fuehrt immer auf eine andere Zeile. Die Regel steht im Modulkopf von
-//! [`crate::leistenmodell`].
+//! **Ein Klick auf die schon gewaehlte Zeile loest ihre Auswahl erneut aus**
+//! (261105, seit 261119 jedes Mal): die Zeile bleibt nach ihrer Auswahl gewaehlt,
+//! und die Auswahlmeldung der Tabelle kommt fuer sie nicht. Dafuer gibt es die
+//! `action` der Tabelle, die auch auf eine schon gewaehlte Zeile kommt; die
+//! Tastatur hat keine solche Geste, denn eine Bewegung fuehrt immer auf eine andere
+//! Zeile. Die Regel steht im Modulkopf von [`crate::leistenmodell`].
 //!
 //! # Die Marke „fehlt“ kommt vom Faden (261105)
 //!
@@ -400,7 +400,7 @@ define_class!(
         /// verbunden wird allein hier. Ein Klick neben die Zeilen meldet
         /// `clickedRow` als `-1` und tut nichts.
         ///
-        /// Hat die Auswahl der geklickten Zeile nicht gewirkt, geht sie hier noch
+        /// War die geklickte Zeile schon gewaehlt, geht ihre Auswahl hier noch
         /// einmal an den Halter ([`Leistenmodell::klick_loest_aus`]).
         // SAFETY: Die Signatur ist die einer Handlung von AppKit, ein Absender
         // und kein Rueckgabewert.
@@ -643,12 +643,6 @@ impl Leistenquelle {
         }
     }
 
-    /// Die zuletzt gemeldete Auswahl hat gewirkt
-    /// ([`Leistenmodell::auswahl_vollzogen`]).
-    pub fn auswahl_vollzogen(&self) {
-        self.ivars().modell.borrow_mut().auswahl_vollzogen();
-    }
-
     /// Was hinter der ausgewaehlten Zeile steht; ohne Frage an die Platte.
     #[must_use]
     pub fn gewaehlt(&self) -> Option<Auswahl> {
@@ -782,7 +776,7 @@ impl Leistenquelle {
     /// Die Ausleihe des Modells endet vor dem Rueckruf: der Aufrufer liest die
     /// Leiste womoeglich selbst.
     fn auswahl_melden(&self) {
-        let Some(auswahl) = self.ivars().modell.borrow_mut().auswahl_zum_melden() else {
+        let Some(auswahl) = self.ivars().modell.borrow().gewaehlt() else {
             return;
         };
         let melden = self.ivars().gewaehlt.borrow();
